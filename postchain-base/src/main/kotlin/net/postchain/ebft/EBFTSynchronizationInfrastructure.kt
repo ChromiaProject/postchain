@@ -2,29 +2,35 @@
 
 package net.postchain.ebft
 
+import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.PostchainContext
 import net.postchain.base.*
 import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.byteArrayKeyOf
+import net.postchain.common.wrap
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.*
-import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
+import net.postchain.metrics.BLOCKCHAIN_RID_TAG
+import net.postchain.metrics.CHAIN_IID_TAG
+import net.postchain.metrics.NODE_PUBKEY_TAG
 import net.postchain.network.CommunicationManager
 import net.postchain.network.common.*
 import net.postchain.network.peer.*
-import net.postchain.debug.BlockchainProcessName
 
 @Suppress("JoinDeclarationAndAssignment")
 open class EBFTSynchronizationInfrastructure(
         protected val postchainContext: PostchainContext,
         val peersCommConfigFactory: PeersCommConfigFactory = DefaultPeersCommConfigFactory()
 ) : SynchronizationInfrastructure {
+
+    companion object : KLogging()
 
     val nodeConfig get() = postchainContext.nodeConfigProvider.getConfiguration()
     val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
@@ -34,75 +40,96 @@ open class EBFTSynchronizationInfrastructure(
     override fun shutdown() {}
 
     override fun makeBlockchainProcess(
-        processName: BlockchainProcessName,
-        engine: BlockchainEngine,
-        awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
         val currentNodeConfig = nodeConfig
 
-        val historicBrid = blockchainConfig.effectiveBlockchainRID
-        val historicBlockchainContext = if (crossFetchingEnabled(blockchainConfig)) {
-            HistoricBlockchainContext(
-                    historicBrid, currentNodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
-                    ?: emptyMap()
-            )
-        } else null
-
-        val peerCommConfiguration = peersCommConfigFactory.create(postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
-        val workerContext = WorkerContext(
-                processName,
-                blockchainConfig,
-                engine,
-                buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid),
-                peerCommConfiguration,
-                postchainContext.appConfig,
-                currentNodeConfig,
-                awaitPermissionToProcessMessages
-        )
-
-        /*
-        Block building is prohibited on FB if its current configuration has a historicBrid set.
-
-        When starting a blockchain:
-
-        If !hasHistoricBrid then do nothing special, proceed as we always did
-
-        Otherwise:
-
-        1 Sync from local-OB (if available) until drained
-        2 Sync from remote-OB until drained or timeout
-        3 Sync from FB until drained or timeout
-        4 Goto 2
-        */
-        return if (historicBlockchainContext != null) {
-
-            historicBlockchainContext.contextCreator = { brid ->
-                val historicPeerCommConfiguration = if (brid == historicBrid) {
-                    peersCommConfigFactory.create(postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
-                } else {
-                    // It's an ancestor brid for historicBrid
-                    buildPeerCommConfigurationForAncestor(historicBlockchainContext, brid)
-                }
-                val histCommManager = buildXCommunicationManager(processName, blockchainConfig, historicPeerCommConfiguration, brid)
-
-                WorkerContext(
-                        processName,
-                        blockchainConfig,
-                        engine,
-                        histCommManager,
-                        historicPeerCommConfiguration,
-                        postchainContext.appConfig,
-                        currentNodeConfig,
-                        awaitPermissionToProcessMessages
+        withLoggingContext(
+                NODE_PUBKEY_TAG to nodeConfig.appConfig.pubKey,
+                CHAIN_IID_TAG to blockchainConfig.chainID.toString(),
+                BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()
+        ) {
+            val historicBrid = blockchainConfig.effectiveBlockchainRID
+            val historicBlockchainContext = if (crossFetchingEnabled(blockchainConfig)) {
+                HistoricBlockchainContext(
+                        historicBrid, currentNodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
+                        ?: emptyMap()
                 )
+            } else null
 
+            val peerCommConfiguration = peersCommConfigFactory.create(postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
+
+            val peers: Set<NodeRid> = peerCommConfiguration.networkNodes.getPeerIds()
+            val signers: Set<NodeRid> = blockchainConfig.signers.map { NodeRid(it) }.toSet()
+            val iAmASigner = signers.contains(peerCommConfiguration.networkNodes.myself.peerId())
+            if (iAmASigner) {
+                if (signers.size == 1) {
+                    logger.info("I am alone signer")
+                } else if (peers.intersect(signers).isEmpty()) {
+                    logger.warn("I am a signer, but there is no overlap between peers and signers: peers=$peers signers=$signers")
+                }
+            } else {
+                if (peers.isEmpty()) {
+                    logger.warn("I am a replica, but I have no peers")
+                }
             }
-            HistoricBlockchainProcess(workerContext, historicBlockchainContext).also { it.start() }
-        } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY) {
-            ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID)).also { it.start() }
-        } else {
-            ReadOnlyBlockchainProcess(workerContext).also { it.start() }
+
+            val workerContext = WorkerContext(
+                    processName,
+                    blockchainConfig,
+                    engine,
+                    buildXCommunicationManager(processName, blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid),
+                    peerCommConfiguration,
+                    postchainContext.appConfig,
+                    currentNodeConfig
+            )
+
+            /*
+            Block building is prohibited on FB if its current configuration has a historicBrid set.
+
+            When starting a blockchain:
+
+            If !hasHistoricBrid then do nothing special, proceed as we always did
+
+            Otherwise:
+
+            1 Sync from local-OB (if available) until drained
+            2 Sync from remote-OB until drained or timeout
+            3 Sync from FB until drained or timeout
+            4 Goto 2
+            */
+            return if (historicBlockchainContext != null) {
+
+                historicBlockchainContext.contextCreator = { brid ->
+                    val historicPeerCommConfiguration = if (brid == historicBrid) {
+                        peersCommConfigFactory.create(
+                                postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
+                    } else {
+                        // It's an ancestor brid for historicBrid
+                        peersCommConfigFactory.create(
+                                postchainContext.appConfig, currentNodeConfig, brid, historicBlockchainContext)
+                    }
+                    val histCommManager = buildXCommunicationManager(processName, blockchainConfig, historicPeerCommConfiguration, brid)
+
+                    WorkerContext(
+                            processName,
+                            blockchainConfig,
+                            engine,
+                            histCommManager,
+                            historicPeerCommConfiguration,
+                            postchainContext.appConfig,
+                            currentNodeConfig
+                    )
+
+                }
+                HistoricBlockchainProcess(workerContext, historicBlockchainContext)
+            } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY) {
+                ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID))
+            } else {
+                ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries())
+            }
         }
     }
 
@@ -141,7 +168,7 @@ open class EBFTSynchronizationInfrastructure(
 
     @Deprecated("POS-90")
     private fun validateConfigurations(nodeConfig: NodeConfig, blockchainConfig: BaseBlockchainConfiguration) {
-        val chainPeers = blockchainConfig.signers.map { it.byteArrayKeyOf() }
+        val chainPeers = blockchainConfig.signers.map { it.wrap() }
 
         val unreachableSigners = chainPeers.filter { !nodeConfig.peerInfoMap.contains(it) }
         require(unreachableSigners.isEmpty()) {
@@ -151,10 +178,10 @@ open class EBFTSynchronizationInfrastructure(
     }
 
     private fun buildXCommunicationManager(
-        processName: BlockchainProcessName,
-        blockchainConfig: BlockchainConfiguration,
-        relevantPeerCommConfig: PeerCommConfiguration,
-        blockchainRid: BlockchainRid
+            processName: BlockchainProcessName,
+            blockchainConfig: BlockchainConfiguration,
+            relevantPeerCommConfig: PeerCommConfiguration,
+            blockchainRid: BlockchainRid
     ): CommunicationManager<EbftMessage> {
         val packetEncoder = EbftPacketEncoder(relevantPeerCommConfig, blockchainRid)
         val packetDecoder = EbftPacketDecoder(relevantPeerCommConfig)
@@ -168,65 +195,6 @@ open class EBFTSynchronizationInfrastructure(
                 packetDecoder,
                 processName
         ).apply { init() }
-    }
-
-    // TODO: [POS-129] Merge: move it to [DefaultPeersCommConfigFactory]
-    private fun buildPeerCommConfigurationForAncestor(
-            historicBlockchainContext: HistoricBlockchainContext,
-            ancBrid: BlockchainRid
-    ): PeerCommConfiguration {
-        val myPeerID = NodeRid(postchainContext.appConfig.pubKeyByteArray)
-        val peersThatServeAncestorBrid = historicBlockchainContext.ancestors[ancBrid]!!
-
-        val relevantPeerMap = nodeConfig.peerInfoMap.filterKeys {
-            it in peersThatServeAncestorBrid || it == myPeerID
-        }
-
-        return BasePeerCommConfiguration.build(
-                relevantPeerMap.values,
-                Secp256K1CryptoSystem(),
-                postchainContext.appConfig.privKeyByteArray,
-                postchainContext.appConfig.pubKeyByteArray
-        )
-    }
-
-    /**
-     * To calculate the [relevantPeerMap] we need to:
-     *
-     * 1. begin with the signers (from the BC config)
-     * 2. add all NODE replicas (from node config)
-     * 3. add BC replicas (from node config)
-     *
-     * TODO: Could getRelevantPeers() be a method inside [NodeConfig]?
-     */
-    private fun buildPeerCommConfiguration(
-            nodeConfig: NodeConfig,
-            blockchainConfig: BaseBlockchainConfiguration,
-            historicBlockchainContext: HistoricBlockchainContext? = null
-    ): PeerCommConfiguration {
-        val myPeerID = NodeRid(postchainContext.appConfig.pubKeyByteArray)
-        val signers = blockchainConfig.signers.map { NodeRid(it) }
-        val signersReplicas = signers.flatMap {
-            nodeConfig.nodeReplicas[it] ?: listOf()
-        }
-        val blockchainReplicas = if (historicBlockchainContext != null) {
-            (nodeConfig.blockchainReplicaNodes[historicBlockchainContext.historicBrid] ?: listOf()).union(
-                    nodeConfig.blockchainReplicaNodes[blockchainConfig.blockchainRid] ?: listOf()
-            )
-        } else {
-            nodeConfig.blockchainReplicaNodes[blockchainConfig.blockchainRid] ?: listOf()
-        }
-
-        val relevantPeerMap = nodeConfig.peerInfoMap.filterKeys {
-            it in signers || it in signersReplicas || it in blockchainReplicas || it == myPeerID
-        }
-
-        return BasePeerCommConfiguration.build(
-                relevantPeerMap.values,
-                Secp256K1CryptoSystem(),
-                postchainContext.appConfig.privKeyByteArray,
-                postchainContext.appConfig.pubKeyByteArray
-        )
     }
 
     private fun getStartWithFastSyncValue(chainId: Long): Boolean {

@@ -7,18 +7,38 @@ import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.core.NodeRid
-import net.postchain.core.NodeStateTracker
 import net.postchain.crypto.Signature
-import net.postchain.ebft.*
-import net.postchain.ebft.message.*
-import net.postchain.ebft.rest.contract.serialize
+import net.postchain.ebft.BlockDatabase
+import net.postchain.ebft.BlockIntent
+import net.postchain.ebft.BlockManager
+import net.postchain.ebft.DoNothingIntent
+import net.postchain.ebft.FetchBlockAtHeightIntent
+import net.postchain.ebft.FetchCommitSignatureIntent
+import net.postchain.ebft.FetchUnfinishedBlockIntent
+import net.postchain.ebft.NodeState
+import net.postchain.ebft.NodeStateTracker
+import net.postchain.ebft.NodeStatus
+import net.postchain.ebft.StatusManager
+import net.postchain.ebft.message.BlockData
+import net.postchain.ebft.message.BlockHeader
+import net.postchain.ebft.message.BlockRange
+import net.postchain.ebft.message.BlockSignature
+import net.postchain.ebft.message.CompleteBlock
+import net.postchain.ebft.message.GetBlockAtHeight
+import net.postchain.ebft.message.GetBlockHeaderAndBlock
+import net.postchain.ebft.message.GetBlockRange
+import net.postchain.ebft.message.GetBlockSignature
+import net.postchain.ebft.message.GetUnfinishedBlock
+import net.postchain.ebft.message.Status
+import net.postchain.ebft.message.Transaction
+import net.postchain.ebft.message.UnfinishedBlock
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockData
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockDataWithWitness
 import net.postchain.ebft.syncmanager.StatusLogInterval
 import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
-import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.Messaging
+import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.gtv.mapper.toObject
 import nl.komponents.kovenant.task
@@ -32,7 +52,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val blockManager: BlockManager,
                            private val blockDatabase: BlockDatabase,
                            private val nodeStateTracker: NodeStateTracker,
-                           private val isProcessRunning: () -> Boolean,
+                           isProcessRunning: () -> Boolean,
                            startInFastSync: Boolean
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
@@ -54,7 +74,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         this.processingIntent = DoNothingIntent
         this.lastStatusLogged = Date().time
         val nodeConfig = workerContext.nodeConfig
-        val params = FastSyncParameters.fromAppConfig(workerContext.appConfig) {
+        val params = SyncParameters.fromAppConfig(workerContext.appConfig) {
             it.mustSyncUntilHeight = nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
         }
         fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params, isProcessRunning)
@@ -76,12 +96,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun dispatchMessages() {
         for (packet in communicationManager.getPackets()) {
-            // We do heartbeat check for each network message because
-            // communicationManager.getPackets() might give a big portion of messages.
-            if (!workerContext.awaitPermissionToProcessMessages(getLastBlockTimestamp()) { !isProcessRunning() }) {
-                return
-            }
-
             val (xPeerId, message) = packet
 
             val nodeIndex = indexOfValidator(xPeerId)
@@ -93,10 +107,10 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 when (message) {
                     // same case for replica and validator node
                     is GetBlockAtHeight -> sendBlockAtHeight(xPeerId, message.height)
-                    is GetBlockHeaderAndBlock -> {
-                        sendBlockHeaderAndBlock(xPeerId, message.height,
-                                this.statusManager.myStatus.height - 1)
-                    }
+                    is GetBlockRange -> sendBlockRangeFromHeight(xPeerId, message.startAtHeight,
+                        this.statusManager.myStatus.height - 1)
+                    is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(xPeerId, message.height,
+                        this.statusManager.myStatus.height - 1)
                     else -> {
                         if (!isReadOnlyNode) { // TODO: [POS-90]: Is it necessary here `isReadOnlyNode`?
                             // validator consensus logic
@@ -145,9 +159,14 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                                     blockchainConfiguration)
                                     )
                                 }
+                                is BlockRange -> {
+                                    // Only replicas should receive BlockRanges (via SlowSync)
+                                    logger.warn("Why did we get a block range from peer: ${xPeerId}? (Starting " +
+                                            "height: ${message.startAtHeight}, blocks: ${message.blocks.size}) ")
+                                }
                                 is GetUnfinishedBlock -> sendUnfinishedBlock(nodeIndex)
                                 is GetBlockSignature -> sendBlockSignature(nodeIndex, message.blockRID)
-                                is Transaction -> handleTransaction(nodeIndex, message)
+                                is Transaction -> handleTransaction(message)
                                 is BlockHeader -> {
                                     // TODO: This might happen because we've already exited FastSync but other nodes
                                     //  are still responding to our old requests. For this case this is harmless.
@@ -168,10 +187,9 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     /**
      * Handle transaction received from peer
      *
-     * @param index
      * @param message message including the transaction
      */
-    private fun handleTransaction(index: Int, message: Transaction) {
+    private fun handleTransaction(message: Transaction) {
         // TODO: reject if queue is full
         task {
             val tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(message.data)
@@ -258,10 +276,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun fetchCommitSignatures(blockRID: ByteArray, nodes: Array<Int>) {
         val message = GetBlockSignature(blockRID)
-        logger.debug{ "$processName: Fetching commit signature for block with RID ${blockRID.toHex()} from nodes ${Arrays.toString(nodes)}" }
-        nodes.forEach {
-            communicationManager.sendPacket(message, validatorAtIndex(it))
-        }
+        logger.debug { "$processName: Fetching commit signature for block with RID ${blockRID.toHex()} from nodes ${Arrays.toString(nodes)}" }
+        communicationManager.sendPacket(message, nodes.map { validatorAtIndex(it) })
     }
 
     /**
@@ -413,8 +429,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 // Sends a status message to all peers when my status has changed or after a timeout
                 statusSender.update()
 
-                nodeStateTracker.myStatus = statusManager.myStatus.serialize()
-                nodeStateTracker.nodeStatuses = statusManager.nodeStatuses.map { it.serialize() }.toTypedArray()
+                nodeStateTracker.myStatus = statusManager.myStatus
+                nodeStateTracker.nodeStatuses = statusManager.nodeStatuses
                 nodeStateTracker.blockHeight = statusManager.myStatus.height
 
                 if (Date().time - lastStatusLogged >= StatusLogInterval) {
@@ -423,13 +439,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 }
             }
         }
-    }
-
-    private fun getLastBlockTimestamp(): Long {
-        // The field blockManager.lastBlockTimestamp will be set to non-null value
-        // after the first block db operation. So we read lastBlockTimestamp value from db
-        // until blockManager.lastBlockTimestamp is non-null.
-        return blockManager.lastBlockTimestamp ?: blockQueries.getLastBlockTimestamp().get()
     }
 
     fun getHeight(): Long {

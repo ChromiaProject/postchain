@@ -3,25 +3,21 @@
 package net.postchain.base.gtv
 
 import net.postchain.common.BlockchainRid
-import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 
 object GtvToBlockchainRidFactory {
-
-    val cryptoSystem = Secp256K1CryptoSystem()
-    private val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
-
     /**
      * Calculates blockchain RID by the given blockchain configuration.
      *
      * @param data is the [Gtv] data of the configuration
      * @return the blockchain RID
      */
-    fun calculateBlockchainRid(data: Gtv): BlockchainRid {
+    fun calculateBlockchainRid(data: Gtv, cryptoSystem: CryptoSystem): BlockchainRid {
         // Need to calculate it the RID, and we do it the usual way (same as merkle root of block)
-        val bcBinary = data.merkleHash(merkleHashCalculator)
+        val bcBinary = data.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
         return BlockchainRid(bcBinary)
     }
 }

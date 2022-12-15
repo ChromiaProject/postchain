@@ -1,20 +1,22 @@
 package net.postchain.devtools
 
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.BlockchainEngine
-import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.crypto.devtools.KeyPairHelper
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.MultiSigBlockWitnessBuilder
+import net.postchain.crypto.KeyPair
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.devtools.KeyPairHelper
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.gtvml.GtvMLParser
 
 
 /**
  * Postchain has different test categories:
  *
- * 1. Unit tests - A test whithout dependencies.
+ * 1. Unit tests - A test without dependencies.
  * 2. Integration tests - Depends on the DB.
  * 3. Nightly test - Tests with a lot of data.
  * 4. Manual test - Requires some manual work to run.
@@ -33,10 +35,6 @@ abstract class AbstractIntegration {
 
     val cryptoSystem = Secp256K1CryptoSystem()
 
-    companion object {
-        const val BASE_PORT = 9870
-    }
-
     /**
      * Put logic in here that should run after each test (the "@after" annotation will guarantee execution)
      */
@@ -49,15 +47,16 @@ abstract class AbstractIntegration {
 
     protected fun buildBlockAndCommit(engine: BlockchainEngine) {
         val (blockBuilder, _) = engine.buildBlock()
-        commitBlock(blockBuilder)
+
+        try {
+            commitBlock(blockBuilder)
+        } catch (_: ProgrammerMistake) {
+            // Block is already committed (presumably by BaseBlockBuildingStrategy)
+        }
     }
 
     protected fun buildBlockAndCommit(node: PostchainTestNode) {
-        commitBlock(node
-                .getBlockchainInstance()
-                .blockchainEngine
-                .buildBlock()
-                .first)
+        buildBlockAndCommit(node.getBlockchainInstance().blockchainEngine)
     }
 
     private fun commitBlock(blockBuilder: BlockBuilder): BlockWitness {
@@ -67,7 +66,7 @@ abstract class AbstractIntegration {
         val blockHeader = blockData.header
         var i = 0
         while (!witnessBuilder.isComplete()) {
-            val sigMaker = cryptoSystem.buildSigMaker(KeyPairHelper.pubKey(i), KeyPairHelper.privKey(i))
+            val sigMaker = cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(i), KeyPairHelper.privKey(i)))
             witnessBuilder.applySignature(sigMaker.signDigest(blockHeader.blockRID))
             i++
         }

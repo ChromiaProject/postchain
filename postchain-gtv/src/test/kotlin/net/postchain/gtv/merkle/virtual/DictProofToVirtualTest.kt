@@ -43,7 +43,7 @@ class DictProofToVirtualTest {
         val gtvFromVirt =virtualGtv["one"]!!
         assertEquals(orgGtv, gtvFromVirt)
 
-        val virtDict = virtualGtv as GtvVirtualDictionary
+        virtualGtv as GtvVirtualDictionary
         assertTrue(virtualGtv.isKeyPresent("one"))
     }
 
@@ -84,10 +84,9 @@ class DictProofToVirtualTest {
         val gtvFromVirt =virtualGtv["four"]!!
         assertEquals(orgGtv, gtvFromVirt)
 
-        val virtDict = virtualGtv as GtvVirtualDictionary
+        virtualGtv as GtvVirtualDictionary
         assertTrue(virtualGtv.isKeyPresent("four"))
         assertFalse(virtualGtv.isKeyPresent("one"))
-
     }
 
 

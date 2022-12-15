@@ -47,13 +47,13 @@ class SystemSetupTest {
 
         // Check BCs to sign
         val node1Found = sysSetup.nodeMap[nodeNr1]!!
-        val foundSignBcs =node1Found.chainsToSign
+        val foundSignBcs =node1Found.initialChainsToSign
         assertEquals(1, foundSignBcs.size)
         val chainFound = foundSignBcs.first()
         assertEquals(chainId1, chainFound)
 
         // Check BCs to read
-        val foundReadBcs = node1Found.chainsToRead
+        val foundReadBcs = node1Found.initialChainsToRead
         assertEquals(0, foundReadBcs.size)
     }
 

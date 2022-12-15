@@ -2,18 +2,19 @@
 
 package net.postchain.base
 
+import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.common.data.ByteArrayKey
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.*
-import net.postchain.core.block.BlockBuilder
 import net.postchain.gtv.Gtv
 import java.sql.Connection
 
 class ConfirmationProofMaterial(
-    val txHash: ByteArrayKey,
-    val txHashes: Array<ByteArrayKey>,
-    val header: ByteArray,
-    val witness: ByteArray
+        val txHash: WrappedByteArray,
+        val txHashes: Array<WrappedByteArray>,
+        val header: ByteArray,
+        val witness: ByteArray
 )
 
 open class BaseAppContext(
@@ -21,6 +22,7 @@ open class BaseAppContext(
     private val dbAccess: DatabaseAccess
 ) : AppContext {
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T> getInterface(c: Class<T>): T? {
         return if (c == DatabaseAccess::class.java) {
             dbAccess as T?
@@ -34,6 +36,7 @@ open class BaseEContext(
     private val dbAccess: DatabaseAccess
 ) : EContext {
 
+    @Suppress("UNCHECKED_CAST")
     override fun <T> getInterface(c: Class<T>): T? {
         return if (c == DatabaseAccess::class.java) {
             dbAccess as T?
@@ -54,7 +57,20 @@ open class BaseBlockEContext(
     val txEventSink: TxEventSink
 ) : EContext by ectx, BlockEContext {
 
+    private var alreadyCommitted = false
+    private val hooks = mutableListOf<() -> Unit>()
 
+    override fun addAfterCommitHook(hook: () -> Unit) {
+        hooks.add(hook)
+    }
+
+    override fun blockWasCommitted() {
+        if (alreadyCommitted) throw ProgrammerMistake("Trying to commit block twice?!")
+        alreadyCommitted = true
+        for (h in hooks) h()
+    }
+
+    @Suppress("UNCHECKED_CAST")
     override fun <T> getInterface(c: Class<T>): T? {
         return if (c == TxEventSink::class.java) {
             txEventSink as T?
@@ -110,6 +126,6 @@ open class BaseTxEContext(
  * To see how it all goes together, see: doc/extension_classes.graphml
  */
 interface BaseBlockBuilderExtension {
-    fun init(blockEContext: BlockEContext, baseBB: BlockBuilder)
+    fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder)
     fun finalize(): Map<String, Gtv>
 }

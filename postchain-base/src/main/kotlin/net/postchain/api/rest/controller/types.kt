@@ -12,6 +12,7 @@ import net.postchain.gtv.Gtv
 
 interface ChainModel {
     val chainIID: Long
+    var live: Boolean
 }
 
 interface ExternalModel : ChainModel {
@@ -23,8 +24,9 @@ interface Model : ChainModel {
     fun getTransaction(txRID: TxRID): ApiTx?
     fun getTransactionInfo(txRID: TxRID): TransactionInfoExt?
     fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt>
-    fun getBlock(blockRID: ByteArray, partialTx: Boolean): BlockDetail? // TODO create type blockRID same as TxRID, not sure if there are particular requirements though
-    fun getBlocks(beforeTime: Long, limit: Int, partialTx: Boolean): List<BlockDetail>
+    fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail?
+    fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail?
+    fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
     fun getConfirmationProof(txRID: TxRID): ConfirmationProof?
     fun getStatus(txRID: TxRID): ApiStatus
     fun query(query: Query): QueryResult
@@ -41,7 +43,7 @@ data class ErrorBody(val error: String = "")
 class NotSupported(message: String) : Exception(message)
 class NotFoundError(message: String) : Exception(message)
 class BadFormatError(message: String) : Exception(message)
-class OverloadedException(message: String) : Exception(message)
+class UnavailableException(message: String) : Exception(message)
 class InvalidTnxException(message: String) : Exception(message)
 class DuplicateTnxException(message: String) : Exception(message)
 

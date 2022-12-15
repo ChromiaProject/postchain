@@ -5,24 +5,30 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
+import net.postchain.containers.bpm.bcconfig.BlockchainConfigVerifier
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.core.BlockRid
 import net.postchain.core.NodeRid
-import net.postchain.ebft.heartbeat.HeartbeatEvent
-import net.postchain.ebft.heartbeat.RemoteConfigVerifier
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
-import net.postchain.network.mastersub.protocol.*
+import net.postchain.network.mastersub.protocol.MsCommittedBlockMessage
+import net.postchain.network.mastersub.protocol.MsConnectedPeersMessage
+import net.postchain.network.mastersub.protocol.MsDataMessage
+import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessage
+import net.postchain.network.mastersub.protocol.MsHandshakeMessage
+import net.postchain.network.mastersub.protocol.MsMessage
+import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
-import net.postchain.debug.BlockchainProcessName
 import java.util.*
 
 /**
  * Manages communication for the give chain
  *
- * For "masters" this means communicate with all peers in a normal fashion, but instead of really process
+ * For "masters" this means to communicate with all peers in a normal fashion, but instead of really process
  * the messages ourselves we wrap them in [MsMessage] and pass them on to the correct sub-node.
  */
 open class DefaultMasterCommunicationManager(
@@ -35,32 +41,25 @@ open class DefaultMasterCommunicationManager(
         private val connectionManager: ConnectionManager,
         private val masterConnectionManager: MasterConnectionManager,
         private val dataSource: DirectoryDataSource,
-        private val processName: BlockchainProcessName
+        private val processName: BlockchainProcessName,
+        private val afterSubnodeCommitListeners: Set<AfterSubnodeCommitListener>,
 ) : AbstractMasterCommunicationManager() {
 
     companion object : KLogging()
 
     private lateinit var sendConnectedPeersTask: TimerTask
+    private val configVerifier = BlockchainConfigVerifier(appConfig)
 
     override fun init() {
         val subnodeChainConfig = SubChainConfig(chainId, blockchainRid, subnodePacketConsumer())
-        masterConnectionManager.connectSubChain(processName, subnodeChainConfig)
+        masterConnectionManager.initSubChainConnection(processName, subnodeChainConfig)
 
         // Scheduling SendConnectedPeers task
-        sendConnectedPeersTask = scheduleTask(containerNodeConfig.containerSendConnectedPeersPeriod) {
+        sendConnectedPeersTask = scheduleTask(containerNodeConfig.sendMasterConnectedPeersPeriod) {
             val peers = connectionManager.getConnectedNodes(chainId)
-            val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.byteArray })
+            val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.data })
             masterConnectionManager.sendPacketToSub(msg)
         }
-    }
-
-    override fun sendHeartbeatToSub(heartbeatEvent: HeartbeatEvent) {
-        logger.trace {
-            "${process()}: Sending a heartbeat packet to subnode: blockchainRid: " +
-                    "${blockchainRid.toShortHex()} "
-        }
-        val message = MsHeartbeatMessage(blockchainRid.data, heartbeatEvent.timestamp)
-        masterConnectionManager.sendPacketToSub(message)
     }
 
     fun subnodePacketConsumer(): MsMessageHandler {
@@ -89,7 +88,7 @@ open class DefaultMasterCommunicationManager(
                         logger.debug {
                             "${process()}: BlockchainConfig requested by subnode: blockchainRid: " + blockchainRid.toShortHex()
                         }
-                        val nextHeight = dataSource.findNextConfigurationHeight(message.blockchainRid, message.currentHeight)
+                        val nextHeight = dataSource.findNextConfigurationHeight(message.blockchainRid, message.lastHeight)
                         val config = if (nextHeight == null) {
                             null
                         } else {
@@ -99,10 +98,10 @@ open class DefaultMasterCommunicationManager(
                                 null // message.nextHeight != null && nextHeight == message.nextHeight
                             }
                         }
-                        val hash = config?.let { RemoteConfigVerifier.calculateHash(it) }
+                        val hash = config?.let { configVerifier.calculateHash(it) }
                         val hashStr = hash?.let { BlockchainRid(it).toHex() }
 
-                        val response = MsNextBlockchainConfigMessage(message.blockchainRid, nextHeight, config, hash)
+                        val response = MsNextBlockchainConfigMessage(message.blockchainRid, message.lastHeight, nextHeight, config, hash)
                         masterConnectionManager.sendPacketToSub(response)
                         logger.debug {
                             "${process()}: BlockchainConfig sent to subnode: blockchainRid: " +
@@ -111,10 +110,14 @@ open class DefaultMasterCommunicationManager(
                         }
                     }
 
-                    is MsSubnodeStatusMessage -> {
-                        logger.debug {
-                            "${process()}: Subnode status: blockchainRid: " +
-                                    "${BlockchainRid(message.blockchainRid).toShortHex()}, height: ${message.height}"
+                    is MsCommittedBlockMessage -> {
+                        afterSubnodeCommitListeners.forEach {
+                            it.onAfterCommitInSubnode(
+                                    BlockchainRid(message.blockchainRid),
+                                    BlockRid(message.blockRid),
+                                    blockHeader = message.blockHeader,
+                                    witnessData = message.witnessData
+                            )
                         }
                     }
                 }
@@ -155,11 +158,11 @@ open class DefaultMasterCommunicationManager(
      * @param packet is the message data
      */
     private fun consumePacket(nodeId: NodeRid, packet: ByteArray) {
-        logger.trace { "${process()}: consumePacket() - Receiving a packet from peer: ${nodeId.byteArray.toHex()}" }
+        logger.trace { "${process()}: consumePacket() - Receiving a packet from peer: ${nodeId.toHex()}" }
 
         val message = MsDataMessage(
                 blockchainRid.data,
-                nodeId.byteArray, // sender
+                nodeId.data, // sender
                 appConfig.pubKeyByteArray, // Can be omitted?
                 packet
         )
@@ -181,6 +184,7 @@ open class DefaultMasterCommunicationManager(
 
         val prefixFun: () -> String = { processName.toString() }
         connectionManager.disconnectChain(prefixFun, chainId)
+        masterConnectionManager.disconnectSubChain(processName, chainId)
     }
 
     private fun process(): String {

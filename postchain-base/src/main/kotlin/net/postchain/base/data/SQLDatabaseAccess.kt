@@ -3,25 +3,33 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.PeerInfo
+import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.HASH_LENGTH
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.core.NodeRid
-import net.postchain.crypto.Signature
-import net.postchain.core.block.BlockData
-import net.postchain.core.block.BlockHeader
-import net.postchain.core.block.BlockWitness
 import net.postchain.core.AppContext
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
+import net.postchain.core.NodeRid
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
+import net.postchain.core.TxEContext
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockWitness
+import net.postchain.crypto.PubKey
+import net.postchain.crypto.Signature
 import org.apache.commons.dbutils.QueryRunner
-import org.apache.commons.dbutils.handlers.*
+import org.apache.commons.dbutils.handlers.BeanHandler
+import org.apache.commons.dbutils.handlers.BeanListHandler
+import org.apache.commons.dbutils.handlers.ColumnListHandler
+import org.apache.commons.dbutils.handlers.MapListHandler
+import org.apache.commons.dbutils.handlers.ScalarHandler
 import java.sql.Connection
 import java.sql.Timestamp
 import java.time.Instant
@@ -38,8 +46,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
     protected fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
-    protected fun tableEvents(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_events")
-    protected fun tableStates(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_states")
+    protected fun tablePages(ctx: EContext, name: String): String = tableName(ctx, "${name}_pages")
+    protected fun tableEventLeafs(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_event_leafs")
+    protected fun tableStateLeafs(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_state_leafs")
+    protected fun indexTableStateLeafs(ctx: EContext, prefix: String, index: Int): String = tableName(ctx, "idx${index}_${prefix}_state_leafs")
 
     fun tableGtxModuleVersion(ctx: EContext): String = tableName(ctx, "gtx_module_version")
 
@@ -61,16 +71,19 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableTransactions(ctx: EContext): String
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
+    protected abstract fun cmdCreateTablePage(ctx: EContext, name: String): String
 
     // Tables not part of the batch creation run
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
     protected abstract fun cmdCreateTableState(ctx: EContext, prefix: String): String
+    protected abstract fun cmdCreateIndexTableState(ctx: EContext, prefix: String, index: Int): String
 
     // --- Insert ---
     protected abstract fun cmdInsertTransactions(ctx: EContext): String
+    protected abstract fun cmdInsertPage(ctx: EContext, name: String): String
     protected abstract fun cmdInsertConfiguration(ctx: EContext): String
-    protected abstract fun cmdInsertEvents(ctx: EContext, prefix: String): String
-    protected abstract fun cmdInsertStates(ctx: EContext, prefix: String): String
+    protected abstract fun cmdInsertEvent(ctx: EContext, prefix: String): String
+    protected abstract fun cmdInsertState(ctx: EContext, prefix: String): String
     protected abstract fun cmdPruneEvents(ctx: EContext, prefix: String): String
     protected abstract fun cmdPruneStates(ctx: EContext, prefix: String): String
     abstract fun cmdCreateTableGtxModuleVersion(ctx: EContext): String
@@ -256,11 +269,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val blockHeader = txInfo["block_header_data"] as ByteArray
         val blockWitness = txInfo["block_witness"] as ByteArray
         val blockTimestamp = txInfo["timestamp"] as Long
-        val txRID = txInfo["tx_rid"] as ByteArray
+        val resultTxRID = txInfo["tx_rid"] as ByteArray
         val txHash = txInfo["tx_hash"] as ByteArray
         val txData = txInfo["tx_data"] as ByteArray
         return TransactionInfoExt(
-                blockRID, blockHeight, blockHeader, blockWitness, blockTimestamp, txRID, txHash, txData)
+                blockRID, blockHeight, blockHeader, blockWitness, blockTimestamp, resultTxRID, txHash, txData)
     }
 
     override fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt> {
@@ -320,19 +333,15 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     // ---- Event and State ----
 
-    /**
-     * Fetch one event that matches the given hash (if height is correct)
-     */
-    override fun getEvent(ctx: EContext, prefix: String, blockHeight: Long, eventHash: ByteArray): DatabaseAccess.EventInfo? {
-        val sql = """SELECT * FROM (SELECT block_height, hash, data, 
-            RANK() OVER (ORDER BY event_iid) rank_number 
-            FROM ${tableEvents(ctx, prefix)} 
-            WHERE block_height = ?) x WHERE hash = ?"""
-        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, eventHash)
+    override fun getEvent(ctx: EContext, prefix: String, eventHash: ByteArray): DatabaseAccess.EventInfo? {
+        val sql = """SELECT block_height, position, hash, data 
+            FROM ${tableEventLeafs(ctx, prefix)} 
+            WHERE hash = ?"""
+        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, eventHash)
         if (rows.isEmpty()) return null
-        val data = rows.first() // Should there be more than one?
+        val data = rows.first()
         return DatabaseAccess.EventInfo(
-                (data["rank_number"] as Long) - 1,
+                data["position"] as Long,
                 data["block_height"] as Long,
                 data["hash"] as Hash,
                 data["data"] as ByteArray
@@ -344,7 +353,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      */
     override fun getEventsOfHeight(ctx: EContext, prefix: String, blockHeight: Long): List<DatabaseAccess.EventInfo> {
         val sql = """SELECT block_height, hash, data, event_iid
-            FROM ${tableEvents(ctx, prefix)} 
+            FROM ${tableEventLeafs(ctx, prefix)} 
             WHERE block_height = ?
             ORDER BY event_iid """
 
@@ -356,7 +365,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      */
     override fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<DatabaseAccess.EventInfo> {
         val sql = """SELECT block_height, hash, data, event_iid
-            FROM ${tableEvents(ctx, prefix)} 
+            FROM ${tableEventLeafs(ctx, prefix)} 
             WHERE block_height > ?
             ORDER BY event_iid
             LIMIT ? """
@@ -365,13 +374,13 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     /**
-     * NOTE: We dont' bother to set "pos" so it starts from 0, we just use the event_iid raw.
+     * NOTE: We don't bother to set "pos" so it starts from 0, we just use the event_iid raw.
      *       In this case the important thing is the SORTING of the events, not the exact pos number.
      */
     private fun getEventList(ctx: EContext, blockHeight: Long, sql: String, maxEventsLimit: Int = 1000): List<DatabaseAccess.EventInfo> {
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, maxEventsLimit)
         return if (rows.isEmpty()) {
-            ArrayList<DatabaseAccess.EventInfo>()
+            ArrayList()
         } else {
             rows.map { data ->
                 DatabaseAccess.EventInfo(
@@ -385,7 +394,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): DatabaseAccess.AccountState? {
-        val sql = """SELECT block_height, state_n, data FROM ${tableStates(ctx, prefix)} WHERE block_height <= ? AND state_n = ?"""
+        val sql = """SELECT block_height, state_n, data FROM ${tableStateLeafs(ctx, prefix)} 
+            WHERE block_height <= ? AND state_n = ? 
+            ORDER BY state_iid DESC LIMIT 1"""
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, height, state_n)
         if (rows.isEmpty()) return null
         val data = rows.first()
@@ -396,12 +407,12 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         )
     }
 
-    override fun insertEvent(ctx: EContext, prefix: String, height: Long, hash: Hash, data: ByteArray) {
-        queryRunner.update(ctx.conn, cmdInsertEvents(ctx, prefix), height, hash, data)
+    override fun insertEvent(ctx: TxEContext, prefix: String, height: Long, position: Long, hash: Hash, data: ByteArray) {
+        queryRunner.update(ctx.conn, cmdInsertEvent(ctx, prefix), height, position, hash, ctx.txIID, data)
     }
 
     override fun insertState(ctx: EContext, prefix: String, height: Long, state_n: Long, data: ByteArray) {
-        queryRunner.update(ctx.conn, cmdInsertStates(ctx, prefix), height, state_n, data)
+        queryRunner.update(ctx.conn, cmdInsertState(ctx, prefix), height, state_n, data)
     }
 
     override fun pruneEvents(ctx: EContext, prefix: String, heightMustBeHigherThan: Long) {
@@ -415,12 +426,56 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdPruneStates(ctx, prefix), left, right, heightMustBeHigherThan)
     }
 
+    override fun insertPage(ctx: EContext, name: String, page: Page) {
+        val childHashes = page.childHashes.fold(ByteArray(0)) { total, item -> total.plus(item) }
+        queryRunner.update(ctx.conn, cmdInsertPage(ctx, name), page.blockHeight, page.level, page.left, childHashes)
+    }
+
+    /**
+     * If we didn't prune the old one then we need to query the snapshot page
+     * at highest block height that less than or equal to specific height
+     */
+    override fun getPage(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page? {
+        val sql = """
+            SELECT child_hashes FROM ${tablePages(ctx, name)} 
+            WHERE block_height = (SELECT MAX(block_height) FROM ${tablePages(ctx, name)} 
+                                    WHERE block_height <= ? AND level = ? AND left_index = ?)
+            AND level = ? AND left_index = ?"""
+        val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height, level, left, level, left)
+        // if data size is not contain correct length then it regards to error
+        if (data == null || data.size % HASH_LENGTH != 0) return null
+        val length = data.size / HASH_LENGTH
+        val childHashes = Array(length) { ByteArray(HASH_LENGTH) }
+        for (i in 0 until length) {
+            val start = i * HASH_LENGTH
+            val end = start + HASH_LENGTH - 1
+            childHashes[i] = data.sliceArray(start..end)
+        }
+        return Page(height, level, left, childHashes)
+    }
+
+    override fun createPageTable(ctx: EContext, prefix: String) {
+        queryRunner.update(ctx.conn, cmdCreateTablePage(ctx, prefix))
+    }
 
     override fun createEventLeafTable(ctx: EContext, prefix: String) {
         queryRunner.update(ctx.conn, cmdCreateTableEvent(ctx, prefix))
     }
 
+
     // --- Init App ----
+    override fun createStateLeafTable(ctx: EContext, prefix: String) {
+        queryRunner.update(ctx.conn, cmdCreateTableState(ctx, prefix))
+    }
+
+    override fun createStateLeafTableIndex(ctx: EContext, prefix: String, index: Int) {
+        queryRunner.update(ctx.conn, cmdCreateIndexTableState(ctx, prefix, index))
+    }
+
+    override fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int {
+        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, name)} WHERE block_height <= ?"
+        return queryRunner.query(ctx.conn, sql, intRes, height)
+    }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int) {
         /**
@@ -442,8 +497,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                     queryRunner.update(connection, cmdCreateTableMustSyncUntil())
 
                     // Update db version to the latest
-                    val sql = "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'"
-                    queryRunner.update(connection, sql, expectedDbVersion)
+                    queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
                     logger.info("Database version has been updated to version: $expectedDbVersion")
                 }
 
@@ -451,7 +505,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             }
 
         } else {
-            logger.info("Meta table does not exist. Assume database does not exist and create it (version: $expectedDbVersion).")
+            logger.debug("Meta table does not exist. Assume database does not exist and create it (version: $expectedDbVersion).")
             queryRunner.update(connection, cmdCreateTableMeta())
             val sql = "INSERT INTO ${tableMeta()} (key, value) values ('version', ?)"
             queryRunner.update(connection, sql, expectedDbVersion)
@@ -506,6 +560,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     override fun getMaxChainId(ctx: EContext): Long? {
         val sql = "SELECT MAX(chain_iid) FROM ${tableBlockchains()}"
+        return queryRunner.query(ctx.conn, sql, nullableLongRes)
+    }
+
+    override fun getMaxSystemChainId(ctx: EContext): Long? {
+        val sql = "SELECT MAX(chain_iid) FROM ${tableBlockchains()} WHERE chain_iid < 100"
         return queryRunner.query(ctx.conn, sql, nullableLongRes)
     }
 
@@ -578,6 +637,25 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             ORDER BY height LIMIT 1
         """.trimIndent()
         return queryRunner.query(ctx.conn, sql, nullableLongRes, height)
+    }
+
+    override fun listConfigurations(ctx: EContext): List<Long> {
+        val sql = """
+            SELECT height 
+            FROM ${tableConfigurations(ctx)} 
+            ORDER BY height
+        """.trimIndent()
+        return queryRunner.query(ctx.conn, sql, mapListHandler).map { configuration ->
+            configuration["height"] as Long
+        }
+    }
+
+    override fun removeConfiguration(ctx: EContext, height: Long): Int {
+        val lastBlockHeight = getLastBlockHeight(ctx)
+        if (lastBlockHeight >= height) {
+            throw UserMistake("Cannot remove configuration at $height, since last block is already at $lastBlockHeight")
+        }
+        return queryRunner.update(ctx.conn, "DELETE FROM ${tableConfigurations(ctx)} WHERE height = ?", height)
     }
 
     override fun getConfigurationData(ctx: EContext, height: Long): ByteArray? {
@@ -676,7 +754,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return result.toTypedArray()
     }
 
-    override fun addBlockchainReplica(ctx: AppContext, brid: String, pubKey: String): Boolean {
+    override fun addBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubKey: PubKey): Boolean {
         if (existsBlockchainReplica(ctx, brid, pubKey)) {
             return false
         }
@@ -690,7 +768,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             ($TABLE_REPLICAS_FIELD_BRID, $TABLE_REPLICAS_FIELD_PUBKEY) 
             VALUES (?, (SELECT $TABLE_PEERINFOS_FIELD_PUBKEY FROM ${tablePeerinfos()} WHERE lower($TABLE_PEERINFOS_FIELD_PUBKEY) = lower(?)))
         """.trimIndent()
-        queryRunner.insert(ctx.conn, sql, ScalarHandler<String>(), brid, pubKey)
+        queryRunner.insert(ctx.conn, sql, ScalarHandler<String>(), brid.toHex(), pubKey.hex())
         return true
     }
 
@@ -716,18 +794,18 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return result.map { BlockchainRid.buildFromHex(it) }.toSet()
     }
 
-    override fun existsBlockchainReplica(ctx: AppContext, brid: String, pubkey: String): Boolean {
+    override fun existsBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubkey: PubKey): Boolean {
         val query = """
             SELECT count($TABLE_REPLICAS_FIELD_PUBKEY) 
             FROM ${tableBlockchainReplicas()}
-            WHERE $TABLE_REPLICAS_FIELD_BRID = '$brid' AND
-            lower($TABLE_REPLICAS_FIELD_PUBKEY) = lower('$pubkey') 
+            WHERE $TABLE_REPLICAS_FIELD_BRID = '${brid.toHex()}' AND
+            lower($TABLE_REPLICAS_FIELD_PUBKEY) = lower('${pubkey.hex()}') 
             """.trimIndent()
 
         return queryRunner.query(ctx.conn, query, ScalarHandler<Long>()) > 0
     }
 
-    override fun removeBlockchainReplica(ctx: AppContext, brid: String?, pubkey: String): Set<BlockchainRid> {
+    override fun removeBlockchainReplica(ctx: AppContext, brid: BlockchainRid?, pubKey: PubKey): Set<BlockchainRid> {
         val delete = """DELETE FROM ${tableBlockchainReplicas()} 
                 WHERE $TABLE_REPLICAS_FIELD_PUBKEY = ?"""
         val res = if (brid == null) {
@@ -735,14 +813,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 $delete
                 RETURNING *
             """.trimIndent()
-            queryRunner.query(ctx.conn, sql, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubkey)
+            queryRunner.query(ctx.conn, sql, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubKey.hex())
         } else {
             val sql = """
                 $delete
                 AND $TABLE_REPLICAS_FIELD_BRID = ?
                 RETURNING *
             """.trimIndent()
-            queryRunner.query(ctx.conn, sql, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubkey, brid)
+            queryRunner.query(ctx.conn, sql, ColumnListHandler(TABLE_REPLICAS_FIELD_BRID), pubKey.hex(), brid.toHex())
         }
         return res.map { BlockchainRid.buildFromHex(it) }.toSet()
     }

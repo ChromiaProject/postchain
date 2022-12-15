@@ -7,22 +7,23 @@ import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.SynchronizationInfrastructure
-import net.postchain.managed.DirectoryDataSource
 import net.postchain.debug.BlockchainProcessName
-import java.nio.file.Path
+import net.postchain.managed.DirectoryDataSource
+import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 
 interface MasterSyncInfra : SynchronizationInfrastructure {
 
     fun makeMasterBlockchainProcess(
-        processName: BlockchainProcessName,
-        chainId: Long,
-        blockchainRid: BlockchainRid,
-        dataSource: DirectoryDataSource,
-        targetContainer: PostchainContainer,
-        containerChainDir: Path
+            processName: BlockchainProcessName,
+            chainId: Long,
+            blockchainRid: BlockchainRid,
+            dataSource: DirectoryDataSource,
+            targetContainer: PostchainContainer,
     ): ContainerBlockchainProcess
 
     fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess)
+
+    fun registerAfterSubnodeCommitListener(afterSubnodeCommitListener: AfterSubnodeCommitListener)
 
 }
 

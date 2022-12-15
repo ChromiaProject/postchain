@@ -13,7 +13,7 @@ import net.postchain.common.toHex
  * Describes the blockchain
  *
  * @property blockchainRid is the external (real) key of the BC
- * @property nickname is a human readable name for this blockchain
+ * @property nickname is a human-readable name for this blockchain
  * @property chainId is the internal ID of the BC
  */
 data class BlockchainRelatedInfo(
@@ -141,7 +141,7 @@ class BlockchainDependencies(
     /**
      * @return the height of the dependency.
      *
-     * If there is no height yet we will assume 0.
+     * If there is no height yet, we will assume 0.
      * This was decided after discussion with Alex: we allow this to make testing easier, but in "real world" a
      * blockchain we depend on should have at least a genesis block.
      */
@@ -161,7 +161,7 @@ class BlockchainDependencies(
         return if (isEmpty()) {
             null
         } else {
-            internalArray.map { it ->
+            internalArray.map {
                 if (it.heightDependency != null) {
                     it.heightDependency.lastBlockRid
                 } else {

@@ -18,8 +18,9 @@ open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
         with(postchainContext) {
             val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-            val syncInfra = DefaultMasterSyncInfra(this, DefaultMasterConnectionManager(appConfig, containerNodeConfig), containerNodeConfig)
-            val apiInfra = DefaultMasterApiInfra(restApiConfig, nodeDiagnosticContext, containerNodeConfig)
+            val connectionManager = DefaultMasterConnectionManager(appConfig, containerNodeConfig)
+            val syncInfra = DefaultMasterSyncInfra(this, connectionManager, containerNodeConfig)
+            val apiInfra = DefaultMasterApiInfra(restApiConfig, nodeDiagnosticContext)
 
             return DefaultMasterBlockchainInfra(this, syncInfra, apiInfra)
         }
@@ -28,13 +29,16 @@ open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
     override fun makeProcessManager(
             postchainContext: PostchainContext,
             blockchainInfrastructure: BlockchainInfrastructure,
-            blockchainConfigurationProvider: BlockchainConfigurationProvider
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
     ): BlockchainProcessManager {
-
-        return ContainerManagedBlockchainProcessManager(
+        val blockchainProcessManager = ContainerManagedBlockchainProcessManager(
                 postchainContext,
                 blockchainInfrastructure as MasterBlockchainInfra,
-                blockchainConfigurationProvider
+                blockchainConfigurationProvider,
+                getProcessManagerExtensions(postchainContext)
         )
+        (blockchainInfrastructure as DefaultMasterBlockchainInfra).registerAfterSubnodeCommitListener(blockchainProcessManager)
+
+        return blockchainProcessManager
     }
 }

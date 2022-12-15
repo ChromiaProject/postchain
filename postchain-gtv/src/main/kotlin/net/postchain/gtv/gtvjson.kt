@@ -7,18 +7,26 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.gtv.GtvFactory.gtv
 import java.lang.reflect.Type
+import java.math.BigDecimal
+
+internal fun errorMsg(number: BigDecimal) = "Could not deserialize number '$number' to GtvInteger, valid numbers must be integers and be in range: [-2^63, (2^63)-1]"
 
 class GtvAdapter : JsonDeserializer<Gtv>, JsonSerializer<Gtv> {
 
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): Gtv {
         if (json.isJsonPrimitive) {
             val prim = json.asJsonPrimitive
-            if (prim.isBoolean)
-                return gtv(if (prim.asBoolean) 1L else 0L)
-            else if (prim.isNumber)
-                return gtv(prim.asLong)
-            else if (prim.isString)
-                return gtv(prim.asString)
+            return if (prim.isBoolean)
+                gtv(if (prim.asBoolean) 1L else 0L)
+            else if (prim.isNumber) {
+                val number = prim.asBigDecimal
+                try {
+                    gtv(number.longValueExact())
+                } catch (e: ArithmeticException) {
+                    throw ProgrammerMistake(errorMsg(number), e)
+                }
+            } else if (prim.isString)
+                gtv(prim.asString)
             else throw ProgrammerMistake("Can't deserialize JSON primitive")
         } else if (json.isJsonArray) {
             val arr = json.asJsonArray

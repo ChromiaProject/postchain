@@ -3,47 +3,83 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.*
+import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
+import com.github.ajalt.clikt.parameters.groups.required
+import com.github.ajalt.clikt.parameters.groups.single
+import com.github.ajalt.clikt.parameters.options.convert
+import com.github.ajalt.clikt.parameters.options.flag
+import com.github.ajalt.clikt.parameters.options.help
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
+import com.github.ajalt.clikt.parameters.options.validate
 import com.github.ajalt.clikt.parameters.types.long
-import net.postchain.base.data.DatabaseAccess
+import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
-import net.postchain.cli.util.*
+import net.postchain.cli.CommandAddConfiguration.Height.Absolute
+import net.postchain.cli.CommandAddConfiguration.Height.Relative
+import net.postchain.cli.util.SafeExecutor.runOnChain
+import net.postchain.cli.util.blockchainConfigOption
+import net.postchain.cli.util.chainIdOption
+import net.postchain.cli.util.forceOption
+import net.postchain.cli.util.nodeConfigOption
+import net.postchain.gtv.GtvFileReader
 
-class CommandAddConfiguration : CliktCommand(name = "add-configuration", help = "Adds a blockchain configuration. All signers in the new configuration must " +
-        "exist in the list of added peerInfos. Else flag --allow-unknown-signers must be set.") {
+class CommandAddConfiguration : CliktCommand(
+        name = "add-configuration",
+        help = "Adds a blockchain configuration. All signers in the new configuration must " +
+                "exist in the list of added peerInfos. Else flag --allow-unknown-signers must be set."
+) {
+
+    private enum class Height {
+        Absolute, Relative
+    }
 
     // TODO: Eliminate it later or reduce to DbConfig only
     private val nodeConfigFile by nodeConfigOption()
 
     private val chainId by chainIdOption().required()
 
-    private val height by option("-h", "--height", help = "Height of configuration").long().default(0)
+    private val height by mutuallyExclusiveOptions(
+            option("-h", "--height", help = "Height of configuration").long()
+                    .convert { Absolute to it }
+                    .validate {
+                        require(it.second > 0L) { "must be positive; use add-blockchain command to add configuration at height 0" }
+                    },
+            option("-fh", "--future-height", help = "Add a configuration this many blocks in the future. (Not compatible with --height)").long()
+                    .convert { Relative to it }
+                    .validate { require(it.second > 0L) { "must be positive" } }
+    ).single().required()
 
-    private val futureHeight by option("-fh", "--future-height", help = "Add a configuration this many blocks in the future. (Not compatible with --height)").long().default(0)
+    private val blockchainConfigFile by blockchainConfigOption().required()
 
-    private val blockchainConfigFile by blockchainConfigOption()
-
-    private val force by forceOption().help("Force the addition of blockchain configuration " +
-            "which already exists of specified chain-id at height")
+    private val force by forceOption().help("Force the addition of blockchain configuration which already exists of specified chain-id at height")
 
     private val allowUnknownSigners by option("-a", "--allow-unknown-signers", help = "Allow signers that are not in the list of peerInfos.").flag()
 
     override fun run() {
-        printCommandInfo()
-
-        if (height != 0L && futureHeight != 0L) {
-            throw IllegalArgumentException("Cannot use --height and --future at the same time")
-        }
-
-        val mode = if (force) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR
-        var heightToUse = height
-        if (futureHeight > 0) {
-            runStorageCommand(nodeConfigFile, chainId) {
-                heightToUse = DatabaseAccess.of(it).getLastBlockHeight(it) + futureHeight
+        val height0 = when (height.first) {
+            Absolute -> height.second
+            else -> height.second + runStorageCommand(nodeConfigFile, chainId) { ctx ->
+                BlockchainApi.getLastBlockHeight(ctx)
             }
         }
-        CliExecution.addConfiguration(nodeConfigFile!!, blockchainConfigFile!!, chainId!!, heightToUse, mode, allowUnknownSigners)
-        println("Configuration has been added successfully")
-    }
 
+        val gtv = try {
+            GtvFileReader.readFile(blockchainConfigFile)
+        } catch (e: Exception) {
+            println("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}")
+            return
+        }
+
+        runOnChain(nodeConfigFile, chainId) {
+            try {
+                CliExecution.addConfiguration(nodeConfigFile, gtv, chainId, height0, force, allowUnknownSigners)
+                println("Configuration has been added successfully")
+            } catch (e: CliException) {
+                println(e.message)
+            } catch (e: Exception) {
+                println("Can't not add configuration: ${e.message}")
+            }
+        }
+    }
 }

@@ -1,10 +1,15 @@
 package net.postchain.gtv.mapper
 
 import assertk.assert
+import assertk.assertions.containsAll
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import assertk.isContentEqualTo
+import net.postchain.common.BlockchainRid
+import net.postchain.common.types.RowId
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
@@ -16,6 +21,10 @@ import java.math.BigInteger
 data class Simple(@Name("key") val value: Long)
 
 data class BasicDict(@Name("dict") val simple: Simple)
+
+enum class SimpleEnum {
+    A, B
+}
 
 internal class GtvObjectMapperTest {
 
@@ -49,7 +58,7 @@ internal class GtvObjectMapperTest {
         val e = assertThrows<IllegalArgumentException> {
             GtvObjectMapper.fromGtv(gtv(mapOf()), SimpleNullable::class)
         }
-        assert(e.message).isEqualTo("Constructor for parameters [null] not found")
+        assert(e.message).isEqualTo("Constructor for ${SimpleNullable::class.simpleName} with parameters [null] not found")
     }
 
     @Test
@@ -64,17 +73,32 @@ internal class GtvObjectMapperTest {
         data class AllTypes(
                 @Name("string") val s: String,
                 @Name("long") val l: Long,
-                @Name("byte") val b: ByteArray // Do not run isEqualTo
+                @Name("enum") val e: SimpleEnum,
+                @Name("byte") val b: ByteArray, // Do not run isEqualTo
+                @Name("wbyte") val w: WrappedByteArray,
+                @Name("row") val r: RowId,
+                @Name("pubkey") val pk: PubKey,
+                @Name("blockchain_rid") val brid: BlockchainRid,
         )
 
         val actual = gtv(mapOf(
                 "string" to gtv("a"),
                 "long" to gtv(1),
-                "byte" to gtv("b".toByteArray())
+                "enum" to gtv("A"),
+                "byte" to gtv("b".toByteArray()),
+                "wbyte" to gtv("w".toByteArray()),
+                "row" to gtv(RowId(17).id),
+                "pubkey" to gtv(ByteArray(33)),
+                "blockchain_rid" to gtv(ByteArray(32))
         )).toObject<AllTypes>()
         assert(actual.l).isEqualTo(1L)
         assert(actual.s).isEqualTo("a")
+        assert(actual.e).isEqualTo(SimpleEnum.A)
         assert(actual.b).isContentEqualTo("b".toByteArray())
+        assert(actual.w).isEqualTo(WrappedByteArray("w".toByteArray()))
+        assert(actual.r).isEqualTo(RowId(17))
+        assert(actual.pk).isEqualTo(PubKey(ByteArray(33)))
+        assert(actual.brid).isEqualTo(BlockchainRid.ZERO_RID)
     }
 
     @Test
@@ -93,12 +117,19 @@ internal class GtvObjectMapperTest {
     }
 
     @Test
-    fun testListType() {
+    fun testCollectionTypes() {
         data class BasicWithList(@Name("list") val l: List<Long>) // Do not run isEqualTo
+        data class BasicWithSet(@Name("list") val l: Set<Long>) // Do not run isEqualTo
+        data class BasicWithCollection(@Name("list") val l: Collection<Long>) // Do not run isEqualTo
 
-        val actual = gtv(mapOf("list" to gtv(gtv(1))))
-                .toObject<BasicWithList>()
-        assert(actual.l).containsExactly(1L)
+        assert(gtv(mapOf("list" to gtv(gtv(1))))
+                .toObject<BasicWithList>().l).containsExactly(1L)
+
+        assert(gtv(mapOf("list" to gtv(gtv(1))))
+                .toObject<BasicWithCollection>().l).containsAll(1L)
+
+        assert(gtv(mapOf("list" to gtv(gtv(1))))
+                .toObject<BasicWithSet>().l).containsAll(1L)
     }
 
     @Test
@@ -297,5 +328,24 @@ internal class GtvObjectMapperTest {
     fun genericTypesWillThrow() {
         assertThrows<IllegalArgumentException> { gtv(mapOf("a" to gtv(1))).toObject<Map<String, Gtv>>() }
         assertThrows<IllegalArgumentException> { gtv(gtv(gtv(1))).toList<List<Long>>() }
+    }
+
+    @Test
+    fun unknownMap() {
+        data class ValidMapType(@Name("foo") val map: Map<String, Simple>)
+
+        val g = gtv(mapOf(
+                "foo" to gtv(mapOf(
+                        "any" to gtv(mapOf("key" to gtv(1)))
+                ))
+        ))
+
+        assert(g.toObject<ValidMapType>().map["any"]?.value).isEqualTo(1L)
+
+        data class WrongMapType(@Name("foo") val map: Map<Int, Simple>)
+        assertThrows<IllegalArgumentException> {
+            g.toObject<WrongMapType>()
+        }
+
     }
 }

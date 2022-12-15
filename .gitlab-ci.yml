@@ -5,6 +5,10 @@ image: maven:3.8.4-jdk-11
     when: always
     paths:
       - "**/*.log"
+    reports:
+      junit:
+        - "*/target/surefire-reports/TEST-*.xml"
+        - "*/target/failsafe-reports/TEST-*.xml"
     expire_in: 1 week
 
 .git_template: &git_setup |
@@ -14,6 +18,7 @@ image: maven:3.8.4-jdk-11
 
 stages:
   - build
+  - nightly-tests
   - deploy
   - release
 
@@ -25,7 +30,7 @@ deploy:
     - master
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly source:jar deploy
 
 build:
   extends: .setup
@@ -38,8 +43,24 @@ build:
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
 
+nightly-tests:
+  extends: .setup
+  stage: nightly-tests
+  except:
+    - dev
+    - master
+    - tags
+    - /^support\/.*$/
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify
+  when: manual
+
 release:
   stage: release
+  variables:
+    # Make a full clone. This is required, since otherwise we get an error regarding unrelated merge histories.
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
   script:
     - *git_setup
     - git fetch --tags
@@ -54,6 +75,10 @@ release:
 
 patch-start:
   stage: release
+  variables:
+    # Make a full clone. This is required, since otherwise we get an error regarding unrelated merge histories.
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
   script:
     - *git_setup
     - git checkout $CI_COMMIT_REF_NAME
@@ -66,6 +91,10 @@ patch-start:
 
 patch-finish:
   stage: release
+  variables:
+    # Make a full clone. This is required, since otherwise we get an error regarding unrelated merge histories.
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
   script:
     - *git_setup
     - git checkout $CI_COMMIT_REF_NAME

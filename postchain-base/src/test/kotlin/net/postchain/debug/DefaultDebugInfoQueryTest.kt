@@ -14,7 +14,7 @@ class DefaultDebugInfoQueryTest {
 
         // Actions
         val json = sut.queryDebugInfo(null)
-        val actual = JsonParser().parse(json).asJsonObject
+        val actual = JsonParser.parseString(json).asJsonObject
 
         // Asserts
         assertEquals(0, actual.size())
@@ -30,7 +30,7 @@ class DefaultDebugInfoQueryTest {
 
         // Actions
         val json = sut.queryDebugInfo(null)
-        val actual = JsonParser().parse(json).asJsonObject
+        val actual = JsonParser.parseString(json).asJsonObject
 
         // Asserts
         assertEquals(2, actual.size())
@@ -48,7 +48,7 @@ class DefaultDebugInfoQueryTest {
 
         // Actions
         val json = sut.queryDebugInfo("subquery")
-        val actual = JsonParser().parse(json).asJsonObject
+        val actual = JsonParser.parseString(json).asJsonObject
 
         // Asserts
         assertEquals(1, actual.size())
@@ -61,7 +61,7 @@ class DefaultDebugInfoQueryTest {
 
         // Actions
         val json = sut.queryDebugInfo(null)
-        val actual = JsonParser().parse(json).asJsonObject
+        val actual = JsonParser.parseString(json).asJsonObject
 
         // Asserts
         assertEquals(1, actual.size())

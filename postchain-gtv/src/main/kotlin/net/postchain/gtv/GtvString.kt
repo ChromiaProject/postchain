@@ -5,7 +5,7 @@ package net.postchain.gtv
 import com.beanit.jasn1.ber.types.string.BerUTF8String
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
-import net.postchain.gtv.messages.RawGtv
+import net.postchain.gtv.gtvmessages.RawGtv
 
 data class GtvString(val string: String) : GtvPrimitive() {
 

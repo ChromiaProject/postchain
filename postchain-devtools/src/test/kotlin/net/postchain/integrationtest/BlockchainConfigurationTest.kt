@@ -6,15 +6,18 @@ import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import net.postchain.common.BlockchainRid
 import net.postchain.configurations.GTXTestModule
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtx.data.GTXDataBuilder
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
+import net.postchain.gtx.GtxBuilder
 import org.apache.commons.lang3.RandomStringUtils
+import org.awaitility.Awaitility
 import org.junit.jupiter.api.Test
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 class BlockchainConfigurationTest : IntegrationTestSetup() {
@@ -26,25 +29,19 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
         val engine = node.getBlockchainInstance().blockchainEngine
 
         // blockchain_config_max_block_size.xml was set maxblocksize is 150 bytes and maxtransaction is 4
-        // the size of testtransaction is 40 bytes
-        // so we send 4 transactions (160bytes) which is over maxblocksize. Cnce we committed block, we expect 3 transactions inserted.
+        // the size of TestTransaction is 40 bytes,
+        // so we send 4 transactions (160bytes) which is over maxblocksize. Once we committed block, we expect 3 transactions inserted.
         for (i in 1..4) {
             engine.getTransactionQueue().enqueue(TestTransaction(i))
         }
-        // reason why we need to try catch is when block committed is over block size,
-        // it throws exception and could stop the test case, so the asserting was not reached.
-        try {
-           buildBlockAndCommit(node)
-        }  catch (e : Exception) {
 
+        buildBlockAndCommit(node)
+
+        Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
+            val height = getBestHeight(node)
+            val acceptedTxs = getTxRidsAtHeight(node, height)
+            assertEquals(3, acceptedTxs.size)
         }
-
-        // we need to sleep a bit (1s) to let the block committed accepted transactions.
-        Thread.sleep(1000)
-
-        val height = getBestHeight(node)
-        val acceptedTxs = getTxRidsAtHeight(node, height)
-        assertEquals(3, acceptedTxs.size)
     }
 
     @Test
@@ -71,12 +68,12 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
     }
 
     private fun buildTransaction(blockchainRid: BlockchainRid, value: String): GTXTransaction {
-        val builder = GTXDataBuilder(blockchainRid, arrayOf(KeyPairHelper.pubKey(0)), cryptoSystem)
         val factory = GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
-        builder.addOperation("gtx_test", arrayOf(GtvFactory.gtv(1L), GtvFactory.gtv(value)))
-        builder.finish()
-        builder.sign(cryptoSystem.buildSigMaker(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
+        val builder = GtxBuilder(blockchainRid, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
+                .addOperation("gtx_test", GtvFactory.gtv(1L), GtvFactory.gtv(value))
+                .finish()
+                .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))
 
-        return factory.build(builder.getGTXTransactionData())
+        return factory.build(builder.buildGtx())
     }
 }

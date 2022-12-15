@@ -12,11 +12,11 @@ import net.postchain.base.BaseBlockQueries
 import net.postchain.base.ConfirmationProof
 import net.postchain.common.BlockchainRid
 import net.postchain.common.TimeLog
-import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus.*
+import net.postchain.common.wrap
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
@@ -25,17 +25,19 @@ import net.postchain.gtv.Gtv
 import net.postchain.metrics.PostchainModelMetrics
 
 open class PostchainModel(
-    final override val chainIID: Long,
-    val txQueue: TransactionQueue,
-    private val transactionFactory: TransactionFactory,
-    val blockQueries: BaseBlockQueries,
-    private val debugInfoQuery: DebugInfoQuery,
-    blockchainRid: BlockchainRid
+        final override val chainIID: Long,
+        val txQueue: TransactionQueue,
+        private val transactionFactory: TransactionFactory,
+        val blockQueries: BaseBlockQueries,
+        private val debugInfoQuery: DebugInfoQuery,
+        blockchainRid: BlockchainRid
 ) : Model {
 
     companion object : KLogging()
 
     private val metrics = PostchainModelMetrics(chainIID, blockchainRid)
+
+    override var live = true
 
     override fun postTransaction(tx: ApiTx) {
         val sample = Timer.start(Metrics.globalRegistry)
@@ -53,7 +55,7 @@ open class PostchainModel(
         when (txQueue.enqueue(decodedTransaction)) {
             EnqueueTransactionResult.FULL -> {
                 sample.stop(metrics.fullTransactions)
-                throw OverloadedException("Transaction queue is full")
+                throw UnavailableException("Transaction queue is full")
             }
             EnqueueTransactionResult.INVALID -> {
                 sample.stop(metrics.invalidTransactions)
@@ -88,12 +90,17 @@ open class PostchainModel(
         return blockQueries.getTransactionsInfo(beforeTime, limit).get()
     }
 
-    override fun getBlocks(beforeTime: Long, limit: Int, partialTx: Boolean): List<BlockDetail> {
-        return blockQueries.getBlocks(beforeTime, limit, partialTx).get()
+    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> {
+        return blockQueries.getBlocks(beforeTime, limit, txHashesOnly).get()
     }
 
-    override fun getBlock(blockRID: ByteArray, partialTx: Boolean): BlockDetail? {
-        return blockQueries.getBlock(blockRID, partialTx).get()
+    override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail? {
+        return blockQueries.getBlock(blockRID, txHashesOnly).get()
+    }
+
+    override fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail? {
+        val blockRid = blockQueries.getBlockRid(height).get()
+        return blockRid?.let { getBlock(it, txHashesOnly) }
     }
 
     override fun getConfirmationProof(txRID: TxRID): ConfirmationProof? {
@@ -109,7 +116,7 @@ open class PostchainModel(
         }
 
         return if (status == REJECTED) {
-            val exception = txQueue.getRejectionReason(txRID.bytes.byteArrayKeyOf())
+            val exception = txQueue.getRejectionReason(txRID.bytes.wrap())
             ApiStatus(status, exception?.message)
         } else {
             ApiStatus(status)

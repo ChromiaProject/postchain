@@ -2,29 +2,51 @@
 
 package net.postchain.config.node
 
-import net.postchain.base.*
+import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.peerId
+import net.postchain.base.withReadConnection
+import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
+import net.postchain.core.Storage
 
-/**
- *
- */
 open class ManualNodeConfigurationProvider(
         protected val appConfig: AppConfig,
         createStorage: (AppConfig) -> Storage
 ) : NodeConfigurationProvider {
 
-    private val storage = createStorage(appConfig)
+    protected val storage = createStorage(appConfig).also { setupMyself(it) }
+
+    private fun setupMyself(storage: Storage) {
+        val hasOwnPeer = storage.withReadConnection {
+            DatabaseAccess.of(it).findPeerInfo(it, null, null, appConfig.pubKey).isNotEmpty()
+        }
+        if (!hasOwnPeer) {
+            storage.withWriteConnection {
+                DatabaseAccess.of(it).addPeerInfo(it, "localhost", appConfig.port, appConfig.pubKey)
+            }
+        }
+        if (appConfig.containsKey("genesis.pubkey")) {
+            require(appConfig.containsKey("genesis.host")) { "Node configuration must contain genesis.host if genesis.pubkey is supplied" }
+            require(appConfig.containsKey("genesis.port")) { "Node configuration must contain genesis.port if genesis.pubkey if supplied" }
+            val hasGenesisPeer = storage.withReadConnection {
+                DatabaseAccess.of(it).findPeerInfo(it, null, null, appConfig.getString("genesis.pubkey")).isNotEmpty()
+            }
+            if (!hasGenesisPeer) {
+                storage.withReadConnection {
+                    DatabaseAccess.of(it).addPeerInfo(it, appConfig.getString("genesis.host"), appConfig.getInt("genesis.port"), appConfig.getString("genesis.pubkey"))
+                }
+            }
+        }
+    }
 
     override fun getConfiguration(): NodeConfig {
         return object : NodeConfig(appConfig) {
-            override val peerInfoMap = getPeerInfoCollection(appConfig)
-                    .associateBy(PeerInfo::peerId)
+            override val peerInfoMap = getPeerInfoCollection(appConfig).associateBy(PeerInfo::peerId)
             override val blockchainReplicaNodes = getBlockchainReplicaCollection(appConfig)
-            override val blockchainsToReplicate: Set<BlockchainRid> = getBlockchainsToReplicate(appConfig)
-            override val mustSyncUntilHeight: Map<Long, Long> = getSyncUntilHeight(appConfig)
+            override val mustSyncUntilHeight = getSyncUntilHeight(appConfig)
         }
     }
 
@@ -48,12 +70,6 @@ open class ManualNodeConfigurationProvider(
     open fun getBlockchainReplicaCollection(appConfig: AppConfig): Map<BlockchainRid, List<NodeRid>> {
         return storage.withReadConnection { ctx ->
             DatabaseAccess.of(ctx).getBlockchainReplicaCollection(ctx)
-        }
-    }
-
-    open fun getBlockchainsToReplicate(appConfig: AppConfig): Set<BlockchainRid> {
-        return storage.withReadConnection {
-            ctx -> DatabaseAccess.of(ctx).getBlockchainsToReplicate(ctx, appConfig.pubKey)
         }
     }
 

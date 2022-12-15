@@ -1,10 +1,13 @@
 package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
+import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.core.NodeRid
+import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockQueries
 import net.postchain.ebft.message.*
 import net.postchain.network.CommunicationManager
-import net.postchain.core.NodeRid
+import net.postchain.network.MAX_PAYLOAD_SIZE
 
 abstract class Messaging(val blockQueries: BlockQueries, val communicationManager: CommunicationManager<EbftMessage>) {
     companion object: KLogging()
@@ -35,8 +38,39 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
             logger.debug{ "No block at height $height, as requested by $peerId" }
             return
         }
-        val packet = CompleteBlock(BlockData(blockData.header.rawData, blockData.transactions), height, blockData.witness.getRawData())
+        val packet = CompleteBlock.buildFromBlockDataWithWitness(height, blockData)
         communicationManager.sendPacket(packet, peerId)
+    }
+
+    /**
+     * Send message to node including the block at [startAtHeight] and onwards (max 10). This is a response to the [GetBlockRange] request.
+     *
+     * Rules:
+     * - Even if we don't find any block we still send a package back
+     * - If we have more blocks but reach the size limit, we don't add more blocks but set the "isFull" flag.
+     * - We never send more than 10 blocks
+     *
+     * @param peerId NodeRid of receiving node
+     * @param startAtHeight requested block height to start from
+     */
+    fun sendBlockRangeFromHeight(peerId: NodeRid, startAtHeight: Long, myHeight: Long) {
+        logger.trace{ "GetBlockRange from peer $peerId , start at height $startAtHeight, myHeight is $myHeight" }
+
+        val blocks = mutableListOf<CompleteBlock>()
+        val allBlocksFit = BlockPacker.packBlockRange(
+            peerId,
+            startAtHeight,
+            myHeight,
+            ::simpleGetBlockAtHeight,
+            CompleteBlock::buildFromBlockDataWithWitness,
+            blocks)
+        val packet = BlockRange(startAtHeight, !allBlocksFit, blocks.toList())
+        communicationManager.sendPacket(packet, peerId)
+    }
+
+    // Just a wrapper
+    private fun simpleGetBlockAtHeight(height: Long): BlockDataWithWitness? {
+        return blockQueries.getBlockAtHeight(height).get()
     }
 
     fun sendBlockHeaderAndBlock(peerID: NodeRid, requestedHeight: Long, myHeight: Long) {
@@ -53,7 +87,8 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
                 sendHeader(peerID, tipHeader.header, tipHeader.witness, tipHeight, requestedHeight)
                 return
             }
-            val block = blockQueries.getBlockAtHeight(myHeight, false).get()!!
+            val block = blockQueries.getBlockAtHeight(myHeight, false).get() ?:
+                throw ProgrammerMistake("Block at height: $myHeight doesn't exist.")
             val h = sendHeader(peerID, block.header.rawData, block.witness.getRawData(), myHeight, requestedHeight)
             tipHeader = h
             tipHeight = myHeight

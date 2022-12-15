@@ -2,16 +2,18 @@
 
 package net.postchain.common
 
-import java.net.ServerSocket
+import net.postchain.common.types.WrappedByteArray
 
 private val HEX_CHARS = "0123456789ABCDEF"
+
+fun String.hexStringToWrappedByteArray() = WrappedByteArray(hexStringToByteArray())
 
 fun String.hexStringToByteArray(): ByteArray {
     require(length % 2 == 0) { "Invalid hex string: length is not an even number" }
 
     val result = ByteArray(length / 2)
 
-    for (i in 0 until length step 2) {
+    for (i in indices step 2) {
         val firstIndex = HEX_CHARS.indexOf(this[i], ignoreCase = true)
         require(firstIndex != -1) { "Char ${this[i]} is not a hex digit" }
 
@@ -42,12 +44,4 @@ fun ByteArray.toHex(): String {
     return result.toString()
 }
 
-object Utils {
-
-    fun findFreePort(): Int {
-        return ServerSocket(0).use {
-            it.reuseAddress = true
-            it.localPort
-        }
-    }
-}
+fun ByteArray.wrap() = WrappedByteArray(this)

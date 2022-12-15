@@ -45,6 +45,7 @@
                     <string>net.postchain.integrationtest.reconfiguration.DummyModule2</string>
                     <string>net.postchain.configurations.GTXTestModule</string>
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                    <string>net.postchain.gtx.StandardOpsGTXModule</string>
                 </array>
             </entry>
         </dict>

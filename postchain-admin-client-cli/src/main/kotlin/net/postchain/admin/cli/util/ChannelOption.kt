@@ -8,24 +8,24 @@ import io.grpc.ChannelCredentials
 import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.TlsChannelCredentials
-import net.postchain.server.service.DebugServiceGrpc
-import net.postchain.server.service.PeerServiceGrpc
-import net.postchain.server.service.PostchainServiceGrpc
+import net.postchain.server.grpc.DebugServiceGrpc
+import net.postchain.server.grpc.PeerServiceGrpc
+import net.postchain.server.grpc.PostchainServiceGrpc
 
 fun CliktCommand.channelOption() = option("-t", "--target", envvar = "POSTCHAIN_TARGET", help = "Target path for command. On the form host:port")
     .convert {
-        val sslOptions = currentContext.findObject<SslConfig>()
-        val channelCredentials = if (sslOptions != null && sslOptions.enabled) {
-            buildTlsCredentials(sslOptions)
+        val tlsOptions = currentContext.findObject<TlsConfig>()
+        val channelCredentials = if (tlsOptions != null && tlsOptions.enabled) {
+            buildTlsCredentials(tlsOptions)
         } else {
             InsecureChannelCredentials.create()
         }
         Grpc.newChannelBuilder(it, channelCredentials).build()
     }
 
-fun buildTlsCredentials(sslOptions: SslConfig): ChannelCredentials {
-    return if (sslOptions.certificateFile != null) {
-        TlsChannelCredentials.newBuilder().trustManager(sslOptions.certificateFile).build()
+fun buildTlsCredentials(tlsOptions: TlsConfig): ChannelCredentials {
+    return if (tlsOptions.certificateFile != null) {
+        TlsChannelCredentials.newBuilder().trustManager(tlsOptions.certificateFile).build()
     } else {
         TlsChannelCredentials.create()
     }

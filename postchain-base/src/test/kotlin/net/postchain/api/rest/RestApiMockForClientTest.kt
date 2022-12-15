@@ -50,6 +50,7 @@ class RestApiMockForClientManual {
     class MockModel : Model {
         override val chainIID: Long
             get() = 5L
+        override var live = true
         private val blockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a1"
         val statusUnknown = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         val statusRejected = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -147,14 +148,16 @@ class RestApiMockForClientManual {
 
         override fun nodeQuery(subQuery: String): String = TODO()
 
-        override fun getBlock(blockRID: ByteArray, partialTx: Boolean): BlockDetail? {
+        override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail? {
             return (blocks.filter { it.rid.contentEquals(blockRID) }).getOrNull(0)
         }
 
-        override fun getBlocks(blockTime: Long, limit: Int, partialTx: Boolean): List<BlockDetail> {
-            var queryBlocks = blocks.sortedBy { blockDetail -> blockDetail.height }
-            return blocks.filter { blockDetail -> blockDetail.timestamp < blockTime }.subList(0, limit)
+        override fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail? {
+            TODO("Not yet implemented")
         }
+
+        override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> =
+                blocks.filter { blockDetail -> blockDetail.timestamp < beforeTime }.subList(0, limit)
 
         override fun getTransactionInfo(txRID: TxRID): TransactionInfoExt {
             val block = blocks.filter { block -> block.transactions.filter { tx -> cryptoSystem.digest(tx.data!!).contentEquals(txRID.bytes) }.size > 0 }[0]

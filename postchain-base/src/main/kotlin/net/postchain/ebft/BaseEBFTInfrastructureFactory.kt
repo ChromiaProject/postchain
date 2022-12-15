@@ -12,8 +12,8 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
+import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.InfrastructureFactory
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.peer.DefaultPeerConnectionManager
 
@@ -22,8 +22,7 @@ open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
     override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager {
         return DefaultPeerConnectionManager(
                 EbftPacketEncoderFactory(),
-                EbftPacketDecoderFactory(),
-                Secp256K1CryptoSystem()
+                EbftPacketDecoderFactory()
         )
     }
 
@@ -45,6 +44,8 @@ open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider
     ): BlockchainProcessManager {
-        return BaseBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider)
+        return BaseBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider, getProcessManagerExtensions(postchainContext))
     }
+
+    protected open fun getProcessManagerExtensions(postchainContext: PostchainContext): List<BlockchainProcessManagerExtension> = listOf()
 }

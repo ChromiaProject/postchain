@@ -3,16 +3,17 @@
 package net.postchain.gtx.gtxml
 
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.byteArrayKeyOf
+import net.postchain.common.wrap
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.crypto.devtools.MockCryptoSystem
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
-import net.postchain.gtx.data.GTXTransactionBodyData
-import net.postchain.gtx.data.GTXTransactionData
-import net.postchain.gtx.data.OpData
+import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxBody
+import net.postchain.gtx.GtxOp
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -28,22 +29,21 @@ class GTXMLTransactionParserAutoSignTest {
 
         val pubKey0 = pubKey(0)
         val privKey0 = privKey(0)
-        val sigMaker0 = MockCryptoSystem().buildSigMaker(pubKey0, privKey0)
+        val sigMaker0 = MockCryptoSystem().buildSigMaker(KeyPair(pubKey0, privKey0))
 
         val pubKey1 = pubKey(1)
         val privKey1 = privKey(1)
-        val sigMaker1 = MockCryptoSystem().buildSigMaker(pubKey1, privKey1)
+        val sigMaker1 = MockCryptoSystem().buildSigMaker(KeyPair(pubKey1, privKey1))
 
-        val expectedBody = GTXTransactionBodyData(
+        val expectedBody = GtxBody(
                 blockchainRID,
                 arrayOf(
-                        OpData("ft_transfer",
-                                arrayOf(
+                        GtxOp("ft_transfer",
                                         GtvString("hello"),
                                         GtvString("hello2"),
                                         GtvString("hello3"),
                                         GtvInteger(42),
-                                        GtvInteger(43)))
+                                        GtvInteger(43))
                 ),
                 arrayOf(
                         pubKey0,
@@ -53,19 +53,16 @@ class GTXMLTransactionParserAutoSignTest {
                 )
         )
 
-        val expectedTx = GTXTransactionData( expectedBody,
+        // Auto-signing
+        val merkleRoot = expectedBody.calculateTxRid(mockCalculator)
+        val expectedTx = Gtx( expectedBody,
                 arrayOf(
-                        byteArrayOf(), // empty signature, will calculated below
+                        sigMaker0.signDigest(merkleRoot).data, // Auto signed
                         byteArrayOf(0x34, 0x56, 0x78, 0x54),
                         byteArrayOf(0x34, 0x56, 0x78, 0x55),
-                        byteArrayOf() // empty signature, will calculated below
+                        sigMaker1.signDigest(merkleRoot).data // Auto signed
                 )
         )
-
-        // Auto-signing
-        val merkleRoot = expectedBody.calculateRID(mockCalculator)
-        expectedTx.signatures[0] = sigMaker0.signDigest(merkleRoot).data
-        expectedTx.signatures[3] = sigMaker1.signDigest(merkleRoot).data
 
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(
             xml,
@@ -74,8 +71,8 @@ class GTXMLTransactionParserAutoSignTest {
                 mapOf(),
                 true,
                 mapOf(
-                    pubKey0.byteArrayKeyOf() to sigMaker0,
-                    pubKey1.byteArrayKeyOf() to sigMaker1
+                        pubKey0.wrap() to sigMaker0,
+                        pubKey1.wrap() to sigMaker1
                 )
             ),
             MockCryptoSystem()
@@ -104,16 +101,15 @@ class GTXMLTransactionParserAutoSignTest {
         val pubKey0 = pubKey(0)
         val pubKey1 = pubKey(1)
 
-        val expectedBody = GTXTransactionBodyData(
+        val expectedBody = GtxBody(
                 blockchainRID,
                 arrayOf(
-                        OpData("ft_transfer",
-                                arrayOf(
+                        GtxOp("ft_transfer",
                                         GtvString("hello"),
                                         GtvString("hello2"),
                                         GtvString("hello3"),
                                         GtvInteger(42),
-                                        GtvInteger(43)))
+                                        GtvInteger(43))
                 ),
                 arrayOf(
                         pubKey0,
@@ -123,7 +119,7 @@ class GTXMLTransactionParserAutoSignTest {
                 )
         )
 
-        val expectedTx = GTXTransactionData(
+        val expectedTx = Gtx(
                 expectedBody,
                 arrayOf(
                         byteArrayOf(), // empty signature
@@ -150,34 +146,32 @@ class GTXMLTransactionParserAutoSignTest {
 
         val pubKey0 = pubKey(0)
         val privKey0 = privKey(0)
-        val sigMaker0 = MockCryptoSystem().buildSigMaker(pubKey0, privKey0)
+        val sigMaker0 = MockCryptoSystem().buildSigMaker(KeyPair(pubKey0, privKey0))
 
         val pubKey1 = pubKey(1)
         val privKey1 = privKey(1)
-        val sigMaker1 = MockCryptoSystem().buildSigMaker(pubKey1, privKey1)
+        val sigMaker1 = MockCryptoSystem().buildSigMaker(KeyPair(pubKey1, privKey1))
 
-        val expectedBody = GTXTransactionBodyData(
+        val expectedBody = GtxBody(
                 blockchainRID,
                 arrayOf(
-                        OpData("ft_transfer",
-                                arrayOf(
+                        GtxOp("ft_transfer",
                                         GtvString("hello"),
                                         GtvString("hello2"),
                                         GtvString("hello3"),
                                         GtvInteger(42),
-                                        GtvInteger(43)))
+                                        GtvInteger(43))
                 ),
                 arrayOf(pubKey0, pubKey1)
         )
 
-        val expectedTx = GTXTransactionData(expectedBody,
-                arrayOf(byteArrayOf(), byteArrayOf()) // empty signatures, will calculated below
+        val merkleRoot = expectedBody.calculateTxRid(mockCalculator)
+        val expectedTx = Gtx(expectedBody,
+                    arrayOf(
+                        sigMaker0.signDigest(merkleRoot).data,
+                        sigMaker1.signDigest(merkleRoot).data
+                    )
                 )
-
-        // Auto-signing
-        val merkleRoot = expectedBody.calculateRID(mockCalculator)
-        expectedTx.signatures[0] = sigMaker0.signDigest(merkleRoot).data
-        expectedTx.signatures[1] = sigMaker1.signDigest(merkleRoot).data
 
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(
             xml,
@@ -186,8 +180,8 @@ class GTXMLTransactionParserAutoSignTest {
                 mapOf(),
                 true,
                 mapOf(
-                    pubKey0.byteArrayKeyOf() to sigMaker0,
-                    pubKey1.byteArrayKeyOf() to sigMaker1
+                        pubKey0.wrap() to sigMaker0,
+                        pubKey1.wrap() to sigMaker1
                 )
             ),
             MockCryptoSystem()

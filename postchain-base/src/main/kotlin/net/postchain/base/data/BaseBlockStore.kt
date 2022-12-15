@@ -3,14 +3,15 @@
 package net.postchain.base.data
 
 import mu.KLogging
-import net.postchain.base.*
+import net.postchain.base.BaseTxEContext
+import net.postchain.base.ConfirmationProofMaterial
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.*
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.core.block.*
 
 /**
@@ -100,15 +101,15 @@ class BaseBlockStore : BlockStore {
         return DatabaseAccess.of(ctx).getWitnessData(ctx, blockRID)
     }
 
-    override fun getBlock(ctx: EContext, blockRID: ByteArray, hashesOnly: Boolean): BlockDetail? {
+    override fun getBlock(ctx: EContext, blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail? {
         val db = DatabaseAccess.of(ctx)
         val blockInfo = db.getBlock(ctx, blockRID) ?: return null
-        val txDetails = db.getBlockTransactions(ctx, blockInfo.blockRid, hashesOnly)
+        val txDetails = db.getBlockTransactions(ctx, blockInfo.blockRid, txHashesOnly)
         // TODO can I do this on the node or is it too computational expensive
-        val blockHeaderDecoded = BaseBlockHeader(blockInfo.blockHeader, Secp256K1CryptoSystem())
+        val headerRec = BlockHeaderData.fromBinary(blockInfo.blockHeader)
         return BlockDetail(
                 blockInfo.blockRid,
-                blockHeaderDecoded.prevBlockRID,
+                headerRec.getPreviousBlockRid(),
                 blockInfo.blockHeader,
                 blockInfo.blockHeight,
                 txDetails,
@@ -116,18 +117,17 @@ class BaseBlockStore : BlockStore {
                 blockInfo.timestamp)
     }
 
-    override fun getBlocks(ctx: EContext, blockTime: Long, limit: Int, hashesOnly: Boolean): List<BlockDetail> {
+    override fun getBlocks(ctx: EContext, beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> {
         val db = DatabaseAccess.of(ctx)
-        val blocksInfo = db.getBlocks(ctx, blockTime, limit)
+        val blocksInfo = db.getBlocks(ctx, beforeTime, limit)
         return blocksInfo.map { blockInfo ->
-            val txs = db.getBlockTransactions(ctx, blockInfo.blockRid, hashesOnly)
+            val txs = db.getBlockTransactions(ctx, blockInfo.blockRid, txHashesOnly)
 
             // Decode block header
-            val blockHeaderDecoded = BaseBlockHeader(blockInfo.blockHeader, Secp256K1CryptoSystem())
-
+            val headerRec = BlockHeaderData.fromBinary(blockInfo.blockHeader)
             BlockDetail(
                     blockInfo.blockRid,
-                    blockHeaderDecoded.prevBlockRID,
+                    headerRec.getPreviousBlockRid(),
                     blockInfo.blockHeader,
                     blockInfo.blockHeight,
                     txs,
@@ -156,8 +156,8 @@ class BaseBlockStore : BlockStore {
         val db = DatabaseAccess.of(ctx)
         val block = db.getBlockInfo(ctx, txRID)
         return ConfirmationProofMaterial(
-                ByteArrayKey(db.getTxHash(ctx, txRID)),
-                db.getBlockTxHashes(ctx, block.blockIid).map { ByteArrayKey(it) }.toTypedArray(),
+                WrappedByteArray(db.getTxHash(ctx, txRID)),
+                db.getBlockTxHashes(ctx, block.blockIid).map { WrappedByteArray(it) }.toTypedArray(),
                 block.blockHeader,
                 block.witness
         )

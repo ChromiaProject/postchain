@@ -4,7 +4,7 @@ package net.postchain.ebft.worker
 
 import mu.KLogging
 import net.postchain.base.NetworkAwareTxQueue
-import net.postchain.core.NodeStateTracker
+import net.postchain.ebft.NodeStateTracker
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
@@ -70,10 +70,8 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     fun isInFastSyncMode() = syncManager.isInFastSync()
 
     override fun action() {
-        if (workerContext.awaitPermissionToProcessMessages(getLastBlockTimestamp()) { !isProcessRunning() }) {
-            syncManager.update()
-            sleep(20)
-        }
+        syncManager.update()
+        sleep(20)
     }
 
     override fun cleanup() {
@@ -87,15 +85,5 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
                 DiagnosticProperty.BLOCKCHAIN_NODE_TYPE to { DpNodeType.NODE_TYPE_VALIDATOR.prettyName },
                 DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT to syncManager::getHeight
         ))
-    }
-
-    private fun getLastBlockTimestamp(): Long {
-        /**
-         * NB: The field blockManager.lastBlockTimestamp will be set to non-null value
-         * after the first block db operation. So we read lastBlockTimestamp value from db
-         * until blockManager.lastBlockTimestamp is non-null.
-         */
-        return blockManager.lastBlockTimestamp
-                ?: workerContext.engine.getBlockQueries().getLastBlockTimestamp().get()
     }
 }

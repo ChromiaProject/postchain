@@ -9,7 +9,6 @@ import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
@@ -21,24 +20,21 @@ class DefaultPeerCommunicationManager1PeerIT {
     private val cryptoSystem = Secp256K1CryptoSystem()
     private val blockchainRid = BlockchainRid.buildRepeat(0)
 
-    private val privKey = cryptoSystem.getRandomBytes(32)
-    private val pubKey = secp256k1_derivePubKey(privKey)
+    private val keyPair = cryptoSystem.generateKeyPair()
+    private val keyPair2 = cryptoSystem.generateKeyPair()
 
-    private val privKey2 = cryptoSystem.getRandomBytes(32)
-    private val pubKey2 = secp256k1_derivePubKey(privKey2)
-
-    private val peerInfo = peerInfoFromPublicKey(pubKey)
+    private val peerInfo = peerInfoFromPublicKey(keyPair.pubKey.data)
 
     private fun startTestContext(peers: Array<PeerInfo>, pubKey: ByteArray): EbftIntegrationTestContext {
         val peerConfiguration = BasePeerCommConfiguration.build(
-                peers, cryptoSystem, privKey, pubKey)
+                peers, cryptoSystem, keyPair.privKey.data, pubKey)
 
         return EbftIntegrationTestContext(peerConfiguration, blockchainRid)
     }
 
     @Test
     fun singlePeer_launched_successfully() {
-        startTestContext(arrayOf(peerInfo), pubKey)
+        startTestContext(arrayOf(peerInfo), keyPair.pubKey.data)
                 .use { context ->
                     context.communicationManager.init()
 
@@ -54,7 +50,7 @@ class DefaultPeerCommunicationManager1PeerIT {
     @Test
     fun singlePeer_launching_with_empty_peers_will_result_in_exception() {
         assertThrows<UserMistake> {
-            startTestContext(arrayOf(), pubKey)
+            startTestContext(arrayOf(), keyPair.pubKey.data)
                 .use {
                     it.communicationManager.init()
                 }
@@ -64,7 +60,7 @@ class DefaultPeerCommunicationManager1PeerIT {
     @Test
     fun singlePeer_launching_with_wrong_pubkey_will_result_in_exception() {
         assertThrows<UserMistake> {
-            startTestContext(arrayOf(peerInfo), pubKey2)
+            startTestContext(arrayOf(peerInfo), keyPair2.pubKey.data)
                 .use {
                     it.communicationManager.init()
                 }

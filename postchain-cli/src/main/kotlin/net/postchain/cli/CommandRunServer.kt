@@ -8,13 +8,16 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
+import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
 import mu.KLogging
-import net.postchain.cli.util.*
+import net.postchain.cli.util.TlsOptions
+import net.postchain.cli.util.debugOption
+import net.postchain.cli.util.nodeConfigOption
 import net.postchain.config.app.AppConfig
 import net.postchain.server.PostchainServer
 import net.postchain.server.config.PostchainServerConfig
-import net.postchain.server.config.SslConfig
+import net.postchain.server.config.TlsConfig
 
 class CommandRunServer : CliktCommand(name = "run-server", help = "Start postchain server") {
 
@@ -24,24 +27,23 @@ class CommandRunServer : CliktCommand(name = "run-server", help = "Start postcha
 
     private val debug by debugOption()
 
-    private val port by portOption().help("Port for the server").default(50051)
+    private val port by option("-p", "--port", envvar = "POSTCHAIN_SERVER_PORT", help = "Port for the server")
+            .int().default(PostchainServerConfig.DEFAULT_RPC_SERVER_PORT)
 
     private val activeChains by option("--initial-chain-ids", "-c", envvar = "POSTCHAIN_INITIAL_CHAIN_IDS")
-        .help("Chain IDs that will be started directly")
-        .long().split(",")
+            .help("Chain IDs that will be started directly")
+            .long().split(",")
 
-    private val sslOptions by SslOptions().cooccurring()
+    private val tlsOptions by TlsOptions().cooccurring()
 
     override fun run() {
-        printCommandInfo()
-
-        val serverConfig = sslOptions?.let {
-            PostchainServerConfig(port, SslConfig(it.certChainFile, it.privateKeyFile))
+        val serverConfig = tlsOptions?.let {
+            PostchainServerConfig(port, TlsConfig(it.certChainFile, it.privateKeyFile))
         } ?: PostchainServerConfig(port)
-        PostchainServer(AppConfig.fromPropertiesFile(nodeConfigFile), false, debug, serverConfig)
-            .apply {
-                start(activeChains)
-                blockUntilShutdown()
-            }
+        PostchainServer(AppConfig.fromPropertiesFile(nodeConfigFile, debug), false, debug, serverConfig)
+                .apply {
+                    start(activeChains)
+                    blockUntilShutdown()
+                }
     }
 }

@@ -1,7 +1,7 @@
+package net.postchain.gtx
+
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
-import net.postchain.gtx.GTXOperation
-import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.data.ExtOpData
 
 /**
@@ -9,7 +9,7 @@ import net.postchain.gtx.data.ExtOpData
  * This module was created to cope with incompatibilities in old blockchains that had
  * erroneous nops in them.
  */
-class GtxPermissiveNop(u: Unit, opData: ExtOpData) : GTXOperation(opData) {
+class GtxPermissiveNop(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GTXOperation(opData) {
     override fun apply(ctx: TxEContext): Boolean = true
 
     override fun isCorrect(): Boolean = true

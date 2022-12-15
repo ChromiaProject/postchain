@@ -1,115 +1,60 @@
 package net.postchain.server.service
 
-import io.grpc.Status
-import io.grpc.stub.StreamObserver
 import net.postchain.PostchainNode
-import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.data.DependenciesValidator
+import net.postchain.api.internal.BlockchainApi
+import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
-import net.postchain.gtv.GtvDecoder
-import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.common.BlockchainRid
+import net.postchain.core.BadDataMistake
+import net.postchain.crypto.PubKey
+import net.postchain.gtv.Gtv
 
-class PostchainService(private val postchainNode: PostchainNode) : PostchainServiceGrpc.PostchainServiceImplBase() {
+class PostchainService(private val postchainNode: PostchainNode) {
+    fun startBlockchain(chainId: Long): BlockchainRid = postchainNode.startBlockchain(chainId)
 
-    override fun startBlockchain(
-        request: StartBlockchainRequest?,
-        responseObserver: StreamObserver<StartBlockchainReply>?
-    ) {
-        val brid = postchainNode.startBlockchain(request!!.chainId)
-        if (brid == null) {
-            responseObserver?.onError(Status.CANCELLED.withDescription("Blockchain with id ${request.chainId} not found in db.").asRuntimeException())
-        } else {
-            responseObserver?.onNext(
-                StartBlockchainReply.newBuilder()
-                    .setMessage("Blockchain with id ${request.chainId} started with brid $brid")
-                    .build()
-            )
-            responseObserver?.onCompleted()
-        }
+    fun stopBlockchain(chainId: Long) {
+        postchainNode.stopBlockchain(chainId)
     }
 
-    override fun stopBlockchain(
-        request: StopBlockchainRequest?,
-        responseObserver: StreamObserver<StopBlockchainReply>?
-    ) {
-        postchainNode.stopBlockchain(request!!.chainId)
-        responseObserver?.onNext(
-            StopBlockchainReply.newBuilder().run {
-                message = "Blockchain has been stopped"
-                build()
-            })
-        responseObserver?.onCompleted()
-    }
-
-    override fun addConfiguration(
-        request: AddConfigurationRequest?,
-        responseObserver: StreamObserver<AddConfigurationReply>?
-    ) {
-        val config = when (request!!.configCase) {
-            AddConfigurationRequest.ConfigCase.XML -> GtvMLParser.parseGtvML(request.xml)
-            AddConfigurationRequest.ConfigCase.GTV -> GtvDecoder.decodeGtv(request.gtv.toByteArray())
-            else -> return responseObserver?.onError(
-                Status.INVALID_ARGUMENT.withDescription("Both xml and gtv fields are empty").asRuntimeException()
-            )!!
-        }
-        withWriteConnection(postchainNode.postchainContext.storage, request.chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
-            val hasConfig = db.getConfigurationData(ctx, request.height) != null
-            if (hasConfig && !request.override) {
-                responseObserver?.onError(
-                    Status.ALREADY_EXISTS.withDescription("Configuration already exists for height ${request.height} on chain ${request.chainId}")
-                        .asRuntimeException()
-                )
-                return@withWriteConnection false
+    /**
+     * @return `true` if configuration was added, `false` if already existed and `override` is `false`
+     * @throws IllegalStateException if current height => given height
+     * @throws BadDataMistake if signer pubkey does not exist in peerinfos and allowUnknownSigners is false
+     */
+    fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: Gtv, allowUnknownSigners: Boolean = false): Boolean =
+            withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
+                BlockchainApi.addConfiguration(ctx, height, override, config, allowUnknownSigners)
             }
 
-            db.addConfigurationData(ctx, request.height, GtvEncoder.encodeGtv(config))
-            true
+    /**
+     * @return [BlockchainRid] if chain was initialized, `null` if already existed and `override` is `false`
+     */
+    fun initializeBlockchain(chainId: Long, maybeBrid: BlockchainRid?, override: Boolean, config: Gtv,
+                             givenDependencies: List<BlockchainRelatedInfo> = listOf()): BlockchainRid? {
+        val brid = maybeBrid
+                ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config, postchainNode.postchainContext.cryptoSystem)
+
+        val initialized = withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
+            BlockchainApi.initializeBlockchain(ctx, brid, override, config, givenDependencies)
         }
-        responseObserver?.onNext(
-            AddConfigurationReply.newBuilder().run {
-                message = "Configuration height ${request.height} on chain ${request.chainId} has been added"
-                build()
-            }
-        )
-        responseObserver?.onCompleted()
+
+        return if (initialized) brid else null
     }
 
-    override fun initializeBlockchain(
-        request: InitializeBlockchainRequest?,
-        responseObserver: StreamObserver<InitializeBlockchainReply>?
-    ) {
-        val config = when (request!!.configCase) {
-            InitializeBlockchainRequest.ConfigCase.XML -> GtvMLParser.parseGtvML(request.xml)
-            InitializeBlockchainRequest.ConfigCase.GTV -> GtvDecoder.decodeGtv(request.gtv.toByteArray())
-            else -> return responseObserver?.onError(
-                Status.INVALID_ARGUMENT.withDescription("Both xml and gtv fields are empty").asRuntimeException()
-            )!!
-        }
-        withWriteConnection(postchainNode.postchainContext.storage, request.chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
-            if (db.getBlockchainRid(ctx) != null && !request.override) {
-                responseObserver?.onError(
-                    Status.ALREADY_EXISTS.withDescription("Blockchain already exists").asRuntimeException()
-                )
-                return@withWriteConnection false
+    fun findBlockchain(chainId: Long): Pair<BlockchainRid, Boolean>? =
+            withReadConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
+                BlockchainApi.findBlockchain(ctx)
+            }?.let { Pair(it, postchainNode.isBlockchainRunning(chainId)) }
+
+    fun addBlockchainReplica(brid: BlockchainRid, pubkey: PubKey): Boolean =
+            postchainNode.postchainContext.storage.withWriteConnection { ctx ->
+                BlockchainApi.addBlockchainReplica(ctx, brid, pubkey)
             }
 
-            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(config)
-            db.initializeBlockchain(ctx, brid)
-            DependenciesValidator.validateBlockchainRids(ctx, listOf())
-            // TODO: Blockchain dependencies [DependenciesValidator#validateBlockchainRids]
-            db.addConfigurationData(ctx, 0, GtvEncoder.encodeGtv(config))
-            true
-        }
-        val blockchainRid = postchainNode.startBlockchain(request.chainId)
-        responseObserver?.onNext(InitializeBlockchainReply.newBuilder().run {
-            message = "Blockchain has been initialized with blockchain RID: $blockchainRid"
-            brid = blockchainRid?.toHex() ?: ""
-            build()
-        })
-        responseObserver?.onCompleted()
-    }
+    fun removeBlockchainReplica(brid: BlockchainRid, pubkey: PubKey): Set<BlockchainRid> =
+            postchainNode.postchainContext.storage.withWriteConnection { ctx ->
+                BlockchainApi.removeBlockchainReplica(ctx, brid, pubkey)
+            }
 }

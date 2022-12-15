@@ -11,6 +11,7 @@ import net.postchain.gtx.GTXTransactionFactory
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Assertions.assertArrayEquals
+import java.util.concurrent.TimeoutException
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
@@ -80,7 +81,7 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
                             }
                             */
 
-                            nodeSetup.getAllBlockchains().forEach { chainId ->
+                            nodeSetup.getAllInitialBlockchains().forEach { chainId ->
                                 val allSignersButMe = systemSetup.blockchainMap[chainId]!!.signerNodeList.filter { it != nodeSetup.sequenceNumber }
                                 if (logger.isDebugEnabled) {
                                     val debugOut = allSignersButMe.map { it.nodeNumber.toString() }.fold(",", String::plus)
@@ -157,7 +158,13 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
         }
     }
 
-    fun buildBlocks(nodeId: Int, chain: Long, block: Int) {
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    fun buildBlocks(nodeId: Int, chain: Long, block: Int, timeout: kotlin.time.Duration = kotlin.time.Duration.INFINITE) {
         logger.debug("-------------------------------------------")
         logger.info { "Node: $nodeId, chain: $chain -> Trigger block" }
         logger.debug("-------------------------------------------")
@@ -165,7 +172,7 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
         logger.debug("-------------------------------------------")
         logger.info { "Node: $nodeId, chain: $chain -> Await committed" }
         logger.debug("-------------------------------------------")
-        strategyOf(nodeId, chain).awaitCommitted(block)
+        strategyOf(nodeId, chain).awaitCommitted(block, timeout)
     }
 
     private fun enqueueTx(chain: Long, currentTxId: Int, txCache: TxCache, height: Int, blockIndex: Int, node: PostchainTestNode) {

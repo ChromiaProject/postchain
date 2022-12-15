@@ -19,20 +19,24 @@ open class BaseApiInfrastructure(
 
     val restApi: RestApi? = with(restApiConfig) {
         if (port != -1) {
-            if (ssl) {
+            if (tls) {
                 RestApi(
-                    port,
-                    basePath,
-                    sslCertificate,
-                    sslCertificatePassword)
+                        port,
+                        basePath,
+                        tlsCertificate,
+                        tlsCertificatePassword)
             } else {
                 RestApi(
-                    port,
-                    basePath)
+                        port,
+                        basePath)
             }
         } else {
             null
         }
+    }
+
+    override fun restartProcess(process: BlockchainProcess) {
+        restApi?.retrieveModel(bridOf(process))?.live = false
     }
 
     override fun connectProcess(process: BlockchainProcess) {

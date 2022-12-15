@@ -15,7 +15,7 @@ import java.nio.charset.Charset
 fun dummySerializatorFun(iGtv: Gtv): ByteArray {
     when (iGtv) {
         is GtvInteger -> {
-            val i: Long = iGtv.integer.toLong()
+            val i: Long = iGtv.integer
             if (i > 127 && i > -1) {
                 throw IllegalArgumentException("Test integers should be positive and should not be bigger than 127: $i")
             } else {
@@ -42,6 +42,7 @@ fun dummySerializatorFun(iGtv: Gtv): ByteArray {
  * A simple dummy hashing function that's easy to test
  * It only adds 1 to all bytes in the byte array.
  */
+@Suppress("UNUSED_PARAMETER")
 fun dummyAddOneHashFun(bArr: ByteArray, cryptoSystem: CryptoSystem?): Hash {
     val retArr = ByteArray(bArr.size)
     var pos = 0

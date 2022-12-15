@@ -2,12 +2,13 @@
 
 package net.postchain.core
 
-import net.postchain.common.BlockchainRid
+import net.postchain.gtv.mapper.Name
+import net.postchain.gtv.mapper.Nullable
 
-open class TxDetail(
-    val rid: ByteArray,
-    val hash: ByteArray,
-    val data: ByteArray?
+data class TxDetail(
+        @Name("rid") val rid: ByteArray,
+        @Name("hash") val hash: ByteArray,
+        @Name("data") @Nullable val data: ByteArray?
 )
 
 open class TransactionInfoExt(
@@ -26,7 +27,7 @@ data class ValidationResult(
         val message: String = "") {
     enum class Result {
         OK, PREV_BLOCK_MISMATCH, BLOCK_FROM_THE_FUTURE, DUPLICATE_BLOCK, SPLIT, OLD_BLOCK_NOT_FOUND, INVALID_TIMESTAMP,
-        MISSING_BLOCKCHAIN_DEPENDENCY, INVALID_ROOT_HASH }
+        MISSING_BLOCKCHAIN_DEPENDENCY, INVALID_ROOT_HASH, INVALID_EXTRA_DATA }
 }
 
 /**

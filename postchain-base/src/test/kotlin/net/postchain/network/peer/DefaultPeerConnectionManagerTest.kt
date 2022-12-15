@@ -5,27 +5,34 @@ package net.postchain.network.peer
 import assertk.assert
 import assertk.assertions.isEmpty
 import assertk.isContentEqualTo
-import net.postchain.base.*
+import net.postchain.base.NetworkNodes
+import net.postchain.base.PeerCommConfiguration
+import net.postchain.base.PeerInfo
+import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.NodeRid
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
 import net.postchain.network.common.ChainsWithConnections
 import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.common.LazyPacket
-import net.postchain.network.common.NodeConnector
 import net.postchain.network.netty2.NettyPeerConnection
 import net.postchain.network.util.peerInfoFromPublicKey
-import net.postchain.debug.BlockchainProcessName
 import org.apache.commons.lang3.reflect.FieldUtils
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.atLeast
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -55,10 +62,6 @@ class DefaultPeerConnectionManagerTest {
         peerConnectionDescriptor1 = PeerConnectionDescriptor(blockchainRid, peerInfo1.peerId(), ConnectionDirection.OUTGOING)
         peerConnectionDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
 
-        val connector: NodeConnector<Int, PeerConnectionDescriptor> = mock {
-            on { connectNode(any(), any(), any()) }.doAnswer { } // FYI: Instead of `doNothing` or `doReturn Unit`
-        }
-
         packetEncoderFactory = mock {
             on { create(any(), any()) } doReturn mock()
         }
@@ -82,7 +85,7 @@ class DefaultPeerConnectionManagerTest {
 
         // When
         val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory, Secp256K1CryptoSystem()
+                packetEncoderFactory, packetDecoderFactory
         ).apply { connectChain(chainPeerConfig, false, mock()) }
 
         // Then
@@ -106,7 +109,7 @@ class DefaultPeerConnectionManagerTest {
 
         // When
         val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory, Secp256K1CryptoSystem()
+                packetEncoderFactory, packetDecoderFactory
         )
 
         try {
@@ -141,7 +144,7 @@ class DefaultPeerConnectionManagerTest {
 
         // When
         val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory, Secp256K1CryptoSystem()
+                packetEncoderFactory, packetDecoderFactory
         ).apply { connectChain(chainPeerConfig, true, mock()) }
 
         // Then
@@ -175,8 +178,7 @@ class DefaultPeerConnectionManagerTest {
         assertThrows<ProgrammerMistake> {
             DefaultPeerConnectionManager<Int>(
                     mock(),
-                    df,
-                    cryptoSystem
+                    df
             ).apply {
                 connectChain(chainPeerConf, false, mock()) // Without connecting to peers
                 connectChainPeer(1, unknownPeerInfo.peerId())
@@ -199,13 +201,9 @@ class DefaultPeerConnectionManagerTest {
             on { commConfiguration } doReturn communicationConfig
         }
 
-        val loggerName = BlockchainProcessName(
-                peerInfo1.pubKey.byteArrayKeyOf().toString(), blockchainRid
-        ).toString()
-
         // When
-        val connectionManager = DefaultPeerConnectionManager<Int>(
-                packetEncoderFactory, packetDecoderFactory, Secp256K1CryptoSystem()
+        val connectionManager = DefaultPeerConnectionManager(
+                packetEncoderFactory, packetDecoderFactory
         ).apply {
             connectChain(chainPeerConfig, false, mock()) // Without connecting to peers
             connectChainPeer(1, peerInfo2.peerId())
@@ -236,7 +234,7 @@ class DefaultPeerConnectionManagerTest {
 
         // When
         val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory, Secp256K1CryptoSystem()
+                packetEncoderFactory, packetDecoderFactory
         ).apply {
             connectChain(chainPeerConfig, true, mock()) // Auto connect all peers
 
@@ -287,7 +285,7 @@ class DefaultPeerConnectionManagerTest {
 
         // When
         val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory, Secp256K1CryptoSystem()
+                packetEncoderFactory, packetDecoderFactory
         ).apply {
             connectChain(chainPeerConfig, true, mock()) // With autoConnect
 
@@ -331,7 +329,7 @@ class DefaultPeerConnectionManagerTest {
             disconnectChain(mock(), 1L)
             // Then
             val internalChains = FieldUtils.readField(this, "chainsWithConnections", true)
-                    as ChainsWithConnections<PeerPacketHandler, PeerConnection, ChainWithPeerConnections>
+                    as ChainsWithConnections<*, *, *>
             assertTrue { internalChains.isEmpty() }
         }
 
@@ -364,7 +362,7 @@ class DefaultPeerConnectionManagerTest {
 
         // When
         val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory, Secp256K1CryptoSystem()
+                packetEncoderFactory, packetDecoderFactory
         ).apply {
             connectChain(chainPeerConfig, true, mock()) // With autoConnect
 
@@ -392,7 +390,7 @@ class DefaultPeerConnectionManagerTest {
         }
     }
 
-    private fun emptyManager() = DefaultPeerConnectionManager<Int>(mock(), mock(), Secp256K1CryptoSystem())
+    private fun emptyManager() = DefaultPeerConnectionManager<Int>(mock(), mock())
 
     private fun emptyCommConf(): PeerCommConfiguration {
         return mock {
@@ -419,7 +417,7 @@ class DefaultPeerConnectionManagerTest {
 
         // When
         val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory, Secp256K1CryptoSystem()
+                packetEncoderFactory, packetDecoderFactory
         ).apply {
             connectChain(chainPeerConfig, true, mock()) // With autoConnect
 

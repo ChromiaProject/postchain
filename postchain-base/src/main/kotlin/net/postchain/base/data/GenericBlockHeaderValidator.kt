@@ -3,10 +3,10 @@ package net.postchain.base.data
 import net.postchain.base.BaseBlockHeader
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockRid
-import net.postchain.core.block.InitialBlockData
 import net.postchain.core.ValidationResult
 import net.postchain.core.block.BlockHeader
-import java.util.*
+import net.postchain.core.block.InitialBlockData
+import net.postchain.gtv.Gtv
 
 /**
  * Here we put validation that doesn't need complex dependencies like signers etc.
@@ -76,7 +76,7 @@ object GenericBlockHeaderValidator {
                                 + "$expectedHeight, (even thought we cannot find the locally)."
                     )
                 } else {
-                    val ourBlockRID = BlockRid(bRidByte!!)
+                    val ourBlockRID = BlockRid(bRidByte)
                     if (ourBlockRID == headerBlockRid)
                         ValidationResult(
                             ValidationResult.Result.DUPLICATE_BLOCK,
@@ -140,8 +140,9 @@ object GenericBlockHeaderValidator {
      * @param initialBlockData is the initial block data we can use to compare with the header
      * @param expectedMerkleRootHash calculates the expected the merkle root of the block
      * @param blockRidFromHeight can find the block RID in the DB from what height we have
-     * @param currentBlockTimestamp is the timestamp of the the block we possess
+     * @param currentBlockTimestamp is the timestamp of the block we possess
      * @param nrOfDependencies is how many dependencies we should have (we cannot test the actual dependencies b/c some might be null still)
+     * @param extraData header extra data
      * @return a [ValidationResult] containing success or info about what went wrong
      */
     fun advancedValidateAgainstKnownBlocks(
@@ -150,7 +151,8 @@ object GenericBlockHeaderValidator {
         expectedMerkleRootHash: () -> ByteArray,
         blockRidFromHeight: (height: Long) -> ByteArray?, // We will probably need to go to DB to find this, so don't call this in vain
         currentBlockTimestamp: Long,
-        nrOfDependencies: Int
+        nrOfDependencies: Int,
+        extraData: Map<String, Gtv>
     ): ValidationResult {
         val header = blockHeader as BaseBlockHeader
 
@@ -176,8 +178,11 @@ object GenericBlockHeaderValidator {
             !header.checkCorrectNumberOfDependencies(nrOfDependencies) ->
                 ValidationResult(ValidationResult.Result.MISSING_BLOCKCHAIN_DEPENDENCY, "checkIfAllBlockchainDependenciesArePresent() is false")
 
-            !Arrays.equals(header.blockHeaderRec.getMerkleRootHash(), expectedMerkleRootHash()) -> // Do this last since most expensive check!
+            !header.blockHeaderRec.getMerkleRootHash().contentEquals(expectedMerkleRootHash()) -> // Do this last since most expensive check!
                 ValidationResult(ValidationResult.Result.INVALID_ROOT_HASH, "header.blockHeaderRec.rootHash != computeMerkleRootHash()")
+
+            !header.checkExtraData(extraData) ->
+                ValidationResult(ValidationResult.Result.INVALID_EXTRA_DATA, "header extra data is not match")
 
             else -> basicResult // = "OK"
         }

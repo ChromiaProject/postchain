@@ -103,7 +103,7 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
         for (i in 0..2) {
 
             val blockData = bockQueries.getBlockAtHeight(i.toLong()).get()!!
-            //System.out.println("block $i fetched.")
+            //println("block $i fetched.")
 
             assertEquals(expectedNumberOfTxs, blockData.transactions.size)
 
@@ -129,7 +129,7 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
         val txGtx = gtxTxFactory.decodeTransaction(tx) as GTXTransaction
         assertEquals(1, txGtx.ops.size)
         val op = txGtx.ops[0] as GTXOperation
-        //System.out.println("Op : ${op.toString()}")
+        //println("Op : ${op.toString()}")
         assertEquals(opName, op.data.opName)
     }
 }

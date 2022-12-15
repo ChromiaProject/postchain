@@ -40,13 +40,34 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
         )
     }
 
+    override fun create(
+            appConfig: AppConfig,
+            nodeConfig: NodeConfig,
+            ancestorBlockchainRid: BlockchainRid,
+            historicBlockchainContext: HistoricBlockchainContext
+    ): PeerCommConfiguration {
+        val myNodeRid = NodeRid(appConfig.pubKeyByteArray)
+        val peersThatServeAncestorBrid = historicBlockchainContext.ancestors[ancestorBlockchainRid] ?: emptySet()
+
+        val relevantPeerMap = nodeConfig.peerInfoMap.filterKeys {
+            it in peersThatServeAncestorBrid || it == myNodeRid
+        }
+
+        return BasePeerCommConfiguration.build(
+                relevantPeerMap.values,
+                Secp256K1CryptoSystem(),
+                appConfig.privKeyByteArray,
+                appConfig.pubKeyByteArray
+        )
+    }
+
     /**
      * The [NodeConfig] has knowledge of many postchain nodes, but we want to narrow this list down to only
      * contain nodes that can be useful for the given blockchain.
      *
      * @param nodeConfig
      * @param blockchainRid is the chain we are interested in
-     * @param peers are the signers/block builders found in the BC's configuration.
+     * @param signers are the signers/block builders found in the BC's configuration.
      * @param historicBlockchainContext is used to get replicas
      *
      * @return a map from [NodeRid] to [PeerInfo] containing as many nodes we can ever have any use for w/ regards
@@ -56,14 +77,11 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
             appConfig: AppConfig,
             nodeConfig: NodeConfig,
             blockchainRid: BlockchainRid,
-            peers: List<ByteArray>, // signers
+            signers: List<ByteArray>, // signers
             historicBlockchainContext: HistoricBlockchainContext?
     ): Map<NodeRid, PeerInfo> {
         val myNodeRid = NodeRid(appConfig.pubKeyByteArray)
-        val peers0 = peers.map { NodeRid(it) }
-        val peersReplicas = peers0.flatMap {
-            nodeConfig.nodeReplicas[it] ?: listOf()
-        }
+        val signers0 = signers.map { NodeRid(it) }
 
         val blockchainReplicas = if (historicBlockchainContext != null) {
             (nodeConfig.blockchainReplicaNodes[historicBlockchainContext.historicBrid] ?: listOf()).union(
@@ -73,12 +91,11 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
         }
 
         // We keep
-        // 1. All BC's peers
-        // 2. All FULL node replicas
-        // 3. All nodes that replicates the BC
-        // 4. This node itself
+        // 1. All BC's signers
+        // 2. All nodes that replicate the BC
+        // 3. This node itself
         return nodeConfig.peerInfoMap.filterKeys {
-            it in peers0 || it in peersReplicas || it in blockchainReplicas || it == myNodeRid
+            it in signers0 || it in blockchainReplicas || it == myNodeRid
         }
     }
 }

@@ -1,5 +1,6 @@
 package net.postchain.integrationtest.sync
 
+import net.postchain.common.hexStringToByteArray
 import net.postchain.core.NodeRid
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.ManagedModeTest
@@ -43,10 +44,10 @@ class ForkTestNightly : ManagedModeTest() {
     fun testForkLocallyAddConfCantBuild() {
         val (c1, c2) = makeFork()
 
-        val c2_11 = addBlockchainConfiguration(c2, 11, setOf(0), setOf(1), c1.chain)
+        addBlockchainConfiguration(c2, 11, setOf(0), setOf(1), c1)
         buildBlock(c1, 11)
-        awaitHeight(c2_11, 11)
-        assertEqualAtHeight(c1, c2_11, 11)
+        awaitHeight(c2, 11)
+        assertEqualAtHeight(c1, c2, 11)
         // Can't build block until configuration without historic brid deployed
         assertCantBuildBlock(c2, 12)
     }
@@ -56,26 +57,26 @@ class ForkTestNightly : ManagedModeTest() {
         val (c1, c2) = makeFork()
         // c1 and c2 are in sync at height 10.
 
-        val c2_12 = addBlockchainConfiguration(c2, 12, setOf(0), setOf(1), null)
+        addBlockchainConfiguration(c2, 12, setOf(0), setOf(1), null)
         buildBlock(c1, 12)
         // Unfortunately, we must wait a full cycle of "synclocally (quick), fetch (2s), cross-fetch (2s)"
         // to be sure we don't sync from c1 after height 11. This sucks.
         sleep(5000)
-        // Assert that c2_12 isn't syncing from c1 after height 11
-        assertEquals(11, c2_12.nodes()[0].currentHeight(c2_12.chain))
-        // Assert that c2_12 can build blocks on its own now
-        buildBlock(c2_12, 12)
-        assertNotEqualAtHeight(c1, c2_12, 12)
+        // Assert that c2 isn't syncing from c1 after height 11
+        assertEquals(11, getChainNodes(c2)[0].currentHeight(c2))
+        // Assert that c2 can build blocks on its own now
+        buildBlock(c2, 12)
+        assertNotEqualAtHeight(c1, c2, 12)
     }
 
 
     @Test
     fun testForkLocallySwapSignerReplica() {
         val c1 = basicSystem()
-        val c2 = startNewBlockchain(setOf(1), setOf(0), c1.chain)
+        val c2 = startNewBlockchain(setOf(1), setOf(0), c1)
         sleep(1000)
-        c2.nodes().forEach {
-            assertEquals(-1, it.blockQueries(c2.chain).getBestHeight().get())
+        getChainNodes(c2).forEach {
+            assertEquals(-1, it.blockQueries(c2).getBestHeight().get())
         }
     }
 
@@ -88,20 +89,21 @@ class ForkTestNightly : ManagedModeTest() {
         val c1 = startNewBlockchain(setOf(0), setOf(1), null)
         buildBlock(c1, 10)
 
-        val expectedBlockRid = nodes[c1.all().first()].blockQueries(c1.chain).getBlockRid(10).get()
+        val expectedBlockRid = getChainNodes(c1).first().blockQueries(c1).getBlockRid(10).get()
 
         // Make sure that node <node> doesn't have c1 locally and that the other node
         // doesn't have c2, We want node <node> to cross-fetch c2 from c1 on the other node instead of from local db.
         val nodeDataSource = dataSources(c1)[0]!!
-        nodeDataSource.delBlockchain(ChainUtil.ridOf(c1.chain))
+        nodeDataSource.delBlockchain(ChainUtil.ridOf(c1))
+
         // Set node 1 as replica for c1 so that node 0 will use node 1 to cross-fetch blocks.
-        nodeDataSource.addExtraReplica(ChainUtil.ridOf(c1.chain), NodeRid(KeyPairHelper.pubKey(1)))
+        nodeDataSource.addExtraReplica(ChainUtil.ridOf(c1), NodeRid(KeyPairHelper.pubKey(1)))
 
         restartNodeClean(0, c0, -1)
-        val c2 = startNewBlockchain(setOf(0), setOf(), c1.chain)
+        val c2 = startNewBlockchain(setOf(0), setOf(), c1)
         awaitHeight(c2, 10)
-        c2.all().forEach {
-           assertArrayEquals(nodes[it].blockQueries(c2.chain).getBlockRid(10).get(), expectedBlockRid)
+        getChainNodes(c2).forEach {
+            assertArrayEquals(it.blockQueries(c2).getBlockRid(10).get(), expectedBlockRid)
         }
         assertCantBuildBlock(c2, 11)
     }
@@ -113,12 +115,12 @@ class ForkTestNightly : ManagedModeTest() {
         val c1 = startNewBlockchain(setOf(0), setOf(1), null)
         buildBlock(c1, 10)
 
-        val expectedBlockRid = nodes[c1.all().first()].blockQueries(c1.chain).getBlockRid(10).get()
+        val expectedBlockRid = getChainNodes(c1).first().blockQueries(c1).getBlockRid(10).get()
 
         // Make sure that node <node> doesn't have c1 locally and that the other node
         // doesn't have c2, We want node <node> to cross-fetch c2 from c1 on the other node instead of from local db.
         val nodeDataSource = dataSources(c1)[1]!!
-        nodeDataSource.delBlockchain(ChainUtil.ridOf(c1.chain))
+        nodeDataSource.delBlockchain(ChainUtil.ridOf(c1))
 
         restartNodeClean(1, c0, -1)
         // We don't know if node 1 will fetch c1 or c2 from node 0, because
@@ -126,10 +128,10 @@ class ForkTestNightly : ManagedModeTest() {
         // from node0. Se we can't be sure that both fetch and cross-fetch works for a replica,
         // only that either works.
         // If you can come up with a test that forces a replica to cross-fetch, it'd be great.
-        val c2 = startNewBlockchain(setOf(0), setOf(1), c1.chain)
+        val c2 = startNewBlockchain(setOf(0), setOf(1), c1)
         awaitHeight(c2, 10)
-        c2.all().forEach {
-           assertArrayEquals(nodes[it].blockQueries(c2.chain).getBlockRid(10).get(), expectedBlockRid)
+        getChainNodes(c2).forEach {
+            assertArrayEquals(it.blockQueries(c2).getBlockRid(10).get(), expectedBlockRid)
         }
         assertCantBuildBlock(c2, 11)
     }
@@ -143,44 +145,44 @@ class ForkTestNightly : ManagedModeTest() {
     @Test
     fun testRecursiveFork() {
         val (c1, c2) = makeFork()
-        val c2_15 = addBlockchainConfiguration(c2, 15, setOf(0), setOf(1), c1.chain)
+        addBlockchainConfiguration(c2, 15, setOf(0), setOf(1), c1)
         buildBlock(c1, 15)
-        awaitChainRestarted(c2_15, 14)
-        awaitHeight(c2_15, 15)
-        val c3 = startNewBlockchain(setOf(0), setOf(), c1.chain)
+        awaitChainRestarted(c2, 14)
+        awaitHeight(c2, 15)
+        val c3 = startNewBlockchain(setOf(0), setOf(), c1)
         buildBlock(c1, 17)
-        awaitHeight(c2_15, 17)
+        awaitHeight(c2, 17)
         awaitHeight(c3, 17)
 
         // From height 19 chain2 is standalone (=is no longer a fork of chain1).
-        val c2_19 = addBlockchainConfiguration(c2_15, 19, setOf(2), setOf(0, 1), null)
-        val c3_19 = addBlockchainConfiguration(c3, 19, setOf(2), setOf(0), c2_19.chain)
+        addBlockchainConfiguration(c2, 19, setOf(2), setOf(0, 1), null)
+        addBlockchainConfiguration(c3, 19, setOf(2), setOf(0), c2)
         buildBlock(c1, 20)
-        awaitChainRestarted(c2_19, 18)
-        awaitChainRestarted(c3_19, 18)
-        buildBlock(c2_19, 19)
-        awaitHeight(c3_19, 19)
-        assertEqualAtHeight(c2_19, c3_19, 19)
-        assertNotEqualAtHeight(c1, c3_19, 19)
+        awaitChainRestarted(c2, 18)
+        awaitChainRestarted(c3, 18)
+        buildBlock(c2, 19)
+        awaitHeight(c3, 19)
+        assertEqualAtHeight(c2, c3, 19)
+        assertNotEqualAtHeight(c1, c3, 19)
 
         // From height 21 chain3 is standalone (=is no longer a fork of chain2).
-        val c3_21 = addBlockchainConfiguration(c3_19, 21, setOf(0), setOf(), null)
-        buildBlock(c2_19, 22)
-        awaitChainRestarted(c3_21, 20)
-        buildBlock(c3_21, 22)
-        assertNotEqualAtHeight(c2_19, c3_21, 21)
+        addBlockchainConfiguration(c3, 21, setOf(0), setOf(), null)
+        buildBlock(c2, 22)
+        awaitChainRestarted(c3, 20)
+        buildBlock(c3, 22)
+        assertNotEqualAtHeight(c2, c3, 21)
     }
 
     @Test
     fun testAncestors() {
         extraNodeProperties[0] = mapOf("blockchain_ancestors.${ChainUtil.ridOf(3)}"
-                to listOf(ancestor(1,2)))
+                to listOf(ancestor(1, 2)))
         val (c1, c2) = makeFork() // c1 and c2 both consist of node index 0 (signer) and 1 (replica)
-        dataSources(c1).forEach {
-            it.value.delBlockchain(ChainUtil.ridOf(c1.chain))
+        dataSources(c1).values.forEach {
+            it.delBlockchain(ChainUtil.ridOf(c1))
         }
         buildBlock(c0) // trigger stopping of c1
-        val c3 = startNewBlockchain(setOf(0), setOf(), c1.chain)
+        val c3 = startNewBlockchain(setOf(0), setOf(), c1)
         awaitHeight(c3, 10)
         assertEqualAtHeight(c2, c3, 10)
     }
@@ -224,7 +226,7 @@ class ForkTestNightly : ManagedModeTest() {
         val chains = mutableMapOf(1 to c1)
 
         // Add chain2 on Node2
-        val c2 = startNewBlockchain(setOf(2), setOf(0), c1.chain)
+        val c2 = startNewBlockchain(setOf(2), setOf(0), c1)
         buildBlock(c0) // trigger blockchain changes
         buildBlock(c2, 10)
         awaitHeight(c2, 10)
@@ -237,7 +239,7 @@ class ForkTestNightly : ManagedModeTest() {
         nodes[1].shutdown()
 
         // -- Create chain 3 on Node3
-        val c3 = startNewBlockchain(setOf(3), setOf(), c1.chain)
+        val c3 = startNewBlockchain(setOf(3), setOf(), c1)
         buildBlock(c0) // trigger blockchain changes
         buildBlock(c3, 10)
         awaitHeight(c3, 10)
@@ -247,11 +249,10 @@ class ForkTestNightly : ManagedModeTest() {
         // ============
         // Step 2 - copy chain2 Node2 -> Node3
         // ============
-        val c2_node3 = addBlockchainConfiguration(c2, 10, setOf(3), setOf(), null)
+        addBlockchainConfiguration(c2, 10, setOf(3), setOf(), null)
         buildBlock(c0) // trigger blockchain changes
-        buildBlock(c2_node3, 20)
-        awaitHeight(c2_node3,  20)
-        assertEqualAtHeight(c2_node3, c2, 10)
+        buildBlock(c2, 20)
+        awaitHeight(c2, 20)
 
         // ============
         // Step 3 - sync Chain4 locally via Chain2 (=ancestor for Chain1)
@@ -260,7 +261,7 @@ class ForkTestNightly : ManagedModeTest() {
         nodes[2].shutdown()
 
         // -- Sync Chain4 from Chain2 locally on Node3
-        val c4 = startNewBlockchain(setOf(3), setOf(), c1.chain)
+        val c4 = startNewBlockchain(setOf(3), setOf(), c1)
         buildBlock(c0) // trigger blockchain changes
         buildBlock(c4, 10)
         awaitHeight(c4, 10)
@@ -325,12 +326,12 @@ class ForkTestNightly : ManagedModeTest() {
         // Chain id is same as node id, for example node 3 is the final signer of chain 3
         val chains = mutableMapOf(1 to c1)
         for (node in 2..4) {
-            val c = startNewBlockchain(setOf(1), setOf(), c1.chain)
+            val c = startNewBlockchain(setOf(1), setOf(), c1)
             chains[node] = c
             for (config in 2..node) {
                 // Node 4 will get chain 4, Node 3 will get chain 3,4, Node 2 will get all chains
-                val configHeight = 10L * (config-1)
-                val chainConfig = if (config == node) {
+                val configHeight = 10L * (config - 1)
+                if (config == node) {
                     // For Node 2, BC 2 will be the "original" (unforked chain),
                     // Node 3 will have the "original" for BC 3 etc.
                     addBlockchainConfiguration(c, configHeight, setOf(config), setOf(), null)
@@ -338,8 +339,8 @@ class ForkTestNightly : ManagedModeTest() {
                     addBlockchainConfiguration(c, configHeight, setOf(config), setOf(), config.toLong())
                 }
                 buildBlock(c0) // Trigger all blockchain changes
-                awaitChainRestarted(chainConfig, configHeight-1)
-                chains[node] = chainConfig
+                awaitChainRestarted(c, configHeight - 1)
+                chains[node] = c
             }
             val forkHeight = (node-1)*10L
             buildBlock(chains[node]!!, forkHeight+10)
@@ -362,27 +363,29 @@ class ForkTestNightly : ManagedModeTest() {
         // -----------------
         // Chain5 will have different signers for every 10 blocks, AND new historic chain for every 10 blocks
         // so this is a really tricky test!
-        val c5 = startNewBlockchain(setOf(1), setOf(5), c1.chain, setOf(1, 2), false)
+        val c5 = startNewBlockchain(setOf(1), setOf(5), c1, setOf(1, 2), false)
         addBlockchainConfiguration(c5, 10, setOf(2), setOf(5), 2L, setOf(1, 2))
         addBlockchainConfiguration(c5, 20, setOf(3), setOf(5), 3L, setOf(1, 2))
         addBlockchainConfiguration(c5, 30, setOf(4), setOf(5), 4L, setOf(1, 2))
         // In the last step, where Node5 signs blocks above 40, we no longer consider this a fork
-        val c5_5 = addBlockchainConfiguration(c5, 40, setOf(5), setOf(), null, setOf(1, 2))
+        addBlockchainConfiguration(c5, 40, setOf(5), setOf(), null, setOf(1, 2))
 
-        buildBlock(c0.remove(setOf(1, 2)))
-        awaitChainRestarted(c5_5, 39)
-        buildBlock(c5_5, 40)
-        assertEqualAtHeight(c4, c5_5, 39)
-        assertNotEqualAtHeight(c4, c5_5, 40)
+        val excludedNodes = setOf(1, 2)
+        val chain0Nodes = nodes.filterIndexed { i, _ -> !excludedNodes.contains(i) }
+        buildBlock(chain0Nodes, c0)
+        awaitChainRestarted(c5, 39)
+        buildBlock(c5, 40)
+        assertEqualAtHeight(c4, c5, 39)
+        assertNotEqualAtHeight(c4, c5, 40)
     }
 
     @Test
     fun testForkReplicaFromNetInvalidSignerSet() {
         val c1 = basicSystem()
-        val c2 = startNewBlockchain(setOf(1), setOf(2), c1.chain)
+        val c2 = startNewBlockchain(setOf(1), setOf(2), c1)
         sleep(1000)
-        c2.nodes().forEach {
-            assertEquals(-1, it.blockQueries(c2.chain).getBestHeight().get())
+        getChainNodes(c2).forEach {
+            assertEquals(-1, it.blockQueries(c2).getBestHeight().get())
         }
     }
 
@@ -425,39 +428,36 @@ class ForkTestNightly : ManagedModeTest() {
         }
     }
 
-
-    override fun awaitChainRestarted(nodeSet: NodeSet, atLeastHeight: Long) {
-        awaitLog("========= AWAIT ALL ${nodeSet.size} NODES RESTART chain:  ${nodeSet.chain}, at least height:  $atLeastHeight")
-        nodeSet.all().forEach { awaitChainRunning(it, nodeSet.chain, atLeastHeight) }
-        awaitLog("========= DONE WAITING ALL ${nodeSet.size} NODES RESTART chain:  ${nodeSet.chain}, at least height:  $atLeastHeight")
-    }
-
-    private fun makeFork(): Pair<NodeSet, NodeSet> {
+    private fun makeFork(): Pair<Long, Long> {
         val c1 = basicSystem()
-        val c2 = startNewBlockchain(setOf(0), setOf(1), c1.chain)
+        val c2 = startNewBlockchain(setOf(0), setOf(1), c1)
         awaitHeight(c2, 10)
         return Pair(c1, c2)
     }
 
-    fun addBlockchainConfiguration(chain: NodeSet, atHeight: Long, signers: Set<Int>, replicas: Set<Int>,
-                                   historicChain: Long? = null, excludeChain0Nodes: Set<Int> = setOf()): NodeSet {
-        val newChain = NodeSet(chain.chain, signers, replicas)
-        newBlockchainConfiguration(newChain, historicChain, atHeight, excludeChain0Nodes)
-        return newChain
+    fun addBlockchainConfiguration(chainId: Long, atHeight: Long, signers: Set<Int>, replicas: Set<Int>,
+                                   historicChain: Long? = null, excludeChain0Nodes: Set<Int> = setOf()) {
+        setChainSigners(signers, chainId)
+        setChainReplicas(replicas, chainId)
+        val signerKeys = signers.associateWith { nodes[it].pubKey.hexStringToByteArray() }
+        addBlockchainConfiguration(chainId, signerKeys, historicChain, atHeight)
+        // Build block to trigger changes
+        val chain0Nodes = nodes.filterIndexed { i, _ -> !excludeChain0Nodes.contains(i) }
+        buildBlock(chain0Nodes, 0)
     }
 
-    fun assertEqualAtHeight(chainOld: NodeSet, chainNew: NodeSet, height: Long) {
-        val expectedBlockRid = nodes[chainOld.all().first()].blockQueries(chainOld.chain).getBlockRid(height).get()
-        chainNew.all().forEach {
-           assertArrayEquals(nodes[it].blockQueries(chainNew.chain).getBlockRid(height).get(), expectedBlockRid)
+    fun assertEqualAtHeight(chainOld: Long, chainNew: Long, height: Long) {
+        val expectedBlockRid = getChainNodes(chainOld).first().blockQueries(chainOld).getBlockRid(height).get()
+        getChainNodes(chainNew).forEach {
+            assertArrayEquals(it.blockQueries(chainNew).getBlockRid(height).get(), expectedBlockRid)
         }
     }
 
 
-    fun assertNotEqualAtHeight(chainOld: NodeSet, chainNew: NodeSet, height: Long) {
-        val expectedBlockRid = nodes[chainOld.all().first()].blockQueries(chainOld.chain).getBlockRid(height).get()
-        chainNew.all().forEach {
-           assertFalse(expectedBlockRid!!.contentEquals(nodes[it].blockQueries(chainNew.chain).getBlockRid(height).get()!!))
+    fun assertNotEqualAtHeight(chainOld: Long, chainNew: Long, height: Long) {
+        val expectedBlockRid = getChainNodes(chainOld).first().blockQueries(chainOld).getBlockRid(height).get()
+        getChainNodes(chainNew).forEach {
+            assertFalse(expectedBlockRid!!.contentEquals(it.blockQueries(chainNew).getBlockRid(height).get()!!))
         }
     }
 
@@ -467,7 +467,7 @@ class ForkTestNightly : ManagedModeTest() {
      * * chain0 has two signers (indices 0 and 1) and one replica (2)
      * * chain1 has one signer (0) and one replica (1)
      */
-    private fun basicSystem(): NodeSet {
+    private fun basicSystem(): Long {
         startManagedSystem(2, 1)
 
         val c1 = startNewBlockchain(setOf(0), setOf(1), null)

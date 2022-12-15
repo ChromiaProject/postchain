@@ -10,12 +10,11 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.*
-import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.peer.DefaultPeerConnectionManager
-import net.postchain.debug.BlockchainProcessName
 
 class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : BlockchainProcess {
 
@@ -43,9 +42,8 @@ class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : B
 class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 
     override fun makeBlockchainProcess(
-        processName: BlockchainProcessName,
-        engine: BlockchainEngine,
-        awaitPermissionToProcessMessages: (timestamp: Long, exitCondition: () -> Boolean) -> Boolean
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine
     ): BlockchainProcess {
         return TestBlockchainProcess(engine)
     }
@@ -61,8 +59,7 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
     override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager {
         return DefaultPeerConnectionManager(
                 EbftPacketEncoderFactory(),
-                EbftPacketDecoderFactory(),
-                Secp256K1CryptoSystem()
+                EbftPacketDecoderFactory()
         )
     }
 
@@ -85,6 +82,10 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider
     ): BlockchainProcessManager {
-        return BaseBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider)
+        return BaseBlockchainProcessManager(postchainContext,
+                blockchainInfrastructure,
+                blockchainConfigurationProvider,
+                listOf()
+        )
     }
 }

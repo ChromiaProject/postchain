@@ -62,15 +62,15 @@ class NettyServerPeerConnection<PacketType>(
         handleSafely(peerConnectionDescriptor?.nodeId) {
             val message = Transport.unwrapMessage(msg as ByteBuf)
             if (packetDecoder.isIdentPacket(message)) {
-                val identPacketInfo = packetDecoder.parseIdentPacket(Transport.unwrapMessage(msg))
+                val identPacketInfo = packetDecoder.parseIdentPacket(message)
                 peerConnectionDescriptor = PeerConnectionDescriptorFactory.createFromIdentPacketInfo(identPacketInfo)
                 onConnectedHandler?.invoke(this)
             } else {
                 if (peerConnectionDescriptor != null) {
-                    peerPacketHandler?.handle(message, peerConnectionDescriptor!!.nodeId!!)
+                    peerPacketHandler?.handle(message, peerConnectionDescriptor!!.nodeId)
                 }
             }
-            (msg as ByteBuf).release()
+            msg.release()
         }
     }
 

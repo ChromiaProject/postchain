@@ -9,12 +9,24 @@ import mu.withLoggingContext
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.TimeLog
-import net.postchain.common.data.ByteArrayKey
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.toHex
-import net.postchain.core.*
-import net.postchain.core.block.*
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.core.AfterCommitHandler
+import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainEngine
+import net.postchain.core.PmEngineIsAlreadyClosed
+import net.postchain.core.Storage
+import net.postchain.core.Transaction
+import net.postchain.core.TransactionQueue
+import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockTrace
+import net.postchain.core.block.ManagedBlockBuilder
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
@@ -34,12 +46,12 @@ const val LOG_STATS = true // Was this the reason this entire class was muted?
  * Usually we don't log single (successful) transactions, not even at trace level.
  */
 open class BaseBlockchainEngine(
-    private val processName: BlockchainProcessName,
-    private val blockchainConfiguration: BlockchainConfiguration,
-    val storage: Storage,
-    private val chainID: Long,
-    private val transactionQueue: TransactionQueue,
-    private val useParallelDecoding: Boolean = true
+        private val processName: BlockchainProcessName,
+        private val blockchainConfiguration: BlockchainConfiguration,
+        override val storage: Storage,
+        private val chainID: Long,
+        private val transactionQueue: TransactionQueue,
+        private val useParallelDecoding: Boolean = true
 ) : BlockchainEngine {
 
     companion object : KLogging()
@@ -68,8 +80,8 @@ open class BaseBlockchainEngine(
         initialized = true
     }
 
-    override fun setAfterCommitHandler(handler: AfterCommitHandler) {
-        afterCommitHandler = handler
+    override fun setAfterCommitHandler(afterCommitHandler: AfterCommitHandler) {
+        this.afterCommitHandler = afterCommitHandler
     }
 
     override fun getTransactionQueue(): TransactionQueue {
@@ -90,6 +102,8 @@ open class BaseBlockchainEngine(
 
     override fun shutdown() {
         closed = true
+        blockchainConfiguration.shutdownModules()
+        blockQueries.shutdown()
         storage.close()
     }
 
@@ -123,7 +137,7 @@ open class BaseBlockchainEngine(
 
     private fun smartDecodeTransaction(txData: ByteArray): Transaction {
         var tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(txData)
-        val enqueuedTx = transactionQueue.findTransaction(ByteArrayKey(tx.getRID()))
+        val enqueuedTx = transactionQueue.findTransaction(WrappedByteArray(tx.getRID()))
         if (enqueuedTx != null && enqueuedTx.getHash().contentEquals(tx.getHash())) {
             // if transaction is identical (has same hash) then use transaction
             // from queue, which is already verified
@@ -151,8 +165,8 @@ open class BaseBlockchainEngine(
     }
 
     private fun loadUnfinishedBlockImpl(
-            block: BlockData,
-            transactionsDecoder: (List<ByteArray>) -> List<Transaction>
+        block: BlockData,
+        transactionsDecoder: (List<ByteArray>) -> List<Transaction>
     ): Pair<ManagedBlockBuilder, Exception?> {
         withLoggingContext(loggingContext) {
             val grossStart = System.nanoTime()
@@ -236,7 +250,7 @@ open class BaseBlockchainEngine(
                             rejectedTxs++
                             transactionSample.stop(metrics.rejectedTransactions)
                             transactionQueue.rejectTransaction(tx, txException)
-                            logger.warn("Rejected Tx: ${ByteArrayKey(tx.getRID())}, reason: ${txException.message}, cause: ${txException.cause}")
+                            logger.warn("Rejected Tx: ${tx.getRID().toHex()}, reason: ${txException.message}, cause: ${txException.cause}")
                         } else {
                             acceptedTxs++
                             transactionSample.stop(metrics.acceptedTransactions)
@@ -288,11 +302,11 @@ open class BaseBlockchainEngine(
     // -----------------
 
     private fun prettyBlockHeader(
-            blockHeader: BlockHeader,
-            acceptedTxs: Int,
-            rejectedTxs: Int,
-            gross: Pair<Long, Long>,
-            net: Pair<Long, Long>
+        blockHeader: BlockHeader,
+        acceptedTxs: Int,
+        rejectedTxs: Int,
+        gross: Pair<Long, Long>,
+        net: Pair<Long, Long>
     ): String {
 
         val grossRate = (acceptedTxs * 1_000_000_000L) / max(gross.second - gross.first, 1)

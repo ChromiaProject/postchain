@@ -34,6 +34,7 @@ class RestApiGetStatusEndpointTest {
     fun setup() {
         model = mock {
             on { chainIID } doReturn 1L
+            on { live } doReturn true
             on { getStatus(TxRID(txHashHex.hexStringToByteArray())) } doReturn ApiStatus(TransactionStatus.CONFIRMED)
         }
 
@@ -50,10 +51,10 @@ class RestApiGetStatusEndpointTest {
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
-            .get("/tx/$blockchainRID/$txHashHex/status")
-            .then()
-            .statusCode(200)
-            .body("status", equalToIgnoringCase("CONFIRMED"))
+                .get("/tx/$blockchainRID/$txHashHex/status")
+                .then()
+                .statusCode(200)
+                .body("status", equalToIgnoringCase("CONFIRMED"))
     }
 
     @Test
@@ -61,9 +62,9 @@ class RestApiGetStatusEndpointTest {
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
-            .get("/tx/iid_${chainIid.toInt().toString()}/$txHashHex/status")
-            .then()
-            .statusCode(200)
-            .body("status", equalToIgnoringCase("CONFIRMED"))
+                .get("/tx/iid_${chainIid.toInt().toString()}/$txHashHex/status")
+                .then()
+                .statusCode(200)
+                .body("status", equalToIgnoringCase("CONFIRMED"))
     }
 }

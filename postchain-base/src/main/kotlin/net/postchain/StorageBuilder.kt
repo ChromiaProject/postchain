@@ -2,11 +2,11 @@
 
 package net.postchain
 
-import net.postchain.base.Storage
 import net.postchain.base.data.BaseStorage
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatabaseAccessFactory
 import net.postchain.config.app.AppConfig
+import net.postchain.core.Storage
 import org.apache.commons.dbcp2.BasicDataSource
 import javax.sql.DataSource
 
@@ -66,6 +66,7 @@ object StorageBuilder {
             username = appConfig.databaseUsername
             password = appConfig.databasePassword
             defaultAutoCommit = false
+            addConnectionProperty("binaryTransfer", "false") // workaround for issue in Postgres driver 42.5.1: https://github.com/pgjdbc/pgjdbc/issues/2695
 
             if (withSchema) {
                 /**

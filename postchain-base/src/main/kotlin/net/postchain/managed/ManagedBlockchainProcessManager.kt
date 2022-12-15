@@ -4,17 +4,20 @@ package net.postchain.managed
 
 import mu.KLogging
 import net.postchain.PostchainContext
-import net.postchain.StorageBuilder
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
+import net.postchain.common.reflection.newInstanceOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.config.node.ManagedNodeConfig
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
-import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
-import net.postchain.ebft.heartbeat.*
+import net.postchain.gtv.GtvDecoder
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
+import net.postchain.managed.config.DappBlockchainConfigurationFactory
+import net.postchain.managed.config.ManagedDataSourceAware
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -52,88 +55,61 @@ import net.postchain.ebft.heartbeat.*
 open class ManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure,
-        blockchainConfigProvider: BlockchainConfigurationProvider
+        blockchainConfigProvider: BlockchainConfigurationProvider,
+        bpmExtensions: List<BlockchainProcessManagerExtension> = listOf()
 ) : BaseBlockchainProcessManager(
         postchainContext,
         blockchainInfrastructure,
-        blockchainConfigProvider
+        blockchainConfigProvider,
+        bpmExtensions
 ) {
 
     protected open lateinit var dataSource: ManagedNodeDataSource
     protected var peerListVersion: Long = -1
     protected val CHAIN0 = 0L
-    protected val heartbeatConfig = HeartbeatConfig.fromAppConfig(appConfig)
-    protected val heartbeatManager = DefaultHeartbeatManager()
 
     companion object : KLogging()
 
-    /**
-     * Check if this is the "chain zero" and if so we need to set the dataSource in a few objects before we go on.
-     */
-    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid? {
-        if (chainId == CHAIN0) {
-            initManagedEnvironment()
-        }
-        return super.startBlockchain(chainId, bTrace)
-    }
-
-    protected open fun initManagedEnvironment() {
-        try {
-            dataSource = buildChain0ManagedDataSource()
-            peerListVersion = dataSource.getPeerListVersion()
-
-            // Setting up managed data source to the nodeConfig
-            (postchainContext.nodeConfigProvider as? ManagedNodeConfigurationProvider)
-                    ?.setPeerInfoDataSource(dataSource)
-                    ?: logger.warn { "Node config is not managed, no peer info updates possible" }
-
-            // Setting up managed data source to the blockchainConfig
-            (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
-                    ?.setDataSource(dataSource)
-                    ?: logger.warn { "Blockchain config is not managed" }
-
-        } catch (e: Exception) {
-            // TODO: [POS-90]: Improve error handling here
-            logger.error { e.message }
+    override fun makeBlockchainConfiguration(chainId: Long): BlockchainConfiguration {
+        return super.makeBlockchainConfiguration(chainId).also {
+            if (chainId == CHAIN0 && it is ManagedDataSourceAware) {
+                initManagedEnvironment(it)
+            }
         }
     }
 
-    // TODO: [POS-129]: 'protected open' for tests only. Change that.
-    protected open fun buildChain0ManagedDataSource(): ManagedNodeDataSource {
-        val storage = StorageBuilder.buildStorage(
-                postchainContext.appConfig)
+    protected open fun initManagedEnvironment(blockchainConfig: ManagedDataSourceAware) {
+        dataSource = blockchainConfig.dataSource
+        peerListVersion = dataSource.getPeerListVersion()
 
-        val blockQueries = withReadWriteConnection(storage, CHAIN0) { ctx0 ->
-            val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(ctx0, CHAIN0)
+        // Setting up managed data source to the nodeConfig
+        (postchainContext.nodeConfigProvider as? ManagedNodeConfigurationProvider)
+                ?.setPeerInfoDataSource(dataSource)
+                ?: logger.warn { "Node config is not managed, no peer info updates possible" }
 
-                    ?: throw ProgrammerMistake("chain0 configuration not found")
-
-            val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
-                    configuration, ctx0, NODE_ID_AUTO, CHAIN0)
-
-            blockchainConfig.makeBlockQueries(storage)
-        }
-
-        return createDataSource(blockQueries)
+        // Setting up managed data source to the blockchainConfig
+        (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
+                ?.setDataSource(dataSource)
+                ?: logger.warn { "Blockchain config is not managed" }
     }
 
-    protected open fun createDataSource(blockQueries: BlockQueries) =
-            BaseManagedNodeDataSource(blockQueries, postchainContext.appConfig)
-
-    override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (Long, () -> Boolean) -> Boolean {
-        return if (!heartbeatConfig.enabled || blockchainConfig.chainID == 0L) {
-            { _, _ -> true }
-        } else {
-            val hbListener: HeartbeatListener = DefaultHeartbeatListener(heartbeatConfig, blockchainConfig.chainID)
-            heartbeatManager.addListener(blockchainConfig.chainID, hbListener);
-            awaitHeartbeatHandler(hbListener, heartbeatConfig)
-        }
-    }
-
-    override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
-        heartbeatManager.removeListener(chainId)
-        super.stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
-    }
+    override fun getBlockchainConfigurationFactory(chainId: Long): BlockchainConfigurationFactorySupplier =
+            BlockchainConfigurationFactorySupplier { factoryName: String ->
+                try {
+                    val factory = newInstanceOf<GTXBlockchainConfigurationFactory>(factoryName)
+                    if (chainId == CHAIN0) {
+                        Chain0BlockchainConfigurationFactory(factory, appConfig)
+                    } else {
+                        DappBlockchainConfigurationFactory(factory, dataSource)
+                    }
+                } catch (e: Exception) {
+                    throw UserMistake(
+                            "[${nodeName()}]: Can't start blockchain chainId: $chainId " +
+                                    "due to configuration is wrong. Check /configurationfactory value: $factoryName. " +
+                                    "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass)", e
+                    )
+                }
+            }
 
     /**
      * @return a [AfterCommitHandler] which is a lambda (This lambda will be called by the Engine after each block
@@ -148,10 +124,9 @@ open class ManagedBlockchainProcessManager(
          *
          * @return "true" if a restart was needed
          */
+        @Suppress("UNUSED_PARAMETER")
         fun afterCommitHandlerChain0(bTrace: BlockTrace?, blockTimestamp: Long): Boolean {
             wrTrace("chain0 begin", chainId, bTrace)
-            // Sending heartbeat to other chains
-            heartbeatManager.beat(blockTimestamp)
 
             // Preloading blockchain configuration
             preloadChain0Configuration()
@@ -188,7 +163,7 @@ open class ManagedBlockchainProcessManager(
 
             return if (isConfigurationChanged(chainId)) {
                 wrTrace("chainN, restart needed", chainId, bTrace)
-                restartBlockchainAsync(chainId, bTrace)
+                startBlockchainAsync(chainId, bTrace)
                 true
             } else {
                 wrTrace("chainN, no restart", chainId, bTrace)
@@ -202,23 +177,26 @@ open class ManagedBlockchainProcessManager(
         fun wrappedAfterCommitHandler(bTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long): Boolean {
             return try {
                 wrTrace("Before", chainId, bTrace)
-                synchronized(synchronizer) {
-                    wrTrace("Sync", chainId, bTrace)
-                    for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
+                for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
 
-                    val restart = if (chainId == CHAIN0) {
-                        afterCommitHandlerChain0(bTrace, blockTimestamp)
-                    } else {
-                        afterCommitHandlerChainN(bTrace)
-                    }
-                    wrTrace("After", chainId, bTrace)
-                    restart
+                wrTrace("Sync", chainId, bTrace)
+                // If chain is already being stopped/restarted by another thread we will not get the lock and may return
+                if (!tryAcquireChainLock(chainId)) return false
+
+                val restart = if (chainId == CHAIN0) {
+                    afterCommitHandlerChain0(bTrace, blockTimestamp)
+                } else {
+                    afterCommitHandlerChainN(bTrace)
                 }
+
+                wrTrace("After", chainId, bTrace)
+                restart
             } catch (e: Exception) {
-                logger.error("Exception in restart handler: $e")
-                e.printStackTrace()
-                restartBlockchainAsync(chainId, bTrace)
+                logger.error(e) { "Exception in restart handler: $e" }
+                startBlockchainAsync(chainId, bTrace)
                 true // let's hope restarting a blockchain fixes the problem
+            } finally {
+                releaseChainLock(chainId)
             }
         }
 
@@ -229,21 +207,21 @@ open class ManagedBlockchainProcessManager(
      * Restart all chains. Begin with chain zero.
      */
     private fun reloadBlockchainsAsync(bTrace: BlockTrace?) {
-        executor.submit {
+        synchronized(synchronizer) {
             reloadAllDebug("Begin", bTrace)
-            val toLaunch = retrieveBlockchainsToLaunch()
+            val toLaunch = retrieveBlockchainsToLaunch().map { it.chainId }.toSet()
             val launched = getLaunchedBlockchains()
             logChains(toLaunch, launched, true)
 
             // Starting blockchains: at first chain0, then the rest
             reloadAllInfo("Launching blockchain", 0)
-            startBlockchain(0L, bTrace)
+            startBlockchainAsync(0L, bTrace)
 
             // Launching new blockchains except blockchain 0
             toLaunch.filter { it != 0L }
                     .forEach {
                         reloadAllInfo("Launching blockchain", it)
-                        startBlockchain(it, bTrace)
+                        startBlockchainAsync(it, bTrace)
                     }
 
             // Stopping launched blockchains
@@ -251,7 +229,7 @@ open class ManagedBlockchainProcessManager(
                     .filter { it in launched }
                     .forEach {
                         reloadAllInfo("Stopping blockchain", it)
-                        stopBlockchain(it, bTrace)
+                        stopBlockchainAsync(it, bTrace)
                     }
         }
     }
@@ -265,16 +243,16 @@ open class ManagedBlockchainProcessManager(
      * @param reloadChain0 is true if the chain zero must be restarted.
      */
     private fun startStopBlockchainsAsync(reloadChain0: Boolean, bTrace: BlockTrace?) {
-        executor.submit {
+        synchronized(synchronizer) {
             ssaTrace("Begin", bTrace)
-            val toLaunch = retrieveBlockchainsToLaunch()
+            val toLaunch = retrieveBlockchainsToLaunch().map { it.chainId }.toSet()
             val launched = getLaunchedBlockchains()
             logChains(toLaunch, launched, reloadChain0)
 
             // Launching blockchain 0
             if (reloadChain0) {
                 ssaInfo("Reloading of blockchain 0 is required, launching it", 0L)
-                startBlockchain(0L, bTrace)
+                startBlockchainAsync(0L, bTrace)
             }
 
             // Launching new blockchains except blockchain 0
@@ -282,7 +260,7 @@ open class ManagedBlockchainProcessManager(
                     .filter { it !in launched }
                     .forEach {
                         ssaInfo("Launching blockchain", it)
-                        startBlockchain(it, bTrace)
+                        startBlockchainAsync(it, bTrace)
                     }
 
             // Stopping launched blockchains
@@ -290,15 +268,9 @@ open class ManagedBlockchainProcessManager(
                     .filter { it in launched }
                     .forEach {
                         ssaInfo("Stopping blockchain", it)
-                        stopBlockchain(it, bTrace)
+                        stopBlockchainAsync(it, bTrace)
                     }
             ssaTrace("End", bTrace)
-        }
-    }
-
-    protected fun restartBlockchainAsync(chainId: Long, bTrace: BlockTrace?) {
-        executor.submit {
-            startBlockchain(chainId, bTrace)
         }
     }
 
@@ -330,13 +302,15 @@ open class ManagedBlockchainProcessManager(
             val nextConfigHeight = dataSource.findNextConfigurationHeight(brid.data, height)
             if (nextConfigHeight != null) {
                 logger.info { "Next config height found in managed-mode module: $nextConfigHeight" }
-                if (BaseConfigurationDataStore.findConfigurationHeightForBlock(ctx, nextConfigHeight) != nextConfigHeight) {
+                if (DatabaseAccess.of(ctx).findConfigurationHeightForBlock(ctx, nextConfigHeight) != nextConfigHeight) {
                     logger.info {
                         "Configuration for the height $nextConfigHeight is not found in ConfigurationDataStore " +
                                 "and will be loaded into it from managed-mode module"
                     }
                     val config = dataSource.getConfiguration(brid.data, nextConfigHeight)!!
-                    BaseConfigurationDataStore.addConfigurationData(ctx, nextConfigHeight, config)
+                    GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(config), brid)
+                    DatabaseAccess.of(ctx).addConfigurationData(
+                            ctx, nextConfigHeight, config)
                 }
             }
 
@@ -347,44 +321,51 @@ open class ManagedBlockchainProcessManager(
     /**
      * Will call chain zero to ask what chains to run.
      *
-     * Note: We use [computeBlockchainList()] which is the API method "nm_compute_blockchain_list" of this node's own
+     * Note: We use [computeBlockchainInfoList()] which is the API method "nm_compute_blockchain_info_list" of this node's own
      * API for chain zero.
      *
      * @return all chainIids chain zero thinks we should run.
      */
-    protected open fun retrieveBlockchainsToLaunch(): Set<Long> {
+    protected open fun retrieveBlockchainsToLaunch(): Set<LocalBlockchainInfo> {
         retrieveTrace("Begin")
         // chain-zero is always in the list
-        val blockchains = mutableSetOf(CHAIN0)
+        val blockchains = mutableSetOf(LocalBlockchainInfo(CHAIN0, true))
 
         withWriteConnection(storage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
-
-            val locallyConfiguredReplicas = postchainContext.nodeConfigProvider.getConfiguration().blockchainsToReplicate
-            val domainBlockchainSet = dataSource.computeBlockchainList().map { BlockchainRid(it) }.toSet()
-            val allMyBlockchains = domainBlockchainSet.union(locallyConfiguredReplicas)
-            allMyBlockchains.map { blockchainRid ->
-                val chainId = db.getChainId(ctx0, blockchainRid)
-                retrieveTrace("launch chainIid: $chainId,  BC RID: ${blockchainRid.toShortHex()} ")
-                if (chainId == null) {
-                    val newChainId = db.getMaxChainId(ctx0)
-                            ?.let { maxOf(it + 1, 100) }
-                            ?: 100
-                    withReadWriteConnection(storage, newChainId) { newCtx ->
-                        db.initializeBlockchain(newCtx, blockchainRid)
+            val domainBlockchains = dataSource.computeBlockchainInfoList().distinctBy { it.rid }
+            val all = domainBlockchains.union(locallyConfiguredBlockchainsToReplicate())
+            all.forEach { blockchainInfo ->
+                val chainId = db.getChainId(ctx0, blockchainInfo.rid)
+                retrieveTrace("launch chainIid: $chainId,  BC RID: ${blockchainInfo.rid.toShortHex()} ")
+                val localBlockchainInfo = if (chainId == null) {
+                    val calculatedChainId = if (blockchainInfo.system) {
+                        (db.getMaxSystemChainId(ctx0) ?: 0) + 1
+                    } else {
+                        maxOf(db.getMaxChainId(ctx0) ?: 0, 99) + 1
                     }
-                    newChainId
+                    withReadWriteConnection(storage, calculatedChainId) { newCtx ->
+                        db.initializeBlockchain(newCtx, blockchainInfo.rid)
+                    }
+                    LocalBlockchainInfo(calculatedChainId, blockchainInfo.system)
                 } else {
-                    chainId
+                    LocalBlockchainInfo(chainId, blockchainInfo.system)
                 }
-            }.filter { it != CHAIN0 }.forEach {
-                blockchains.add(it)
+
+                if (localBlockchainInfo.chainId != CHAIN0) {
+                    blockchains.add(localBlockchainInfo)
+                }
             }
             true
         }
         retrieveTrace("End, restart: ${blockchains.size}.")
-        return blockchains.toSet()
+        return blockchains
     }
+
+    protected open fun locallyConfiguredBlockchainsToReplicate() =
+            (postchainContext.nodeConfigProvider.getConfiguration() as? ManagedNodeConfig)
+                    ?.locallyConfiguredBlockchainsToReplicate?.map { BlockchainInfo(it, false) }?.toSet()
+                    ?: emptySet()
 
     protected open fun getLaunchedBlockchains(): Set<Long> {
         return blockchainProcesses.keys

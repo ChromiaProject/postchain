@@ -3,11 +3,17 @@
 package net.postchain.core
 
 import net.postchain.base.BlockWitnessProvider
-import net.postchain.base.Storage
+import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.common.BlockchainRid
+import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockWitness
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
-import net.postchain.core.TransactionFactory
-import net.postchain.core.block.*
 
 /**
  * [BlockchainConfiguration] describes an individual blockchain instance (within Postchain system).
@@ -15,14 +21,17 @@ import net.postchain.core.block.*
  * (for example [BlockBuildingStrategy]).
  */
 interface BlockchainConfiguration {
+    val rawConfig: Gtv
     val blockchainContext: BlockchainContext
     val chainID: Long
     val blockchainRid: BlockchainRid
+    val blockchainDependencies: List<BlockchainRelatedInfo>
     val signers: List<ByteArray>
     val effectiveBlockchainRID: BlockchainRid
     val traits: Set<String>
     val syncInfrastructureName: DynamicClassName?
     val syncInfrastructureExtensionNames: List<DynamicClassName>
+    val transactionQueueSize: Int
 
     fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader
     fun decodeWitness(rawWitness: ByteArray): BlockWitness
@@ -30,18 +39,18 @@ interface BlockchainConfiguration {
     fun getTransactionFactory(): TransactionFactory
     fun makeBlockBuilder(ctx: EContext): BlockBuilder
     fun makeBlockQueries(storage: Storage): BlockQueries
-    fun initializeDB(ctx: EContext)
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
+    fun shutdownModules()
 }
 
-interface ConfigurationDataStore {
-    fun findConfigurationHeightForBlock(context: EContext, height: Long): Long?
-    fun getConfigurationData(context: EContext, height: Long): ByteArray?
-    fun addConfigurationData(context: EContext, height: Long, binData: ByteArray)
-    fun addConfigurationData(context: EContext, height: Long, gtvData: Gtv)
-    fun setMustSyncUntil(context: EContext, brid: BlockchainRid, height: Long) : Boolean
+fun interface BlockchainConfigurationFactorySupplier {
+    fun supply(factoryName: String): BlockchainConfigurationFactory
 }
 
 interface BlockchainConfigurationFactory {
-    fun makeBlockchainConfiguration(configurationData: Any): BlockchainConfiguration
+    fun makeBlockchainConfiguration(configurationData: Any,
+                                    partialContext: BlockchainContext,
+                                    blockSigMaker: SigMaker,
+                                    eContext: EContext,
+                                    cryptoSystem: CryptoSystem = Secp256K1CryptoSystem()): BlockchainConfiguration
 }

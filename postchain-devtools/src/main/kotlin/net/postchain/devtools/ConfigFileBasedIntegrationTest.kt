@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.StorageBuilder
 import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
+import net.postchain.config.app.AppConfig.Companion.DEFAULT_PORT
 import net.postchain.core.*
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.testinfra.TestTransaction
@@ -12,7 +13,6 @@ import net.postchain.devtools.utils.configuration.UniversalFileLocationStrategy
 import net.postchain.devtools.utils.configuration.activeChainIds
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import net.postchain.core.*
 import org.apache.commons.configuration2.CompositeConfiguration
 import org.apache.commons.configuration2.MapConfiguration
 import org.apache.commons.configuration2.PropertiesConfiguration
@@ -25,6 +25,8 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInfo
 import java.io.File
+import java.util.concurrent.TimeoutException
+import kotlin.time.Duration
 
 // Legacy code still use this old name, don't want to break compatibility.
 typealias IntegrationTest = ConfigFileBasedIntegrationTest
@@ -291,7 +293,6 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         }
 
         baseConfig.setProperty("fastsync.exit_delay", if (nodeCount == 1) 0 else 1000)
-        baseConfig.setProperty("heartbeat.enabled", false)
 
         val appConfig = CompositeConfiguration().apply {
             addConfiguration(configOverrides)
@@ -310,8 +311,8 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     fun createPeerInfosWithReplicas(nodeCount: Int, replicasCount: Int): Array<PeerInfo> {
         if (peerInfos == null) {
             peerInfos =
-                    Array(nodeCount) { PeerInfo("localhost", BASE_PORT + it, generatePubKey(it)) } +
-                            Array(replicasCount) { PeerInfo("localhost", BASE_PORT - it - 1, generatePubKey(-it - 1)) }
+                    Array(nodeCount) { PeerInfo("localhost", DEFAULT_PORT + it, generatePubKey(it)) } +
+                            Array(replicasCount) { PeerInfo("localhost", DEFAULT_PORT - it - 1, generatePubKey(-it - 1)) }
         }
 
         return peerInfos!!
@@ -323,13 +324,19 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         return node.getBlockchainInstance().blockchainEngine.getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
     }
 
-    protected fun buildBlock(toHeight: Int, vararg txs: TestTransaction) {
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    protected fun buildBlock(toHeight: Int, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
         nodes.forEach {
             enqueueTransactions(it, *txs)
             strategy(it).buildBlocksUpTo(toHeight.toLong())
         }
         nodes.forEach {
-            strategy(it).awaitCommitted(toHeight)
+            strategy(it).awaitCommitted(toHeight, timeout)
         }
     }
 
@@ -341,4 +348,33 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     }
 
 
+    /**
+     * Use this instead of [buildBlock] when you expect chain to restart while building up to specified height
+     */
+    fun buildBlocksWithChainRestart(toHeight: Long, vararg txs: TestTransaction) {
+        nodes.forEach {
+            enqueueTransactions(it, *txs)
+            strategy(it).buildBlocksUpTo(toHeight)
+        }
+        var allAtHeight = false
+        while (!allAtHeight) {
+            allAtHeight = true
+            run checkHeights@{
+                nodes.forEach {
+                    val strategy = getStrategySafely(it)
+                    // If chain has restarted we need to update height in the new strategy instance
+                    strategy?.buildBlocksUpTo(toHeight)
+
+                    if (strategy == null || strategy.shouldBuildBlock()) {
+                        allAtHeight = false
+                        return@checkHeights
+                    }
+                }
+            }
+        }
+    }
+
+    private fun getStrategySafely(node: PostchainTestNode): OnDemandBlockBuildingStrategy? {
+        return node.retrieveBlockchain()?.blockchainEngine?.getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy?
+    }
 }

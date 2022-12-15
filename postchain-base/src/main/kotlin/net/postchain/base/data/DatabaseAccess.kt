@@ -3,18 +3,21 @@
 package net.postchain.base.data
 
 import net.postchain.base.PeerInfo
+import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.core.NodeRid
-import net.postchain.core.block.BlockHeader
-import net.postchain.core.block.BlockWitness
 import net.postchain.core.AppContext
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
+import net.postchain.core.NodeRid
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
+import net.postchain.core.TxEContext
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockWitness
+import net.postchain.crypto.PubKey
 import java.sql.Connection
 import java.time.Instant
 
@@ -55,6 +58,7 @@ interface DatabaseAccess {
     fun initializeBlockchain(ctx: EContext, blockchainRid: BlockchainRid)
     fun getChainId(ctx: EContext, blockchainRid: BlockchainRid): Long?
     fun getMaxChainId(ctx: EContext): Long?
+    fun getMaxSystemChainId(ctx: EContext): Long?
 
     fun getBlockchainRid(ctx: EContext): BlockchainRid?
     fun insertBlock(ctx: EContext, height: Long): Long
@@ -75,7 +79,7 @@ interface DatabaseAccess {
     fun getBlockInfo(ctx: EContext, txRID: ByteArray): BlockInfo
     fun getTxHash(ctx: EContext, txRID: ByteArray): ByteArray
     fun getBlockTxRIDs(ctx: EContext, blockIid: Long): List<ByteArray>
-    fun getBlockTxHashes(ctx: EContext, blokcIid: Long): List<ByteArray>
+    fun getBlockTxHashes(ctx: EContext, blockIid: Long): List<ByteArray>
     fun getTxBytes(ctx: EContext, txRID: ByteArray): ByteArray?
     fun isTransactionConfirmed(ctx: EContext, txRID: ByteArray): Boolean
     fun getBlock(ctx: EContext, blockRID: ByteArray): BlockInfoExt?
@@ -86,19 +90,24 @@ interface DatabaseAccess {
     // Blockchain configurations
     fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long?
     fun findNextConfigurationHeight(ctx: EContext, height: Long): Long?
+    fun listConfigurations(ctx: EContext): List<Long>
+    fun removeConfiguration(ctx: EContext, height: Long): Int
 
     fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
 
     // Event and State
-    fun insertEvent(ctx: EContext, prefix: String, height: Long, hash: Hash, data: ByteArray)
-    fun getEvent(ctx: EContext, prefix: String, blockHeight: Long, eventHash: ByteArray): EventInfo?
+    fun insertEvent(ctx: TxEContext, prefix: String, height: Long, position: Long, hash: Hash, data: ByteArray)
+    fun getEvent(ctx: EContext, prefix: String, eventHash: ByteArray): EventInfo?
     fun getEventsOfHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
     fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
-    fun pruneEvents(ctx: EContext, prefix: String, height: Long)
+    fun pruneEvents(ctx: EContext, prefix: String, heightMustBeHigherThan: Long)
     fun insertState(ctx: EContext, prefix: String, height: Long, state_n: Long, data: ByteArray)
     fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): AccountState?
-    fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, height: Long)
+    fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, heightMustBeHigherThan: Long)
+    fun insertPage(ctx: EContext, name: String, page: Page)
+    fun getPage(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page?
+    fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int
 
     // Peers
     fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo>
@@ -110,9 +119,9 @@ interface DatabaseAccess {
 
     // Extra nodes to sync from
     fun getBlockchainReplicaCollection(ctx: AppContext): Map<BlockchainRid, List<NodeRid>>
-    fun existsBlockchainReplica(ctx: AppContext, brid: String, pubkey: String): Boolean
-    fun addBlockchainReplica(ctx: AppContext, brid: String, pubKey: String): Boolean
-    fun removeBlockchainReplica(ctx: AppContext, brid: String?, pubKey: String): Set<BlockchainRid>
+    fun existsBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubkey: PubKey): Boolean
+    fun addBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubKey: PubKey): Boolean
+    fun removeBlockchainReplica(ctx: AppContext, brid: BlockchainRid?, pubKey: PubKey): Set<BlockchainRid>
     fun getBlockchainsToReplicate(ctx: AppContext, pubkey: String): Set<BlockchainRid>
 
     //Avoid potential chain split
@@ -123,6 +132,9 @@ interface DatabaseAccess {
     // To be able to create tables not automatically created by the system
     // (most mandatory tables are not "creatable")
     fun createEventLeafTable(ctx: EContext, prefix: String) // Note: Not used by anchoring
+    fun createPageTable(ctx: EContext, prefix: String)
+    fun createStateLeafTable(ctx: EContext, prefix: String)
+    fun createStateLeafTableIndex(ctx: EContext, prefix: String, index: Int)
 
     companion object {
         fun of(ctx: AppContext): DatabaseAccess {

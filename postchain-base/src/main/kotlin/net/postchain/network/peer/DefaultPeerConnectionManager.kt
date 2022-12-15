@@ -7,16 +7,13 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.common.toHex
 import net.postchain.core.NodeRid
-import net.postchain.crypto.CryptoSystem
-import net.postchain.devtools.NameHelper
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
 import net.postchain.network.common.*
 import net.postchain.network.netty2.NettyPeerConnector
-import net.postchain.debug.BlockchainProcessName
 
 /**
  * Default implementation for "peer" based networks (which EBFT is).
@@ -52,9 +49,8 @@ import net.postchain.debug.BlockchainProcessName
  */
 open class DefaultPeerConnectionManager<PacketType>(
         private val packetEncoderFactory: XPacketEncoderFactory<PacketType>,
-        private val packetDecoderFactory: XPacketDecoderFactory<PacketType>,
-        cryptoSystem: CryptoSystem
-) : NetworkTopology, // Only "Peer" neworks need this
+        private val packetDecoderFactory: XPacketDecoderFactory<PacketType>
+) : NetworkTopology, // Only "Peer" networks need this
         PeerConnectionManager,  // Methods specific to the "X" connection part
         NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
 
@@ -178,13 +174,13 @@ open class DefaultPeerConnectionManager<PacketType>(
                 ConnectionDirection.OUTGOING
         )
 
-        val peerInfo = chainPeersConfig.commConfiguration.resolvePeer(peerId.byteArray)
-                ?: throw ProgrammerMistake("Peer ID not found: ${peerId.byteArray.toHex()}")
+        val peerInfo = chainPeersConfig.commConfiguration.resolvePeer(peerId.data)
+                ?: throw ProgrammerMistake("Peer ID not found: ${peerId.toHex()}")
         if (peerInfo.peerId() != peerId) {
             // Have to add this check since I see strange things
             throw ProgrammerMistake(
                     "Peer id found in comm config not same as we looked for" +
-                            " ${peerId.byteArray.toHex()}, found: ${peerInfo.peerId().byteArray.toHex()} "
+                            " ${peerId.toHex()}, found: ${peerInfo.peerId().toHex()} "
             )
         }
 
@@ -202,7 +198,7 @@ open class DefaultPeerConnectionManager<PacketType>(
         if (chain.isConnected(peerId)) {
             logger.debug {
                 "${logger(chain.peerConfig)}: connectChainPeer() - already connected chain $chainId " +
-                        "to peer: ${peerId.shortString()} so do nothing. "
+                        "to peer: ${peerName(peerId)} so do nothing. "
             }
         } else {
             connectorConnectPeer(chain.peerConfig, peerId)
@@ -242,7 +238,7 @@ open class DefaultPeerConnectionManager<PacketType>(
         } else {
             logger.debug(
                     "${logger(chain.peerConfig)}: connectChainPeer() - cannot connect chain $chainId " +
-                            "to peer: ${peerId.shortString()} b/c chain missing that connection. "
+                            "to peer: ${peerName(peerId)} b/c chain missing that connection. "
             )
         }
     }
@@ -283,7 +279,7 @@ open class DefaultPeerConnectionManager<PacketType>(
         logger.info(
                 "${logger(descriptor)}: onPeerConnected() - New ${descriptor.dir} connection: peer = " +
                         "${peerName(descriptor.nodeId)}, blockchainRID: ${descriptor.blockchainRid}, " +
-                        "${chainsWithConnections.getStats()}"
+                        chainsWithConnections.getStats()
         )
 
         // Find the connected Chain IID (Will report any error it finds)
@@ -356,7 +352,7 @@ open class DefaultPeerConnectionManager<PacketType>(
         val descriptor = connection.descriptor()
 
         // Find the disconnected Chain IID
-        var chainID: Long? = getChainIdOnDisconnected(descriptor)
+        val chainID: Long? = getChainIdOnDisconnected(descriptor)
         if (chainID == null) {
             connection.close()
             return
@@ -434,15 +430,6 @@ open class DefaultPeerConnectionManager<PacketType>(
                         connection.close()
                         return null
                     }
-                    null -> {
-                        logger.warn(
-                                "${logger(descriptor)}: getChainIdOnConnected() - Chain ID not found by " +
-                                        " blockchainRID = ${descriptor.blockchainRid} and we don't know the connection's" +
-                                        " direction."
-                        )
-                        connection.close()
-                        return null
-                    }
                 }
     }
 
@@ -504,16 +491,8 @@ open class DefaultPeerConnectionManager<PacketType>(
                         // Should never happen
                         logger.error(
                                 "${logger(descriptor)}: getChainIdOnDisconnected() - How can we never have seen " +
-                                        "chain: from peer: ${NameHelper.peerName(descriptor.nodeId)} , direction: " +
+                                        "chain: from peer: ${peerName(descriptor.nodeId)} , direction: " +
                                         "${descriptor.dir}, blockchainRID = ${descriptor.blockchainRid}) . "
-                        )
-                        null
-                    }
-                    null -> {
-                        logger.warn(
-                                "${logger(descriptor)}: getChainIdOnDisconnected() - Chain ID not found by " +
-                                        " blockchainRID = ${descriptor.blockchainRid}" +
-                                        " (and we don't know the direction)"
                         )
                         null
                     }
@@ -539,10 +518,6 @@ open class DefaultPeerConnectionManager<PacketType>(
     private fun loggingPrefix(blockchainRid: BlockchainRid): String = BlockchainProcessName(
             myPeerInfo.peerId().toString(), blockchainRid
     ).toString()
-
-    private fun loggingPrefix(descriptor: PeerConnectionDescriptor): String {
-        return "${myPeerInfo.peerId()} ${descriptor.loggingPrefix()}"
-    }
 
     private fun logger(descriptor: PeerConnectionDescriptor): String =
             "${myPeerInfo.peerId()}, ${descriptor.loggingPrefix()}"

@@ -6,19 +6,20 @@ import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
+import net.postchain.core.block.InitialBlockData
 import net.postchain.gtv.*
 import net.postchain.gtv.GtvFactory.gtv
 
 /**
  * The structure of the block header goes like this:
  *
- *  1. bockchainRid [GtvByteArray]
+ *  1. blockchainRid [GtvByteArray]
  *  2. prevBlockRid [GtvByteArray]
  *  3. rootHash [GtvByteArray]
  *  4. timestamp [GtvInteger]
  *  5. height [GtvInteger]
  *  6. dependencies [GtvArray] or [GtvNull] (this is to save space)
- *  6. extra  [GtvDictionary]
+ *  7. extra  [GtvDictionary]
  */
 data class BlockHeaderData(
         val gtvBlockchainRid: GtvByteArray,
@@ -43,11 +44,11 @@ data class BlockHeaderData(
     }
 
     fun getTimestamp(): Long {
-        return gtvTimestamp.integer.toLong()
+        return gtvTimestamp.integer
     }
 
     fun getHeight(): Long {
-        return gtvHeight.integer.toLong()
+        return gtvHeight.integer
     }
 
     /**
@@ -61,14 +62,12 @@ data class BlockHeaderData(
             is GtvNull -> arrayOf()
             is GtvArray -> {
                 val lastBlockRidArray = arrayOfNulls<Hash>(gtvDependencies.getSize())
-                var i = 0
-                for (blockRid in gtvDependencies.array) {
+                for ((i, blockRid) in gtvDependencies.array.withIndex()) {
                     lastBlockRidArray[i] = when (blockRid) {
                         is GtvByteArray -> blockRid.bytearray
                         is GtvNull -> null // Allowed
                         else -> throw UserMistake("Cannot use type ${blockRid.type} in dependency list (at pos: $i)")
                     }
-                    i++
                 }
                 lastBlockRidArray
             }
@@ -78,13 +77,8 @@ data class BlockHeaderData(
 
     }
 
-    fun getExtra(): Map<String, String> {
-        val retMap = HashMap<String, String>()
-        for (key in this.gtvExtra.dict.keys) {
-            val gtvValue = gtvExtra[key] as GtvString
-            retMap.put(key, gtvValue.string)
-        }
-        return retMap
+    fun getExtra(): Map<String, Gtv> {
+        return gtvExtra.asDict()
     }
 
     fun toGtv(): GtvArray {
@@ -92,17 +86,39 @@ data class BlockHeaderData(
     }
 
     companion object {
+        fun fromBinary(rawData: ByteArray) = fromGtv(GtvDecoder.decodeGtv(rawData))
 
-        fun fromGtv(gtv: GtvArray): BlockHeaderData {
-            return BlockHeaderData(
-                    gtv[0] as GtvByteArray,
-                    gtv[1] as GtvByteArray,
-                    gtv[2] as GtvByteArray,
-                    gtv[3] as GtvInteger,
-                    gtv[4] as GtvInteger,
-                    gtv[5],
-                    gtv[6] as GtvDictionary)
+        fun fromGtv(gtv: Gtv) = BlockHeaderData(
+                gtv[0] as GtvByteArray,
+                gtv[1] as GtvByteArray,
+                gtv[2] as GtvByteArray,
+                gtv[3] as GtvInteger,
+                gtv[4] as GtvInteger,
+                gtv[5],
+                gtv[6] as GtvDictionary)
+
+        fun fromDomainObjects(iBlockData: InitialBlockData, rootHash: ByteArray, timestamp: Long, extraData: Map<String, Gtv>): BlockHeaderData {
+            val gtvBlockchainRid: GtvByteArray = gtv(iBlockData.blockchainRid.data)
+            val previousBlockRid: GtvByteArray = gtv(iBlockData.prevBlockRID)
+            val merkleRootHash: GtvByteArray = gtv(rootHash)
+            val gtvTimestamp: GtvInteger = gtv(timestamp)
+            val height: GtvInteger = gtv(iBlockData.height)
+            val dependencies: Gtv = translateArrayOfHashToGtv(iBlockData.blockHeightDependencyArr)
+            val extra = GtvDictionary.build(extraData)
+
+            return BlockHeaderData(gtvBlockchainRid, previousBlockRid, merkleRootHash, gtvTimestamp, height, dependencies, extra)
+        }
+
+        private fun translateArrayOfHashToGtv(hashArr: Array<Hash?>?): Gtv = if (hashArr != null) {
+            gtv(hashArr.map {
+                if (it != null) {
+                    gtv(it)
+                } else {
+                    GtvNull
+                }
+            })
+        } else {
+            GtvNull
         }
     }
-
 }

@@ -3,11 +3,15 @@
 package net.postchain.devtools
 
 import com.google.gson.GsonBuilder
+import jakarta.xml.bind.JAXBContext
+import jakarta.xml.bind.JAXBElement
+import jakarta.xml.bind.util.ValidationEventCollector
 import mu.KLogging
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.byteArrayKeyOf
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.utils.configuration.NodeSeqNumber
@@ -20,9 +24,6 @@ import net.postchain.gtx.gtxml.GTXMLTransactionParser
 import net.postchain.gtx.gtxml.TransactionContext
 import java.io.File
 import java.io.StringReader
-import javax.xml.bind.JAXBContext
-import javax.xml.bind.JAXBElement
-import javax.xml.bind.util.ValidationEventCollector
 
 /**
  * TODO: [et]: Maybe redesign this implementation based on [IntegrationTestSetup] currently
@@ -125,9 +126,9 @@ class TestLauncher : IntegrationTestSetup() {
                 ),
                 true,
                 mapOf(
-                        pubKey(0).byteArrayKeyOf() to cryptoSystem.buildSigMaker(pubKey(0), privKey(0)),
-                        user2pub.byteArrayKeyOf() to cryptoSystem.buildSigMaker(user2pub, user2priv),
-                        user3pub.byteArrayKeyOf() to cryptoSystem.buildSigMaker(user3pub, user3priv)
+                        pubKey(0).wrap() to cryptoSystem.buildSigMaker(KeyPair(pubKey(0), privKey(0))),
+                        user2pub.wrap() to cryptoSystem.buildSigMaker(KeyPair(user2pub, user2priv)),
+                        user3pub.wrap() to cryptoSystem.buildSigMaker(KeyPair(user3pub, user3priv))
                 )
         )
 
@@ -141,7 +142,7 @@ class TestLauncher : IntegrationTestSetup() {
             for ((txIdx, txXml) in block.transaction.withIndex()) {
                 try {
                     val gtxData = GTXMLTransactionParser.parseGTXMLTransaction(txXml, txContext, cryptoSystem)
-                    val tx = enqueueTx(node, gtxData.serialize(), blockNum)
+                    val tx = enqueueTx(node, gtxData.encode(), blockNum)
                     enqueued.add(EnqueuedTx(
                             txIdx.toLong(), tx!!.getRID(), txXml.isFailure
                     ))
@@ -171,10 +172,10 @@ class TestLauncher : IntegrationTestSetup() {
 
 
         for (blockHeight in 1..testType.block.size) {
-            val actualRIDs = getTxRidsAtHeight(node, blockHeight.toLong()).map { it.byteArrayKeyOf() }.toSet()
+            val actualRIDs = getTxRidsAtHeight(node, blockHeight.toLong()).map { it.wrap() }.toSet()
 
             enqueuedTxs[blockHeight.toLong()]!!.forEach {
-                val txRID = it.txRID.byteArrayKeyOf()
+                val txRID = it.txRID.wrap()
                 val present = actualRIDs.contains(txRID)
                 if (present && it.isFailure) {
                     failures.add(TransactionFailure(blockHeight.toLong(), it.txIdx,

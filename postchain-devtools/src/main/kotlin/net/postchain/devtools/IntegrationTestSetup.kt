@@ -5,14 +5,15 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
+import net.postchain.config.app.AppConfig.Companion.DEFAULT_PORT
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.core.Transaction
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
-import net.postchain.core.Transaction
 import org.apache.commons.configuration2.MapConfiguration
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterEach
@@ -20,6 +21,8 @@ import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInfo
+import java.util.concurrent.TimeoutException
+import kotlin.time.Duration
 
 /**
  * This class uses the [SystemSetup] helper class to construct tests, and this way skips node config files, but
@@ -88,7 +91,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     /**
      * Easy to forget we have two caches (due to legacy, maybe a bad practice?)
      */
-    protected fun updateCache(nodeSetup: NodeSetup, testNode: PostchainTestNode) {
+    protected open fun updateCache(nodeSetup: NodeSetup, testNode: PostchainTestNode) {
         nodeMap[nodeSetup.sequenceNumber] = testNode
         val nodeId = nodeSetup.sequenceNumber.nodeNumber
 
@@ -101,9 +104,9 @@ open class IntegrationTestSetup : AbstractIntegration() {
 
     protected fun strategy(node: PostchainTestNode): OnDemandBlockBuildingStrategy {
         return node
-            .getBlockchainInstance()
-            .blockchainEngine
-            .getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
+                .getBlockchainInstance()
+                .blockchainEngine
+                .getBlockBuildingStrategy() as OnDemandBlockBuildingStrategy
     }
 
     // TODO: [et]: Check out nullability for return value
@@ -177,9 +180,9 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * @param systemSetup is the map of what the test setup looks like.
      */
     protected fun createNodesFromSystemSetup(
-        sysSetup: SystemSetup,
-        preWipeDatabase: Boolean = true,
-        setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+            sysSetup: SystemSetup,
+            preWipeDatabase: Boolean = true,
+            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
     ) {
         this.systemSetup = sysSetup
 
@@ -209,11 +212,11 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * This code waits for sync on all signer nodes before returning in step 1.
      */
     protected fun awaitFastSynch(
-        sysSetup: SystemSetup,
-        testNodeMap: Map<NodeSeqNumber, PostchainTestNode>
+            sysSetup: SystemSetup,
+            testNodeMap: Map<NodeSeqNumber, PostchainTestNode>
     ) {
         sysSetup.nodeMap.values.forEach { nodeSetup ->
-            nodeSetup.chainsToSign.forEach { chainIid ->
+            nodeSetup.initialChainsToSign.forEach { chainIid ->
                 val testNode = testNodeMap[nodeSetup.sequenceNumber]
                 val process = testNode!!.getBlockchainInstance(chainIid.toLong())
                 await.until {
@@ -231,8 +234,8 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * Create the [PostchainTestNode], start everything, and return them
      */
     protected fun startAllTestNodesAndAllChains(
-        sysSetup: SystemSetup,
-        preWipeDatabase: Boolean
+            sysSetup: SystemSetup,
+            preWipeDatabase: Boolean
     ): Map<NodeSeqNumber, PostchainTestNode> {
         val retMap = mutableMapOf<NodeSeqNumber, PostchainTestNode>()
         for (nodeSetup in sysSetup.nodeMap.values) {
@@ -257,9 +260,9 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * Generates config for all [NodeSetup] objects
      */
     protected fun createNodeConfProvidersAndAddToNodeSetup(
-        sysSetup: SystemSetup,
-        confOverrides: MapConfiguration,
-        setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+            sysSetup: SystemSetup,
+            confOverrides: MapConfiguration,
+            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
     ) {
         val peerList = sysSetup.toPeerInfoList()
         confOverrides.setProperty("testpeerinfos", peerList.toTypedArray())
@@ -267,11 +270,11 @@ open class IntegrationTestSetup : AbstractIntegration() {
         val testName: String = getTestName()
         for (nodeSetup in sysSetup.nodeMap.values) {
             val nodeConfigProvider = NodeConfigurationProviderGenerator.buildFromSetup(
-                testName,
-                confOverrides,
-                nodeSetup,
-                sysSetup,
-                setupAction
+                    testName,
+                    confOverrides,
+                    nodeSetup,
+                    sysSetup,
+                    setupAction
             )
             nodeSetup.configurationProvider = nodeConfigProvider
         }
@@ -286,7 +289,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * @return list of [PostchainTestNode] s.
      */
     protected fun createMultiChainNodesFromSystemSetup(systemSetup: SystemSetup) =
-        systemSetup.toTestNodes().toTypedArray()
+            systemSetup.toTestNodes().toTypedArray()
 
     /**
      * Takes a [SystemSetup] and adds [NodeConfigurationProvider] to all [NodeSetup] in it.
@@ -313,8 +316,8 @@ open class IntegrationTestSetup : AbstractIntegration() {
     fun createPeerInfosWithReplicas(nodeCount: Int, replicasCount: Int): Array<PeerInfo> {
         if (peerInfos == null) {
             peerInfos =
-                    Array(nodeCount) { PeerInfo("localhost", BASE_PORT + it, pubKey(it)) } +
-                            Array(replicasCount) { PeerInfo("localhost", BASE_PORT - it - 1, pubKey(-it - 1)) }
+                    Array(nodeCount) { PeerInfo("localhost", DEFAULT_PORT + it, pubKey(it)) } +
+                            Array(replicasCount) { PeerInfo("localhost", DEFAULT_PORT - it - 1, pubKey(-it - 1)) }
         }
 
         return peerInfos!!
@@ -326,20 +329,57 @@ open class IntegrationTestSetup : AbstractIntegration() {
 
     fun createPeerInfos(nodeCount: Int): Array<PeerInfo> = createPeerInfosWithReplicas(nodeCount, 0)
 
-    protected fun buildBlock(chainId: Long, toHeight: Long, vararg txs: TestTransaction) {
-        buildBlock(nodes, chainId, toHeight, *txs)
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    protected fun buildBlock(chainId: Long, toHeight: Long, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
+        buildBlock(getChainNodes(chainId), chainId, toHeight, *txs, timeout = timeout)
     }
 
-    protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, toHeight: Long, vararg txs: TestTransaction) {
+    /**
+     * Builds next block
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    protected fun buildBlock(chainId: Long, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
+        val currentHeight = getChainNodes(chainId).first().currentHeight(chainId)
+        buildBlock(getChainNodes(chainId), chainId, currentHeight + 1, *txs, timeout = timeout)
+    }
+
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, toHeight: Long, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
         buildBlockNoWait(nodes, chainId, toHeight, *txs)
-        awaitHeight(nodes, chainId, toHeight)
+        awaitHeight(nodes, chainId, toHeight, timeout)
+    }
+
+    /**
+     * Builds next block
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
+        val currentHeight = nodes.first().currentHeight(chainId)
+        buildBlockNoWait(nodes, chainId, currentHeight + 1, *txs)
+        awaitHeight(nodes, chainId, currentHeight + 1, timeout)
     }
 
     protected fun buildBlockNoWait(
-        nodes: List<PostchainTestNode>,
-        chainId: Long,
-        toHeight: Long,
-        vararg txs: Transaction
+            nodes: List<PostchainTestNode>,
+            chainId: Long,
+            toHeight: Long,
+            vararg txs: Transaction
     ) {
         nodes.forEach {
             it.enqueueTxs(chainId, *txs)
@@ -349,18 +389,35 @@ open class IntegrationTestSetup : AbstractIntegration() {
         }
     }
 
-    protected open fun awaitHeight(chainId: Long, height: Long) {
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    protected open fun awaitHeight(chainId: Long, height: Long, timeout: Duration = Duration.INFINITE) {
         awaitLog("========= AWAIT ALL ${nodes.size} NODES chain:  $chainId, height:  $height (i)")
-        awaitHeight(nodes, chainId, height)
+        awaitHeight(getChainNodes(chainId), chainId, height, timeout)
         awaitLog("========= DONE AWAIT ALL ${nodes.size} NODES chain: $chainId, height: $height (i)")
     }
 
-    protected fun awaitHeight(nodes: List<PostchainTestNode>, chainId: Long, height: Long) {
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    protected fun awaitHeight(nodes: List<PostchainTestNode>, chainId: Long, height: Long, timeout: Duration = Duration.INFINITE) {
         nodes.forEach {
             awaitLog("++++++ AWAIT node RID: ${NameHelper.peerName(it.pubKey)}, chain: $chainId, height: $height (i)")
-            it.awaitHeight(chainId, height)
+            it.awaitHeight(chainId, height, timeout)
             awaitLog("++++++ WAIT OVER node RID: ${NameHelper.peerName(it.pubKey)}, chain: $chainId, height: $height (i)")
         }
     }
 
+    protected fun getChainNodeSetups(chainId: Long): List<NodeSetup> =
+            systemSetup.nodeMap.values.filter { it.chainsToSign.contains(chainId.toInt()) || it.chainsToRead.contains(chainId.toInt()) }
+
+    protected fun getChainNodes(chainId: Long): List<PostchainTestNode> =
+            getChainNodeSetups(chainId).map { nodes[it.sequenceNumber.nodeNumber] }
 }

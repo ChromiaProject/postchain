@@ -6,14 +6,15 @@ import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.*
+import net.postchain.core.block.*
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
-import net.postchain.base.ConfirmationProof
-import net.postchain.core.block.*
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
-import nl.komponents.kovenant.Kovenant
+import net.postchain.utils.KovenantHelper
 import nl.komponents.kovenant.Promise
 import nl.komponents.kovenant.task
+import java.sql.SQLException
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Encapsulating a proof of a transaction hash in a block header
@@ -32,27 +33,23 @@ class ConfirmationProof(val txHash: ByteArray, val header: ByteArray, val witnes
  * @param blockchainConfiguration Configuration data for the blockchain
  * @param storage Connection manager
  * @param blockStore Blockchain storage facilitator
- * @param chainID Blockchain identifier
+ * @param chainId Blockchain identifier
  * @param mySubjectId Public key related to the private key used for signing blocks
  */
 open class BaseBlockQueries(
-    private val blockchainConfiguration: BlockchainConfiguration,
-    private val storage: Storage,
-    private val blockStore: BlockStore,
-    private val chainId: Long,
-    private val mySubjectId: ByteArray
+        private val blockchainConfiguration: BlockchainConfiguration,
+        private val storage: Storage,
+        private val blockStore: BlockStore,
+        private val chainId: Long,
+        private val mySubjectId: ByteArray
 ) : BlockQueries {
 
     companion object : KLogging()
 
-    // create a separate Kovenant context to make sure
-    // other tasks do not compete with BlockQueries
-    val kctx = Kovenant.createContext {
-        workerContext.dispatcher {
-            name = "BlockQueries"
-            concurrentTasks = storage.readConcurrency
-        }
-    }
+    private val closed = AtomicBoolean(false)
+
+    // Create a separate Kovenant context to make sure other tasks do not compete with BlockQueries
+    val kctx = KovenantHelper.createContext("BlockQueries", storage.readConcurrency)
 
     /**
      * Wrapper function for a supplied function with the goal of opening a new read-only connection, catching any exceptions
@@ -60,7 +57,15 @@ open class BaseBlockQueries(
      */
     protected fun <T> runOp(operation: (EContext) -> T): Promise<T, Exception> {
         return task(kctx) {
-            val ctx = storage.openReadConnection(chainId)
+            if (closed.get()) throw PmEngineIsAlreadyClosed("Engine is closed")
+
+            val ctx = try {
+                storage.openReadConnection(chainId)
+            } catch (e: SQLException) {
+                if (closed.get()) throw PmEngineIsAlreadyClosed("Engine is closed", e)
+                throw e
+            }
+
             try {
                 operation(ctx)
             } catch (e: Exception) {
@@ -130,15 +135,15 @@ open class BaseBlockQueries(
         }
     }
 
-    override fun getBlocks(beforeTime: Long, limit: Int, partialTx: Boolean): Promise<List<BlockDetail>, Exception> {
+    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): Promise<List<BlockDetail>, Exception> {
         return runOp {
-            blockStore.getBlocks(it, beforeTime, limit, partialTx)
+            blockStore.getBlocks(it, beforeTime, limit, txHashesOnly)
         }
     }
 
-    override fun getBlock(blockRID: ByteArray, partialTx: Boolean): Promise<BlockDetail?, Exception> {
+    override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): Promise<BlockDetail?, Exception> {
         return runOp {
-            blockStore.getBlock(it, blockRID, partialTx)
+            blockStore.getBlock(it, blockRID, txHashesOnly)
         }
     }
 
@@ -152,6 +157,10 @@ open class BaseBlockQueries(
         return runOp {
             blockStore.isTransactionConfirmed(it, txRID)
         }
+    }
+
+    override fun shutdown() {
+        closed.set(true)
     }
 
     override fun query(query: String): Promise<String, Exception> {
@@ -169,7 +178,7 @@ open class BaseBlockQueries(
             val decodedBlockHeader = blockchainConfiguration.decodeBlockHeader(material.header) as BaseBlockHeader
 
             val merkleProofTree = decodedBlockHeader.merklePath(material.txHash, material.txHashes)
-            ConfirmationProof(material.txHash.byteArray, material.header, decodedWitness, merkleProofTree)
+            ConfirmationProof(material.txHash.data, material.header, decodedWitness, merkleProofTree)
         }
     }
 

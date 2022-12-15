@@ -3,16 +3,22 @@
 package net.postchain.devtools.testinfra
 
 import mu.KLogging
-import net.postchain.base.configuration.BaseBlockchainConfiguration
+import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.configuration.BlockchainConfigurationData
-import net.postchain.gtx.GTXModule
-import net.postchain.core.EContext
+import net.postchain.core.BlockchainContext
 import net.postchain.core.TransactionFactory
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.SigMaker
+import net.postchain.gtx.GTXBlockchainConfiguration
+import net.postchain.gtx.GTXModule
 
 open class TestBlockchainConfiguration(
         configData: BlockchainConfigurationData,
-        val module: GTXModule
-) : BaseBlockchainConfiguration(configData) {
+        cryptoSystem: CryptoSystem,
+        partialContext: BlockchainContext,
+        blockSigMaker: SigMaker,
+        module: GTXModule
+) : GTXBlockchainConfiguration(configData, cryptoSystem, partialContext, blockSigMaker, module) {
 
     open val transactionFactory = TestTransactionFactory()
 
@@ -22,8 +28,7 @@ open class TestBlockchainConfiguration(
         return transactionFactory
     }
 
-    override fun initializeDB(ctx: EContext) {
-        super.initializeDB(ctx)
-        logger.debug{ "++ TEST ONLY ++: Running TestBlockchainConfiguration - means DB for modules NOT initialized! ++ TEST ONLY ++" }
+    override fun makeBBExtensions(): List<BaseBlockBuilderExtension> {
+        return module.makeBlockBuilderExtensions()
     }
 }

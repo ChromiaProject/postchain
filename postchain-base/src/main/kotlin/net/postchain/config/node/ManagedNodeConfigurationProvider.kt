@@ -3,12 +3,14 @@
 package net.postchain.config.node
 
 import net.postchain.base.PeerInfo
-import net.postchain.base.Storage
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.peerId
+import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.ByteArrayKey
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
+import net.postchain.core.Storage
 import java.time.Instant.EPOCH
 
 class ManagedNodeConfigurationProvider(
@@ -26,13 +28,10 @@ class ManagedNodeConfigurationProvider(
     }
 
     override fun getConfiguration(): NodeConfig {
-        return object : NodeConfig(appConfig) {
-            override val peerInfoMap = getPeerInfoCollection(appConfig)
-                    .associateBy(PeerInfo::peerId)
-            // nodeReplicas: for making a node a full clone of another node
-            override val nodeReplicas = managedPeerSource?.getNodeReplicaMap() ?: mapOf()
+        return object : ManagedNodeConfig(appConfig) {
+            override val peerInfoMap = getPeerInfoCollection(appConfig).associateBy(PeerInfo::peerId)
             override val blockchainReplicaNodes = getBlockchainReplicaCollection(appConfig)
-            override val blockchainsToReplicate: Set<BlockchainRid> = getBlockchainsToReplicate(appConfig)
+            override val locallyConfiguredBlockchainsToReplicate = getLocallyConfiguredBlockchainsToReplicate(appConfig)
             override val mustSyncUntilHeight = getSyncUntilHeight(appConfig)
         }
     }
@@ -51,12 +50,12 @@ class ManagedNodeConfigurationProvider(
      * is not involved here.
      */
     override fun getPeerInfoCollection(appConfig: AppConfig): Array<PeerInfo> {
-        val peerInfoMap = mutableMapOf<ByteArrayKey, PeerInfo>()
+        val peerInfoMap = mutableMapOf<WrappedByteArray, PeerInfo>()
 
         // Define pick function
         val peerInfoPicker: (PeerInfo) -> Unit = { peerInfo ->
             peerInfoMap.merge(peerInfo.peerId(), peerInfo) { old, new ->
-                if (old.timestamp ?: EPOCH < new.timestamp ?: EPOCH) new else old
+                if (old.lastUpdated ?: EPOCH < new.lastUpdated ?: EPOCH) new else old
             }
         }
 
@@ -79,7 +78,7 @@ class ManagedNodeConfigurationProvider(
         // Collect from local table (common for all bcs)
         val localResMap = super.getBlockchainReplicaCollection(appConfig)
         // get values from the chain0 table
-        val chain0ResMap = (managedPeerSource?.getBlockchainReplicaNodeMap() ?: mutableMapOf<BlockchainRid, List<NodeRid>>())
+        val chain0ResMap = managedPeerSource?.getBlockchainReplicaNodeMap() ?: mapOf()
 
         val resMap = mutableMapOf<BlockchainRid, List<NodeRid>>()
         val allKeys = localResMap.keys + chain0ResMap.keys
@@ -127,7 +126,7 @@ class ManagedNodeConfigurationProvider(
         return resMap
     }
 
-    fun mergeLong(a: Long?, b: Long?): Long {
+    protected fun mergeLong(a: Long?, b: Long?): Long {
         if (a == null) {
             return b!!
         }
@@ -135,5 +134,11 @@ class ManagedNodeConfigurationProvider(
             return a
         }
         return maxOf(a, b)
+    }
+
+    fun getLocallyConfiguredBlockchainsToReplicate(appConfig: AppConfig): Set<BlockchainRid> {
+        return storage.withReadConnection { ctx ->
+            DatabaseAccess.of(ctx).getBlockchainsToReplicate(ctx, appConfig.pubKey)
+        }
     }
 }

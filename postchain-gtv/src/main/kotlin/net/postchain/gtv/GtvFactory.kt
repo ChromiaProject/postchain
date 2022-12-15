@@ -4,8 +4,9 @@ package net.postchain.gtv
 
 import com.beanit.jasn1.ber.types.string.BerUTF8String
 import net.postchain.common.BlockchainRid
-import net.postchain.gtv.messages.DictPair
-import net.postchain.gtv.messages.RawGtv
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.gtv.gtvmessages.DictPair
+import net.postchain.gtv.gtvmessages.RawGtv
 import java.math.BigInteger
 
 fun Boolean.toLong() = if (this) 1L else 0L
@@ -34,6 +35,10 @@ object GtvFactory {
 
     fun gtv(ba: ByteArray): GtvByteArray {
         return GtvByteArray(ba)
+    }
+
+    fun gtv(wba: WrappedByteArray): GtvByteArray {
+        return GtvByteArray(wba.data)
     }
 
     fun gtv(ba: BlockchainRid): GtvByteArray {

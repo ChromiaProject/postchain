@@ -3,7 +3,6 @@
 package net.postchain.ebft.worker
 
 import mu.KLogging
-import net.postchain.base.BaseBlockchainEngine
 import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.DatabaseAccess
@@ -11,18 +10,18 @@ import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
+import net.postchain.core.EContext
+import net.postchain.core.NODE_ID_READ_ONLY
+import net.postchain.core.block.BlockDataWithWitness
+import net.postchain.core.block.BlockTrace
 import net.postchain.core.framework.AbstractBlockchainProcess
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpNodeType
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.CompletionPromise
-import net.postchain.ebft.syncmanager.common.FastSyncParameters
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
-import net.postchain.core.block.BlockDataWithWitness
-import net.postchain.core.block.BlockTrace
-import net.postchain.core.EContext
-import net.postchain.core.NODE_ID_READ_ONLY
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DpNodeType
+import net.postchain.ebft.syncmanager.common.SyncParameters
 import nl.komponents.kovenant.Promise
 import java.lang.Thread.sleep
 import java.util.concurrent.atomic.AtomicBoolean
@@ -47,12 +46,12 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     private val AWAIT_PROMISE_MS = 5L // The amount of millis we wait before we check if the add block promise has been completed
 
     private var historicSynchronizer: FastSynchronizer? = null
-    private val storage = (workerContext.engine as BaseBlockchainEngine).storage
+    private val storage = workerContext.engine.storage
     private val blockDatabase = BaseBlockDatabase(
-        blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
+            blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
     private val fastSynchronizer = FastSynchronizer(
             workerContext, blockDatabase,
-            FastSyncParameters.fromAppConfig(workerContext.appConfig),
+            SyncParameters.fromAppConfig(workerContext.appConfig),
             ::isProcessRunning
     )
 
@@ -96,7 +95,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
             brid: BlockchainRid, // the BC we are trying to pull blocks from
             myBRID: BlockchainRid, // our BC
             blockDatabase: BlockDatabase,
-            params: FastSyncParameters) {
+            params: SyncParameters) {
 
         if (brid == myBRID) {
             netDebug("Try network sync using own BRID")
@@ -328,8 +327,9 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
 
     private fun getCopyBTrace(heightToCopy: Long): BlockTrace? {
         return if (logger.isTraceEnabled) {
+            logger.trace { "getCopyBTrace() - Creating block trace with procname: $process , height: $heightToCopy " }
+
             this.blockTrace = BlockTrace.buildBeforeBlock(workerContext.processName, heightToCopy) // At this point we don't have the Block RID.
-            copyLog("Got block height", heightToCopy)
             this.blockTrace
         } else {
             null // Use null for speed

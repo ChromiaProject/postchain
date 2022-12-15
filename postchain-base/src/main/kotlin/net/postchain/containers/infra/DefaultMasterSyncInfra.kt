@@ -7,31 +7,33 @@ import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.managed.DirectoryDataSource
+import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 import net.postchain.network.mastersub.master.DefaultMasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterConnectionManager
-import net.postchain.debug.BlockchainProcessName
-import java.nio.file.Path
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 
 open class DefaultMasterSyncInfra(
         postchainContext: PostchainContext,
         protected val masterConnectionManager: MasterConnectionManager,
-        private val containerNodeConfig: ContainerNodeConfig
+        private val containerNodeConfig: ContainerNodeConfig,
 ) : EBFTSynchronizationInfrastructure(postchainContext), MasterSyncInfra {
+    private val afterSubnodeCommitListeners = Collections.newSetFromMap(ConcurrentHashMap<AfterSubnodeCommitListener, Boolean>())
 
     /**
      * We create a new [MasterCommunicationManager] for every new BC process we make.
      */
     override fun makeMasterBlockchainProcess(
-        processName: BlockchainProcessName,
-        chainId: Long,
-        blockchainRid: BlockchainRid,
-        dataSource: DirectoryDataSource,
-        targetContainer: PostchainContainer,
-        containerChainDir: Path
+            processName: BlockchainProcessName,
+            chainId: Long,
+            blockchainRid: BlockchainRid,
+            dataSource: DirectoryDataSource,
+            targetContainer: PostchainContainer,
     ): ContainerBlockchainProcess {
 
         val communicationManager = DefaultMasterCommunicationManager(
@@ -44,18 +46,18 @@ open class DefaultMasterSyncInfra(
                 connectionManager,
                 masterConnectionManager,
                 dataSource,
-                processName
+                processName,
+                afterSubnodeCommitListeners
         ).apply { init() }
 
         return DefaultContainerBlockchainProcess(
                 nodeConfig,
+                containerNodeConfig,
+                targetContainer.containerPorts.hostRestApiPort,
                 processName,
                 chainId,
                 blockchainRid,
-                targetContainer.restApiPort,
-                communicationManager,
-                dataSource,
-                containerChainDir,
+                communicationManager
         )
     }
 
@@ -64,5 +66,9 @@ open class DefaultMasterSyncInfra(
     override fun shutdown() {
         super.shutdown()
         masterConnectionManager.shutdown()
+    }
+
+    override fun registerAfterSubnodeCommitListener(afterSubnodeCommitListener: AfterSubnodeCommitListener) {
+        afterSubnodeCommitListeners.add(afterSubnodeCommitListener)
     }
 }

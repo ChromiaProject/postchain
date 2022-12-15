@@ -3,7 +3,6 @@
 package net.postchain.base.data
 
 import mu.KLogging
-import net.postchain.base.Storage
 import net.postchain.common.TimeLog
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionFailed
@@ -39,7 +38,7 @@ class BaseManagedBlockBuilder(
     var blocTrace: BlockTrace? = null // Only for logging, remains "null" unless TRACE
 
     /**
-     * Wrapper for blockbuilder operations. Will close current working block for further modifications
+     * Wrapper for block builder operations. Will close current working block for further modifications
      * if an operation fails to execute in full.
      *
      * @param RT type of returned object from called operation (Currently all Unit)
@@ -168,12 +167,12 @@ class BaseManagedBlockBuilder(
     }
 
     // Only used during logging
-    override fun setBTrace(newBlockDebug: BlockTrace) {
+    override fun setBTrace(bTrace: BlockTrace) {
         if (blocTrace == null) {
-            blocTrace = newBlockDebug
+            blocTrace = bTrace
         } else {
             // Update existing object with missing info
-            blocTrace!!.addDataIfMissing(newBlockDebug)
+            blocTrace!!.addDataIfMissing(bTrace)
         }
     }
 
@@ -214,5 +213,4 @@ class BaseManagedBlockBuilder(
             logger.trace("${eContext.chainID} rollback() -- $str, from block: ${getBTrace()}")
         }
     }
-
 }

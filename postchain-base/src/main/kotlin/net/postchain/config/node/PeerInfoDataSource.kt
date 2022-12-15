@@ -2,13 +2,12 @@
 
 package net.postchain.config.node
 
-import net.postchain.common.BlockchainRid
 import net.postchain.base.PeerInfo
+import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 
 interface PeerInfoDataSource {
     fun getPeerInfos(): Array<PeerInfo>
-    fun getNodeReplicaMap(): Map<NodeRid, List<NodeRid>>
     fun getBlockchainReplicaNodeMap(): Map<BlockchainRid, List<NodeRid>>
     fun getSyncUntilHeight(): Map<BlockchainRid, Long>
 }

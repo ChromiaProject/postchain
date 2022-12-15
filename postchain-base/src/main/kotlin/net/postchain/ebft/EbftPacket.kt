@@ -15,7 +15,7 @@ import net.postchain.network.*
 class EbftPacketEncoder(val config: PeerCommConfiguration, val blockchainRID: BlockchainRid) : XPacketEncoder<EbftMessage> {
 
     override fun makeIdentPacket(forNode: NodeRid): ByteArray {
-        val idMessage = Identification(forNode.byteArray, blockchainRID, System.currentTimeMillis())
+        val idMessage = Identification(forNode.data, blockchainRID, System.currentTimeMillis())
         val sigMaker = config.sigMaker()
         val signature = sigMaker.signMessage(idMessage.encoded)
         return SignedMessage(idMessage, config.pubKey, signature.data).encoded
@@ -60,7 +60,7 @@ class EbftPacketDecoder(val config: PeerCommConfiguration) : XPacketDecoder<Ebft
 
     // TODO: [et]: Improve the design
     override fun isIdentPacket(bytes: ByteArray): Boolean {
-        return decodePacket(bytes) is Identification
+        return decodeWithoutVerification(bytes).message is Identification
     }
 }
 

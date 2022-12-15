@@ -2,8 +2,12 @@
 
 package net.postchain.config.app
 
+import net.postchain.common.config.Config
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.reflection.newInstanceOf
 import net.postchain.core.Infrastructure
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.Secp256K1CryptoSystem
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
@@ -18,34 +22,35 @@ import java.io.PrintWriter
  * Wrapper to the generic [Configuration]
  * Adding some convenience fields, for example regarding database connection.
  */
-class AppConfig(private val config: Configuration) {
+class AppConfig(private val config: Configuration, val debug: Boolean = false) : Config {
 
     companion object {
 
-        fun fromPropertiesFile(configFile: String): AppConfig {
+        const val DEFAULT_PORT: Int = 9870
+
+        fun fromPropertiesFile(configFile: String, debug: Boolean = false): AppConfig = fromPropertiesFile(File(configFile), debug)
+
+        fun fromPropertiesFile(configFile: File, debug: Boolean = false): AppConfig {
             val params = Parameters().properties()
-                .setFileName(configFile)
-                .setListDelimiterHandler(DefaultListDelimiterHandler(','))
+                    .setFile(configFile)
+                    .setListDelimiterHandler(DefaultListDelimiterHandler(','))
 
             val configuration = FileBasedConfigurationBuilder(PropertiesConfiguration::class.java)
-                .configure(params)
-                .configuration
+                    .configure(params)
+                    .configuration
 
-            configuration.setProperty("configDir", File(configFile).absoluteFile.parent)
-
-            return AppConfig(configuration)
+            return AppConfig(configuration, debug)
         }
 
         fun toPropertiesFile(config: Configuration, configFile: String) {
             ConfigurationUtils.dump(config, PrintWriter(FileWriter(configFile)))
         }
-    }
 
-    /**
-     * This config dir
-     */
-    val configDir: String
-        get() = config.getString("configDir")
+        fun removeProperty(config: Configuration, prefix: String) {
+            val keys = config.getKeys(prefix).asSequence().toList()
+            keys.forEach(config::clearProperty)
+        }
+    }
 
     /**
      * Configuration provider
@@ -58,23 +63,23 @@ class AppConfig(private val config: Configuration) {
      * Database
      */
     val databaseDriverclass: String
-        get() = config.getString("database.driverclass", "")
+        get() = config.getString("database.driverclass", "org.postgresql.Driver")
 
     val databaseUrl: String
         get() = System.getenv("POSTCHAIN_DB_URL")
-            ?: config.getString("database.url", "")
+                ?: config.getString("database.url", "")
 
     val databaseSchema: String
         get() = System.getenv("POSTCHAIN_DB_SCHEMA")
-            ?: config.getString("database.schema", "public")
+                ?: config.getString("database.schema", "public")
 
     val databaseUsername: String
         get() = System.getenv("POSTCHAIN_DB_USERNAME")
-            ?: config.getString("database.username", "")
+                ?: config.getString("database.username", "")
 
     val databasePassword: String
         get() = System.getenv("POSTCHAIN_DB_PASSWORD")
-            ?: config.getString("database.password", "")
+                ?: config.getString("database.password", "")
 
     val databaseReadConcurrency: Int
         get() = config.getInt("database.readConcurrency", 10)
@@ -83,19 +88,26 @@ class AppConfig(private val config: Configuration) {
         // "base/ebft" is the default
         get() = config.getString("infrastructure", Infrastructure.Ebft.get())
 
+    val cryptoSystem: CryptoSystem
+        = newInstanceOf(config.getString("cryptosystem", Secp256K1CryptoSystem::class.qualifiedName))
+
     /**
      * Pub/Priv keys
      */
     val privKey: String
         get() = System.getenv("POSTCHAIN_PRIVKEY")
-            ?: config.getString("messaging.privkey", "")
+                ?: config.getString("messaging.privkey", "")
 
     val privKeyByteArray: ByteArray
         get() = privKey.hexStringToByteArray()
 
     val pubKey: String
         get() = System.getenv("POSTCHAIN_PUBKEY")
-            ?: config.getString("messaging.pubkey", "")
+                ?: config.getString("messaging.pubkey", "")
+
+    val port: Int
+        get() = System.getenv("POSTCHAIN_PORT")?.toInt()
+                ?: config.getInt("messaging.port", DEFAULT_PORT)
 
     val pubKeyByteArray: ByteArray
         get() = pubKey.hexStringToByteArray()
@@ -109,7 +121,7 @@ class AppConfig(private val config: Configuration) {
     fun getString(key: String, defaultValue: String = ""): String = config.getString(key, defaultValue)
     fun getStringArray(key: String): Array<String> = config.getStringArray(key)
     fun subset(prefix: String): Configuration = config.subset(prefix)
-    fun getProperty(key: String): Any = config.getProperty(key)
+    fun getProperty(key: String): Any? = config.getProperty(key)
     fun getKeys(prefix: String): MutableIterator<String> = config.getKeys(prefix)
     fun containsKey(key: String) = config.containsKey(key)
 

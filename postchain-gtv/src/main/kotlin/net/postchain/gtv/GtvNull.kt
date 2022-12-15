@@ -3,7 +3,7 @@
 package net.postchain.gtv
 
 import com.beanit.jasn1.ber.types.BerNull
-import net.postchain.gtv.messages.RawGtv
+import net.postchain.gtv.gtvmessages.RawGtv
 
 object GtvNull : GtvPrimitive() {
 
@@ -24,4 +24,6 @@ object GtvNull : GtvPrimitive() {
     override fun nrOfBytes(): Int {
         return 0
     }
+
+    override fun toString() = "null"
 }

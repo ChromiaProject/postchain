@@ -8,7 +8,7 @@ import assertk.isContentEqualTo
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
-import net.postchain.common.data.byteArrayKeyOf
+import net.postchain.common.wrap
 import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.peer.PeerConnection
 import net.postchain.network.peer.PeerConnectionDescriptor
@@ -64,10 +64,10 @@ class IntNettyConnector2PeersCommunicationIT {
         await().atMost(FIVE_SECONDS)
                 .untilAsserted {
                     verify(context1.events).onNodeConnected(connection1.capture())
-                    assert(connection1.firstValue.descriptor().nodeId!!.byteArray).isContentEqualTo(peerInfo2.pubKey)
+                    assert(connection1.firstValue.descriptor().nodeId.data).isContentEqualTo(peerInfo2.pubKey)
 
                     verify(context2.events).onNodeConnected(connection2.capture())
-                    assert(connection2.firstValue.descriptor().nodeId!!.byteArray).isContentEqualTo(peerInfo1.pubKey)
+                    assert(connection2.firstValue.descriptor().nodeId.data).isContentEqualTo(peerInfo1.pubKey)
                 }
 
         // Sending packets
@@ -91,18 +91,18 @@ class IntNettyConnector2PeersCommunicationIT {
                 .untilAsserted {
                     // Peer1
                     val actualPackets1 = argumentCaptor<ByteArray>()
-                    val expected1 = packets2.map(ByteArray::byteArrayKeyOf).toTypedArray()
+                    val expected1 = packets2.map(ByteArray::wrap).toTypedArray()
                     verify(context1.packets, times(2)).handle(actualPackets1.capture(), any())
-                    assert(actualPackets1.firstValue.byteArrayKeyOf()).isIn(*expected1)
-                    assert(actualPackets1.secondValue.byteArrayKeyOf()).isIn(*expected1)
+                    assert(actualPackets1.firstValue.wrap()).isIn(*expected1)
+                    assert(actualPackets1.secondValue.wrap()).isIn(*expected1)
 
                     // Peer2
                     val actualPackets2 = argumentCaptor<ByteArray>()
-                    val expected2 = packets1.map(ByteArray::byteArrayKeyOf).toTypedArray()
+                    val expected2 = packets1.map(ByteArray::wrap).toTypedArray()
                     verify(context2.packets, times(3)).handle(actualPackets2.capture(), any())
-                    assert(actualPackets2.firstValue.byteArrayKeyOf()).isIn(*expected2)
-                    assert(actualPackets2.secondValue.byteArrayKeyOf()).isIn(*expected2)
-                    assert(actualPackets2.thirdValue.byteArrayKeyOf()).isIn(*expected2)
+                    assert(actualPackets2.firstValue.wrap()).isIn(*expected2)
+                    assert(actualPackets2.secondValue.wrap()).isIn(*expected2)
+                    assert(actualPackets2.thirdValue.wrap()).isIn(*expected2)
                 }
     }
 }

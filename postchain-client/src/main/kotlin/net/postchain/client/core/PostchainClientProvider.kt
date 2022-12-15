@@ -1,7 +1,7 @@
 package net.postchain.client.core
 
-import net.postchain.common.BlockchainRid
+import net.postchain.client.config.PostchainClientConfig
 
-interface PostchainClientProvider {
-    fun createClient(url: String, blockchainRid: BlockchainRid, defaultSigner: DefaultSigner?): PostchainClient
+fun interface PostchainClientProvider {
+    fun createClient(clientConfig: PostchainClientConfig): PostchainClient
 }

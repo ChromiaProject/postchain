@@ -1,13 +1,11 @@
 package net.postchain.network.mastersub.master
 
 import net.postchain.core.Shutdownable
-import net.postchain.ebft.heartbeat.HeartbeatEvent
 import java.util.*
 import kotlin.concurrent.schedule
 
 interface MasterCommunicationManager : Shutdownable {
     fun init()
-    fun sendHeartbeatToSub(heartbeatEvent: HeartbeatEvent)
 }
 
 /**

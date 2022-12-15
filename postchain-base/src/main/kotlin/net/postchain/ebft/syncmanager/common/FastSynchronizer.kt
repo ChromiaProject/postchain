@@ -4,88 +4,21 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
-import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.config.app.AppConfig
 import net.postchain.core.*
-import net.postchain.ebft.BDBAbortException
-import net.postchain.ebft.BlockDatabase
-import net.postchain.ebft.CompletionPromise
-import net.postchain.ebft.message.*
-import net.postchain.ebft.worker.WorkerContext
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
+import net.postchain.devtools.NameHelper
+import net.postchain.ebft.BDBAbortException
+import net.postchain.ebft.BlockDatabase
+import net.postchain.ebft.message.*
+import net.postchain.ebft.worker.WorkerContext
 import java.lang.Thread.sleep
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 import net.postchain.ebft.message.BlockData as MessageBlockData
 import net.postchain.ebft.message.BlockHeader as BlockHeaderMessage
-
-
-/**
- * Tuning parameters for FastSychronizer. All times are in ms.
- */
-data class FastSyncParameters(
-        var resurrectDrainedTime: Long = 10000,
-        var resurrectUnresponsiveTime: Long = 20000,
-        /**
-         * For tiny blocks it might make sense to increase parallelism to, eg 100,
-         * to increase throughput by ~6x (as experienced through experiments),
-         * but for non-trivial blockchains, this will require substantial amounts
-         * of memory, worst case about parallelism*blocksize.
-         *
-         * There seems to be a sweet-spot throughput-wise at parallelism=120,
-         * but it can come at great memory cost. We set this to 10
-         * to be safe.
-         *
-         * Ultimately, this should be a configuration setting.
-         */
-        var parallelism: Int = 10,
-        /**
-         * Don't exit fastsync for at least this amount of time (ms).
-         * This gives the connection manager some time to accumulate
-         * connections so that the random peer selection has more
-         * peers to chose from, to avoid exiting fastsync
-         * prematurely because one peer is connected quicker, giving
-         * us the impression that there is only one reachable node.
-         *
-         * Example: I'm A(height=-1), and B(-1),C(-1),D(0) are peers. When entering FastSync
-         * we're only connected to B.
-         *
-         * * Send a GetBlockHeaderAndBlock(0) to B
-         * * B replies with empty block header and we mark it as drained(-1).
-         * * We conclude that we have drained all peers at -1 and exit fastsync
-         * * C and D connections are established.
-         *
-         * We have exited fastsync before we had a chance to sync from C and D
-         *
-         * Sane values:
-         * Replicas: not used
-         * Signers: 60000ms
-         * Tests with single node: 0
-         * Tests with multiple nodes: 1000
-         */
-        var exitDelay: Long = 60000,
-        var pollPeersInterval: Long = 10000,
-        var jobTimeout: Long = 10000,
-        var loopInterval: Long = 100,
-        var mustSyncUntilHeight: Long = -1,
-        var maxErrorsBeforeBlacklisting: Int = 10,
-        /**
-         * 10 minutes in milliseconds
-         */
-        var blacklistingTimeoutMs: Long = 10 * 60 * 1000) {
-    companion object {
-        @JvmStatic
-        fun fromAppConfig(config: AppConfig, init: (FastSyncParameters) -> Unit = {}): FastSyncParameters {
-            return FastSyncParameters(
-                    exitDelay = config.getLong("fastsync.exit_delay", 60000),
-                    jobTimeout = config.getLong("fastsync.job_timeout", 10000)
-            ).also(init)
-        }
-    }
-}
 
 /**
  * This class syncs blocks from its peers by requesting <parallelism> blocks
@@ -109,28 +42,23 @@ data class FastSyncParameters(
  * or so upon first start. But in tests, this can be really annoying. So tests that only runs a single node
  * should set [params.exitDelay] to 0.
  */
-class FastSynchronizer(private val workerContext: WorkerContext,
-                       val blockDatabase: BlockDatabase,
-                       val params: FastSyncParameters,
-                       val isProcessRunning: () -> Boolean
-) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
-    private val blockchainConfiguration = workerContext.engine.getConfiguration()
-    private val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
-    private val jobs = TreeMap<Long, Job>()
-    private val peerStatuses = PeerStatuses(params)
-    private var lastJob: Job? = null
-    private var lastBlockTimestamp: Long = blockQueries.getLastBlockTimestamp().get()
+class FastSynchronizer(
+        wrkrCntxt: WorkerContext,
+        val blockDatabase: BlockDatabase,
+        val params: SyncParameters,
+        val isProcessRunning: () -> Boolean
+) : AbstractSynchronizer(wrkrCntxt) {
 
-    // this is used to track pending asynchronous BlockDatabase.addBlock tasks to make sure failure to commit propagates properly
-    private var addBlockCompletionPromise: CompletionPromise? = null
+    private val jobs = TreeMap<Long, Job>()
+    private var lastJob: Job? = null
 
     // This is the communication mechanism from the async commitBlock callback to main loop
     private val finishedJobs = LinkedBlockingQueue<Job>()
 
+    val peerStatuses = FastSyncPeerStatuses(params) // Don't want to put this in [AbstractSynchronizer] b/c too much generics.
+
     companion object : KLogging()
 
-    var blockHeight: Long = blockQueries.getBestHeight().get()
-        private set
 
     inner class Job(val height: Long, var peerId: NodeRid) {
         var header: BlockHeader? = null
@@ -141,7 +69,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         val startTime = System.currentTimeMillis()
         var hasRestartFailed = false
         override fun toString(): String {
-            return "${this@FastSynchronizer.workerContext.processName}-h${height}-${peerId.shortString()}"
+            return "${this@FastSynchronizer.workerContext.processName}-h${height}-${NameHelper.peerName(peerId)}"
         }
     }
 
@@ -149,10 +77,9 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         try {
             blockHeight = blockQueries.getBestHeight().get()
             syncDebug("Start", blockHeight)
-            lastBlockTimestamp = blockQueries.getLastBlockTimestamp().get()
             while (isProcessRunning() && !exitCondition()) {
                 refillJobs()
-                processMessages(exitCondition)
+                processMessages()
                 processDoneJobs()
                 processStaleJobs()
                 sleep(params.loopInterval)
@@ -208,7 +135,7 @@ class FastSynchronizer(private val workerContext: WorkerContext,
             logger.debug("syncUntilResponsiveNodesDrained() begin with exitDelay: ${params.exitDelay}")
         }
         syncUntil {
-            val syncableCount = peerStatuses.getSyncable(blockHeight + 1).intersect(configuredPeers).size
+            val syncableCount = peerStatuses.getSyncableAndConnected(blockHeight + 1).intersect(configuredPeers).size
 
             // Keep syncing until this becomes true, i.e. to exit we must have:
             val done = timeout < System.currentTimeMillis()      // 1. must have timeout
@@ -401,15 +328,22 @@ class FastSynchronizer(private val workerContext: WorkerContext,
     private fun sendLegacyRequest(height: Long): NodeRid? {
         val peers = peerStatuses.getLegacyPeers(height).intersect(configuredPeers)
         if (peers.isEmpty()) return null
-        return communicationManager.sendToRandomPeer(GetBlockAtHeight(height), peers)
+        return sendMessageAndUpdateConnectionStatuses(GetBlockAtHeight(height), peers)
     }
 
     private fun sendRequest(height: Long): NodeRid? {
         val now = System.currentTimeMillis()
         val excludedPeers = peerStatuses.exclNonSyncable(height, now)
         val peers = configuredPeers.minus(excludedPeers)
+        return sendMessageAndUpdateConnectionStatuses(GetBlockHeaderAndBlock(height), peers)
+    }
+
+    private fun sendMessageAndUpdateConnectionStatuses(message: EbftMessage, peers: Set<NodeRid>): NodeRid? {
         if (peers.isEmpty()) return null
-        return communicationManager.sendToRandomPeer(GetBlockHeaderAndBlock(height), peers)
+        val (selectedPeer, connectedPeers) = communicationManager.sendToRandomPeer(message, peers)
+        peerStatuses.markConnected(connectedPeers)
+        peerStatuses.markDisconnected(peers - connectedPeers)
+        return selectedPeer
     }
 
     private fun startJob(height: Long): Boolean {
@@ -481,19 +415,18 @@ class FastSynchronizer(private val workerContext: WorkerContext,
             return false
         }
 
-        if (header.size == 0) {
-            if (witness.size == 0) {
+        if (header.isEmpty()) {
+            if (witness.isEmpty()) {
                 // The peer says it has no blocks, try another peer
                 headerDebug("Peer for job $j drained (sent empty header)")
                 val now = System.currentTimeMillis()
                 peerStatuses.drained(peerId, -1, now)
                 restartJob(j)
-                return false
             } else {
                 var dbg = debugJobString(j, requestedHeight, peerId)
                 peerStatuses.maybeBlacklist(peerId, "Synch: Why we get a witness without a header? $dbg")
-                return false
             }
+            return false
         }
 
         val h = blockchainConfiguration.decodeBlockHeader(header)
@@ -534,23 +467,6 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         }
     }
 
-    private fun getHeight(header: BlockHeader): Long {
-        // A bit ugly hack. Figure out something better. We shouldn't rely on specific
-        // implementation here.
-        // Our current implementation, BaseBlockHeader, includes the height, which
-        // means that we can trust the height in the header because it's been
-        // signed by a quorum of signers.
-        // If another BlockHeader implementation is used, that doesn't include
-        // the height, we'd have to rely on something else, for example
-        // sending the height explicitly, but then we trust only that single
-        // sender node to tell the truth.
-        // For now we rely on the height being part of the header.
-        if (header !is BaseBlockHeader) {
-            throw ProgrammerMistake("Expected BaseBlockHeader")
-        }
-        return header.blockHeaderRec.getHeight()
-    }
-
     private fun handleUnfinishedBlock(peerId: NodeRid, header: ByteArray, txs: List<ByteArray>) {
         val h = blockchainConfiguration.decodeBlockHeader(header)
         if (h !is BaseBlockHeader) {
@@ -565,7 +481,9 @@ class FastSynchronizer(private val workerContext: WorkerContext,
         unfinishedTrace("Received for $j")
         var bTrace: BlockTrace? = null
         if (logger.isDebugEnabled) {
-            bTrace = BlockTrace.build(null, h.blockRID, height)
+            logger.trace { "handleUnfinishedBlock() - Creating block trace with procname: $procName , height: $height " }
+
+            bTrace = BlockTrace.build(procName, h.blockRID, height)
         }
         val expectedHeader = j.header
 
@@ -633,21 +551,15 @@ class FastSynchronizer(private val workerContext: WorkerContext,
     }
 
     /**
-     * Requirements:
-     * 1. Must commit in order of height.
-     * 2. If one block fails to commit, we should not commit of blocks coming after it.
-     *
-     * Therefore:
-     * we cannot start all commits in parallel, since that might cause us to commit a block even though
-     * previous block failed to commit. Instead we start next commit only after the previous commit was
-     * successfully finished.
+     * NOTE:
+     * If one block fails to commit, don't worry about the blocks coming after. This is handled in the BBD.addBlock().
      */
     private fun commitBlock(job: Job, bTrace: BlockTrace?) {
         // Once we set this flag we must add the job to finishedJobs otherwise we risk a deadlock
         job.blockCommitting = true
 
         if (addBlockCompletionPromise?.isDone() == true) {
-            addBlockCompletionPromise = null
+            addBlockCompletionPromise = null // We want to do cleanup, since the old promise is used in "addBlock()" below.
         }
 
         // We are free to commit this Job, go on and add it to DB
@@ -666,14 +578,8 @@ class FastSynchronizer(private val workerContext: WorkerContext,
                 .always { finishedJobs.add(job) }
     }
 
-    private fun processMessages(exitCondition: () -> Boolean) {
+    private fun processMessages() {
         for (packet in communicationManager.getPackets()) {
-            // We do heartbeat check for each network message because
-            // communicationManager.getPackets() might give a big portion of messages.
-            if (!workerContext.awaitPermissionToProcessMessages(lastBlockTimestamp) { !isProcessRunning() || exitCondition() }) {
-                return
-            }
-
             val peerId = packet.first
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue
@@ -685,12 +591,13 @@ class FastSynchronizer(private val workerContext: WorkerContext,
             try {
                 when (message) {
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
+                    is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight) // A replica might ask us
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight)
                     is BlockHeaderMessage -> handleBlockHeader(peerId, message.header, message.witness, message.requestedHeight)
                     is UnfinishedBlock -> handleUnfinishedBlock(peerId, message.header, message.transactions)
                     is CompleteBlock -> handleCompleteBlock(peerId, message.data, message.height, message.witness)
                     is Status -> peerStatuses.statusReceived(peerId, message.height - 1)
-                    else -> logger.trace { "Unhandled type ${message} from peer $peerId" }
+                    else -> logger.warn { "Unhandled message type: ${message.topic} from peer $peerId" } // WARN b/c this might be buggy?
                 }
             } catch (e: Exception) {
                 logger.info("Couldn't handle message $message from peer $peerId. Ignoring and continuing", e)
@@ -714,11 +621,6 @@ class FastSynchronizer(private val workerContext: WorkerContext,
     // addJob()
     private fun addTrace(message: String, e: Exception? = null) {
         logger.trace(e) { "addJob() -- $message" }
-    }
-
-    // handleUnfinishedBlock()
-    private fun unfinishedTrace(message: String, e: Exception? = null) {
-        logger.trace(e) { "handleUnfinishedBlock() -- $message" }
     }
 
     private fun headerDebug(message: String, e: Exception? = null) {

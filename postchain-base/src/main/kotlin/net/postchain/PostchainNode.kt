@@ -7,12 +7,14 @@ import mu.withLoggingContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.NotFound
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.BaseInfrastructureFactoryProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.Shutdownable
+import net.postchain.core.block.BlockQueriesProviderImpl
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DefaultNodeDiagnosticContext
@@ -50,16 +52,19 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debu
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
         logPrefix = peerName(appConfig.pubKey)
 
+        val blockQueriesProvider = BlockQueriesProviderImpl()
         postchainContext = PostchainContext(
                 appConfig,
                 NodeConfigurationProviderFactory.createProvider(appConfig) { storage },
                 storage,
                 infrastructureFactory.makeConnectionManager(appConfig),
+                blockQueriesProvider,
                 if (debug) DefaultNodeDiagnosticContext() else null
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
+        blockQueriesProvider.processManager = processManager
 
         postchainContext.nodeDiagnosticContext?.apply {
             addProperty(DiagnosticProperty.VERSION, getVersion())
@@ -68,22 +73,25 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debu
         }
     }
 
-    fun startBlockchain(chainId: Long): BlockchainRid? {
+    fun startBlockchain(chainId: Long): BlockchainRid {
         if (!chainExists(chainId)) {
-            logger.error { "Cannot start chain $chainId, not found in db." }
-            return null
+            throw NotFound("Cannot start chain $chainId, not found in db.")
         }
         return processManager.startBlockchain(chainId, buildBbDebug(chainId))
     }
 
     private fun chainExists(chainId: Long): Boolean {
         return withReadConnection(postchainContext.storage, chainId) {
-            return@withReadConnection DatabaseAccess.of(it).getChainIds(it).containsValue(chainId)
+            DatabaseAccess.of(it).getChainIds(it).containsValue(chainId)
         }
     }
 
     fun stopBlockchain(chainId: Long) {
         processManager.stopBlockchain(chainId, buildBbDebug(chainId))
+    }
+
+    fun isBlockchainRunning(chainId: Long): Boolean {
+        return processManager.retrieveBlockchain(chainId) != null
     }
 
     override fun shutdown() {
@@ -116,8 +124,8 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debu
     private fun buildBbDebug(chainId: Long): BlockTrace? {
         return if (logger.isDebugEnabled) {
             withLoggingContext(
-                NODE_PUBKEY_TAG to appConfig.pubKey,
-                CHAIN_IID_TAG to chainId.toString()
+                    NODE_PUBKEY_TAG to appConfig.pubKey,
+                    CHAIN_IID_TAG to chainId.toString()
             ) {
                 val x = processManager.retrieveBlockchain(chainId)
                 if (x == null) {
@@ -125,8 +133,8 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debu
                     null
                 } else {
                     val procName = BlockchainProcessName(
-                        postchainContext.appConfig.pubKey,
-                        x.blockchainEngine.getConfiguration().blockchainRid
+                            postchainContext.appConfig.pubKey,
+                            x.blockchainEngine.getConfiguration().blockchainRid
                     )
                     BlockTrace.buildBeforeBlock(procName)
                 }

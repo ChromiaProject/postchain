@@ -5,6 +5,7 @@ package net.postchain.gtx
 import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.configurations.GTXTestModule
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
@@ -12,8 +13,6 @@ import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.data.GTXDataBuilder
-import net.postchain.gtx.data.factory.GtxTransactionDataFactory
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -27,11 +26,12 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
     val dummyBcRid = BlockchainRid.buildFromHex( "ABABAABABABABABABABABABABABABABAABABABABABABABABABABABABABAABABA")
 
     private fun makeTestTx(id: Long, value: String, blockchainRid: BlockchainRid): ByteArray {
-        val b = GTXDataBuilder(blockchainRid, arrayOf(pubKey(0)), net.postchain.devtools.gtx.myCS)
-        b.addOperation("gtx_test", arrayOf(gtv(id), gtv(value)))
-        b.finish()
-        b.sign(net.postchain.devtools.gtx.myCS.buildSigMaker(pubKey(0), privKey(0)))
-        return b.serialize()
+        val b = GtxBuilder(blockchainRid, listOf(pubKey(0)), net.postchain.devtools.gtx.myCS)
+            .addOperation("gtx_test", gtv(id), gtv(value))
+            .finish()
+            .sign(net.postchain.devtools.gtx.myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
+            .buildGtx()
+        return b.encode()
     }
 
     @Test
@@ -55,8 +55,8 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
         val nanoDelta = measureNanoTime {
             for (rawTx in transactions) {
                 val gtvData = GtvFactory.decodeGtv(rawTx)
-                val gtxData = GtxTransactionDataFactory.deserializeFromGtv(gtvData)
-                total += gtxData.transactionBodyData.operations.size
+                val gtxData = Gtx.fromGtv(gtvData)
+                total += gtxData.gtxBody.operations.size
             }
         }
        assertTrue(total == 1000)

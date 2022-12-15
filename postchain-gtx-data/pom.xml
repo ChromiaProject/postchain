@@ -5,16 +5,13 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.6.0</version>
+        <version>3.7.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>postchain-gtx-data</artifactId>
     <name>Postchain GTX Data</name>
     <description>Defines a data format GTX for Postchain Transactions (that builds on GTV).</description>
-
-    <properties>
-    </properties>
 
     <dependencies>
         <dependency>
@@ -26,7 +23,22 @@
             <artifactId>postchain-gtv</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>jakarta.xml.bind</groupId>
+            <artifactId>jakarta.xml.bind-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.beanit</groupId>
+            <artifactId>jasn1</artifactId>
+        </dependency>
+
         <!-- Test dependencies -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>

@@ -3,15 +3,25 @@
 package net.postchain.devtools.testinfra
 
 import net.postchain.base.configuration.BlockchainConfigurationData
-import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainContext
+import net.postchain.core.EContext
+import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 
 open class TestBlockchainConfigurationFactory : GTXBlockchainConfigurationFactory() {
 
-    override fun makeBlockchainConfiguration(configData: Any): BlockchainConfiguration {
+    override fun makeBlockchainConfiguration(configurationData: Any,
+                                             partialContext: BlockchainContext,
+                                             blockSigMaker: SigMaker,
+                                             eContext: EContext,
+                                             cryptoSystem: CryptoSystem): TestBlockchainConfiguration {
         return TestBlockchainConfiguration(
-                configData as BlockchainConfigurationData,
-                createGtxModule(configData.context.blockchainRID, configData)
+                configurationData as BlockchainConfigurationData,
+                cryptoSystem,
+                partialContext,
+                blockSigMaker,
+                createGtxModule(partialContext.blockchainRID, configurationData, eContext)
         )
     }
 }

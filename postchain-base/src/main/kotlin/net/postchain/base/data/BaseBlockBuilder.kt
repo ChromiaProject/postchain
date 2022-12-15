@@ -24,6 +24,7 @@ import java.util.*
 /**
  * BaseBlockBuilder is used to aid in building blocks, including construction and validation of block header and witness
  *
+ * @property blockchainRID
  * @property cryptoSystem Crypto utilities
  * @property eContext Connection context including blockchain and node identifiers
  * @property store For database access
@@ -31,7 +32,7 @@ import java.util.*
  * @property specialTxHandler is the main entry point for special transaction handling.
  * @property subjects Public keys for nodes authorized to sign blocks
  * @property blockSigMaker used to produce signatures on blocks for local node
- * @property blockWitnessBuilderFactory
+ * @property blockWitnessProvider
  * @property blockchainRelatedInfoDependencyList holds the blockchain RIDs this blockchain depends on
  * @property extensions are extensions to the block builder, usually helping with handling of special transactions.
  * @property usingHistoricBRID
@@ -51,9 +52,9 @@ open class BaseBlockBuilder(
         val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
         val extensions: List<BaseBlockBuilderExtension>,
         val usingHistoricBRID: Boolean,
-        val maxBlockSize: Long = 20 * 1024 * 1024, // 20mb
-        val maxBlockTransactions: Long = 100,
-        maxTxExecutionTime: Long = 0
+        val maxBlockSize: Long,
+        val maxBlockTransactions: Long,
+        maxTxExecutionTime: Long
 ): AbstractBlockBuilder(eContext, blockchainRID, store, txFactory, maxTxExecutionTime) {
 
     companion object : KLogging()
@@ -94,7 +95,7 @@ open class BaseBlockBuilder(
      */
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {
         when (val proc = eventProcessors[type]) {
-            null -> throw ProgrammerMistake("Event sink for ${type} not found")
+            null -> throw ProgrammerMistake("Event sink for $type not found")
             else -> proc.processEmittedEvent(ctxt, type, data)
         }
     }
@@ -112,13 +113,8 @@ open class BaseBlockBuilder(
         }
         super.begin(partialBlockHeader)
         for (x in extensions) x.init(this.bctx, this)
-        if (buildingNewBlock
-                && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.Begin)) {
-
-            val stx = specialTxHandler.createSpecialTransaction(
-                SpecialTransactionPosition.Begin,
-                bctx
-            )
+        if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.Begin)) {
+            val stx = specialTxHandler.createSpecialTransaction(SpecialTransactionPosition.Begin, bctx)
             appendTransaction(stx)
         }
     }
@@ -145,7 +141,7 @@ open class BaseBlockBuilder(
         // If our time is behind the timestamp of most recent block, do a minimal increment
         val timestamp = max(System.currentTimeMillis(), initialBlockData.timestamp + 1)
         val rootHash = computeMerkleRootHash()
-        return BaseBlockHeader.make(cryptoSystem, initialBlockData, rootHash, timestamp, finalizeExtensions())
+        return BaseBlockHeader.make(GtvMerkleHashCalculator(cryptoSystem), initialBlockData, rootHash, timestamp, finalizeExtensions())
     }
 
     /**
@@ -169,8 +165,7 @@ open class BaseBlockBuilder(
             if (givenDependencies.size == blockchainRelatedInfoDependencyList.size) {
 
                 val resList = mutableListOf<BlockchainDependency>()
-                var i = 0
-                for (bcInfo in blockchainRelatedInfoDependencyList) {
+                for ((i, bcInfo) in blockchainRelatedInfoDependencyList.withIndex()) {
                     val blockRid = givenDependencies[i]
                     val dep = if (blockRid != null) {
                         val dbHeight = store.getBlockHeightFromAnyBlockchain(ectx, blockRid, bcInfo.chainId!!)
@@ -178,14 +173,12 @@ open class BaseBlockBuilder(
                             BlockchainDependency(bcInfo, HeightDependency(blockRid, dbHeight))
                         } else {
                             // Ok to bang out if we are behind in blocks. Discussed this with Alex (2019-03-29)
-                            throw BadDataMistake(BadDataType.MISSING_DEPENDENCY,
-                                    "We are not ready to accept the block since block dependency (RID: ${blockRid.toHex()}) is missing. ")
+                            throw BadDataMistake(BadDataType.MISSING_DEPENDENCY, "We are not ready to accept the block since block dependency (RID: ${blockRid.toHex()}) is missing.")
                         }
                     } else {
                         BlockchainDependency(bcInfo, null) // No blocks required -> allowed
                     }
                     resList.add(dep)
-                    i++
                 }
                 BlockchainDependencies(resList)
             } else {
@@ -248,10 +241,17 @@ open class BaseBlockBuilder(
     override fun finalizeAndValidate(blockHeader: BlockHeader) {
         if (specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End) && !haveSpecialEndTransaction)
             throw BadDataMistake(BadDataType.BAD_BLOCK,"End special transaction is missing")
-        super.finalizeAndValidate(blockHeader)
-
-        // TODO: validate returned values!
-        finalizeExtensions()
+        val extraData = finalizeExtensions()
+        val validationResult = validateBlockHeader(blockHeader, extraData)
+        when (validationResult.result) {
+            OK -> {
+                store.finalizeBlock(bctx, blockHeader)
+                _blockData = BlockData(blockHeader, rawTransactions)
+                finalized = true
+            }
+            PREV_BLOCK_MISMATCH -> throw BadDataMistake(BadDataType.PREV_BLOCK_MISMATCH, validationResult.message)
+            else -> throw BadDataMistake(BadDataType.BAD_BLOCK, validationResult.message)
+        }
     }
 
     private fun checkSpecialTransaction(tx: Transaction) {
@@ -274,22 +274,40 @@ open class BaseBlockBuilder(
                 throw BlockValidationMistake("Special transaction validation failed")
             }
             haveSpecialEndTransaction = true
-        } else {
-            if (expectBeginTx) {
-                throw BlockValidationMistake("First transaction must be special transaction")
-            }
+        } else if (expectBeginTx) {
+            throw BlockValidationMistake("First transaction must be special transaction")
         }
     }
 
     override fun appendTransaction(tx: Transaction) {
         if (blockSize + tx.getRawData().size > maxBlockSize) {
-            throw BlockValidationMistake("block size exceeds max block size ${maxBlockSize} bytes")
+            throw BlockValidationMistake("block size exceeds max block size $maxBlockSize bytes")
         } else if (transactions.size >= maxBlockTransactions) {
-            throw BlockValidationMistake("Number of transactions exceeds max ${maxBlockTransactions} transactions in block")
+            throw BlockValidationMistake("Number of transactions exceeds max $maxBlockTransactions transactions in block")
         }
         checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
         super.appendTransaction(tx)
         blockSize += tx.getRawData().size
     }
 
+    /**
+     * @return the block RID at a certain height
+     */
+    private fun getBlockRidAtHeight(height: Long) = store.getBlockRID(ectx, height)
+
+    /**
+     * (Note: don't call this. We only keep this as a public function for legacy tests to work)
+     */
+    internal fun validateBlockHeader(blockHeader: BlockHeader, extraData: Map<String, Gtv> = mapOf()): ValidationResult {
+        val nrOfDependencies = blockchainDependencies?.all()?.size ?: 0
+        return GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(
+            blockHeader,
+            initialBlockData,
+            ::computeMerkleRootHash,
+            ::getBlockRidAtHeight,
+            bctx.timestamp,
+            nrOfDependencies,
+            extraData
+        )
+    }
 }

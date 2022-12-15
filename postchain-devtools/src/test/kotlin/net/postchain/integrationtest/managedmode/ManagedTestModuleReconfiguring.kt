@@ -3,14 +3,21 @@
 package net.postchain.integrationtest.managedmode
 
 import net.postchain.common.hexStringToByteArray
-import net.postchain.gtv.*
+import net.postchain.core.EContext
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtx.SimpleGTXModule
+import net.postchain.integrationtest.managedmode.TestModulesHelper.argBlockchainRid
 import net.postchain.integrationtest.managedmode.TestModulesHelper.argHeight
 import net.postchain.integrationtest.managedmode.TestModulesHelper.peerInfoToGtv
 import net.postchain.integrationtest.managedmode.TestPeerInfos.Companion.peerInfo0
 import net.postchain.util.TestKLogging
-import net.postchain.core.EContext
 
 open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit>(
         Unit,
@@ -18,7 +25,7 @@ open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit
         mapOf(
                 "nm_get_peer_infos" to ::queryGetPeerInfos,
                 "nm_get_peer_list_version" to ::queryGetPeerListVersion,
-                "nm_compute_blockchain_list" to ::queryComputeBlockchainList,
+                "nm_compute_blockchain_info_list" to ::queryComputeBlockchainInfoList,
                 "nm_get_blockchain_configuration" to ::queryGetConfiguration,
                 "nm_find_next_configuration_height" to ::queryFindNextConfigurationHeight,
                 "nm_get_blockchain_last_height_map" to ::dummyHandlerArray,
@@ -33,7 +40,7 @@ open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit
     companion object : TestKLogging(LogLevel.DEBUG) {
 
         private val BLOCKCHAIN_RIDS = mapOf(
-                0L to "196F099F825BCE5D426A729F42533529C8AC0255AE26001C34E31B6F25DCC2DF"
+                0L to "A852EE99CD0C058F2C67423E95659FF76275E3E245F287F41EF6444F2D0D7191"
         )
 
         private val stage0 = -1 until 15
@@ -55,31 +62,36 @@ open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit
 
         fun queryNMApiVersion(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_api_version" }
-            return GtvInteger(2L)
+            return GtvInteger(4L)
         }
 
-        fun queryComputeBlockchainList(unit: Unit, eContext: EContext, args: Gtv): Gtv {
-            logger.log { "Query: nm_compute_blockchain_list" }
-            return GtvArray(arrayOf(gtvBlockchainRid(0L)))
+        fun queryComputeBlockchainInfoList(unit: Unit, eContext: EContext, args: Gtv): Gtv {
+            logger.log { "Query: nm_compute_blockchain_info_list" }
+            return GtvArray(arrayOf(GtvDictionary.build(
+                    mapOf(
+                            "rid" to gtvBlockchainRid(0L),
+                            "system" to GtvInteger(1L)
+                    )
+            )))
         }
 
         fun queryGetConfiguration(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log {
                 "Query: nm_get_blockchain_configuration: " +
                         "height: ${argHeight(args)}, " +
-                        "blockchainRid: ${TestModulesHelper.argBlockchainRid(args)}"
+                        "blockchainRid: ${argBlockchainRid(args)}"
             }
 
             val blockchainConfigFilename = when (argHeight(args)) {
                 15L -> "/net/postchain/devtools/managedmode/singlepeer_loads_config_and_reconfigures/blockchain_config_reconfiguring_15.xml"
                 30L -> "/net/postchain/devtools/managedmode/singlepeer_loads_config_and_reconfigures/blockchain_config_reconfiguring_30.xml"
                 45L -> "/net/postchain/devtools/managedmode/singlepeer_loads_config_and_reconfigures/blockchain_config_reconfiguring_45.xml"
-                else -> "an unreachable branch"
+                else -> null
             }
 
             logger.log { "blockchainConfigFilename: $blockchainConfigFilename" }
 
-            return if (blockchainConfigFilename == "an unreachable branch") {
+            return if (blockchainConfigFilename == null) {
                 GtvNull
             } else {
                 val gtvConfig = GtvMLParser.parseGtvML(

@@ -5,13 +5,22 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.base.AbstractBlockBuilder
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
-import net.postchain.core.block.BlockBuildingStrategy
-import net.postchain.core.block.BlockQueries
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockQueries
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import kotlin.time.Duration
 
+/**
+ * This block building strategy is very useful for tests.
+ *
+ * Not only can we tell the blockchain when to build blocks [buildBlocksUpTo()], we can also wait for a block
+ * to get done [awaitCommitted()].
+ */
 @Suppress("UNUSED_PARAMETER")
 class OnDemandBlockBuildingStrategy(
         val configData: BaseBlockBuildingStrategyConfigurationData,
@@ -45,20 +54,28 @@ class OnDemandBlockBuildingStrategy(
         blocks.add(blockData)
     }
 
-    fun awaitCommitted(height: Int) {
+    /**
+     *
+     * @param timeout  time to wait for each block
+     *
+     * @throws TimeoutException if timeout
+     */
+    fun awaitCommitted(height: Int, timeout: Duration = Duration.INFINITE) {
         if (logger.isTraceEnabled) {
             logger.trace("awaitCommitted() - start: height: $height, committedHeight: $committedHeight")
         }
         while (committedHeight < height) {
-            blocks.take()
+            if (timeout.isInfinite()) {
+                blocks.take()
+            } else {
+                blocks.poll(timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+                        ?: throw TimeoutException("Timeout waiting for block")
+            }
             logger.debug { "awaitCommitted() - took a block height: $height, committedHeight: $committedHeight" }
         }
-        var x = -2
-        if (this.blockQueries != null) {
-            x = blockQueries.getBestHeight().get().toInt()
-        }
+        val dbHeight = blockQueries.getBestHeight().get().toInt()
         if (logger.isTraceEnabled) {
-            logger.trace("awaitCommitted() - end: height: $height, committedHeight: $committedHeight, from db: $x")
+            logger.trace("awaitCommitted() - end: height: $height, committedHeight: $committedHeight, from db: $dbHeight")
         }
     }
 

@@ -93,7 +93,6 @@ object TestNodeConfigProducer {
         setConfInfrastructure(systemSetup.confInfrastructure, baseConfig)
         setApiPort(nodeSetup, baseConfig, systemSetup.needRestApi)
         setKeys(nodeSetup, baseConfig)
-        setHeartbeat(baseConfig)
     }
 
     fun setSyncTuningParams(systemSetup: SystemSetup, baseConfig: PropertiesConfiguration) {
@@ -180,9 +179,5 @@ object TestNodeConfigProducer {
 
         baseConfig.setProperty("messaging.privkey", nodeConf.privKeyHex)
         baseConfig.setProperty("messaging.pubkey", nodeConf.pubKeyHex)
-    }
-
-    fun setHeartbeat(baseConfig: PropertiesConfiguration) {
-        baseConfig.setProperty("heartbeat.enabled", false)
     }
 }

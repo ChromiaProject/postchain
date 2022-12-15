@@ -6,12 +6,13 @@ import io.restassured.RestAssured.given
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtx.data.GTXDataBuilder
 import net.postchain.gtx.GTXTransactionFactory
+import net.postchain.gtx.GtxBuilder
 import org.hamcrest.core.IsEqual.equalTo
 import java.util.*
 
@@ -40,16 +41,16 @@ class RestApiTestManual {
                 .then()
                 .statusCode(200)
 
-        val transaction = GTXTransactionFactory(BlockchainRid.ZERO_RID, GTXTestModule(), cryptoSystem)
+        GTXTransactionFactory(BlockchainRid.ZERO_RID, GTXTestModule(), cryptoSystem)
                 .decodeTransaction(txBytes)
         //RestTools.awaitConfirmed(port, blockchainRID!!.toHex(), transaction.getRID().toHex())
     }
 
     private fun buildTestTx(id: Long, value: String): ByteArray {
-        val b = GTXDataBuilder(BlockchainRid.ZERO_RID, arrayOf(pubKey(0)), cryptoSystem)
-        b.addOperation("gtx_test", arrayOf(gtv(id), gtv(value)))
-        b.finish()
-        b.sign(cryptoSystem.buildSigMaker(pubKey(0), privKey(0)))
-        return b.serialize()
+        val b = GtxBuilder(BlockchainRid.ZERO_RID, listOf(pubKey(0)), cryptoSystem)
+            .addOperation("gtx_test", gtv(id), gtv(value))
+            .finish()
+            .sign(cryptoSystem.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
+        return b.buildGtx().encode()
     }
 }

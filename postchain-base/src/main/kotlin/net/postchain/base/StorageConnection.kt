@@ -6,6 +6,8 @@ import net.postchain.StorageBuilder
 import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 import net.postchain.core.EContext
+import net.postchain.core.Storage
+import java.io.File
 
 fun <RT> Storage.withReadConnection(op: (AppContext) -> RT): RT {
     val ctx = openReadConnection()
@@ -98,7 +100,12 @@ fun <RT> runStorageCommand(appConfig: AppConfig, op: (ctx: AppContext) -> RT): R
     }
 }
 
-fun <RT> runStorageCommand(nodeConfigFile: String, op: (ctx: AppContext) -> RT): RT {
+fun <RT> runStorageCommand(nodeConfigFilename: String, op: (ctx: AppContext) -> RT): RT {
+    val appConfig = AppConfig.fromPropertiesFile(nodeConfigFilename)
+    return runStorageCommand(appConfig, op)
+}
+
+fun <RT> runStorageCommand(nodeConfigFile: File, op: (ctx: AppContext) -> RT): RT {
     val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
     return runStorageCommand(appConfig, op)
 }
@@ -113,7 +120,12 @@ fun <RT> runStorageCommand(appConfig: AppConfig, chainId: Long, op: (ctx: EConte
     }
 }
 
-fun <RT> runStorageCommand(nodeConfigFile: String, chainId: Long, op: (ctx: EContext) -> RT): RT {
+fun <RT> runStorageCommand(nodeConfigFilename: String, chainId: Long, op: (ctx: EContext) -> RT): RT {
+    val appConfig = AppConfig.fromPropertiesFile(nodeConfigFilename)
+    return runStorageCommand(appConfig, chainId, op)
+}
+
+fun <RT> runStorageCommand(nodeConfigFile: File, chainId: Long, op: (ctx: EContext) -> RT): RT {
     val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
     return runStorageCommand(appConfig, chainId, op)
 }

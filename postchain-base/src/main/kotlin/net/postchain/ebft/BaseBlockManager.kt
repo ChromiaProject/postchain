@@ -5,8 +5,8 @@ package net.postchain.ebft
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.common.toHex
-import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.PmEngineIsAlreadyClosed
+import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
@@ -89,6 +89,7 @@ class BaseBlockManager(
             if (theIntent is FetchBlockAtHeightIntent && theIntent.height == height) {
                 runDBOp({
                     val bTrace = if (logger.isTraceEnabled) {
+                        logger.trace { "onReceivedBlockAtHeight() - Creating block trace with procname: $processName , height: $height " }
                         BlockTrace.build(processName, block.header.blockRID, height)
                     } else {
                         null // Use null for performance
@@ -172,7 +173,7 @@ class BaseBlockManager(
                     if (exception is PmEngineIsAlreadyClosed) {
                         logger.debug(msg)
                     } else {
-                        logger.error(msg)
+                        logger.error(msg, exception)
                     }
                 })
             }
@@ -197,7 +198,7 @@ class BaseBlockManager(
         if (logger.isTraceEnabled) {
             try {
                 val heightIntent: Long? = if (blockIntent is FetchBlockAtHeightIntent) {
-                    (blockIntent as FetchBlockAtHeightIntent).height  // In this case we should know the height, let's add it
+                    blockIntent.height  // In this case we should know the height, let's add it
                 } else {
                     null
                 }

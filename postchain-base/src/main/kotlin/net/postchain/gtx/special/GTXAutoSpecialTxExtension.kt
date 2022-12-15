@@ -1,13 +1,13 @@
 package net.postchain.gtx.special
 
+import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid
+import net.postchain.core.BlockEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvType
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.data.OpData
-import net.postchain.core.BlockEContext
-import net.postchain.base.SpecialTransactionPosition
 
 /**
  * This extension adds "begin" and "end" to the block, which how a block should be constructed.
@@ -32,7 +32,7 @@ class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
      * (Alex:) We only add the "__begin_.." and "__end.." if they are used by the Rell programmer writing the module,
      * so we must check the module for these operations before we know if they are relevant.
      */
-    override fun init(module: GTXModule, blockchainRID: BlockchainRid, cs: CryptoSystem) {
+    override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {
         val ops = module.getOperations()
         if (OP_BEGIN_BLOCK in ops) {
             wantBegin = true

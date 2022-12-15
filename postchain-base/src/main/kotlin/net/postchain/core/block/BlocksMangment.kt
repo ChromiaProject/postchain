@@ -35,8 +35,8 @@ interface BlockStore {
     //    fun getBlockData(ctx: EContext, blockRID: ByteArray): BlockData
     fun getWitnessData(ctx: EContext, blockRID: ByteArray): ByteArray
 
-    fun getBlocks(ctx: EContext, beforeTime: Long, limit: Int, partialTx: Boolean): List<BlockDetail>
-    fun getBlock(ctx: EContext, blockRID: ByteArray, partialTx: Boolean): BlockDetail?
+    fun getBlocks(ctx: EContext, beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
+    fun getBlock(ctx: EContext, blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail?
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
     fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt>
 
@@ -52,15 +52,15 @@ interface BlockStore {
 /**
  * A collection of methods for various blockchain related queries
  */
-interface BlockQueries {
+interface BlockQueries : Shutdownable {
     fun getBlockSignature(blockRID: ByteArray): Promise<Signature, Exception>
     fun getBestHeight(): Promise<Long, Exception>
     fun getLastBlockTimestamp(): Promise<Long, Exception>
     fun getBlockRid(height: Long): Promise<ByteArray?, Exception>
     fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): Promise<BlockDataWithWitness?, Exception>
     fun getBlockHeader(blockRID: ByteArray): Promise<BlockHeader, Exception>
-    fun getBlocks(beforeTime: Long, limit: Int, partialTx: Boolean): Promise<List<BlockDetail>, Exception>
-    fun getBlock(blockRID: ByteArray, partialTx: Boolean): Promise<BlockDetail?, Exception>
+    fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): Promise<List<BlockDetail>, Exception>
+    fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): Promise<BlockDetail?, Exception>
 
     fun getBlockTransactionRids(blockRID: ByteArray): Promise<List<ByteArray>, Exception>
     fun getTransaction(txRID: ByteArray): Promise<Transaction?, Exception>
