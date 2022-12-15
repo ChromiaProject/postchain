@@ -19,6 +19,7 @@ data class ContainerNodeConfig(
         val masterHost: String,
         val masterPort: Int,
         val masterRestApiPort: Int,
+        val subnodeNetwork: String?,
         val subnodeHost: String,
         val subnodeRestApiPort: Int,
         val subnodeAdminRpcPort: Int,
@@ -69,6 +70,7 @@ data class ContainerNodeConfig(
         const val KEY_MASTER_HOST = "master-host"
         const val KEY_MASTER_PORT = "master-port"
         const val KEY_MASTER_REST_API_PORT = "master-rest-api-port"
+        const val KEY_SUBNODE_NETWORK = "subnode-network"
         const val KEY_SUBNODE_HOST = "subnode-host"
         const val KEY_SUBNODE_REST_API_PORT = "rest-api-port"
         const val KEY_SUBNODE_ADMIN_RPC_PORT = "admin-rpc-port"
@@ -96,6 +98,7 @@ data class ContainerNodeConfig(
                         getString(KEY_MASTER_HOST, "localhost"),
                         getInt(KEY_MASTER_PORT, 9860),
                         getMasterRestApiPort(config),
+                        getString(KEY_SUBNODE_NETWORK),
                         getString(KEY_SUBNODE_HOST, "localhost"),
                         getInt(KEY_SUBNODE_REST_API_PORT, RestApiConfig.DEFAULT_REST_API_PORT),
                         getInt(KEY_SUBNODE_ADMIN_RPC_PORT, PostchainServerConfig.DEFAULT_RPC_SERVER_PORT),

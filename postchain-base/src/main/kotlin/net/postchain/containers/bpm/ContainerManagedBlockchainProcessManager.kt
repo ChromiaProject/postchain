@@ -272,6 +272,15 @@ open class ContainerManagedBlockchainProcessManager(
             psContainer.containerId = dockerClient.createContainer(config, job.containerName.toString()).id()!!
             logger.debug { dcLog("created", psContainer) }
 
+            // connect to network
+            if (containerNodeConfig.subnodeNetwork != null) {
+                for (network in dockerClient.inspectContainer(psContainer.containerId).networkSettings().networks()?.keys
+                        ?: emptySet()) {
+                    dockerClient.disconnectFromNetwork(psContainer.containerId, network)
+                }
+                dockerClient.connectToNetwork(psContainer.containerId, containerNodeConfig.subnodeNetwork)
+            }
+
             // starting container
             dockerClient.startContainer(psContainer.containerId)
             psContainer.start()
