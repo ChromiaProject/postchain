@@ -19,7 +19,7 @@ data class ContainerNodeConfig(
         val masterHost: String,
         val masterPort: Int,
         val masterRestApiPort: Int,
-        val subnodeNetwork: String?,
+        val network: String?,
         val subnodeHost: String,
         val subnodeRestApiPort: Int,
         val subnodeAdminRpcPort: Int,
