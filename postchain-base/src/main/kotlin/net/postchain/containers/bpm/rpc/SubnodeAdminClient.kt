@@ -20,5 +20,6 @@ interface SubnodeAdminClient : Shutdownable {
     fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid, config: ByteArray): Boolean
     fun stopBlockchain(chainId: Long): Boolean
     fun isBlockchainRunning(chainId: Long): Boolean
+    fun getBlockchainLastHeight(chainId: Long): Long
     fun addPeerInfo(peerInfo: PeerInfo): Boolean
 }

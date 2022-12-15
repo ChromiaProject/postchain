@@ -70,6 +70,7 @@ message FindBlockchainRequest {
 message FindBlockchainReply {
   string brid = 1;
   bool active = 2;
+  int64 height = 3;
 }
 
 message AddBlockchainReplicaRequest {
