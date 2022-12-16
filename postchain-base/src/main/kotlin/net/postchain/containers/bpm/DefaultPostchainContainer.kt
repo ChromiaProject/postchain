@@ -72,6 +72,10 @@ class DefaultPostchainContainer(
         return getAllChains().toSet().onEach(::terminateProcess)
     }
 
+    override fun getBlockchainLastHeight(chainId: Long): Long {
+        return subnodeAdminClient.getBlockchainLastHeight(chainId)
+    }
+
     override fun start() {
         state = ContainerState.RUNNING
         subnodeAdminClient.connect()

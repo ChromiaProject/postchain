@@ -409,6 +409,7 @@ open class ContainerManagedBlockchainProcessManager(
                     .forEach { it.connectRemoteProcess(process) }
             blockchainProcessesDiagnosticData[chain.brid] = mutableMapOf(
                     DiagnosticProperty.BLOCKCHAIN_RID to { process.blockchainRid.toHex() },
+                    DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT to { psContainer.getBlockchainLastHeight(process.chainId) },
                     DiagnosticProperty.CONTAINER_NAME to { psContainer.containerName.toString() },
                     DiagnosticProperty.CONTAINER_ID to { psContainer.shortContainerId() ?: "" }
             )
