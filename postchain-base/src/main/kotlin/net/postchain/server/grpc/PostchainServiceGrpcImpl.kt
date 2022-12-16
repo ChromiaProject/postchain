@@ -135,8 +135,9 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         val response = postchainService.findBlockchain(request.chainId)
 
         responseObserver.onNext(FindBlockchainReply.newBuilder().run {
-            this.brid = response?.first?.toHex() ?: ""
-            this.active = response?.second ?: false
+            this.brid = response.first?.toHex() ?: ""
+            this.active = response.second ?: false
+            this.height = response.third
             build()
         })
         responseObserver.onCompleted()

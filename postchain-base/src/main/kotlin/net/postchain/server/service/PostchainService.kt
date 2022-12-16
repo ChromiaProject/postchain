@@ -43,10 +43,14 @@ class PostchainService(private val postchainNode: PostchainNode) {
         return if (initialized) brid else null
     }
 
-    fun findBlockchain(chainId: Long): Pair<BlockchainRid, Boolean>? =
+    fun findBlockchain(chainId: Long): Triple<BlockchainRid?, Boolean?, Long> =
             withReadConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
-                BlockchainApi.findBlockchain(ctx)
-            }?.let { Pair(it, postchainNode.isBlockchainRunning(chainId)) }
+                Triple(
+                        BlockchainApi.findBlockchain(ctx),
+                        postchainNode.isBlockchainRunning(chainId),
+                        BlockchainApi.getLastBlockHeight(ctx)
+                )
+            }
 
     fun addBlockchainReplica(brid: BlockchainRid, pubkey: PubKey): Boolean =
             postchainNode.postchainContext.storage.withWriteConnection { ctx ->
