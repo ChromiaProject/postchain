@@ -162,9 +162,9 @@ object CliExecution : KLogging() {
             }
 
     fun runNode(nodeConfigFile: File, chainIds: List<Long>, debug: Boolean) {
-        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile, debug)
 
-        with(PostchainNode(appConfig, wipeDb = false, debug = debug)) {
+        with(PostchainNode(appConfig, wipeDb = false)) {
             chainIds.forEach {
                 withLoggingContext(
                         NODE_PUBKEY_TAG to appConfig.pubKey,
