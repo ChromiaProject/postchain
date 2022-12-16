@@ -12,7 +12,7 @@ data class ContainerName private constructor(
     companion object {
 
         fun create(appConfig: AppConfig, directoryContainer: String): ContainerName {
-            val dockerContainer = "n${appConfig.pubKey.take(8)}_${directoryContainer}"
+            val dockerContainer = "${appConfig.pubKey.take(8)}-${directoryContainer}"
             return ContainerName(directoryContainer, dockerContainer)
         }
     }
