@@ -20,11 +20,11 @@ import net.postchain.server.service.DebugService
 import net.postchain.server.service.PeerService
 import net.postchain.server.service.PostchainService
 
-class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false, private val config: PostchainServerConfig) {
+class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, private val config: PostchainServerConfig) {
 
     companion object : KLogging()
 
-    private val postchainNode = PostchainNode(appConfig, wipeDb, debug)
+    private val postchainNode = PostchainNode(appConfig, wipeDb)
     private val credentials = config.tlsConfig?.let {
         TlsServerCredentials.create(it.certChainFile, it.privateKeyFile)
     } ?: InsecureServerCredentials.create()
