@@ -97,6 +97,7 @@ object ContainerConfigFactory : KLogging() {
                 .hostConfig(hostConfig)
                 .exposedPorts(portBindings.keys)
                 .env("POSTCHAIN_DEBUG=${restApiConfig.debug}")
+                .labels(mapOf(POSTCHAIN_MASTER_PUBKEY to containerNodeConfig.masterPubkey))
                 .build()
     }
 

@@ -40,6 +40,8 @@ import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 
+const val POSTCHAIN_MASTER_PUBKEY = "postchain-master-pubkey"
+
 open class ContainerManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
         private val masterBlockchainInfra: MasterBlockchainInfra,
@@ -460,25 +462,18 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     private fun stopRunningContainersIfExist() {
-        if (containerNodeConfig.healthcheckRunningContainersAtStartRegexp.isNotEmpty()) {
-            val toStop = dockerClient.listContainers().filter {
-                try {
-                    containerName(it).contains(Regex(containerNodeConfig.healthcheckRunningContainersAtStartRegexp, RegexOption.IGNORE_CASE))
-                } catch (e: Exception) {
-                    logger.error { "Regexp expression error: ${containerNodeConfig.healthcheckRunningContainersAtStartRegexp}" }
-                    false
-                }
+        val toStop = dockerClient.listContainers().filter {
+            (it.labels() ?: emptyMap())[POSTCHAIN_MASTER_PUBKEY] == containerNodeConfig.masterPubkey
+        }
+
+        if (toStop.isNotEmpty()) {
+            logger.warn {
+                "Containers found to be stopped (${toStop.size}): ${toStop.joinToString(transform = ::containerName)}"
             }
 
-            if (toStop.isNotEmpty()) {
-                logger.warn {
-                    "Containers found to be stopped (${toStop.size}): ${toStop.joinToString(transform = ::containerName)}"
-                }
-
-                toStop.forEach {
-                    dockerClient.stopContainer(it.id(), 20)
-                    logger.info { "Container has been stopped: ${containerName(it)} / ${shortContainerId(it.id())}" }
-                }
+            toStop.forEach {
+                dockerClient.stopContainer(it.id(), 20)
+                logger.info { "Container has been stopped: ${containerName(it)} / ${shortContainerId(it.id())}" }
             }
         }
     }
