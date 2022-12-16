@@ -3,11 +3,12 @@ package net.postchain.containers.bpm
 import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
+import mu.KLogging
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.infra.ContainerNodeConfig
 
-object ContainerConfigFactory {
+object ContainerConfigFactory : KLogging() {
 
     fun createConfig(fs: FileSystem, restApiConfig: RestApiConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer): ContainerConfig {
         // Container volumes
@@ -81,6 +82,12 @@ object ContainerConfigFactory {
                     if (resources.hasCpu()) {
                         cpuPeriod(resources.cpuPeriod())
                         cpuQuota(resources.cpuQuota())
+                    }
+                }
+                .apply {
+                    if (containerNodeConfig.network != null) {
+                        logger.info("Setting container network to ${containerNodeConfig.network}")
+                        networkMode(containerNodeConfig.network)
                     }
                 }
                 .build()
