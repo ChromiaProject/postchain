@@ -463,7 +463,7 @@ open class ContainerManagedBlockchainProcessManager(
         if (containerNodeConfig.healthcheckRunningContainersAtStartRegexp.isNotEmpty()) {
             val toStop = dockerClient.listContainers().filter {
                 try {
-                    containerName(it).contains(Regex(containerNodeConfig.healthcheckRunningContainersAtStartRegexp))
+                    containerName(it).contains(Regex(containerNodeConfig.healthcheckRunningContainersAtStartRegexp, RegexOption.IGNORE_CASE))
                 } catch (e: Exception) {
                     logger.error { "Regexp expression error: ${containerNodeConfig.healthcheckRunningContainersAtStartRegexp}" }
                     false
