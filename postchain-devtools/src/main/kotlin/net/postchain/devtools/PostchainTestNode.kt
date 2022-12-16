@@ -37,9 +37,8 @@ import kotlin.properties.Delegates
  */
 class PostchainTestNode(
         appConfig: AppConfig,
-        wipeDb: Boolean,
-        debug: Boolean = false
-) : PostchainNode(appConfig, wipeDb, debug) {
+        wipeDb: Boolean
+) : PostchainNode(appConfig, wipeDb) {
 
     val pubKey: String
     private var isInitialized by Delegates.notNull<Boolean>()

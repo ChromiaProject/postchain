@@ -40,7 +40,7 @@ class CommandRunServer : CliktCommand(name = "run-server", help = "Start postcha
         val serverConfig = tlsOptions?.let {
             PostchainServerConfig(port, TlsConfig(it.certChainFile, it.privateKeyFile))
         } ?: PostchainServerConfig(port)
-        PostchainServer(AppConfig.fromPropertiesFile(nodeConfigFile, debug), false, debug, serverConfig)
+        PostchainServer(AppConfig.fromPropertiesFile(nodeConfigFile, debug), false, serverConfig)
                 .apply {
                     start(activeChains)
                     blockUntilShutdown()
