@@ -15,6 +15,7 @@ import org.apache.commons.configuration2.Configuration
  * @param healthcheckRunningContainersCheckPeriod In number of blocks of chain0, set 0 to disable a check
  */
 data class ContainerNodeConfig(
+        val masterPubkey: String,
         val containerImage: String,
         val masterHost: String,
         val masterPort: Int,
@@ -24,7 +25,6 @@ data class ContainerNodeConfig(
         val subnodeRestApiPort: Int,
         val subnodeAdminRpcPort: Int,
         val sendMasterConnectedPeersPeriod: Long,
-        val healthcheckRunningContainersAtStartRegexp: String,
         val healthcheckRunningContainersCheckPeriod: Int,
         // Container FileSystem
         val containerFilesystem: String,
@@ -75,7 +75,6 @@ data class ContainerNodeConfig(
         const val KEY_SUBNODE_REST_API_PORT = "rest-api-port"
         const val KEY_SUBNODE_ADMIN_RPC_PORT = "admin-rpc-port"
         const val KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD = "send-master-connected-peers-period"
-        const val KEY_HEALTHCHECK_RUNNING_CONTAINERS_AT_START_REGEXP = "healthcheck.running-containers-at-start-regexp"
         const val KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD = "healthcheck.running-containers-check-period"
         const val KEY_SUBNODE_DATABASE_URL = "subnode-database-url"
         const val KEY_SUBNODE_FILESYSTEM = "filesystem"
@@ -94,6 +93,7 @@ data class ContainerNodeConfig(
         fun fromAppConfig(config: AppConfig): ContainerNodeConfig {
             return with(config.subset(KEY_CONTAINER_PREFIX)) {
                 ContainerNodeConfig(
+                        config.pubKey,
                         getString(KEY_DOCKER_IMAGE, "chromaway/postchain-subnode:latest"),
                         getString(KEY_MASTER_HOST, "localhost"),
                         getInt(KEY_MASTER_PORT, 9860),
@@ -103,7 +103,6 @@ data class ContainerNodeConfig(
                         getInt(KEY_SUBNODE_REST_API_PORT, RestApiConfig.DEFAULT_REST_API_PORT),
                         getInt(KEY_SUBNODE_ADMIN_RPC_PORT, PostchainServerConfig.DEFAULT_RPC_SERVER_PORT),
                         getLong(KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD, 60_000L),
-                        getString(KEY_HEALTHCHECK_RUNNING_CONTAINERS_AT_START_REGEXP, ""),
                         getInt(KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 0),
                         getString(KEY_SUBNODE_FILESYSTEM, FileSystem.Type.LOCAL.name).uppercase(), // LOCAL | ZFS
                         getString(KEY_HOST_MOUNT_DIR),
