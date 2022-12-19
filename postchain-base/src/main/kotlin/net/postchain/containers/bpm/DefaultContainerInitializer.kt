@@ -33,8 +33,9 @@ internal class DefaultContainerInitializer(private val appConfig: AppConfig, pri
         config.setProperty("infrastructure", Infrastructure.EbftContainerSub.get())
 
         // DB
-        if (config.containsKey(fullKey(KEY_SUBNODE_DATABASE_URL))) {
-            config.setProperty("database.url", config.getProperty(fullKey(KEY_SUBNODE_DATABASE_URL)))
+        val subnodeDatabaseUrl = appConfig.getEnvOrString("POSTCHAIN_SUBNODE_DATABASE_URL", fullKey(KEY_SUBNODE_DATABASE_URL))
+        if (subnodeDatabaseUrl != null) {
+            config.setProperty("database.url", subnodeDatabaseUrl)
         }
         val scheme = databaseSchema(container.containerName)
         config.setProperty("database.schema", scheme)
