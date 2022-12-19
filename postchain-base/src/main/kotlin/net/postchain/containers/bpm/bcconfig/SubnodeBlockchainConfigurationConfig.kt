@@ -17,8 +17,8 @@ data class SubnodeBlockchainConfigurationConfig(
         @JvmStatic
         fun fromAppConfig(config: AppConfig): SubnodeBlockchainConfigurationConfig {
             return SubnodeBlockchainConfigurationConfig(
-                    config.getBoolean("subnode_blockchain_config.enabled", true),
-                    config.getLong("subnode_blockchain_config.sleep_timeout", 5_000L)
+                    config.getEnvOrBoolean("POSTCHAIN_SUBNODE_BLOCKCHAIN_CONFIG_ENABLED", "subnode_blockchain_config.enabled", true),
+                    config.getEnvOrLong("POSTCHAIN_SUBNODE_BLOCKCHAIN_CONFIG_SLEEP_TIMEOUT", "subnode_blockchain_config.sleep_timeout", 5_000L)
             )
         }
     }

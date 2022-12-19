@@ -2,6 +2,11 @@ package net.postchain.containers.infra
 
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.common.config.Config
+import net.postchain.common.config.getEnvOrBooleanProperty
+import net.postchain.common.config.getEnvOrIntProperty
+import net.postchain.common.config.getEnvOrLongProperty
+import net.postchain.common.config.getEnvOrStringProperty
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.server.config.PostchainServerConfig
@@ -19,7 +24,6 @@ data class ContainerNodeConfig(
         val containerImage: String,
         val masterHost: String,
         val masterPort: Int,
-        val masterRestApiPort: Int,
         val network: String?,
         val subnodeHost: String,
         val subnodeRestApiPort: Int,
@@ -69,7 +73,6 @@ data class ContainerNodeConfig(
         const val KEY_DOCKER_IMAGE = "docker-image"
         const val KEY_MASTER_HOST = "master-host"
         const val KEY_MASTER_PORT = "master-port"
-        const val KEY_MASTER_REST_API_PORT = "master-rest-api-port"
         const val KEY_NETWORK = "network"
         const val KEY_SUBNODE_HOST = "subnode-host"
         const val KEY_SUBNODE_REST_API_PORT = "rest-api-port"
@@ -92,24 +95,25 @@ data class ContainerNodeConfig(
         @JvmStatic
         fun fromAppConfig(config: AppConfig): ContainerNodeConfig {
             return with(config.subset(KEY_CONTAINER_PREFIX)) {
+                val hostMountDir = getEnvOrStringProperty("POSTCHAIN_HOST_MOUNT_DIR", KEY_HOST_MOUNT_DIR)
+                        ?: throw UserMistake("$KEY_HOST_MOUNT_DIR must be specified")
                 ContainerNodeConfig(
                         config.pubKey,
-                        getString(KEY_DOCKER_IMAGE, "chromaway/postchain-subnode:latest"),
-                        getString(KEY_MASTER_HOST, "localhost"),
-                        getInt(KEY_MASTER_PORT, 9860),
-                        getMasterRestApiPort(config),
-                        getString(KEY_NETWORK),
-                        getString(KEY_SUBNODE_HOST, "localhost"),
-                        getInt(KEY_SUBNODE_REST_API_PORT, RestApiConfig.DEFAULT_REST_API_PORT),
-                        getInt(KEY_SUBNODE_ADMIN_RPC_PORT, PostchainServerConfig.DEFAULT_RPC_SERVER_PORT),
-                        getLong(KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD, 60_000L),
-                        getInt(KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 0),
-                        getString(KEY_SUBNODE_FILESYSTEM, FileSystem.Type.LOCAL.name).uppercase(), // LOCAL | ZFS
-                        getString(KEY_HOST_MOUNT_DIR),
-                        getMasterMountDir(),
-                        getString(KEY_ZFS_POOL_NAME, FileSystem.ZFS_POOL_NAME),
-                        getString(KEY_ZFS_POOL_INIT_SCRIPT, DEFAULT_CONTAINER_ZFS_INIT_SCRIPT),
-                        getBoolean(KEY_BIND_PGDATA_VOLUME, true),
+                        getEnvOrStringProperty("POSTCHAIN_SUBNODE_DOCKER_IMAGE", KEY_DOCKER_IMAGE, "chromaway/postchain-subnode:latest"),
+                        getEnvOrStringProperty("POSTCHAIN_MASTER_HOST", KEY_MASTER_HOST, "localhost"),
+                        getEnvOrIntProperty("POSTCHAIN_MASTER_PORT", KEY_MASTER_PORT, 9860),
+                        getEnvOrStringProperty("POSTCHAIN_SUBNODE_NETWORK", KEY_NETWORK),
+                        getEnvOrStringProperty("POSTCHAIN_SUBNODE_HOST", KEY_SUBNODE_HOST, "localhost"),
+                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_REST_API_PORT", KEY_SUBNODE_REST_API_PORT, RestApiConfig.DEFAULT_REST_API_PORT),
+                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_ADMIN_RPC_PORT", KEY_SUBNODE_ADMIN_RPC_PORT, PostchainServerConfig.DEFAULT_RPC_SERVER_PORT),
+                        getEnvOrLongProperty("POSTCHAIN_SEND_MASTER_CONNECTED_PEERS_PERIOD", KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD, 60_000L),
+                        getEnvOrIntProperty("POSTCHAIN_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD", KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 0),
+                        getEnvOrStringProperty("POSTCHAIN_SUBNODE_FILESYSTEM", KEY_SUBNODE_FILESYSTEM, FileSystem.Type.LOCAL.name).uppercase(), // LOCAL | ZFS
+                        hostMountDir,
+                        getEnvOrStringProperty("POSTCHAIN_MASTER_MOUNT_DIR", KEY_MASTER_MOUNT_DIR, hostMountDir),
+                        getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_NAME", KEY_ZFS_POOL_NAME, FileSystem.ZFS_POOL_NAME),
+                        getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_INIT_SCRIPT", KEY_ZFS_POOL_INIT_SCRIPT, DEFAULT_CONTAINER_ZFS_INIT_SCRIPT),
+                        getEnvOrBooleanProperty("POSTCHAIN_BIND_PGDATA_VOLUME", KEY_BIND_PGDATA_VOLUME, true),
                         getTestmode(),
                         getLong(KEY_TESTMODE_RESOURCE_LIMITS_CPU, -1),
                         getLong(KEY_TESTMODE_RESOURCE_LIMITS_RAM, -1),
@@ -119,19 +123,7 @@ data class ContainerNodeConfig(
             }
         }
 
-        private fun Configuration.getMasterRestApiPort(config: AppConfig): Int {
-            return if (containsKey(KEY_MASTER_REST_API_PORT)) {
-                getInt(KEY_MASTER_REST_API_PORT)
-            } else {
-                RestApiConfig.fromAppConfig(config).port
-            }
-        }
-
         private fun Configuration.getTestmode() = getBoolean("testmode", false)
-
-        private fun Configuration.getMasterMountDir(): String {
-            return getString(KEY_MASTER_MOUNT_DIR, getString(KEY_HOST_MOUNT_DIR)) // See kdoc
-        }
 
         /*
             Example:
