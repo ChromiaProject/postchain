@@ -8,6 +8,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.config.app.AppConfig
 
 class CommandWaitDb : CliktCommand(name = "wait-db", help = "Block until successfully connected to db [ default retry times: 5, interval: 1000 millis ]") {
 
@@ -19,8 +20,8 @@ class CommandWaitDb : CliktCommand(name = "wait-db", help = "Block until success
 
 
     override fun run() {
-        CliExecution.waitDb(retryTimes, retryInterval, nodeConfigFile)
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        CliExecution.waitDb(retryTimes, retryInterval, appConfig)
     }
-
 
 }

@@ -22,6 +22,7 @@ import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.forceOption
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvFileReader
 
 class CommandAddConfiguration : CliktCommand(
@@ -57,9 +58,11 @@ class CommandAddConfiguration : CliktCommand(
     private val allowUnknownSigners by option("-a", "--allow-unknown-signers", help = "Allow signers that are not in the list of peerInfos.").flag()
 
     override fun run() {
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+
         val height0 = when (height.first) {
             Absolute -> height.second
-            else -> height.second + runStorageCommand(nodeConfigFile, chainId) { ctx ->
+            else -> height.second + runStorageCommand(appConfig, chainId) { ctx ->
                 BlockchainApi.getLastBlockHeight(ctx)
             }
         }
@@ -71,9 +74,9 @@ class CommandAddConfiguration : CliktCommand(
             return
         }
 
-        runOnChain(nodeConfigFile, chainId) {
+        runOnChain(appConfig, chainId) {
             try {
-                CliExecution.addConfiguration(nodeConfigFile, gtv, chainId, height0, force, allowUnknownSigners)
+                CliExecution.addConfiguration(appConfig, gtv, chainId, height0, force, allowUnknownSigners)
                 println("Configuration has been added successfully")
             } catch (e: CliException) {
                 println(e.message)

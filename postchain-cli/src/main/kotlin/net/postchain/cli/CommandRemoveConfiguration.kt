@@ -12,6 +12,8 @@ import net.postchain.cli.util.SafeExecutor.runOnChain
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.common.exception.UserMistake
+import net.postchain.config.app.AppConfig
+import net.postchain.core.EContext
 
 class CommandRemoveConfiguration : CliktCommand(name = "remove-configuration", help = "Remove configuration at a given height for a blockchain.") {
 
@@ -23,8 +25,9 @@ class CommandRemoveConfiguration : CliktCommand(name = "remove-configuration", h
     private val height by option("-h", "--height", help = "Height of configuration to remove").long().required()
 
     override fun run() {
-        runOnChain(nodeConfigFile, chainId) {
-            runStorageCommand(nodeConfigFile, chainId) { ctx ->
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        runOnChain(appConfig, chainId) {
+            runStorageCommand(appConfig, chainId) { ctx: EContext ->
                 val config = BlockchainApi.getConfiguration(ctx, height)
                 if (config != null) {
                     try {

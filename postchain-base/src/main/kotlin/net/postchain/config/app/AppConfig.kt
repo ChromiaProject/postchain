@@ -32,6 +32,8 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
 
         const val DEFAULT_PORT: Int = 9870
 
+        @Deprecated(message = "Use fromPropertiesFile(File, Boolean) instead",
+                replaceWith = ReplaceWith("fromPropertiesFile(File(configFile), debug))", imports = arrayOf("java.io.File")))
         fun fromPropertiesFile(configFile: String, debug: Boolean = false): AppConfig = fromPropertiesFile(File(configFile), debug)
 
         fun fromPropertiesFile(configFile: File, debug: Boolean = false): AppConfig {

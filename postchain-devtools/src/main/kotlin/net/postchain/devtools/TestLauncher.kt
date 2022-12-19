@@ -50,7 +50,7 @@ class TestLauncher : IntegrationTestSetup() {
     }
 
     private fun createTestNode(configFile: String, blockchainConfigFile: String): PostchainTestNode {
-        val appConfig = AppConfig.fromPropertiesFile(configFile)
+        val appConfig = AppConfig.fromPropertiesFile(File(configFile))
 
         val blockchainConfig = GtvMLParser.parseGtvML(
                 File(blockchainConfigFile).readText())

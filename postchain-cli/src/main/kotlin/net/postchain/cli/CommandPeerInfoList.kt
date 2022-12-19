@@ -8,6 +8,8 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.Templater
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.config.app.AppConfig
+import net.postchain.core.AppContext
 import java.io.File
 
 class CommandPeerInfoList : CliktCommand(name = "peerinfo-list", help = "List peer information") {
@@ -28,7 +30,10 @@ class CommandPeerInfoList : CliktCommand(name = "peerinfo-list", help = "List pe
         }
     }
 
-    private fun peerinfoList(nodeConfigFile: File): Array<PeerInfo> = runStorageCommand(nodeConfigFile) { ctx ->
-        PeerApi.listPeers(ctx)
+    private fun peerinfoList(nodeConfigFile: File): Array<PeerInfo> {
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        return runStorageCommand(appConfig) { ctx: AppContext ->
+            PeerApi.listPeers(ctx)
+        }
     }
 }

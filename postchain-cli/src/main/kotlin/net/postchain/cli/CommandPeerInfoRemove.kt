@@ -8,6 +8,8 @@ import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.Templater
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.requiredPubkeyOption
+import net.postchain.config.app.AppConfig
+import net.postchain.core.AppContext
 
 class CommandPeerInfoRemove : CliktCommand(name = "peerinfo-remove", help = "Remove peer information") {
 
@@ -17,7 +19,8 @@ class CommandPeerInfoRemove : CliktCommand(name = "peerinfo-remove", help = "Rem
     private val pubKey by requiredPubkeyOption()
 
     override fun run() {
-        val removed = runStorageCommand(nodeConfigFile) { ctx ->
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val removed = runStorageCommand(appConfig) { ctx: AppContext ->
             PeerApi.removePeer(ctx, pubKey)
         }
 

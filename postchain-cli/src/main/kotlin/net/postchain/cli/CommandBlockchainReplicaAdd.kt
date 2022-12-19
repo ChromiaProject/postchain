@@ -8,6 +8,8 @@ import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.requiredPubkeyOption
+import net.postchain.config.app.AppConfig
+import net.postchain.core.AppContext
 
 class CommandBlockchainReplicaAdd : CliktCommand(name = "blockchain-replica-add", help = "Add info to system about blockchain replicas. To be used to sync this node.") {
 
@@ -18,7 +20,8 @@ class CommandBlockchainReplicaAdd : CliktCommand(name = "blockchain-replica-add"
     private val blockchainRID by blockchainRidOption()
 
     override fun run() {
-        val added = runStorageCommand(nodeConfigFile) { ctx ->
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val added = runStorageCommand(appConfig) { ctx: AppContext ->
             BlockchainApi.addBlockchainReplica(ctx, blockchainRID, pubKey)
         }
 
