@@ -19,3 +19,6 @@ fun Configuration.getEnvOrIntProperty(env: String, property: String, default: In
 
 fun Configuration.getEnvOrLongProperty(env: String, property: String, default: Long): Long =
         System.getenv(env)?.toLong() ?: getLong(property, default)
+
+fun Configuration.getEnvOrBooleanProperty(env: String, property: String, default: Boolean): Boolean =
+        System.getenv(env)?.let { it.toBoolean() } ?: getBoolean(property, default)

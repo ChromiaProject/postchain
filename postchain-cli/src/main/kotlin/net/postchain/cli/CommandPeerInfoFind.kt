@@ -4,17 +4,20 @@ package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.Templater
 import net.postchain.cli.util.hostOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.portOption
+import net.postchain.config.app.AppConfig
+import net.postchain.core.AppContext
 
 class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find peerinfo") {
 
     // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption()
+    private val nodeConfigFile by nodeConfigOption().required()
 
     private val host by hostOption()
 
@@ -23,7 +26,8 @@ class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find pe
     private val pubKey by option("-pk", "--pubkey", help = "Public key (or substring)")
 
     override fun run() {
-        val peerInfos = runStorageCommand(nodeConfigFile) { ctx ->
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val peerInfos = runStorageCommand(appConfig) { ctx: AppContext ->
             PeerApi.findPeerInfo(ctx, host, port, pubKey)
         }
 

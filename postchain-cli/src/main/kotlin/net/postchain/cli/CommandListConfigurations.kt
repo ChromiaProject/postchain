@@ -7,19 +7,21 @@ import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.SafeExecutor.runOnChain
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.config.app.AppConfig
 
 class CommandListConfigurations : CliktCommand(name = "list-configurations", help = "Lists configurations for a blockchain.") {
 
     // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption()
+    private val nodeConfigFile by nodeConfigOption().required()
 
     private val chainId by chainIdOption().required()
 
     override fun run() {
-        runOnChain(nodeConfigFile, chainId) {
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        runOnChain(appConfig, chainId) {
             println("Height")
             println("------")
-            CliExecution.listConfigurations(nodeConfigFile, chainId).forEach(::println)
+            CliExecution.listConfigurations(appConfig, chainId).forEach(::println)
         }
     }
 }
