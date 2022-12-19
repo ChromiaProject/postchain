@@ -36,7 +36,7 @@ class CommandAddConfiguration : CliktCommand(
     }
 
     // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption()
+    private val nodeConfigFile by nodeConfigOption().required()
 
     private val chainId by chainIdOption().required()
 

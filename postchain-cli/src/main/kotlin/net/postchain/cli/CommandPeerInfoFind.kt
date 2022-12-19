@@ -4,6 +4,7 @@ package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.Templater
@@ -16,7 +17,7 @@ import net.postchain.core.AppContext
 class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find peerinfo") {
 
     // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption()
+    private val nodeConfigFile by nodeConfigOption().required()
 
     private val host by hostOption()
 

@@ -12,6 +12,7 @@ import net.postchain.common.reflection.newInstanceOf
 import net.postchain.core.Infrastructure
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Secp256K1CryptoSystem
+import org.apache.commons.configuration2.BaseConfiguration
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
@@ -36,6 +37,13 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
                 replaceWith = ReplaceWith("fromPropertiesFile(File(configFile), debug))", imports = arrayOf("java.io.File")))
         fun fromPropertiesFile(configFile: String, debug: Boolean = false): AppConfig = fromPropertiesFile(File(configFile), debug)
 
+        fun fromPropertiesFileOrEnvironment(configFile: File?, debug: Boolean = false): AppConfig =
+                if (configFile != null) {
+                    fromPropertiesFile(configFile, debug)
+                } else {
+                    fromEnvironment(debug)
+                }
+
         fun fromPropertiesFile(configFile: File, debug: Boolean = false): AppConfig {
             val params = Parameters().properties()
                     .setFile(configFile)
@@ -45,8 +53,12 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
                     .configure(params)
                     .configuration
 
-            return AppConfig(configuration, debug)
+            return fromConfiguration(configuration, debug)
         }
+
+        fun fromEnvironment(debug: Boolean): AppConfig = fromConfiguration(BaseConfiguration(), debug)
+
+        private fun fromConfiguration(configuration: Configuration, debug: Boolean): AppConfig = AppConfig(configuration, debug)
 
         fun toPropertiesFile(config: Configuration, configFile: String) {
             ConfigurationUtils.dump(config, PrintWriter(FileWriter(configFile)))

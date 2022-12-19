@@ -15,7 +15,7 @@ import net.postchain.gtv.GtvFileReader
 class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add blockchain") {
 
     // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption()
+    private val nodeConfigFile by nodeConfigOption().required()
 
     private val chainId by chainIdOption().required()
 

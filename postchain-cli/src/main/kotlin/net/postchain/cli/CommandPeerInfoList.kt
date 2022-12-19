@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.PeerInfo
 import net.postchain.base.runStorageCommand
@@ -15,7 +16,7 @@ import java.io.File
 class CommandPeerInfoList : CliktCommand(name = "peerinfo-list", help = "List peer information") {
 
     // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption()
+    private val nodeConfigFile by nodeConfigOption().required()
 
     override fun run() {
         val peerInfos = peerinfoList(nodeConfigFile)
