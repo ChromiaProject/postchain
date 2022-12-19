@@ -24,6 +24,7 @@ data class ContainerNodeConfig(
         val containerImage: String,
         val masterHost: String,
         val masterPort: Int,
+        val masterRestApiPort: Int,
         val network: String?,
         val subnodeHost: String,
         val subnodeRestApiPort: Int,
@@ -73,6 +74,7 @@ data class ContainerNodeConfig(
         const val KEY_DOCKER_IMAGE = "docker-image"
         const val KEY_MASTER_HOST = "master-host"
         const val KEY_MASTER_PORT = "master-port"
+        const val KEY_MASTER_REST_API_PORT = "master-rest-api-port"
         const val KEY_NETWORK = "network"
         const val KEY_SUBNODE_HOST = "subnode-host"
         const val KEY_SUBNODE_REST_API_PORT = "rest-api-port"
@@ -102,6 +104,7 @@ data class ContainerNodeConfig(
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_DOCKER_IMAGE", KEY_DOCKER_IMAGE, "chromaway/postchain-subnode:latest"),
                         getEnvOrStringProperty("POSTCHAIN_MASTER_HOST", KEY_MASTER_HOST, "localhost"),
                         getEnvOrIntProperty("POSTCHAIN_MASTER_PORT", KEY_MASTER_PORT, 9860),
+                        getMasterRestApiPort(config),
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_NETWORK", KEY_NETWORK),
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_HOST", KEY_SUBNODE_HOST, "localhost"),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_REST_API_PORT", KEY_SUBNODE_REST_API_PORT, RestApiConfig.DEFAULT_REST_API_PORT),
@@ -122,6 +125,13 @@ data class ContainerNodeConfig(
                 )
             }
         }
+
+        private fun getMasterRestApiPort(config: AppConfig): Int =
+                if (config.hasEnvOrKey("POSTCHAIN_MASTER_REST_API_PORT", KEY_MASTER_REST_API_PORT)) {
+                    config.getEnvOrInt("POSTCHAIN_MASTER_REST_API_PORT", KEY_MASTER_REST_API_PORT, 0)
+                } else {
+                    RestApiConfig.fromAppConfig(config).port
+                }
 
         private fun Configuration.getTestmode() = getBoolean("testmode", false)
 
