@@ -38,7 +38,6 @@ import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
-import java.nio.file.Path
 
 const val POSTCHAIN_MASTER_PUBKEY = "postchain-master-pubkey"
 
@@ -247,16 +246,7 @@ open class ContainerManagedBlockchainProcessManager(
             psContainer = DefaultPostchainContainer(
                     directoryDataSource, job.containerName, containerPorts, STARTING, subnodeAdminClient)
             logger.debug { "[${nodeName()}]: $scope -- PostchainContainer created" }
-            val dir = initContainerWorkingDir(fs, psContainer)
-            if (dir != null) {
-                postchainContainers[psContainer.containerName] = psContainer
-                logger.debug { "[${nodeName()}]: $scope -- Container dir initialized, container: ${job.containerName}, dir: $dir" }
-            } else {
-                // error
-                logger.error { "[${nodeName()}]: $scope -- Container dir hasn't been initialized, container: ${job.containerName}" }
-                //return false
-                return result(false)
-            }
+            postchainContainers[psContainer.containerName] = psContainer
         }
 
         // 2. Start Docker container
@@ -332,9 +322,6 @@ open class ContainerManagedBlockchainProcessManager(
         job.done = true
         return result(true)
     }
-
-    private fun initContainerWorkingDir(fs: FileSystem, container: PostchainContainer): Path? =
-            fs.createContainerRoot(container.containerName, container.resourceLimits)
 
     private fun containerHealthcheckJobHandler(containersInProgress: Set<String>) {
         val start = System.currentTimeMillis()

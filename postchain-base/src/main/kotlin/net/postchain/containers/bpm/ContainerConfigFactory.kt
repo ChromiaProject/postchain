@@ -25,20 +25,12 @@ object ContainerConfigFactory : KLogging() {
          *
          *      local fs:
          *      ---------
-         *      container-dir                   /opt/chromaway/postchain/target
+         *      container-dir                   /var/lib/postgresql/data
          *
          *      zfs fs:
          *      -------
-         *      /psvol/container-dir            /opt/chromaway/postchain/target
          *      /psvol/container-dir/pgdata     /var/lib/postgresql/data
          */
-
-        // target volume
-        val targetVol = HostConfig.Bind
-                .from(fs.hostRootOf(container.containerName).toString())
-                .to(FileSystem.CONTAINER_TARGET_PATH)
-                .build()
-        volumes.add(targetVol)
 
         // pgdata volume
         if (containerNodeConfig.bindPgdataVolume) {
