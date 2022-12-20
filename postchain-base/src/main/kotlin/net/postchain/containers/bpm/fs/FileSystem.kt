@@ -45,11 +45,9 @@ interface FileSystem {
     companion object : KLogging() {
 
         const val ZFS_POOL_NAME = "psvol"
-        const val CONTAINER_TARGET_PATH = "/opt/chromaway/postchain/target"
         const val CONTAINER_PGDATA_PATH = "/var/lib/postgresql/data/"
         const val PGDATA_DIR = "pgdata"
         const val BLOCKCHAINS_DIR = "blockchains"
-        const val NODE_CONFIG_FILE = "node-config.properties"
         const val PEERS_FILE = "env-peers.sh"
 
         fun create(containerConfig: ContainerNodeConfig): FileSystem {
