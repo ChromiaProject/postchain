@@ -38,6 +38,7 @@ import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
+import java.nio.file.Path
 
 const val POSTCHAIN_MASTER_PUBKEY = "postchain-master-pubkey"
 
@@ -322,6 +323,9 @@ open class ContainerManagedBlockchainProcessManager(
         job.done = true
         return result(true)
     }
+
+    private fun initContainerWorkingDir(fs: FileSystem, container: PostchainContainer): Path? =
+            fs.createContainerRoot(container.containerName, container.resourceLimits)
 
     private fun containerHealthcheckJobHandler(containersInProgress: Set<String>) {
         val start = System.currentTimeMillis()
