@@ -11,29 +11,7 @@ import java.nio.file.Path
  * File system structure:
  * .
  * └── target/
- *     ├── blockchains/
- *     │   ├── 0/                              chainId
- *     │   │   ├── 0.gtv                       config0 / gtv
- *     │   │   ├── 0.xml                       config0 / xml
- *     │   │   ├── 10.gtv                      config10 / gtv
- *     │   │   ├── 10.xml                      config10 / gtv
- *     │   │   └── brid.txt                    brid
- *     │   ├── 1/                              chainId
- *     │   │   └── ...
- *     │   └── ...
- *     ├── containers/
- *     │   ├── n020CCD8A_cont0/                container
- *     │   │   ├── logs                        logs
- *     │   │   ├── env-peers.sh                this node host, port, pubkey
- *     │   │   └── node-config.properties      node config file
- *     │   ├── n020CCD8A_cont1/                container
- *     │   │   └── ...
- *     │   └── ...
- *     ├── .initialized
- *     ├── env-peers.sh                        this node host, port, pubkey
- *     ├── keys.properties                     node priv/pub key
- *     └── node-config.properties              node config file
- *
+ *     └── logs/
  */
 interface FileSystem {
 
@@ -48,9 +26,6 @@ interface FileSystem {
         const val CONTAINER_TARGET_PATH = "/opt/chromaway/postchain/target"
         const val CONTAINER_PGDATA_PATH = "/var/lib/postgresql/data/"
         const val PGDATA_DIR = "pgdata"
-        const val BLOCKCHAINS_DIR = "blockchains"
-        const val NODE_CONFIG_FILE = "node-config.properties"
-        const val PEERS_FILE = "env-peers.sh"
 
         fun create(containerConfig: ContainerNodeConfig): FileSystem {
             return when (containerConfig.containerFilesystem) {
