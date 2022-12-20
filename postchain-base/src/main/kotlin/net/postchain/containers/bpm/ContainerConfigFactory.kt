@@ -10,6 +10,7 @@ import net.postchain.config.node.NodeConfigProviders
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Infrastructure
+import net.postchain.ebft.syncmanager.common.SyncParameters
 
 object ContainerConfigFactory : KLogging() {
 
@@ -126,6 +127,7 @@ object ContainerConfigFactory : KLogging() {
         add("POSTCHAIN_PRIVKEY=${appConfig.privKey}")
         add("POSTCHAIN_PUBKEY=${appConfig.pubKey}")
         add("POSTCHAIN_PORT=${appConfig.port}")
+        add("POSTCHAIN_FASTSYNC_EXIT_DELAY=${SyncParameters.fromAppConfig(appConfig).exitDelay}")
 
         /**
          * If restApiPort > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
@@ -141,5 +143,9 @@ object ContainerConfigFactory : KLogging() {
 
         add("POSTCHAIN_MASTER_HOST=${containerNodeConfig.masterHost}")
         add("POSTCHAIN_MASTER_PORT=${containerNodeConfig.masterPort}")
+        add("POSTCHAIN_MASTER_REST_API_PORT=${containerNodeConfig.masterRestApiPort}")
+        add("POSTCHAIN_HOST_MOUNT_DIR=${containerNodeConfig.hostMountDir}")
+        add("POSTCHAIN_SUBNODE_DOCKER_IMAGE=${containerNodeConfig.containerImage}")
+        add("POSTCHAIN_SUBNODE_NETWORK=${containerNodeConfig.network}")
     }
 }
