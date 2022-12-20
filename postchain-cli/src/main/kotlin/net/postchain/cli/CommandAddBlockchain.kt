@@ -9,12 +9,13 @@ import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.forceOption
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvFileReader
 
 class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add blockchain") {
 
     // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption()
+    private val nodeConfigFile by nodeConfigOption().required()
 
     private val chainId by chainIdOption().required()
 
@@ -31,7 +32,8 @@ class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add b
             return
         }
 
-        CliExecution.addBlockchain(nodeConfigFile, chainId, gtv, force)
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        CliExecution.addBlockchain(appConfig, chainId, gtv, force)
         println("Configuration has been added successfully")
     }
 }

@@ -23,11 +23,11 @@ data class RestApiConfig(
         @JvmStatic
         fun fromAppConfig(config: AppConfig): RestApiConfig {
             return RestApiConfig(
-                    config.getString("api.basepath", ""),
-                    config.getInt("api.port", DEFAULT_REST_API_PORT),
-                    config.getBoolean("api.enable_tls", config.getBoolean("api.enable_ssl", false)),
-                    config.getString("api.tls_certificate", config.getString("api.ssl_certificate", "")),
-                    config.getString("api.tls_certificate.password", config.getString("api.ssl_certificate.password", "")),
+                    config.getEnvOrString("POSTCHAIN_API_BASEPATH", "api.basepath", ""),
+                    config.getEnvOrInt("POSTCHAIN_API_PORT", "api.port", DEFAULT_REST_API_PORT),
+                    config.getEnvOrBoolean("POSTCHAIN_API_TLS_ENABLE", "api.enable_tls", config.getBoolean("api.enable_ssl", false)),
+                    config.getEnvOrString("POSTCHAIN_API_TLS_CERTIFICATE", "api.tls_certificate", config.getString("api.ssl_certificate", "")),
+                    config.getEnvOrString("POSTCHAIN_API_TLS_CERTIFICATE_PASSWORD", "api.tls_certificate.password", config.getString("api.ssl_certificate.password", "")),
                     config.debug
             )
         }
