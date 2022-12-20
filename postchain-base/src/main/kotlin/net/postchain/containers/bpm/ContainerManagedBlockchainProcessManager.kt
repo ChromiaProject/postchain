@@ -4,7 +4,6 @@ import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.messages.Container
 import mu.KLogging
 import net.postchain.PostchainContext
-import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
@@ -39,6 +38,7 @@ import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
+import java.nio.file.Path
 
 const val POSTCHAIN_MASTER_PUBKEY = "postchain-master-pubkey"
 
@@ -59,9 +59,7 @@ open class ContainerManagedBlockchainProcessManager(
     private val directoryDataSource: DirectoryDataSource by lazy { dataSource as DirectoryDataSource }
     private val chains: MutableMap<Long, Chain> = mutableMapOf() // chainId -> Chain
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
-    private val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
     private val fs = FileSystem.create(containerNodeConfig)
-    private val containerInitializer = DefaultContainerInitializer(appConfig, containerNodeConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableMapOf<ContainerName, PostchainContainer>() // { ContainerName -> PsContainer }
     private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
@@ -249,7 +247,7 @@ open class ContainerManagedBlockchainProcessManager(
             psContainer = DefaultPostchainContainer(
                     directoryDataSource, job.containerName, containerPorts, STARTING, subnodeAdminClient)
             logger.debug { "[${nodeName()}]: $scope -- PostchainContainer created" }
-            val dir = containerInitializer.initContainerWorkingDir(fs, psContainer)
+            val dir = initContainerWorkingDir(fs, psContainer)
             if (dir != null) {
                 postchainContainers[psContainer.containerName] = psContainer
                 logger.debug { "[${nodeName()}]: $scope -- Container dir initialized, container: ${job.containerName}, dir: $dir" }
@@ -270,7 +268,7 @@ open class ContainerManagedBlockchainProcessManager(
             logger.debug { dcLog("not found", null) }
 
             // creating container
-            val config = ContainerConfigFactory.createConfig(fs, restApiConfig, containerNodeConfig, psContainer)
+            val config = ContainerConfigFactory.createConfig(fs, appConfig, containerNodeConfig, psContainer)
             psContainer.containerId = dockerClient.createContainer(config, job.containerName.toString()).id()!!
             logger.debug { dcLog("created", psContainer) }
 
@@ -334,6 +332,9 @@ open class ContainerManagedBlockchainProcessManager(
         job.done = true
         return result(true)
     }
+
+    private fun initContainerWorkingDir(fs: FileSystem, container: PostchainContainer): Path? =
+            fs.createContainerRoot(container.containerName, container.resourceLimits)
 
     private fun containerHealthcheckJobHandler(containersInProgress: Set<String>) {
         val start = System.currentTimeMillis()
