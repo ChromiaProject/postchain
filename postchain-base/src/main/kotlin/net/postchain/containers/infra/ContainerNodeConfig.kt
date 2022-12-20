@@ -99,9 +99,11 @@ data class ContainerNodeConfig(
             return with(config.subset(KEY_CONTAINER_PREFIX)) {
                 val hostMountDir = getEnvOrStringProperty("POSTCHAIN_HOST_MOUNT_DIR", KEY_HOST_MOUNT_DIR)
                         ?: throw UserMistake("$KEY_HOST_MOUNT_DIR must be specified")
+                val subnodeImage = getEnvOrStringProperty("POSTCHAIN_SUBNODE_DOCKER_IMAGE", KEY_DOCKER_IMAGE)
+                        ?: throw UserMistake("$KEY_DOCKER_IMAGE must be specified")
                 ContainerNodeConfig(
                         config.pubKey,
-                        getEnvOrStringProperty("POSTCHAIN_SUBNODE_DOCKER_IMAGE", KEY_DOCKER_IMAGE, "chromaway/postchain-subnode:latest"),
+                        subnodeImage,
                         getEnvOrStringProperty("POSTCHAIN_MASTER_HOST", KEY_MASTER_HOST, "localhost"),
                         getEnvOrIntProperty("POSTCHAIN_MASTER_PORT", KEY_MASTER_PORT, 9860),
                         getMasterRestApiPort(config),
