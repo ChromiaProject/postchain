@@ -9,6 +9,7 @@ import assertk.assertions.isLessThan
 import net.postchain.config.app.AssertsHelper.assertIsDefaultOrEqualsToEnvVar
 import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
 import org.junit.jupiter.api.Test
+import java.io.File
 import kotlin.test.assertEquals
 
 class AppConfigTest {
@@ -55,6 +56,6 @@ class AppConfigTest {
 
     private fun loadFromResource(filename: String): AppConfig {
         return AppConfig.fromPropertiesFile(
-                javaClass.getResource("/net/postchain/config/$filename")!!.file)
+                File(javaClass.getResource("/net/postchain/config/$filename")!!.file))
     }
 }

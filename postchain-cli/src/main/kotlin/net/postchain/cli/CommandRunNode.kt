@@ -28,10 +28,11 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
     private val debug by debugOption()
 
     override fun run() {
+        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile, debug)
+
         if (blockchainConfigFile != null) {
             require(chainIDs.size == 1) { "Cannot start more than one chain if a blockchain configuration is specified" }
 
-            val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
             val blockchainConfig = GtvFileReader.readFile(blockchainConfigFile!!)
             val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, appConfig.cryptoSystem)
 
@@ -45,6 +46,6 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
             }
         }
 
-        CliExecution.runNode(nodeConfigFile, chainIDs, debug)
+        CliExecution.runNode(appConfig, chainIDs, debug)
     }
 }

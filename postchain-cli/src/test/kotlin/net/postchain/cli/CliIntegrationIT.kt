@@ -44,7 +44,7 @@ class CliIntegrationIT {
         storage = StorageBuilder.buildStorage(appConfig, true)
         // add-blockchain goes here
         val gtv = GtvFileReader.readFile(fullPath("blockchain_config.xml"))
-        CliExecution.addBlockchain(nodeConfigPath, chainId, gtv, AlreadyExistMode.FORCE)
+        CliExecution.addBlockchain(AppConfig.fromPropertiesFile(nodeConfigPath), chainId, gtv, AlreadyExistMode.FORCE)
     }
 
     @Test
@@ -91,7 +91,7 @@ class CliIntegrationIT {
                 )
         )
 
-        val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
+        val configData = CliExecution.getConfiguration(AppConfig.fromPropertiesFile(nodeConfigPath), chainId, heightSecondConfig)
         assertNull(configData)
     }
 
@@ -107,7 +107,7 @@ class CliIntegrationIT {
                 )
         )
 
-        val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
+        val configData = CliExecution.getConfiguration(AppConfig.fromPropertiesFile(nodeConfigPath), chainId, heightSecondConfig)
         assertNull(configData)
     }
 
@@ -131,10 +131,13 @@ class CliIntegrationIT {
                 "-cid", chainId.toString(),
                 "-brid", expectedBlockchainRID
         ))
+
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigPath)
+
         // assert config added
-        val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
+        val configData = CliExecution.getConfiguration(appConfig, chainId, heightSecondConfig)
         assertNotNull(configData)
-        val configurations = CliExecution.listConfigurations(nodeConfigPath, chainId)
+        val configurations = CliExecution.listConfigurations(appConfig, chainId)
         assertContains(configurations, heightSecondConfig)
     }
 
@@ -163,10 +166,13 @@ class CliIntegrationIT {
                         "--force"
                 )
         )
+
+        AppConfig.fromPropertiesFile(nodeConfigPath)
+
         // assert config added
-        val configData = CliExecution.getConfiguration(nodeConfigPath, chainId, heightSecondConfig)
+        val configData = CliExecution.getConfiguration(appConfig, chainId, heightSecondConfig)
         assertNotNull(configData)
-        val configurations = CliExecution.listConfigurations(nodeConfigPath, chainId)
+        val configurations = CliExecution.listConfigurations(appConfig, chainId)
         assertContains(configurations, heightSecondConfig)
     }
 }
