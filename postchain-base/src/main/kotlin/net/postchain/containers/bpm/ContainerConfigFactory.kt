@@ -5,12 +5,15 @@ import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
 import mu.KLogging
 import net.postchain.api.rest.infra.RestApiConfig
+import net.postchain.config.app.AppConfig
+import net.postchain.config.node.NodeConfigProviders
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.core.Infrastructure
 
 object ContainerConfigFactory : KLogging() {
 
-    fun createConfig(fs: FileSystem, restApiConfig: RestApiConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer): ContainerConfig {
+    fun createConfig(fs: FileSystem, appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer): ContainerConfig {
         // Container volumes
         val volumes = mutableListOf<HostConfig.Bind>()
 
@@ -44,6 +47,8 @@ object ContainerConfigFactory : KLogging() {
                     .build()
             volumes.add(pgdataVol)
         }
+
+        val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
 
         /**
          * Rest API port binding.
@@ -96,9 +101,45 @@ object ContainerConfigFactory : KLogging() {
                 .image(containerNodeConfig.containerImage)
                 .hostConfig(hostConfig)
                 .exposedPorts(portBindings.keys)
-                .env("POSTCHAIN_DEBUG=${restApiConfig.debug}")
+                .env(createNodeConfigEnv(appConfig, containerNodeConfig, container))
                 .labels(mapOf(POSTCHAIN_MASTER_PUBKEY to containerNodeConfig.masterPubkey))
                 .build()
     }
 
+    private fun createNodeConfigEnv(appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer) = buildList {
+        val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
+
+        add("POSTCHAIN_DEBUG=${restApiConfig.debug}")
+
+        add("POSTCHAIN_NODE_CONFIG_PROVIDER=${NodeConfigProviders.Manual.name.lowercase()}")
+        add("POSTCHAIN_INFRASTRUCTURE=${Infrastructure.EbftContainerSub.get()}")
+
+        val subnodeDatabaseUrl = appConfig.getEnvOrString("POSTCHAIN_SUBNODE_DATABASE_URL", ContainerNodeConfig.fullKey(ContainerNodeConfig.KEY_SUBNODE_DATABASE_URL))
+                ?: appConfig.databaseUrl
+        add("POSTCHAIN_DB_URL=${subnodeDatabaseUrl}")
+        val scheme = "${appConfig.databaseSchema}_${container.containerName.directoryContainer}"
+        add("POSTCHAIN_DB_SCHEMA=${scheme}")
+        add("POSTCHAIN_DB_USERNAME=${appConfig.databaseUsername}")
+        add("POSTCHAIN_DB_PASSWORD=${appConfig.databasePassword}")
+        add("POSTCHAIN_DB_READ_CONCURRENCY=${appConfig.databaseReadConcurrency}")
+        add("POSTCHAIN_CRYPTO_SYSTEM=${appConfig.cryptoSystemClass}")
+        add("POSTCHAIN_PRIVKEY=${appConfig.privKey}")
+        add("POSTCHAIN_PUBKEY=${appConfig.pubKey}")
+        add("POSTCHAIN_PORT=${appConfig.port}")
+
+        /**
+         * If restApiPort > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
+         * control here and know that it is always free.
+         * If -1, no API communication => subnodeRestApiPort=-1
+         */
+        val restApiPort = if (restApiConfig.port > -1) {
+            containerNodeConfig.subnodeRestApiPort
+        } else {
+            -1
+        }
+        add("POSTCHAIN_API_PORT=${restApiPort}")
+
+        add("POSTCHAIN_MASTER_HOST=${containerNodeConfig.masterHost}")
+        add("POSTCHAIN_MASTER_PORT=${containerNodeConfig.masterPort}")
+    }
 }

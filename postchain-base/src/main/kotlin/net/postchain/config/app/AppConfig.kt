@@ -14,14 +14,11 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Secp256K1CryptoSystem
 import org.apache.commons.configuration2.BaseConfiguration
 import org.apache.commons.configuration2.Configuration
-import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
 import java.io.File
-import java.io.FileWriter
-import java.io.PrintWriter
 
 /**
  * Wrapper to the generic [Configuration]
@@ -59,15 +56,6 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
         fun fromEnvironment(debug: Boolean): AppConfig = fromConfiguration(BaseConfiguration(), debug)
 
         private fun fromConfiguration(configuration: Configuration, debug: Boolean): AppConfig = AppConfig(configuration, debug)
-
-        fun toPropertiesFile(config: Configuration, configFile: String) {
-            ConfigurationUtils.dump(config, PrintWriter(FileWriter(configFile)))
-        }
-
-        fun removeProperty(config: Configuration, prefix: String) {
-            val keys = config.getKeys(prefix).asSequence().toList()
-            keys.forEach(config::clearProperty)
-        }
     }
 
     /**
@@ -102,7 +90,9 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
         // "base/ebft" is the default
         get() = config.getEnvOrStringProperty("POSTCHAIN_INFRASTRUCTURE", "infrastructure", Infrastructure.Ebft.get())
 
-    val cryptoSystem: CryptoSystem = newInstanceOf(config.getEnvOrStringProperty("POSTCHAIN_CRYPTO_SYSTEM", "cryptosystem", Secp256K1CryptoSystem::class.qualifiedName!!))
+    val cryptoSystemClass: String = config.getEnvOrStringProperty("POSTCHAIN_CRYPTO_SYSTEM", "cryptosystem", Secp256K1CryptoSystem::class.qualifiedName!!)
+
+    val cryptoSystem: CryptoSystem = newInstanceOf(cryptoSystemClass)
 
     /**
      * Pub/Priv keys
@@ -141,6 +131,4 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     fun getEnvOrLong(env: String, key: String, defaultValue: Long) = config.getEnvOrLongProperty(env, key, defaultValue)
     fun getEnvOrBoolean(env: String, key: String, defaultValue: Boolean) = config.getEnvOrBooleanProperty(env, key, defaultValue)
     fun hasEnvOrKey(env: String, key: String) = System.getenv(env) != null || config.containsKey(key)
-
-    fun cloneConfiguration(): Configuration = ConfigurationUtils.cloneConfiguration(config)
 }
