@@ -81,7 +81,7 @@ object ContainerConfigFactory : KLogging() {
         val hostConfig = HostConfig.builder()
                 .appendBinds(*volumes.toTypedArray())
                 .portBindings(portBindings)
-                .publishAllPorts(true)
+                .publishAllPorts(false)
                 .apply {
                     if (resources.hasRam()) memory(resources.ramBytes())
                 }.apply {
