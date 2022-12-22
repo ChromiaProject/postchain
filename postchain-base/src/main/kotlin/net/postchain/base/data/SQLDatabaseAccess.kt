@@ -579,13 +579,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val blockInfos = queryRunner.query(ctx.conn, sql, mapListHandler, blockRID)
         if (blockInfos.isEmpty()) return null
         val blockInfo = blockInfos.first()
-
-        val blockRid = blockInfo["block_rid"] as ByteArray
-        val blockHeight = blockInfo["block_height"] as Long
-        val blockHeader = blockInfo["block_header_data"] as ByteArray
-        val blockWitness = blockInfo["block_witness"] as ByteArray
-        val timestamp = blockInfo["timestamp"] as Long
-        return DatabaseAccess.BlockInfoExt(blockRid, blockHeight, blockHeader, blockWitness, timestamp)
+        return buildBlockInfoExt(blockInfo)
     }
 
     override fun getBlocks(ctx: EContext, blockTime: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
@@ -596,16 +590,27 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             ORDER BY timestamp DESC LIMIT ?
         """.trimIndent()
         val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, blockTime, limit)
+        return blocksInfo.map { buildBlockInfoExt(it) }
+    }
 
-        return blocksInfo.map { blockInfo ->
-            val blockRid = blockInfo["block_rid"] as ByteArray
-            val heightOfBlock = blockInfo["block_height"] as Long
-            val blockHeader = blockInfo["block_header_data"] as ByteArray
-            val blockWitness = blockInfo["block_witness"] as ByteArray
-            val timestamp = blockInfo["timestamp"] as Long
-            DatabaseAccess.BlockInfoExt(
-                    blockRid, heightOfBlock, blockHeader, blockWitness, timestamp)
-        }
+    override fun getBlocksBeforeHeight(ctx: EContext, blockHeight: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
+        val sql = """
+            SELECT block_rid, block_height, block_header_data, block_witness, timestamp 
+            FROM ${tableBlocks(ctx)} 
+            WHERE block_height < ? 
+            ORDER BY block_height DESC LIMIT ?
+        """.trimIndent()
+        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, limit)
+        return blocksInfo.map { buildBlockInfoExt(it) }
+    }
+
+    private fun buildBlockInfoExt(blockInfo: MutableMap<String, Any>): DatabaseAccess.BlockInfoExt {
+        val blockRid = blockInfo["block_rid"] as ByteArray
+        val blockHeight = blockInfo["block_height"] as Long
+        val blockHeader = blockInfo["block_header_data"] as ByteArray
+        val blockWitness = blockInfo["block_witness"] as ByteArray
+        val timestamp = blockInfo["timestamp"] as Long
+        return DatabaseAccess.BlockInfoExt(blockRid, blockHeight, blockHeader, blockWitness, timestamp)
     }
 
     /**
