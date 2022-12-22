@@ -230,7 +230,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val sql = "SELECT tx_rid" +
                 " FROM ${tableTransactions(ctx)} t" +
                 " INNER JOIN ${tableBlocks(ctx)} b ON t.block_iid=b.block_iid" +
-                " WHERE b.block_height = ?"
+                " WHERE b.block_height = ?" +
+                " ORDER BY t.tx_iid"
         return queryRunner.query(ctx.conn, sql, ColumnListHandler<ByteArray>(), height).toTypedArray()
     }
 
@@ -282,7 +283,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                     FROM ${tableBlocks(ctx)} as b 
                     JOIN ${tableTransactions(ctx)} as t ON (t.block_iid = b.block_iid) 
                     WHERE b.timestamp < ? 
-                    ORDER BY b.block_height DESC LIMIT ?;
+                    ORDER BY b.block_height, t.tx_iid DESC LIMIT ?;
         """.trimIndent()
         val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, beforeTime, limit)
         return transactions.map { txInfo ->
