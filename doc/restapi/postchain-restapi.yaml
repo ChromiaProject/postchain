@@ -53,7 +53,7 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: 3.5.0
+  version: 3.7.0
 paths:
   /tx/{blockchainRid}:
     post:
@@ -1027,7 +1027,7 @@ components:
               BLOCKCHAIN_NODE_PEERS:
                 type: object
       example:
-        version: "3.5.0"
+        version: "3.7.0"
         pub-key: "0288BDC8ED1FDE8A5E58179E7B1F60EE0700557435E5D3DA89CFA9EE62B5640DD2"
         blockchain-infra: "BaseBlockchainInfrastructure"
         blockchain:
