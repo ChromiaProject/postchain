@@ -319,6 +319,44 @@ class RestApiModelTest {
     }
 
     @Test
+    fun testGetTwoLastBlocksBeforeHeight_txHashesOnly() {
+        val response = listOf(
+                BlockDetail(
+                        "blockRid003".toByteArray(),
+                        "blockRid002".toByteArray(),
+                        "yet another header".toByteArray(),
+                        2,
+                        listOf(),
+                        "signatures".toByteArray(),
+                        1574849880),
+                BlockDetail(
+                        "blockRid004".toByteArray(),
+                        "blockRid003".toByteArray(),
+                        "guess what? Another header".toByteArray(),
+                        3,
+                        listOf(
+                                TxDetail("hash2".toByteArray(), "tx2RID".toByteArray(), null),
+                                TxDetail("hash3".toByteArray(), "tx3RID".toByteArray(), null),
+                                TxDetail("hash4".toByteArray(), "tx4RID".toByteArray(), null)
+                        ),
+                        "signatures".toByteArray(),
+                        1574849940)
+        )
+
+        whenever(
+                model.getBlocksBeforeHeight(4, 2, true)
+        ).thenReturn(response)
+
+        restApi.attachModel(blockchainRID1, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/blocks/$blockchainRID1?before-height=${4}&limit=${2}&txs=false")
+                .then()
+                .statusCode(200)
+                .assertThat().body(equalTo(gson.toJson(response).toString()))
+    }
+
+    @Test
     fun testGetBlocksWithoutParams() {
 
         val blocks = listOf(
