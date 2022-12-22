@@ -11,8 +11,16 @@ import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.types.WrappedByteArray
-import net.postchain.core.*
-import net.postchain.core.block.*
+import net.postchain.core.BlockEContext
+import net.postchain.core.EContext
+import net.postchain.core.Transaction
+import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TxEContext
+import net.postchain.core.block.BlockDetail
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockStore
+import net.postchain.core.block.BlockWitness
+import net.postchain.core.block.InitialBlockData
 
 /**
  * Provides database access to the location where the blockchain with related metadata and transactions
@@ -120,20 +128,28 @@ class BaseBlockStore : BlockStore {
     override fun getBlocks(ctx: EContext, beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> {
         val db = DatabaseAccess.of(ctx)
         val blocksInfo = db.getBlocks(ctx, beforeTime, limit)
-        return blocksInfo.map { blockInfo ->
-            val txs = db.getBlockTransactions(ctx, blockInfo.blockRid, txHashesOnly)
+        return blocksInfo.map { buildBlockDetail(it, db, ctx, txHashesOnly) }
+    }
 
-            // Decode block header
-            val headerRec = BlockHeaderData.fromBinary(blockInfo.blockHeader)
-            BlockDetail(
-                    blockInfo.blockRid,
-                    headerRec.getPreviousBlockRid(),
-                    blockInfo.blockHeader,
-                    blockInfo.blockHeight,
-                    txs,
-                    blockInfo.witness,
-                    blockInfo.timestamp)
-        }
+    override fun getBlocksBeforeHeight(ctx: EContext, beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> {
+        val db = DatabaseAccess.of(ctx)
+        val blocksInfo = db.getBlocksBeforeHeight(ctx, beforeHeight, limit)
+        return blocksInfo.map { buildBlockDetail(it, db, ctx, txHashesOnly) }
+    }
+
+    private fun buildBlockDetail(blockInfo: DatabaseAccess.BlockInfoExt, db: DatabaseAccess, ctx: EContext, txHashesOnly: Boolean): BlockDetail {
+        val txs = db.getBlockTransactions(ctx, blockInfo.blockRid, txHashesOnly)
+
+        // Decode block header
+        val headerRec = BlockHeaderData.fromBinary(blockInfo.blockHeader)
+        return BlockDetail(
+                blockInfo.blockRid,
+                headerRec.getPreviousBlockRid(),
+                blockInfo.blockHeader,
+                blockInfo.blockHeight,
+                txs,
+                blockInfo.witness,
+                blockInfo.timestamp)
     }
 
     override fun getLastBlockHeight(ctx: EContext): Long {

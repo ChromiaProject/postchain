@@ -94,6 +94,10 @@ open class PostchainModel(
         return blockQueries.getBlocks(beforeTime, limit, txHashesOnly).get()
     }
 
+    override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> {
+        return blockQueries.getBlocksBeforeHeight(beforeHeight, limit, txHashesOnly).get()
+    }
+
     override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail? {
         return blockQueries.getBlock(blockRID, txHashesOnly).get()
     }
