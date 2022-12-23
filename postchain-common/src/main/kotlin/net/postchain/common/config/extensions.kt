@@ -14,6 +14,9 @@ fun Configuration.getEnvOrStringProperty(env: String, property: String): String?
 fun Configuration.getEnvOrStringProperty(env: String, property: String, default: String): String =
         System.getenv(env) ?: getString(property, default)
 
+fun Configuration.getEnvOrListProperty(env: String, property: String, default: List<String>): List<String> =
+        System.getenv(env)?.split(",") ?: getList(property, default).flatMap { (it as String).split(",") }
+
 fun Configuration.getEnvOrIntProperty(env: String, property: String, default: Int): Int =
         System.getenv(env)?.toInt() ?: getInt(property, default)
 
