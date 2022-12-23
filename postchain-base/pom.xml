@@ -6,7 +6,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.7.0-SNAPSHOT</version>
+        <version>3.8.0-SNAPSHOT</version>
     </parent>
     <artifactId>postchain-base</artifactId>
     <packaging>jar</packaging>
@@ -46,6 +46,11 @@
             <groupId>io.github.microutils</groupId>
             <artifactId>kotlin-logging-jvm</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>commons-dbutils</groupId>
@@ -79,6 +84,7 @@
         <dependency>
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <!-- REST -->
@@ -114,12 +120,23 @@
             <artifactId>docker-client</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <artifactId>jersey-client</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.github.jnr</groupId>
             <artifactId>jffi</artifactId>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>com.github.jnr</groupId>
             <artifactId>jnr-ffi</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <scope>runtime</scope>
         </dependency>
 
         <dependency>

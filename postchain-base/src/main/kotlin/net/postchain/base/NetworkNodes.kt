@@ -4,7 +4,6 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.NodeRid
 

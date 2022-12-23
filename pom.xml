@@ -5,7 +5,7 @@
 
     <groupId>net.postchain</groupId>
     <artifactId>postchain</artifactId>
-    <version>3.7.0-SNAPSHOT</version>
+    <version>3.8.0-SNAPSHOT</version>
     <modules>
         <module>postchain-common</module>
         <module>postchain-gtv</module>
@@ -22,11 +22,11 @@
     <packaging>pom</packaging>
 
     <name>Postchain</name>
-    <url>http://postchain.org</url>
+    <url>https://docs.chromia.com</url>
     <properties>
         <doclint>none</doclint>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.build.outputTimestamp>10</project.build.outputTimestamp>
+        <project.build.outputTimestamp>1671101816</project.build.outputTimestamp>
 
         <!-- Kotlin -->
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
@@ -57,7 +57,6 @@
         <log4j2.version>2.19.0</log4j2.version>
 
         <!-- 3rd party -->
-        <postgresql.version>42.2.11</postgresql.version>
         <netty.version>4.1.85.Final</netty.version>
         <jasn.version>1.11.3</jasn.version>
         <spark-core.version>2.9.4</spark-core.version>
@@ -67,12 +66,9 @@
         <kovenant-core.version>3.3.0</kovenant-core.version>
         <gson.version>2.10</gson.version>
         <gitflow.maven.plugin.version>1.19.0</gitflow.maven.plugin.version>
-        <spongycastle.core.version>1.58.0.0</spongycastle.core.version>
         <commons-dbutils.version>1.7</commons-dbutils.version>
         <commons-dbcp2.version>2.9.0</commons-dbcp2.version>
         <commons-lang3.version>3.12.0</commons-lang3.version>
-        <commons-configuration2.version>2.8.0</commons-configuration2.version>
-        <commons-beanutils.version>1.9.4</commons-beanutils.version>
         <micrometer.version>1.10.1</micrometer.version>
 
         <maven.compiler.source>11</maven.compiler.source>
@@ -105,6 +101,11 @@
                 <version>${kotlin.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+            <dependency> <!-- used by downstream projects -->
+                <groupId>org.jetbrains.kotlinx</groupId>
+                <artifactId>kotlinx-coroutines-core</artifactId>
+                <version>1.6.4</version>
             </dependency>
 
             <!-- Postchain -->
@@ -270,6 +271,11 @@
                 <artifactId>unirest-java</artifactId>
                 <version>3.13.13</version>
             </dependency>
+            <dependency> <!-- for rest-assured also -->
+                <groupId>commons-codec</groupId>
+                <artifactId>commons-codec</artifactId>
+                <version>1.13</version>
+            </dependency>
 
             <dependency>
                 <groupId>com.spotify</groupId>
@@ -284,7 +290,16 @@
                         <groupId>com.github.jnr</groupId>
                         <artifactId>jnr-ffi</artifactId>
                     </exclusion>
+                    <exclusion>
+                        <groupId>org.bouncycastle</groupId>
+                        <artifactId>bcpkix-jdk15on</artifactId>
+                    </exclusion>
                 </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey.core</groupId>
+                <artifactId>jersey-client</artifactId>
+                <version>2.22.2</version>
             </dependency>
             <dependency>
                 <groupId>com.github.jnr</groupId>
@@ -295,6 +310,26 @@
                 <groupId>com.github.jnr</groupId>
                 <artifactId>jnr-ffi</artifactId>
                 <version>2.2.13</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-compress</artifactId>
+                <version>1.21</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpclient</artifactId>
+                <version>4.5.13</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents</groupId>
+                <artifactId>httpcore</artifactId>
+                <version>4.4.16</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk18on</artifactId>
+                <version>1.72</version>
             </dependency>
 
             <dependency>
@@ -336,17 +371,12 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>${postgresql.version}</version>
+                <version>42.5.1</version>
             </dependency>
             <dependency>
-                <groupId>com.madgag.spongycastle</groupId>
-                <artifactId>core</artifactId>
-                <version>${spongycastle.core.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.madgag.spongycastle</groupId>
-                <artifactId>prov</artifactId>
-                <version>${spongycastle.core.version}</version>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>1.72</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -358,16 +388,23 @@
                 <artifactId>commons-lang3</artifactId>
                 <version>${commons-lang3.version}</version>
             </dependency>
+
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-configuration2</artifactId>
-                <version>${commons-configuration2.version}</version>
+                <version>2.8.0</version>
             </dependency>
             <dependency>
                 <groupId>commons-beanutils</groupId>
                 <artifactId>commons-beanutils</artifactId>
-                <version>${commons-beanutils.version}</version>
+                <version>1.9.4</version>
             </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-text</artifactId>
+                <version>1.10.0</version>
+            </dependency>
+
             <dependency>
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
@@ -426,6 +463,11 @@
                 <version>0.16.1</version>
             </dependency>
             <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-javalite</artifactId>
+                <version>3.21.7</version>
+            </dependency>
+            <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>31.1-jre</version>
@@ -461,14 +503,26 @@
             <dependency>
                 <groupId>io.grpc</groupId>
                 <artifactId>grpc-bom</artifactId>
-                <version>1.48.0</version>
+                <version>1.51.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
             <dependency>
+                <groupId>com.google.protobuf</groupId>
+                <artifactId>protobuf-java</artifactId>
+                <version>3.21.7</version>
+            </dependency>
+
+            <dependency>
                 <groupId>org.apache.tomcat</groupId>
                 <artifactId>annotations-api</artifactId>
                 <version>6.0.53</version>
+            </dependency>
+
+            <dependency> <!-- used by downstream projects -->
+                <groupId>org.jooq</groupId>
+                <artifactId>jooq</artifactId>
+                <version>3.10.4</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -482,6 +536,13 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
                     <version>3.2.0</version>
+                    <configuration>
+                        <archive>
+                            <manifest>
+                                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            </manifest>
+                        </archive>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.jetbrains.kotlin</groupId>
@@ -606,7 +667,7 @@
                 <configuration>
                     <allowMajorUpdates>false</allowMajorUpdates>
                     <allowSnapshots>false</allowSnapshots>
-                    <excludeProperties>kotlin.version,slf4j.version,assertk.version,postgresql.version</excludeProperties>
+                    <excludeProperties>kotlin.version,slf4j.version,assertk.version</excludeProperties>
                 </configuration>
             </plugin>
 

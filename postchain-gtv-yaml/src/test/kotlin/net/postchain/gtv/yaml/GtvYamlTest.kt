@@ -46,7 +46,7 @@ internal class GtvYamlTest {
                 val wb: WrappedByteArray
         )
 
-        val actual = GtvYaml().load<Binary>("b: 0xAB\nwb: 0xAC")
+        val actual = GtvYaml().load<Binary>("b: x\"AB\"\nwb: x\"AC\"")
         assertContentEquals("AB".hexStringToByteArray(), actual.b)
         assertEquals("AC".hexStringToWrappedByteArray(), actual.wb)
 
@@ -85,8 +85,8 @@ internal class GtvYamlTest {
             i: 1
             l: 2
             bo: true
-            ba: 0x12
-            wba: 0x13
+            ba: x"12"
+            wba: x"13"
             s: foo
             gtv: 12
             li: 
@@ -123,7 +123,7 @@ internal class GtvYamlTest {
                 arrayOf("true", gtv(true)),
                 arrayOf("test", gtv("test")),
                 arrayOf("1.2", gtv("1.2")),
-                arrayOf("0xAB", gtv("AB".hexStringToByteArray())),
+                arrayOf("x\"AB\"", gtv("AB".hexStringToByteArray())),
                 arrayOf("\n  - 1 \n  - 2", gtv(gtv(1), gtv(2))),
                 arrayOf("\n  a: 37", gtv(mapOf("a" to gtv(37)))),
                 arrayOf("null", GtvNull),

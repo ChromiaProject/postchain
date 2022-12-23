@@ -6,6 +6,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BadDataMistake
+import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.server.service.PostchainService
@@ -134,8 +135,9 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         val response = postchainService.findBlockchain(request.chainId)
 
         responseObserver.onNext(FindBlockchainReply.newBuilder().run {
-            this.brid = response?.first?.toHex() ?: ""
-            this.active = response?.second ?: false
+            this.brid = response.first?.toHex() ?: ""
+            this.active = response.second ?: false
+            this.height = response.third
             build()
         })
         responseObserver.onCompleted()
@@ -145,7 +147,7 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
             request: AddBlockchainReplicaRequest, responseObserver: StreamObserver<AddBlockchainReplicaReply>
     ) {
         try {
-            postchainService.addBlockchainReplica(request.brid, request.pubkey)
+            postchainService.addBlockchainReplica(BlockchainRid.buildFromHex(request.brid), PubKey(request.pubkey))
             responseObserver.onNext(AddBlockchainReplicaReply.newBuilder().run {
                 message = "Node ${request.pubkey} has been added as a replica for chain with brid ${request.brid}"
                 build()
@@ -161,7 +163,7 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
     override fun removeBlockchainReplica(
             request: RemoveBlockchainReplicaRequest, responseObserver: StreamObserver<RemoveBlockchainReplicaReply>
     ) {
-        val removedReplica = postchainService.removeBlockchainReplica(request.brid, request.pubkey)
+        val removedReplica = postchainService.removeBlockchainReplica(BlockchainRid.buildFromHex(request.brid), PubKey(request.pubkey))
         val message = if (removedReplica.isEmpty()) {
             "No replica has been removed"
         } else {

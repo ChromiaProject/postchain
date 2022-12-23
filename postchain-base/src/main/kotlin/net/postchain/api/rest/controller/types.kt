@@ -27,6 +27,7 @@ interface Model : ChainModel {
     fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail?
     fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail?
     fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
+    fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
     fun getConfirmationProof(txRID: TxRID): ConfirmationProof?
     fun getStatus(txRID: TxRID): ApiStatus
     fun query(query: Query): QueryResult

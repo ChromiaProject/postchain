@@ -1,7 +1,7 @@
 package net.postchain.ebft.syncmanager.common
 
-import net.postchain.config.app.AppConfig
 import net.postchain.common.config.Config
+import net.postchain.config.app.AppConfig
 
 /**
  * Tuning parameters for various sychronizers (used to load blocks from other nodes).
@@ -63,9 +63,9 @@ data class SyncParameters(
         @JvmStatic
         fun fromAppConfig(config: AppConfig, init: (SyncParameters) -> Unit = {}): SyncParameters {
             return SyncParameters(
-                    exitDelay = config.getLong("fastsync.exit_delay", 60000),
-                    jobTimeout = config.getLong("fastsync.job_timeout", 10000),
-                    disconnectTimeout = config.getLong("fastsync.disconnect_timeout", 10000)
+                    exitDelay = config.getEnvOrLong("POSTCHAIN_FASTSYNC_EXIT_DELAY", "fastsync.exit_delay", 60000),
+                    jobTimeout = config.getEnvOrLong("POSTCHAIN_FASTSYNC_JOB_TIMEOUT", "fastsync.job_timeout", 10000),
+                    disconnectTimeout = config.getEnvOrLong("POSTCHAIN_FASTSYNC_DISCONNECT_TIMEOUT", "fastsync.disconnect_timeout", 10000)
             ).also(init)
         }
     }

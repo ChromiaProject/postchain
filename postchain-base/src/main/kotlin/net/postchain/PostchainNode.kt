@@ -29,7 +29,7 @@ import nl.komponents.kovenant.Kovenant
 /**
  * Postchain node instantiates infrastructure and blockchain process manager.
  */
-open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debug: Boolean = false) : Shutdownable {
+open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Shutdownable {
 
     protected val blockchainInfrastructure: BlockchainInfrastructure
     val processManager: BlockchainProcessManager
@@ -59,7 +59,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false, debu
                 storage,
                 infrastructureFactory.makeConnectionManager(appConfig),
                 blockQueriesProvider,
-                if (debug) DefaultNodeDiagnosticContext() else null
+                if (appConfig.debug) DefaultNodeDiagnosticContext() else null
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()

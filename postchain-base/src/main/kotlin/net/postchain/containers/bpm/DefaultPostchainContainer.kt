@@ -38,7 +38,21 @@ class DefaultPostchainContainer(
 
     override fun startProcess(process: ContainerBlockchainProcess): Boolean {
         val config0 = dataSource.getConfiguration(process.blockchainRid.data, 0L)
+        val peerInfos = dataSource.getPeerInfos()
         return if (config0 != null) {
+            peerInfos.forEach { subnodeAdminClient.addPeerInfo(it) }
+            val height = dataSource.getLastBuiltHeight(process.blockchainRid.data)
+            logger.info { "Chain ${process.chainId} last built height: $height" }
+            if (height != -1L) {
+                val currentHeight = height + 1
+                val currentConfig = dataSource.getConfiguration(process.blockchainRid.data, currentHeight)
+                if (currentConfig != null) {
+                    logger.info { "Chain ${process.chainId} config at height $currentHeight will be added to subnode" }
+                    subnodeAdminClient.addConfiguration(process.chainId, currentHeight, true, currentConfig)
+                } else {
+                    logger.info { "There is no a config at height $currentHeight for chain ${process.chainId}" }
+                }
+            }
             subnodeAdminClient.startBlockchain(process.chainId, process.blockchainRid, config0).also {
                 if (it) processes[process.chainId] = process
             }
@@ -56,6 +70,10 @@ class DefaultPostchainContainer(
 
     override fun terminateAllProcesses(): Set<Long> {
         return getAllChains().toSet().onEach(::terminateProcess)
+    }
+
+    override fun getBlockchainLastHeight(chainId: Long): Long {
+        return subnodeAdminClient.getBlockchainLastHeight(chainId)
     }
 
     override fun start() {

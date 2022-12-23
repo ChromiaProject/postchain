@@ -8,6 +8,7 @@ import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BadDataMistake
+import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 
 class PostchainService(private val postchainNode: PostchainNode) {
@@ -42,17 +43,21 @@ class PostchainService(private val postchainNode: PostchainNode) {
         return if (initialized) brid else null
     }
 
-    fun findBlockchain(chainId: Long): Pair<BlockchainRid, Boolean>? =
+    fun findBlockchain(chainId: Long): Triple<BlockchainRid?, Boolean?, Long> =
             withReadConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
-                BlockchainApi.findBlockchain(ctx)
-            }?.let { Pair(it, postchainNode.isBlockchainRunning(chainId)) }
+                Triple(
+                        BlockchainApi.findBlockchain(ctx),
+                        postchainNode.isBlockchainRunning(chainId),
+                        BlockchainApi.getLastBlockHeight(ctx)
+                )
+            }
 
-    fun addBlockchainReplica(brid: String, pubkey: String): Boolean =
+    fun addBlockchainReplica(brid: BlockchainRid, pubkey: PubKey): Boolean =
             postchainNode.postchainContext.storage.withWriteConnection { ctx ->
                 BlockchainApi.addBlockchainReplica(ctx, brid, pubkey)
             }
 
-    fun removeBlockchainReplica(brid: String, pubkey: String): Set<BlockchainRid> =
+    fun removeBlockchainReplica(brid: BlockchainRid, pubkey: PubKey): Set<BlockchainRid> =
             postchainNode.postchainContext.storage.withWriteConnection { ctx ->
                 BlockchainApi.removeBlockchainReplica(ctx, brid, pubkey)
             }

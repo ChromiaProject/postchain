@@ -4,15 +4,15 @@ package net.postchain.crypto
 
 import mu.KotlinLogging
 import net.postchain.common.data.Hash
-import org.spongycastle.asn1.x9.X9ECParameters
-import org.spongycastle.crypto.digests.SHA256Digest
-import org.spongycastle.crypto.ec.CustomNamedCurves
-import org.spongycastle.crypto.params.ECDomainParameters
-import org.spongycastle.crypto.params.ECPrivateKeyParameters
-import org.spongycastle.crypto.params.ECPublicKeyParameters
-import org.spongycastle.crypto.signers.ECDSASigner
-import org.spongycastle.crypto.signers.HMacDSAKCalculator
-import org.spongycastle.util.Arrays
+import org.bouncycastle.asn1.x9.X9ECParameters
+import org.bouncycastle.crypto.digests.SHA256Digest
+import org.bouncycastle.crypto.ec.CustomNamedCurves
+import org.bouncycastle.crypto.params.ECDomainParameters
+import org.bouncycastle.crypto.params.ECPrivateKeyParameters
+import org.bouncycastle.crypto.params.ECPublicKeyParameters
+import org.bouncycastle.crypto.signers.ECDSASigner
+import org.bouncycastle.crypto.signers.HMacDSAKCalculator
+import org.bouncycastle.util.Arrays
 import java.math.BigInteger
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -219,8 +219,29 @@ open class Secp256K1CryptoSystem : CryptoSystem {
      * Generate a random key pair
      */
     override fun generateKeyPair(): KeyPair {
-        val privKey = getRandomBytes(32)
-        val pubKey = secp256k1_derivePubKey(privKey)
-        return KeyPair(PubKey(pubKey), PrivKey(privKey))
+        val privKey = generatePrivKey()
+        val pubKey = secp256k1_derivePubKey(privKey.data)
+        return KeyPair(PubKey(pubKey), privKey)
+    }
+
+    /**
+     * Generate a random private key.
+     *
+     * Not part of [CryptoSystem] interface since it might not make sense for other algorithms.
+     */
+    fun generatePrivKey(): PrivKey {
+        var privateKey: ByteArray
+        var d: BigInteger
+        while (true) {
+            privateKey = getRandomBytes(32)
+            d = BigInteger(1, privateKey)
+            try {
+                ECPrivateKeyParameters(d, CURVE) // validate private key
+                break
+            } catch (e: Exception) {
+                logger.debug("Generated invalid private key: $d")
+            }
+        }
+        return PrivKey(privateKey)
     }
 }

@@ -14,8 +14,14 @@ fun Configuration.getEnvOrStringProperty(env: String, property: String): String?
 fun Configuration.getEnvOrStringProperty(env: String, property: String, default: String): String =
         System.getenv(env) ?: getString(property, default)
 
+fun Configuration.getEnvOrListProperty(env: String, property: String, default: List<String>): List<String> =
+        System.getenv(env)?.split(",") ?: getList(property, default).flatMap { (it as String).split(",") }
+
 fun Configuration.getEnvOrIntProperty(env: String, property: String, default: Int): Int =
         System.getenv(env)?.toInt() ?: getInt(property, default)
 
 fun Configuration.getEnvOrLongProperty(env: String, property: String, default: Long): Long =
         System.getenv(env)?.toLong() ?: getLong(property, default)
+
+fun Configuration.getEnvOrBooleanProperty(env: String, property: String, default: Boolean): Boolean =
+        System.getenv(env)?.let { it.toBoolean() } ?: getBoolean(property, default)

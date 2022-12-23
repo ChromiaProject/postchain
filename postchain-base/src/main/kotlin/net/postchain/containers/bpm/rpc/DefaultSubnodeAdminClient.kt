@@ -5,13 +5,18 @@ import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.ManagedChannel
 import mu.KLogging
+import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
+import net.postchain.common.toHex
 import net.postchain.containers.bpm.ContainerPorts
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.server.grpc.AddConfigurationRequest
+import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.DebugRequest
 import net.postchain.server.grpc.DebugServiceGrpc
 import net.postchain.server.grpc.FindBlockchainRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
+import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
 import net.postchain.server.grpc.StopBlockchainRequest
 import nl.komponents.kovenant.task
@@ -29,6 +34,7 @@ class DefaultSubnodeAdminClient(
 
     private lateinit var channel: ManagedChannel
     private lateinit var service: PostchainServiceGrpc.PostchainServiceBlockingStub
+    private lateinit var peerService: PeerServiceGrpc.PeerServiceBlockingStub
     private lateinit var healthcheckService: DebugServiceGrpc.DebugServiceBlockingStub
 
     override fun connect() {
@@ -40,6 +46,7 @@ class DefaultSubnodeAdminClient(
                     val creds = InsecureChannelCredentials.create()
                     channel = Grpc.newChannelBuilder(target, creds).build()
                     service = PostchainServiceGrpc.newBlockingStub(channel)
+                    peerService = PeerServiceGrpc.newBlockingStub(channel)
                     healthcheckService = DebugServiceGrpc.newBlockingStub(channel)
                     logger.info { "connect() -- Subnode container connection established on $target" }
                     return@task
@@ -66,6 +73,24 @@ class DefaultSubnodeAdminClient(
             reply.message != ""
         } catch (e: Exception) {
             logger.error { e.message }
+            false
+        }
+    }
+
+    override fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: ByteArray): Boolean {
+        return try {
+            val request = AddConfigurationRequest.newBuilder()
+                    .setChainId(chainId)
+                    .setHeight(height)
+                    .setOverride(true)
+                    .setGtv(ByteString.copyFrom(config))
+                    .build()
+
+            val response = service.addConfiguration(request)
+            logger.debug { "addConfiguration(${chainId}) -- ${response.message}" }
+            true
+        } catch (e: Exception) {
+            logger.error { "addConfiguration(${chainId}) -- can't add configuration: ${e.message}" }
             false
         }
     }
@@ -120,6 +145,38 @@ class DefaultSubnodeAdminClient(
             response.active
         } catch (e: Exception) {
             logger.error { "isBlockchainRunning($chainId) -- exception occurred: : ${e.message}" }
+            false
+        }
+    }
+
+    override fun getBlockchainLastHeight(chainId: Long): Long {
+        return try {
+            val request = FindBlockchainRequest.newBuilder()
+                    .setChainId(chainId)
+                    .build()
+            val response = service.findBlockchain(request)
+            logger.debug { "getBlockchainLastHeight($chainId) -- ${response.height}" }
+            response.height
+        } catch (e: Exception) {
+            logger.error { "getBlockchainLastHeight($chainId) -- exception occurred: : ${e.message}" }
+            -1L
+        }
+    }
+
+    override fun addPeerInfo(peerInfo: PeerInfo): Boolean {
+        return try {
+            val request = AddPeerRequest.newBuilder()
+                    .setOverride(true)
+                    .setHost(peerInfo.host)
+                    .setPort(peerInfo.port)
+                    .setPubkey(peerInfo.pubKey.toHex())
+                    .build()
+
+            val response = peerService.addPeer(request)
+            logger.debug { response.message }
+            true
+        } catch (e: Exception) {
+            logger.error { "addPeerInfo($peerInfo) -- exception occurred: : ${e.message}" }
             false
         }
     }

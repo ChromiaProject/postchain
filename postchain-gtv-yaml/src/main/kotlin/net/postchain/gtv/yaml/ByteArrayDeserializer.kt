@@ -7,6 +7,7 @@ import net.postchain.common.hexStringToByteArray
 
 class ByteArrayDeserializer : JsonDeserializer<ByteArray>() {
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): ByteArray {
-        return p.valueAsString.substringAfter("0x").hexStringToByteArray()
+        require(p.valueAsString.startsWith("x\""))
+        return p.valueAsString.substringAfter("x\"").trimEnd('"').hexStringToByteArray()
     }
 }

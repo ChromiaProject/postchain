@@ -9,24 +9,24 @@ import net.postchain.StorageBuilder
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
+import net.postchain.core.AppContext
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
+import net.postchain.core.EContext
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvFileReader
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
 import org.apache.commons.configuration2.ex.ConfigurationException
 import org.apache.commons.dbcp2.BasicDataSource
-import java.io.File
 import java.sql.Connection
 import java.sql.SQLException
 import java.util.concurrent.TimeoutException
@@ -37,25 +37,23 @@ object CliExecution : KLogging() {
      * @return blockchain RID
      */
     fun addBlockchain(
-            nodeConfigFile: File,
+            appConfig: AppConfig,
             chainId: Long,
-            blockchainConfigFile: File,
+            blockchainConfigGtv: Gtv,
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
             givenDependencies: List<BlockchainRelatedInfo> = listOf()
     ): BlockchainRid {
-        val gtv = GtvFileReader.readFile(blockchainConfigFile)
-        return addBlockchainGtv(nodeConfigFile, chainId, gtv, mode, givenDependencies)
+        return addBlockchainGtv(appConfig, chainId, blockchainConfigGtv, mode, givenDependencies)
     }
 
     private fun addBlockchainGtv(
-            nodeConfigFile: File,
+            appConfig: AppConfig,
             chainId: Long,
             blockchainConfig: Gtv,
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
             givenDependencies: List<BlockchainRelatedInfo> = listOf()
     ): BlockchainRid {
         // If brid is specified in nodeConfigFile, use that instead of calculating it from blockchain configuration.
-        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
         val keyString = "brid.chainid." + chainId.toString()
         val brid = if (appConfig.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.getString(keyString)) else
             GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, appConfig.cryptoSystem)
@@ -86,26 +84,14 @@ object CliExecution : KLogging() {
     }
 
     fun addConfiguration(
-            nodeConfigFile: File,
-            blockchainConfigFile: File,
-            chainId: Long,
-            height: Long,
-            mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
-            allowUnknownSigners: Boolean = false
-    ) {
-        val gtv = GtvFileReader.readFile(blockchainConfigFile)
-        addConfigurationGtv(nodeConfigFile, gtv, chainId, height, mode, allowUnknownSigners)
-    }
-
-    private fun addConfigurationGtv(
-            nodeConfigFile: File,
+            appConfig: AppConfig,
             blockchainConfig: Gtv,
             chainId: Long,
             height: Long,
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
             allowUnknownSigners: Boolean
     ) {
-        runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
+        runStorageCommand(appConfig, chainId) { ctx: EContext ->
             try {
                 when (mode) {
                     AlreadyExistMode.ERROR -> {
@@ -137,41 +123,37 @@ object CliExecution : KLogging() {
         }
     }
 
-    fun setMustSyncUntil(nodeConfigFile: File, blockchainRID: BlockchainRid, height: Long): Boolean =
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
-                BlockchainApi.setMustSyncUntil(ctx, blockchainRID, height)
-            }
-
-    fun getMustSyncUntilHeight(nodeConfigFile: File): Map<Long, Long> = runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
-        BlockchainApi.getMustSyncUntilHeight(ctx)
+    fun setMustSyncUntil(appConfig: AppConfig, blockchainRID: BlockchainRid, height: Long): Boolean {
+        return runStorageCommand(appConfig) { ctx: AppContext ->
+            BlockchainApi.setMustSyncUntil(ctx, blockchainRID, height)
+        }
     }
 
-    fun peerinfoAdd(nodeConfigFile: File, host: String, port: Int, pubKey: String, mode: AlreadyExistMode): Boolean =
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
-                // mode tells us how to react upon an error caused if pubkey already exist (throw error or force write).
-                when (mode) {
-                    AlreadyExistMode.ERROR -> {
-                        val added = PeerApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, false)
-                        if (!added) {
-                            throw CliException("Peerinfo with pubkey already exists. Using -f to force update")
-                        }
-                        true
+    fun peerinfoAdd(appConfig: AppConfig, host: String, port: Int, pubKey: PubKey, mode: AlreadyExistMode): Boolean {
+        return runStorageCommand(appConfig) { ctx: AppContext ->
+            // mode tells us how to react upon an error caused if pubkey already exist (throw error or force write).
+            when (mode) {
+                AlreadyExistMode.ERROR -> {
+                    val added = PeerApi.addPeer(ctx, pubKey, host, port, false)
+                    if (!added) {
+                        throw CliException("Peerinfo with pubkey already exists. Using -f to force update")
                     }
+                    true
+                }
 
-                    AlreadyExistMode.FORCE -> {
-                        PeerApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, true)
-                    }
+                AlreadyExistMode.FORCE -> {
+                    PeerApi.addPeer(ctx, pubKey, host, port, true)
+                }
 
-                    AlreadyExistMode.IGNORE -> {
-                        PeerApi.addPeer(ctx, PubKey(pubKey.hexStringToByteArray()), host, port, false)
-                    }
+                AlreadyExistMode.IGNORE -> {
+                    PeerApi.addPeer(ctx, pubKey, host, port, false)
                 }
             }
+        }
+    }
 
-    fun runNode(nodeConfigFile: File, chainIds: List<Long>, debug: Boolean) {
-        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
-
-        with(PostchainNode(appConfig, wipeDb = false, debug = debug)) {
+    fun runNode(appConfig: AppConfig, chainIds: List<Long>, debug: Boolean) {
+        with(PostchainNode(appConfig, wipeDb = false)) {
             chainIds.forEach {
                 withLoggingContext(
                         NODE_PUBKEY_TAG to appConfig.pubKey,
@@ -191,32 +173,39 @@ object CliExecution : KLogging() {
         }
     }
 
-    fun checkBlockchain(nodeConfigFile: File, chainId: Long, blockchainRID: String) {
-        runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
+    fun findBlockchainRid(appConfig: AppConfig, chainId: Long): BlockchainRid? {
+        return runStorageCommand(appConfig, chainId) { ctx: EContext ->
+            DatabaseAccess.of(ctx).getBlockchainRid(ctx)
+        }
+    }
+
+    fun checkBlockchain(appConfig: AppConfig, chainId: Long, blockchainRID: String) {
+        runStorageCommand(appConfig, chainId) { ctx: EContext ->
             BlockchainApi.checkBlockchain(ctx, blockchainRID)
         }
     }
 
-    fun getConfiguration(nodeConfigFile: File, chainId: Long, height: Long): ByteArray? =
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
-                BlockchainApi.getConfiguration(ctx, height)
-            }
+    fun getConfiguration(appConfig: AppConfig, chainId: Long, height: Long): ByteArray? {
+        return runStorageCommand(appConfig, chainId) { ctx: EContext ->
+            BlockchainApi.getConfiguration(ctx, height)
+        }
+    }
 
-    fun listConfigurations(nodeConfigFile: File, chainId: Long) =
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId) { ctx ->
-                BlockchainApi.listConfigurations(ctx)
-            }
+    fun listConfigurations(appConfig: AppConfig, chainId: Long): List<Long> {
+        return runStorageCommand(appConfig, chainId) { ctx: EContext ->
+            BlockchainApi.listConfigurations(ctx)
+        }
+    }
 
-    fun waitDb(retryTimes: Int, retryInterval: Long, nodeConfigFile: File) {
-        tryCreateBasicDataSource(nodeConfigFile)?.let { return } ?: if (retryTimes > 0) {
+    fun waitDb(retryTimes: Int, retryInterval: Long, appConfig: AppConfig) {
+        tryCreateBasicDataSource(appConfig)?.let { return } ?: if (retryTimes > 0) {
             Thread.sleep(retryInterval)
-            waitDb(retryTimes - 1, retryInterval, nodeConfigFile)
+            waitDb(retryTimes - 1, retryInterval, appConfig)
         } else throw TimeoutException("Unable to connect to database")
     }
 
-    private fun tryCreateBasicDataSource(nodeConfigFile: File): Connection? {
+    private fun tryCreateBasicDataSource(appConfig: AppConfig): Connection? {
         return try {
-            val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
             val storage = StorageBuilder.buildStorage(appConfig)
             NodeConfigurationProviderFactory.createProvider(appConfig) { storage }.getConfiguration()
 

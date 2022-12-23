@@ -116,4 +116,18 @@ class RestApiRedirectEndpointTest {
 
         assertEquals(make_gtv_gson().toJson(MockPostchainRestApi.gtvQueryResponse), body.extract().body().asString())
     }
+
+    @Test
+    fun `Error will be forwarded`() {
+        val queryString = """["error_query", {"a"="b", "c"=3}]"""
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .body(queryString)
+                .post("/query/$blockchainRID")
+                .then()
+                .statusCode(400)
+                .contentType(RestApi.JSON_CONTENT_TYPE)
+    }
 }

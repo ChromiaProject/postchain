@@ -22,6 +22,7 @@ import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockWitness
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.BeanHandler
@@ -229,7 +230,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val sql = "SELECT tx_rid" +
                 " FROM ${tableTransactions(ctx)} t" +
                 " INNER JOIN ${tableBlocks(ctx)} b ON t.block_iid=b.block_iid" +
-                " WHERE b.block_height = ?"
+                " WHERE b.block_height = ?" +
+                " ORDER BY t.tx_iid"
         return queryRunner.query(ctx.conn, sql, ColumnListHandler<ByteArray>(), height).toTypedArray()
     }
 
@@ -281,7 +283,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                     FROM ${tableBlocks(ctx)} as b 
                     JOIN ${tableTransactions(ctx)} as t ON (t.block_iid = b.block_iid) 
                     WHERE b.timestamp < ? 
-                    ORDER BY b.block_height DESC LIMIT ?;
+                    ORDER BY b.block_height, t.tx_iid DESC LIMIT ?;
         """.trimIndent()
         val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, beforeTime, limit)
         return transactions.map { txInfo ->
@@ -340,10 +342,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         if (rows.isEmpty()) return null
         val data = rows.first()
         return DatabaseAccess.EventInfo(
-            data["position"] as Long,
-            data["block_height"] as Long,
-            data["hash"] as Hash,
-            data["data"] as ByteArray
+                data["position"] as Long,
+                data["block_height"] as Long,
+                data["hash"] as Hash,
+                data["data"] as ByteArray
         )
     }
 
@@ -426,7 +428,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun insertPage(ctx: EContext, name: String, page: Page) {
-        val childHashes = page.childHashes.fold(ByteArray(0)) {total, item -> total.plus(item)}
+        val childHashes = page.childHashes.fold(ByteArray(0)) { total, item -> total.plus(item) }
         queryRunner.update(ctx.conn, cmdInsertPage(ctx, name), page.blockHeight, page.level, page.left, childHashes)
     }
 
@@ -444,7 +446,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         // if data size is not contain correct length then it regards to error
         if (data == null || data.size % HASH_LENGTH != 0) return null
         val length = data.size / HASH_LENGTH
-        val childHashes = Array(length){ByteArray(HASH_LENGTH)}
+        val childHashes = Array(length) { ByteArray(HASH_LENGTH) }
         for (i in 0 until length) {
             val start = i * HASH_LENGTH
             val end = start + HASH_LENGTH - 1
@@ -578,13 +580,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val blockInfos = queryRunner.query(ctx.conn, sql, mapListHandler, blockRID)
         if (blockInfos.isEmpty()) return null
         val blockInfo = blockInfos.first()
-
-        val blockRid = blockInfo["block_rid"] as ByteArray
-        val blockHeight = blockInfo["block_height"] as Long
-        val blockHeader = blockInfo["block_header_data"] as ByteArray
-        val blockWitness = blockInfo["block_witness"] as ByteArray
-        val timestamp = blockInfo["timestamp"] as Long
-        return DatabaseAccess.BlockInfoExt(blockRid, blockHeight, blockHeader, blockWitness, timestamp)
+        return buildBlockInfoExt(blockInfo)
     }
 
     override fun getBlocks(ctx: EContext, blockTime: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
@@ -595,16 +591,27 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             ORDER BY timestamp DESC LIMIT ?
         """.trimIndent()
         val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, blockTime, limit)
+        return blocksInfo.map { buildBlockInfoExt(it) }
+    }
 
-        return blocksInfo.map { blockInfo ->
-            val blockRid = blockInfo["block_rid"] as ByteArray
-            val heightOfBlock = blockInfo["block_height"] as Long
-            val blockHeader = blockInfo["block_header_data"] as ByteArray
-            val blockWitness = blockInfo["block_witness"] as ByteArray
-            val timestamp = blockInfo["timestamp"] as Long
-            DatabaseAccess.BlockInfoExt(
-                    blockRid, heightOfBlock, blockHeader, blockWitness, timestamp)
-        }
+    override fun getBlocksBeforeHeight(ctx: EContext, blockHeight: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
+        val sql = """
+            SELECT block_rid, block_height, block_header_data, block_witness, timestamp 
+            FROM ${tableBlocks(ctx)} 
+            WHERE block_height < ? 
+            ORDER BY block_height DESC LIMIT ?
+        """.trimIndent()
+        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, limit)
+        return blocksInfo.map { buildBlockInfoExt(it) }
+    }
+
+    private fun buildBlockInfoExt(blockInfo: MutableMap<String, Any>): DatabaseAccess.BlockInfoExt {
+        val blockRid = blockInfo["block_rid"] as ByteArray
+        val blockHeight = blockInfo["block_height"] as Long
+        val blockHeader = blockInfo["block_header_data"] as ByteArray
+        val blockWitness = blockInfo["block_witness"] as ByteArray
+        val timestamp = blockInfo["timestamp"] as Long
+        return DatabaseAccess.BlockInfoExt(blockRid, blockHeight, blockHeader, blockWitness, timestamp)
     }
 
     /**
@@ -753,7 +760,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return result.toTypedArray()
     }
 
-    override fun addBlockchainReplica(ctx: AppContext, brid: String, pubKey: String): Boolean {
+    override fun addBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubKey: PubKey): Boolean {
         if (existsBlockchainReplica(ctx, brid, pubKey)) {
             return false
         }
@@ -767,7 +774,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             ($TABLE_REPLICAS_FIELD_BRID, $TABLE_REPLICAS_FIELD_PUBKEY) 
             VALUES (?, (SELECT $TABLE_PEERINFOS_FIELD_PUBKEY FROM ${tablePeerinfos()} WHERE lower($TABLE_PEERINFOS_FIELD_PUBKEY) = lower(?)))
         """.trimIndent()
-        queryRunner.insert(ctx.conn, sql, ScalarHandler<String>(), brid, pubKey)
+        queryRunner.insert(ctx.conn, sql, ScalarHandler<String>(), brid.toHex(), pubKey.hex())
         return true
     }
 
@@ -793,18 +800,18 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return result.map { BlockchainRid.buildFromHex(it) }.toSet()
     }
 
-    override fun existsBlockchainReplica(ctx: AppContext, brid: String, pubkey: String): Boolean {
+    override fun existsBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubkey: PubKey): Boolean {
         val query = """
             SELECT count($TABLE_REPLICAS_FIELD_PUBKEY) 
             FROM ${tableBlockchainReplicas()}
-            WHERE $TABLE_REPLICAS_FIELD_BRID = '$brid' AND
-            lower($TABLE_REPLICAS_FIELD_PUBKEY) = lower('$pubkey') 
+            WHERE $TABLE_REPLICAS_FIELD_BRID = '${brid.toHex()}' AND
+            lower($TABLE_REPLICAS_FIELD_PUBKEY) = lower('${pubkey.hex()}') 
             """.trimIndent()
 
         return queryRunner.query(ctx.conn, query, ScalarHandler<Long>()) > 0
     }
 
-    override fun removeBlockchainReplica(ctx: AppContext, brid: String?, pubKey: String): Set<BlockchainRid> {
+    override fun removeBlockchainReplica(ctx: AppContext, brid: BlockchainRid?, pubKey: PubKey): Set<BlockchainRid> {
         val delete = """DELETE FROM ${tableBlockchainReplicas()} 
                 WHERE $TABLE_REPLICAS_FIELD_PUBKEY = ?"""
         val res = if (brid == null) {
@@ -812,14 +819,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 $delete
                 RETURNING *
             """.trimIndent()
-            queryRunner.query(ctx.conn, sql, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubKey)
+            queryRunner.query(ctx.conn, sql, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubKey.hex())
         } else {
             val sql = """
                 $delete
                 AND $TABLE_REPLICAS_FIELD_BRID = ?
                 RETURNING *
             """.trimIndent()
-            queryRunner.query(ctx.conn, sql, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubKey, brid)
+            queryRunner.query(ctx.conn, sql, ColumnListHandler(TABLE_REPLICAS_FIELD_BRID), pubKey.hex(), brid.toHex())
         }
         return res.map { BlockchainRid.buildFromHex(it) }.toSet()
     }

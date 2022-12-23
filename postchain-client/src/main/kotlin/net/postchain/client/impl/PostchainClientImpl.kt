@@ -74,12 +74,12 @@ class PostchainClientImpl(
     )
 
     @Throws(IOException::class)
-    override fun query(name: String, gtv: Gtv): Gtv {
+    override fun query(name: String, args: Gtv): Gtv {
         var queryResult: Response? = null
         var responseStream: BoundedInputStream? = null
         for (j in 1..config.endpointPool.size()) {
             val endpoint = nextEndpoint()
-            val request = createQueryRequest(name, gtv, endpoint)
+            val request = createQueryRequest(name, args, endpoint)
             endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
                 queryResult = queryTo(request, endpoint)
                 responseStream = BoundedInputStream(queryResult.body.stream, config.maxResponseSize.toLong())
@@ -99,10 +99,10 @@ class PostchainClientImpl(
 
     private fun createQueryRequest(
             name: String,
-            gtv: Gtv,
+            args: Gtv,
             endpoint: Endpoint,
     ): Request {
-        val gtxQuery = gtv(gtv(name), gtv)
+        val gtxQuery = gtv(gtv(name), args)
         val encodedQuery = GtvEncoder.encodeGtv(gtxQuery)
         return Request(Method.POST, "${endpoint.url}/query_gtv/$blockchainRIDOrID")
                 .body(encodedQuery.inputStream())
@@ -115,7 +115,13 @@ class PostchainClientImpl(
     }
 
     private fun buildExceptionFromGTV(responseStream: InputStream, status: Status): UserMistake {
-        val errorMessage = GtvDecoder.decodeGtv(responseStream).asString()
+        val errorMessage = try {
+            GtvDecoder.decodeGtv(responseStream).asString()
+        } catch (e: IOException) {
+            // Error body can't be parsed as GTV, this could be a client generated error
+            // Dump it as a string and hope it is either empty or readable text
+            String(responseStream.readAllBytes())
+        }
         return UserMistake("Can not make a query: $status $errorMessage")
     }
 

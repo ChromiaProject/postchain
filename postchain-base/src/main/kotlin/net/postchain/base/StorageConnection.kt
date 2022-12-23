@@ -7,6 +7,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 import net.postchain.core.EContext
 import net.postchain.core.Storage
+import java.io.File
 
 fun <RT> Storage.withReadConnection(op: (AppContext) -> RT): RT {
     val ctx = openReadConnection()
@@ -99,7 +100,18 @@ fun <RT> runStorageCommand(appConfig: AppConfig, op: (ctx: AppContext) -> RT): R
     }
 }
 
-fun <RT> runStorageCommand(nodeConfigFile: String, op: (ctx: AppContext) -> RT): RT {
+@Deprecated(message = "use runStorageCommand(AppConfig, (ctx: AppContext) -> RT) instead",
+        replaceWith = ReplaceWith("runStorageCommand(AppConfig.fromPropertiesFile(File(nodeConfigFilename)), op)",
+                imports = arrayOf("net.postchain.config.app.AppConfig", "java.io.File")))
+fun <RT> runStorageCommand(nodeConfigFilename: String, op: (ctx: AppContext) -> RT): RT {
+    val appConfig = AppConfig.fromPropertiesFile(File(nodeConfigFilename))
+    return runStorageCommand(appConfig, op)
+}
+
+@Deprecated(message = "use runStorageCommand(AppConfig, (ctx: AppContext) -> RT) instead",
+        replaceWith = ReplaceWith("runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFilename), op)",
+                imports = arrayOf("net.postchain.config.app.AppConfig")))
+fun <RT> runStorageCommand(nodeConfigFile: File, op: (ctx: AppContext) -> RT): RT {
     val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
     return runStorageCommand(appConfig, op)
 }
@@ -114,7 +126,18 @@ fun <RT> runStorageCommand(appConfig: AppConfig, chainId: Long, op: (ctx: EConte
     }
 }
 
-fun <RT> runStorageCommand(nodeConfigFile: String, chainId: Long, op: (ctx: EContext) -> RT): RT {
+@Deprecated(message = "use runStorageCommand(AppConfig, Long, (ctx: EContext) -> RT) instead",
+        replaceWith = ReplaceWith("runStorageCommand(AppConfig.fromPropertiesFile(File(nodeConfigFilename)), chainId, op)",
+                imports = arrayOf("net.postchain.config.app.AppConfig", "java.io.File")))
+fun <RT> runStorageCommand(nodeConfigFilename: String, chainId: Long, op: (ctx: EContext) -> RT): RT {
+    val appConfig = AppConfig.fromPropertiesFile(File(nodeConfigFilename))
+    return runStorageCommand(appConfig, chainId, op)
+}
+
+@Deprecated(message = "use runStorageCommand(AppConfig, Long, (ctx: EContext) -> RT) instead",
+        replaceWith = ReplaceWith("runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId, op)",
+                imports = arrayOf("net.postchain.config.app.AppConfig")))
+fun <RT> runStorageCommand(nodeConfigFile: File, chainId: Long, op: (ctx: EContext) -> RT): RT {
     val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
     return runStorageCommand(appConfig, chainId, op)
 }

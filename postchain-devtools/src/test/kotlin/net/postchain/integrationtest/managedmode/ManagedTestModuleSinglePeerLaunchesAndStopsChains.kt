@@ -2,13 +2,19 @@
 
 package net.postchain.integrationtest.managedmode
 
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.EContext
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.integrationtest.managedmode.TestModulesHelper.argBlockchainRid
-import net.postchain.integrationtest.managedmode.TestModulesHelper.argCurrentHeight
 import net.postchain.integrationtest.managedmode.TestModulesHelper.argHeight
 import net.postchain.integrationtest.managedmode.TestModulesHelper.peerInfoToGtv
 import net.postchain.integrationtest.managedmode.TestPeerInfos.Companion.peerInfo0
@@ -20,11 +26,13 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
         mapOf(
                 "nm_get_peer_infos" to ::queryGetPeerInfos,
                 "nm_get_peer_list_version" to ::queryGetPeerListVersion,
-                "nm_compute_blockchain_list" to ::queryComputeBlockchainList,
+                "nm_compute_blockchain_info_list" to ::queryComputeBlockchainInfoList,
                 "nm_get_blockchain_configuration" to ::queryGetConfiguration,
                 "nm_find_next_configuration_height" to ::queryFindNextConfigurationHeight,
-                "nm_get_blockchain_replica_node_map_v4" to ::dummyHandlerArray,
-                "nm_get_node_replica_map" to ::dummyHandlerArray
+                "nm_get_blockchain_last_height_map" to ::dummyHandlerArray,
+                "nm_get_blockchain_replica_node_map" to ::dummyHandlerArray,
+                "nm_get_node_replica_map" to ::dummyHandlerArray,
+                "nm_api_version" to ::queryNMApiVersion
         )
 ) {
 
@@ -33,15 +41,17 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
     companion object : TestKLogging(LogLevel.DEBUG) {
 
         private val BLOCKCHAIN_RIDS = mapOf(
-                0L to "DB52031AB8994B26AACFB5DB01264226A6F3A73821D46C71CEA66FEB7AD38618"
-                , 100L to "932380DC6DF90854B1170FCA873F1BCD3CA42F44D6423DCE96B8957B8DA1F525"
-                , 101L to "3964AD3C0BB381E2E1F6F7289B4F002EEE30E5E83B67B105991BB3EE7903B45D"
+                0L to "74129F4DE673D2200DFC20E2D02073C03EFEDE5BCE165970C71191275B07FABD",
+                100L to "B52512A7B550370E3C0B05F32B68C49A3C8F0B52C1CDAC323F3FC98514882157",
+                101L to "04BA8587D4EFDA97B21611CB20504A23FD305DABFB28AC4824EEF3AB3FDD0508"
         )
 
         private val stage0 = -1 until 5
         private val stage1 = 5 until 10
         private val stage2 = 10 until 15
         private val stage3 = 15 until 20
+
+        var chain101RecoveringCounter = 0
 
         fun queryGetPeerInfos(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_get_peer_infos" }
@@ -55,10 +65,15 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
             return GtvInteger(1L)
         }
 
-        fun queryComputeBlockchainList(unit: Unit, eContext: EContext, args: Gtv): Gtv {
-            logger.log { "Query: nm_compute_blockchain_list" }
+        fun queryNMApiVersion(unit: Unit, eContext: EContext, args: Gtv): Gtv {
+            logger.log { "Query: nm_api_version" }
+            return GtvInteger(4L)
+        }
 
-            val chainIds = when (argCurrentHeight(args)) {
+        fun queryComputeBlockchainInfoList(unit: Unit, eContext: EContext, args: Gtv): Gtv {
+            logger.log { "Query: nm_compute_blockchain_info_list" }
+
+            val chainIds = when (DatabaseAccess.of(eContext).getLastBlockHeight(eContext)) {
                 in stage0 -> arrayOf(0L)
                 in stage1 -> arrayOf(0L, 100L)
                 in stage2 -> arrayOf(0L, 100L, 101L)
@@ -67,7 +82,13 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
             }
 
             return GtvArray(
-                    chainIds.map(::gtvBlockchainRid).toTypedArray())
+                    chainIds.map {
+                        GtvDictionary.build(mapOf(
+                                "rid" to gtvBlockchainRid(it),
+                                "system" to GtvInteger(if (it == 0L) 1L else 0L)
+                        ))
+                    }.toTypedArray()
+            )
         }
 
         fun queryGetConfiguration(unit: Unit, eContext: EContext, args: Gtv): Gtv {
@@ -83,7 +104,7 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
                         5L -> "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_0_height_5.xml"
                         10L -> "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_0_height_10.xml"
                         15L -> "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_0_height_15.xml"
-                        else -> "an unreachable branch"
+                        else -> null
                     }
                 }
 
@@ -92,15 +113,22 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
                 }
 
                 BLOCKCHAIN_RIDS[101L] -> {
-                    "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_2.xml"
+                    when (argHeight(args)) {
+                        10L -> {
+                            if (chain101RecoveringCounter++ < 5) { // bad config
+                                "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_2_bad.xml"
+                            } else { // recovering config
+                                "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_2.xml"
+                            }
+                        }
+                        else -> "/net/postchain/devtools/managedmode/singlepeer_launches_and_stops_chains/blockchain_config_2.xml"
+                    }
                 }
-
-                else -> "an unreachable branch"
+                else -> null
             }
 
             val gtvConfig = try {
-                GtvMLParser.parseGtvML(
-                        javaClass.getResource(blockchainConfigFilename).readText())
+                GtvMLParser.parseGtvML(javaClass.getResource(blockchainConfigFilename!!).readText())
             } catch (e: Exception) {
                 logger.error { "Some troubles with resource loading: $blockchainConfigFilename, ${e.message}" }
                 throw e
@@ -112,11 +140,23 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
 
         fun queryFindNextConfigurationHeight(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_find_next_configuration_height" }
-            return when (argHeight(args)) {
-                in stage0 -> GtvInteger(5)
-                in stage1 -> GtvInteger(10)
-                in stage2 -> GtvInteger(15)
-                in stage3 -> GtvNull
+
+            return when (argBlockchainRid(args).uppercase()) {
+                BLOCKCHAIN_RIDS[0L] -> {
+                    when (argHeight(args)) {
+                        in stage0 -> GtvInteger(5)
+                        in stage1 -> GtvInteger(10)
+                        in stage2 -> GtvInteger(15)
+                        in stage3 -> GtvNull
+                        else -> GtvNull
+                    }
+                }
+                BLOCKCHAIN_RIDS[101L] -> {
+                    when (argHeight(args)) {
+                        in 0 until 10L -> GtvInteger(10)
+                        else -> GtvNull
+                    }
+                }
                 else -> GtvNull
             }
         }
@@ -125,7 +165,6 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
             return GtvFactory.gtv(
                     BLOCKCHAIN_RIDS[chainId]?.hexStringToByteArray() ?: byteArrayOf())
         }
-
     }
 }
 

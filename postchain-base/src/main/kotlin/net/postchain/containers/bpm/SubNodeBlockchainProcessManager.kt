@@ -5,13 +5,16 @@ import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.containers.bpm.bcconfig.BlockWiseSubnodeBlockchainConfigListener
+import net.postchain.containers.bpm.bcconfig.BlockchainConfigVerifier
+import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigListener
+import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigurationConfig
+import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.block.BlockTrace
-import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigurationConfig
-import net.postchain.containers.bpm.bcconfig.DefaultSubnodeBlockchainConfigListener
-import net.postchain.containers.bpm.bcconfig.SubnodeBlockchainConfigListener
-import net.postchain.core.AfterCommitHandler
+import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.mastersub.protocol.MsCommittedBlockMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 import java.util.concurrent.ConcurrentHashMap
@@ -26,31 +29,21 @@ open class SubNodeBlockchainProcessManager(
         blockchainConfigProvider
 ) {
 
-    protected val subnodeBcCfgConfig = SubnodeBlockchainConfigurationConfig.fromAppConfig(appConfig)
-    protected val subnodeBcCfgListeners: MutableMap<Long, SubnodeBlockchainConfigListener> = ConcurrentHashMap()
+    private val subnodeBcCfgConfig = SubnodeBlockchainConfigurationConfig.fromAppConfig(appConfig)
+    private val subnodeBcCfgListeners: MutableMap<Long, SubnodeBlockchainConfigListener> = ConcurrentHashMap()
+    private val configVerifier = BlockchainConfigVerifier(appConfig)
 
-    override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (Long, () -> Boolean) -> Boolean {
-        return if (!subnodeBcCfgConfig.enabled) {
-            { _, _ -> true }
-        } else {
-            val listener: SubnodeBlockchainConfigListener = DefaultSubnodeBlockchainConfigListener(
-                    subnodeBcCfgConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, connectionManager as SubConnectionManager
-            ).also {
-                it.blockchainConfigProvider = blockchainConfigProvider
-                it.storage = storage
-                subnodeBcCfgListeners[blockchainConfig.chainID] = it
-            }
-
-            return configCheck@{ blockTimestamp, exitCondition ->
-                while (!listener.checkConfig(blockTimestamp)) {
-                    if (exitCondition()) {
-                        return@configCheck false
-                    }
-                    Thread.sleep(subnodeBcCfgConfig.sleepTimeout)
-                }
-                true
-            }
-        }
+    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine) {
+        subnodeBcCfgListeners[chainId] = BlockWiseSubnodeBlockchainConfigListener(
+                subnodeBcCfgConfig,
+                configVerifier,
+                chainId,
+                blockchainConfig.blockchainRid,
+                connectionManager as SubConnectionManager,
+                blockchainConfigProvider,
+                storage
+        )
+        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine)
     }
 
     override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
@@ -80,6 +73,7 @@ open class SubNodeBlockchainProcessManager(
             } catch (e: Exception) {
                 logger.error(e) { "Error when sending committed block message: $e" }
             }
+            subnodeBcCfgListeners[chainId]!!.commit(height)
             baseHandler(bTrace, height, blockTimestamp)
         }
     }

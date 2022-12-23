@@ -14,7 +14,7 @@
                 <string>net.postchain.base.BaseBlockBuildingStrategy</string>
             </entry>
             <entry key="maxblocktime">
-                <int>1002</int>
+                <int>300</int>
             </entry>
             <entry key="blockdelay">
                 <int>102</int>

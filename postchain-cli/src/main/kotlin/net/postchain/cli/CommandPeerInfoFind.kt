@@ -3,29 +3,33 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.api.internal.PeerApi
-import net.postchain.base.PeerInfo
 import net.postchain.base.runStorageCommand
+import net.postchain.cli.util.Templater
 import net.postchain.cli.util.hostOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.portOption
-import net.postchain.cli.util.pubkeyOption
 import net.postchain.config.app.AppConfig
-import java.io.File
+import net.postchain.core.AppContext
 
 class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find peerinfo") {
 
     // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption()
+    private val nodeConfigFile by nodeConfigOption().required()
 
     private val host by hostOption()
 
     private val port by portOption()
 
-    private val pubKey by pubkeyOption()
+    private val pubKey by option("-pk", "--pubkey", help = "Public key (or substring)")
 
     override fun run() {
-        val peerInfos = peerinfoFind(nodeConfigFile, host, port, pubKey)
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val peerInfos = runStorageCommand(appConfig) { ctx: AppContext ->
+            PeerApi.findPeerInfo(ctx, host, port, pubKey)
+        }
 
         if (peerInfos.isEmpty()) {
             println("No peerinfo found")
@@ -36,9 +40,4 @@ class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find pe
                     }
         }
     }
-
-    private fun peerinfoFind(nodeConfigFile: File, host: String?, port: Int?, pubKey: String?): Array<PeerInfo> =
-            runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile)) { ctx ->
-                PeerApi.findPeerInfo(ctx, host, port, pubKey)
-            }
 }

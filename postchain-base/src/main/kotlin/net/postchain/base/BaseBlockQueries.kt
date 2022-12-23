@@ -5,8 +5,19 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
-import net.postchain.core.*
-import net.postchain.core.block.*
+import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.EContext
+import net.postchain.core.PmEngineIsAlreadyClosed
+import net.postchain.core.Storage
+import net.postchain.core.Transaction
+import net.postchain.core.TransactionInfoExt
+import net.postchain.core.block.BlockDataWithWitness
+import net.postchain.core.block.BlockDetail
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockStore
+import net.postchain.core.block.BlockWitness
+import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
@@ -138,6 +149,12 @@ open class BaseBlockQueries(
     override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): Promise<List<BlockDetail>, Exception> {
         return runOp {
             blockStore.getBlocks(it, beforeTime, limit, txHashesOnly)
+        }
+    }
+
+    override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): Promise<List<BlockDetail>, Exception> {
+        return runOp {
+            blockStore.getBlocksBeforeHeight(it, beforeHeight, limit, txHashesOnly)
         }
     }
 

@@ -3,13 +3,11 @@
 package net.postchain.config.app
 
 import assertk.assert
-import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
-import assertk.assertions.isGreaterThan
-import assertk.assertions.isLessThan
 import net.postchain.config.app.AssertsHelper.assertIsDefaultOrEqualsToEnvVar
 import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
 import org.junit.jupiter.api.Test
+import java.io.File
 import kotlin.test.assertEquals
 
 class AppConfigTest {
@@ -19,7 +17,7 @@ class AppConfigTest {
         val appConfig = loadFromResource("empty-node-config.properties")
 
         assert(appConfig.nodeConfigProvider).isEqualTo("properties")
-        assert(appConfig.databaseDriverclass).isEmpty()
+        assertEquals("org.postgresql.Driver", appConfig.databaseDriverclass)
 
         assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUrl, "POSTCHAIN_DB_URL")
         assertIsDefaultOrEqualsToEnvVar(appConfig.databaseSchema, "public", "POSTCHAIN_DB_SCHEMA")
@@ -28,34 +26,20 @@ class AppConfigTest {
     }
 
     @Test
-    fun testClone() {
-        val appConfig = loadFromResource("sub.properties")
+    fun testNoNodeConfig() {
+        val appConfig = AppConfig.fromEnvironment(false)
 
-        // full copy
-        val clone = appConfig.cloneConfiguration()
-        val originalSize = clone.size()
-        assert(originalSize).isGreaterThan(0)
+        assert(appConfig.nodeConfigProvider).isEqualTo("properties")
+        assertEquals("org.postgresql.Driver", appConfig.databaseDriverclass)
 
-        // exclude unknown keys
-        AppConfig.removeProperty(clone, "unknown_key")
-        assert(clone.size()).isEqualTo(originalSize)
-
-        // exclude 'container' properties
-        // a) asserting that container properties exist
-        clone.subset("container").also {
-            assert(it.size()).isGreaterThan(0)
-        }
-        // b) removing container properties
-        AppConfig.removeProperty(clone, "container")
-        assert(clone.size()).isLessThan(originalSize)
-        // c) asserting that container properties don't exist
-        clone.subset("container").also {
-            assertEquals(0, it.size())
-        }
+        assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUrl, "POSTCHAIN_DB_URL")
+        assertIsDefaultOrEqualsToEnvVar(appConfig.databaseSchema, "public", "POSTCHAIN_DB_SCHEMA")
+        assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUsername, "POSTCHAIN_DB_USERNAME")
+        assertIsEmptyOrEqualsToEnvVar(appConfig.databasePassword, "POSTCHAIN_DB_PASSWORD")
     }
 
     private fun loadFromResource(filename: String): AppConfig {
         return AppConfig.fromPropertiesFile(
-                javaClass.getResource("/net/postchain/config/$filename")!!.file)
+                File(javaClass.getResource("/net/postchain/config/$filename")!!.file))
     }
 }

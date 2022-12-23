@@ -3,20 +3,22 @@
 package net.postchain.config.app
 
 import net.postchain.common.config.Config
+import net.postchain.common.config.getEnvOrBooleanProperty
+import net.postchain.common.config.getEnvOrIntProperty
+import net.postchain.common.config.getEnvOrLongProperty
+import net.postchain.common.config.getEnvOrStringProperty
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.core.Infrastructure
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Secp256K1CryptoSystem
+import org.apache.commons.configuration2.BaseConfiguration
 import org.apache.commons.configuration2.Configuration
-import org.apache.commons.configuration2.ConfigurationUtils
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
 import java.io.File
-import java.io.FileWriter
-import java.io.PrintWriter
 
 /**
  * Wrapper to the generic [Configuration]
@@ -28,7 +30,16 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
 
         const val DEFAULT_PORT: Int = 9870
 
+        @Deprecated(message = "Use fromPropertiesFile(File, Boolean) instead",
+                replaceWith = ReplaceWith("fromPropertiesFile(File(configFile), debug))", imports = arrayOf("java.io.File")))
         fun fromPropertiesFile(configFile: String, debug: Boolean = false): AppConfig = fromPropertiesFile(File(configFile), debug)
+
+        fun fromPropertiesFileOrEnvironment(configFile: File?, debug: Boolean = false): AppConfig =
+                if (configFile != null) {
+                    fromPropertiesFile(configFile, debug)
+                } else {
+                    fromEnvironment(debug)
+                }
 
         fun fromPropertiesFile(configFile: File, debug: Boolean = false): AppConfig {
             val params = Parameters().properties()
@@ -39,17 +50,12 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
                     .configure(params)
                     .configuration
 
-            return AppConfig(configuration, debug)
+            return fromConfiguration(configuration, debug)
         }
 
-        fun toPropertiesFile(config: Configuration, configFile: String) {
-            ConfigurationUtils.dump(config, PrintWriter(FileWriter(configFile)))
-        }
+        fun fromEnvironment(debug: Boolean): AppConfig = fromConfiguration(BaseConfiguration(), debug)
 
-        fun removeProperty(config: Configuration, prefix: String) {
-            val keys = config.getKeys(prefix).asSequence().toList()
-            keys.forEach(config::clearProperty)
-        }
+        private fun fromConfiguration(configuration: Configuration, debug: Boolean): AppConfig = AppConfig(configuration, debug)
     }
 
     /**
@@ -57,60 +63,54 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
      */
     val nodeConfigProvider: String
         // properties | manual | managed
-        get() = config.getString("configuration.provider.node", "properties")
+        get() = config.getEnvOrStringProperty("POSTCHAIN_NODE_CONFIG_PROVIDER", "configuration.provider.node", "properties")
 
     /**
      * Database
      */
     val databaseDriverclass: String
-        get() = config.getString("database.driverclass", "")
+        get() = config.getEnvOrStringProperty("POSTCHAIN_DB_DRIVER", "database.driverclass", "org.postgresql.Driver")
 
     val databaseUrl: String
-        get() = System.getenv("POSTCHAIN_DB_URL")
-                ?: config.getString("database.url", "")
+        get() = config.getEnvOrStringProperty("POSTCHAIN_DB_URL", "database.url", "")
 
     val databaseSchema: String
-        get() = System.getenv("POSTCHAIN_DB_SCHEMA")
-                ?: config.getString("database.schema", "public")
+        get() = config.getEnvOrStringProperty("POSTCHAIN_DB_SCHEMA", "database.schema", "public")
 
     val databaseUsername: String
-        get() = System.getenv("POSTCHAIN_DB_USERNAME")
-                ?: config.getString("database.username", "")
+        get() = config.getEnvOrStringProperty("POSTCHAIN_DB_USERNAME", "database.username", "")
 
     val databasePassword: String
-        get() = System.getenv("POSTCHAIN_DB_PASSWORD")
-                ?: config.getString("database.password", "")
+        get() = config.getEnvOrStringProperty("POSTCHAIN_DB_PASSWORD", "database.password", "")
 
     val databaseReadConcurrency: Int
-        get() = config.getInt("database.readConcurrency", 10)
+        get() = config.getEnvOrIntProperty("POSTCHAIN_DB_READ_CONCURRENCY", "database.readConcurrency", 10)
 
     val infrastructure: String
         // "base/ebft" is the default
-        get() = config.getString("infrastructure", Infrastructure.Ebft.get())
+        get() = config.getEnvOrStringProperty("POSTCHAIN_INFRASTRUCTURE", "infrastructure", Infrastructure.Ebft.get())
 
-    val cryptoSystem: CryptoSystem
-        = newInstanceOf(config.getString("cryptosystem", Secp256K1CryptoSystem::class.qualifiedName))
+    val cryptoSystemClass: String = config.getEnvOrStringProperty("POSTCHAIN_CRYPTO_SYSTEM", "cryptosystem", Secp256K1CryptoSystem::class.qualifiedName!!)
+
+    val cryptoSystem: CryptoSystem = newInstanceOf(cryptoSystemClass)
 
     /**
      * Pub/Priv keys
      */
     val privKey: String
-        get() = System.getenv("POSTCHAIN_PRIVKEY")
-                ?: config.getString("messaging.privkey", "")
+        get() = config.getEnvOrStringProperty("POSTCHAIN_PRIVKEY", "messaging.privkey", "")
 
     val privKeyByteArray: ByteArray
         get() = privKey.hexStringToByteArray()
 
     val pubKey: String
-        get() = System.getenv("POSTCHAIN_PUBKEY")
-                ?: config.getString("messaging.pubkey", "")
-
-    val port: Int
-        get() = System.getenv("POSTCHAIN_PORT")?.toInt()
-                ?: config.getInt("messaging.port", DEFAULT_PORT)
+        get() = config.getEnvOrStringProperty("POSTCHAIN_PUBKEY", "messaging.pubkey", "")
 
     val pubKeyByteArray: ByteArray
         get() = pubKey.hexStringToByteArray()
+
+    val port: Int
+        get() = config.getEnvOrIntProperty("POSTCHAIN_PORT", "messaging.port", DEFAULT_PORT)
 
     /**
      * Wrappers for [Configuration] getters and other functionalities
@@ -125,5 +125,10 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     fun getKeys(prefix: String): MutableIterator<String> = config.getKeys(prefix)
     fun containsKey(key: String) = config.containsKey(key)
 
-    fun cloneConfiguration(): Configuration = ConfigurationUtils.cloneConfiguration(config)
+    fun getEnvOrString(env: String, key: String, defaultValue: String) = config.getEnvOrStringProperty(env, key, defaultValue)
+    fun getEnvOrString(env: String, key: String) = config.getEnvOrStringProperty(env, key)
+    fun getEnvOrInt(env: String, key: String, defaultValue: Int) = config.getEnvOrIntProperty(env, key, defaultValue)
+    fun getEnvOrLong(env: String, key: String, defaultValue: Long) = config.getEnvOrLongProperty(env, key, defaultValue)
+    fun getEnvOrBoolean(env: String, key: String, defaultValue: Boolean) = config.getEnvOrBooleanProperty(env, key, defaultValue)
+    fun hasEnvOrKey(env: String, key: String) = System.getenv(env) != null || config.containsKey(key)
 }

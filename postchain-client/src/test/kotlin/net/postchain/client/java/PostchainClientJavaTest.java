@@ -8,11 +8,8 @@ import net.postchain.client.impl.PostchainClientImpl;
 import net.postchain.client.impl.PostchainClientProviderImpl;
 import net.postchain.client.request.EndpointPool;
 import net.postchain.common.BlockchainRid;
-import net.postchain.crypto.KeyPair;
-import net.postchain.crypto.PrivKey;
-import net.postchain.crypto.PubKey;
+import net.postchain.common.exception.UserMistake;
 import net.postchain.crypto.Secp256K1CryptoSystem;
-import net.postchain.crypto.Secp256k1Kt;
 import net.postchain.gtv.GtvFactory;
 import org.http4k.core.Request;
 import org.http4k.core.Response;
@@ -63,8 +60,9 @@ class PostchainClientJavaTest {
     void query() {
         try {
             client.query("foo", GtvFactory.INSTANCE.gtv(Collections.emptyMap()));
-        } catch (IOException e) {
+        } catch (UserMistake e) {
             // Just to make the test pass
+        } catch (IOException ignored) {
         }
         assertEquals(1, requestCounter);
     }
@@ -72,9 +70,7 @@ class PostchainClientJavaTest {
     @Test
     void operation() {
         var cryptoSystem = new Secp256K1CryptoSystem();
-        var privKey = new PrivKey(cryptoSystem.getRandomBytes(32));
-        var pubKey = new PubKey(Secp256k1Kt.secp256k1_derivePubKey(privKey.getData()));
-        var keyPair = new KeyPair(pubKey, privKey);
+        var keyPair = cryptoSystem.generateKeyPair();
         client
                 .transactionBuilder(List.of(keyPair))
                 .addOperation("op1", GtvFactory.INSTANCE.gtv("foo"), GtvFactory.INSTANCE.gtv(17))

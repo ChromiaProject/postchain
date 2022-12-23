@@ -66,6 +66,7 @@ object StorageBuilder {
             username = appConfig.databaseUsername
             password = appConfig.databasePassword
             defaultAutoCommit = false
+            addConnectionProperty("binaryTransfer", "false") // workaround for issue in Postgres driver 42.5.1: https://github.com/pgjdbc/pgjdbc/issues/2695
 
             if (withSchema) {
                 /**

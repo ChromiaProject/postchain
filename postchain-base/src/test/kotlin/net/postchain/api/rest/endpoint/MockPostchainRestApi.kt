@@ -46,10 +46,15 @@ object MockPostchainRestApi : HttpHandler, Closeable {
             routes(
                     "/query/{blockchainRID}" bind Method.POST to { request ->
                         val gtvQuery = gtvGson.fromJson(request.body.payload.asString(), Gtv::class.java)
-                        gtvQuery[0].asString()
+                        val queryName = gtvQuery[0].asString()
                         gtvQuery[1]
 
-                        Response(Status.OK).header("Content-Type", RestApi.JSON_CONTENT_TYPE).body(gtvGson.toJson(gtvQueryResponse))
+                        if (queryName == "error_query") {
+                            Response(Status.BAD_REQUEST).header("Content-Type", RestApi.JSON_CONTENT_TYPE).body("error")
+                        } else {
+                            Response(Status.OK).header("Content-Type", RestApi.JSON_CONTENT_TYPE).body(gtvGson.toJson(gtvQueryResponse))
+                        }
+
                     },
                     "/query_gtv/{blockchainRID}" bind Method.POST to { request ->
                         val gtvQuery = GtvDecoder.decodeGtv(request.body.payload.array())
