@@ -20,14 +20,14 @@ class ZfsFileSystem(private val config: ContainerNodeConfig) : FileSystem {
             root
         } else {
             try {
-                val script = "./${config.zfsPoolInitScript}"
+                val script = config.zfsPoolInitScript
                 if (!File(script).exists()) {
                     logger.error("Can't find zfs init script: $script")
                     null
                 } else {
                     val fs = "${config.zfsPoolName}/${containerName.name}"
                     val quota = resourceLimits.storageMb().toString()
-                    val cmd = arrayOf(script, fs, quota)
+                    val cmd = arrayOf("/bin/sh", script, fs, quota)
                     Runtime.getRuntime().exec(cmd).waitFor(10, TimeUnit.SECONDS)
                     if (root.toFile().exists()) {
                         logger.info("Container dir has been created: $root")
