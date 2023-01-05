@@ -356,9 +356,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     }
 
     override fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) {
-        diagnosticData.putAll(mapOf(
-                DiagnosticProperty.BLOCKCHAIN_RID to { workerContext.blockchainConfiguration.blockchainRid.toHex() },
-                DiagnosticProperty.BLOCKCHAIN_NODE_TYPE to { DpNodeType.NODE_TYPE_HISTORIC_REPLICA.prettyName },
-        ))
+        super.registerDiagnosticData(diagnosticData)
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = { DpNodeType.NODE_TYPE_HISTORIC_REPLICA.prettyName }
     }
 }
