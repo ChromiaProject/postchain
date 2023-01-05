@@ -3,12 +3,13 @@ package net.postchain.core.framework
 import mu.NamedKLogging
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
+import net.postchain.debug.DiagnosticProperty
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
 abstract class AbstractBlockchainProcess(private val processName: String, override val blockchainEngine: BlockchainEngine) : BlockchainProcess {
 
-    val logger =  NamedKLogging(this::class.java.simpleName).logger
+    val logger = NamedKLogging(this::class.java.simpleName).logger
 
     private val running = AtomicBoolean(false)
     internal lateinit var process: Thread
@@ -56,4 +57,9 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
     }
 
     private fun alreadyShutdown() = !::process.isInitialized || !process.isAlive
+
+    override fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) {
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_RID] = { blockchainEngine.getConfiguration().blockchainRid.toHex() }
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT] = { blockchainEngine.getBlockQueries().getBestHeight().get() }
+    }
 }
