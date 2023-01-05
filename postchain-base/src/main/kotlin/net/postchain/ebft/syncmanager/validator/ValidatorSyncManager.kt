@@ -441,11 +441,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         }
     }
 
-    fun getHeight(): Long {
-        return if (useFastSyncAlgorithm) fastSynchronizer.blockHeight
-        else nodeStateTracker.blockHeight
-    }
-
     fun isInFastSync(): Boolean {
         return useFastSyncAlgorithm
     }

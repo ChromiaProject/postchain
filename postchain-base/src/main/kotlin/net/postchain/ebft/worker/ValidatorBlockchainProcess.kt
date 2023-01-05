@@ -4,15 +4,15 @@ package net.postchain.ebft.worker
 
 import mu.KLogging
 import net.postchain.base.NetworkAwareTxQueue
-import net.postchain.ebft.NodeStateTracker
 import net.postchain.core.framework.AbstractBlockchainProcess
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpNodeType
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
+import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.StatusManager
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DpNodeType
 import java.lang.Thread.sleep
 
 /**
@@ -80,10 +80,7 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     }
 
     override fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) {
-        diagnosticData.putAll(mapOf(
-                DiagnosticProperty.BLOCKCHAIN_RID to { workerContext.blockchainConfiguration.blockchainRid.toHex() },
-                DiagnosticProperty.BLOCKCHAIN_NODE_TYPE to { DpNodeType.NODE_TYPE_VALIDATOR.prettyName },
-                DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT to syncManager::getHeight
-        ))
+        super.registerDiagnosticData(diagnosticData)
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = { DpNodeType.NODE_TYPE_VALIDATOR.prettyName }
     }
 }

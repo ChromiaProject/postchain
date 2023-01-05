@@ -14,30 +14,30 @@ import net.postchain.ebft.syncmanager.common.SlowSynchronizer
 import net.postchain.ebft.syncmanager.common.SyncParameters
 
 class ReadOnlyBlockchainProcess(
-    val workerContext: WorkerContext,
-    val blockQueries: BlockQueries
+        val workerContext: WorkerContext,
+        val blockQueries: BlockQueries
 ) : AbstractBlockchainProcess("replica-${workerContext.processName}", workerContext.engine) {
 
     companion object : KLogging()
 
     private val blockDatabase = BaseBlockDatabase(
-        blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY
+            blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY
     )
 
     private val params = SyncParameters.fromAppConfig(workerContext.appConfig)
 
     private val fastSynchronizer = FastSynchronizer(
-        workerContext,
-        blockDatabase,
-        params,
-        ::isProcessRunning
+            workerContext,
+            blockDatabase,
+            params,
+            ::isProcessRunning
     )
 
     private val slowSynchronizer = SlowSynchronizer(
-        workerContext,
-        blockDatabase,
-        params,
-        ::isProcessRunning
+            workerContext,
+            blockDatabase,
+            params,
+            ::isProcessRunning
     )
 
     var blockHeight: Long = blockQueries.getBestHeight().get()
@@ -60,11 +60,8 @@ class ReadOnlyBlockchainProcess(
     }
 
     override fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) {
-        diagnosticData.putAll(mapOf(
-                DiagnosticProperty.BLOCKCHAIN_RID to { workerContext.blockchainConfiguration.blockchainRid.toHex() },
-                DiagnosticProperty.BLOCKCHAIN_NODE_TYPE to { DpNodeType.NODE_TYPE_REPLICA.prettyName },
-                DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT to { fastSynchronizer.blockHeight }
-        ))
+        super.registerDiagnosticData(diagnosticData)
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = { DpNodeType.NODE_TYPE_REPLICA.prettyName }
     }
 
 }
