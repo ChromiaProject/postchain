@@ -473,8 +473,19 @@ open class ContainerManagedBlockchainProcessManager(
             }
 
             toStop.forEach {
-                dockerClient.removeContainer(it.id(), DockerClient.RemoveContainerParam.forceKill())
-                logger.info { "Container has been removed: ${containerName(it)} / ${shortContainerId(it.id())}" }
+                try {
+                    dockerClient.stopContainer(it.id(), 20)
+                    logger.info { "Container has been stopped: ${containerName(it)} / ${shortContainerId(it.id())}" }
+                } catch (e: Exception) {
+                    logger.error("Can't stop container: " + it.id(), e)
+                }
+
+                try {
+                    dockerClient.removeContainer(it.id(), DockerClient.RemoveContainerParam.forceKill())
+                    logger.info { "Container has been removed: ${containerName(it)} / ${shortContainerId(it.id())}" }
+                } catch (e: Exception) {
+                    logger.error("Can't remove container: " + it.id(), e)
+                }
             }
         }
     }
