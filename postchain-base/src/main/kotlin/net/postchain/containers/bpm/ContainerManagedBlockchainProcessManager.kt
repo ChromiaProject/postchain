@@ -65,7 +65,7 @@ open class ContainerManagedBlockchainProcessManager(
     private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
 
     init {
-        stopRunningContainersIfExist()
+        removeContainersIfExist()
         Runtime.getRuntime().addShutdownHook(
                 Thread {
                     logger.info("Shutting down master node - stopping subnode containers...")
@@ -462,19 +462,30 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
-    private fun stopRunningContainersIfExist() {
-        val toStop = dockerClient.listContainers().filter {
+    private fun removeContainersIfExist() {
+        val toStop = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).filter {
             (it.labels() ?: emptyMap())[POSTCHAIN_MASTER_PUBKEY] == containerNodeConfig.masterPubkey
         }
 
         if (toStop.isNotEmpty()) {
             logger.warn {
-                "Containers found to be stopped (${toStop.size}): ${toStop.joinToString(transform = ::containerName)}"
+                "Containers found to be removed (${toStop.size}): ${toStop.joinToString(transform = ::containerName)}"
             }
 
             toStop.forEach {
-                dockerClient.stopContainer(it.id(), 20)
-                logger.info { "Container has been stopped: ${containerName(it)} / ${shortContainerId(it.id())}" }
+                try {
+                    dockerClient.stopContainer(it.id(), 20)
+                    logger.info { "Container has been stopped: ${containerName(it)} / ${shortContainerId(it.id())}" }
+                } catch (e: Exception) {
+                    logger.error("Can't stop container: " + it.id(), e)
+                }
+
+                try {
+                    dockerClient.removeContainer(it.id(), DockerClient.RemoveContainerParam.forceKill())
+                    logger.info { "Container has been removed: ${containerName(it)} / ${shortContainerId(it.id())}" }
+                } catch (e: Exception) {
+                    logger.error("Can't remove container: " + it.id(), e)
+                }
             }
         }
     }
