@@ -65,7 +65,7 @@ open class ContainerManagedBlockchainProcessManager(
     private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
 
     init {
-        stopRunningContainersIfExist()
+        removeRunningContainersIfExist()
         Runtime.getRuntime().addShutdownHook(
                 Thread {
                     logger.info("Shutting down master node - stopping subnode containers...")
@@ -462,19 +462,19 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
-    private fun stopRunningContainersIfExist() {
+    private fun removeRunningContainersIfExist() {
         val toStop = dockerClient.listContainers().filter {
             (it.labels() ?: emptyMap())[POSTCHAIN_MASTER_PUBKEY] == containerNodeConfig.masterPubkey
         }
 
         if (toStop.isNotEmpty()) {
             logger.warn {
-                "Containers found to be stopped (${toStop.size}): ${toStop.joinToString(transform = ::containerName)}"
+                "Containers found to be removed (${toStop.size}): ${toStop.joinToString(transform = ::containerName)}"
             }
 
             toStop.forEach {
-                dockerClient.stopContainer(it.id(), 20)
-                logger.info { "Container has been stopped: ${containerName(it)} / ${shortContainerId(it.id())}" }
+                dockerClient.removeContainer(it.id())
+                logger.info { "Container has been removed: ${containerName(it)} / ${shortContainerId(it.id())}" }
             }
         }
     }
