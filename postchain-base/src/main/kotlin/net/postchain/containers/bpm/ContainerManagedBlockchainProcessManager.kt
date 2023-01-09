@@ -473,7 +473,7 @@ open class ContainerManagedBlockchainProcessManager(
             }
 
             toStop.forEach {
-                dockerClient.removeContainer(it.id())
+                dockerClient.removeContainer(it.id(), DockerClient.RemoveContainerParam.forceKill())
                 logger.info { "Container has been removed: ${containerName(it)} / ${shortContainerId(it.id())}" }
             }
         }
