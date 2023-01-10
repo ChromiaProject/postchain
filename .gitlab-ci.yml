@@ -64,8 +64,13 @@ release:
   script:
     - *git_setup
     - git checkout $CI_COMMIT_REF_NAME
-    - DIGIT="${VERSION_DIGIT_TO_INCREMENT:-2}"
-    - mvn -B gitflow:release -DskipTestProject=true -DversionDigitToIncrement=$DIGIT
+    - >
+      if [ -z "${VERSION}" ] || [ -z "${NEXT_VERSION}" ]; then
+        DIGIT="${VERSION_DIGIT_TO_INCREMENT:-2}"
+        mvn -B gitflow:release -DskipTestProject=true -DversionDigitToIncrement=$DIGIT
+      else
+        mvn -B gitflow:release -DskipTestProject=true -DreleaseVersion=$VERSION -DdevelopmentVersion=$NEXT_VERSION
+      fi
   only:
     - dev
   when: manual
