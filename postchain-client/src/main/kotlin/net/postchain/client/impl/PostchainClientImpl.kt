@@ -54,7 +54,9 @@ class PostchainClientImpl(
                         .build()).build()),
 ) : PostchainClient {
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        const val MAX_TX_STATUS_SIZE = 64 * 1024L
+    }
 
     private fun nextEndpoint() = config.endpointPool.next()
     private val blockchainRIDHex = config.blockchainRid.toHex()
@@ -178,7 +180,7 @@ class PostchainClientImpl(
         if (response.status == Status.SERVICE_UNAVAILABLE) endpoint.setUnreachable()
         val status = if (response.status == Status.OK) WAITING else REJECTED
         val rejectReason = if (status == REJECTED) {
-            val body = response.body.stream.bufferedReader()
+            val body = BoundedInputStream(response.body.stream, MAX_TX_STATUS_SIZE).bufferedReader()
             parseJson(body, ErrorResponse::class.java)?.error ?: response.status.description
         } else {
             response.status.description
@@ -218,7 +220,7 @@ class PostchainClientImpl(
         val endpoint = nextEndpoint()
         val validationRequest = Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/status")
         val response = queryTo(validationRequest, endpoint)
-        val responseStream = BoundedInputStream(response.body.stream, 64 * 1024)
+        val responseStream = BoundedInputStream(response.body.stream, MAX_TX_STATUS_SIZE)
         val txStatus = parseJson(responseStream.bufferedReader(), TxStatus::class.java)
         return TransactionResult(
                 txRid,
