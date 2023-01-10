@@ -107,6 +107,8 @@ class PostchainClientImpl(
         val gtxQuery = gtv(gtv(name), args)
         val encodedQuery = GtvEncoder.encodeGtv(gtxQuery)
         return Request(Method.POST, "${endpoint.url}/query_gtv/$blockchainRIDOrID")
+                .header("Content-Type", ContentType.OCTET_STREAM.value)
+                .header("Accept", ContentType.OCTET_STREAM.value)
                 .body(encodedQuery.inputStream())
     }
 
@@ -131,6 +133,7 @@ class PostchainClientImpl(
     override fun currentBlockHeight(): Long {
         val endpoint = nextEndpoint()
         val request = Request(Method.GET, "${endpoint.url}/node/$blockchainRIDOrID/height")
+                .header("Accept", ContentType.APPLICATION_JSON.value)
         val response = queryTo(request, endpoint)
         val body = BoundedInputStream(response.body.stream, 1024).bufferedReader()
         if (response.status != Status.OK) {
@@ -175,6 +178,8 @@ class PostchainClientImpl(
     private fun postTransactionTo(tx: Gtx, endpoint: Endpoint): TransactionResult {
         val txRid = TxRid(tx.calculateTxRid(calculator).toHex())
         val request = Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex")
+                .header("Content-Type", ContentType.APPLICATION_JSON.value)
+                .header("Accept", ContentType.APPLICATION_JSON.value)
                 .body(gson.toJson(Tx(tx.encodeHex())))
         val response = httpClient(request)
         if (response.status == Status.SERVICE_UNAVAILABLE) endpoint.setUnreachable()
@@ -219,6 +224,7 @@ class PostchainClientImpl(
     override fun checkTxStatus(txRid: TxRid): TransactionResult {
         val endpoint = nextEndpoint()
         val validationRequest = Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/status")
+                .header("Accept", ContentType.APPLICATION_JSON.value)
         val response = queryTo(validationRequest, endpoint)
         val responseStream = BoundedInputStream(response.body.stream, MAX_TX_STATUS_SIZE)
         val txStatus = parseJson(responseStream.bufferedReader(), TxStatus::class.java)
