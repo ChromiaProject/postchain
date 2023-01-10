@@ -3,12 +3,16 @@
 package net.postchain.network.netty2
 
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.*
+import io.netty.channel.ChannelHandler
+import io.netty.channel.ChannelInitializer
+import io.netty.channel.EventLoopGroup
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.util.concurrent.DefaultThreadFactory
 import mu.KLogging
+import net.postchain.common.exception.UserMistake
+import java.net.BindException
 import java.util.concurrent.TimeUnit
 
 class NettyServer {
@@ -43,7 +47,11 @@ class NettyServer {
                     }
                 })
 
-        server.bind(port).sync()
+        try {
+            server.bind(port).sync()
+        } catch (e: BindException) {
+            throw UserMistake("Unable to bind to port ${port}: ${e.message}")
+        }
     }
 
     fun shutdown() {
