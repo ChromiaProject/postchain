@@ -1,13 +1,13 @@
 package net.postchain.client.impl
 
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import net.postchain.client.config.FailOverConfig
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.TxRid
-import net.postchain.client.impl.PostchainClientImpl.CurrentBlockHeight
-import net.postchain.client.impl.PostchainClientImpl.TxStatus
+import net.postchain.client.impl.PostchainClientImpl.*
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
@@ -142,6 +142,20 @@ internal class PostchainClientImplTest {
                 throw e.cause ?: e
             }
         }
+    }
+
+    @Test
+    fun `unknown rell operation tx is immediately rejected with proper reject reason`() {
+        val client = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+            override fun invoke(request: Request): Response {
+                val error = GsonBuilder().create().toJson(ErrorResponse("Unknown operation: add_node"))
+                return Response(Status.BAD_REQUEST).body(error)
+            }
+        })
+        val txResult = client.transactionBuilder().finish().build().postAwaitConfirmation()
+        assertEquals(Status.BAD_REQUEST.code, txResult.httpStatusCode)
+        assertEquals(TransactionStatus.REJECTED, txResult.status)
+        assertEquals("Unknown operation: add_node", txResult.rejectReason)
     }
 
     @Test

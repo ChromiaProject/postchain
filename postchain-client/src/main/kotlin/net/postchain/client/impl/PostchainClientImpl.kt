@@ -177,7 +177,13 @@ class PostchainClientImpl(
         val response = httpClient(request)
         if (response.status == Status.SERVICE_UNAVAILABLE) endpoint.setUnreachable()
         val status = if (response.status == Status.OK) WAITING else REJECTED
-        return TransactionResult(txRid, status, response.status.code, response.status.description)
+        val rejectReason = if (status == REJECTED) {
+            val body = response.body.stream.bufferedReader()
+            parseJson(body, ErrorResponse::class.java)?.error ?: response.status.description
+        } else {
+            response.status.description
+        }
+        return TransactionResult(txRid, status, response.status.code, rejectReason)
     }
 
     @Throws(IOException::class)
