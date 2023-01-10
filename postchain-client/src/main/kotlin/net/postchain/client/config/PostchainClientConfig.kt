@@ -46,7 +46,7 @@ data class PostchainClientConfig @JvmOverloads constructor(
             val pubkeys = config.getEnvOrListProperty("POSTCHAIN_CLIENT_PUBKEY", "pubkey", listOf())
             val privkeys = config.getEnvOrListProperty("POSTCHAIN_CLIENT_PRIVKEY", "privkey", listOf())
             require(pubkeys.size == privkeys.size) { "Equally many pubkeys as privkeys must be provided, but ${pubkeys.size} and ${privkeys.size} was found" }
-            val signers = if (privkeys.first() == "") listOf() else pubkeys.zip(privkeys).map { KeyPair.of(it.first, it.second) }
+            val signers = if (privkeys.isEmpty() || privkeys.first() == "") listOf() else pubkeys.zip(privkeys).map { KeyPair.of(it.first, it.second) }
             return PostchainClientConfig(
                     blockchainRid = config.getEnvOrStringProperty("POSTCHAIN_CLIENT_BLOCKCHAIN_RID", "brid", "").let { BlockchainRid.buildFromHex(it) },
                     endpointPool = EndpointPool.default(config.getEnvOrStringProperty("POSTCHAIN_CLIENT_API_URL", "api.url", "").split(",")),
