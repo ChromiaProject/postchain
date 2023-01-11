@@ -11,4 +11,4 @@ import net.postchain.network.common.ConnectionDescriptor
 data class SubConnectionDescriptor(
         private val bcRid: BlockchainRid,
         val peers: List<ByteArray>
-): ConnectionDescriptor(bcRid)
+) : ConnectionDescriptor(bcRid)
