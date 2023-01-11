@@ -4,7 +4,6 @@ import com.spotify.docker.client.DockerClient
 import com.spotify.docker.client.messages.Container
 import mu.KLogging
 import net.postchain.PostchainContext
-import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
@@ -39,6 +38,9 @@ import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
+import java.nio.file.Path
+
+const val POSTCHAIN_MASTER_PUBKEY = "postchain-master-pubkey"
 
 open class ContainerManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
@@ -57,15 +59,13 @@ open class ContainerManagedBlockchainProcessManager(
     private val directoryDataSource: DirectoryDataSource by lazy { dataSource as DirectoryDataSource }
     private val chains: MutableMap<Long, Chain> = mutableMapOf() // chainId -> Chain
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
-    private val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
     private val fs = FileSystem.create(containerNodeConfig)
-    private val containerInitializer = DefaultContainerInitializer(appConfig, containerNodeConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableMapOf<ContainerName, PostchainContainer>() // { ContainerName -> PsContainer }
     private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
 
     init {
-        stopRunningContainersIfExist()
+        removeContainersIfExist()
         Runtime.getRuntime().addShutdownHook(
                 Thread {
                     logger.info("Shutting down master node - stopping subnode containers...")
@@ -247,7 +247,7 @@ open class ContainerManagedBlockchainProcessManager(
             psContainer = DefaultPostchainContainer(
                     directoryDataSource, job.containerName, containerPorts, STARTING, subnodeAdminClient)
             logger.debug { "[${nodeName()}]: $scope -- PostchainContainer created" }
-            val dir = containerInitializer.initContainerWorkingDir(fs, psContainer)
+            val dir = initContainerWorkingDir(fs, psContainer)
             if (dir != null) {
                 postchainContainers[psContainer.containerName] = psContainer
                 logger.debug { "[${nodeName()}]: $scope -- Container dir initialized, container: ${job.containerName}, dir: $dir" }
@@ -268,7 +268,7 @@ open class ContainerManagedBlockchainProcessManager(
             logger.debug { dcLog("not found", null) }
 
             // creating container
-            val config = ContainerConfigFactory.createConfig(fs, restApiConfig, containerNodeConfig, psContainer)
+            val config = ContainerConfigFactory.createConfig(fs, appConfig, containerNodeConfig, psContainer)
             psContainer.containerId = dockerClient.createContainer(config, job.containerName.toString()).id()!!
             logger.debug { dcLog("created", psContainer) }
 
@@ -332,6 +332,9 @@ open class ContainerManagedBlockchainProcessManager(
         job.done = true
         return result(true)
     }
+
+    private fun initContainerWorkingDir(fs: FileSystem, container: PostchainContainer): Path? =
+            fs.createContainerRoot(container.containerName, container.resourceLimits)
 
     private fun containerHealthcheckJobHandler(containersInProgress: Set<String>) {
         val start = System.currentTimeMillis()
@@ -409,6 +412,7 @@ open class ContainerManagedBlockchainProcessManager(
                     .forEach { it.connectRemoteProcess(process) }
             blockchainProcessesDiagnosticData[chain.brid] = mutableMapOf(
                     DiagnosticProperty.BLOCKCHAIN_RID to { process.blockchainRid.toHex() },
+                    DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT to { psContainer.getBlockchainLastHeight(process.chainId) },
                     DiagnosticProperty.CONTAINER_NAME to { psContainer.containerName.toString() },
                     DiagnosticProperty.CONTAINER_ID to { psContainer.shortContainerId() ?: "" }
             )
@@ -458,25 +462,29 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
-    private fun stopRunningContainersIfExist() {
-        if (containerNodeConfig.healthcheckRunningContainersAtStartRegexp.isNotEmpty()) {
-            val toStop = dockerClient.listContainers().filter {
-                try {
-                    containerName(it).contains(Regex(containerNodeConfig.healthcheckRunningContainersAtStartRegexp))
-                } catch (e: Exception) {
-                    logger.error { "Regexp expression error: ${containerNodeConfig.healthcheckRunningContainersAtStartRegexp}" }
-                    false
-                }
+    private fun removeContainersIfExist() {
+        val toStop = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).filter {
+            (it.labels() ?: emptyMap())[POSTCHAIN_MASTER_PUBKEY] == containerNodeConfig.masterPubkey
+        }
+
+        if (toStop.isNotEmpty()) {
+            logger.warn {
+                "Containers found to be removed (${toStop.size}): ${toStop.joinToString(transform = ::containerName)}"
             }
 
-            if (toStop.isNotEmpty()) {
-                logger.warn {
-                    "Containers found to be stopped (${toStop.size}): ${toStop.joinToString(transform = ::containerName)}"
-                }
-
-                toStop.forEach {
+            toStop.forEach {
+                try {
                     dockerClient.stopContainer(it.id(), 20)
                     logger.info { "Container has been stopped: ${containerName(it)} / ${shortContainerId(it.id())}" }
+                } catch (e: Exception) {
+                    logger.error("Can't stop container: " + it.id(), e)
+                }
+
+                try {
+                    dockerClient.removeContainer(it.id(), DockerClient.RemoveContainerParam.forceKill())
+                    logger.info { "Container has been removed: ${containerName(it)} / ${shortContainerId(it.id())}" }
+                } catch (e: Exception) {
+                    logger.error("Can't remove container: " + it.id(), e)
                 }
             }
         }

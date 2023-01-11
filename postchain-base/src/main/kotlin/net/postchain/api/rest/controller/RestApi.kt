@@ -52,7 +52,6 @@ class RestApi(
 ) : Modellable {
 
     val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
-    val DEFAULT_BLOCK_HEIGHT_REQUEST = Long.MAX_VALUE
     val DEFAULT_ENTRY_RESULTS_REQUEST = 25
     val MAX_NUMBER_OF_TXS_PER_REQUEST = 600
 
@@ -248,11 +247,19 @@ class RestApi(
             http.get("/blocks/$PARAM_BLOCKCHAIN_RID", JSON_CONTENT_TYPE, redirectGet { request, _ ->
                 val model = model(request)
                 val paramsMap = request.queryMap()
-                val beforeTime = paramsMap.get("before-time")?.value()?.toLongOrNull() ?: Long.MAX_VALUE
+                val beforeTime = paramsMap.get("before-time")?.value()?.toLongOrNull()
+                val beforeHeight = paramsMap.get("before-height")?.value()?.toLongOrNull()
+                if (beforeTime != null && beforeHeight != null) {
+                    throw UserMistake("Cannot specify both before-time and before-height")
+                }
                 val limit = paramsMap.get("limit")?.value()?.toIntOrNull()?.coerceIn(0, MAX_NUMBER_OF_BLOCKS_PER_REQUEST)
                         ?: DEFAULT_ENTRY_RESULTS_REQUEST
                 val txHashesOnly = paramsMap.get("txs")?.value() != "true"
-                val result = model.getBlocks(beforeTime, limit, txHashesOnly)
+                val result = if (beforeHeight != null) {
+                    model.getBlocksBeforeHeight(beforeHeight, limit, txHashesOnly)
+                } else {
+                    model.getBlocks(beforeTime ?: Long.MAX_VALUE, limit, txHashesOnly)
+                }
                 gson.toJson(result)
             })
 

@@ -63,44 +63,16 @@ release:
     GIT_DEPTH: 0
   script:
     - *git_setup
-    - git fetch --tags
-    - LATEST_VERSION_TAG=$(git for-each-ref --sort=-version:refname --count=1 --format="%(refname:short)" "refs/tags/ver-")
-    - mvn -B gitflow:support-start -DskipTestProject=true -DtagName=$LATEST_VERSION_TAG
     - git checkout $CI_COMMIT_REF_NAME
-    - DIGIT="${VERSION_DIGIT_TO_INCREMENT:-1}"
-    - mvn -B gitflow:release -DskipTestProject=true -DversionDigitToIncrement=$DIGIT
+    - >
+      if [ -z "${VERSION}" ] || [ -z "${NEXT_VERSION}" ]; then
+        DIGIT="${VERSION_DIGIT_TO_INCREMENT:-2}"
+        mvn -B gitflow:release -DskipTestProject=true -DversionDigitToIncrement=$DIGIT
+      else
+        mvn -B gitflow:release -DskipTestProject=true -DreleaseVersion=$VERSION -DdevelopmentVersion=$NEXT_VERSION
+      fi
   only:
     - dev
-  when: manual
-
-patch-start:
-  stage: release
-  variables:
-    # Make a full clone. This is required, since otherwise we get an error regarding unrelated merge histories.
-    GIT_STRATEGY: clone
-    GIT_DEPTH: 0
-  script:
-    - *git_setup
-    - git checkout $CI_COMMIT_REF_NAME
-    - mvn -B gitflow:hotfix-start -DfromBranch=$CI_COMMIT_REF_NAME
-    - git push origin HEAD
-  only:
-    - master
-    - /^support\/.*$/
-  when: manual
-
-patch-finish:
-  stage: release
-  variables:
-    # Make a full clone. This is required, since otherwise we get an error regarding unrelated merge histories.
-    GIT_STRATEGY: clone
-    GIT_DEPTH: 0
-  script:
-    - *git_setup
-    - git checkout $CI_COMMIT_REF_NAME
-    - mvn -B gitflow:hotfix-finish -DskipTestProject=true -DhotfixBranch=$CI_COMMIT_REF_NAME -DversionDigitToIncrement=2
-  only:
-    - /^hotfix\/.*$/
   when: manual
 
 variables:

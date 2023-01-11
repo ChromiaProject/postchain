@@ -4,7 +4,12 @@ package net.postchain.core.block
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
-import net.postchain.core.*
+import net.postchain.core.BlockEContext
+import net.postchain.core.EContext
+import net.postchain.core.Shutdownable
+import net.postchain.core.Transaction
+import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TxEContext
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import nl.komponents.kovenant.Promise
@@ -36,6 +41,7 @@ interface BlockStore {
     fun getWitnessData(ctx: EContext, blockRID: ByteArray): ByteArray
 
     fun getBlocks(ctx: EContext, beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
+    fun getBlocksBeforeHeight(ctx: EContext, beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
     fun getBlock(ctx: EContext, blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail?
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
     fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt>
@@ -60,6 +66,7 @@ interface BlockQueries : Shutdownable {
     fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): Promise<BlockDataWithWitness?, Exception>
     fun getBlockHeader(blockRID: ByteArray): Promise<BlockHeader, Exception>
     fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): Promise<List<BlockDetail>, Exception>
+    fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): Promise<List<BlockDetail>, Exception>
     fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): Promise<BlockDetail?, Exception>
 
     fun getBlockTransactionRids(blockRID: ByteArray): Promise<List<ByteArray>, Exception>

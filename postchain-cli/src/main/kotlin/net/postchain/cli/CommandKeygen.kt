@@ -9,6 +9,7 @@ import net.postchain.common.toHex
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.secp256k1_derivePubKey
 import org.bitcoinj.crypto.MnemonicCode
+import java.io.File
 import java.io.FileOutputStream
 import java.util.*
 
@@ -44,6 +45,7 @@ class CommandKeygen : CliktCommand(name = "keygen", help = "Generates public/pri
         val pubKey = secp256k1_derivePubKey(privKey)
 
         file?.let { fileName ->
+            if (!File(fileName).parentFile.exists()) File(fileName).parentFile.mkdirs()
             val properties = Properties()
             properties["privkey"] = privKey.toHex()
             properties["pubkey"] = pubKey.toHex()

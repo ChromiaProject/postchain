@@ -10,6 +10,7 @@ import net.postchain.config.app.AssertsHelper.assertIsDefaultOrEqualsToEnvVar
 import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
 import net.postchain.core.NodeRid
 import org.junit.jupiter.api.Test
+import java.io.File
 import kotlin.test.assertEquals
 
 class NodeConfigTest {
@@ -59,6 +60,6 @@ class NodeConfigTest {
     }
 
     private fun loadAppConfig(path: String): AppConfig {
-        return AppConfig.fromPropertiesFile(javaClass.getResource(path).file)
+        return AppConfig.fromPropertiesFile(File(javaClass.getResource(path).file))
     }
 }

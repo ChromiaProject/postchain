@@ -157,7 +157,10 @@ class RestApiMockForClientManual {
         }
 
         override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> =
-                blocks.filter { blockDetail -> blockDetail.timestamp < beforeTime }.subList(0, limit)
+                blocks.filter { it.timestamp < beforeTime }.subList(0, limit)
+
+        override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> =
+                blocks.filter { it.height < beforeHeight }.subList(0, limit)
 
         override fun getTransactionInfo(txRID: TxRID): TransactionInfoExt {
             val block = blocks.filter { block -> block.transactions.filter { tx -> cryptoSystem.digest(tx.data!!).contentEquals(txRID.bytes) }.size > 0 }[0]

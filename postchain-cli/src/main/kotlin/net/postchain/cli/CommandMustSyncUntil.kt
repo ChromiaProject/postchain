@@ -8,10 +8,11 @@ import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.heightOption
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.config.app.AppConfig
 
 class CommandMustSyncUntil : CliktCommand(name = "must-sync-until", help = "Set this to ensure that chain is not split after a database loss.") {
 
-    private val nodeConfigFile by nodeConfigOption()
+    private val nodeConfigFile by nodeConfigOption().required()
 
     private val blockchainRid by blockchainRidOption()
 
@@ -20,7 +21,8 @@ class CommandMustSyncUntil : CliktCommand(name = "must-sync-until", help = "Set 
 
 
     override fun run() {
-        val added = CliExecution.setMustSyncUntil(nodeConfigFile, blockchainRid,
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val added = CliExecution.setMustSyncUntil(appConfig, blockchainRid,
                 height)
         when {
             added -> println("Command $commandName finished successfully")

@@ -149,6 +149,20 @@ class DefaultSubnodeAdminClient(
         }
     }
 
+    override fun getBlockchainLastHeight(chainId: Long): Long {
+        return try {
+            val request = FindBlockchainRequest.newBuilder()
+                    .setChainId(chainId)
+                    .build()
+            val response = service.findBlockchain(request)
+            logger.debug { "getBlockchainLastHeight($chainId) -- ${response.height}" }
+            response.height
+        } catch (e: Exception) {
+            logger.error { "getBlockchainLastHeight($chainId) -- exception occurred: : ${e.message}" }
+            -1L
+        }
+    }
+
     override fun addPeerInfo(peerInfo: PeerInfo): Boolean {
         return try {
             val request = AddPeerRequest.newBuilder()

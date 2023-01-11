@@ -3,13 +3,18 @@ package net.postchain.containers.bpm
 import com.spotify.docker.client.messages.ContainerConfig
 import com.spotify.docker.client.messages.HostConfig
 import com.spotify.docker.client.messages.PortBinding
+import mu.KLogging
 import net.postchain.api.rest.infra.RestApiConfig
+import net.postchain.config.app.AppConfig
+import net.postchain.config.node.NodeConfigProviders
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.core.Infrastructure
+import net.postchain.ebft.syncmanager.common.SyncParameters
 
-object ContainerConfigFactory {
+object ContainerConfigFactory : KLogging() {
 
-    fun createConfig(fs: FileSystem, restApiConfig: RestApiConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer): ContainerConfig {
+    fun createConfig(fs: FileSystem, appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer): ContainerConfig {
         // Container volumes
         val volumes = mutableListOf<HostConfig.Bind>()
 
@@ -44,6 +49,8 @@ object ContainerConfigFactory {
             volumes.add(pgdataVol)
         }
 
+        val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
+
         /**
          * Rest API port binding.
          * If restApiConfig.restApiPort == -1 => no communication with API => no binding needed.
@@ -57,11 +64,11 @@ object ContainerConfigFactory {
         // rest-api-port
         val restApiPort = "${containerPorts.restApiPort}/tcp"
         if (restApiConfig.port > -1) {
-            portBindings[restApiPort] = listOf(PortBinding.of("0.0.0.0", containerPorts.hostRestApiPort))
+            portBindings[restApiPort] = listOf(PortBinding.of(containerNodeConfig.subnodeHost, containerPorts.hostRestApiPort))
         }
         // admin-rpc-port
         val adminRpcPort = "${containerPorts.adminRpcPort}/tcp"
-        portBindings[adminRpcPort] = listOf(PortBinding.of("0.0.0.0", containerPorts.hostAdminRpcPort))
+        portBindings[adminRpcPort] = listOf(PortBinding.of(containerNodeConfig.subnodeHost, containerPorts.hostAdminRpcPort))
 
         /**
          * CPU:
@@ -74,7 +81,7 @@ object ContainerConfigFactory {
         val hostConfig = HostConfig.builder()
                 .appendBinds(*volumes.toTypedArray())
                 .portBindings(portBindings)
-                .publishAllPorts(true)
+                .publishAllPorts(false)
                 .apply {
                     if (resources.hasRam()) memory(resources.ramBytes())
                 }.apply {
@@ -83,14 +90,62 @@ object ContainerConfigFactory {
                         cpuQuota(resources.cpuQuota())
                     }
                 }
+                .apply {
+                    if (containerNodeConfig.network != null) {
+                        logger.info("Setting container network to ${containerNodeConfig.network}")
+                        networkMode(containerNodeConfig.network)
+                    }
+                }
                 .build()
 
         return ContainerConfig.builder()
                 .image(containerNodeConfig.containerImage)
                 .hostConfig(hostConfig)
                 .exposedPorts(portBindings.keys)
-                .env("POSTCHAIN_DEBUG=${restApiConfig.debug}")
+                .env(createNodeConfigEnv(appConfig, containerNodeConfig, container))
+                .labels(mapOf(POSTCHAIN_MASTER_PUBKEY to containerNodeConfig.masterPubkey))
                 .build()
     }
 
+    private fun createNodeConfigEnv(appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer) = buildList {
+        val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
+
+        add("POSTCHAIN_DEBUG=${restApiConfig.debug}")
+
+        add("POSTCHAIN_NODE_CONFIG_PROVIDER=${NodeConfigProviders.Manual.name.lowercase()}")
+        add("POSTCHAIN_INFRASTRUCTURE=${Infrastructure.EbftContainerSub.get()}")
+
+        val subnodeDatabaseUrl = appConfig.getEnvOrString("POSTCHAIN_SUBNODE_DATABASE_URL", ContainerNodeConfig.fullKey(ContainerNodeConfig.KEY_SUBNODE_DATABASE_URL))
+                ?: appConfig.databaseUrl
+        add("POSTCHAIN_DB_URL=${subnodeDatabaseUrl}")
+        val scheme = "${appConfig.databaseSchema}_${container.containerName.directoryContainer}"
+        add("POSTCHAIN_DB_SCHEMA=${scheme}")
+        add("POSTCHAIN_DB_USERNAME=${appConfig.databaseUsername}")
+        add("POSTCHAIN_DB_PASSWORD=${appConfig.databasePassword}")
+        add("POSTCHAIN_DB_READ_CONCURRENCY=${appConfig.databaseReadConcurrency}")
+        add("POSTCHAIN_CRYPTO_SYSTEM=${appConfig.cryptoSystemClass}")
+        add("POSTCHAIN_PRIVKEY=${appConfig.privKey}")
+        add("POSTCHAIN_PUBKEY=${appConfig.pubKey}")
+        add("POSTCHAIN_PORT=${appConfig.port}")
+        add("POSTCHAIN_FASTSYNC_EXIT_DELAY=${SyncParameters.fromAppConfig(appConfig).exitDelay}")
+
+        /**
+         * If restApiPort > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
+         * control here and know that it is always free.
+         * If -1, no API communication => subnodeRestApiPort=-1
+         */
+        val restApiPort = if (restApiConfig.port > -1) {
+            containerNodeConfig.subnodeRestApiPort
+        } else {
+            -1
+        }
+        add("POSTCHAIN_API_PORT=${restApiPort}")
+
+        add("POSTCHAIN_MASTER_HOST=${containerNodeConfig.masterHost}")
+        add("POSTCHAIN_MASTER_PORT=${containerNodeConfig.masterPort}")
+        add("POSTCHAIN_MASTER_REST_API_PORT=${containerNodeConfig.masterRestApiPort}")
+        add("POSTCHAIN_HOST_MOUNT_DIR=${containerNodeConfig.hostMountDir}")
+        add("POSTCHAIN_SUBNODE_DOCKER_IMAGE=${containerNodeConfig.containerImage}")
+        add("POSTCHAIN_SUBNODE_NETWORK=${containerNodeConfig.network}")
+    }
 }

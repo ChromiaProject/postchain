@@ -1,12 +1,12 @@
 package net.postchain.cli.util
 
 import net.postchain.cli.CliExecution
-import java.io.File
+import net.postchain.config.app.AppConfig
 
 object SafeExecutor {
 
-    fun runOnChain(nodeConfigFile: File, chainId: Long, action: () -> Unit) {
-        val brid = CliExecution.findBlockchainRid(nodeConfigFile, chainId)
+    fun runOnChain(appConfig: AppConfig, chainId: Long, action: () -> Unit) {
+        val brid = CliExecution.findBlockchainRid(appConfig, chainId)
         if (brid != null) {
             action()
         } else {
