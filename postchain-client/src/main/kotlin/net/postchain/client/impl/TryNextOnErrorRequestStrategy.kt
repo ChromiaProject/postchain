@@ -1,5 +1,6 @@
 package net.postchain.client.impl
 
+import mu.KLogging
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.request.Endpoint
 import net.postchain.client.request.RequestStrategy
@@ -9,9 +10,11 @@ import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
 
-class AbortOnErrorRequestStrategy(
+class TryNextOnErrorRequestStrategy(
         private val config: PostchainClientConfig,
         private val httpClient: HttpHandler) : RequestStrategy {
+    companion object : KLogging()
+
     override fun <R> request(createRequest: (Endpoint) -> Request, success: (Response) -> R, failure: (Response) -> R): R {
         var response: Response? = null
         for (endpoint in config.endpointPool) {
@@ -24,7 +27,10 @@ class AbortOnErrorRequestStrategy(
 
                     Status.BAD_REQUEST,
                     Status.NOT_FOUND,
-                    Status.CONFLICT -> return failure(response)
+                    Status.CONFLICT -> {
+                        logger.debug("Got ${response.status} response from ${endpoint.url}, trying next")
+                        break@endpoint
+                    }
 
                     Status.INTERNAL_SERVER_ERROR,
                     Status.SERVICE_UNAVAILABLE,
@@ -39,7 +45,7 @@ class AbortOnErrorRequestStrategy(
     }
 }
 
-class AbortOnErrorRequestStrategyFactory : RequestStrategyFactory {
+class TryNextOnErrorRequestStrategyFactory : RequestStrategyFactory {
     override fun create(config: PostchainClientConfig, httpClient: HttpHandler): RequestStrategy =
-            AbortOnErrorRequestStrategy(config, httpClient)
+            TryNextOnErrorRequestStrategy(config, httpClient)
 }

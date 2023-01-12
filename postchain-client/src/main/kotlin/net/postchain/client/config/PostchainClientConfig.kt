@@ -1,6 +1,8 @@
 package net.postchain.client.config
 
+import net.postchain.client.impl.AbortOnErrorRequestStrategyFactory
 import net.postchain.client.request.EndpointPool
+import net.postchain.client.request.RequestStrategyFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.common.PropertiesFileLoader
 import net.postchain.common.config.Config
@@ -35,7 +37,8 @@ data class PostchainClientConfig @JvmOverloads constructor(
         /** Will not be used if `httpClient` parameter is specified when creating `ConcretePostchainClient`. */
         val connectTimeout: Duration = CONNECT_TIMEOUT,
         /** Will not be used if `httpClient` parameter is specified when creating `ConcretePostchainClient`. */
-        val responseTimeout: Duration = RESPONSE_TIMEOUT
+        val responseTimeout: Duration = RESPONSE_TIMEOUT,
+        val requestStrategy: RequestStrategyFactory = AbortOnErrorRequestStrategyFactory()
 ) : Config {
     companion object {
         @JvmStatic
@@ -58,6 +61,8 @@ data class PostchainClientConfig @JvmOverloads constructor(
                     maxResponseSize = config.getEnvOrIntProperty("POSTCHAIN_CLIENT_MAX_RESPONSE_SIZE", "max.response.size", MAX_RESPONSE_SIZE),
                     connectTimeout = config.getEnvOrLongProperty("POSTCHAIN_CLIENT_CONNECT_TIMEOUT", "connect.timeout", CONNECT_TIMEOUT.toMillis()).let { Duration.ofMillis(it) },
                     responseTimeout = config.getEnvOrLongProperty("POSTCHAIN_CLIENT_RESPONSE_TIMEOUT", "response.timeout", RESPONSE_TIMEOUT.toMillis()).let { Duration.ofMillis(it) },
+                    requestStrategy = config.getEnvOrStringProperty("POSTCHAIN_CLIENT_REQUEST_STRATEGY", "request.strategy", RequestStrategies.ABORT_ON_ERROR.name)
+                            .let { RequestStrategies.valueOf(it).factory },
             )
         }
     }
