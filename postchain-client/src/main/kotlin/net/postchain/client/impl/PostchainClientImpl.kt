@@ -59,7 +59,7 @@ class PostchainClientImpl(
     private val cryptoSystem = config.cryptoSystem
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
     private val gson = Gson()
-    private val requestStrategy = AbortOnErrorRequestStrategy(config, httpClient)
+    private val requestStrategy = config.requestStrategy.create(config, httpClient)
 
     override fun transactionBuilder() = transactionBuilder(config.signers)
 

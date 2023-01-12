@@ -1,9 +1,6 @@
 package net.postchain.client.request
 
-interface EndpointPool {
-    fun size(): Int
-    fun next(): Endpoint
-
+interface EndpointPool : Iterable<Endpoint> {
     companion object {
         @JvmStatic
         fun singleUrl(url: String) = SingleEndpointPool(url)

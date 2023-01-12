@@ -4,23 +4,19 @@ import java.security.SecureRandom
 
 class RandomizedEndpointPool(urls: List<String>) : EndpointPool {
     private val endpoints = urls.map { Endpoint(it) }
-    private val size = endpoints.size
     private val randGenerator = SecureRandom()
 
     init {
         require(urls.isNotEmpty()) { "Must provide at least one url" }
     }
 
-    override fun size() = size
-    override fun next(): Endpoint {
-        if (size == 1) return endpoints.first()
+    override fun iterator(): Iterator<Endpoint> {
+        if (endpoints.size == 1) return endpoints.iterator()
         val reachableEndpoints = endpoints.filter { it.isReachable() }
         if (reachableEndpoints.isEmpty()) {
             endpoints.forEach { it.setReachable() }
-            return next()
+            return iterator()
         }
-        return reachableEndpoints[nextRand(reachableEndpoints.size)]
+        return reachableEndpoints.shuffled(randGenerator).iterator()
     }
-
-    private fun nextRand(size: Int) = randGenerator.nextInt(size)
 }
