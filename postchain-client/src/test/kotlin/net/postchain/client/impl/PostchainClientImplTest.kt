@@ -125,7 +125,7 @@ internal class PostchainClientImplTest {
     fun `Tx status retrieves underlying error`() {
         val result = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request) =
-                    Response(Status.BAD_REQUEST).body(Gson().toJson(TxStatus("rejected", "Message!")))
+                    Response(Status.OK).body(Gson().toJson(TxStatus("rejected", "Message!")))
         }).checkTxStatus(TxRid(""))
         assertEquals("Message!", result.rejectReason)
     }
@@ -164,7 +164,7 @@ internal class PostchainClientImplTest {
         PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
                 nCalls++
-                return Response(Status.BAD_REQUEST).body(Gson().toJson(TxStatus("rejected", "Message!")))
+                return Response(Status.OK).body(Gson().toJson(TxStatus("rejected", "Message!")))
             }
         }).awaitConfirmation(TxRid(""), 10, Duration.ZERO)
         assertEquals(1, nCalls)
