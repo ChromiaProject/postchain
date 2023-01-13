@@ -50,11 +50,13 @@ class CliIntegrationIT {
     @Test
     fun keygen() {
         val file = kotlin.io.path.createTempFile()
-        CommandKeygen().parse(arrayOf("-m", "fever donor long", "-s", file.absolutePathString()))
+        CommandKeygen().parse(arrayOf(
+                "-m", "picnic shove leader great protect table leg witness walk night cable caution about produce engage armor first burden olive violin cube gentle bulk train",
+                "-s", file.absolutePathString()))
 
         val keys = PropertiesFileLoader.load(file.absolutePathString())
-        assert(keys.getString("pubkey")).isEqualTo("02B819304E8CFF69D7ACE3C9B2B41346216347972818CCC07F02F05E1FA01D6E63")
-        assert(keys.getString("privkey")).isEqualTo("55682A0F")
+        assert(keys.getString("pubkey")).isEqualTo("030C9C4203B80509B353F85792FB9F664918F6D2136D8FCE55BE1A985B89E058D3")
+        assert(keys.getString("privkey")).isEqualTo("A438E1FA331ACBB9DFD7E5F692B07F9250075752905F5763D268FA2356C24787")
 
         val exception = assertThrows<MnemonicLengthException> {
             CommandKeygen().parse(arrayOf("-m", "invalid mnemonic"))
