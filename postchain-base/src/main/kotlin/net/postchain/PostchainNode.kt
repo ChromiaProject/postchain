@@ -14,11 +14,13 @@ import net.postchain.core.BaseInfrastructureFactoryProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.Shutdownable
+import net.postchain.core.Storage
 import net.postchain.core.block.BlockQueriesProviderImpl
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
@@ -33,7 +35,9 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
 
     protected val blockchainInfrastructure: BlockchainInfrastructure
     val processManager: BlockchainProcessManager
-    val postchainContext: PostchainContext
+    val storage: Storage
+    val nodeDiagnosticContext: NodeDiagnosticContext?
+    protected val postchainContext: PostchainContext
     private val logPrefix: String
 
     companion object : KLogging()
@@ -47,19 +51,20 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 concurrentTasks = 5
             }
         }
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDb)
+        storage = StorageBuilder.buildStorage(appConfig, wipeDb)
 
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
         logPrefix = peerName(appConfig.pubKey)
 
         val blockQueriesProvider = BlockQueriesProviderImpl()
+        nodeDiagnosticContext = if (appConfig.debug) DefaultNodeDiagnosticContext() else null
         postchainContext = PostchainContext(
                 appConfig,
                 NodeConfigurationProviderFactory.createProvider(appConfig) { storage },
                 storage,
                 infrastructureFactory.makeConnectionManager(appConfig),
                 blockQueriesProvider,
-                if (appConfig.debug) DefaultNodeDiagnosticContext() else null
+                nodeDiagnosticContext
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()

@@ -30,8 +30,8 @@ class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, private val
     } ?: InsecureServerCredentials.create()
     private val server: Server = Grpc.newServerBuilderForPort(config.port, credentials)
             .addService(PostchainServiceGrpcImpl(PostchainService(postchainNode)))
-            .addService(PeerServiceGrpcImpl(PeerService(postchainNode.postchainContext)))
-            .addService(DebugServiceGrpcImpl(DebugService(postchainNode.postchainContext.nodeDiagnosticContext)))
+            .addService(PeerServiceGrpcImpl(PeerService(postchainNode.storage)))
+            .addService(DebugServiceGrpcImpl(DebugService(postchainNode.nodeDiagnosticContext)))
             .build()
 
     fun start(initialChainIds: List<Long>? = null) {
