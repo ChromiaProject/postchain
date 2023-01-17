@@ -160,7 +160,8 @@ class RestApi(
         }
 
         http.before { req, res ->
-            if (!req.body().isNullOrBlank()) {
+            // Assuming content-type is correctly set we will avoid logging binary request bodies
+            if (!req.contentType().contains(OCTET_CONTENT_TYPE) && !req.body().isNullOrBlank()) {
                 logger.debug { "Request body: ${req.body()}" }
             }
 
