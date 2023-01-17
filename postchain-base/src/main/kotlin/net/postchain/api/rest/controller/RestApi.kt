@@ -160,6 +160,10 @@ class RestApi(
         }
 
         http.before { req, res ->
+            if (!req.body().isNullOrBlank()) {
+                logger.debug { "Request body: ${req.body()}" }
+            }
+
             res.header(ACCESS_CONTROL_ALLOW_ORIGIN, "*")
             res.header(ACCESS_CONTROL_REQUEST_METHOD, "POST, GET, OPTIONS")
             //res.header("Access-Control-Allow-Headers", "")
@@ -169,6 +173,13 @@ class RestApi(
             req.pathInfo()
                     .takeIf { it.endsWith("/") }
                     ?.also { res.redirect(it.dropLast(1)) }
+        }
+
+        http.after { _, res ->
+            // This will not log binary response bodies
+            if (!res.body().isNullOrBlank()) {
+                logger.debug { "Response body: ${res.body()}" }
+            }
         }
 
         http.path(basePath) {
@@ -194,7 +205,7 @@ class RestApi(
 
                 logger.debug {
                     """
-                        Request body : {"tx": "${tx.bytes.sliceArray(0 until maxLength).toHex()}" }
+                        Processed tx bytes: ${tx.bytes.sliceArray(0 until maxLength).toHex()}
                     """.trimIndent()
                 }
                 if (!tx.tx.matches(Regex("[0-9a-fA-F]{2,}"))) {
@@ -386,7 +397,6 @@ class RestApi(
     }
 
     private fun handlePostQuery(request: Request): String {
-        logger.debug { "Request body: ${request.body()}" }
         return model(request)
                 .query(Query(request.body()))
                 .json
@@ -433,7 +443,6 @@ class RestApi(
     }
 
     private fun handleQueries(request: Request): String {
-        logger.debug("Request body: ${request.body()}")
         val queriesArray: JsonArray = parseMultipleQueriesRequest(request)
         val response: MutableList<String> = mutableListOf()
 
@@ -446,7 +455,6 @@ class RestApi(
     }
 
     private fun handleGTXQueries(request: Request): String {
-        logger.debug("Request body: ${request.body()}")
         val response: MutableList<String> = mutableListOf<String>()
         val queriesArray: JsonArray = parseMultipleQueriesRequest(request)
 
@@ -473,12 +481,10 @@ class RestApi(
     }
 
     private fun handleNodeStatusQueries(request: Request): String {
-        logger.debug("Request body: ${request.body()}")
         return model(request).nodeQuery(request.params(SUBQUERY))
     }
 
     private fun handleDebugQuery(request: Request): String {
-        logger.debug("Request body: ${request.body()}")
         return models.values
                 .filterIsInstance(Model::class.java)
                 .firstOrNull()
