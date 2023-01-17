@@ -5,19 +5,15 @@ import assertk.assertions.isEqualTo
 import net.postchain.StorageBuilder
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
-import net.postchain.common.PropertiesFileLoader
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.Storage
 import net.postchain.gtv.GtvFileReader
-import org.bitcoinj.crypto.MnemonicException.MnemonicLengthException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.io.File
 import java.nio.file.Paths
-import kotlin.io.path.absolutePathString
 import kotlin.test.assertContains
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -45,23 +41,6 @@ class CliIntegrationIT {
         // add-blockchain goes here
         val gtv = GtvFileReader.readFile(fullPath("blockchain_config.xml"))
         CliExecution.addBlockchain(AppConfig.fromPropertiesFile(nodeConfigPath), chainId, gtv, AlreadyExistMode.FORCE)
-    }
-
-    @Test
-    fun keygen() {
-        val file = kotlin.io.path.createTempFile()
-        CommandKeygen().parse(arrayOf(
-                "-m", "picnic shove leader great protect table leg witness walk night cable caution about produce engage armor first burden olive violin cube gentle bulk train",
-                "-s", file.absolutePathString()))
-
-        val keys = PropertiesFileLoader.load(file.absolutePathString())
-        assert(keys.getString("pubkey")).isEqualTo("030C9C4203B80509B353F85792FB9F664918F6D2136D8FCE55BE1A985B89E058D3")
-        assert(keys.getString("privkey")).isEqualTo("A438E1FA331ACBB9DFD7E5F692B07F9250075752905F5763D268FA2356C24787")
-
-        val exception = assertThrows<MnemonicLengthException> {
-            CommandKeygen().parse(arrayOf("-m", "invalid mnemonic"))
-        }
-        assert(exception.message).isEqualTo("Word list size must be multiple of three words.")
     }
 
     @Test

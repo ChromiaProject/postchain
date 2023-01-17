@@ -10,7 +10,6 @@ import net.postchain.cli.CommandBlockchainReplicaAdd
 import net.postchain.cli.CommandBlockchainReplicaRemove
 import net.postchain.cli.CommandCheckBlockchain
 import net.postchain.cli.CommandGenerateContainerZfsInitScript
-import net.postchain.cli.CommandKeygen
 import net.postchain.cli.CommandListConfigurations
 import net.postchain.cli.CommandMustSyncUntil
 import net.postchain.cli.CommandPeerInfoAdd
@@ -47,7 +46,6 @@ fun main(args: Array<String>) {
                     CommandBlockchainReplicaRemove(),
                     CommandCheckBlockchain(),
                     CommandGenerateContainerZfsInitScript(),
-                    CommandKeygen(),
                     CommandMustSyncUntil(),
                     CommandPeerInfoAdd(),
                     CommandPeerInfoFind(),
