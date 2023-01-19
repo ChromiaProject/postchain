@@ -47,7 +47,7 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
     companion object : KLogging()
 
     override fun makeBBExtensions(): List<BaseBlockBuilderExtension> {
-        return module.makeBlockBuilderExtensions()
+        return super.makeBBExtensions() + module.makeBlockBuilderExtensions()
     }
 
     override fun getTransactionFactory(): TransactionFactory {

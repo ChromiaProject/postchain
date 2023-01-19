@@ -51,7 +51,10 @@ data class BlockchainConfigurationData(
         val maxTxExecutionTime: Long,
         @Name(KEY_REVOLT)
         @Nullable
-        val revoltConfigData: Gtv?
+        val revoltConfigData: Gtv?,
+        @Name(KEY_CONFIG_CONSENSUS)
+        @DefaultValue(defaultBoolean = false)
+        val configConsensus: Boolean
 ) {
     val historicBrid = historicBridAsByteArray?.let { BlockchainRid(it) }
     val blockchainDependencies = blockchainDependenciesRaw?.let { BaseDependencyFactory.build(it) } ?: listOf()

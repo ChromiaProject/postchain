@@ -17,6 +17,8 @@ import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.BaseBlockWitnessProvider
 import net.postchain.base.data.BaseTransactionFactory
+import net.postchain.base.extension.ConfigurationHashBlockBuilderExtension
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
@@ -68,6 +70,7 @@ open class BaseBlockchainConfiguration(
     final override val signers get() = configData.signers
     final override val transactionQueueSize: Int
         get() = configData.txQueueSize.toInt()
+    val configHash = GtvToBlockchainRidFactory.calculateBlockchainRid(rawConfig, cryptoSystem).data
 
     private fun resolveNodeID(nodeID: Int, subjectID: ByteArray): Int {
         return if (nodeID == NODE_ID_AUTO) {
@@ -119,7 +122,9 @@ open class BaseBlockchainConfiguration(
     }
 
     open fun makeBBExtensions(): List<BaseBlockBuilderExtension> {
-        return listOf()
+        return if (configData.configConsensus) {
+            listOf(ConfigurationHashBlockBuilderExtension(configHash))
+        } else listOf()
     }
 
     override fun makeBlockBuilder(ctx: EContext): BlockBuilder {
