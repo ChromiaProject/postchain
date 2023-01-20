@@ -122,9 +122,7 @@ open class BaseBlockchainConfiguration(
     }
 
     open fun makeBBExtensions(): List<BaseBlockBuilderExtension> {
-        return if (configData.configConsensus) {
-            listOf(ConfigurationHashBlockBuilderExtension(configHash))
-        } else listOf()
+        return listOf()
     }
 
     override fun makeBlockBuilder(ctx: EContext): BlockBuilder {
@@ -141,7 +139,7 @@ open class BaseBlockchainConfiguration(
                 blockSigMaker,
                 blockWitnessProvider,
                 blockchainDependencies,
-                makeBBExtensions(),
+                makeDefaultBBExtensions() + makeBBExtensions(),
                 effectiveBlockchainRID != blockchainRid,
                 blockStrategyConfig.maxBlockSize,
                 blockStrategyConfig.maxBlockTransactions,
@@ -195,4 +193,10 @@ open class BaseBlockchainConfiguration(
     }
 
     override fun shutdownModules() {}
+
+    private fun makeDefaultBBExtensions(): List<BaseBlockBuilderExtension> {
+        return if (configData.configConsensusStrategy == ConfigConsensusStrategy.HEADER_HASH) {
+            listOf(ConfigurationHashBlockBuilderExtension(configHash))
+        } else listOf()
+    }
 }

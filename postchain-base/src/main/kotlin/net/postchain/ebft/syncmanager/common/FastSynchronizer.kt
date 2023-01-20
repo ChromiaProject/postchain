@@ -555,12 +555,12 @@ class FastSynchronizer(
      * NOTE:
      * If one block fails to commit, don't worry about the blocks coming after. This is handled in the BBD.addBlock().
      */
-    private fun commitBlock(job: Job, bTrace: BlockTrace?, isNextBlock: Boolean) {
+    private fun commitBlock(job: Job, bTrace: BlockTrace?, hasNoPrecedingJob: Boolean) {
         // Once we set this flag we must add the job to finishedJobs otherwise we risk a deadlock
         job.blockCommitting = true
 
-        // If this is the block after the latest block we have committed we can safely ignore the result of previous add block
-        if (isNextBlock) {
+        // This job has no preceding job that it has to check status for
+        if (hasNoPrecedingJob) {
             addBlockCompletionPromise = null // We want to do cleanup, since the old promise is used in "addBlock()" below.
         }
 

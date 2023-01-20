@@ -13,16 +13,16 @@ import org.awaitility.Duration
 import org.junit.jupiter.api.Test
 
 class ConfigConsensusTestNightly : ConfigFileBasedIntegrationTest() {
-    private val blockchainConfig1 = "/net/postchain/devtools/reconfiguration/four_peers/consensus/blockchain_config_1.xml"
+    private val blockchainConfig1FileName = "/net/postchain/devtools/reconfiguration/four_peers/consensus/blockchain_config_1.xml"
     private val blockchainConfig2 = readBlockchainConfig(
             "/net/postchain/devtools/reconfiguration/four_peers/consensus/blockchain_config_2.xml")
 
     @Test
     fun `Verify that config hash is added to extra header`() {
-        createNodes(4, blockchainConfig1)
+        createNodes(4, blockchainConfig1FileName)
         buildBlock(0)
 
-        val initialHash = GtvToBlockchainRidFactory.calculateBlockchainRid(readBlockchainConfig(blockchainConfig1), cryptoSystem).data
+        val initialHash = GtvToBlockchainRidFactory.calculateBlockchainRid(readBlockchainConfig(blockchainConfig1FileName), cryptoSystem).data
         nodes.forEach {
             val initialBlock = it.blockQueries().getBlockAtHeight(0L).get()!!
             val decodedBlock = BlockHeaderData.fromBinary(initialBlock.header.rawData)
@@ -44,7 +44,7 @@ class ConfigConsensusTestNightly : ConfigFileBasedIntegrationTest() {
 
     @Test
     fun `Verify configuration consensus`() {
-        createNodes(4, blockchainConfig1)
+        createNodes(4, blockchainConfig1FileName)
         buildBlock(0)
 
         // Add new configs to all nodes except nr 3
