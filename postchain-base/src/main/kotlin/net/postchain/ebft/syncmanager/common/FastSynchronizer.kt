@@ -4,6 +4,7 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
+import net.postchain.common.toHex
 import net.postchain.core.*
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockHeader
@@ -219,8 +220,8 @@ class FastSynchronizer(
                 logger.info {
                     "processDoneJob() - ${
                         "Previous block mismatch. " +
-                                "Previous block ${lastJob?.header?.blockRID} received from ${lastJob?.peerId}, " +
-                                "This block ${j.header?.blockRID} received from ${j.peerId}."
+                                "Previous block ${lastJob?.header?.blockRID?.toHex()} received from ${lastJob?.peerId}, " +
+                                "This block ${j.header?.blockRID?.toHex()} received from ${j.peerId}."
                     }"
                 }
                 throw exception
@@ -516,7 +517,7 @@ class FastSynchronizer(
 
     private fun commitJobsAsNecessary(bTrace: BlockTrace?) {
         // We have to make sure blocks are committed in the correct order. If we are missing a block we have to wait for it.
-        for (job in jobs.values) {
+        for ((index, job) in jobs.values.withIndex()) {
             if (!isProcessRunning()) return
 
             // The values are iterated in key-ascending order (see TreeMap)
@@ -527,7 +528,7 @@ class FastSynchronizer(
             }
             if (!job.blockCommitting) {
                 unfinishedTrace("Committing block for $job")
-                commitBlock(job, bTrace)
+                commitBlock(job, bTrace, index == 0)
             }
         }
     }
@@ -554,11 +555,12 @@ class FastSynchronizer(
      * NOTE:
      * If one block fails to commit, don't worry about the blocks coming after. This is handled in the BBD.addBlock().
      */
-    private fun commitBlock(job: Job, bTrace: BlockTrace?) {
+    private fun commitBlock(job: Job, bTrace: BlockTrace?, hasNoPrecedingJob: Boolean) {
         // Once we set this flag we must add the job to finishedJobs otherwise we risk a deadlock
         job.blockCommitting = true
 
-        if (addBlockCompletionPromise?.isDone() == true) {
+        // This job has no preceding job that it has to check status for
+        if (hasNoPrecedingJob) {
             addBlockCompletionPromise = null // We want to do cleanup, since the old promise is used in "addBlock()" below.
         }
 
