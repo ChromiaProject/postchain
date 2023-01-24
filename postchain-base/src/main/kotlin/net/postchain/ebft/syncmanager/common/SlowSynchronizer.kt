@@ -162,7 +162,7 @@ class SlowSynchronizer(
                     "(We wanted ${stateMachine.waitForNodeId} to do it).")
         }
 
-        logger.info("Got ${blocks.size} from peer $peerId (starting at height $startingAtHeight).")
+        logger.debug("Got ${blocks.size} from peer $peerId (starting at height $startingAtHeight).")
         var expectedHeight = startingAtHeight
         for (block in blocks) {
             val blockData = block.data
