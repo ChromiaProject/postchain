@@ -104,6 +104,8 @@ data class ContainerNodeConfig(
                 val subnodeImage = getEnvOrStringProperty("POSTCHAIN_SUBNODE_DOCKER_IMAGE", KEY_DOCKER_IMAGE)
                         ?: throw UserMistake("$KEY_DOCKER_IMAGE must be specified")
                 val restApiConfig = RestApiConfig.fromAppConfig(config)
+                val subnodeHost = getEnvOrStringProperty("POSTCHAIN_SUBNODE_HOST", KEY_SUBNODE_HOST)
+                        ?: throw UserMistake("$KEY_SUBNODE_HOST must be specified")
                 ContainerNodeConfig(
                         config.pubKey,
                         subnodeImage,
@@ -112,7 +114,7 @@ data class ContainerNodeConfig(
                         getMasterRestApiPort(config, restApiConfig),
                         getMasterRestApiTlsEnabled(config, restApiConfig),
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_NETWORK", KEY_NETWORK),
-                        getEnvOrStringProperty("POSTCHAIN_SUBNODE_HOST", KEY_SUBNODE_HOST, "localhost"),
+                        subnodeHost,
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_REST_API_PORT", KEY_SUBNODE_REST_API_PORT, RestApiConfig.DEFAULT_REST_API_PORT),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_ADMIN_RPC_PORT", KEY_SUBNODE_ADMIN_RPC_PORT, PostchainServerConfig.DEFAULT_RPC_SERVER_PORT),
                         getEnvOrLongProperty("POSTCHAIN_SEND_MASTER_CONNECTED_PEERS_PERIOD", KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD, 60_000L),
