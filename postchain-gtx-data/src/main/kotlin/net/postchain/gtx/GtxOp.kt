@@ -1,17 +1,12 @@
 package net.postchain.gtx
 
-import com.beanit.jasn1.ber.types.string.BerUTF8String
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
-import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvString
-import net.postchain.gtv.gtxmessages.RawGtxOp
 import net.postchain.gtx.data.OpData
 
 class GtxOp(val opName: String, vararg val args: Gtv) {
-
-    internal fun toRaw() = RawGtxOp(BerUTF8String(opName), RawGtxOp.Args(args.map { it.getRawGtv() }))
 
     /**
      * Elements are structured like an ordered array with elements:
@@ -41,10 +36,6 @@ class GtxOp(val opName: String, vararg val args: Gtv) {
     }
 
     companion object {
-        @JvmStatic
-        internal fun fromAsn(op: RawGtxOp): GtxOp {
-            return GtxOp(op.name.toString(), *op.args.seqOf.map { GtvDecoder.fromRawGtv(it) }.toTypedArray())
-        }
         @JvmStatic
         fun fromGtv(gtv: Gtv): GtxOp {
             if ((gtv !is GtvArray) && gtv.asArray().size != 2) throw IllegalArgumentException("Gtv must be an array of size 2")
