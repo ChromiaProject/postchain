@@ -24,8 +24,6 @@ data class ContainerNodeConfig(
         val containerImage: String,
         val masterHost: String,
         val masterPort: Int,
-        val masterRestApiPort: Int,
-        val masterRestApiTlsEnabled: Boolean,
         val network: String?,
         val subnodeHost: String,
         val subnodeRestApiPort: Int,
@@ -49,8 +47,8 @@ data class ContainerNodeConfig(
 
         /**
          * A path to dir where container volume is placed in the master (container) filesystem.
-         * [net.postchain.containers.bpm.ContainerInitializer] uses it to create container node config file,
-         * blockchains dir, etc.
+         * [net.postchain.containers.bpm.ContainerManagedBlockchainProcessManager.initContainerWorkingDir] uses it to
+         * initialize it.
          *
          * If master node is launched natively or by means of fabric8 maven plugin or Testcontainers Lib or CI/CD,
          * [masterMountDir] has to be equal to [hostMountDir] ([masterMountDir] can be omitted in config)
@@ -75,8 +73,6 @@ data class ContainerNodeConfig(
         const val KEY_DOCKER_IMAGE = "docker-image"
         const val KEY_MASTER_HOST = "master-host"
         const val KEY_MASTER_PORT = "master-port"
-        const val KEY_MASTER_REST_API_PORT = "master-rest-api-port"
-        const val KEY_MASTER_REST_API_TLS_ENABLED = "master-rest-api-tls-enabled"
         const val KEY_NETWORK = "network"
         const val KEY_SUBNODE_HOST = "subnode-host"
         const val KEY_SUBNODE_REST_API_PORT = "rest-api-port"
@@ -103,7 +99,6 @@ data class ContainerNodeConfig(
                         ?: throw UserMistake("$KEY_HOST_MOUNT_DIR must be specified")
                 val subnodeImage = getEnvOrStringProperty("POSTCHAIN_SUBNODE_DOCKER_IMAGE", KEY_DOCKER_IMAGE)
                         ?: throw UserMistake("$KEY_DOCKER_IMAGE must be specified")
-                val restApiConfig = RestApiConfig.fromAppConfig(config)
                 val subnodeHost = getEnvOrStringProperty("POSTCHAIN_SUBNODE_HOST", KEY_SUBNODE_HOST)
                         ?: throw UserMistake("$KEY_SUBNODE_HOST must be specified")
                 ContainerNodeConfig(
@@ -111,8 +106,6 @@ data class ContainerNodeConfig(
                         subnodeImage,
                         getEnvOrStringProperty("POSTCHAIN_MASTER_HOST", KEY_MASTER_HOST, "localhost"),
                         getEnvOrIntProperty("POSTCHAIN_MASTER_PORT", KEY_MASTER_PORT, 9860),
-                        getMasterRestApiPort(config, restApiConfig),
-                        getMasterRestApiTlsEnabled(config, restApiConfig),
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_NETWORK", KEY_NETWORK),
                         subnodeHost,
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_REST_API_PORT", KEY_SUBNODE_REST_API_PORT, RestApiConfig.DEFAULT_REST_API_PORT),
@@ -133,20 +126,6 @@ data class ContainerNodeConfig(
                 )
             }
         }
-
-        private fun getMasterRestApiPort(config: AppConfig, restApiConfig: RestApiConfig): Int =
-                if (config.hasEnvOrKey("POSTCHAIN_MASTER_REST_API_PORT", KEY_MASTER_REST_API_PORT)) {
-                    config.getEnvOrInt("POSTCHAIN_MASTER_REST_API_PORT", KEY_MASTER_REST_API_PORT, 0)
-                } else {
-                    restApiConfig.port
-                }
-
-        private fun getMasterRestApiTlsEnabled(config: AppConfig, restApiConfig: RestApiConfig): Boolean =
-                if (config.hasEnvOrKey("POSTCHAIN_MASTER_REST_API_TLS_ENABLED", KEY_MASTER_REST_API_TLS_ENABLED)) {
-                    config.getEnvOrBoolean("POSTCHAIN_MASTER_REST_API_TLS_ENABLED", KEY_MASTER_REST_API_TLS_ENABLED, false)
-                } else {
-                    restApiConfig.tls
-                }
 
         private fun Configuration.getTestmode() = getBoolean("testmode", false)
 
