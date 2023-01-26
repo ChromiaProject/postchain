@@ -162,8 +162,6 @@ object ContainerConfigFactory : KLogging() {
 
         add("POSTCHAIN_MASTER_HOST=${containerNodeConfig.masterHost}")
         add("POSTCHAIN_MASTER_PORT=${containerNodeConfig.masterPort}")
-        add("POSTCHAIN_MASTER_REST_API_PORT=${containerNodeConfig.masterRestApiPort}")
-        add("POSTCHAIN_MASTER_REST_API_TLS_ENABLED=${containerNodeConfig.masterRestApiTlsEnabled}")
         add("POSTCHAIN_HOST_MOUNT_DIR=${containerNodeConfig.hostMountDir}")
         add("POSTCHAIN_SUBNODE_DOCKER_IMAGE=${containerNodeConfig.containerImage}")
         add("POSTCHAIN_SUBNODE_HOST=${containerNodeConfig.subnodeHost}")
