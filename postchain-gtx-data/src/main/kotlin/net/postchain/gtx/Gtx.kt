@@ -1,16 +1,14 @@
 package net.postchain.gtx
 
-import com.beanit.jasn1.ber.ReverseByteArrayOutputStream
-import com.beanit.jasn1.ber.types.BerOctetString
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.gtxmessages.RawGtx
 import net.postchain.gtv.merkle.MerkleHashCalculator
-import java.io.ByteArrayInputStream
 
 class Gtx(
     val gtxBody: GtxBody,
@@ -28,12 +26,7 @@ class Gtx(
     fun encodeHex() = encode().toHex()
     fun encode(): ByteArray {
         if (signatures.size != gtxBody.signers.size) throw UserMistake("Not fully signed")
-        val encoded = ReverseByteArrayOutputStream(1000, true)
-        RawGtx(
-            gtxBody.toRaw(),
-            RawGtx.Signatures(signatures.map { BerOctetString(it) })
-        ).encode(encoded)
-        return encoded.array
+        return GtvEncoder.encodeGtv(toGtv())
     }
 
     /**
@@ -71,14 +64,7 @@ class Gtx(
 
     companion object {
         @JvmStatic
-        fun decode(b: ByteArray): Gtx {
-            val bytes = ByteArrayInputStream(b)
-            val decoded = RawGtx().apply { decode(bytes) }
-            return Gtx(
-                GtxBody.fromAsn(decoded.body),
-                decoded.signatures.seqOf.map { it.value }
-            )
-        }
+        fun decode(b: ByteArray) = fromGtv(GtvDecoder.decodeGtv(b))
 
         @JvmStatic
         fun fromGtv(gtv: Gtv): Gtx {
