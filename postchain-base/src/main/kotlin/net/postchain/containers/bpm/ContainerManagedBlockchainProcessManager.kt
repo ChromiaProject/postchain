@@ -65,7 +65,16 @@ open class ContainerManagedBlockchainProcessManager(
     private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
 
     init {
-        removeContainersIfExist()
+        try {
+            dockerClient.ping()
+        } catch (e: Exception) {
+            logger.error("Unable to access Docker daemon: $e")
+        }
+        try {
+            removeContainersIfExist()
+        } catch (e: Exception) {
+            logger.error("Unable to list/remove containers: $e")
+        }
         Runtime.getRuntime().addShutdownHook(
                 Thread {
                     logger.info("Shutting down master node - stopping subnode containers...")
