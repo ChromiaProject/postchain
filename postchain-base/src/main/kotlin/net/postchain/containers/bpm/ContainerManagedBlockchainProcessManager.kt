@@ -63,8 +63,10 @@ open class ContainerManagedBlockchainProcessManager(
     private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableMapOf<ContainerName, PostchainContainer>() // { ContainerName -> PsContainer }
     private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
+    private val runningInContainer = System.getenv("POSTCHAIN_RUNNING_IN_CONTAINER").toBoolean()
 
     init {
+        logger.info(if (runningInContainer) "Running in container" else "Running as native process")
         try {
             dockerClient.ping()
         } catch (e: Exception) {
@@ -277,7 +279,7 @@ open class ContainerManagedBlockchainProcessManager(
             logger.debug { dcLog("not found", null) }
 
             // creating container
-            val config = ContainerConfigFactory.createConfig(fs, appConfig, containerNodeConfig, psContainer)
+            val config = ContainerConfigFactory.createConfig(fs, appConfig, containerNodeConfig, psContainer, runningInContainer)
             psContainer.containerId = dockerClient.createContainer(config, job.containerName.toString()).id()!!
             logger.debug { dcLog("created", psContainer) }
 
