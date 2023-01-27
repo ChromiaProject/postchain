@@ -14,11 +14,7 @@ import net.postchain.ebft.syncmanager.common.SyncParameters
 
 object ContainerConfigFactory : KLogging() {
 
-    fun createConfig(fs: FileSystem,
-                     appConfig: AppConfig,
-                     containerNodeConfig: ContainerNodeConfig,
-                     container: PostchainContainer,
-                     runningInContainer: Boolean): ContainerConfig {
+    fun createConfig(fs: FileSystem, appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer): ContainerConfig {
         // Container volumes
         val volumes = mutableListOf<HostConfig.Bind>()
 
@@ -111,11 +107,8 @@ object ContainerConfigFactory : KLogging() {
                 }
                 .apply {
                     if (containerNodeConfig.network != null) {
-                        logger.info("Setting subnode container network to ${containerNodeConfig.network}")
+                        logger.info("Setting container network to ${containerNodeConfig.network}")
                         networkMode(containerNodeConfig.network)
-                    } else if (!runningInContainer) {
-                        logger.info("Using host networking for subnode container")
-                        networkMode("host")
                     }
                 }
                 .build()
