@@ -638,6 +638,11 @@
                         <exclude>**/*IT.java</exclude>
                         <exclude>**/*Nightly.java</exclude>
                     </excludes>
+                    <properties>
+                        <configurationParameters>
+                            junit.jupiter.execution.timeout.default=5m
+                        </configurationParameters>
+                    </properties>
                 </configuration>
             </plugin>
 
