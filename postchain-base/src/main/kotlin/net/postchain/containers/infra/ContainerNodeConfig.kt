@@ -96,15 +96,17 @@ data class ContainerNodeConfig(
         fun fromAppConfig(config: AppConfig): ContainerNodeConfig {
             return with(config.subset(KEY_CONTAINER_PREFIX)) {
                 val hostMountDir = getEnvOrStringProperty("POSTCHAIN_HOST_MOUNT_DIR", KEY_HOST_MOUNT_DIR)
-                        ?: throw UserMistake("$KEY_HOST_MOUNT_DIR must be specified")
+                        ?: throw UserMistake("$KEY_CONTAINER_PREFIX.$KEY_HOST_MOUNT_DIR must be specified")
                 val subnodeImage = getEnvOrStringProperty("POSTCHAIN_SUBNODE_DOCKER_IMAGE", KEY_DOCKER_IMAGE)
-                        ?: throw UserMistake("$KEY_DOCKER_IMAGE must be specified")
+                        ?: throw UserMistake("$KEY_CONTAINER_PREFIX.$KEY_DOCKER_IMAGE must be specified")
+                val masterHost = getEnvOrStringProperty("POSTCHAIN_MASTER_HOST", KEY_MASTER_HOST)
+                        ?: throw UserMistake("$KEY_CONTAINER_PREFIX.$KEY_MASTER_HOST must be specified")
                 val subnodeHost = getEnvOrStringProperty("POSTCHAIN_SUBNODE_HOST", KEY_SUBNODE_HOST)
-                        ?: throw UserMistake("$KEY_SUBNODE_HOST must be specified")
+                        ?: throw UserMistake("$KEY_CONTAINER_PREFIX.$KEY_SUBNODE_HOST must be specified")
                 ContainerNodeConfig(
                         config.pubKey,
                         subnodeImage,
-                        getEnvOrStringProperty("POSTCHAIN_MASTER_HOST", KEY_MASTER_HOST, "localhost"),
+                        masterHost,
                         getEnvOrIntProperty("POSTCHAIN_MASTER_PORT", KEY_MASTER_PORT, 9860),
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_NETWORK", KEY_NETWORK),
                         subnodeHost,
