@@ -12,6 +12,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtx.GtxQuery
 import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -192,7 +193,7 @@ class RestApiQueryEndpointTest {
 
     @Test
     fun gtvRequestAndResponseTypes() {
-        val query = gtv(listOf(gtv("test_query"), gtv(mapOf("arg" to gtv("value")))))
+        val query = GtxQuery("test_query", gtv(mapOf("arg" to gtv("value"))))
         val answer = gtv("answer")
 
         whenever(model.query(query)).thenReturn(answer)
@@ -200,7 +201,7 @@ class RestApiQueryEndpointTest {
         restApi.attachModel(blockchainRID, model)
 
         val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .body(GtvEncoder.encodeGtv(query))
+                .body(query.encode())
                 .post("/query_gtv/${blockchainRID}")
                 .then()
                 .statusCode(200)
@@ -211,7 +212,7 @@ class RestApiQueryEndpointTest {
 
     @Test
     fun `Errors are in GTV format when querying for GTV`() {
-        val query = gtv(listOf(gtv("test_query"), gtv(mapOf("arg" to gtv("value")))))
+        val query = GtxQuery("test_query", gtv(mapOf("arg" to gtv("value"))))
 
         val errorMessage = "Unknown query"
         whenever(model.query(query)).thenThrow(UserMistake(errorMessage))
@@ -219,7 +220,7 @@ class RestApiQueryEndpointTest {
         restApi.attachModel(blockchainRID, model)
 
         val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .body(GtvEncoder.encodeGtv(query))
+                .body(query.encode())
                 .post("/query_gtv/${blockchainRID}")
                 .then()
                 .statusCode(400)

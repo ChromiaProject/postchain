@@ -22,6 +22,7 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.Gtv
+import net.postchain.gtx.GtxQuery
 import net.postchain.metrics.PostchainModelMetrics
 
 open class PostchainModel(
@@ -131,8 +132,8 @@ open class PostchainModel(
         return QueryResult(blockQueries.query(query.json).get())
     }
 
-    override fun query(query: Gtv): Gtv {
-        return blockQueries.query(query[0].asString(), query[1]).get()
+    override fun query(query: GtxQuery): Gtv {
+        return blockQueries.query(query.name, query.args).get()
     }
 
     override fun nodeQuery(subQuery: String): String = throw NotSupported("NotSupported: $subQuery")

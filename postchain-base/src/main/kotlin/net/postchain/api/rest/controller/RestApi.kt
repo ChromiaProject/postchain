@@ -28,14 +28,13 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.PmEngineIsAlreadyClosed
-import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvType
 import net.postchain.gtv.mapper.GtvObjectMapper
+import net.postchain.gtx.GtxQuery
 import spark.Request
 import spark.Response
 import spark.Service
@@ -423,12 +422,10 @@ class RestApi(
 
     private fun handleDirectQuery(request: Request, response: Response): Any {
         val queryMap = request.queryMap()
-        val type = gtv(queryMap.value("type"))
         val args = GtvDictionary.build(queryMap.toMap().mapValues {
             gtv(queryMap.value(it.key))
         })
-        val gtvQuery = GtvEncoder.encodeGtv(gtv(type, args))
-        val array = model(request).query(GtvDecoder.decodeGtv(gtvQuery)).asArray()
+        val array = model(request).query(GtxQuery(queryMap.value("type"), args)).asArray()
 
         if (array.size < 2) {
             throw UserMistake("Response should have two parts: content-type and content")
@@ -462,7 +459,7 @@ class RestApi(
         queriesArray.forEach {
             val hexQuery = it.asString
             val gtxQuery = try {
-                GtvFactory.decodeGtv(hexQuery.hexStringToByteArray())
+                GtxQuery.decode(hexQuery.hexStringToByteArray())
             } catch (e: IOException) {
                 throw BadFormatError(e.message ?: "")
             }
@@ -474,7 +471,7 @@ class RestApi(
 
     private fun handleGtvQuery(request: Request): ByteArray {
         val gtvQuery = try {
-            GtvDecoder.decodeGtv(request.bodyAsBytes())
+            GtxQuery.decode(request.bodyAsBytes())
         } catch (e: IOException) {
             throw BadFormatError(e.message ?: "")
         }
