@@ -279,7 +279,7 @@ open class ContainerManagedBlockchainProcessManager(
             logger.debug { dcLog("not found", null) }
 
             // creating container
-            val config = ContainerConfigFactory.createConfig(fs, appConfig, containerNodeConfig, psContainer, runningInContainer)
+            val config = ContainerConfigFactory.createConfig(fs, appConfig, containerNodeConfig, psContainer)
             psContainer.containerId = dockerClient.createContainer(config, job.containerName.toString()).id()!!
             logger.debug { dcLog("created", psContainer) }
 
