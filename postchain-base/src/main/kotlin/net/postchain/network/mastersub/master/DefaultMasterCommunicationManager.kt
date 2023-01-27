@@ -222,7 +222,7 @@ open class DefaultMasterCommunicationManager(
                         } else {
                             masterConnectionManager.masterSubQueryManager.blockAtHeight(
                                     chainId,
-                                    blockchainRid,
+                                    message.targetBlockchainRid,
                                     message.targetBlockchainRid,
                                     message.height
                             ).whenComplete { response, error ->
