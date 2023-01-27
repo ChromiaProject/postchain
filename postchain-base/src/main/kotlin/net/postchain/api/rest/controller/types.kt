@@ -9,6 +9,7 @@ import net.postchain.base.ConfirmationProof
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.Gtv
+import net.postchain.gtx.GtxQuery
 
 interface ChainModel {
     val chainIID: Long
@@ -31,7 +32,7 @@ interface Model : ChainModel {
     fun getConfirmationProof(txRID: TxRID): ConfirmationProof?
     fun getStatus(txRID: TxRID): ApiStatus
     fun query(query: Query): QueryResult
-    fun query(query: Gtv): Gtv
+    fun query(query: GtxQuery): Gtv
     fun nodeQuery(subQuery: String): String
     fun debugQuery(subQuery: String?): String
 }

@@ -18,11 +18,10 @@ import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.crypto.KeyPair
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
-import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxQuery
 import org.apache.commons.io.input.BoundedInputStream
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.apache.hc.client5.http.config.RequestConfig
@@ -73,12 +72,11 @@ class PostchainClientImpl(
 
     @Throws(IOException::class)
     override fun query(name: String, args: Gtv): Gtv = requestStrategy.request({ endpoint ->
-        val gtxQuery = gtv(gtv(name), args)
-        val encodedQuery = GtvEncoder.encodeGtv(gtxQuery)
+        val gtxQuery = GtxQuery(name, args)
         Request(Method.POST, "${endpoint.url}/query_gtv/$blockchainRIDOrID")
                 .header("Content-Type", ContentType.OCTET_STREAM.value)
                 .header("Accept", ContentType.OCTET_STREAM.value)
-                .body(encodedQuery.inputStream())
+                .body(gtxQuery.encode().inputStream())
     }, ::decodeGtv, ::buildExceptionFromGTV)
 
     @Throws(IOException::class)

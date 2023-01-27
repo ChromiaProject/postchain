@@ -21,6 +21,7 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.Gtv
+import net.postchain.gtx.GtxQuery
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 
@@ -142,7 +143,7 @@ class RestApiMockForClientManual {
         }
 
         //TODO Should tests in base have knowledge of GTV? If yes, convert getTransactionsInfo to use GTV
-        override fun query(query: Gtv): Gtv {
+        override fun query(query: GtxQuery): Gtv {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
 
