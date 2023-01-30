@@ -325,8 +325,6 @@
                     </exclusion>
                 </exclusions>
             </dependency>
-            -->
-
             <dependency>
                 <groupId>org.glassfish.jersey.core</groupId>
                 <artifactId>jersey-client</artifactId>
@@ -342,6 +340,8 @@
                 <artifactId>jnr-ffi</artifactId>
                 <version>2.2.13</version>
             </dependency>
+            -->
+
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
