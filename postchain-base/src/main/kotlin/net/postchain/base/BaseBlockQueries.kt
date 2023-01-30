@@ -20,6 +20,7 @@ import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.utils.KovenantHelper
 import nl.komponents.kovenant.Promise
@@ -35,7 +36,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  * @param witness The block witness
  * @param proof a proof including [txHash] (in its raw form)
  */
-class ConfirmationProof(val txHash: ByteArray, val header: ByteArray, val witness: BlockWitness, val proof: GtvMerkleProofTree)
+class ConfirmationProof(
+        @Name("txHash") val txHash: ByteArray,
+        @Name("header") val header: ByteArray,
+        @Name("witness") val witness: BlockWitness,
+        @Name("proof") val proof: GtvMerkleProofTree
+)
 
 /**
  * A collection of methods for various blockchain-related queries. Each query is called with the wrapping method [runOp]
@@ -190,12 +196,13 @@ open class BaseBlockQueries(
 
     fun getConfirmationProof(txRID: ByteArray): Promise<ConfirmationProof?, Exception> {
         return runOp {
-            val material = blockStore.getConfirmationProofMaterial(it, txRID) as ConfirmationProofMaterial
-            val decodedWitness = blockchainConfiguration.decodeWitness(material.witness)
-            val decodedBlockHeader = blockchainConfiguration.decodeBlockHeader(material.header) as BaseBlockHeader
+            blockStore.getConfirmationProofMaterial(it, txRID)?.let { material ->
+                val decodedWitness = blockchainConfiguration.decodeWitness(material.witness)
+                val decodedBlockHeader = blockchainConfiguration.decodeBlockHeader(material.header) as BaseBlockHeader
 
-            val merkleProofTree = decodedBlockHeader.merklePath(material.txHash, material.txHashes)
-            ConfirmationProof(material.txHash.data, material.header, decodedWitness, merkleProofTree)
+                val merkleProofTree = decodedBlockHeader.merklePath(material.txHash, material.txHashes)
+                ConfirmationProof(material.txHash.data, material.header, decodedWitness, merkleProofTree)
+            }
         }
     }
 

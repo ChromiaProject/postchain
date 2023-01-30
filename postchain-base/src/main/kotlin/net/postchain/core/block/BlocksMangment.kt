@@ -2,6 +2,7 @@
 
 package net.postchain.core.block
 
+import net.postchain.base.ConfirmationProofMaterial
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.core.BlockEContext
@@ -52,7 +53,7 @@ interface BlockStore {
     fun getBlockTransactions(ctx: EContext, blockRID: ByteArray): List<ByteArray>
 
     fun isTransactionConfirmed(ctx: EContext, txRID: ByteArray): Boolean
-    fun getConfirmationProofMaterial(ctx: EContext, txRID: ByteArray): Any
+    fun getConfirmationProofMaterial(ctx: EContext, txRID: ByteArray): ConfirmationProofMaterial?
 }
 
 /**

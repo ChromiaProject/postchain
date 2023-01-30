@@ -168,15 +168,16 @@ class BaseBlockStore : BlockStore {
         return DatabaseAccess.of(ctx).getTxRIDsAtHeight(ctx, height)
     }
 
-    override fun getConfirmationProofMaterial(ctx: EContext, txRID: ByteArray): Any {
+    override fun getConfirmationProofMaterial(ctx: EContext, txRID: ByteArray): ConfirmationProofMaterial? {
         val db = DatabaseAccess.of(ctx)
-        val block = db.getBlockInfo(ctx, txRID)
-        return ConfirmationProofMaterial(
-                WrappedByteArray(db.getTxHash(ctx, txRID)),
-                db.getBlockTxHashes(ctx, block.blockIid).map { WrappedByteArray(it) }.toTypedArray(),
-                block.blockHeader,
-                block.witness
-        )
+        return db.getBlockInfo(ctx, txRID)?.let { block ->
+            ConfirmationProofMaterial(
+                    WrappedByteArray(db.getTxHash(ctx, txRID)),
+                    db.getBlockTxHashes(ctx, block.blockIid).map { WrappedByteArray(it) }.toTypedArray(),
+                    block.blockHeader,
+                    block.witness
+            )
+        }
     }
 
     override fun getTxBytes(ctx: EContext, txRID: ByteArray): ByteArray? {

@@ -23,6 +23,7 @@ import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GtxQuery
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 class RestApiMockForClientManual {
@@ -39,6 +40,7 @@ class RestApiMockForClientManual {
         logger.debug { "Stopped" }
     }
 
+    @Disabled
     @Test
     fun startMockRestApi() {
         val model = MockModel()

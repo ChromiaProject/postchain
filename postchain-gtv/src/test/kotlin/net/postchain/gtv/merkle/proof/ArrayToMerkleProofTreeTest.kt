@@ -4,13 +4,16 @@ package net.postchain.gtv.merkle.proof
 
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.generateProof
-import net.postchain.gtv.merkle.*
+import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected1ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected4ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected7ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expectet7and3ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.MerkleHashCalculatorDummy
+import net.postchain.gtv.merkle.PrintableTreeFactory
+import net.postchain.gtv.merkle.TreeHelper
 import net.postchain.gtv.merkle.TreeHelper.stripWhite
+import net.postchain.gtv.merkle.TreePrinter
 import net.postchain.gtv.merkle.path.GtvPath
 import net.postchain.gtv.merkle.path.GtvPathFactory
 import net.postchain.gtv.merkle.path.GtvPathSet
@@ -86,7 +89,7 @@ class ArrayToMerkleProofTreeTest {
         assertEquals(expected1ElementArrayMerkleRoot, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray = merkleProofTree.toGtv()
         //println("Serialized: $serialize")
 
         val expectedSerialization = "[$ln" +
@@ -161,7 +164,7 @@ class ArrayToMerkleProofTreeTest {
         assertEquals(expected4ElementArrayMerkleRoot, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray = merkleProofTree.toGtv()
         //println("Serilalized: $serialize")
 
         val expectedSerialization = "[$ln" +
@@ -251,7 +254,7 @@ class ArrayToMerkleProofTreeTest {
         assertEquals(expected7ElementArrayMerkleRoot, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray = merkleProofTree.toGtv()
         //println("Serilalized: $serialize")
 
         val expectedSerialization = "[$ln" +
@@ -493,7 +496,7 @@ class ArrayToMerkleProofTreeTest {
         assertEquals(expectet7and3ElementArrayMerkleRoot, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray = merkleProofTree.toGtv()
         println("Serilalized: $serialize")
 
         val expectedSerialization = "[$ln" +

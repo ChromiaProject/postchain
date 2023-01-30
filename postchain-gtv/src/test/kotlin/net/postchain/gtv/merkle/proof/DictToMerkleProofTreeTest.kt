@@ -4,10 +4,14 @@ package net.postchain.gtv.merkle.proof
 
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.generateProof
-import net.postchain.gtv.merkle.*
+import net.postchain.gtv.merkle.DictToGtvBinaryTreeHelper
 import net.postchain.gtv.merkle.DictToGtvBinaryTreeHelper.expectedMerkleRoot1
 import net.postchain.gtv.merkle.DictToGtvBinaryTreeHelper.expectedMerkleRoot4
 import net.postchain.gtv.merkle.DictToGtvBinaryTreeHelper.expectedMerkleRootDictInDict
+import net.postchain.gtv.merkle.MerkleHashCalculatorDummy
+import net.postchain.gtv.merkle.PrintableTreeFactory
+import net.postchain.gtv.merkle.TreeHelper
+import net.postchain.gtv.merkle.TreePrinter
 import net.postchain.gtv.merkle.path.GtvPath
 import net.postchain.gtv.merkle.path.GtvPathFactory
 import net.postchain.gtv.merkle.path.GtvPathSet
@@ -86,7 +90,7 @@ class DictToMerkleProofTreeTest {
         assertEquals(expectedMerkleRoot1, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray = merkleProofTree.toGtv()
         //println("Serilalized: $serialize")
 
         val expectedSerialization = "[$ln" +
@@ -193,7 +197,7 @@ class DictToMerkleProofTreeTest {
         assertEquals(expectedMerkleRoot4, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray = merkleProofTree.toGtv()
         //println("Serilalized: $serialize")
 
         val expectedSerialization = "[$ln" +
@@ -280,7 +284,7 @@ class DictToMerkleProofTreeTest {
         assertEquals(expectedMerkleRootDictInDict, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray = merkleProofTree.toGtv()
         println("Serilalized: $serialize")
 
         val expectedSerialization =  "[$ln" +
@@ -366,7 +370,7 @@ class DictToMerkleProofTreeTest {
         assertEquals(expectedMerkleRootDictInDict, TreeHelper.convertToHex(merkleProofRoot))
 
         // Proof -> Serialize
-        val serialize: GtvArray = merkleProofTree.serializeToGtv()
+        val serialize: GtvArray = merkleProofTree.toGtv()
         //println("Serilalized: $serialize")
 
         val expectedSerialization = "[$ln" +
