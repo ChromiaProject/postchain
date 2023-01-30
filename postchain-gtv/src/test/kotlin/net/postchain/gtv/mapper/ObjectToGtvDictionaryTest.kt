@@ -10,15 +10,16 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
-data class DictWithList(
-        @Name("simples") val simples: List<Simple>
-)
-
 class ObjectToGtvDictionaryTest {
 
     @Test
     fun basicMap() {
         assert(GtvObjectMapper.toGtvDictionary(mapOf("foo" to 1L))).isEqualTo(gtv(mapOf("foo" to gtv(1))))
+    }
+
+    @Test
+    fun toGtv() {
+        assert(GtvObjectMapper.toGtvDictionary(WithCustom("FOO", Custom("BAR")))).isEqualTo(gtv(mapOf("foo" to gtv("FOO"), "bar" to gtv("<<<BAR>>>"))))
     }
 
     @ParameterizedTest(name = "Mapping from {1} to {2}")

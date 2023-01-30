@@ -22,6 +22,11 @@ class ObjectToGtvArrayTest {
     }
 
     @Test
+    fun toGtv() {
+        assert(GtvObjectMapper.toGtvArray(WithCustom("FOO", Custom("BAR")))).isEqualTo(gtv(listOf(gtv("FOO"), gtv("<<<BAR>>>"))))
+    }
+
+    @Test
     fun illegalAnnotations() {
         data class RawGtvClass(@RawGtv val gtv: Gtv)
         assertThrows<IllegalArgumentException> { GtvObjectMapper.toGtvArray(RawGtvClass(gtv(1))) }
@@ -33,7 +38,7 @@ class ObjectToGtvArrayTest {
 
     @Test
     fun simpleTypes() {
-        @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
+        @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN", "KotlinConstantConditions")
         data class AllPrimitives(
                 val long: Long = 1,
                 val javaLong: java.lang.Long = java.lang.Long.valueOf(2) as java.lang.Long,
