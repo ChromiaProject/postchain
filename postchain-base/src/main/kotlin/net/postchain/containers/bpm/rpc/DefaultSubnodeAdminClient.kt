@@ -4,6 +4,8 @@ import com.google.protobuf.ByteString
 import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.ManagedChannel
+import io.grpc.Status
+import io.grpc.StatusRuntimeException
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
@@ -51,7 +53,7 @@ class DefaultSubnodeAdminClient(
                     logger.info { "connect() -- Subnode container connection established on $target" }
                     return@task
                 } catch (e: Exception) {
-                    logger.error(e) { "connect() -- Can't connect to subnode on $target, attempt $it of $MAX_RETRIES" }
+                    logger.warn(e) { "connect() -- Can't connect to subnode on $target, attempt $it of $MAX_RETRIES" }
                 }
 
                 if (it == MAX_RETRIES - 1) {
@@ -175,6 +177,13 @@ class DefaultSubnodeAdminClient(
             val response = peerService.addPeer(request)
             logger.debug { response.message }
             true
+        } catch (e: StatusRuntimeException) {
+            if (e.status == Status.ALREADY_EXISTS) {
+                logger.warn { "addPeerInfo($peerInfo) -- ${e.message}" }
+            } else {
+                logger.error { "addPeerInfo($peerInfo) -- failed: ${e.message}" }
+            }
+            false
         } catch (e: Exception) {
             logger.error { "addPeerInfo($peerInfo) -- exception occurred: : ${e.message}" }
             false
