@@ -39,6 +39,9 @@ import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 import java.nio.file.Path
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 
 const val POSTCHAIN_MASTER_PUBKEY = "postchain-master-pubkey"
 
@@ -64,6 +67,7 @@ open class ContainerManagedBlockchainProcessManager(
     private val postchainContainers = mutableMapOf<ContainerName, PostchainContainer>() // { ContainerName -> PsContainer }
     private val containerJobManager = DefaultContainerJobManager(::containerJobHandler, ::containerHealthcheckJobHandler)
     private val runningInContainer = System.getenv("POSTCHAIN_RUNNING_IN_CONTAINER").toBoolean()
+    private val healthCheckExecutor: ScheduledExecutorService?
 
     init {
         logger.info(if (runningInContainer) "Running in container" else "Running as native process")
@@ -76,6 +80,19 @@ open class ContainerManagedBlockchainProcessManager(
             removeContainersIfExist()
         } catch (e: Exception) {
             logger.error("Unable to list/remove containers: $e")
+        }
+
+        // Healthcheck
+        val period = containerNodeConfig.healthcheckRunningContainersCheckPeriod
+        healthCheckExecutor = if (containerNodeConfig.healthcheckRunningContainersCheckPeriod > 0) {
+            Executors.newScheduledThreadPool(1).also {
+                it.scheduleAtFixedRate({
+                    logger.debug("[${nodeName()}]: ContainerJob -- Healthcheck job created")
+                    containerJobManager.doHealthcheck()
+                }, period, period, TimeUnit.MILLISECONDS)
+            }
+        } else {
+            null
         }
         Runtime.getRuntime().addShutdownHook(
                 Thread {
@@ -135,9 +152,6 @@ open class ContainerManagedBlockchainProcessManager(
                         stopStartBlockchains(reloadChain0)
                         reloadChain0
                     }
-
-                    // Docker containers healthcheck
-                    scheduleDockerContainersHealthcheck()
                     res2
                 }
 
@@ -202,20 +216,6 @@ open class ContainerManagedBlockchainProcessManager(
             } else {
                 logger.debug("[${nodeName()}]: ContainerJob -- Start subnode chain: ${getChain(it.chainId)}")
                 containerJobManager.startChain(getChain(it.chainId))
-            }
-        }
-    }
-
-    private fun scheduleDockerContainersHealthcheck() {
-        val period = containerNodeConfig.healthcheckRunningContainersCheckPeriod.toLong()
-        if (period > 0 && postchainContainers.isNotEmpty()) {
-            val height = withReadConnection(storage, CHAIN0) { ctx ->
-                DatabaseAccess.of(ctx).getLastBlockHeight(ctx)
-            }
-
-            if (height % period == 0L) {
-                logger.debug("[${nodeName()}]: ContainerJob -- Healthcheck job created")
-                containerJobManager.doHealthcheck()
             }
         }
     }
@@ -401,6 +401,9 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     override fun shutdown() {
+        healthCheckExecutor?.shutdownNow()
+        healthCheckExecutor?.awaitTermination(2000, TimeUnit.MILLISECONDS)
+
         getStartingOrRunningContainerBlockchains()
                 .forEach { stopBlockchain(it, bTrace = null) }
         containerJobManager.shutdown()

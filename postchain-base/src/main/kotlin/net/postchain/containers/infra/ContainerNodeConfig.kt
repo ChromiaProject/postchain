@@ -17,7 +17,7 @@ import org.apache.commons.configuration2.Configuration
  *
  * @param masterHost Used by subnode to connect to master for inter-node communication
  * @param subnodeHost Used by master for restAPI communication with subnode
- * @param healthcheckRunningContainersCheckPeriod In number of blocks of chain0, set 0 to disable a check
+ * @param healthcheckRunningContainersCheckPeriod In milliseconds, set 0 to disable health check
  */
 data class ContainerNodeConfig(
         val masterPubkey: String,
@@ -29,7 +29,7 @@ data class ContainerNodeConfig(
         val subnodeRestApiPort: Int,
         val subnodeAdminRpcPort: Int,
         val sendMasterConnectedPeersPeriod: Long,
-        val healthcheckRunningContainersCheckPeriod: Int,
+        val healthcheckRunningContainersCheckPeriod: Long,
         // Container FileSystem
         val containerFilesystem: String,
 
@@ -113,7 +113,7 @@ data class ContainerNodeConfig(
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_REST_API_PORT", KEY_SUBNODE_REST_API_PORT, RestApiConfig.DEFAULT_REST_API_PORT),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_ADMIN_RPC_PORT", KEY_SUBNODE_ADMIN_RPC_PORT, PostchainServerConfig.DEFAULT_RPC_SERVER_PORT),
                         getEnvOrLongProperty("POSTCHAIN_SEND_MASTER_CONNECTED_PEERS_PERIOD", KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD, 60_000L),
-                        getEnvOrIntProperty("POSTCHAIN_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD", KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 0),
+                        getEnvOrLongProperty("POSTCHAIN_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD", KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 60_000),
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_FILESYSTEM", KEY_SUBNODE_FILESYSTEM, FileSystem.Type.LOCAL.name).uppercase(), // LOCAL | ZFS
                         hostMountDir,
                         getEnvOrStringProperty("POSTCHAIN_MASTER_MOUNT_DIR", KEY_MASTER_MOUNT_DIR, hostMountDir),
