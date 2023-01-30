@@ -240,8 +240,7 @@ class RestApi(
                 gson.toJson(result)
             })
 
-            // undocumented
-            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX/confirmationProof", redirectGet { request, _ ->
+            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX/confirmationProof", JSON_CONTENT_TYPE, redirectGet { request, _ ->
                 val result = runTxActionOnModel(request) { model, txRID ->
                     model.getConfirmationProof(txRID)
                 }
@@ -527,7 +526,7 @@ class RestApi(
         System.runFinalization()
     }
 
-    private fun runTxActionOnModel(request: Request, txAction: (Model, TxRID) -> Any?): Any? {
+    private fun runTxActionOnModel(request: Request, txAction: (Model, TxRID) -> Any?): Any {
         val model = model(request)
         val txHashHex = checkTxHashHex(request)
         return txAction(model, toTxRID(txHashHex))

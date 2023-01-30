@@ -235,7 +235,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, ColumnListHandler<ByteArray>(), height).toTypedArray()
     }
 
-    override fun getBlockInfo(ctx: EContext, txRID: ByteArray): DatabaseAccess.BlockInfo {
+    override fun getBlockInfo(ctx: EContext, txRID: ByteArray): DatabaseAccess.BlockInfo? {
         val sql = """
             SELECT b.block_iid, b.block_header_data, b.block_witness
                     FROM ${tableBlocks(ctx)} b
@@ -243,7 +243,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                     WHERE t.tx_rid = ?
         """.trimIndent()
         val block = queryRunner.query(ctx.conn, sql, mapListHandler, txRID)!!
-        if (block.size < 1) throw UserMistake("Can't get confirmation proof for nonexistent tx")
+        if (block.size < 1) return null
         if (block.size > 1) throw ProgrammerMistake("Expected at most one hit")
 
         val blockIid = block.first()["block_iid"] as Long

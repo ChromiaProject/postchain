@@ -3,7 +3,13 @@
 package net.postchain.gtv.merkle.proof
 
 import net.postchain.common.data.Hash
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvVirtual
+import net.postchain.gtv.mapper.ToGtv
 import net.postchain.gtv.merkle.GtvMerkleBasics
 import net.postchain.gtv.merkle.GtvMerkleBasics.HASH_PREFIX_NODE_GTV_ARRAY
 import net.postchain.gtv.merkle.GtvMerkleBasics.HASH_PREFIX_NODE_GTV_DICT
@@ -71,8 +77,8 @@ class ProofNodeGtvDictHead(
  * @property root is the root of the proof
  * @property totalNrOfBytes is the size in bytes of the original [Gtv] structure (sometimes we don't have the size, e.g. after deserialization)
  */
-class GtvMerkleProofTree(root: MerkleProofElement, totalNrOfBytes: Int = UNKNOWN_SIZE_IN_BYTE ):
-        MerkleProofTree<Gtv>(root, totalNrOfBytes) {
+class GtvMerkleProofTree(root: MerkleProofElement, totalNrOfBytes: Int = UNKNOWN_SIZE_IN_BYTE) :
+        MerkleProofTree<Gtv>(root, totalNrOfBytes), ToGtv {
 
     /**
      * Note that we have our own primitive serialization format. It is based on arrays that begins with an integer.
@@ -82,7 +88,7 @@ class GtvMerkleProofTree(root: MerkleProofElement, totalNrOfBytes: Int = UNKNOWN
      * 2 -> a node
      * (we can add more in subclasses)
      */
-    fun serializeToGtv(): GtvArray {
+    override fun toGtv(): GtvArray {
         return serializeToGtvInternal(this.root)
     }
 

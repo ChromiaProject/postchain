@@ -5,6 +5,7 @@ package net.postchain.gtx
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.SQLDatabaseAccess
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.gtv.Gtv
@@ -146,7 +147,7 @@ fun txConfirmationTime(config: Unit, ctx: EContext, args: Gtv): Gtv {
     val dba: SQLDatabaseAccess = DatabaseAccess.of(ctx) as SQLDatabaseAccess
     val argsDict = args as GtvDictionary
     val txRID = argsDict["txRID"]!!.asByteArray(true)
-    val info = dba.getBlockInfo(ctx, txRID)
+    val info = dba.getBlockInfo(ctx, txRID) ?: throw UserMistake("Can't get confirmation proof for nonexistent tx")
     val timestamp = dba.queryRunner.query(ctx.conn, "SELECT timestamp FROM blocks WHERE block_iid = ?",
             ScalarHandler<Long>(), info.blockIid)
     val blockRID = dba.queryRunner.query(ctx.conn, "SELECT block_rid FROM blocks WHERE block_iid = ?",

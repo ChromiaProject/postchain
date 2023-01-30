@@ -76,7 +76,7 @@ interface DatabaseAccess {
     fun getLastBlockTimestamp(ctx: EContext): Long
     fun getBlockHeightInfo(ctx: EContext, bcRid: BlockchainRid): Pair<Long, ByteArray>?
     fun getTxRIDsAtHeight(ctx: EContext, height: Long): Array<ByteArray>
-    fun getBlockInfo(ctx: EContext, txRID: ByteArray): BlockInfo
+    fun getBlockInfo(ctx: EContext, txRID: ByteArray): BlockInfo?
     fun getTxHash(ctx: EContext, txRID: ByteArray): ByteArray
     fun getBlockTxRIDs(ctx: EContext, blockIid: Long): List<ByteArray>
     fun getBlockTxHashes(ctx: EContext, blockIid: Long): List<ByteArray>

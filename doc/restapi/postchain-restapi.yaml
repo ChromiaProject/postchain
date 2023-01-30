@@ -225,6 +225,35 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /tx/{blockchainRid}/{txRid}/confirmationProof:
+    get:
+      tags:
+        - transaction
+      summary: Fetch transaction confirmation proof
+      description: Fetch confirmation proof for a transaction from a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/txRid"
+      responses:
+        200:
+          description: Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/confirmationProof"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+                txNotFound:
+                  value:
+                    error: "Can't find tx with hash <hex-string>"
   /tx/{blockchainRid}/{txRid}/status:
     get:
       tags:
@@ -901,6 +930,13 @@ components:
         txHash:
           $ref: "#/components/schemas/hash"
         txData:
+          $ref: "#/components/schemas/hex"
+    confirmationProof:
+      type: object
+      required:
+        - proof
+      properties:
+        proof:
           $ref: "#/components/schemas/hex"
     unknown:
       type: object
