@@ -16,7 +16,6 @@ import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockStore
-import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
@@ -31,16 +30,16 @@ import java.util.concurrent.atomic.AtomicBoolean
 /**
  * Encapsulating a proof of a transaction hash in a block header
  *
- * @param txHash The transaction hash the proof applies to
- * @param header The block header the [txHash] is supposedly in
+ * @param hash The transaction hash the proof applies to
+ * @param blockHeader The block header the [hash] is supposedly in
  * @param witness The block witness
- * @param proof a proof including [txHash] (in its raw form)
+ * @param merkleProofTree a proof including [hash] (in its raw form)
  */
 class ConfirmationProof(
-        @Name("txHash") val txHash: ByteArray,
-        @Name("header") val header: ByteArray,
-        @Name("witness") val witness: BlockWitness,
-        @Name("proof") val proof: GtvMerkleProofTree
+        @Name("hash") val hash: ByteArray,
+        @Name("blockHeader") val blockHeader: ByteArray,
+        @Name("witness") val witness: BaseBlockWitness,
+        @Name("merkleProofTree") val merkleProofTree: GtvMerkleProofTree
 )
 
 /**
@@ -201,7 +200,11 @@ open class BaseBlockQueries(
                 val decodedBlockHeader = blockchainConfiguration.decodeBlockHeader(material.header) as BaseBlockHeader
 
                 val merkleProofTree = decodedBlockHeader.merklePath(material.txHash, material.txHashes)
-                ConfirmationProof(material.txHash.data, material.header, decodedWitness, merkleProofTree)
+                ConfirmationProof(
+                        material.txHash.data,
+                        material.header,
+                        decodedWitness as BaseBlockWitness,
+                        merkleProofTree)
             }
         }
     }
