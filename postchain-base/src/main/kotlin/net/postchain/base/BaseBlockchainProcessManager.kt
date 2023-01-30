@@ -57,9 +57,6 @@ open class BaseBlockchainProcessManager(
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
     private val scheduledForStart = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
 
-    // FYI: [et]: For integration testing. Will be removed or refactored later
-    private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
-
     // For DEBUG only
     var insideATest = false
     var blockDebug: BlockTrace? = null
