@@ -31,6 +31,11 @@ class MasterSubQueryManager(private val messageSender: (Long, MsMessage) -> Bool
 
     fun query(chainId: Long, blockchainRid: BlockchainRid, targetBlockchainRid: BlockchainRid?, name: String, args: Gtv): CompletionStage<Gtv> {
         val requestId = requestCounter.incrementAndGet()
+        val future = CompletableFuture<Any?>()
+                .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
+                .whenComplete { _, _ -> outstandingRequests.remove(requestId) }
+        outstandingRequests[requestId] = future
+
         if (!messageSender(
                         chainId,
                         MsQueryRequest(
@@ -41,17 +46,18 @@ class MasterSubQueryManager(private val messageSender: (Long, MsMessage) -> Bool
                                 args
                         )
                 )) {
-            return CompletableFuture.failedStage(ProgrammerMistake("Unable to send query"))
+            future.completeExceptionally(ProgrammerMistake("Unable to send query"))
         }
-        val future = CompletableFuture<Any?>()
-                .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
-                .whenComplete { _, _ -> outstandingRequests.remove(requestId) }
-        outstandingRequests[requestId] = future
         return future as CompletionStage<Gtv>
     }
 
     fun blockAtHeight(chainId: Long, blockchainRid: BlockchainRid, targetBlockchainRid: BlockchainRid, height: Long): CompletionStage<BlockDetail?> {
         val requestId = requestCounter.incrementAndGet()
+        val future = CompletableFuture<Any?>()
+                .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
+                .whenComplete { _, _ -> outstandingRequests.remove(requestId) }
+        outstandingRequests[requestId] = future
+
         if (!messageSender(
                         chainId,
                         MsBlockAtHeightRequest(
@@ -61,12 +67,8 @@ class MasterSubQueryManager(private val messageSender: (Long, MsMessage) -> Bool
                                 height
                         )
                 )) {
-            return CompletableFuture.failedStage(ProgrammerMistake("Unable to send block at height query"))
+            future.completeExceptionally(ProgrammerMistake("Unable to send block at height query"))
         }
-        val future = CompletableFuture<Any?>()
-                .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
-                .whenComplete { _, _ -> outstandingRequests.remove(requestId) }
-        outstandingRequests[requestId] = future
         return future as CompletionStage<BlockDetail?>
     }
 
