@@ -1,8 +1,7 @@
 package net.postchain.containers.bpm.docker
 
-import com.spotify.docker.client.DefaultDockerClient
-import com.spotify.docker.client.DockerClient
-import org.glassfish.jersey.client.RequestEntityProcessing
+import org.mandas.docker.client.DockerClient
+import org.mandas.docker.client.builder.jersey.JerseyDockerClientBuilder
 
 object DockerClientFactory {
 
@@ -25,11 +24,6 @@ object DockerClientFactory {
      *  - https://github.com/spotify/docker-client/pull/1021
      *  - https://community.atlassian.com/t5/Bitbucket-questions/create-container-authorization-denied-by-plugin-pipelines/qaq-p/731364
      */
-    fun create(): DockerClient {
-        return DefaultDockerClient
-                .fromEnv()
-                .useRequestEntityProcessing(RequestEntityProcessing.BUFFERED)
-                .build()
-    }
+    fun create(): DockerClient = JerseyDockerClientBuilder().fromEnv().build()
 
 }

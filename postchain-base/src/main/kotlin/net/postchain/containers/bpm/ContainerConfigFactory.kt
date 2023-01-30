@@ -1,8 +1,5 @@
 package net.postchain.containers.bpm
 
-import com.spotify.docker.client.messages.ContainerConfig
-import com.spotify.docker.client.messages.HostConfig
-import com.spotify.docker.client.messages.PortBinding
 import mu.KLogging
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.config.app.AppConfig
@@ -11,6 +8,9 @@ import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Infrastructure
 import net.postchain.ebft.syncmanager.common.SyncParameters
+import org.mandas.docker.client.messages.ContainerConfig
+import org.mandas.docker.client.messages.HostConfig
+import org.mandas.docker.client.messages.PortBinding
 
 object ContainerConfigFactory : KLogging() {
 
@@ -34,7 +34,7 @@ object ContainerConfigFactory : KLogging() {
          */
 
         // target volume
-        val targetVol = HostConfig.Bind
+        val targetVol = HostConfig.Bind.builder()
                 .from(fs.hostRootOf(container.containerName).toString())
                 .to(FileSystem.CONTAINER_TARGET_PATH)
                 .build()
@@ -42,7 +42,7 @@ object ContainerConfigFactory : KLogging() {
 
         // pgdata volume
         if (containerNodeConfig.bindPgdataVolume) {
-            val pgdataVol = HostConfig.Bind
+            val pgdataVol = HostConfig.Bind.builder()
                     .from(fs.hostPgdataOf(container.containerName).toString())
                     .to(FileSystem.CONTAINER_PGDATA_PATH)
                     .build()
@@ -61,7 +61,7 @@ object ContainerConfigFactory : KLogging() {
         }
 
         if (userSpec != null) {
-            volumes.add(HostConfig.Bind.from("/etc/passwd").to("/etc/passwd").readOnly(true).build())
+            volumes.add(HostConfig.Bind.builder().from("/etc/passwd").to("/etc/passwd").readOnly(true).build())
         }
 
         val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
@@ -94,7 +94,7 @@ object ContainerConfigFactory : KLogging() {
         // Host config
         val resources = container.resourceLimits
         val hostConfig = HostConfig.builder()
-                .appendBinds(*volumes.toTypedArray())
+                .binds(*volumes.toTypedArray())
                 .portBindings(portBindings)
                 .publishAllPorts(false)
                 .apply {
