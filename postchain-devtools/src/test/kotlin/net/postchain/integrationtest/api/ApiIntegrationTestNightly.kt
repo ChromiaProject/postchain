@@ -4,23 +4,26 @@ package net.postchain.integrationtest.api
 
 import io.restassured.RestAssured.given
 import net.postchain.base.BaseBlockHeader
+import net.postchain.base.ConfirmationProof
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
 import net.postchain.crypto.KeyPair
-import net.postchain.crypto.Signature
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.RestTools
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
-import net.postchain.gtv.*
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvProofTreeTestHelper
+import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
-import net.postchain.gtv.merkle.proof.GtvMerkleProofTreeFactory
 import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.Gtx
@@ -42,7 +45,6 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
     private var txHashHex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
     private val gtxTestModule = GTXTestModule()
-    private val gtxTextModuleOperation = "gtx_test" // This is a real operation
     private val chainIid = 1
 
 
@@ -80,7 +82,7 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
         awaitConfirmed(blockchainRID, tx.getRID())
 
         // Note: here we use the "iid_1" method instead of BC RID
-        testStatusGet("/tx/iid_${chainIid.toInt().toString()}/${tx.getRID().toHex()}/status", 200) {
+        testStatusGet("/tx/iid_$chainIid/${tx.getRID().toHex()}/status", 200) {
             assertEquals(
                     jsonAsMap(gson, "{\"status\"=\"confirmed\"}"),
                     jsonAsMap(gson, it))
@@ -190,7 +192,6 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
     }
 
     @Test
-    @Suppress("UNCHECKED_CAST")
     fun testConfirmationProof() {
         val nodeCount = 3
 
@@ -283,7 +284,7 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
         // ---- To post a TX ---
         val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem)
 
-        var blockHeight = 0
+        val blockHeight = 0
         var currentId = 0
 
 
@@ -403,25 +404,22 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
      *   2.c merkle path
      *
      * @param realTx - the transaction to check
-     * @param actualMap - a map of json parts that is the proof
+     * @param jsonBody - proof in JSON format
      */
     private fun checkConfirmationProofForTx(realTx: TestOneOpGtxTransaction, jsonBody: String) {
-
-        val actualMap: Map<String, Any> = jsonAsMap(gson, jsonBody)
+        val confirmationProofGtv = GtvDecoder.decodeGtv((jsonAsMap(gson, jsonBody)["proof"] as String).hexStringToByteArray())
+        val confirmationProof = GtvObjectMapper.fromGtv(confirmationProofGtv, ConfirmationProof::class)
 
         // Assert tx hash
-        val hash = (actualMap["hash"] as String).hexStringToByteArray()
-        assertArrayEquals(realTx.getHash(), hash)
+        assertArrayEquals(realTx.getHash(), confirmationProof.hash)
 
         // Assert signatures
-        val blockHeaderRaw = (actualMap["blockHeader"] as String).hexStringToByteArray()
+        val blockHeaderRaw = confirmationProof.blockHeader
         val blockHeader = BaseBlockHeader(blockHeaderRaw, GtvMerkleHashCalculator(cryptoSystem))
         val blockRid = blockHeader.blockRID
 
-        val signatures = actualMap["signatures"] as List<Map<String, String>>
-        signatures.forEach {
-            val signature = Signature(it["pubKey"]!!.hexStringToByteArray(), it["signature"]!!.hexStringToByteArray())
-            assertTrue(cryptoSystem.verifyDigest(blockRid, signature))
+        confirmationProof.witness.getSignatures().forEach {
+            assertTrue(cryptoSystem.verifyDigest(blockRid, it))
         }
 
         val blockMerkleRootHashFromHeader = blockHeader.blockHeaderRec.getMerkleRootHash()
@@ -429,32 +427,19 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
         // -------------------
         // Merkle Proof Tree
         // -------------------
+        val merkleProofTree = confirmationProofGtv["merkleProofTree"]!! as GtvArray
 
         // a) Do we have the value to prove
-        val merkleProofTree = actualMap["merkleProofTree"] as List<Any>
         val found = GtvProofTreeTestHelper.findHashInBlockProof(realTx.getHash(), merkleProofTree)
         assertTrue(found, "The proof does not contain the hash we expected")
 
         // b) Calculate the merkle root of the proof
-        // JSON -> GTV
-        val gsonGtv = make_gtv_gson()
-        val gtvDictBody = gsonGtv.fromJson<Gtv>(jsonBody, Gtv::class.java)
-        val gtvProof = gtvDictBody!!.asDict().get("merkleProofTree")
-
-        // TODO: Should this really be done? Shouldn't we make the JSON format understand Binary?
-        val gtvCleanProof = GtvProofTreeTestHelper.translateGtvStringToGtvByteArray(gtvProof!!)
-        println("Proof as gtv: $gtvCleanProof")
-        // GTV -> Proof
-        val proofTreeFactory = GtvMerkleProofTreeFactory()
-        val x = proofTreeFactory.deserialize(gtvCleanProof as GtvArray)
-        println("Proof as classes: $x")
-        val myNewBlockHash = x.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val myNewBlockHash = confirmationProof.merkleProofTree.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
 
         // Assert we get the same block RID
         println("Block merkle root - calculated : ${myNewBlockHash.toHex()}")
         assertTrue(myNewBlockHash.contentEquals(blockMerkleRootHashFromHeader),
                 "The block merkle root calculated from the proof doesn't correspond to the block's merkle root hash from the header")
-
     }
 
     private fun awaitConfirmed(blockchainRID: String, txRid: Hash) {

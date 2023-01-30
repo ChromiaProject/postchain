@@ -9,6 +9,7 @@ import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvVirtual
+import net.postchain.gtv.mapper.FromGtv
 import net.postchain.gtv.mapper.ToGtv
 import net.postchain.gtv.merkle.GtvMerkleBasics
 import net.postchain.gtv.merkle.GtvMerkleBasics.HASH_PREFIX_NODE_GTV_ARRAY
@@ -17,7 +18,6 @@ import net.postchain.gtv.merkle.GtvMerkleBasics.UNKNOWN_COLLECTION_POSITION
 import net.postchain.gtv.merkle.MerkleBasics.UNKNOWN_SIZE_IN_BYTE
 import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.gtv.merkle.path.SearchableGtvPathElement
-
 
 const val SERIALIZATION_ARRAY_TYPE: Long = 103
 const val SERIALIZATION_DICT_TYPE: Long = 104
@@ -88,21 +88,9 @@ class GtvMerkleProofTree(root: MerkleProofElement, totalNrOfBytes: Int = UNKNOWN
      * 2 -> a node
      * (we can add more in subclasses)
      */
-    override fun toGtv(): GtvArray {
-        return serializeToGtvInternal(this.root)
-    }
+    override fun toGtv(): GtvArray = serializeToGtvInternal(this.root)
 
-
-    /**
-     * In this case the implementation is trivial. We already have a value of the
-     * correct type, so let's return it.
-     */
-    fun serializeValueLeafToGtv(valueLeaf: Gtv): Gtv {
-        return valueLeaf
-    }
-
-
-    fun serializeToGtvInternal(currentElement: MerkleProofElement): GtvArray {
+    private fun serializeToGtvInternal(currentElement: MerkleProofElement): GtvArray {
         return when (currentElement) {
             is ProofHashedLeaf -> {
                 val tail = GtvByteArray(currentElement.merkleHash)
@@ -110,6 +98,7 @@ class GtvMerkleProofTree(root: MerkleProofElement, totalNrOfBytes: Int = UNKNOWN
                 val arr: Array<Gtv> = arrayOf(head, tail)
                 GtvArray(arr)
             }
+
             is ProofValueGtvLeaf -> {
                 val tail = serializeValueLeafToGtv(currentElement.content)
                 val head = GtvInteger(SERIALIZATION_VALUE_LEAF_TYPE)
@@ -142,20 +131,24 @@ class GtvMerkleProofTree(root: MerkleProofElement, totalNrOfBytes: Int = UNKNOWN
                 val arr: Array<Gtv> = arrayOf(head, size, position, tail1, tail2)
                 GtvArray(arr)
             }
+
             else -> throw IllegalStateException("This type should have been taken care of: $currentElement")
         }
     }
 
-    private fun serializePathElement(pathElem: SearchableGtvPathElement?): Gtv {
-        return if (pathElem != null) {
-            pathElem.buildGtv()
-        } else {
-            GtvInteger(UNKNOWN_COLLECTION_POSITION )
-        }
+    /**
+     * In this case the implementation is trivial. We already have a value of the
+     * correct type, so let's return it.
+     */
+    private fun serializeValueLeafToGtv(valueLeaf: Gtv): Gtv = valueLeaf
+
+    private fun serializePathElement(pathElem: SearchableGtvPathElement?): Gtv =
+            pathElem?.buildGtv() ?: GtvInteger(UNKNOWN_COLLECTION_POSITION)
+
+    companion object : FromGtv<GtvMerkleProofTree> {
+        override fun fromGtv(gtv: Gtv): GtvMerkleProofTree = GtvMerkleProofTreeFactory().deserialize(gtv as GtvArray)
     }
-
 }
-
 
 /**
  * Calculates the merkle root hash of the proof structure.
@@ -163,9 +156,8 @@ class GtvMerkleProofTree(root: MerkleProofElement, totalNrOfBytes: Int = UNKNOWN
  * @param calculator describes the method we use for hashing and serialization
  * @return the merkle root hash
  */
-fun GtvMerkleProofTree.merkleHash(calculator: MerkleHashCalculator<Gtv>): Hash {
-    return this.merkleHashSummary(calculator).merkleHash
-}
+fun GtvMerkleProofTree.merkleHash(calculator: MerkleHashCalculator<Gtv>): Hash =
+        this.merkleHashSummary(calculator).merkleHash
 
 /**
  * Calculates the merkle root hash of the proof structure.
@@ -174,7 +166,6 @@ fun GtvMerkleProofTree.merkleHash(calculator: MerkleHashCalculator<Gtv>): Hash {
  * @return the merkle root hash summary
  */
 fun GtvMerkleProofTree.merkleHashSummary(calculator: MerkleHashCalculator<Gtv>): MerkleHashSummary {
-
     val summaryFactory = GtvMerkleBasics.getGtvMerkleHashSummaryFactory()
     return summaryFactory.calculateMerkleRoot(this, calculator)
 }
