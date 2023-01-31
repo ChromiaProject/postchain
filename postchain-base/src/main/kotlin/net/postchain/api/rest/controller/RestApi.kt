@@ -161,7 +161,9 @@ class RestApi(
         http.before { req, res ->
             // Assuming content-type is correctly set we will avoid logging binary request bodies
             if (!req.contentType().isNullOrBlank() && !req.contentType().contains(OCTET_CONTENT_TYPE) && !req.body().isNullOrBlank()) {
-                logger.debug { "Request body: ${req.body()}" }
+                logger.debug { "[${req.ip()}] ${req.requestMethod()} ${req.pathInfo()} with body: ${req.body()}" }
+            } else {
+                logger.debug { "[${req.ip()}] ${req.requestMethod()} ${req.pathInfo()}" }
             }
 
             res.header(ACCESS_CONTROL_ALLOW_ORIGIN, "*")
