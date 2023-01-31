@@ -41,7 +41,7 @@ build:
     - tags
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS -DskipTests deploy
+    - mvn $MAVEN_CLI_OPTS -DskipTests deploy -U
 #    - mvn $MAVEN_CLI_OPTS --activate-profiles ci verify
 
 nightly-tests:
