@@ -2,9 +2,12 @@
 
 package net.postchain.debug
 
+import mu.KLogging
 import java.util.Comparator.comparingInt
 
 class DefaultNodeDiagnosticContext() : NodeDiagnosticContext {
+
+    companion object : KLogging()
 
     private val properties: MutableMap<DiagnosticProperty, () -> Any?> = mutableMapOf()
 
@@ -24,7 +27,14 @@ class DefaultNodeDiagnosticContext() : NodeDiagnosticContext {
         return properties
                 .toSortedMap(comparingInt(DiagnosticProperty::ordinal))
                 .mapKeys { (k, _) -> k.prettyName }
-                .mapValues { (_, v) -> v() }
+                .mapValues { (k, v) ->
+                    try {
+                        v()
+                    } catch (e: Exception) {
+                        logger.warn(e) { "Unable to fetch diagnostic property $k: ${e.message}" }
+                        "Unable to fetch value, ${e.message}"
+                    }
+                }
     }
 
     override fun removeProperty(property: DiagnosticProperty) {
