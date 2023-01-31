@@ -61,4 +61,16 @@ class DefaultNodeDiagnosticContextTest {
         assertEquals("my-container", sut.getProperty(DiagnosticProperty.CONTAINER_NAME)?.invoke())
     }
 
+    @Test
+    fun testExceptionWhenFetchingProperties() {
+        val sut = DefaultNodeDiagnosticContext()
+        sut.addProperty(DiagnosticProperty.VERSION, "4.4.4")
+        sut.addProperty(DiagnosticProperty.CONTAINER_NAME) { throw Exception("fail") }
+
+        // Asserts
+        val content = sut.getProperties()
+        assertThat(content, hasEntry(DiagnosticProperty.VERSION.prettyName, "4.4.4"))
+        assertThat(content, hasEntry(DiagnosticProperty.CONTAINER_NAME.prettyName, "Unable to fetch value, fail"))
+    }
+
 }
