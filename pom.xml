@@ -1,6 +1,7 @@
 <!-- Copyright (c) 2020 ChromaWay AB. See README for license information. -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>net.postchain</groupId>
@@ -282,40 +283,33 @@
                 <version>1.13</version>
             </dependency>
 
+            <!-- DockerClient -->
             <dependency>
-                <groupId>com.spotify</groupId>
+                <groupId>org.mandas</groupId>
                 <artifactId>docker-client</artifactId>
-                <version>8.16.0</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.github.jnr</groupId>
-                        <artifactId>jffi</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.github.jnr</groupId>
-                        <artifactId>jnr-ffi</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.bouncycastle</groupId>
-                        <artifactId>bcpkix-jdk15on</artifactId>
-                    </exclusion>
-                </exclusions>
+                <version>7.0.0</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.jersey.core</groupId>
                 <artifactId>jersey-client</artifactId>
-                <version>2.22.2</version>
+                <version>3.1.0</version>
             </dependency>
             <dependency>
-                <groupId>com.github.jnr</groupId>
-                <artifactId>jffi</artifactId>
-                <version>1.3.10</version>
+                <groupId>org.glassfish.jersey.inject</groupId>
+                <artifactId>jersey-hk2</artifactId>
+                <version>3.1.0</version>
             </dependency>
             <dependency>
-                <groupId>com.github.jnr</groupId>
-                <artifactId>jnr-ffi</artifactId>
-                <version>2.2.13</version>
+                <groupId>org.glassfish.jersey.connectors</groupId>
+                <artifactId>jersey-apache-connector</artifactId>
+                <version>3.1.0</version>
             </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey.media</groupId>
+                <artifactId>jersey-media-json-jackson</artifactId>
+                <version>3.1.0</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>

@@ -1,7 +1,5 @@
 package net.postchain.containers.bpm
 
-import com.spotify.docker.client.DockerClient
-import com.spotify.docker.client.messages.Container
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.data.DatabaseAccess
@@ -38,6 +36,8 @@ import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
+import org.mandas.docker.client.DockerClient
+import org.mandas.docker.client.messages.Container
 import java.nio.file.Path
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
