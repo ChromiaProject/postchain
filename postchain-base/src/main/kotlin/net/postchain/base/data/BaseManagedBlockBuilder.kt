@@ -3,13 +3,20 @@
 package net.postchain.base.data
 
 import mu.KLogging
-import net.postchain.common.TimeLog
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionFailed
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.toHex
-import net.postchain.core.*
-import net.postchain.core.block.*
+import net.postchain.core.EContext
+import net.postchain.core.Storage
+import net.postchain.core.Transaction
+import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockTrace
+import net.postchain.core.block.BlockWitness
+import net.postchain.core.block.BlockWitnessBuilder
+import net.postchain.core.block.ManagedBlockBuilder
 
 /**
  * Wrapper around BlockBuilder providing more control over the process of building blocks,
@@ -19,9 +26,9 @@ import net.postchain.core.block.*
  * @property eContext Connection context including blockchain and node identifiers
  * @property storage For database access
  * @property blockBuilder The base block builder
- * @property onCommit Clean-up function to be called when block has been commited
+ * @property afterCommit Clean-up function to be called when block has been committed
  * @property closed Boolean for if block is open to further modifications and queries. It is closed if
- *           an operation fails to execute in full or if a witness is created and the block commited.
+ *           an operation fails to execute in full or if a witness is created and the block committed.
  *
  */
 class BaseManagedBlockBuilder(
@@ -35,7 +42,7 @@ class BaseManagedBlockBuilder(
 
     private var closed = false
 
-    var blocTrace: BlockTrace? = null // Only for logging, remains "null" unless TRACE
+    private var blocTrace: BlockTrace? = null // Only for logging, remains "null" unless TRACE
 
     /**
      * Wrapper for block builder operations. Will close current working block for further modifications
@@ -72,18 +79,11 @@ class BaseManagedBlockBuilder(
      * @return exception if error occurs
      */
     override fun maybeAppendTransaction(tx: Transaction): Exception? {
-        TimeLog.startSum("BaseManagedBlockBuilder.maybeAppendTransaction().withSavepoint")
-
         val action = {
-            TimeLog.startSum("BaseManagedBlockBuilder.maybeAppendTransaction().insideSavepoint")
-            try {
-                blockBuilder.appendTransaction(tx)
-            } finally {
-                TimeLog.end("BaseManagedBlockBuilder.maybeAppendTransaction().insideSavepoint")
-            }
+            blockBuilder.appendTransaction(tx)
         }
 
-        val exception = if (storage.isSavepointSupported()) {
+        return if (storage.isSavepointSupported()) {
             storage.withSavepoint(eContext, action).also {
                 if (it != null) {
                     when (it) {
@@ -94,20 +94,16 @@ class BaseManagedBlockBuilder(
                             "Tx failed ${tx.getRID().toHex()}."
                         } // Don't log stacktrace
                         else -> logger.error(
-                            "Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}.", it
+                                "Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}.", it
                         ) // Should be unusual, so let's log everything
                     }
                 }
             }
-
         } else {
             logger.warn("Savepoint not supported! Unclear if Postchain will work under these conditions")
             action()
             null
         }
-
-        TimeLog.end("BaseManagedBlockBuilder.maybeAppendTransaction().withSavepoint")
-        return exception
     }
 
     override fun finalizeBlock(): BlockHeader {
@@ -183,7 +179,7 @@ class BaseManagedBlockBuilder(
     private fun getOrBuildBlockTrace() {
         if (logger.isTraceEnabled) {
             if (getBTrace() != null) {
-                var inner = blockBuilder.getBTrace()
+                val inner = blockBuilder.getBTrace()
                 if (inner != null) {
                     inner.addDataIfMissing(getBTrace())
                 } else {

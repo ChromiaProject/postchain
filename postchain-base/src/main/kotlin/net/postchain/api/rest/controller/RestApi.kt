@@ -22,7 +22,6 @@ import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.GTXQuery
 import net.postchain.api.rest.model.TxRID
-import net.postchain.common.TimeLog
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
@@ -197,7 +196,6 @@ class RestApi(
             }
 
             http.post("/tx/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
-                val n = TimeLog.startSumConc("RestApi.buildRouter().postTx")
                 val tx = toTransaction(request)
                 val maxLength = try {
                     if (tx.bytes.size > 200) 200 else tx.bytes.size
@@ -214,7 +212,6 @@ class RestApi(
                     throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
                 }
                 model(request).postTransaction(tx)
-                TimeLog.end("RestApi.buildRouter().postTx", n)
                 "{}"
             })
 
