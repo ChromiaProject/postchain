@@ -7,10 +7,10 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.TxRid
+import net.postchain.client.exception.ClientError
 import net.postchain.client.impl.PostchainClientImpl.*
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.gtv.Gtv
@@ -23,7 +23,6 @@ import org.http4k.core.HttpHandler
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -113,8 +112,8 @@ internal class PostchainClientImplTest {
     }
 
     @Test
-    fun `Query error without body should throw UserMistake`() {
-        assertThrows<UserMistake> {
+    fun `Query error without body should throw ClientError`() {
+        assertThrows<ClientError> {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) = Response(Status.BAD_REQUEST).body(Body.EMPTY)
             }).query("foo", gtv(mapOf()))
@@ -132,7 +131,7 @@ internal class PostchainClientImplTest {
 
     @Test
     fun `too big tx status response is rejected`() {
-        assertThrows(IOException::class.java) {
+        assertThrows<IOException> {
             try {
                 PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                     override fun invoke(request: Request) =
@@ -203,8 +202,8 @@ internal class PostchainClientImplTest {
             }
         }).blockAtHeight(1L)
         assertEquals(1L, someBlock!!.height)
-        assertContentEquals("34ED10678AAE0414562340E8754A7CCD174B435B52C7F0A4E69470537AEE47E6".hexStringToByteArray(), someBlock.rid)
-        assertContentEquals("62F71D71BA63D03FA0C6741DE22B116A3A8022893E7977DDC2A9CD981BBADE29".hexStringToByteArray(), someBlock.transactions[0].rid)
+        assertContentEquals("34ED10678AAE0414562340E8754A7CCD174B435B52C7F0A4E69470537AEE47E6".hexStringToByteArray(), someBlock.rid.data)
+        assertContentEquals("62F71D71BA63D03FA0C6741DE22B116A3A8022893E7977DDC2A9CD981BBADE29".hexStringToByteArray(), someBlock.transactions[0].rid.data)
         assertNull(someBlock.transactions[0].data)
     }
 
@@ -228,7 +227,7 @@ internal class PostchainClientImplTest {
 
     @Test
     fun `too big response will be rejected`() {
-        assertThrows(EOFException::class.java) {
+        assertThrows<EOFException> {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
                         Response(Status.OK).body(encodeGtv(gtv(ByteArray(2 * 1024))).inputStream())
@@ -238,7 +237,7 @@ internal class PostchainClientImplTest {
 
     @Test
     fun `invalid GTV response will throw IOException`() {
-        assertThrows(IOException::class.java) {
+        assertThrows<IOException> {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
                         Response(Status.OK).body(ByteArray(100).inputStream())
@@ -248,12 +247,12 @@ internal class PostchainClientImplTest {
 
     @Test
     fun `binary GTV error will be parsed`() {
-        assertThrows(UserMistake::class.java, {
+        assertThrows<ClientError> {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
                         Response(Status.BAD_REQUEST).body(encodeGtv(gtv("the error")).inputStream())
             }).query("test_query", gtv("arg"))
-        }, "Can not make a query: 400 the error")
+        }
     }
 
     @Test
@@ -267,7 +266,7 @@ internal class PostchainClientImplTest {
 
     @Test
     fun `too big block height response will be rejected`() {
-        assertThrows(IOException::class.java) {
+        assertThrows<IOException> {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
                         Response(Status.OK).body("""{"blockHeight":${" ".repeat(1024)}1}""")
@@ -277,7 +276,7 @@ internal class PostchainClientImplTest {
 
     @Test
     fun `Can handle empty error body`() {
-        assertThrows(UserMistake::class.java) {
+        assertThrows<ClientError> {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) = Response(Status.BAD_REQUEST).body("")
             }).currentBlockHeight()
@@ -286,7 +285,7 @@ internal class PostchainClientImplTest {
 
     @Test
     fun `Can handle too big error body`() {
-        assertThrows(IOException::class.java) {
+        assertThrows<IOException> {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
                         Response(Status.BAD_REQUEST).body("""{"error":"${"e".repeat(1024)}"}""")
@@ -296,7 +295,7 @@ internal class PostchainClientImplTest {
 
     @Test
     fun `Client generated errors can be handled`() {
-        assertThrows(UserMistake::class.java) {
+        assertThrows<ClientError> {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl("http://invalidhost"))).currentBlockHeight()
         }
     }

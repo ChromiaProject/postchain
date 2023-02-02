@@ -11,7 +11,7 @@ import org.http4k.core.Response
 class SingleEndpointRequestStrategy(
         private val config: PostchainClientConfig,
         private val httpClient: HttpHandler) : RequestStrategy {
-    override fun <R> request(createRequest: (Endpoint) -> Request, success: (Response) -> R, failure: (Response) -> R): R {
+    override fun <R> request(createRequest: (Endpoint) -> Request, success: (Response) -> R, failure: (Response) -> R, queryMultiple: Boolean): R {
         var response: Response? = null
         val endpoint = config.endpointPool.iterator().next()
         val request = createRequest(endpoint)
@@ -33,6 +33,8 @@ class SingleEndpointRequestStrategy(
         }
         return failure(response!!)
     }
+
+    override fun close() {}
 }
 
 class SingleEndpointRequestStrategyFactory : RequestStrategyFactory {

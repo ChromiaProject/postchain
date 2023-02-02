@@ -11,7 +11,7 @@ import org.http4k.core.Response
 class AbortOnErrorRequestStrategy(
         private val config: PostchainClientConfig,
         private val httpClient: HttpHandler) : RequestStrategy {
-    override fun <R> request(createRequest: (Endpoint) -> Request, success: (Response) -> R, failure: (Response) -> R): R {
+    override fun <R> request(createRequest: (Endpoint) -> Request, success: (Response) -> R, failure: (Response) -> R, queryMultiple: Boolean): R {
         var response: Response? = null
         for (endpoint in config.endpointPool) {
             val request = createRequest(endpoint)
@@ -34,6 +34,8 @@ class AbortOnErrorRequestStrategy(
         }
         return failure(response!!)
     }
+
+    override fun close() {}
 }
 
 class AbortOnErrorRequestStrategyFactory : RequestStrategyFactory {

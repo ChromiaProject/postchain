@@ -14,7 +14,7 @@ class TryNextOnErrorRequestStrategy(
         private val httpClient: HttpHandler) : RequestStrategy {
     companion object : KLogging()
 
-    override fun <R> request(createRequest: (Endpoint) -> Request, success: (Response) -> R, failure: (Response) -> R): R {
+    override fun <R> request(createRequest: (Endpoint) -> Request, success: (Response) -> R, failure: (Response) -> R, queryMultiple: Boolean): R {
         var response: Response? = null
         for (endpoint in config.endpointPool) {
             val request = createRequest(endpoint)
@@ -40,6 +40,8 @@ class TryNextOnErrorRequestStrategy(
         }
         return failure(response!!)
     }
+
+    override fun close() {}
 }
 
 class TryNextOnErrorRequestStrategyFactory : RequestStrategyFactory {

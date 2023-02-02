@@ -230,6 +230,11 @@
                 <artifactId>http4k-client-apache</artifactId>
                 <version>4.34.0.4</version>
             </dependency>
+            <dependency>
+                <groupId>org.http4k</groupId>
+                <artifactId>http4k-client-apache-async</artifactId>
+                <version>4.34.0.4</version>
+            </dependency>
 
             <!-- Json -->
             <dependency>
