@@ -4,11 +4,11 @@ import kotlin.jvm.functions.Function1;
 import net.postchain.client.config.FailOverConfig;
 import net.postchain.client.config.PostchainClientConfig;
 import net.postchain.client.core.PostchainClientProvider;
+import net.postchain.client.exception.ClientError;
 import net.postchain.client.impl.PostchainClientImpl;
 import net.postchain.client.impl.PostchainClientProviderImpl;
 import net.postchain.client.request.EndpointPool;
 import net.postchain.common.BlockchainRid;
-import net.postchain.common.exception.UserMistake;
 import net.postchain.crypto.Secp256K1CryptoSystem;
 import net.postchain.gtv.GtvFactory;
 import org.http4k.core.Request;
@@ -60,7 +60,7 @@ class PostchainClientJavaTest {
     void query() {
         try {
             client.query("foo", GtvFactory.INSTANCE.gtv(Collections.emptyMap()));
-        } catch (UserMistake e) {
+        } catch (ClientError e) {
             // Just to make the test pass
         } catch (IOException ignored) {
         }
@@ -82,7 +82,7 @@ class PostchainClientJavaTest {
         assertEquals(1, requestCounter);
     }
 
-    @SuppressWarnings("unused")
+    @SuppressWarnings({"unused", "resource"})
         // we have this method just to see how to use PostchainClientProvider from Java
     void provider() {
         PostchainClientProvider clientProvider = new PostchainClientProviderImpl();

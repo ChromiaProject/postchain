@@ -76,9 +76,9 @@ class PostchainTestNode(
         return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
             val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, postchainContext.cryptoSystem)
             withLoggingContext(
-                NODE_PUBKEY_TAG to appConfig.pubKey,
-                CHAIN_IID_TAG to chainId.toString(),
-                BLOCKCHAIN_RID_TAG to brid.toHex()
+                    NODE_PUBKEY_TAG to appConfig.pubKey,
+                    CHAIN_IID_TAG to chainId.toString(),
+                    BLOCKCHAIN_RID_TAG to brid.toHex()
             ) {
                 logger.info("Adding blockchain: chainId: $chainId, blockchainRid: ${brid.toHex()}") // Needs to be info, since users often don't know the BC RID and take it from the logs
                 DatabaseAccess.of(eContext).initializeBlockchain(eContext, brid)
@@ -95,9 +95,9 @@ class PostchainTestNode(
         return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
             val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, postchainContext.cryptoSystem)
             withLoggingContext(
-                NODE_PUBKEY_TAG to appConfig.pubKey,
-                CHAIN_IID_TAG to chainId.toString(),
-                BLOCKCHAIN_RID_TAG to brid.toHex()
+                    NODE_PUBKEY_TAG to appConfig.pubKey,
+                    CHAIN_IID_TAG to chainId.toString(),
+                    BLOCKCHAIN_RID_TAG to brid.toHex()
             ) {
                 logger.info("Adding configuration for chain: $chainId, height: $height") // Needs to be info, since users often don't know the BC RID and take it from the logs
                 DatabaseAccess.of(eContext).addConfigurationData(
@@ -112,9 +112,9 @@ class PostchainTestNode(
 
         return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
             withLoggingContext(
-                NODE_PUBKEY_TAG to appConfig.pubKey,
-                CHAIN_IID_TAG to chainId.toString(),
-                BLOCKCHAIN_RID_TAG to brid.toHex()
+                    NODE_PUBKEY_TAG to appConfig.pubKey,
+                    CHAIN_IID_TAG to chainId.toString(),
+                    BLOCKCHAIN_RID_TAG to brid.toHex()
             ) {
                 logger.debug("Set must_sync_until for chain: $brid, height: $height")
                 DatabaseAccess.of(eContext).setMustSyncUntil(eContext, brid, height)
@@ -124,8 +124,8 @@ class PostchainTestNode(
 
     fun startBlockchain() {
         withLoggingContext(
-            NODE_PUBKEY_TAG to appConfig.pubKey,
-            CHAIN_IID_TAG to DEFAULT_CHAIN_IID.toString()
+                NODE_PUBKEY_TAG to appConfig.pubKey,
+                CHAIN_IID_TAG to DEFAULT_CHAIN_IID.toString()
         ) {
             try {
                 startBlockchain(DEFAULT_CHAIN_IID)
@@ -151,9 +151,18 @@ class PostchainTestNode(
         return getRestApiModel(getBlockchainRid(DEFAULT_CHAIN_IID)!!)!!
     }
 
+    fun overrideRestApiModel(chainModel: Model) {
+        overrideRestApiModel(getBlockchainRid(DEFAULT_CHAIN_IID)!!, chainModel)
+    }
+
     fun getRestApiModel(blockchainRid: BlockchainRid): Model? {
         return ((blockchainInfrastructure as BaseBlockchainInfrastructure).apiInfrastructure as BaseApiInfrastructure)
                 .restApi?.retrieveModel(blockchainRid.toHex()) as Model?
+    }
+
+    fun overrideRestApiModel(blockchainRid: BlockchainRid, chainModel: Model) {
+        ((blockchainInfrastructure as BaseBlockchainInfrastructure).apiInfrastructure as BaseApiInfrastructure)
+                .restApi?.attachModel(blockchainRid.toHex(), chainModel)
     }
 
     fun getRestApiHttpPort(): Int {

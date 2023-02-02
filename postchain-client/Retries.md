@@ -36,10 +36,15 @@ retries the same node on transient server failures.
 ### ABORT_ON_ERROR
 
 Uses all nodes in the cluster (randomly ordered), will return failure on client failures, try next node on server
-failure,
-reties the same node on transient server failures.
+failure, reties the same node on transient server failures.
 
 ### TRY_NEXT_ON_ERROR
 
 Uses all nodes in the cluster (randomly ordered), will try next node on both client and server failure,
 reties the same node on transient server failures.
+
+### QUERY_MAJORITY
+
+Queries all nodes in the cluster in parallel. Compare successful responses from different nodes, and tries to establish
+a BFT majority of agreeing nodes, fails with `NodesDisagree` exception if that's not possible. Will not retry the same
+node on failure.

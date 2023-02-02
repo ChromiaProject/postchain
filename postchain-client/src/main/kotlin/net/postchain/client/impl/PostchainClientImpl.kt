@@ -10,8 +10,8 @@ import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.core.TxRid
+import net.postchain.client.exception.ClientError
 import net.postchain.client.transaction.TransactionBuilder
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.tx.TransactionStatus.*
@@ -77,7 +77,7 @@ class PostchainClientImpl(
                 .header("Content-Type", ContentType.OCTET_STREAM.value)
                 .header("Accept", ContentType.OCTET_STREAM.value)
                 .body(gtxQuery.encode().inputStream())
-    }, ::decodeGtv, ::buildExceptionFromGTV)
+    }, ::decodeGtv, ::buildExceptionFromGTV, true)
 
     @Throws(IOException::class)
     override fun currentBlockHeight(): Long = requestStrategy.request({ endpoint ->
@@ -88,8 +88,8 @@ class PostchainClientImpl(
                 ?: throw IOException("Json parsing failed")
     }, { response ->
         val msg = parseJson(response, 1024, ErrorResponse::class.java)?.error ?: "Unknown error"
-        throw UserMistake("Cannot fetch current block height: ${response.status} $msg")
-    })
+        throw ClientError("Cannot fetch current block height: ${response.status} $msg")
+    }, false)
 
     @Throws(IOException::class)
     override fun blockAtHeight(height: Long): BlockDetail? = requestStrategy.request({ endpoint ->
@@ -98,7 +98,7 @@ class PostchainClientImpl(
     }, { response ->
         val gtv = decodeGtv(response)
         if (gtv.isNull()) null else GtvObjectMapper.fromGtv(gtv, BlockDetail::class)
-    }, ::buildExceptionFromGTV)
+    }, ::buildExceptionFromGTV, true)
 
     private fun decodeGtv(response: Response) =
             GtvDecoder.decodeGtv(BoundedInputStream(response.body.stream, config.maxResponseSize.toLong()))
@@ -112,7 +112,7 @@ class PostchainClientImpl(
             // Dump it as a string and hope it is either empty or readable text
             String(responseStream.readAllBytes())
         }
-        throw UserMistake("Can not make a query: ${response.status} $errorMessage")
+        throw ClientError("Can not make a query: ${response.status} $errorMessage")
     }
 
     @Throws(IOException::class)
@@ -130,7 +130,7 @@ class PostchainClientImpl(
                     parseJson(response, MAX_TX_STATUS_SIZE, ErrorResponse::class.java)?.error
                             ?: response.status.description
             TransactionResult(txRid, REJECTED, response.status.code, rejectReason)
-        })
+        }, false)
     }
 
     @Throws(IOException::class)
@@ -174,8 +174,8 @@ class PostchainClientImpl(
         )
     }, { response ->
         val msg = parseJson(response, 1024, ErrorResponse::class.java)?.error ?: "Unknown error"
-        throw UserMistake("Can not check transaction status: ${response.status} $msg")
-    })
+        throw ClientError("Can not check transaction status: ${response.status} $msg")
+    }, true)
 
     private fun <T> parseJson(response: Response, maxSize: Long, cls: Class<T>): T? = try {
         val body = BoundedInputStream(response.body.stream, maxSize).bufferedReader()
@@ -184,6 +184,10 @@ class PostchainClientImpl(
         val rootCause = ExceptionUtils.getRootCause(e)
         if (rootCause is IOException) throw rootCause
         else throw IOException("Json parsing failed", e)
+    }
+
+    override fun close() {
+        requestStrategy.close()
     }
 
     /* JSON structures */

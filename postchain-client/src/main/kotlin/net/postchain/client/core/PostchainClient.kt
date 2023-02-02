@@ -4,9 +4,10 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.crypto.KeyPair
 import net.postchain.gtx.Gtx
+import java.io.Closeable
 import java.time.Duration
 
-interface PostchainClient : PostchainBlockClient, PostchainQuery {
+interface PostchainClient : PostchainBlockClient, PostchainQuery, Closeable {
     val config: PostchainClientConfig
 
     /**
