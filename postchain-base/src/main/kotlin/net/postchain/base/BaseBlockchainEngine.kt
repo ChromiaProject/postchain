@@ -8,7 +8,6 @@ import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.gtv.BlockHeaderData
-import net.postchain.common.TimeLog
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.toHex
@@ -36,8 +35,6 @@ import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
 import nl.komponents.kovenant.task
 import java.lang.Long.max
-
-const val LOG_STATS = true // Was this the reason this entire class was muted?
 
 /**
  * An [BlockchainEngine] will only produce [BlockBuilder]s for a single chain.
@@ -188,12 +185,10 @@ open class BaseBlockchainEngine(
                 blockBuilder.finalizeAndValidate(block.header)
                 val grossEnd = System.nanoTime()
 
-                if (LOG_STATS) {
-                    val prettyBlockHeader = prettyBlockHeader(
+                val prettyBlockHeader = prettyBlockHeader(
                         block.header, block.transactions.size, 0, grossStart to grossEnd, netStart to netEnd
-                    )
-                    logger.info("$processName: Loaded block: $prettyBlockHeader")
-                }
+                )
+                logger.info("$processName: Loaded block: $prettyBlockHeader")
 
                 loadLog("End", blockBuilder.getBTrace())
             } catch (e: Exception) {
@@ -206,7 +201,6 @@ open class BaseBlockchainEngine(
 
     override fun buildBlock(): Pair<ManagedBlockBuilder, Exception?> {
         withLoggingContext(loggingContext) {
-            TimeLog.startSum("BaseBlockchainEngine.buildBlock().buildBlock")
             buildLog("Begin")
             val grossStart = System.nanoTime()
 
@@ -221,7 +215,6 @@ open class BaseBlockchainEngine(
                     ((blockBuilder as BaseManagedBlockBuilder).blockBuilder as AbstractBlockBuilder)
                 val netStart = System.nanoTime()
 
-                TimeLog.startSum("BaseBlockchainEngine.buildBlock().appendTransactions")
                 var acceptedTxs = 0
                 var rejectedTxs = 0
 
@@ -229,13 +222,10 @@ open class BaseBlockchainEngine(
                     if (logger.isTraceEnabled) {
                         logger.trace("$processName: Checking transaction queue")
                     }
-                    TimeLog.startSum("BaseBlockchainEngine.buildBlock().takeTransaction")
                     val tx = transactionQueue.takeTransaction()
-                    TimeLog.end("BaseBlockchainEngine.buildBlock().takeTransaction")
                     if (tx != null) {
                         logger.trace { "$processName: Appending transaction ${tx.getRID().toHex()}" }
                         val transactionSample = Timer.start(Metrics.globalRegistry)
-                        TimeLog.startSum("BaseBlockchainEngine.buildBlock().maybeApppendTransaction")
                         if (tx.isSpecial()) {
                             rejectedTxs++
                             transactionQueue.rejectTransaction(
@@ -245,7 +235,6 @@ open class BaseBlockchainEngine(
                             continue
                         }
                         val txException = blockBuilder.maybeAppendTransaction(tx)
-                        TimeLog.end("BaseBlockchainEngine.buildBlock().maybeAppendTransaction")
                         if (txException != null) {
                             rejectedTxs++
                             transactionSample.stop(metrics.rejectedTransactions)
@@ -265,22 +254,14 @@ open class BaseBlockchainEngine(
                     }
                 }
 
-                TimeLog.end("BaseBlockchainEngine.buildBlock().appendTransactions")
-
                 val netEnd = System.nanoTime()
                 val blockHeader = blockBuilder.finalizeBlock()
                 val grossEnd = System.nanoTime()
 
-                TimeLog.end("BaseBlockchainEngine.buildBlock().buildBlock")
-
-                if (LOG_STATS) {
-                    val prettyBlockHeader = prettyBlockHeader(
+                val prettyBlockHeader = prettyBlockHeader(
                         blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd
-                    )
-                    logger.info("$processName: Block is finalized: $prettyBlockHeader")
-                } else {
-                    logger.info("$processName: Block is finalized")
-                }
+                )
+                logger.info("$processName: Block is finalized: $prettyBlockHeader")
 
                 if (logger.isTraceEnabled) {
                     blockBuilder.setBTrace(getBlockTrace(blockHeader))
@@ -308,7 +289,6 @@ open class BaseBlockchainEngine(
         gross: Pair<Long, Long>,
         net: Pair<Long, Long>
     ): String {
-
         val grossRate = (acceptedTxs * 1_000_000_000L) / max(gross.second - gross.first, 1)
         val netRate = (acceptedTxs * 1_000_000_000L) / max(net.second - net.first, 1)
         val grossTimeMs = (gross.second - gross.first) / 1_000_000

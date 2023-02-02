@@ -11,7 +11,6 @@ import net.postchain.api.rest.model.TxRID
 import net.postchain.base.BaseBlockQueries
 import net.postchain.base.ConfirmationProof
 import net.postchain.common.BlockchainRid
-import net.postchain.common.TimeLog
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.tx.EnqueueTransactionResult
@@ -43,16 +42,11 @@ open class PostchainModel(
     override fun postTransaction(tx: ApiTx) {
         val sample = Timer.start(Metrics.globalRegistry)
 
-        var nonce = TimeLog.startSumConc("PostchainModel.postTransaction().decodeTransaction")
         val decodedTransaction = transactionFactory.decodeTransaction(tx.bytes)
-        TimeLog.end("PostchainModel.postTransaction().decodeTransaction", nonce)
 
-        nonce = TimeLog.startSumConc("PostchainModel.postTransaction().isCorrect")
         if (!decodedTransaction.isCorrect()) {
             throw UserMistake("Transaction ${decodedTransaction.getRID().toHex()} is not correct")
         }
-        TimeLog.end("PostchainModel.postTransaction().isCorrect", nonce)
-        nonce = TimeLog.startSumConc("PostchainModel.postTransaction().enqueue")
         when (txQueue.enqueue(decodedTransaction)) {
             EnqueueTransactionResult.FULL -> {
                 sample.stop(metrics.fullTransactions)
@@ -74,7 +68,6 @@ open class PostchainModel(
                 sample.stop(metrics.okTransactions)
             }
         }
-        TimeLog.end("PostchainModel.postTransaction().enqueue", nonce)
     }
 
     override fun getTransaction(txRID: TxRID): ApiTx? {

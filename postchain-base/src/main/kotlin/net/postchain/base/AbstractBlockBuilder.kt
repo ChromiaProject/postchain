@@ -4,17 +4,24 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.common.BlockchainRid
-import net.postchain.common.TimeLog
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionFailed
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
-import net.postchain.core.*
+import net.postchain.core.BlockEContext
+import net.postchain.core.EContext
+import net.postchain.core.Transaction
 import net.postchain.core.TransactionFactory
-import net.postchain.core.ValidationResult.Result.OK
-import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
-import net.postchain.core.block.*
+import net.postchain.core.TxEContext
+import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockStore
+import net.postchain.core.block.BlockTrace
+import net.postchain.core.block.BlockWitness
+import net.postchain.core.block.BlockWitnessBuilder
+import net.postchain.core.block.InitialBlockData
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
@@ -27,7 +34,7 @@ import java.util.concurrent.TimeoutException
  * - can call functions on the [BlockWitnessProvider] but cannot create a [BlockWitnessProvider]
  * etc
  *
- * Everything else is left to sub-classes.
+ * Everything else is left to subclasses.
  */
 abstract class AbstractBlockBuilder(
         val ectx: EContext,               // a general DB context (use bctx when possible)
@@ -37,15 +44,15 @@ abstract class AbstractBlockBuilder(
         private val maxTxExecutionTime: Long
 ) : BlockBuilder, TxEventSink {
 
-    companion object: KLogging()
+    companion object : KLogging()
 
     // ----------------------------------
     // functions which need to be implemented in a concrete BlockBuilder:
     // ----------------------------------
-    abstract protected val blockWitnessProvider: BlockWitnessProvider
-    abstract protected fun computeMerkleRootHash(): ByteArray              // Computes the root hash for the Merkle tree of transactions currently in a block
-    abstract protected fun makeBlockHeader(): BlockHeader                  // Create block header from initial block data
-    abstract protected fun buildBlockchainDependencies(partialBlockHeader: BlockHeader?): BlockchainDependencies
+    protected abstract val blockWitnessProvider: BlockWitnessProvider
+    protected abstract fun computeMerkleRootHash(): ByteArray              // Computes the root hash for the Merkle tree of transactions currently in a block
+    protected abstract fun makeBlockHeader(): BlockHeader                  // Create block header from initial block data
+    protected abstract fun buildBlockchainDependencies(partialBlockHeader: BlockHeader?): BlockchainDependencies
 
     // ----------------------------------
     // Public b/c need to be accessed by subclasses
@@ -99,21 +106,16 @@ abstract class AbstractBlockBuilder(
         if (finalized) throw ProgrammerMistake("Block is already finalized")
         // tx.isCorrect may also throw UserMistake to provide
         // a meaningful error message to log.
-        TimeLog.startSum("AbstractBlockBuilder.appendTransaction().isCorrect")
         if (!tx.isCorrect()) {
             throw TransactionIncorrect("Transaction ${tx.getRID().toHex()} is not correct")
         }
-        TimeLog.end("AbstractBlockBuilder.appendTransaction().isCorrect")
         val txctx: TxEContext
         try {
-            TimeLog.startSum("AbstractBlockBuilder.appendTransaction().addTransaction")
             txctx = store.addTransaction(bctx, tx)
-            TimeLog.end("AbstractBlockBuilder.appendTransaction().addTransaction")
         } catch (e: Exception) {
             throw UserMistake("Failed to save tx to database", e)
         }
         // In case of errors, tx.apply may either return false or throw UserMistake
-        TimeLog.startSum("AbstractBlockBuilder.appendTransaction().apply")
 
         if (applyTransaction(tx, txctx)) {
             txctx.done()
@@ -122,7 +124,6 @@ abstract class AbstractBlockBuilder(
         } else {
             throw TransactionFailed("Transaction ${tx.getRID().toHex()} failed")
         }
-        TimeLog.end("AbstractBlockBuilder.appendTransaction().apply")
     }
 
     private fun applyTransaction(tx: Transaction, txctx: TxEContext): Boolean {

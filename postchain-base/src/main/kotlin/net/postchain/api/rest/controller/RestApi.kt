@@ -2,7 +2,6 @@
 
 package net.postchain.api.rest.controller
 
-import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
@@ -20,9 +19,7 @@ import net.postchain.api.rest.controller.HttpHelper.Companion.PARAM_HEIGHT
 import net.postchain.api.rest.controller.HttpHelper.Companion.SUBQUERY
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.model.ApiTx
-import net.postchain.api.rest.model.GTXQuery
 import net.postchain.api.rest.model.TxRID
-import net.postchain.common.TimeLog
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
@@ -50,13 +47,13 @@ class RestApi(
         private val tlsCertificatePassword: String? = null
 ) : Modellable {
 
-    val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
-    val DEFAULT_ENTRY_RESULTS_REQUEST = 25
-    val MAX_NUMBER_OF_TXS_PER_REQUEST = 600
+    private val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
+    private val DEFAULT_ENTRY_RESULTS_REQUEST = 25
+    private val MAX_NUMBER_OF_TXS_PER_REQUEST = 600
 
     companion object : KLogging() {
-        val JSON_CONTENT_TYPE = "application/json"
-        val OCTET_CONTENT_TYPE = "application/octet-stream"
+        const val JSON_CONTENT_TYPE = "application/json"
+        const val OCTET_CONTENT_TYPE = "application/octet-stream"
     }
 
     private val http = Service.ignite()!!
@@ -197,7 +194,6 @@ class RestApi(
             }
 
             http.post("/tx/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
-                val n = TimeLog.startSumConc("RestApi.buildRouter().postTx")
                 val tx = toTransaction(request)
                 val maxLength = try {
                     if (tx.bytes.size > 200) 200 else tx.bytes.size
@@ -214,7 +210,6 @@ class RestApi(
                     throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
                 }
                 model(request).postTransaction(tx)
-                TimeLog.end("RestApi.buildRouter().postTx", n)
                 "{}"
             })
 
@@ -360,7 +355,7 @@ class RestApi(
 
     private fun toTransaction(request: Request): ApiTx {
         try {
-            return gson.fromJson<ApiTx>(request.body(), ApiTx::class.java)
+            return gson.fromJson(request.body(), ApiTx::class.java)
         } catch (e: Exception) {
             throw UserMistake("Could not parse json", e)
         }
@@ -382,15 +377,6 @@ class RestApi(
         }
 
         return txRID
-    }
-
-    private fun toGTXQuery(json: String): GTXQuery {
-        try {
-            val gson = Gson()
-            return gson.fromJson<GTXQuery>(json, GTXQuery::class.java)
-        } catch (e: Exception) {
-            throw UserMistake("Could not parse json", e)
-        }
     }
 
     private fun toJson(error: Exception): String {
@@ -454,7 +440,7 @@ class RestApi(
     }
 
     private fun handleGTXQueries(request: Request): String {
-        val response: MutableList<String> = mutableListOf<String>()
+        val response: MutableList<String> = mutableListOf()
         val queriesArray: JsonArray = parseMultipleQueriesRequest(request)
 
         queriesArray.forEach {
