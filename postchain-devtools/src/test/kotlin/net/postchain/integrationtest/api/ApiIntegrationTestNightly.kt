@@ -61,8 +61,8 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
 
     @Test
     fun testMixedAPICalls() {
-        val nodeCount = 3
-        val sysSetup = doSystemSetup(nodeCount,"/net/postchain/devtools/api/blockchain_config.xml")
+        val nodeCount = 4
+        val sysSetup = doSystemSetup(nodeCount, "/net/postchain/devtools/api/blockchain_config.xml")
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
 
@@ -193,9 +193,8 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
 
     @Test
     fun testConfirmationProof() {
-        val nodeCount = 3
-
-        val sysSetup = doSystemSetup(nodeCount,"/net/postchain/devtools/api/blockchain_config.xml")
+        val nodeCount = 4
+        val sysSetup = doSystemSetup(nodeCount, "/net/postchain/devtools/api/blockchain_config.xml")
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
 
@@ -205,7 +204,6 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
         var currentId = 0
 
         for (txCount in 1..16) {
-
             println("----------------- Running testConfirmationProof with txCount: $txCount ---------------------")
             val txList = mutableListOf<TestOneOpGtxTransaction>()
             for (i in 1..txCount) {
