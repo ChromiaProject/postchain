@@ -36,8 +36,6 @@ import net.postchain.metrics.NODE_PUBKEY_TAG
 import nl.komponents.kovenant.task
 import java.lang.Long.max
 
-const val LOG_STATS = true // Was this the reason this entire class was muted?
-
 /**
  * An [BlockchainEngine] will only produce [BlockBuilder]s for a single chain.
  * This class produces [ManagedBlockBuilder]s, which means we have to check for BC restart after a block is built.
@@ -187,12 +185,10 @@ open class BaseBlockchainEngine(
                 blockBuilder.finalizeAndValidate(block.header)
                 val grossEnd = System.nanoTime()
 
-                if (LOG_STATS) {
-                    val prettyBlockHeader = prettyBlockHeader(
+                val prettyBlockHeader = prettyBlockHeader(
                         block.header, block.transactions.size, 0, grossStart to grossEnd, netStart to netEnd
-                    )
-                    logger.info("$processName: Loaded block: $prettyBlockHeader")
-                }
+                )
+                logger.info("$processName: Loaded block: $prettyBlockHeader")
 
                 loadLog("End", blockBuilder.getBTrace())
             } catch (e: Exception) {
@@ -262,14 +258,10 @@ open class BaseBlockchainEngine(
                 val blockHeader = blockBuilder.finalizeBlock()
                 val grossEnd = System.nanoTime()
 
-                if (LOG_STATS) {
-                    val prettyBlockHeader = prettyBlockHeader(
+                val prettyBlockHeader = prettyBlockHeader(
                         blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd
-                    )
-                    logger.info("$processName: Block is finalized: $prettyBlockHeader")
-                } else {
-                    logger.info("$processName: Block is finalized")
-                }
+                )
+                logger.info("$processName: Block is finalized: $prettyBlockHeader")
 
                 if (logger.isTraceEnabled) {
                     blockBuilder.setBTrace(getBlockTrace(blockHeader))
