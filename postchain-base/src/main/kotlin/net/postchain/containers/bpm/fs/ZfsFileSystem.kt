@@ -19,23 +19,30 @@ class ZfsFileSystem(private val config: ContainerNodeConfig) : FileSystem {
             logger.info("Container dir exists: $root")
             root
         } else {
-            try {
-                val script = config.zfsPoolInitScript
-                if (!File(script).exists()) {
-                    logger.error("Can't find zfs init script: $script")
-                    null
+            val fs = "${config.zfsPoolName}/${containerName.name}"
+            val quota = resourceLimits.storageMb()
+            val cmd = if (config.zfsPoolInitScript != null && File(config.zfsPoolInitScript).exists()) {
+                arrayOf("/bin/sh", config.zfsPoolInitScript, fs, quota.toString())
+            } else {
+                if (resourceLimits.hasStorage()) {
+                    arrayOf("/usr/sbin/zfs", "create", "-o", "quota=${quota}m", "-o", "reservation=50m", fs)
                 } else {
-                    val fs = "${config.zfsPoolName}/${containerName.name}"
-                    val quota = resourceLimits.storageMb().toString()
-                    val cmd = arrayOf("/bin/sh", script, fs, quota)
-                    Runtime.getRuntime().exec(cmd).waitFor(10, TimeUnit.SECONDS)
-                    if (root.toFile().exists()) {
-                        logger.info("Container dir has been created: $root")
-                        root
-                    } else {
-                        logger.error("Container dir hasn't been created: $root")
-                        null
-                    }
+                    arrayOf("/usr/sbin/zfs", "create", fs)
+                }
+            }
+            try {
+                val process = Runtime.getRuntime().exec(cmd)
+                process.waitFor(10, TimeUnit.SECONDS)
+                if (process.exitValue() != 0) {
+                    logger.warn("Unable to initialise ZFS file system: ${String(process.errorStream.readAllBytes())}")
+                }
+
+                if (root.toFile().exists()) {
+                    logger.info("Container dir has been created: $root")
+                    root
+                } else {
+                    logger.error("Container dir hasn't been created: $root")
+                    null
                 }
             } catch (e: Exception) {
                 logger.error("Can't create container dir: $root", e)

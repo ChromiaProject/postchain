@@ -58,7 +58,7 @@ data class ContainerNodeConfig(
          */
         val masterMountDir: String,
         val zfsPoolName: String,
-        val zfsPoolInitScript: String,
+        val zfsPoolInitScript: String?,
         val bindPgdataVolume: Boolean,
         val testmode: Boolean,
         val testmodeResourceLimitsCPU: Long,
@@ -118,7 +118,7 @@ data class ContainerNodeConfig(
                         hostMountDir,
                         getEnvOrStringProperty("POSTCHAIN_MASTER_MOUNT_DIR", KEY_MASTER_MOUNT_DIR, hostMountDir),
                         getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_NAME", KEY_ZFS_POOL_NAME, FileSystem.ZFS_POOL_NAME),
-                        getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_INIT_SCRIPT", KEY_ZFS_POOL_INIT_SCRIPT, DEFAULT_CONTAINER_ZFS_INIT_SCRIPT),
+                        getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_INIT_SCRIPT", KEY_ZFS_POOL_INIT_SCRIPT),
                         getEnvOrBooleanProperty("POSTCHAIN_BIND_PGDATA_VOLUME", KEY_BIND_PGDATA_VOLUME, true),
                         getTestmode(),
                         getLong(KEY_TESTMODE_RESOURCE_LIMITS_CPU, -1),
