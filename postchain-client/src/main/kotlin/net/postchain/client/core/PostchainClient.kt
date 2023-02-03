@@ -23,7 +23,6 @@ interface PostchainClient : PostchainBlockClient, PostchainQuery, Closeable {
     /**
      * Post a [Gtx] transaction.
      */
-
     fun postTransaction(tx: Gtx): TransactionResult
 
     /**
@@ -40,4 +39,9 @@ interface PostchainClient : PostchainBlockClient, PostchainQuery, Closeable {
      * Check the current status of a [TxRid]
      */
     fun checkTxStatus(txRid: TxRid): TransactionResult
+
+    /**
+     * Query current block height.
+     */
+    fun currentBlockHeight(): Long
 }
