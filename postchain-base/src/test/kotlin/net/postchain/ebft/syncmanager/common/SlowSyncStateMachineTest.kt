@@ -30,7 +30,7 @@ class SlowSyncStateMachineTest {
         assertEquals(theOnlyOtherNode, sssm.waitForNodeId)
 
         // Getting 3 blocks (heights: 0,1,2)
-        sssm.updateToWaitForCommit(3, 113L)
+        sssm.updateToWaitForCommit(2, 113L)
         assertEquals(SlowSyncStates.WAIT_FOR_COMMIT, sssm.state)
         assertEquals(2L, sssm.lastUncommittedBlockHeight)
 
@@ -48,7 +48,7 @@ class SlowSyncStateMachineTest {
         assertEquals(3L, sssm.waitForHeight)
 
         // Getting 1 block (heights: 3)
-        sssm.updateToWaitForCommit(1, 213L)
+        sssm.updateToWaitForCommit(3, 213L)
         assertEquals(SlowSyncStates.WAIT_FOR_COMMIT, sssm.state)
 
         sssm.updateAfterSuccessfulCommit(3L)
@@ -68,7 +68,7 @@ class SlowSyncStateMachineTest {
         assertEquals(theOnlyOtherNode, sssm.waitForNodeId)
 
         // Getting 3 blocks (heights: 0,1,2)
-        sssm.updateToWaitForCommit(3, 113L)
+        sssm.updateToWaitForCommit(2, 113L)
         assertEquals(SlowSyncStates.WAIT_FOR_COMMIT, sssm.state)
         assertEquals(2L, sssm.lastUncommittedBlockHeight)
 

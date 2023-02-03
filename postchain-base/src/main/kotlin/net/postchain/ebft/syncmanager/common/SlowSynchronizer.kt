@@ -168,21 +168,23 @@ class SlowSynchronizer(
             val blockData = block.data
             val headerWitnessPair = handleBlockHeader(peerId, blockData.header, block.witness, expectedHeight)
                 ?: return (expectedHeight - startingAtHeight).toInt() // Header failed for some reason. Just give up
-            handleUnfinishedBlock(
-                peerId,
-                headerWitnessPair.first,
-                headerWitnessPair.second,
-                expectedHeight,
-                blockData.transactions
+            handleBlock(
+                    peerId,
+                    headerWitnessPair.first,
+                    headerWitnessPair.second,
+                    expectedHeight,
+                    blockData.transactions
             )
             expectedHeight++ // We expect blocks to be in the correct order in the list
         }
         val processedBlocks = (expectedHeight - startingAtHeight).toInt()
         if (processedBlocks != blocks.size) {
+            stateMachine.state = SlowSyncStates.WAIT_FOR_ACTION
             throw ProgrammerMistake("processedBlocks != blocks.size")
         }
-
-        stateMachine.updateToWaitForCommit(processedBlocks, System.currentTimeMillis())
+        if (processedBlocks == 0) {
+            stateMachine.state = SlowSyncStates.WAIT_FOR_ACTION
+        }
         return processedBlocks
     }
 
@@ -228,21 +230,21 @@ class SlowSynchronizer(
         }
     }
 
-    private fun handleUnfinishedBlock(
-        peerId: NodeRid,
-        header: net.postchain.core.block.BlockHeader,
-        witness: BlockWitness,
-        height: Long,
-        txs: List<ByteArray>
+    private fun handleBlock(
+            peerId: NodeRid,
+            header: net.postchain.core.block.BlockHeader,
+            witness: BlockWitness,
+            height: Long,
+            txs: List<ByteArray>
     ) {
         if (header !is BaseBlockHeader) {
             throw BadDataMistake(BadDataType.BAD_MESSAGE, "Expected BaseBlockHeader")
         }
 
-        unfinishedTrace("Received for height: $height")
+        logger.trace { "handleBlock() - Received for height: $height" }
         var bTrace: BlockTrace? = null
         if (logger.isTraceEnabled) {
-            logger.trace { "handleUnfinishedBlock() - Creating block trace with procname: $procName , height: $height " }
+            logger.trace("handleBlock() - Creating block trace with procname: $procName , height: $height")
 
             bTrace = BlockTrace.build(procName, header.blockRID, height)
         }
@@ -250,6 +252,7 @@ class SlowSynchronizer(
         // The witness has already been verified in handleBlockHeader().
         val block = BlockDataWithWitness(header, txs, witness)
 
+        stateMachine.updateToWaitForCommit(height, System.currentTimeMillis())
         commitBlock(peerId, bTrace, block, height)
     }
 
