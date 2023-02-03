@@ -16,8 +16,8 @@ import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.HttpHandler
 import org.http4k.core.Request
 import org.http4k.core.Response
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Semaphore
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
 
 class QueryMajorityRequestStrategy(
@@ -42,41 +42,39 @@ class QueryMajorityRequestStrategy(
             }
 
     private fun <R> requestMultiple(createRequest: (Endpoint) -> Request, success: (Response) -> R, failure: (Response) -> R): R {
-        val semaphore = Semaphore(0)
-
-        val successes = ConcurrentHashMap<String, Any>(config.endpointPool.size)
-        val failures = ConcurrentHashMap<String, Any>(config.endpointPool.size)
-        val errors = ConcurrentHashMap<String, Exception>(config.endpointPool.size)
+        val outcomes = ArrayBlockingQueue<Outcome>(config.endpointPool.size)
 
         config.endpointPool.forEach { endpoint ->
             val request = createRequest(endpoint)
             asyncHttpClient(request) { response ->
-                if (isSuccess(response.status)) {
+                outcomes.add(if (isSuccess(response.status)) {
                     try {
-                        successes[endpoint.url] = success(response) ?: nullValue
+                        Success(success(response) ?: nullValue)
                     } catch (e: Exception) {
-                        errors[endpoint.url] = e
+                        Error(e)
                     }
                 } else {
                     if (isServerFailure(response.status)) {
                         endpoint.setUnreachable(unreachableDuration(response.status))
                     }
                     try {
-                        failures[endpoint.url] = failure(response) ?: nullValue
+                        Failure(failure(response) ?: nullValue)
                     } catch (e: Exception) {
-                        errors[endpoint.url] = e
+                        Error(e)
                     }
-                }
-                semaphore.release()
+                })
             }
         }
 
-        val startTime = System.currentTimeMillis()
+        val completedOutcomes = mutableListOf<Outcome>()
 
-        semaphore.acquire(bftMajorityThreshold)
+        repeat(bftMajorityThreshold) {
+            completedOutcomes += outcomes.poll(timeout, TimeUnit.MILLISECONDS)
+                    ?: throw TimeoutException("Requests took longer than $timeout ms")
+        }
 
         while (true) {
-            val responses = Responses(successes.values)
+            val responses = Responses(completedOutcomes.filterIsInstance<Success>().map { it.success })
 
             if (responses.maxNumberOfEqualResponses() >= bftMajorityThreshold) {
                 if (responses.numberOfDistinctResponses() > 1) {
@@ -85,30 +83,38 @@ class QueryMajorityRequestStrategy(
                 return fixNull(responses.majorityResponse())
             }
 
-            if ((failures.size + errors.size) >= failureThreshold) {
-                if (failures.isNotEmpty())
-                    return fixNull(failures.values.first())
+            if ((completedOutcomes.filterIsInstance<NonSuccess>().count()) >= failureThreshold) {
+                if (completedOutcomes.filterIsInstance<Failure>().isNotEmpty())
+                    return completedOutcomes.filterIsInstance<Failure>().first().fixNull()
                 else
-                    throw errors.values.first()
+                    throw completedOutcomes.filterIsInstance<Error>().first().error
             }
 
-            if ((successes.size + failures.size + errors.size) >= config.endpointPool.size) {
+            if (completedOutcomes.size >= config.endpointPool.size) {
                 throw NodesDisagree(responses.toString())
             }
 
-            if (System.currentTimeMillis() - startTime > timeout) throw TimeoutException("Requests took longer than $timeout ms")
-
-            semaphore.acquire()
+            completedOutcomes += outcomes.poll(timeout, TimeUnit.MILLISECONDS)
+                    ?: throw TimeoutException("Requests took longer than $timeout ms")
         }
     }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun <R> fixNull(v: Any): R = (if (v === nullValue) null else v) as R
 
     override fun close() {
         asyncHttpClient.close()
     }
+
+    sealed interface Outcome
+    class Success(val success: Any) : Outcome
+    sealed class NonSuccess : Outcome
+    class Failure(val failure: Any) : NonSuccess() {
+        fun <R> fixNull(): R = fixNull(failure)
+    }
+
+    class Error(val error: Exception) : NonSuccess()
 }
+
+@Suppress("UNCHECKED_CAST")
+private fun <R> fixNull(v: Any): R = (if (v === QueryMajorityRequestStrategy.nullValue) null else v) as R
 
 class Responses(successResponses: Collection<Any>) {
     private val distinctResponses: List<Map.Entry<Any, Int>> =
