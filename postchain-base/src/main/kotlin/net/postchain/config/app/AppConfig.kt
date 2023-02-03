@@ -34,14 +34,14 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
                 replaceWith = ReplaceWith("fromPropertiesFile(File(configFile), debug))", imports = arrayOf("java.io.File")))
         fun fromPropertiesFile(configFile: String, debug: Boolean = false): AppConfig = fromPropertiesFile(File(configFile), debug)
 
-        fun fromPropertiesFileOrEnvironment(configFile: File?, debug: Boolean = false): AppConfig =
+        fun fromPropertiesFileOrEnvironment(configFile: File?, debug: Boolean = false, overrides: Map<String, Any> = mapOf()): AppConfig =
                 if (configFile != null) {
-                    fromPropertiesFile(configFile, debug)
+                    fromPropertiesFile(configFile, debug, overrides)
                 } else {
-                    fromEnvironment(debug)
+                    fromEnvironment(debug, overrides)
                 }
 
-        fun fromPropertiesFile(configFile: File, debug: Boolean = false): AppConfig {
+        fun fromPropertiesFile(configFile: File, debug: Boolean = false, overrides: Map<String, Any> = mapOf()): AppConfig {
             val params = Parameters().properties()
                     .setFile(configFile)
                     .setListDelimiterHandler(DefaultListDelimiterHandler(','))
@@ -49,13 +49,17 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
             val configuration = FileBasedConfigurationBuilder(PropertiesConfiguration::class.java)
                     .configure(params)
                     .configuration
+                    .apply {
+                        overrides.forEach { (k, v) -> setProperty(k, v) }
+                    }
 
-            return fromConfiguration(configuration, debug)
+            return AppConfig(configuration, debug)
         }
 
-        fun fromEnvironment(debug: Boolean): AppConfig = fromConfiguration(BaseConfiguration(), debug)
-
-        private fun fromConfiguration(configuration: Configuration, debug: Boolean): AppConfig = AppConfig(configuration, debug)
+        fun fromEnvironment(debug: Boolean, overrides: Map<String, Any> = mapOf()): AppConfig = AppConfig(
+                BaseConfiguration().apply { overrides.forEach { (k, v) -> setProperty(k, v) } },
+                debug
+        )
     }
 
     /**
