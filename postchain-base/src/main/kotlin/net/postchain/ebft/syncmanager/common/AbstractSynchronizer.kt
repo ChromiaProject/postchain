@@ -41,14 +41,4 @@ abstract class AbstractSynchronizer (
         workerContext.appConfig.pubKey,
         blockchainConfiguration.blockchainRid
     )
-
-
-    // -------------
-    // Only logging below
-    // -------------
-
-    // handleUnfinishedBlock()
-    protected fun unfinishedTrace(message: String, e: Exception? = null) {
-        logger.trace(e) { "handleUnfinishedBlock() -- $message" }
-    }
 }

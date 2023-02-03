@@ -628,4 +628,8 @@ class FastSynchronizer(
     private fun headerDebug(message: String, e: Exception? = null) {
         logger.debug(e) { "handleBlockHeader() -- $message" }
     }
+
+    private fun unfinishedTrace(message: String, e: Exception? = null) {
+        logger.trace(e) { "handleUnfinishedBlock() -- $message" }
+    }
 }

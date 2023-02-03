@@ -168,7 +168,7 @@ class SlowSynchronizer(
             val blockData = block.data
             val headerWitnessPair = handleBlockHeader(peerId, blockData.header, block.witness, expectedHeight)
                 ?: return (expectedHeight - startingAtHeight).toInt() // Header failed for some reason. Just give up
-            handleUnfinishedBlock(
+            handleBlock(
                     peerId,
                     headerWitnessPair.first,
                     headerWitnessPair.second,
@@ -230,21 +230,21 @@ class SlowSynchronizer(
         }
     }
 
-    private fun handleUnfinishedBlock(
-        peerId: NodeRid,
-        header: net.postchain.core.block.BlockHeader,
-        witness: BlockWitness,
-        height: Long,
-        txs: List<ByteArray>
+    private fun handleBlock(
+            peerId: NodeRid,
+            header: net.postchain.core.block.BlockHeader,
+            witness: BlockWitness,
+            height: Long,
+            txs: List<ByteArray>
     ) {
         if (header !is BaseBlockHeader) {
             throw BadDataMistake(BadDataType.BAD_MESSAGE, "Expected BaseBlockHeader")
         }
 
-        unfinishedTrace("Received for height: $height")
+        logger.trace { "handleBlock() - Received for height: $height" }
         var bTrace: BlockTrace? = null
         if (logger.isTraceEnabled) {
-            logger.trace { "handleUnfinishedBlock() - Creating block trace with procname: $procName , height: $height " }
+            logger.trace("handleBlock() - Creating block trace with procname: $procName , height: $height")
 
             bTrace = BlockTrace.build(procName, header.blockRID, height)
         }
