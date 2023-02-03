@@ -169,20 +169,22 @@ class SlowSynchronizer(
             val headerWitnessPair = handleBlockHeader(peerId, blockData.header, block.witness, expectedHeight)
                 ?: return (expectedHeight - startingAtHeight).toInt() // Header failed for some reason. Just give up
             handleUnfinishedBlock(
-                peerId,
-                headerWitnessPair.first,
-                headerWitnessPair.second,
-                expectedHeight,
-                blockData.transactions
+                    peerId,
+                    headerWitnessPair.first,
+                    headerWitnessPair.second,
+                    expectedHeight,
+                    blockData.transactions
             )
             expectedHeight++ // We expect blocks to be in the correct order in the list
         }
         val processedBlocks = (expectedHeight - startingAtHeight).toInt()
         if (processedBlocks != blocks.size) {
+            stateMachine.state = SlowSyncStates.WAIT_FOR_ACTION
             throw ProgrammerMistake("processedBlocks != blocks.size")
         }
-
-        stateMachine.updateToWaitForCommit(processedBlocks, System.currentTimeMillis())
+        if (processedBlocks == 0) {
+            stateMachine.state = SlowSyncStates.WAIT_FOR_ACTION
+        }
         return processedBlocks
     }
 
@@ -250,6 +252,7 @@ class SlowSynchronizer(
         // The witness has already been verified in handleBlockHeader().
         val block = BlockDataWithWitness(header, txs, witness)
 
+        stateMachine.updateToWaitForCommit(height, System.currentTimeMillis())
         commitBlock(peerId, bTrace, block, height)
     }
 
