@@ -13,7 +13,7 @@ class CommandGenerateContainerZfsInitScript : CliktCommand(name = "generate-cont
             #!/bin/sh
             
             # create fs
-            zfs create ${'$'}1
+            zfs create -u ${'$'}1
             
             # set disk quota and reservation
             if [ ${'$'}2 -gt 0 ]

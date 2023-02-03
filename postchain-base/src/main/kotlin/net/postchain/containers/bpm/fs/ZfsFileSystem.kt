@@ -21,33 +21,42 @@ class ZfsFileSystem(private val config: ContainerNodeConfig) : FileSystem {
         } else {
             val fs = "${config.zfsPoolName}/${containerName.name}"
             val quota = resourceLimits.storageMb()
-            val cmd = if (config.zfsPoolInitScript != null && File(config.zfsPoolInitScript).exists()) {
+            val createCommand = if (config.zfsPoolInitScript != null && File(config.zfsPoolInitScript).exists()) {
                 arrayOf("/bin/sh", config.zfsPoolInitScript, fs, quota.toString())
             } else {
                 if (resourceLimits.hasStorage()) {
-                    arrayOf("/usr/sbin/zfs", "create", "-o", "quota=${quota}m", "-o", "reservation=50m", fs)
+                    arrayOf("/usr/sbin/zfs", "create", "-u", "-o", "quota=${quota}m", "-o", "reservation=50m", fs)
                 } else {
-                    arrayOf("/usr/sbin/zfs", "create", fs)
+                    arrayOf("/usr/sbin/zfs", "create", "-u", fs)
                 }
             }
             try {
-                val process = Runtime.getRuntime().exec(cmd)
-                process.waitFor(10, TimeUnit.SECONDS)
-                if (process.exitValue() != 0) {
-                    logger.warn("Unable to initialise ZFS file system: ${String(process.errorStream.readAllBytes())}")
+                runCommand(createCommand)?.let {
+                    logger.info("Unable to create ZFS file system: $it")
                 }
-
-                if (root.toFile().exists()) {
-                    logger.info("Container dir has been created: $root")
-                    root
-                } else {
-                    logger.error("Container dir hasn't been created: $root")
-                    null
+                runCommand(arrayOf("/usr/sbin/zfs", "mount", fs))?.let {
+                    logger.warn("Unable to mount ZFS file system: $it")
                 }
             } catch (e: Exception) {
                 logger.error("Can't create container dir: $root", e)
+            }
+            if (root.toFile().exists()) {
+                logger.info("Container dir has been created: $root")
+                root
+            } else {
+                logger.error("Container dir hasn't been created: $root")
                 null
             }
+        }
+    }
+
+    private fun runCommand(cmd: Array<String>): String? {
+        val process = Runtime.getRuntime().exec(cmd)
+        process.waitFor(10, TimeUnit.SECONDS)
+        return if (process.exitValue() != 0) {
+            String(process.errorStream.readAllBytes())
+        } else {
+            null
         }
     }
 
