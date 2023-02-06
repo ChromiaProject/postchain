@@ -21,33 +21,51 @@ class ZfsFileSystem(private val config: ContainerNodeConfig) : FileSystem {
         } else {
             val fs = "${config.zfsPoolName}/${containerName.name}"
             val quota = resourceLimits.storageMb()
-            val cmd = if (config.zfsPoolInitScript != null && File(config.zfsPoolInitScript).exists()) {
-                arrayOf("/bin/sh", config.zfsPoolInitScript, fs, quota.toString())
+
+            if (runCommand(arrayOf("/usr/sbin/zfs", "get", "all", fs)) == null) {
+                logger.info("ZFS volume exists: $fs")
             } else {
-                if (resourceLimits.hasStorage()) {
-                    arrayOf("/usr/sbin/zfs", "create", "-o", "quota=${quota}m", "-o", "reservation=50m", fs)
+                logger.info("Creating ZFS volume: $fs")
+                val createCommand = if (config.zfsPoolInitScript != null && File(config.zfsPoolInitScript).exists()) {
+                    arrayOf("/bin/sh", config.zfsPoolInitScript, fs, quota.toString())
                 } else {
-                    arrayOf("/usr/sbin/zfs", "create", fs)
+                    if (resourceLimits.hasStorage()) {
+                        arrayOf("/usr/sbin/zfs", "create", "-u", "-o", "quota=${quota}m", "-o", "reservation=50m", fs)
+                    } else {
+                        arrayOf("/usr/sbin/zfs", "create", "-u", fs)
+                    }
+                }
+                runCommand(createCommand)?.let {
+                    logger.warn("Unable to create ZFS file system: $it")
                 }
             }
-            try {
-                val process = Runtime.getRuntime().exec(cmd)
-                process.waitFor(10, TimeUnit.SECONDS)
-                if (process.exitValue() != 0) {
-                    logger.warn("Unable to initialise ZFS file system: ${String(process.errorStream.readAllBytes())}")
-                }
 
-                if (root.toFile().exists()) {
-                    logger.info("Container dir has been created: $root")
-                    root
-                } else {
-                    logger.error("Container dir hasn't been created: $root")
-                    null
-                }
-            } catch (e: Exception) {
-                logger.error("Can't create container dir: $root", e)
+            runCommand(arrayOf("/usr/sbin/zfs", "mount", fs))?.let {
+                logger.warn("Unable to mount ZFS file system: $it")
+            }
+            if (root.toFile().exists()) {
+                logger.info("Container dir has been created: $root")
+                root
+            } else {
+                logger.error("Container dir hasn't been created: $root")
                 null
             }
+        }
+    }
+
+    private fun runCommand(cmd: Array<String>): String? {
+        logger.debug("Executing command: ${cmd.contentToString()}")
+        return try {
+            val process = Runtime.getRuntime().exec(cmd)
+            process.waitFor(10, TimeUnit.SECONDS)
+            return if (process.exitValue() != 0) {
+                String(process.errorStream.readAllBytes())
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            logger.error("Unable to run ZFS command: $e")
+            e.toString()
         }
     }
 
