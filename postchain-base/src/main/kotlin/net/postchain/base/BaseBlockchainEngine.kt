@@ -33,8 +33,9 @@ import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.BaseBlockchainEngineMetrics
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
-import nl.komponents.kovenant.task
 import java.lang.Long.max
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
 
 /**
  * An [BlockchainEngine] will only produce [BlockBuilder]s for a single chain.
@@ -61,9 +62,9 @@ open class BaseBlockchainEngine(
     private var afterCommitHandler: AfterCommitHandler = afterCommitHandlerInternal
     private val metrics = BaseBlockchainEngineMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid, transactionQueue)
     private val loggingContext = mapOf(
-        NODE_PUBKEY_TAG to processName.pubKey,
-        CHAIN_IID_TAG to chainID.toString(),
-        BLOCKCHAIN_RID_TAG to processName.blockchainRid.toHex()
+            NODE_PUBKEY_TAG to processName.pubKey,
+            CHAIN_IID_TAG to chainID.toString(),
+            BLOCKCHAIN_RID_TAG to processName.blockchainRid.toHex()
     )
 
     override fun isRunning() = !closed
@@ -154,16 +155,22 @@ open class BaseBlockchainEngine(
     private fun parallelLoadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?> {
         return loadUnfinishedBlockImpl(block) { txs ->
             val txsLazy = txs.map { tx ->
-                task { smartDecodeTransaction(tx) }
+                CompletableFuture.supplyAsync { smartDecodeTransaction(tx) }
             }
 
-            txsLazy.map { it.get() }
+            txsLazy.map {
+                try {
+                    it.get()
+                } catch (e: ExecutionException) {
+                    throw e.cause ?: e
+                }
+            }
         }
     }
 
     private fun loadUnfinishedBlockImpl(
-        block: BlockData,
-        transactionsDecoder: (List<ByteArray>) -> List<Transaction>
+            block: BlockData,
+            transactionsDecoder: (List<ByteArray>) -> List<Transaction>
     ): Pair<ManagedBlockBuilder, Exception?> {
         withLoggingContext(loggingContext) {
             val grossStart = System.nanoTime()
@@ -212,7 +219,7 @@ open class BaseBlockchainEngine(
 
                 blockBuilder.begin(null)
                 val abstractBlockBuilder =
-                    ((blockBuilder as BaseManagedBlockBuilder).blockBuilder as AbstractBlockBuilder)
+                        ((blockBuilder as BaseManagedBlockBuilder).blockBuilder as AbstractBlockBuilder)
                 val netStart = System.nanoTime()
 
                 var acceptedTxs = 0
@@ -229,8 +236,8 @@ open class BaseBlockchainEngine(
                         if (tx.isSpecial()) {
                             rejectedTxs++
                             transactionQueue.rejectTransaction(
-                                tx,
-                                ProgrammerMistake("special transactions can't enter queue")
+                                    tx,
+                                    ProgrammerMistake("special transactions can't enter queue")
                             )
                             continue
                         }
@@ -283,11 +290,11 @@ open class BaseBlockchainEngine(
     // -----------------
 
     private fun prettyBlockHeader(
-        blockHeader: BlockHeader,
-        acceptedTxs: Int,
-        rejectedTxs: Int,
-        gross: Pair<Long, Long>,
-        net: Pair<Long, Long>
+            blockHeader: BlockHeader,
+            acceptedTxs: Int,
+            rejectedTxs: Int,
+            gross: Pair<Long, Long>,
+            net: Pair<Long, Long>
     ): String {
         val grossRate = (acceptedTxs * 1_000_000_000L) / max(gross.second - gross.first, 1)
         val netRate = (acceptedTxs * 1_000_000_000L) / max(net.second - net.first, 1)

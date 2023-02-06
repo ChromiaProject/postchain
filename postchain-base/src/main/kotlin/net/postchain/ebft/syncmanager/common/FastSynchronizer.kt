@@ -5,6 +5,8 @@ package net.postchain.ebft.syncmanager.common
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.common.toHex
+import net.postchain.concurrent.util.get
+import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.*
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockHeader
@@ -66,7 +68,7 @@ class FastSynchronizer(
         var witness: BlockWitness? = null
         var block: BlockDataWithWitness? = null
         var blockCommitting = false
-        var addBlockException: Exception? = null
+        var addBlockException: Throwable? = null
         val startTime = System.currentTimeMillis()
         var hasRestartFailed = false
         override fun toString(): String {
@@ -561,23 +563,24 @@ class FastSynchronizer(
 
         // This job has no preceding job that it has to check status for
         if (hasNoPrecedingJob) {
-            addBlockCompletionPromise = null // We want to do cleanup, since the old promise is used in "addBlock()" below.
+            addBlockCompletionFuture = null // We want to do cleanup, since the old future is used in "addBlock()" below.
         }
 
         // We are free to commit this Job, go on and add it to DB
-        // (this is usually slow and is therefore handled via a promise).
-        addBlockCompletionPromise = blockDatabase
-                .addBlock(job.block!!, addBlockCompletionPromise, bTrace)
-                .fail {
-                    // peer and try another peer
-                    if (it is PmEngineIsAlreadyClosed || it is BDBAbortException) {
-                        logger.warn { "Exception committing block $job: ${it.message}" }
-                    } else {
-                        logger.warn(it) { "Exception committing block $job" }
+        // (this is usually slow and is therefore handled via a future).
+        addBlockCompletionFuture = blockDatabase
+                .addBlock(job.block!!, addBlockCompletionFuture, bTrace)
+                .whenCompleteUnwrapped { _: Any?, exception ->
+                    if (exception != null) {
+                        if (exception is PmEngineIsAlreadyClosed || exception is BDBAbortException) {
+                            logger.warn { "Exception committing block $job: ${exception.message}" }
+                        } else {
+                            logger.warn(exception) { "Exception committing block $job" }
+                        }
+                        job.addBlockException = exception
                     }
-                    job.addBlockException = it
+                    finishedJobs.add(job)
                 }
-                .always { finishedJobs.add(job) }
     }
 
     private fun processMessages() {

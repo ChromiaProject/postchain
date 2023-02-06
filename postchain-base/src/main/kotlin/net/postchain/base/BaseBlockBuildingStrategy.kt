@@ -2,6 +2,7 @@
 
 package net.postchain.base
 
+import net.postchain.concurrent.util.get
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy

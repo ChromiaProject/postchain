@@ -16,6 +16,7 @@ import net.postchain.common.toHex
 import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.common.wrap
+import net.postchain.concurrent.util.get
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue

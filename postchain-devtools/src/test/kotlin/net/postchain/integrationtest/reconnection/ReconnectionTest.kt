@@ -5,13 +5,14 @@ package net.postchain.integrationtest.reconnection
 import assertk.assertions.containsExactly
 import assertk.assertions.isFalse
 import net.postchain.common.wrap
+import net.postchain.concurrent.util.get
 import net.postchain.core.Transaction
 import net.postchain.core.block.BlockQueries
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.testinfra.TestTransaction
-import nl.komponents.kovenant.Promise
 import java.util.*
+import java.util.concurrent.CompletionStage
 
 open class ReconnectionTest : ConfigFileBasedIntegrationTest() {
 
@@ -22,7 +23,7 @@ open class ReconnectionTest : ConfigFileBasedIntegrationTest() {
     protected val tx100 = TestTransaction(100)
     protected val tx101 = TestTransaction(101)
 
-    protected fun <T> queries(node: PostchainTestNode, action: (BlockQueries) -> Promise<T, Exception>): T {
+    protected fun <T> queries(node: PostchainTestNode, action: (BlockQueries) -> CompletionStage<T>): T {
         return node
                 .getBlockchainInstance()
                 .blockchainEngine

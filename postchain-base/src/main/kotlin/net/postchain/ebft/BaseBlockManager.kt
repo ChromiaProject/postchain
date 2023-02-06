@@ -5,26 +5,28 @@ package net.postchain.ebft
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.common.toHex
+import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import nl.komponents.kovenant.Promise
+import java.util.concurrent.CompletionStage
 
 /**
  * Manages intents and acts as a wrapper for [blockDatabase] and [statusManager]
  */
 class BaseBlockManager(
-    private val processName: BlockchainProcessName,
-    private val blockDB: BlockDatabase,
-    private val statusManager: StatusManager,
-    val blockStrategy: BlockBuildingStrategy
+        private val processName: BlockchainProcessName,
+        private val blockDB: BlockDatabase,
+        private val statusManager: StatusManager,
+        val blockStrategy: BlockBuildingStrategy
 ) : BlockManager {
 
     @Volatile
     private var processing = false
+
     @Volatile
     private var intent: BlockIntent = DoNothingIntent
 
@@ -36,22 +38,24 @@ class BaseBlockManager(
     @Volatile
     override var currentBlock: BlockData? = null
 
-    private fun <RT> runDBOp(op: () -> Promise<RT, Exception>, onSuccess: (RT) -> Unit, onFailure: (Exception) -> Unit = {}) {
+    private fun <RT> runDBOp(op: () -> CompletionStage<RT>, onSuccess: (RT) -> Unit, onFailure: (Throwable) -> Unit = {}) {
         if (!processing) {
             synchronized(statusManager) {
                 processing = true
                 intent = DoNothingIntent
 
-                op() success { res ->
-                    synchronized(statusManager) {
-                        onSuccess(res)
-                        processing = false
-                    }
-                } fail { err ->
-                    synchronized(statusManager) {
-                        onFailure(err)
-                        processing = false
-                        logger.debug(err) { "Error in runDBOp()" }
+                op().whenCompleteUnwrapped { res, exception ->
+                    if (exception == null) {
+                        synchronized(statusManager) {
+                            onSuccess(res)
+                            processing = false
+                        }
+                    } else {
+                        synchronized(statusManager) {
+                            onFailure(exception)
+                            processing = false
+                            logger.debug(exception) { "Error in runDBOp()" }
+                        }
                     }
                 }
             }

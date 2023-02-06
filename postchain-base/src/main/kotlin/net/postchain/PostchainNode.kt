@@ -23,8 +23,6 @@ import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
 import net.postchain.metrics.initMetrics
-import nl.komponents.kovenant.Kovenant
-
 
 /**
  * Postchain node instantiates infrastructure and blockchain process manager.
@@ -41,12 +39,6 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
     init {
         initMetrics(appConfig)
 
-        Kovenant.context {
-            workerContext.dispatcher {
-                name = "main"
-                concurrentTasks = 5
-            }
-        }
         val storage = StorageBuilder.buildStorage(appConfig, wipeDb)
 
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)

@@ -3,6 +3,7 @@
 package net.postchain.ebft.worker
 
 import mu.KLogging
+import net.postchain.concurrent.util.get
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.framework.AbstractBlockchainProcess

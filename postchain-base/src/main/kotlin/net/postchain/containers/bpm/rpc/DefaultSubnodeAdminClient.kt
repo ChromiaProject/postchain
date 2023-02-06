@@ -21,8 +21,10 @@ import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
 import net.postchain.server.grpc.StopBlockchainRequest
-import nl.komponents.kovenant.task
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 class DefaultSubnodeAdminClient(
         private val containerNodeConfig: ContainerNodeConfig,
@@ -32,6 +34,7 @@ class DefaultSubnodeAdminClient(
     companion object : KLogging() {
         private const val RETRY_INTERVAL = 1000
         private const val MAX_RETRIES = 5 * 60 * 1000 / RETRY_INTERVAL // 5 min
+        val clientCount = AtomicInteger()
     }
 
     private lateinit var channel: ManagedChannel
@@ -39,8 +42,12 @@ class DefaultSubnodeAdminClient(
     private lateinit var peerService: PeerServiceGrpc.PeerServiceBlockingStub
     private lateinit var healthcheckService: DebugServiceGrpc.DebugServiceBlockingStub
 
+    private val executor: ExecutorService = Executors.newSingleThreadExecutor {
+        Thread(it, "${clientCount.incrementAndGet()}-DefaultSubnodeAdminClient")
+    }
+
     override fun connect() {
-        task {
+        executor.submit {
             val target = "${containerNodeConfig.subnodeHost}:${containerPorts.hostAdminRpcPort}"
             repeat(MAX_RETRIES) {
                 try {
@@ -51,7 +58,7 @@ class DefaultSubnodeAdminClient(
                     peerService = PeerServiceGrpc.newBlockingStub(channel)
                     healthcheckService = DebugServiceGrpc.newBlockingStub(channel)
                     logger.info { "connect() -- Subnode container connection established on $target" }
-                    return@task
+                    return@submit
                 } catch (e: Exception) {
                     logger.warn(e) { "connect() -- Can't connect to subnode on $target, attempt $it of $MAX_RETRIES" }
                 }
@@ -193,6 +200,7 @@ class DefaultSubnodeAdminClient(
     override fun shutdown() {
         channel.shutdownNow()
         channel.awaitTermination(1000, TimeUnit.MILLISECONDS)
+        executor.shutdown()
     }
 
 }
