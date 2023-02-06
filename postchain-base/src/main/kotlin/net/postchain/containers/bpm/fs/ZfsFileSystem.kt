@@ -51,7 +51,7 @@ class ZfsFileSystem(private val config: ContainerNodeConfig) : FileSystem {
     }
 
     private fun runCommand(cmd: Array<String>): String? {
-        logger.debug("Executing command: $cmd")
+        logger.debug("Executing command: ${cmd.contentToString()}")
         val process = Runtime.getRuntime().exec(cmd)
         process.waitFor(10, TimeUnit.SECONDS)
         return if (process.exitValue() != 0) {
