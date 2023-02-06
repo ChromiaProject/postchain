@@ -8,7 +8,6 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
-import nl.komponents.kovenant.Promise
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
@@ -17,6 +16,8 @@ import org.junit.jupiter.api.TestMethodOrder
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.kotlin.*
 import org.mockito.stubbing.Answer
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeUnit
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
@@ -26,10 +27,8 @@ class BaseBlockBuildingStrategyTest {
 
         // Mocks
         private val blockQueries: BlockQueries = mock {
-            val height: Promise<Long, Exception> = mock {
-                onGeneric { get() } doReturn -1L
-            }
-            on { getBestHeight() } doReturn height
+            val completionStage: CompletionStage<Long> = CompletableFuture.completedStage(-1)
+            on { getBestHeight() } doReturn completionStage
         }
 
         private fun committedBlockData(): BlockData {

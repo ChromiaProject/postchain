@@ -20,7 +20,7 @@ import net.postchain.gtv.gtvToJSON
 import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.special.GTXSpecialTxHandler
-import nl.komponents.kovenant.Promise
+import java.util.concurrent.CompletionStage
 
 open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
                                       cryptoSystem: CryptoSystem,
@@ -63,7 +63,7 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
                 chainID, blockchainContext.nodeRID!!) {
             private val gson = make_gtv_gson()
 
-            override fun query(query: String): Promise<String, Exception> {
+            override fun query(query: String): CompletionStage<String> {
                 val gtxQuery = gson.fromJson<Gtv>(query, Gtv::class.java)
                 return runOp {
                     val type = gtxQuery.asDict()["type"] ?: throw UserMistake("Missing query type")
@@ -72,7 +72,7 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
                 }
             }
 
-            override fun query(name: String, args: Gtv): Promise<Gtv, Exception> {
+            override fun query(name: String, args: Gtv): CompletionStage<Gtv> {
                 return runOp {
                     module.query(it, name, args)
                 }

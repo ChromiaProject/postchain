@@ -4,12 +4,17 @@ package net.postchain.gtx
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.concurrent.util.get
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.IntegrationTestSetup
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvCollection
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.make_gtv_gson
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -21,11 +26,11 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
     private fun makeTx(ownerIdx: Int, key: String, value: String, bcRid: BlockchainRid): ByteArray {
         val owner = pubKey(ownerIdx)
         return GtxBuilder(bcRid, listOf(owner), net.postchain.devtools.gtx.myCS)
-            .addOperation("test_set_value", gtv(key), gtv(value), gtv(owner))
-            .finish()
-            .sign(net.postchain.devtools.gtx.myCS.buildSigMaker(KeyPair(owner, privKey(ownerIdx))))
-            .buildGtx()
-            .encode()
+                .addOperation("test_set_value", gtv(key), gtv(value), gtv(owner))
+                .finish()
+                .sign(net.postchain.devtools.gtx.myCS.buildSigMaker(KeyPair(owner, privKey(ownerIdx))))
+                .buildGtx()
+                .encode()
     }
 
 

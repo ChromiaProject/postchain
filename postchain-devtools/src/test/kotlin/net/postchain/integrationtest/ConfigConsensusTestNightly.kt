@@ -6,6 +6,7 @@ import assertk.assertions.isTrue
 import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.concurrent.util.get
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.PostchainTestNode
 import org.awaitility.Awaitility

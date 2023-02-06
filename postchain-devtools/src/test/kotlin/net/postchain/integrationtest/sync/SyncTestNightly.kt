@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.devtools.AbstractSyncTest
 import org.awaitility.Awaitility
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.concurrent.TimeUnit
