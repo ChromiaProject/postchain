@@ -136,7 +136,7 @@ abstract class AbstractBlockBuilder(
                 throw if (e.cause is TimeoutException) {
                     TransactionFailed("Transaction failed to execute within given time constraint: $maxTxExecutionTime ms")
                 } else {
-                    e
+                    e.cause ?: e
                 }
             }
         } else {

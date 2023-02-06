@@ -3,11 +3,12 @@
 package net.postchain.integrationtest.multiple_chains
 
 import mu.KLogging
+import net.postchain.concurrent.util.get
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.OnDemandBlockBuildingStrategy
-import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.assertChainStarted
 import net.postchain.devtools.assertNodeConnectedWith
+import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.util.NodesTestHelper.selectAnotherRandNode
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration.TEN_SECONDS

@@ -4,6 +4,7 @@ package net.postchain.devtools
 
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
+import net.postchain.concurrent.util.get
 import net.postchain.core.Transaction
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.MultiSigBlockWitness
@@ -13,9 +14,9 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtx.CompositeGTXModule
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
-import nl.komponents.kovenant.Promise
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import java.util.concurrent.CompletionStage
 import java.util.concurrent.TimeoutException
 import kotlin.time.Duration
 
@@ -37,7 +38,7 @@ fun PostchainTestNode.assertNodeConnectedWith(chainId: Long, vararg nodes: Postc
     assertEquals(nodes.map(PostchainTestNode::pubKey).toSet(), networkTopology(chainId).keys)
 }
 
-fun <T> PostchainTestNode.query(chainId: Long, action: (BlockQueries) -> Promise<T, Exception>): T? {
+fun <T> PostchainTestNode.query(chainId: Long, action: (BlockQueries) -> CompletionStage<T>): T? {
     return retrieveBlockchain(chainId)?.blockchainEngine?.getBlockQueries()?.run {
         action(this)
     }?.get()
@@ -91,12 +92,12 @@ fun PostchainTestNode.awaitHeight(chainId: Long, height: Long, timeout: Duration
 
 fun PostchainTestNode.enqueueTxs(chainId: Long, vararg txs: Transaction): Boolean {
     return retrieveBlockchain(chainId)
-        ?.let { process ->
-            val txQueue = process.blockchainEngine.getTransactionQueue()
-            txs.forEach { txQueue.enqueue(it) }
-            true
-        }
-        ?: false
+            ?.let { process ->
+                val txQueue = process.blockchainEngine.getTransactionQueue()
+                txs.forEach { txQueue.enqueue(it) }
+                true
+            }
+            ?: false
 }
 
 fun PostchainTestNode.enqueueTxsAndAwaitBuiltBlock(chainId: Long, height: Long, vararg txs: TestTransaction) {

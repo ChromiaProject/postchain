@@ -3,6 +3,7 @@ package net.postchain.network.mastersub.master
 import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
+import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.bpm.bcconfig.BlockchainConfigVerifier
@@ -29,10 +30,8 @@ import net.postchain.network.mastersub.protocol.MsQueryResponse
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
-import nl.komponents.kovenant.Promise
-import nl.komponents.kovenant.thenApply
-import nl.komponents.kovenant.unwrap
 import java.util.*
+import java.util.concurrent.CompletableFuture
 
 /**
  * Manages communication for the give chain
@@ -150,21 +149,21 @@ open class DefaultMasterCommunicationManager(
                         } else {
                             val blockQueries = blockQueriesProvider.getBlockQueries(message.targetBlockchainRid)
                             if (blockQueries != null) {
-                                blockQueries.query(message.name, message.args)
-                                        .success {
-                                            masterConnectionManager.sendPacketToSub(MsQueryResponse(
-                                                    message.blockchainRid,
-                                                    message.requestId,
-                                                    it
-                                            ))
-                                        }
-                                        .fail {
-                                            masterConnectionManager.sendPacketToSub(MsQueryFailure(
-                                                    message.blockchainRid,
-                                                    message.requestId,
-                                                    it.toString()
-                                            ))
-                                        }
+                                blockQueries.query(message.name, message.args).whenCompleteUnwrapped { response, exception ->
+                                    if (exception == null) {
+                                        masterConnectionManager.sendPacketToSub(MsQueryResponse(
+                                                message.blockchainRid,
+                                                message.requestId,
+                                                response
+                                        ))
+                                    } else {
+                                        masterConnectionManager.sendPacketToSub(MsQueryFailure(
+                                                message.blockchainRid,
+                                                message.requestId,
+                                                exception.toString()
+                                        ))
+                                    }
+                                }
                             } else {
                                 logger.trace { "Forwarding message to subnode with target blockchain-rid ${message.targetBlockchainRid}, message blockchain-rid ${message.blockchainRid.toHex()} and request id ${message.requestId}" }
                                 masterConnectionManager.masterSubQueryManager.query(
@@ -173,7 +172,7 @@ open class DefaultMasterCommunicationManager(
                                         message.targetBlockchainRid,
                                         message.name,
                                         message.args
-                                ).whenComplete { response, error ->
+                                ).whenCompleteUnwrapped() { response, error ->
                                     if (error == null) {
                                         logger.trace { "Got response from subnode with target blockchain-rid ${message.targetBlockchainRid}, message blockchain-rid ${message.blockchainRid.toHex()} and request id ${message.requestId}" }
                                         masterConnectionManager.sendPacketToSub(MsQueryResponse(
@@ -197,35 +196,34 @@ open class DefaultMasterCommunicationManager(
                     is MsBlockAtHeightRequest -> {
                         val blockQueries = blockQueriesProvider.getBlockQueries(message.targetBlockchainRid)
                         if (blockQueries != null) {
-                            blockQueries.getBlockRid(message.height).thenApply {
-                                if (this == null) {
-                                    Promise.ofSuccess(null)
+                            blockQueries.getBlockRid(message.height).thenCompose {
+                                if (it == null) {
+                                    CompletableFuture.completedFuture(null)
                                 } else {
-                                    blockQueries.getBlock(this, true)
+                                    blockQueries.getBlock(it, true)
                                 }
-                            }.unwrap()
-                                    .success {
-                                        masterConnectionManager.sendPacketToSub(MsBlockAtHeightResponse(
-                                                message.blockchainRid,
-                                                message.requestId,
-                                                it
-                                        ))
-                                    }
-                                    .fail {
-                                        masterConnectionManager.sendPacketToSub(MsQueryFailure(
-                                                message.blockchainRid,
-                                                message.requestId,
-                                                it.toString()
-                                        ))
-                                    }
-
+                            }.whenCompleteUnwrapped { response, exception ->
+                                if (exception == null) {
+                                    masterConnectionManager.sendPacketToSub(MsBlockAtHeightResponse(
+                                            message.blockchainRid,
+                                            message.requestId,
+                                            response
+                                    ))
+                                } else {
+                                    masterConnectionManager.sendPacketToSub(MsQueryFailure(
+                                            message.blockchainRid,
+                                            message.requestId,
+                                            exception.toString()
+                                    ))
+                                }
+                            }
                         } else {
                             masterConnectionManager.masterSubQueryManager.blockAtHeight(
                                     chainId,
                                     message.targetBlockchainRid,
                                     message.targetBlockchainRid,
                                     message.height
-                            ).whenComplete { response, error ->
+                            ).whenCompleteUnwrapped { response, error ->
                                 if (error == null) {
                                     masterConnectionManager.sendPacketToSub(MsBlockAtHeightResponse(
                                             message.blockchainRid,

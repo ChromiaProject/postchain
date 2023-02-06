@@ -5,6 +5,7 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.base.AbstractBlockBuilder
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
+import net.postchain.concurrent.util.get
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy

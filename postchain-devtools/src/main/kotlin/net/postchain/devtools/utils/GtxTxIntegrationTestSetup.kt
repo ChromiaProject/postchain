@@ -2,6 +2,7 @@ package net.postchain.devtools.utils
 
 import mu.KLogging
 import net.postchain.common.toHex
+import net.postchain.concurrent.util.get
 import net.postchain.configurations.GTXTestModule
 import net.postchain.devtools.*
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
@@ -20,12 +21,12 @@ import kotlin.test.assertNotNull
  *
  * We are using (real) [GTXTransaction] here, not some mock transaction as otherwise is common for integration tests.
  */
-open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
+open class GtxTxIntegrationTestSetup : IntegrationTestSetup() {
 
-    private val gtxTestModule =  GTXTestModule()
+    private val gtxTestModule = GTXTestModule()
     private val factoryMap: MutableMap<Long, GTXTransactionFactory> = mutableMapOf()
 
-    companion object: KLogging()
+    companion object : KLogging()
 
 
     private fun strategyOf(nodeId: Int, chainId: Long): OnDemandBlockBuildingStrategy {
@@ -72,7 +73,7 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
                     .untilAsserted {
                         systemSetup.nodeMap.values.forEach { nodeSetup ->
 
-                            val nn =nodeSetup.sequenceNumber.nodeNumber
+                            val nn = nodeSetup.sequenceNumber.nodeNumber
                             logger.debug("Assert connection for node: $nn")
                             /*
                             val nodesForBc = mutableListOf<PostchainTestNode>()
@@ -96,7 +97,6 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
     }
 
 
-
     /**
      * Note that we are enqueueing real GTX TXs here.
      * We are assuming that the relevant chains have been added and started on the nodes.
@@ -113,7 +113,7 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
             txCache: TxCache
     ) {
 
-        if(factoryMap.isEmpty()) {
+        if (factoryMap.isEmpty()) {
             // Must create the TX factories before any transactions can be created
             systemSetup.blockchainMap.values.forEach { chainSetup ->
                 if (chainSetup.shouldHaveNormalTx()) {
@@ -135,12 +135,12 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
                     node.chainsToSign.forEach { chain -> // For each chain this node is a signer of
                         if (systemSetup.blockchainMap[chain]!!.shouldHaveNormalTx()) { // Only create tx if this chain should have it
                             enqueueTx(
-                                chain.toLong(),
-                                currentTxId,
-                                txCache,
-                                block,
-                                blockIndex,
-                                nodes[node.sequenceNumber.nodeNumber]
+                                    chain.toLong(),
+                                    currentTxId,
+                                    txCache,
+                                    block,
+                                    blockIndex,
+                                    nodes[node.sequenceNumber.nodeNumber]
                             )
                         }
                     }
@@ -195,11 +195,11 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
         //logger.debug("Nr of nodes: ${nodes.size}, total nr of blocks: $blocksCount => expected height: $expectedHeight")
 
         systemSetup.nodeMap.values.forEach { node ->
-                    node.chainsToSign.forEach { chain ->
-                        if (systemSetup.blockchainMap[chain]!!.shouldHaveNormalTx()) { // No need to assert if we don't have generated test TXs
-                            assertChainForNode(node.sequenceNumber, chain.toLong(), expectedHeight, txPerBlock, txCache)
-                        }
+            node.chainsToSign.forEach { chain ->
+                if (systemSetup.blockchainMap[chain]!!.shouldHaveNormalTx()) { // No need to assert if we don't have generated test TXs
+                    assertChainForNode(node.sequenceNumber, chain.toLong(), expectedHeight, txPerBlock, txCache)
                 }
+            }
         }
     }
 
@@ -211,7 +211,7 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
 
         // Asserting best height equals to expected
         val best = queries.getBestHeight().get()
-       assertEquals(expectedHeight, best)
+        assertEquals(expectedHeight, best)
 
         for (height in 0..expectedHeight) {
             logger.info { "Verifying height $height" }
@@ -222,7 +222,7 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
 
             // Asserting txs count
             val txs = queries.getBlockTransactionRids(blockRid).get()
-           assertEquals(txPerBlock, txs.size)
+            assertEquals(txPerBlock, txs.size)
 
             // Asserting txs content
             for (tx in 0 until txPerBlock) {
@@ -233,7 +233,7 @@ open class GtxTxIntegrationTestSetup: IntegrationTestSetup()  {
                 //val expectedTx = TestTransaction(height.toInt() * txPerBlock + tx)
                 val realTxRid = txs[tx]
                 logger.debug("Real TX RID: ${realTxRid.toHex()}")
-               assertArrayEquals(expectedTxRid, realTxRid)
+                assertArrayEquals(expectedTxRid, realTxRid)
             }
         }
     }

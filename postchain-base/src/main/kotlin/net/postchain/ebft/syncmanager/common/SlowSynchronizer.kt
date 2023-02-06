@@ -3,6 +3,8 @@ package net.postchain.ebft.syncmanager.common
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.concurrent.util.get
+import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.core.NodeRid
@@ -127,7 +129,7 @@ class SlowSynchronizer(
                         val processedBlocks = handleBlockRange(peerId, message.blocks, message.startAtHeight)
                         sleepData.updateData(processedBlocks)
                     }
-                    is Status ->  { ; } // Do nothing, we don't measure drained
+                    is Status -> {} // Do nothing, we don't measure drained
                     else -> logger.debug { "Unhandled type $message from peer $peerId" }
                 }
             } catch (e: Exception) {
@@ -192,10 +194,10 @@ class SlowSynchronizer(
      * @return true if we could extract the header and it was considered valid.
      */
     private fun handleBlockHeader(
-        peerId: NodeRid,
-        header: ByteArray,
-        witness: ByteArray,
-        requestedHeight: Long
+            peerId: NodeRid,
+            header: ByteArray,
+            witness: ByteArray,
+            requestedHeight: Long
     ): Pair<net.postchain.core.block.BlockHeader, BlockWitness>? {
 
         if (header.isEmpty()) {
@@ -261,35 +263,39 @@ class SlowSynchronizer(
      * If one block fails to commit, don't worry about the blocks coming after. This is handled in the BBD.addBlock().
      */
     private fun commitBlock(peerId: NodeRid, bTrace: BlockTrace?, block: BlockDataWithWitness, height: Long) {
-        if (addBlockCompletionPromise?.isDone() == true) {
-            addBlockCompletionPromise = null // If it's done we don't need the promise
+        if (addBlockCompletionFuture?.isDone == true) {
+            addBlockCompletionFuture = null // If it's done we don't need the future
         }
 
-        // (this is usually slow and is therefore handled via a promise).
-        addBlockCompletionPromise = blockDatabase
-            .addBlock(block, addBlockCompletionPromise, bTrace)
-            .success {
-                logger.debug { "commitBlock() - Block height: $height committed successfully." }
-                stateMachine.updateAfterSuccessfulCommit(height)
-                blockHeight = height
-            }
-            .fail {
-                // peer and try another peer
-                if (it is PmEngineIsAlreadyClosed || it is BDBAbortException) {
-                    if (logger.isTraceEnabled) {
-                        logger.warn { "Exception committing block height $height from peer: $peerId: ${it.message}, cause: {${it.cause}, from bTrace: ${bTrace?.toString()}" }
+        // (this is usually slow and is therefore handled via a future).
+        addBlockCompletionFuture = blockDatabase
+                .addBlock(block, addBlockCompletionFuture, bTrace)
+                .whenCompleteUnwrapped { _: Any?, exception ->
+                    if (exception == null) {
+                        logger.debug { "commitBlock() - Block height: $height committed successfully." }
+                        try {
+                            stateMachine.updateAfterSuccessfulCommit(height)
+                            blockHeight = height
+                        } catch (t: Throwable) {
+                            logger.warn(t) { "Failed to update after successful commit" }
+                        }
                     } else {
-                        logger.warn { "Exception committing block height $height from peer: $peerId: ${it.message}, cause: {${it.cause}" }
-                    }
-                } else {
-                    if (logger.isTraceEnabled) {
-                        logger.warn(it) { "Exception committing block height $height from peer: $peerId from bTrace: ${bTrace?.toString()}" }
-                    } else {
-                        logger.warn(it) { "Exception committing block height $height from peer: $peerId" }
+                        if (exception is PmEngineIsAlreadyClosed || exception is BDBAbortException) {
+                            if (logger.isTraceEnabled) {
+                                logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}, cause: ${exception.cause}, from bTrace: ${bTrace?.toString()}" }
+                            } else {
+                                logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}, cause: ${exception.cause}" }
+                            }
+                        } else {
+                            if (logger.isTraceEnabled) {
+                                logger.warn(exception) { "Exception committing block height $height from peer: $peerId from bTrace: ${bTrace?.toString()}" }
+                            } else {
+                                logger.warn(exception) { "Exception committing block height $height from peer: $peerId" }
+                            }
+                        }
+                        stateMachine.updateAfterFailedCommit(height)
                     }
                 }
-                stateMachine.updateAfterFailedCommit(height)
-            }
     }
 
     // -------------

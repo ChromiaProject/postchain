@@ -1,6 +1,7 @@
 package net.postchain.core.framework
 
 import mu.NamedKLogging
+import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
 import net.postchain.debug.DiagnosticProperty

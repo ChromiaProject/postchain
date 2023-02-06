@@ -5,6 +5,7 @@ import net.postchain.PostchainContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadWriteConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManagerExtension
@@ -24,8 +25,7 @@ class TestManagedBlockchainProcessManager(
         blockchainConfigProvider: BlockchainConfigurationProvider,
         val testDataSource: ManagedNodeDataSource,
         bpmExtensions: List<BlockchainProcessManagerExtension> = listOf()
-)
-    : ManagedBlockchainProcessManager(
+) : ManagedBlockchainProcessManager(
         postchainContext,
         blockchainInfrastructure,
         blockchainConfigProvider,
