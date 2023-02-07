@@ -35,8 +35,7 @@ class CommandAddConfiguration : CliktCommand(
         Absolute, Relative
     }
 
-    // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption().required()
+    private val nodeConfigFile by nodeConfigOption()
 
     private val chainId by chainIdOption().required()
 
@@ -58,7 +57,7 @@ class CommandAddConfiguration : CliktCommand(
     private val allowUnknownSigners by option("-a", "--allow-unknown-signers", help = "Allow signers that are not in the list of peerInfos.").flag()
 
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
 
         val height0 = when (height.first) {
             Absolute -> height.second

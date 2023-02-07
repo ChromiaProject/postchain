@@ -12,7 +12,7 @@ import net.postchain.config.app.AppConfig
 
 class CommandMustSyncUntil : CliktCommand(name = "must-sync-until", help = "Set this to ensure that chain is not split after a database loss.") {
 
-    private val nodeConfigFile by nodeConfigOption().required()
+    private val nodeConfigFile by nodeConfigOption()
 
     private val blockchainRid by blockchainRidOption()
 
@@ -21,7 +21,7 @@ class CommandMustSyncUntil : CliktCommand(name = "must-sync-until", help = "Set 
 
 
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         val added = CliExecution.setMustSyncUntil(appConfig, blockchainRid,
                 height)
         when {

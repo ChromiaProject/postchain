@@ -1,7 +1,6 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.blockchainRidOption
@@ -15,8 +14,7 @@ class CommandBlockchainReplicaRemove : CliktCommand(
         help = "Remove node as replica for given blockchain rid. If brid not given command will be " +
                 "applied on all blockchains."
 ) {
-    // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption().required()
+    private val nodeConfigFile by nodeConfigOption()
 
     private val blockchainRID by blockchainRidOption()
 
@@ -24,7 +22,7 @@ class CommandBlockchainReplicaRemove : CliktCommand(
 
 
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         val removed = runStorageCommand(appConfig) { ctx: AppContext ->
             BlockchainApi.removeBlockchainReplica(ctx, blockchainRID, pubKey)
         }

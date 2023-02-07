@@ -3,7 +3,6 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.Templater
@@ -14,13 +13,12 @@ import net.postchain.core.AppContext
 
 class CommandPeerInfoRemove : CliktCommand(name = "peerinfo-remove", help = "Remove peer information") {
 
-    // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption().required()
+    private val nodeConfigFile by nodeConfigOption()
 
     private val pubKey by requiredPubkeyOption()
 
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         val removed = runStorageCommand(appConfig) { ctx: AppContext ->
             PeerApi.removePeer(ctx, pubKey)
         }
