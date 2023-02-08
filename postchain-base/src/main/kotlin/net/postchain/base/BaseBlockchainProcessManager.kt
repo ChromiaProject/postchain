@@ -191,11 +191,17 @@ open class BaseBlockchainProcessManager(
     }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
-        return blockchainProcesses[chainId]
+        return chainSynchronizers[chainId]?.withLock {
+            blockchainProcesses[chainId]
+        }
     }
 
     override fun retrieveBlockchain(blockchainRid: BlockchainRid): BlockchainProcess? {
-        return blockchainProcesses[bridToChainId[blockchainRid]]
+        return bridToChainId[blockchainRid]?.let {
+            chainSynchronizers[it]?.withLock {
+                blockchainProcesses[it]
+            }
+        }
     }
 
     /**
@@ -216,13 +222,15 @@ open class BaseBlockchainProcessManager(
                 }
             }
         }
-        if (!restart) chainSynchronizers.remove(chainId)
+        if (!restart) {
+            chainIdToBrid.remove(chainId).also { bridToChainId.remove(it) }
+            chainSynchronizers.remove(chainId)
+        }
     }
 
     protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
-        val blockchainRid = chainIdToBrid.remove(chainId)
+        val blockchainRid = chainIdToBrid[chainId]
         blockchainProcessesDiagnosticData.remove(blockchainRid)
-        bridToChainId.remove(blockchainRid)
         blockchainProcesses.remove(chainId)?.also {
             stopInfoDebug("Stopping of blockchain", chainId, bTrace)
             extensions.forEach { ext -> ext.disconnectProcess(it) }
