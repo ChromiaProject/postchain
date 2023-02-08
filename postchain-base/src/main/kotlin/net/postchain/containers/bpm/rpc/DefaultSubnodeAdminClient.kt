@@ -5,7 +5,7 @@ import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.ManagedChannel
 import io.grpc.Status
-import io.grpc.StatusRuntimeException
+import io.grpc.Status.ALREADY_EXISTS
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
@@ -139,7 +139,7 @@ class DefaultSubnodeAdminClient(
             logger.debug { "stopBlockchain($chainId) -- blockchain stopped: service's reply: ${response.message}" }
             true
         } catch (e: Exception) {
-            logger.error { "stopBlockchain($chainId) -- can't stop blockchain: : ${e.message}" }
+            logger.error { "stopBlockchain($chainId) -- can't stop blockchain: ${e.message}" }
             false
         }
     }
@@ -153,7 +153,7 @@ class DefaultSubnodeAdminClient(
             logger.debug { "isBlockchainRunning($chainId) -- ${response.active}" }
             response.active
         } catch (e: Exception) {
-            logger.error { "isBlockchainRunning($chainId) -- exception occurred: : ${e.message}" }
+            logger.error { "isBlockchainRunning($chainId) -- exception occurred: ${e.message}" }
             false
         }
     }
@@ -167,7 +167,7 @@ class DefaultSubnodeAdminClient(
             logger.debug { "getBlockchainLastHeight($chainId) -- ${response.height}" }
             response.height
         } catch (e: Exception) {
-            logger.error { "getBlockchainLastHeight($chainId) -- exception occurred: : ${e.message}" }
+            logger.error { "getBlockchainLastHeight($chainId) -- exception occurred: ${e.message}" }
             -1L
         }
     }
@@ -184,15 +184,12 @@ class DefaultSubnodeAdminClient(
             val response = peerService.addPeer(request)
             logger.debug { response.message }
             true
-        } catch (e: StatusRuntimeException) {
-            if (e.status == Status.ALREADY_EXISTS) {
-                logger.warn { "addPeerInfo($peerInfo) -- ${e.message}" }
-            } else {
-                logger.error { "addPeerInfo($peerInfo) -- failed: ${e.message}" }
-            }
-            false
         } catch (e: Exception) {
-            logger.error { "addPeerInfo($peerInfo) -- exception occurred: : ${e.message}" }
+            if (Status.fromThrowable(e).code == ALREADY_EXISTS.code) {
+                logger.info { "addPeerInfo($peerInfo) -- ${e.message}" }
+            } else {
+                logger.error { "addPeerInfo($peerInfo) -- exception occurred: ${e.message}" }
+            }
             false
         }
     }
