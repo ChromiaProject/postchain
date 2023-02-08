@@ -30,7 +30,7 @@ open class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFacto
 
             val syncInfra = EBFTSynchronizationInfrastructure(this)
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, configurationProvider)
+            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, configurationProvider, debug)
             return TestManagedBlockchainInfrastructure(this, syncInfra, apiInfra, dataSource)
         }
     }
