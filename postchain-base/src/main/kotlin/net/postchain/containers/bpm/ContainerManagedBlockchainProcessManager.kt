@@ -292,24 +292,25 @@ open class ContainerManagedBlockchainProcessManager(
             return result(false)
         }
 
-        if (dockerContainer != null && dockerContainer.state() == "exited" && job.chainsToStart.isNotEmpty()) {
-            logger.info { dcLog("stopped and will be started", psContainer) }
-            psContainer.containerId = dockerContainer.id()
-            dockerClient.startContainer(psContainer.containerId)
-            psContainer.start()
-            job.postpone(5_000)
-            return result(false)
-        }
-
         // 3. Asserting subnode is connected and running
         if (dockerContainer != null && job.chainsToStart.isNotEmpty()) {
+            psContainer.containerId = dockerContainer.id()
+            if (dockerContainer.state() == "exited" || dockerContainer.state() == "created" || dockerContainer.state() == "paused") {
+                logger.info { dcLog("stopped and will be started", psContainer) }
+                dockerClient.startContainer(psContainer.containerId)
+            }
+            if (psContainer.state != RUNNING) {
+                psContainer.start()
+                job.postpone(5_000)
+                return result(false)
+            }
             if (!psContainer.isSubnodeConnected()) {
                 logger.warn { "[${nodeName()}]: $scope -- Subnode is not connected, container: ${job.containerName}" }
                 job.postpone(5_000)
                 return result(false)
-            } else {
-                logger.info { "[${nodeName()}]: $scope -- Subnode is connected, container: ${job.containerName}" }
             }
+
+            logger.info { "[${nodeName()}]: $scope -- Subnode is connected, container: ${job.containerName}" }
         } else {
             logger.debug { "[${nodeName()}]: $scope -- DockerContainer is not running, 'is subnode connected' check will be skipped, container: ${job.containerName}" }
         }
