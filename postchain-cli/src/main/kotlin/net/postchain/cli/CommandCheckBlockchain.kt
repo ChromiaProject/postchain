@@ -13,15 +13,14 @@ import net.postchain.config.app.AppConfig
 
 class CommandCheckBlockchain : CliktCommand(name = "check-blockchain", help = "Checks Blockchain") {
 
-    // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption().required()
+    private val nodeConfigFile by nodeConfigOption()
 
     private val chainId by chainIdOption().required()
 
     private val blockchainRID by blockchainRidOption()
 
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         runOnChain(appConfig, chainId) {
             try {
                 CliExecution.checkBlockchain(appConfig, chainId, blockchainRID.toHex())
