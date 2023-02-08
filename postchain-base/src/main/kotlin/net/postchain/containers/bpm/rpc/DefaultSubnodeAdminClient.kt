@@ -186,7 +186,7 @@ class DefaultSubnodeAdminClient(
             true
         } catch (e: Exception) {
             if (Status.fromThrowable(e).code == ALREADY_EXISTS.code) {
-                logger.warn { "addPeerInfo($peerInfo) -- ${e.message}" }
+                logger.info { "addPeerInfo($peerInfo) -- ${e.message}" }
             } else {
                 logger.error { "addPeerInfo($peerInfo) -- exception occurred: ${e.message}" }
             }
