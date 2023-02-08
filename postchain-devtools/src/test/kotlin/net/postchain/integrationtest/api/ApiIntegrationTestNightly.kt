@@ -3,6 +3,7 @@
 package net.postchain.integrationtest.api
 
 import io.restassured.RestAssured.given
+import io.restassured.http.ContentType
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.ConfirmationProof
 import net.postchain.common.BlockchainRid
@@ -21,6 +22,7 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvFileReader
 import net.postchain.gtv.GtvProofTreeTestHelper
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
@@ -37,6 +39,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.skyscreamer.jsonassert.JSONAssert
 import org.skyscreamer.jsonassert.JSONCompareMode
+import java.nio.file.Paths
+import kotlin.test.assertContentEquals
 import kotlin.test.assertTrue
 
 class ApiIntegrationTestNightly : IntegrationTestSetup() {
@@ -172,7 +176,7 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
     fun testQueryGTXApi() {
         val nodesCount = 1
 
-        val sysSetup = doSystemSetup(nodesCount,"/net/postchain/devtools/api/blockchain_config_1.xml")
+        val sysSetup = doSystemSetup(nodesCount, "/net/postchain/devtools/api/blockchain_config_1.xml")
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
 
@@ -233,7 +237,7 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
     @Test
     fun testRejectedTransactionWithReason() {
         val nodesCount = 1
-        val sysSetup = doSystemSetup(nodesCount,"/net/postchain/devtools/api/blockchain_config_rejected.xml")
+        val sysSetup = doSystemSetup(nodesCount, "/net/postchain/devtools/api/blockchain_config_rejected.xml")
         val bcRid = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = bcRid.toHex()
 
@@ -275,7 +279,7 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
     fun testTransactionQueueFullWithReason() {
         val nodesCount = 1
 
-        val sysSetup = doSystemSetup(nodesCount,"/net/postchain/devtools/api/blockchain_config_tx_queue_size.xml")
+        val sysSetup = doSystemSetup(nodesCount, "/net/postchain/devtools/api/blockchain_config_tx_queue_size.xml")
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
 
@@ -292,10 +296,10 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
         //println("Sending TX: $strHexData:")
 
         testStatusPost(
-            blockHeight,
-            "/tx/${blockchainRID}",
-            "{\"tx\": \"$strHexData1\"}",
-            200
+                blockHeight,
+                "/tx/${blockchainRID}",
+                "{\"tx\": \"$strHexData1\"}",
+                200
         )
 
         // ----- TX = 2 ------
@@ -305,11 +309,43 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
         //println("Sending TX: $strHexData:")
 
         testStatusPost(
-            blockHeight,
-            "/tx/${blockchainRID}",
-            "{\"tx\": \"$strHexData2\"}",
-            503 // This should fail since we set the TX queue max size 1
+                blockHeight,
+                "/tx/${blockchainRID}",
+                "{\"tx\": \"$strHexData2\"}",
+                503 // This should fail since we set the TX queue max size 1
         )
+    }
+
+    @Test
+    fun testGetBlockchainConfiguration() {
+        val nodeCount = 4
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config.xml"
+        val sysSetup = doSystemSetup(nodeCount, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        val config = GtvEncoder.encodeGtv(GtvFileReader.readFile(Paths.get(javaClass.getResource(blockChainFile)!!.toURI()).toFile()))
+        val byteArray = given().port(nodes[0].getRestApiHttpPort())
+                .header("Accept", ContentType.BINARY)
+                .get("/config/$blockchainRID?height=0")
+                .then()
+                .statusCode(200)
+                .extract().asByteArray()
+        assertContentEquals(config, byteArray)
+    }
+
+    @Test
+    fun testGetBlockchainConfigurationWithInvalidHeight() {
+        val nodeCount = 4
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config.xml"
+        val sysSetup = doSystemSetup(nodeCount, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        val config = GtvEncoder.encodeGtv(GtvFileReader.readFile(Paths.get(javaClass.getResource(blockChainFile)!!.toURI()).toFile()))
+        val byteArray = given().port(nodes[0].getRestApiHttpPort())
+                .header("Accept", ContentType.BINARY)
+                .get("/config/$blockchainRID?height=-42")
+                .then()
+                .statusCode(400)
     }
 
     /**
@@ -467,9 +503,9 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
 
     private fun createBuilder(blockchainRid: BlockchainRid, value: String): Gtx {
         return GtxBuilder(blockchainRid, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
-        .addOperation("gtx_test", gtv(1L), gtv(value))
-        .finish()
-        .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))
-            .buildGtx()
+                .addOperation("gtx_test", gtv(1L), gtv(value))
+                .finish()
+                .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))
+                .buildGtx()
     }
 }

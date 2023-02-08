@@ -45,16 +45,17 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
         logPrefix = peerName(appConfig.pubKey)
 
         val blockQueriesProvider = BlockQueriesProviderImpl()
+        val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         postchainContext = PostchainContext(
                 appConfig,
                 NodeConfigurationProviderFactory.createProvider(appConfig) { storage },
                 storage,
                 infrastructureFactory.makeConnectionManager(appConfig),
                 blockQueriesProvider,
-                if (appConfig.debug) DefaultNodeDiagnosticContext() else null
+                if (appConfig.debug) DefaultNodeDiagnosticContext() else null,
+                blockchainConfigProvider
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
-        val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
         blockQueriesProvider.processManager = processManager
 

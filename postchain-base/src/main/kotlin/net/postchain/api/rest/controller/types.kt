@@ -35,6 +35,7 @@ interface Model : ChainModel {
     fun query(query: GtxQuery): Gtv
     fun nodeQuery(subQuery: String): String
     fun debugQuery(subQuery: String?): String
+    fun getBlockchainConfiguration(height: Long = -1): ByteArray?
 }
 
 data class Query(val json: String)

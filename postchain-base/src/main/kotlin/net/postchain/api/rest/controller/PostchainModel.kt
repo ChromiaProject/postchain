@@ -10,6 +10,7 @@ import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
 import net.postchain.base.BaseBlockQueries
 import net.postchain.base.ConfirmationProof
+import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
@@ -17,6 +18,8 @@ import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
@@ -31,7 +34,9 @@ open class PostchainModel(
         private val transactionFactory: TransactionFactory,
         val blockQueries: BaseBlockQueries,
         private val debugInfoQuery: DebugInfoQuery,
-        blockchainRid: BlockchainRid
+        blockchainRid: BlockchainRid,
+        val configurationProvider: BlockchainConfigurationProvider,
+        val storage: Storage
 ) : Model {
 
     companion object : KLogging()
@@ -53,18 +58,22 @@ open class PostchainModel(
                 sample.stop(metrics.fullTransactions)
                 throw UnavailableException("Transaction queue is full")
             }
+
             EnqueueTransactionResult.INVALID -> {
                 sample.stop(metrics.invalidTransactions)
                 throw InvalidTnxException("Transaction is invalid")
             }
+
             EnqueueTransactionResult.DUPLICATE -> {
                 sample.stop(metrics.duplicateTransactions)
                 throw DuplicateTnxException("Transaction already in queue")
             }
+
             EnqueueTransactionResult.UNKNOWN -> {
                 sample.stop(metrics.unknownTransactions)
                 throw UserMistake("Unknown error")
             }
+
             EnqueueTransactionResult.OK -> {
                 sample.stop(metrics.okTransactions)
             }
@@ -134,6 +143,18 @@ open class PostchainModel(
 
     override fun debugQuery(subQuery: String?): String {
         return debugInfoQuery.queryDebugInfo(subQuery)
+    }
+
+    override fun getBlockchainConfiguration(height: Long): ByteArray? {
+        return withReadConnection(storage, chainIID) { ctx ->
+            if (height < 0) {
+                configurationProvider.getActiveBlocksConfiguration(ctx, chainIID)
+            } else {
+                val historicConfigHeight = configurationProvider.getHistoricConfigurationHeight(ctx, chainIID, height)
+                        ?: throw UserMistake("Unknown chain")
+                configurationProvider.getHistoricConfiguration(ctx, chainIID, historicConfigHeight)
+            }
+        }
     }
 
     override fun toString(): String {

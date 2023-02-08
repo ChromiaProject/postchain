@@ -71,7 +71,7 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
         with(postchainContext) {
             val syncInfra = TestSynchronizationInfrastructure()
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext)
+            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, configurationProvider)
 
             return BaseBlockchainInfrastructure(syncInfra, apiInfra, this)
         }
