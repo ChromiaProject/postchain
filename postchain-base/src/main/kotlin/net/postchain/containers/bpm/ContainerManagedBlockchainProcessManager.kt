@@ -366,6 +366,13 @@ open class ContainerManagedBlockchainProcessManager(
             val running = dockerClient.listContainers() // running containers only
             containersToCheck.values.forEach { cname ->
                 val psContainer = postchainContainers[cname]!!
+
+                // Check for resource limit updates
+                val updates = psContainer.checkForResourceLimitsUpdates()
+                if (updates.first) {
+                    logger.warn { "Resource limits for container ${cname.name} have been changed from ${psContainer.resourceLimits} to ${updates.second}" }
+                }
+
                 val dc = running.firstOrNull { it.hasName(cname.name) }
                 val chainIds = if (dc == null) {
                     logger.warn { "[${nodeName()}]: $scope -- Docker container is not running and will be restarted: ${cname.name}" }
