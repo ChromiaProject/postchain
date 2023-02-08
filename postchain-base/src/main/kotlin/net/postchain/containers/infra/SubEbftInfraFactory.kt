@@ -33,7 +33,7 @@ class SubEbftInfraFactory : InfrastructureFactory {
         with(postchainContext) {
             val syncInfra = EBFTSynchronizationInfrastructure(this, DefaultSubPeersCommConfigFactory())
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, configurationProvider)
+            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, configurationProvider, debug)
 
             return BaseBlockchainInfrastructure(syncInfra, apiInfra, this)
         }

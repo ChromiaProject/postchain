@@ -3,6 +3,7 @@
 package net.postchain.api.rest.infra
 
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
+import net.postchain.api.rest.controller.DisabledDebugInfoQuery
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.base.BaseBlockQueries
@@ -14,9 +15,10 @@ import net.postchain.ebft.rest.model.PostchainEBFTModel
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 
 open class BaseApiInfrastructure(
-    protected val restApiConfig: RestApiConfig,
-    val nodeDiagnosticContext: NodeDiagnosticContext?,
-    val configurationProvider: BlockchainConfigurationProvider
+        restApiConfig: RestApiConfig,
+        val nodeDiagnosticContext: NodeDiagnosticContext,
+        val configurationProvider: BlockchainConfigurationProvider,
+        val enableDebugApi: Boolean
 ) : ApiInfrastructure {
 
     val restApi: RestApi? = with(restApiConfig) {
@@ -46,6 +48,7 @@ open class BaseApiInfrastructure(
             val engine = process.blockchainEngine
             val apiModel: PostchainModel
 
+            val debugInfoQuery = if (enableDebugApi) DefaultDebugInfoQuery(nodeDiagnosticContext) else DisabledDebugInfoQuery()
             if (process is ValidatorBlockchainProcess) { // TODO: EBFT-specific code, but pretty harmless
                 apiModel = PostchainEBFTModel(
                         engine.getConfiguration().chainID,
@@ -53,7 +56,7 @@ open class BaseApiInfrastructure(
                         process.networkAwareTxQueue,
                         engine.getConfiguration().getTransactionFactory(),
                         engine.getBlockQueries() as BaseBlockQueries, // TODO: [et]: Resolve type cast
-                        DefaultDebugInfoQuery(nodeDiagnosticContext),
+                        debugInfoQuery,
                         engine.getConfiguration().blockchainRid,
                         configurationProvider,
                         engine.storage
@@ -64,7 +67,7 @@ open class BaseApiInfrastructure(
                         engine.getTransactionQueue(),
                         engine.getConfiguration().getTransactionFactory(),
                         engine.getBlockQueries() as BaseBlockQueries,
-                        DefaultDebugInfoQuery(nodeDiagnosticContext),
+                        debugInfoQuery,
                         engine.getConfiguration().blockchainRid,
                         configurationProvider,
                         engine.storage

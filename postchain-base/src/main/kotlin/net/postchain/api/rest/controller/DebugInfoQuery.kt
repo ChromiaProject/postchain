@@ -14,25 +14,29 @@ interface DebugInfoQuery {
     fun queryDebugInfo(query: String?): String
 }
 
-class DefaultDebugInfoQuery(val nodeDiagnosticContext: NodeDiagnosticContext?) : DebugInfoQuery {
+class DisabledDebugInfoQuery: DebugInfoQuery {
+    override fun queryDebugInfo(query: String?): String {
+        return JsonObject().apply {
+            addProperty("Error", "Debug endpoint is not enabled. Use --debug cli option to enable it.")
+        }.toString()
+    }
+}
+
+class DefaultDebugInfoQuery(val nodeDiagnosticContext: NodeDiagnosticContext) : DebugInfoQuery {
 
     private val jsonBuilder = JsonFactory.makePrettyJson()
 
     override fun queryDebugInfo(query: String?): String {
-        return if (nodeDiagnosticContext != null) {
-            when (query) {
-                null -> collectDebugInfo()
-                else -> unknownQuery(query)
-            }
-        } else {
-            debugDisabled()
+        return when (query) {
+            null -> collectDebugInfo()
+            else -> unknownQuery(query)
         }
     }
 
     private fun collectDebugInfo(): String {
         return JsonObject()
                 .apply {
-                    nodeDiagnosticContext?.getProperties()?.forEach { (property, value) ->
+                    nodeDiagnosticContext.getProperties().forEach { (property, value) ->
                         add(property, jsonBuilder.toJsonTree(value))
                     }
                 }.let(jsonBuilder::toJson)
@@ -41,12 +45,6 @@ class DefaultDebugInfoQuery(val nodeDiagnosticContext: NodeDiagnosticContext?) :
     private fun unknownQuery(query: String): String {
         return JsonObject().apply {
             addProperty("Error", "Unknown query: $query")
-        }.toString()
-    }
-
-    private fun debugDisabled(): String {
-        return JsonObject().apply {
-            addProperty("Error", "Debug mode is not enabled. Use --debug cli option to enable it.")
         }.toString()
     }
 }

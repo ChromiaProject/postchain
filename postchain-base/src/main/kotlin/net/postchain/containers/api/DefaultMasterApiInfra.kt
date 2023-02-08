@@ -9,12 +9,14 @@ import net.postchain.debug.NodeDiagnosticContext
 
 class DefaultMasterApiInfra(
         restApiConfig: RestApiConfig,
-        nodeDiagnosticContext: NodeDiagnosticContext?,
-        configurationProvider: BlockchainConfigurationProvider
+        nodeDiagnosticContext: NodeDiagnosticContext,
+        configurationProvider: BlockchainConfigurationProvider,
+        enableDebugApi: Boolean
 ) : BaseApiInfrastructure(
         restApiConfig,
         nodeDiagnosticContext,
-        configurationProvider
+        configurationProvider,
+        enableDebugApi
 ), MasterApiInfra {
 
     override fun connectContainerProcess(process: ContainerBlockchainProcess) {

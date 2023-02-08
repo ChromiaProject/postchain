@@ -2,6 +2,7 @@ package net.postchain.debug
 
 import com.google.gson.JsonParser
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
+import net.postchain.api.rest.controller.DisabledDebugInfoQuery
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
@@ -56,8 +57,8 @@ class DefaultDebugInfoQueryTest {
     }
 
     @Test
-    fun testError_When_NullDiagnosticContext_IsGiven() {
-        val sut = DefaultDebugInfoQuery(null)
+    fun testError_When_DisabledDebugInfoQuery() {
+        val sut = DisabledDebugInfoQuery()
 
         // Actions
         val json = sut.queryDebugInfo(null)
