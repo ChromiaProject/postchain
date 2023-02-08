@@ -89,4 +89,10 @@ class DefaultPostchainContainer(
     override fun isEmpty() = processes.isEmpty()
 
     override fun isSubnodeConnected() = subnodeAdminClient.isSubnodeConnected()
+
+    override fun checkForResourceLimitsUpdates(): Pair<Boolean, ContainerResourceLimits?> {
+        val newLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
+                .takeIf { resourceLimits != it }
+        return (newLimits != null) to newLimits
+    }
 }

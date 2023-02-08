@@ -23,4 +23,5 @@ interface PostchainContainer {
     fun stop()
     fun isEmpty(): Boolean
     fun isSubnodeConnected(): Boolean
+    fun checkForResourceLimitsUpdates(): Pair<Boolean, ContainerResourceLimits?>
 }
