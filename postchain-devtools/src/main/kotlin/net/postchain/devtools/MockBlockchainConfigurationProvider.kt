@@ -14,8 +14,10 @@ import net.postchain.managed.ManagedNodeDataSource
  *
  * (broken out to here from Kalle's code, thought it could be re-used)
  */
-class MockBlockchainConfigurationProvider(val mockDataSource: ManagedNodeDataSource):
+class MockBlockchainConfigurationProvider():
     AbstractBlockchainConfigurationProvider() {   // Using the abstract class means we are using "real" ICMF for test, see no reason not to.
+
+    lateinit var mockDataSource: ManagedNodeDataSource
 
     companion object: KLogging()
 

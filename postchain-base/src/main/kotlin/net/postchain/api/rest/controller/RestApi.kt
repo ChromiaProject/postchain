@@ -25,11 +25,13 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.PmEngineIsAlreadyClosed
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvType
+import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtx.GtxQuery
 import spark.Request
@@ -54,6 +56,7 @@ class RestApi(
     companion object : KLogging() {
         const val JSON_CONTENT_TYPE = "application/json"
         const val OCTET_CONTENT_TYPE = "application/octet-stream"
+        const val XML_CONTENT_TYPE = "text/xml"
     }
 
     private val http = Service.ignite()!!
@@ -348,9 +351,26 @@ class RestApi(
                 response.type("text/plain")
                 brid
             }
+
+            http.get("/config/$PARAM_BLOCKCHAIN_RID", XML_CONTENT_TYPE, redirectGet(XML_CONTENT_TYPE) { request, _ ->
+                val configuration = getBlockchainConfiguration(request)
+                GtvMLEncoder.encodeXMLGtv(GtvDecoder.decodeGtv(configuration))
+            })
+
+            http.get("/config/$PARAM_BLOCKCHAIN_RID", OCTET_CONTENT_TYPE, redirectGet(OCTET_CONTENT_TYPE) { request, _ ->
+                getBlockchainConfiguration(request)
+            })
         }
 
         http.awaitInitialization()
+    }
+
+    private fun getBlockchainConfiguration(request: Request): ByteArray {
+        val model = model(request)
+        val paramsMap = request.queryMap()
+        val height = paramsMap.get("height")?.value()?.toLongOrNull() ?: -1
+        if (height < -1) throw BadFormatError("Height must be -1 (current height) or a non-negative integer")
+        return model.getBlockchainConfiguration(height) ?: throw UserMistake("Failed to find configuration")
     }
 
     private fun toTransaction(request: Request): ApiTx {

@@ -25,14 +25,17 @@ open class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFacto
         with(postchainContext) {
             dataSource = appConfig.getProperty("infrastructure.datasource") as MockManagedNodeDataSource
 
+            val mockBlockQueriesProvider = configurationProvider as MockBlockchainConfigurationProvider
+            mockBlockQueriesProvider.mockDataSource = dataSource
+
             val syncInfra = EBFTSynchronizationInfrastructure(this)
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext)
+            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, configurationProvider)
             return TestManagedBlockchainInfrastructure(this, syncInfra, apiInfra, dataSource)
         }
     }
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
-        return MockBlockchainConfigurationProvider(dataSource)
+        return MockBlockchainConfigurationProvider()
     }
 }

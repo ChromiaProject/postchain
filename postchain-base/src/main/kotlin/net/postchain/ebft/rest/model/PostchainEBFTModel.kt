@@ -6,6 +6,8 @@ import net.postchain.api.rest.controller.*
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.base.BaseBlockQueries
 import net.postchain.common.BlockchainRid
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.core.Storage
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionQueue
@@ -18,8 +20,10 @@ class PostchainEBFTModel(
         transactionFactory: TransactionFactory,
         blockQueries: BaseBlockQueries,
         debugInfoQuery: DebugInfoQuery,
-        blockchainRid: BlockchainRid
-) : PostchainModel(chainIID, txQueue, transactionFactory, blockQueries, debugInfoQuery, blockchainRid) {
+        blockchainRid: BlockchainRid,
+        configurationProvider: BlockchainConfigurationProvider,
+        storage: Storage
+) : PostchainModel(chainIID, txQueue, transactionFactory, blockQueries, debugInfoQuery, blockchainRid, configurationProvider, storage) {
 
     override fun nodeQuery(subQuery: String): String {
         val json = JsonFactory.makeJson()
