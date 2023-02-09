@@ -4,8 +4,6 @@ package net.postchain.api.rest.controller
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
-import com.google.gson.JsonObject
-import com.google.gson.JsonPrimitive
 import kong.unirest.Unirest
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
@@ -26,12 +24,15 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvType
 import net.postchain.gtv.gtvml.GtvMLEncoder
+import net.postchain.gtv.gtvToJSON
+import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtx.GtxQuery
 import spark.Request
@@ -61,6 +62,7 @@ class RestApi(
 
     private val http = Service.ignite()!!
     private val gson = JsonFactory.makeJson()
+    private val gtvGson = make_gtv_gson()
     private val models = mutableMapOf<String, ChainModel>()
     private val bridByIID = mutableMapOf<Long, String>()
 
@@ -404,27 +406,34 @@ class RestApi(
     }
 
     private fun handlePostQuery(request: Request): String {
-        return model(request)
-                .query(Query(request.body()))
-                .json
+        val model = model(request)
+        val gtxQuery = gtvGson.fromJson(request.body(), Gtv::class.java)
+        val queryDict = gtxQuery.asDict()
+        val type = queryDict["type"] ?: throw UserMistake("Missing query type")
+        val args = gtv(queryDict.filterKeys { key -> key != "type" })
+        val queryResult = model.query(GtxQuery(type.asString(), args))
+        return gtvToJSON(queryResult, gtvGson)
     }
 
     private fun handleGetQuery(request: Request): String {
+        val model = model(request)
         val queryMap = request.queryMap()
-        val jsonQuery = JsonObject()
+        val type = queryMap.value("type") ?: throw UserMistake("Missing query type")
+        val args = mutableMapOf<String, Gtv>()
 
-        queryMap.toMap().forEach {
+        queryMap.toMap().filterKeys { it != "type" }.forEach {
             val paramValue = queryMap.value(it.key)
-            var value = JsonPrimitive(paramValue)
             if (paramValue == "true" || paramValue == "false") {
-                value = JsonPrimitive(paramValue.toBoolean())
-            } else if (paramValue.toIntOrNull() != null) {
-                value = JsonPrimitive(paramValue.toInt())
+                args[it.key] = gtv(paramValue.toBoolean())
+            } else if (paramValue.toLongOrNull() != null) {
+                args[it.key] = gtv(paramValue.toLong())
+            } else {
+                args[it.key] = gtv(paramValue)
             }
-            jsonQuery.add(it.key, value)
         }
 
-        return model(request).query(Query(gson.toJson(jsonQuery))).json
+        val queryResult = model.query(GtxQuery(type, gtv(args)))
+        return gtvToJSON(queryResult, gtvGson)
     }
 
     private fun handleDirectQuery(request: Request, response: Response): Any {
@@ -448,12 +457,17 @@ class RestApi(
     }
 
     private fun handleQueries(request: Request): String {
+        val model = model(request)
         val queriesArray: JsonArray = parseMultipleQueriesRequest(request)
         val response: MutableList<String> = mutableListOf()
 
         queriesArray.forEach {
-            val query = gson.toJson(it)
-            response.add(model(request).query(Query(query)).json)
+            val gtxQuery = gtvGson.fromJson(it, Gtv::class.java)
+            val queryDict = gtxQuery.asDict()
+            val type = queryDict["type"] ?: throw UserMistake("Missing query type")
+            val args = gtv(queryDict.filterKeys { key -> key != "type" })
+            val queryResult = model.query(GtxQuery(type.asString(), args))
+            response.add(gtvToJSON(queryResult, gtvGson))
         }
 
         return gson.toJson(response)

@@ -74,7 +74,6 @@ interface BlockQueries : Shutdownable {
     fun getTransaction(txRID: ByteArray): CompletionStage<Transaction?>
     fun getTransactionInfo(txRID: ByteArray): CompletionStage<TransactionInfoExt?>
     fun getTransactionsInfo(beforeTime: Long, limit: Int): CompletionStage<List<TransactionInfoExt>>
-    fun query(query: String): CompletionStage<String>
     fun query(name: String, args: Gtv): CompletionStage<Gtv>
     fun isTransactionConfirmed(txRID: ByteArray): CompletionStage<Boolean>
 }
