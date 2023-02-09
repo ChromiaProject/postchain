@@ -348,7 +348,6 @@ open class ContainerManagedBlockchainProcessManager(
 
     private fun initContainerWorkingDir(fs: FileSystem, container: PostchainContainer): Path? =
             fs.createContainerRoot(container.containerName, container.resourceLimits)
-                    ?.also { fs.hostPgdataOf(container.containerName).toFile().mkdirs() }
 
     private fun containerHealthcheckJobHandler(containersInProgress: Set<String>) {
         val start = System.currentTimeMillis()

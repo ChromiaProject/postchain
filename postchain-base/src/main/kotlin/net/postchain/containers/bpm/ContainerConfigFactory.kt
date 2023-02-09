@@ -49,18 +49,7 @@ object ContainerConfigFactory : KLogging() {
             volumes.add(pgdataVol)
         }
 
-        val userSpec = try {
-            val unixSystem = com.sun.security.auth.module.UnixSystem()
-            if (unixSystem.uid == 0L) null else "${unixSystem.uid}:${unixSystem.gid}"
-        } catch (e: Exception) {
-            logger.warn("Unable to fetch current user id: $e")
-            null
-        } catch (le: LinkageError) {
-            logger.warn("Fetching current user id is unsupported: $le")
-            null
-        }
-
-        if (userSpec != null) {
+        if (containerNodeConfig.subnodeUser != null) {
             volumes.add(HostConfig.Bind.builder().from("/etc/passwd").to("/etc/passwd").readOnly(true).build())
         }
 
@@ -115,8 +104,7 @@ object ContainerConfigFactory : KLogging() {
 
         return ContainerConfig.builder()
                 .apply {
-                    if (userSpec != null)
-                        user(userSpec)
+                    containerNodeConfig.subnodeUser?.let { user(it) }
                 }
                 .image(containerNodeConfig.containerImage)
                 .hostConfig(hostConfig)
