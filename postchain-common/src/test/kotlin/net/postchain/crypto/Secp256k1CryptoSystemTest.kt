@@ -42,4 +42,18 @@ class Secp256k1CryptoSystemTest {
     fun tooShortPubKey() {
         assert(sut.validatePubKey("02030405".hexStringToByteArray())).isFalse()
     }
+
+    @Test
+    fun validLongPubKey() {
+        assert(sut.validatePubKey(
+                "041B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F70BEAF8F588B541507FED6A642C5AB42DFDF8120A7F639DE5122D47A69A8E8D1".hexStringToByteArray()
+        )).isTrue()
+    }
+
+    @Test
+    fun invalidLongPubKey() {
+        assert(sut.validatePubKey(
+                "042B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F70BEAF8F588B541507FED6A642C5AB42DFDF8120A7F639DE5122D47A69A8E8D1".hexStringToByteArray()
+        )).isFalse()
+    }
 }
