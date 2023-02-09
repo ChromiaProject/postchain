@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
+import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
@@ -474,15 +475,18 @@ open class ContainerManagedBlockchainProcessManager(
         return chains.computeIfAbsent(chainId) {
             val brid = getBridByChainId(chainId)
             val container = directoryDataSource.getContainerForBlockchain(brid)
-            val containerName = ContainerName.create(appConfig, container)
+            val containerIid = getContainerIid(container)
+            val containerName = ContainerName.create(appConfig, container, containerIid)
             Chain(containerName, chainId, brid)
         }
     }
 
-    private fun getBridByChainId(chainId: Long): BlockchainRid {
-        return withReadConnection(storage, chainId) { ctx ->
-            DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
-        }
+    private fun getBridByChainId(chainId: Long): BlockchainRid = withReadConnection(storage, chainId) { ctx ->
+        DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
+    }
+
+    private fun getContainerIid(name: String): Int = storage.withWriteConnection { ctx ->
+        DatabaseAccess.of(ctx).getContainerIid(ctx, name) ?: DatabaseAccess.of(ctx).createContainer(ctx, name)
     }
 
     private fun removeContainersIfExist() {

@@ -19,14 +19,10 @@ import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import net.postchain.core.TxEContext
-import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockWitness
 import net.postchain.crypto.PubKey
-import net.postchain.crypto.Signature
 import org.apache.commons.dbutils.QueryRunner
-import org.apache.commons.dbutils.handlers.BeanHandler
-import org.apache.commons.dbutils.handlers.BeanListHandler
 import org.apache.commons.dbutils.handlers.ColumnListHandler
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.apache.commons.dbutils.handlers.ScalarHandler
@@ -38,6 +34,7 @@ import java.time.Instant
 abstract class SQLDatabaseAccess : DatabaseAccess {
 
     protected fun tableMeta(): String = "meta"
+    protected fun tableContainers(): String = "containers"
     protected fun tableBlockchains(): String = "blockchains"
     protected fun tablePeerinfos(): String = "peerinfos"
     protected fun tableBlockchainReplicas(): String = "blockchain_replicas"
@@ -45,7 +42,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected fun tableConfigurations(ctx: EContext): String = tableName(ctx, "configurations")
     protected fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
-    protected fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
+    private fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
     protected fun tablePages(ctx: EContext, name: String): String = tableName(ctx, "${name}_pages")
     protected fun tableEventLeafs(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_event_leafs")
     protected fun tableStateLeafs(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_state_leafs")
@@ -53,16 +50,13 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     fun tableGtxModuleVersion(ctx: EContext): String = tableName(ctx, "gtx_module_version")
 
-    override fun tableName(ctx: EContext, table: String): String {
-        return tableName(ctx.chainID, table)
-    }
+    override fun tableName(ctx: EContext, table: String): String = tableName(ctx.chainID, table)
 
-    fun tableName(chainId: Long, table: String): String {
-        return "\"c${chainId}.$table\""
-    }
+    private fun tableName(chainId: Long, table: String): String = "\"c${chainId}.$table\""
 
     // --- Create Table ---
     protected abstract fun cmdCreateTableMeta(): String
+    protected abstract fun cmdCreateTableContainers(): String
     protected abstract fun cmdCreateTableBlockchains(): String
     protected abstract fun cmdCreateTablePeerInfos(): String
     protected abstract fun cmdCreateTableBlockchainReplicas(): String
@@ -91,15 +85,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     var queryRunner = QueryRunner()
     private val intRes = ScalarHandler<Int>()
     val longRes = ScalarHandler<Long>()
-    private val signatureRes = BeanListHandler<Signature>(Signature::class.java)
     private val nullableByteArrayRes = ScalarHandler<ByteArray?>()
     private val nullableIntRes = ScalarHandler<Int?>()
     private val nullableLongRes = ScalarHandler<Long?>()
     private val byteArrayRes = ScalarHandler<ByteArray>()
-    private val blockDataRes = BeanHandler<BlockData>(BlockData::class.java)
-    private val byteArrayListRes = ColumnListHandler<ByteArray>()
     private val mapListHandler = MapListHandler()
-    private val stringRes = ScalarHandler<String>()
 
     companion object : KLogging() {
         const val TABLE_PEERINFOS_FIELD_HOST = "host"
@@ -479,6 +469,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int) {
+        if (expectedDbVersion !in 1..3) {
+            throw UserMistake("Unsupported DB version $expectedDbVersion")
+        }
+
         /**
          * "CREATE TABLE IF NOT EXISTS" is not good enough for the meta table
          * We need to know whether it exists or not in order to
@@ -489,22 +483,24 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             val sql = "SELECT value FROM ${tableMeta()} WHERE key='version'"
             val version = queryRunner.query(connection, sql, ScalarHandler<String>()).toInt()
 
-            when {
-                version == expectedDbVersion -> Unit
-
-                version == 1 && expectedDbVersion == 2 -> {
-                    logger.info("Current version $version is lower than expectedVersion $expectedDbVersion")
-                    queryRunner.update(connection, cmdCreateTableBlockchainReplicas())
-                    queryRunner.update(connection, cmdCreateTableMustSyncUntil())
-
-                    // Update db version to the latest
-                    queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
-                    logger.info("Database version has been updated to version: $expectedDbVersion")
-                }
-
-                else -> throw UserMistake("Unexpected version $version in database. Expected $expectedDbVersion")
+            if (expectedDbVersion < version) {
+                throw UserMistake("Will not downgrade database from $version to $expectedDbVersion")
             }
 
+            if (version < 2 && expectedDbVersion >= 2) {
+                logger.info("Upgrading to version 2")
+                version2(connection)
+            }
+
+            if (version < 3 && expectedDbVersion >= 3) {
+                logger.info("Upgrading to version 3")
+                version3(connection)
+            }
+
+            if (expectedDbVersion > version) {
+                queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
+                logger.info("Database version has been updated to version: $expectedDbVersion")
+            }
         } else {
             logger.debug("Meta table does not exist. Assume database does not exist and create it (version: $expectedDbVersion).")
             queryRunner.update(connection, cmdCreateTableMeta())
@@ -513,23 +509,44 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
             /**
              * NB: Don't use "CREATE TABLE IF NOT EXISTS" because if they do exist
-             * we must throw an error. If these tables exists but meta did not exist,
+             * we must throw an error. If these tables exist but meta did not exist,
              * there is some serious problem that needs manual work
              */
 
-            // version 1:
-            if (1 <= expectedDbVersion) {
-                queryRunner.update(connection, cmdCreateTablePeerInfos())
-                queryRunner.update(connection, cmdCreateTableBlockchains())
+            version1(connection)
+
+            if (expectedDbVersion >= 2) {
+                version2(connection)
             }
 
-            // version 2:
-            if (2 <= expectedDbVersion) {
-                queryRunner.update(connection, cmdCreateTableBlockchainReplicas())
-                queryRunner.update(connection, cmdCreateTableMustSyncUntil())
+            if (expectedDbVersion >= 3) {
+                version3(connection)
             }
-
         }
+    }
+
+    private fun version1(connection: Connection) {
+        queryRunner.update(connection, cmdCreateTablePeerInfos())
+        queryRunner.update(connection, cmdCreateTableBlockchains())
+    }
+
+    private fun version2(connection: Connection) {
+        queryRunner.update(connection, cmdCreateTableBlockchainReplicas())
+        queryRunner.update(connection, cmdCreateTableMustSyncUntil())
+    }
+
+    private fun version3(connection: Connection) {
+        queryRunner.update(connection, cmdCreateTableContainers())
+    }
+
+    override fun createContainer(ctx: AppContext, name: String): Int {
+        val sql = "INSERT INTO ${tableContainers()} (name) values (?) RETURNING container_iid"
+        return queryRunner.insert(ctx.conn, sql, intRes, name)
+    }
+
+    override fun getContainerIid(ctx: AppContext, name: String): Int? {
+        val sql = "SELECT container_iid FROM ${tableContainers()} WHERE name = ?"
+        return queryRunner.query(ctx.conn, sql, nullableIntRes, name)
     }
 
     override fun initializeBlockchain(ctx: EContext, blockchainRid: BlockchainRid) {
@@ -623,7 +640,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      * @param height is the height of a block
      * @return the height of the CONFIGURATION used for a block of the given height.
      *         returning "null" here means no configuration is defined for the chain,
-     *         which is must likely an error.
+     *         which is most likely an error.
      */
     override fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long? {
         val sql = """
@@ -766,7 +783,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
         /*
         Due to reference integrity between tables peerInfos and BlockchainReplicas AND the fact that the pubkey string in peerInfos
-        can hold both lower and upper characters (historically), we use the exact (case sensitive) value from the peerInfos table when
+        can hold both lower and upper characters (historically), we use the exact (case-sensitive) value from the peerInfos table when
         adding the node as blockchain replica.
          */
         val sql = """
@@ -874,7 +891,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val rs = connection.metaData.getTables(null, null, null, types)
         while (rs.next()) {
             // Avoid wildcard '_' in SQL. Eg: if you pass "employee_salary" that should return something
-            // employeesalary which we don't expect
+            // employee salary which we don't expect
             if (rs.getString("TABLE_SCHEM").equals(connection.schema, true)
                     && rs.getString("TABLE_NAME").equals(tableName0, true)
             ) {
