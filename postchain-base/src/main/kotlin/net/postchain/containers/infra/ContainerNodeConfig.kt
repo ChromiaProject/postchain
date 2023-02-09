@@ -8,6 +8,7 @@ import net.postchain.common.config.getEnvOrLongProperty
 import net.postchain.common.config.getEnvOrStringProperty
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
+import net.postchain.containers.bpm.ContainerConfigFactory
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.server.config.PostchainServerConfig
 import org.apache.commons.configuration2.Configuration
@@ -28,6 +29,7 @@ data class ContainerNodeConfig(
         val subnodeHost: String,
         val subnodeRestApiPort: Int,
         val subnodeAdminRpcPort: Int,
+        val subnodeUser: String?,
         val sendMasterConnectedPeersPeriod: Long,
         val healthcheckRunningContainersCheckPeriod: Long,
         // Container FileSystem
@@ -77,6 +79,7 @@ data class ContainerNodeConfig(
         const val KEY_SUBNODE_HOST = "subnode-host"
         const val KEY_SUBNODE_REST_API_PORT = "rest-api-port"
         const val KEY_SUBNODE_ADMIN_RPC_PORT = "admin-rpc-port"
+        const val KEY_SUBNODE_USER = "subnode-user"
         const val KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD = "send-master-connected-peers-period"
         const val KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD = "healthcheck.running-containers-check-period"
         const val KEY_SUBNODE_DATABASE_URL = "subnode-database-url"
@@ -103,6 +106,18 @@ data class ContainerNodeConfig(
                         ?: throw UserMistake("$KEY_CONTAINER_PREFIX.$KEY_MASTER_HOST must be specified")
                 val subnodeHost = getEnvOrStringProperty("POSTCHAIN_SUBNODE_HOST", KEY_SUBNODE_HOST)
                         ?: throw UserMistake("$KEY_CONTAINER_PREFIX.$KEY_SUBNODE_HOST must be specified")
+
+                val subnodeUser = getEnvOrStringProperty("POSTCHAIN_SUBNODE_USER", KEY_SUBNODE_USER) ?: try {
+                    val unixSystem = com.sun.security.auth.module.UnixSystem()
+                    if (unixSystem.uid == 0L) null else "${unixSystem.uid}:${unixSystem.gid}"
+                } catch (e: Exception) {
+                    ContainerConfigFactory.logger.warn("Unable to fetch current user id: $e")
+                    null
+                } catch (le: LinkageError) {
+                    ContainerConfigFactory.logger.warn("Fetching current user id is unsupported: $le")
+                    null
+                }
+
                 ContainerNodeConfig(
                         config.pubKey,
                         subnodeImage,
@@ -112,6 +127,7 @@ data class ContainerNodeConfig(
                         subnodeHost,
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_REST_API_PORT", KEY_SUBNODE_REST_API_PORT, RestApiConfig.DEFAULT_REST_API_PORT),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_ADMIN_RPC_PORT", KEY_SUBNODE_ADMIN_RPC_PORT, PostchainServerConfig.DEFAULT_RPC_SERVER_PORT),
+                        subnodeUser,
                         getEnvOrLongProperty("POSTCHAIN_SEND_MASTER_CONNECTED_PEERS_PERIOD", KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD, 60_000L),
                         getEnvOrLongProperty("POSTCHAIN_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD", KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 60_000),
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_FILESYSTEM", KEY_SUBNODE_FILESYSTEM, FileSystem.Type.LOCAL.name).uppercase(), // LOCAL | ZFS

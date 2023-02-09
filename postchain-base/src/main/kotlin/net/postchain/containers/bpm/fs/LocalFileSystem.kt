@@ -13,22 +13,25 @@ class LocalFileSystem(private val containerConfig: ContainerNodeConfig) : FileSy
 
     override fun createContainerRoot(containerName: ContainerName, resourceLimits: ContainerResourceLimits): Path? {
         val root = rootOf(containerName)
-        return if (root.toFile().exists()) {
+        if (root.toFile().exists()) {
             logger.info("Container dir exists: $root")
-            root
         } else {
-            val created = root.toFile().mkdirs()
-            logger.info("Container dir ${if (created) "has" else "hasn't"} been created: $root")
-            if (created) root else null
+            if (!root.toFile().mkdirs()) {
+                logger.warn("Unable to create container dir: $root")
+                return null
+            }
+            logger.info("Container dir has been created: $root")
         }
+
+        val hostPgdata = hostPgdataOf(containerName)
+        hostPgdata.toFile().mkdirs()
+
+        return root
     }
 
-    override fun rootOf(containerName: ContainerName): Path {
-        return Paths.get(containerConfig.masterMountDir, containerName.name)
-    }
+    override fun rootOf(containerName: ContainerName): Path =
+            Paths.get(containerConfig.masterMountDir, containerName.name)
 
-    override fun hostRootOf(containerName: ContainerName): Path {
-        return Paths.get(containerConfig.hostMountDir, containerName.name)
-    }
-
+    override fun hostRootOf(containerName: ContainerName): Path =
+            Paths.get(containerConfig.hostMountDir, containerName.name)
 }
