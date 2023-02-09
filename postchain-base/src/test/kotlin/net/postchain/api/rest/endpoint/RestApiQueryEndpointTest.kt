@@ -193,7 +193,7 @@ class RestApiQueryEndpointTest {
 
     @Test
     fun gtvRequestAndResponseTypes() {
-        val query = GtxQuery("test_query", gtv(mapOf("arg" to gtv("value"))))
+        val query = GtxQuery("test_query", gtv(mapOf("type" to gtv("value"))))
         val answer = gtv("answer")
 
         whenever(model.query(query)).thenReturn(answer)
