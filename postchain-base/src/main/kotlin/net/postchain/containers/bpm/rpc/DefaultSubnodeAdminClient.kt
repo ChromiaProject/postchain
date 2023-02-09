@@ -1,6 +1,7 @@
 package net.postchain.containers.bpm.rpc
 
 import com.google.protobuf.ByteString
+import io.grpc.ConnectivityState
 import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.ManagedChannel
@@ -14,7 +15,6 @@ import net.postchain.containers.bpm.ContainerPorts
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.server.grpc.AddConfigurationRequest
 import net.postchain.server.grpc.AddPeerRequest
-import net.postchain.server.grpc.DebugRequest
 import net.postchain.server.grpc.DebugServiceGrpc
 import net.postchain.server.grpc.FindBlockchainRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
@@ -77,9 +77,7 @@ class DefaultSubnodeAdminClient(
         if (!initialized) return false
 
         return try {
-            val request = DebugRequest.newBuilder().build()
-            val reply = healthcheckService.debugInfo(request) // Asking something
-            reply.message != ""
+            channel.getState(true) == ConnectivityState.READY
         } catch (e: Exception) {
             logger.error { e.message }
             false
