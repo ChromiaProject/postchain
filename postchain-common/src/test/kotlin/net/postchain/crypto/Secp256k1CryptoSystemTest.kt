@@ -4,10 +4,24 @@ import assertk.assert
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.toHex
 import org.junit.jupiter.api.Test
 
 class Secp256k1CryptoSystemTest {
     val sut = Secp256K1CryptoSystem()
+
+    @Test
+    fun testSignVerify() {
+        for (i in 0..39) {
+            val keyPair = sut.generateKeyPair()
+            val sigMaker = sut.buildSigMaker(keyPair)
+            val data = "Hello".toByteArray()
+            val signature = sigMaker.signMessage(data) // TODO: POS-04_sig ???
+            val verifier = sut.makeVerifier()
+            assert(verifier(data, signature), "Positive test failed for privkey ${keyPair.privKey.data.toHex()}").isTrue()
+            assert(verifier("Hell0".toByteArray(), signature), "Negative test failed for privkey ${keyPair.privKey.data.toHex()}").isFalse()
+        }
+    }
 
     @Test
     fun validPubKey() {
