@@ -54,6 +54,12 @@ interface DatabaseAccess {
     fun setCurrentSchema(connection: Connection, schema: String)
     fun dropSchemaCascade(connection: Connection, schema: String)
 
+    /**
+     * @return iid of the newly created container
+     */
+    fun createContainer(ctx: AppContext, name: String): Int
+    fun getContainerIid(ctx: AppContext, name: String): Int?
+
     fun initializeApp(connection: Connection, expectedDbVersion: Int)
     fun initializeBlockchain(ctx: EContext, blockchainRid: BlockchainRid)
     fun getChainId(ctx: EContext, blockchainRid: BlockchainRid): Long?
