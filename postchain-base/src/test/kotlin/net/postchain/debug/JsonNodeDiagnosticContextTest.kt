@@ -5,17 +5,17 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import org.junit.jupiter.api.Test
 
-class DefaultNodeDiagnosticContextTest {
+class JsonNodeDiagnosticContextTest {
 
     @Test
     fun testEmptyContext() {
-        val sut = JsonDiagnosticContext()
+        val sut = JsonNodeDiagnosticContext()
         assert(sut.isEmpty())
     }
 
     @Test
     fun testAddPropertyToContext() {
-        val sut = JsonDiagnosticContext()
+        val sut = JsonNodeDiagnosticContext()
         sut.add(DiagnosticProperty.VERSION withValue  "4.4.4")
         sut.add(DiagnosticProperty.PUB_KEY withValue  "237823673673")
         sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { "my-container" })
@@ -28,7 +28,7 @@ class DefaultNodeDiagnosticContextTest {
 
     @Test
     fun testRemovePropertyOnContext() {
-        val sut = JsonDiagnosticContext()
+        val sut = JsonNodeDiagnosticContext()
         sut.add(DiagnosticProperty.VERSION withValue "4.4.4")
         sut.add(DiagnosticProperty.PUB_KEY withValue "237823673673")
         sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { "my-container" })
@@ -47,7 +47,7 @@ class DefaultNodeDiagnosticContextTest {
 
     @Test
     fun testGetPropertyForContext() {
-        val sut = JsonDiagnosticContext()
+        val sut = JsonNodeDiagnosticContext()
         sut.add(DiagnosticProperty.VERSION withValue "4.4.4")
         sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { "my-container" })
 
@@ -59,7 +59,7 @@ class DefaultNodeDiagnosticContextTest {
 
     @Test
     fun testExceptionWhenFetchingProperties() {
-        val sut = JsonDiagnosticContext()
+        val sut = JsonNodeDiagnosticContext()
         sut.add(DiagnosticProperty.VERSION withValue  "4.4.4")
         sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { throw Exception("fail") })
 
@@ -70,7 +70,7 @@ class DefaultNodeDiagnosticContextTest {
 
     @Test
     fun testFormat() {
-        val sut = JsonDiagnosticContext()
+        val sut = JsonNodeDiagnosticContext()
         sut.add(DiagnosticProperty.VERSION withValue  "4.4.4")
         sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { "my-container" })
 

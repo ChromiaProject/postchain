@@ -30,6 +30,7 @@ import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DiagnosticValueMap
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.LocalBlockchainInfo
@@ -433,11 +434,11 @@ open class ContainerManagedBlockchainProcessManager(
             bridToChainId[chain.brid] = chain.chainId
             extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
                     .forEach { it.connectRemoteProcess(process) }
-            blockchainProcessesDiagnosticData[chain.brid] = mutableMapOf(
-                    DiagnosticProperty.BLOCKCHAIN_RID to { process.blockchainRid.toHex() },
-                    DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT to { psContainer.getBlockchainLastHeight(process.chainId) },
-                    DiagnosticProperty.CONTAINER_NAME to { psContainer.containerName.toString() },
-                    DiagnosticProperty.CONTAINER_ID to { psContainer.shortContainerId() ?: "" }
+            blockchainDiagnostics[chain.brid] = DiagnosticValueMap(DiagnosticProperty.BLOCKCHAIN,
+                    DiagnosticProperty.BLOCKCHAIN_RID withLazyValue  { process.blockchainRid.toHex() },
+                    DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue  { psContainer.getBlockchainLastHeight(process.chainId) },
+                    DiagnosticProperty.CONTAINER_NAME withLazyValue  { psContainer.containerName.toString() },
+                    DiagnosticProperty.CONTAINER_ID withLazyValue  { psContainer.shortContainerId() ?: "" }
             )
         }
 
@@ -451,7 +452,7 @@ open class ContainerManagedBlockchainProcessManager(
                             .forEach { it.disconnectRemoteProcess(process) }
                     masterBlockchainInfra.exitMasterBlockchainProcess(process)
                     val blockchainRid = chainIdToBrid.remove(chainId)
-                    blockchainProcessesDiagnosticData.remove(blockchainRid)
+                    blockchainDiagnostics.remove(blockchainRid)
                     bridToChainId.remove(blockchainRid)
                     chains.remove(chainId)
                     process.shutdown()

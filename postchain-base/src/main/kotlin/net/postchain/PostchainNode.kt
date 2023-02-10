@@ -17,8 +17,8 @@ import net.postchain.core.Shutdownable
 import net.postchain.core.block.BlockQueriesProviderImpl
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
@@ -52,7 +52,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 storage,
                 infrastructureFactory.makeConnectionManager(appConfig),
                 blockQueriesProvider,
-                DefaultNodeDiagnosticContext(),
+                JsonNodeDiagnosticContext(),
                 blockchainConfigProvider,
                 appConfig.debug
         )
@@ -60,10 +60,11 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
         blockQueriesProvider.processManager = processManager
 
-        postchainContext.nodeDiagnosticContext.apply {
-            addProperty(DiagnosticProperty.VERSION, getVersion())
-            addProperty(DiagnosticProperty.PUB_KEY, appConfig.pubKey)
-            addProperty(DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE, blockchainInfrastructure.javaClass.simpleName)
+        with(
+        postchainContext.nodeDiagnosticContext) {
+            add(DiagnosticProperty.VERSION withValue getVersion())
+            add(DiagnosticProperty.PUB_KEY withValue appConfig.pubKey)
+            add(DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE withValue blockchainInfrastructure.javaClass.simpleName)
         }
     }
 

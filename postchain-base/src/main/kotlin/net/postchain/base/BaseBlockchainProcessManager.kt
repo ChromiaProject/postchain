@@ -14,6 +14,8 @@ import net.postchain.core.*
 import net.postchain.core.block.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DiagnosticValueMap
+import net.postchain.debug.OrderedDiagnosticValueSet
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
@@ -52,7 +54,7 @@ open class BaseBlockchainProcessManager(
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val bridToChainId = mutableMapOf<BlockchainRid, Long>()
-    protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<DiagnosticProperty, () -> Any>>()
+    protected val blockchainDiagnostics = mutableMapOf<BlockchainRid, DiagnosticValueMap>()
     protected val extensions: List<BlockchainProcessManagerExtension> = bpmExtensions
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
     private val scheduledForStart = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
@@ -183,7 +185,7 @@ open class BaseBlockchainProcessManager(
     ) {
         blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine)
                 .also {
-                    it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
+                    it.registerDiagnosticData(blockchainDiagnostics.getOrPut(blockchainConfig.blockchainRid) { DiagnosticValueMap(DiagnosticProperty.BLOCKCHAIN) })
                     extensions.forEach { ext -> ext.connectProcess(it) }
                     chainIdToBrid[chainId] = blockchainConfig.blockchainRid
                     bridToChainId[blockchainConfig.blockchainRid] = chainId
@@ -230,7 +232,7 @@ open class BaseBlockchainProcessManager(
 
     protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
         val blockchainRid = chainIdToBrid[chainId]
-        blockchainProcessesDiagnosticData.remove(blockchainRid)
+        blockchainDiagnostics.remove(blockchainRid)
         blockchainProcesses.remove(chainId)?.also {
             stopInfoDebug("Stopping of blockchain", chainId, bTrace)
             extensions.forEach { ext -> ext.disconnectProcess(it) }
@@ -255,7 +257,7 @@ open class BaseBlockchainProcessManager(
             it.shutdown()
         }
         blockchainProcesses.clear()
-        blockchainProcessesDiagnosticData.clear()
+        blockchainDiagnostics.clear()
         chainIdToBrid.clear()
         bridToChainId.clear()
         logger.debug("[${nodeName()}]: Stopped BlockchainProcessManager")
@@ -318,21 +320,17 @@ open class BaseBlockchainProcessManager(
     }
 
     protected fun initiateChainDiagnosticData() {
-        nodeDiagnosticContext.addProperty(DiagnosticProperty.BLOCKCHAIN) {
-            val diagnosticData = blockchainProcessesDiagnosticData.toMutableMap()
-
-            connectionManager.getNodesTopology().forEach { (blockchainRid, topology) ->
-                diagnosticData.computeIfPresent(BlockchainRid.buildFromHex(blockchainRid)) { _, properties ->
-                    properties.apply {
-                        put(DiagnosticProperty.BLOCKCHAIN_NODE_PEERS) { topology }
+        nodeDiagnosticContext.add(
+                DiagnosticProperty.BLOCKCHAIN withLazyValue {
+                    connectionManager.getNodesTopology().forEach { (blockchainRid, topology) ->
+                        blockchainDiagnostics.computeIfPresent(BlockchainRid.buildFromHex(blockchainRid)) { _, properties ->
+                            properties.apply {
+                                add(DiagnosticProperty.BLOCKCHAIN_NODE_PEERS withLazyValue  { topology })
+                            }
+                        }
                     }
                 }
-            }
-
-            diagnosticData.mapValues { (_, v) ->
-                v.map { e -> e.key.prettyName to e.value() }.toMap()
-            }.values.toTypedArray()
-        }
+        )
     }
 
     protected fun tryAcquireChainLock(chainId: Long): Boolean {

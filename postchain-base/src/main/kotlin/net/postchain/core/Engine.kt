@@ -6,6 +6,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.core.*
 import net.postchain.core.block.*
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DiagnosticValueMap
 
 interface Shutdownable {
     fun shutdown()
@@ -54,7 +55,7 @@ interface BlockchainProcess {
     val blockchainEngine: BlockchainEngine
     fun start()
     fun shutdown()
-    fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) = Unit
+    fun registerDiagnosticData(diagnosticData: DiagnosticValueMap) = Unit
 }
 
 // TODO: [POS-358]: Should we add chainId and brid to BlockchainProcess?

@@ -3,9 +3,9 @@ package net.postchain.debug
 import com.google.gson.JsonObject
 import net.postchain.api.rest.json.JsonFactory
 
-class JsonDiagnosticContext(
+class JsonNodeDiagnosticContext(
         private val properties: MutableMap<DiagnosticProperty, DiagnosticValue>
-) : DiagnosticContext, AbstractMutableMap<DiagnosticProperty, DiagnosticValue>() {
+) : NodeDiagnosticContext, AbstractMutableMap<DiagnosticProperty, DiagnosticValue>() {
 
     private val json = JsonFactory.makePrettyJson()
 
