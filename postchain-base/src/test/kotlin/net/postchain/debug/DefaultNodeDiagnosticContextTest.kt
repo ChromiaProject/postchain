@@ -1,76 +1,100 @@
 package net.postchain.debug
 
-import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.equalTo
-import org.hamcrest.collection.IsMapContaining.hasEntry
+import assertk.assert
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import org.hamcrest.Matchers.`is` as Is
 
 class DefaultNodeDiagnosticContextTest {
 
     @Test
     fun testEmptyContext() {
-        val sut = DefaultNodeDiagnosticContext()
-        assert(sut.getProperties().isEmpty())
+        val sut = JsonDiagnosticContext()
+        assert(sut.isEmpty())
     }
 
     @Test
     fun testAddPropertyToContext() {
-        val sut = DefaultNodeDiagnosticContext()
-        sut.addProperty(DiagnosticProperty.VERSION, "4.4.4")
-        sut.addProperty(DiagnosticProperty.PUB_KEY, "237823673673")
-        sut.addProperty(DiagnosticProperty.CONTAINER_NAME) { "my-container" } // lazy
+        val sut = JsonDiagnosticContext()
+        sut.add(DiagnosticProperty.VERSION withValue  "4.4.4")
+        sut.add(DiagnosticProperty.PUB_KEY withValue  "237823673673")
+        sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { "my-container" })
 
         // Asserts
-        val content = sut.getProperties()
-        assertThat(content, hasEntry(DiagnosticProperty.VERSION.prettyName, "4.4.4"))
-        assertThat(content, hasEntry(DiagnosticProperty.PUB_KEY.prettyName, "237823673673"))
-        assertThat(content, hasEntry(DiagnosticProperty.CONTAINER_NAME.prettyName, "my-container"))
+        assert(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
+        assert(sut[DiagnosticProperty.PUB_KEY]?.value).isEqualTo("237823673673")
+        assert(sut[DiagnosticProperty.CONTAINER_NAME]?.value).isEqualTo("my-container")
     }
 
     @Test
     fun testRemovePropertyOnContext() {
-        val sut = DefaultNodeDiagnosticContext()
-        sut.addProperty(DiagnosticProperty.VERSION, "4.4.4")
-        sut.addProperty(DiagnosticProperty.PUB_KEY, "237823673673")
-        sut.addProperty(DiagnosticProperty.CONTAINER_NAME) { "my-container" } // lazy
+        val sut = JsonDiagnosticContext()
+        sut.add(DiagnosticProperty.VERSION withValue "4.4.4")
+        sut.add(DiagnosticProperty.PUB_KEY withValue "237823673673")
+        sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { "my-container" })
 
         // Asserts
-        assertThat(sut.getProperties().size, Is(equalTo(3)))
+        assert(sut.size).isEqualTo(3)
 
         // Remove
-        sut.removeProperty(DiagnosticProperty.PUB_KEY)
+        sut.remove(DiagnosticProperty.PUB_KEY)
 
         // Asserts
-        val content = sut.getProperties()
-        assertThat(content.size, Is(equalTo(2)))
-        assertThat(content, hasEntry(DiagnosticProperty.VERSION.prettyName, "4.4.4"))
-        assertThat(content, hasEntry(DiagnosticProperty.CONTAINER_NAME.prettyName, "my-container"))
+        assert(sut.size).isEqualTo(2)
+        assert(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
+        assert(sut[DiagnosticProperty.CONTAINER_NAME]?.value).isEqualTo("my-container")
     }
 
     @Test
     fun testGetPropertyForContext() {
-        val sut = DefaultNodeDiagnosticContext()
-        sut.addProperty(DiagnosticProperty.VERSION, "4.4.4")
-        sut.addProperty(DiagnosticProperty.CONTAINER_NAME) { "my-container" }
+        val sut = JsonDiagnosticContext()
+        sut.add(DiagnosticProperty.VERSION withValue "4.4.4")
+        sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { "my-container" })
 
         // Asserts
-        assertEquals(null, sut.getProperty(DiagnosticProperty.PUB_KEY)) // Unknown property
-        assertEquals("4.4.4", sut.getProperty(DiagnosticProperty.VERSION)?.invoke())
-        assertEquals("my-container", sut.getProperty(DiagnosticProperty.CONTAINER_NAME)?.invoke())
+        assert(sut[DiagnosticProperty.PUB_KEY]).isNull()
+        assert(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
+        assert(sut[DiagnosticProperty.CONTAINER_NAME]?.value).isEqualTo("my-container")
     }
 
     @Test
     fun testExceptionWhenFetchingProperties() {
-        val sut = DefaultNodeDiagnosticContext()
-        sut.addProperty(DiagnosticProperty.VERSION, "4.4.4")
-        sut.addProperty(DiagnosticProperty.CONTAINER_NAME) { throw Exception("fail") }
+        val sut = JsonDiagnosticContext()
+        sut.add(DiagnosticProperty.VERSION withValue  "4.4.4")
+        sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { throw Exception("fail") })
 
         // Asserts
-        val content = sut.getProperties()
-        assertThat(content, hasEntry(DiagnosticProperty.VERSION.prettyName, "4.4.4"))
-        assertThat(content, hasEntry(DiagnosticProperty.CONTAINER_NAME.prettyName, "Unable to fetch value, fail"))
+        assert(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
+        assert(sut[DiagnosticProperty.CONTAINER_NAME]?.value).isEqualTo("Unable to fetch value, fail")
+    }
+
+    @Test
+    fun testFormat() {
+        val sut = JsonDiagnosticContext()
+        sut.add(DiagnosticProperty.VERSION withValue  "4.4.4")
+        sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { "my-container" })
+
+        val map = DiagnosticValueMap(DiagnosticProperty.BLOCKCHAIN,
+                DiagnosticProperty.BLOCKCHAIN_RID withValue "AB12",
+                DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue { 1 }
+        )
+
+        val blockchains = OrderedDiagnosticValueSet(DiagnosticProperty.BLOCKCHAIN, mutableSetOf(map))
+
+        sut.add(blockchains)
+
+        assert(sut.format()).isEqualTo("""
+            {
+              "version": "4.4.4",
+              "container-name": "my-container",
+              "blockchain": [
+                {
+                  "brid": "AB12",
+                  "height": 1
+                }
+              ]
+            }
+        """.trimIndent())
     }
 
 }
