@@ -20,10 +20,12 @@ include:
   - template: Jobs/Dependency-Scanning.gitlab-ci.yml
 
 gemnasium-dependency_scanning:
+  stage: test
   only: dev
   when: manual
 
 gemnasium-maven-dependency_scanning:
+  stage: test
   only: dev
   when: manual
 
