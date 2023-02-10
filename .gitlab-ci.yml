@@ -24,6 +24,7 @@ stages:
   - nightly-tests
   - deploy
   - release
+  - test
 
 deploy:
   extends: .setup
