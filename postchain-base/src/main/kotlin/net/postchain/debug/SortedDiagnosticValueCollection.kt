@@ -1,6 +1,9 @@
 package net.postchain.debug
 
-class OrderedDiagnosticValueSet(override val property: DiagnosticProperty, private val set: MutableCollection<DiagnosticValue>): DiagnosticValue, AbstractMutableSet<DiagnosticValue>() {
+class SortedDiagnosticValueCollection(
+        override val property: DiagnosticProperty,
+        private val set: MutableCollection<DiagnosticValue>
+) : DiagnosticValue, AbstractMutableSet<DiagnosticValue>() {
 
     override fun add(element: DiagnosticValue) = set.add(element)
 

@@ -326,7 +326,7 @@ open class BaseBlockchainProcessManager(
                             }
                         }
                     }
-                    OrderedDiagnosticValueSet(DiagnosticProperty.BLOCKCHAIN, blockchainDiagnostics.values.toMutableSet()).value
+                    SortedDiagnosticValueCollection(DiagnosticProperty.BLOCKCHAIN, blockchainDiagnostics.values.toMutableSet()).value
                 }
         )
     }
