@@ -16,6 +16,9 @@ image: maven:3.8.4-jdk-11
   git config user.name "build-user core-dev"
   git config user.email build_user@chromaway.com
 
+include:
+  - template: Jobs/Dependency-Scanning.gitlab-ci.yml
+
 stages:
   - build
   - nightly-tests
