@@ -187,10 +187,6 @@ open class BaseBlockQueries(
         workerPool.shutdown()
     }
 
-    override fun query(query: String): CompletionStage<String> {
-        return CompletableFuture.failedFuture(UserMistake("Queries are not supported"))
-    }
-
     override fun query(name: String, args: Gtv): CompletionStage<Gtv> {
         return CompletableFuture.failedFuture(UserMistake("Queries are not supported"))
     }

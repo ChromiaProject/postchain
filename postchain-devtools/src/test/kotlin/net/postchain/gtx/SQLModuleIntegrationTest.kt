@@ -9,12 +9,8 @@ import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.IntegrationTestSetup
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvArray
-import net.postchain.gtv.GtvCollection
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
-import net.postchain.gtv.make_gtv_gson
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -52,30 +48,22 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
 
         val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
         assertFailsWith<UserMistake> {
-            blockQueries.query("""{tdype: 'test_get_value'}""").get()
+            blockQueries.query("non-existing", gtv(mapOf())).get()
         }
-
-        assertFailsWith<UserMistake> {
-            blockQueries.query("""{type: 'non-existing'}""").get()
-        }
-
-        val gson = make_gtv_gson()
 
         // ------------------------------------------
         // Shouldn't find key "hello" in type "test_get_value"
         // ------------------------------------------
-        val result = blockQueries.query("""{type: 'test_get_value', q_key: 'hello'}""").get()
-        val gtvResult = gson.fromJson<Gtv>(result, Gtv::class.java) as GtvCollection
-        assertEquals(0, gtvResult.getSize())
+        val result = blockQueries.query("test_get_value", gtv(mapOf("q_key" to gtv("hello")))).get()
+        assertEquals(0, result.asArray().size)
 
         // ------------------------------------------
         // Should find 1 hit for key "k" in type "test_get_value"
         // ------------------------------------------
-        val result1 = blockQueries.query("""{type: 'test_get_value', q_key: 'k'}""").get()
-        val gtvArrRes1 = gson.fromJson<Gtv>(result1, Gtv::class.java) as GtvArray
-        assertEquals(1, gtvArrRes1.getSize())
+        val result1 = blockQueries.query("test_get_value", gtv(mapOf("q_key" to gtv("k")))).get()
+        assertEquals(1, result1.asArray().size)
 
-        val hit0 = gtvArrRes1[0].asDict()
+        val hit0 = result1[0].asDict()
         assertNotNull(hit0["val"])
         assertEquals("v2", hit0["val"]!!.asString())
         assertNotNull(hit0["owner"])
@@ -84,11 +72,11 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         // ------------------------------------------
         // Look for type "test_get_count"
         // ------------------------------------------
-        val result2 = blockQueries.query("""{type: 'test_get_count'}""").get()
-        val gtvArrRes2 = gson.fromJson<Gtv>(result2, Gtv::class.java) as GtvArray
-        assertEquals(1, gtvArrRes2.getSize())
-        assertEquals(1, gtvArrRes2[0]["nbigint"]!!.asInteger())
-        assertEquals(2, gtvArrRes2[0]["ncount"]!!.asInteger())
+        val result2 = blockQueries.query("test_get_count", gtv(mapOf())).get()
+        val result2Arr = result2.asArray()
+        assertEquals(1, result2Arr.size)
+        assertEquals(1, result2Arr[0]["nbigint"]!!.asInteger())
+        assertEquals(2, result2Arr[0]["ncount"]!!.asInteger())
 
         println(result2)
     }
@@ -104,10 +92,8 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         buildBlockAndCommit(node)
         verifyBlockchainTransactions(node)
         val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
-        val gson = make_gtv_gson()
-        var result = blockQueries.query("""{type: 'test_get_value', q_key: 'k', q_value : 'v'}""").get()
-        var gtxResult = gson.fromJson<Gtv>(result, Gtv::class.java) as GtvArray
-        assertEquals(1, gtxResult.getSize())
+        val result = blockQueries.query("test_get_value", gtv(mapOf("q_key" to gtv("k"), "q_value" to gtv("v")))).get()
+        assertEquals(1, result.asArray().size)
     }
 
     @Test
@@ -122,12 +108,10 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         verifyBlockchainTransactions(node)
 
         val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
-        var result = blockQueries.query("""{type: 'test_null_value'}""").get()
-        val gson = make_gtv_gson()
-        var gtxResult = gson.fromJson<Gtv>(result, Gtv::class.java)
+        val result = blockQueries.query("test_null_value", gtv(mapOf())).get()
 
-        val hit0 = gtxResult.get(0).asDict()
-        assertNotNull(hit0.get("val"))
-        assertEquals(GtvNull, hit0.get("val"))
+        val hit0 = result[0].asDict()
+        assertNotNull(hit0["val"])
+        assertEquals(GtvNull, hit0["val"])
     }
 }
