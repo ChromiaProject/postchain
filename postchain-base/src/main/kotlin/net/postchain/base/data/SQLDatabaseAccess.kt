@@ -273,7 +273,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                     FROM ${tableBlocks(ctx)} as b 
                     JOIN ${tableTransactions(ctx)} as t ON (t.block_iid = b.block_iid) 
                     WHERE b.timestamp < ? 
-                    ORDER BY b.block_height, t.tx_iid DESC LIMIT ?;
+                    ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?;
         """.trimIndent()
         val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, beforeTime, limit)
         return transactions.map { txInfo ->
