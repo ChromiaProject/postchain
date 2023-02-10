@@ -16,7 +16,7 @@ class JsonNodeDiagnosticContext(
 
     override fun contains(element: DiagnosticValue) = properties.containsValue(element)
     override fun containsAll(elements: Collection<DiagnosticValue>) = properties.values.containsAll(elements)
-    override fun iterator() = properties.values.sortedBy { it.property.prettyName }.toMutableSet().iterator()
+    override fun iterator() = properties.values.iterator()
     override fun remove(element: DiagnosticValue): Boolean = properties.remove(element.property) != null
     override fun removeAll(elements: Collection<DiagnosticValue>): Boolean = elements.all(::remove)
 

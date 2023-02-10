@@ -12,10 +12,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.*
-import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DiagnosticValueMap
-import net.postchain.debug.OrderedDiagnosticValueSet
+import net.postchain.debug.*
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
@@ -329,6 +326,7 @@ open class BaseBlockchainProcessManager(
                             }
                         }
                     }
+                    OrderedDiagnosticValueSet(DiagnosticProperty.BLOCKCHAIN, blockchainDiagnostics.values.toMutableSet()).value
                 }
         )
     }
