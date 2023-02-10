@@ -19,6 +19,14 @@ image: maven:3.8.4-jdk-11
 include:
   - template: Jobs/Dependency-Scanning.gitlab-ci.yml
 
+gemnasium-dependency_scanning:
+  only: dev
+  when: manual
+
+gemnasium-maven-dependency_scanning:
+  only: dev
+  when: manual
+
 stages:
   - build
   - nightly-tests
