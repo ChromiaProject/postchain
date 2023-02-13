@@ -89,6 +89,7 @@ variables:
   POSTGRES_USER: postchain
   POSTGRES_PASSWORD: postchain
   POSTCHAIN_DB_URL: jdbc:postgresql://postgres/postchain
+  POSTGRES_INITDB_ARGS: "--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
 
 services:
   - postgres
