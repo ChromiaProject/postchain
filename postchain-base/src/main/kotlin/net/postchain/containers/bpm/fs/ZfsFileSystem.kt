@@ -18,17 +18,17 @@ class ZfsFileSystem(private val containerConfig: ContainerNodeConfig) : FileSyst
             logger.info("Container dir exists: $root")
         } else {
             val fs = "${containerConfig.zfsPoolName}/${containerName.name}"
-            val quota = resourceLimits.storageMb()
+            val quotaBytes = resourceLimits.storageMb() * 1024 * 1024
 
             if (runCommand(arrayOf("zfs", "get", "all", fs)) == null) {
                 logger.info("ZFS volume exists: $fs")
             } else {
                 logger.info("Creating ZFS volume: $fs")
                 val createCommand = if (containerConfig.zfsPoolInitScript != null && File(containerConfig.zfsPoolInitScript).exists()) {
-                    arrayOf("/bin/sh", containerConfig.zfsPoolInitScript, fs, quota.toString())
+                    arrayOf("/bin/sh", containerConfig.zfsPoolInitScript, fs, quotaBytes.toString())
                 } else {
                     if (resourceLimits.hasStorage()) {
-                        arrayOf("zfs", "create", "-u", "-o", "quota=${quota}m", "-o", "reservation=50m", fs)
+                        arrayOf("zfs", "create", "-u", "-o", "quota=${quotaBytes}", "-o", "reservation=50m", fs)
                     } else {
                         arrayOf("zfs", "create", "-u", fs)
                     }

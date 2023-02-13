@@ -78,28 +78,28 @@ class GtvEncoderTest {
 
     @Test
     fun stressTestGtv() {
-        val size = (1024*1024 * 4) /10  // that could make gtv size is around 2.7 MB
+        val size = (1024 * 1024 * 4) / 10  // that could make gtv size is around 2.7 MiB
         // TODO: this test is 10 times smaller than it should be because we trigger OOM
-        // currently it requires >2 GB to compute hash
+        // currently it requires >2 GiB to compute hash
         val gtvArray  = (1..size).map { GtvInteger( it.toLong() ) }.toTypedArray()
         var encoded: ByteArray
         val gtv = GtvArray(gtvArray)
         val serializationTime = measureTimeMillis {
             encoded = GtvEncoder.encodeGtv(gtv)
         }
-        println("Size of gtv ~: ${encoded.size / (1024*1024)} MB")
-        println("Execution time serialization: ${serializationTime} milliseconds")
+        println("Size of gtv ~: ${encoded.size / (1024 * 1024)} MiB")
+        println("Execution time serialization: $serializationTime milliseconds")
 
         val deserializationTime = measureTimeMillis {
             GtvDecoder.decodeGtv(encoded).asArray()
         }
-        println("Execution time deserialization: ${deserializationTime} milliseconds")
+        println("Execution time deserialization: $deserializationTime milliseconds")
 
         val cs = Secp256K1CryptoSystem()
         val hashingTime = measureTimeMillis {
             val hash = gtv.merkleHash(GtvMerkleHashCalculator(cs))
             println(hash.toHex())
         }
-        println("Execution hashing time: ${hashingTime} milliseconds")
+        println("Execution hashing time: $hashingTime milliseconds")
     }
 }
