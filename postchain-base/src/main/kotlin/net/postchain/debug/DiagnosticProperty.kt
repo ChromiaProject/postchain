@@ -4,6 +4,7 @@ package net.postchain.debug
 
 enum class DiagnosticProperty(val prettyName: String) {
 
+    NULL(""),
     VERSION("version"),
 
     PUB_KEY("pub-key"),

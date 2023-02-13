@@ -16,9 +16,9 @@ class JsonNodeDiagnosticContextTest {
     @Test
     fun testAddPropertyToContext() {
         val sut = JsonNodeDiagnosticContext()
-        sut.add(DiagnosticProperty.VERSION withValue  "4.4.4")
-        sut.add(DiagnosticProperty.PUB_KEY withValue  "237823673673")
-        sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { "my-container" })
+        sut.add(DiagnosticProperty.VERSION withValue "4.4.4")
+        sut.add(DiagnosticProperty.PUB_KEY withValue "237823673673")
+        sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue { "my-container" })
 
         // Asserts
         assert(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
@@ -31,7 +31,7 @@ class JsonNodeDiagnosticContextTest {
         val sut = JsonNodeDiagnosticContext()
         sut.add(DiagnosticProperty.VERSION withValue "4.4.4")
         sut.add(DiagnosticProperty.PUB_KEY withValue "237823673673")
-        sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { "my-container" })
+        sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue { "my-container" })
 
         // Asserts
         assert(sut.size).isEqualTo(3)
@@ -49,7 +49,7 @@ class JsonNodeDiagnosticContextTest {
     fun testGetPropertyForContext() {
         val sut = JsonNodeDiagnosticContext()
         sut.add(DiagnosticProperty.VERSION withValue "4.4.4")
-        sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { "my-container" })
+        sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue { "my-container" })
 
         // Asserts
         assert(sut[DiagnosticProperty.PUB_KEY]).isNull()
@@ -60,8 +60,8 @@ class JsonNodeDiagnosticContextTest {
     @Test
     fun testExceptionWhenFetchingProperties() {
         val sut = JsonNodeDiagnosticContext()
-        sut.add(DiagnosticProperty.VERSION withValue  "4.4.4")
-        sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { throw Exception("fail") })
+        sut.add(DiagnosticProperty.VERSION withValue "4.4.4")
+        sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue { throw Exception("fail") })
 
         // Asserts
         assert(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
@@ -70,16 +70,17 @@ class JsonNodeDiagnosticContextTest {
 
     @Test
     fun testFormat() {
-        val sut = JsonNodeDiagnosticContext()
-        sut.add(DiagnosticProperty.VERSION withValue  "4.4.4")
-        sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { "my-container" })
+        val sut = JsonNodeDiagnosticContext(
+                DiagnosticProperty.VERSION withValue "4.4.4",
+                DiagnosticProperty.CONTAINER_NAME withLazyValue { "my-container" }
+        )
 
-        val map = DiagnosticData(DiagnosticProperty.BLOCKCHAIN,
+        val map = DiagnosticData(
                 DiagnosticProperty.BLOCKCHAIN_RID withValue "AB12",
                 DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue { 1 }
         )
 
-        val blockchains = SortedDiagnosticValueCollection(DiagnosticProperty.BLOCKCHAIN, mutableSetOf(map))
+        val blockchains = DiagnosticValueCollection(DiagnosticProperty.BLOCKCHAIN, mutableSetOf(map))
 
         sut.add(blockchains)
 
@@ -96,5 +97,4 @@ class JsonNodeDiagnosticContextTest {
             }
         """.trimIndent())
     }
-
 }

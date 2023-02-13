@@ -16,7 +16,7 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.SortedDiagnosticValueCollection
+import net.postchain.debug.DiagnosticValueCollection
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
@@ -69,7 +69,7 @@ open class BaseBlockchainProcessManager(
     init {
         nodeDiagnosticContext.add(
                 DiagnosticProperty.BLOCKCHAIN withLazyValue {
-                    SortedDiagnosticValueCollection(DiagnosticProperty.BLOCKCHAIN, blockchainDiagnostics.values.toMutableSet()).value
+                    DiagnosticValueCollection(DiagnosticProperty.BLOCKCHAIN, blockchainDiagnostics.values.toMutableSet()).value
                 }
         )
     }
@@ -192,7 +192,6 @@ open class BaseBlockchainProcessManager(
                 .also {
                     it.registerDiagnosticData(blockchainDiagnostics.getOrPut(blockchainConfig.blockchainRid) {
                         DiagnosticData(
-                                DiagnosticProperty.BLOCKCHAIN,
                                 DiagnosticProperty.BLOCKCHAIN_RID withValue blockchainConfig.blockchainRid.toHex(),
                                 DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue { engine.getBlockQueries().getBestHeight().get() },
                                 DiagnosticProperty.BLOCKCHAIN_NODE_PEERS withLazyValue { connectionManager.getNodesTopology(chainId) })

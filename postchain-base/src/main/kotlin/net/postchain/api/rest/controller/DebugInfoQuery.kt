@@ -30,9 +30,7 @@ class DefaultDebugInfoQuery(val nodeDiagnosticContext: NodeDiagnosticContext) : 
         }
     }
 
-    private fun collectDebugInfo(): String {
-        return nodeDiagnosticContext.format()
-    }
+    private fun collectDebugInfo() = nodeDiagnosticContext.format()
 
     private fun unknownQuery(query: String): String {
         return JsonObject().apply {

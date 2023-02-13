@@ -1,6 +1,6 @@
 package net.postchain.debug
 
-class LazyDiagnosticValue(override val property: DiagnosticProperty, val lazyValue: () -> Any?) : DiagnosticValue {
+class LazyDiagnosticValue(property: DiagnosticProperty, val lazyValue: () -> Any?) : AbstractDiagnosticValue(property) {
     override val value
         get() = try {
             lazyValue()

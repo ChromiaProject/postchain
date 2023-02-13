@@ -434,7 +434,7 @@ open class ContainerManagedBlockchainProcessManager(
             bridToChainId[chain.brid] = chain.chainId
             extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
                     .forEach { it.connectRemoteProcess(process) }
-            blockchainDiagnostics[chain.brid] = DiagnosticData(DiagnosticProperty.BLOCKCHAIN,
+            blockchainDiagnostics[chain.brid] = DiagnosticData(
                     DiagnosticProperty.BLOCKCHAIN_RID withLazyValue  { process.blockchainRid.toHex() },
                     DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue  { psContainer.getBlockchainLastHeight(process.chainId) },
                     DiagnosticProperty.CONTAINER_NAME withLazyValue  { psContainer.containerName.toString() },

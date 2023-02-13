@@ -1,11 +1,9 @@
 package net.postchain.debug
 
-interface NodeDiagnosticContext : MutableSet<DiagnosticValue> {
+interface NodeDiagnosticContext : Map<DiagnosticProperty, DiagnosticValue> {
 
-    operator fun get(k: DiagnosticProperty): DiagnosticValue?
+    fun add(v: DiagnosticValue): Boolean
     fun remove(k: DiagnosticProperty): DiagnosticValue?
-
-    fun contains(k: DiagnosticProperty): Boolean
 
     fun format(): String
 }
