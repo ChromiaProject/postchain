@@ -46,6 +46,10 @@ data class ContainerNodeConfig(
          * [masterMountDir] might not be equal to [hostMountDir] (see subnode Dockerfile for details)
          */
         val hostMountDir: String,
+        /**
+         * The device where [hostMountDir] is located on the host.
+         */
+        val hostMountDevice: String,
 
         /**
          * A path to dir where container volume is placed in the master (container) filesystem.
@@ -85,6 +89,7 @@ data class ContainerNodeConfig(
         const val KEY_SUBNODE_DATABASE_URL = "subnode-database-url"
         const val KEY_SUBNODE_FILESYSTEM = "filesystem"
         const val KEY_HOST_MOUNT_DIR = "host-mount-dir"
+        const val KEY_HOST_MOUNT_DEVICE = "host-mount-device"
         const val KEY_MASTER_MOUNT_DIR = "master-mount-dir"
         const val KEY_ZFS_POOL_NAME = "zfs.pool-name"
         const val KEY_ZFS_POOL_INIT_SCRIPT = "zfs.pool-init-script"
@@ -100,6 +105,8 @@ data class ContainerNodeConfig(
             return with(config.subset(KEY_CONTAINER_PREFIX)) {
                 val hostMountDir = getEnvOrStringProperty("POSTCHAIN_HOST_MOUNT_DIR", KEY_HOST_MOUNT_DIR)
                         ?: throw UserMistake("$KEY_CONTAINER_PREFIX.$KEY_HOST_MOUNT_DIR must be specified")
+                val hostMountDevice = getEnvOrStringProperty("POSTCHAIN_HOST_MOUNT_DEVICE", KEY_HOST_MOUNT_DEVICE)
+                        ?: throw UserMistake("$KEY_CONTAINER_PREFIX.$KEY_HOST_MOUNT_DEVICE must be specified")
                 val subnodeImage = getEnvOrStringProperty("POSTCHAIN_SUBNODE_DOCKER_IMAGE", KEY_DOCKER_IMAGE)
                         ?: throw UserMistake("$KEY_CONTAINER_PREFIX.$KEY_DOCKER_IMAGE must be specified")
                 val masterHost = getEnvOrStringProperty("POSTCHAIN_MASTER_HOST", KEY_MASTER_HOST)
@@ -132,6 +139,7 @@ data class ContainerNodeConfig(
                         getEnvOrLongProperty("POSTCHAIN_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD", KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 60_000),
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_FILESYSTEM", KEY_SUBNODE_FILESYSTEM, FileSystem.Type.LOCAL.name).uppercase(), // LOCAL | ZFS
                         hostMountDir,
+                        hostMountDevice,
                         getEnvOrStringProperty("POSTCHAIN_MASTER_MOUNT_DIR", KEY_MASTER_MOUNT_DIR, hostMountDir),
                         getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_NAME", KEY_ZFS_POOL_NAME, FileSystem.ZFS_POOL_NAME),
                         getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_INIT_SCRIPT", KEY_ZFS_POOL_INIT_SCRIPT),

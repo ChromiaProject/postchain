@@ -95,6 +95,26 @@ object ContainerConfigFactory : KLogging() {
                     }
                 }
                 .apply {
+                    if (resources.hasIoRead()) {
+                        blkioDeviceReadBps(listOf(
+                                HostConfig.BlkioDeviceRate.builder()
+                                        .path(containerNodeConfig.hostMountDevice)
+                                        .rate(resources.ioReadBytes().toInt())
+                                        .build()
+                        ))
+                    }
+                }
+                .apply {
+                    if (resources.hasIoWrite()) {
+                        blkioDeviceWriteBps(listOf(
+                                HostConfig.BlkioDeviceRate.builder()
+                                        .path(containerNodeConfig.hostMountDevice)
+                                        .rate(resources.ioWriteBytes().toInt())
+                                        .build()
+                        ))
+                    }
+                }
+                .apply {
                     if (containerNodeConfig.network != null) {
                         logger.info("Setting container network to ${containerNodeConfig.network}")
                         networkMode(containerNodeConfig.network)
@@ -151,6 +171,7 @@ object ContainerConfigFactory : KLogging() {
         add("POSTCHAIN_MASTER_HOST=${containerNodeConfig.masterHost}")
         add("POSTCHAIN_MASTER_PORT=${containerNodeConfig.masterPort}")
         add("POSTCHAIN_HOST_MOUNT_DIR=${containerNodeConfig.hostMountDir}")
+        add("POSTCHAIN_HOST_MOUNT_DEVICE=${containerNodeConfig.hostMountDevice}")
         add("POSTCHAIN_SUBNODE_DOCKER_IMAGE=${containerNodeConfig.containerImage}")
         add("POSTCHAIN_SUBNODE_HOST=${containerNodeConfig.subnodeHost}")
         add("POSTCHAIN_SUBNODE_NETWORK=${containerNodeConfig.network}")
