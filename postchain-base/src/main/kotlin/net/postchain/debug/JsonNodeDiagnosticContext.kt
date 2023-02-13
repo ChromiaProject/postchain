@@ -8,6 +8,10 @@ class JsonNodeDiagnosticContext(
 ) : NodeDiagnosticContext, AbstractDiagnosticMap(properties) {
 
     private val json = JsonFactory.makePrettyJson()
+    override fun get(k: DiagnosticProperty) = properties[k]
+    override fun remove(k: DiagnosticProperty) = properties.remove(k)
+
+    override fun contains(k: DiagnosticProperty) = properties.containsKey(k)
 
     override fun format(): String = JsonObject().apply {
         properties.forEach { (p, v) -> add(p.prettyName, json.toJsonTree(v.value)) }
