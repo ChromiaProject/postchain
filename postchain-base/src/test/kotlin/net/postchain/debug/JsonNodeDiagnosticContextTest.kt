@@ -74,7 +74,7 @@ class JsonNodeDiagnosticContextTest {
         sut.add(DiagnosticProperty.VERSION withValue  "4.4.4")
         sut.add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { "my-container" })
 
-        val map = DiagnosticValueMap(DiagnosticProperty.BLOCKCHAIN,
+        val map = DiagnosticData(DiagnosticProperty.BLOCKCHAIN,
                 DiagnosticProperty.BLOCKCHAIN_RID withValue "AB12",
                 DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue { 1 }
         )

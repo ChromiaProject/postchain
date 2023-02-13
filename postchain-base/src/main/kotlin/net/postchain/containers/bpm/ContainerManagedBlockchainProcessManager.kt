@@ -30,7 +30,7 @@ import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DiagnosticValueMap
+import net.postchain.debug.DiagnosticData
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.LocalBlockchainInfo
@@ -434,7 +434,7 @@ open class ContainerManagedBlockchainProcessManager(
             bridToChainId[chain.brid] = chain.chainId
             extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
                     .forEach { it.connectRemoteProcess(process) }
-            blockchainDiagnostics[chain.brid] = DiagnosticValueMap(DiagnosticProperty.BLOCKCHAIN,
+            blockchainDiagnostics[chain.brid] = DiagnosticData(DiagnosticProperty.BLOCKCHAIN,
                     DiagnosticProperty.BLOCKCHAIN_RID withLazyValue  { process.blockchainRid.toHex() },
                     DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue  { psContainer.getBlockchainLastHeight(process.chainId) },
                     DiagnosticProperty.CONTAINER_NAME withLazyValue  { psContainer.containerName.toString() },

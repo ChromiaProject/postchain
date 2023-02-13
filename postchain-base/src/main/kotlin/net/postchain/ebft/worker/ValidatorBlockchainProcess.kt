@@ -7,7 +7,7 @@ import net.postchain.base.NetworkAwareTxQueue
 import net.postchain.concurrent.util.get
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DiagnosticValueMap
+import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DpNodeType
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
@@ -81,7 +81,7 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
         workerContext.shutdown()
     }
 
-    override fun registerDiagnosticData(diagnosticData: DiagnosticValueMap) {
+    override fun registerDiagnosticData(diagnosticData: DiagnosticData) {
         super.registerDiagnosticData(diagnosticData)
         diagnosticData.add(DiagnosticProperty.BLOCKCHAIN_NODE_TYPE withLazyValue { DpNodeType.NODE_TYPE_VALIDATOR.prettyName })
     }

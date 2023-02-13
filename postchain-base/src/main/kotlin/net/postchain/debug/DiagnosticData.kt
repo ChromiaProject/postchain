@@ -1,6 +1,6 @@
 package net.postchain.debug
 
-class DiagnosticValueMap(
+class DiagnosticData(
         override val property: DiagnosticProperty,
         vararg values: DiagnosticValue
 ) : DiagnosticValue, AbstractDiagnosticMap(values.associateBy { it.property }.toMutableMap()) {

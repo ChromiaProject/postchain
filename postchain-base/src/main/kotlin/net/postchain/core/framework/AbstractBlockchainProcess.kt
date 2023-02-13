@@ -5,7 +5,7 @@ import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DiagnosticValueMap
+import net.postchain.debug.DiagnosticData
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
@@ -59,9 +59,4 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
     }
 
     private fun alreadyShutdown() = !::process.isInitialized || !process.isAlive
-
-    override fun registerDiagnosticData(diagnosticData: DiagnosticValueMap) {
-        diagnosticData.add(DiagnosticProperty.BLOCKCHAIN_RID withLazyValue { blockchainEngine.getConfiguration().blockchainRid.toHex() })
-        diagnosticData.add(DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue { blockchainEngine.getBlockQueries().getBestHeight().get() })
-    }
 }

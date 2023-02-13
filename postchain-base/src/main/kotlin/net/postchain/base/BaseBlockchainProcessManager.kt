@@ -9,10 +9,14 @@ import net.postchain.base.data.DependenciesValidator
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
+import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
-import net.postchain.core.block.*
-import net.postchain.debug.*
+import net.postchain.core.block.BlockTrace
+import net.postchain.debug.BlockchainProcessName
+import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.SortedDiagnosticValueCollection
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
@@ -51,7 +55,7 @@ open class BaseBlockchainProcessManager(
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val bridToChainId = mutableMapOf<BlockchainRid, Long>()
-    protected val blockchainDiagnostics = mutableMapOf<BlockchainRid, DiagnosticValueMap>()
+    protected val blockchainDiagnostics = mutableMapOf<BlockchainRid, DiagnosticData>()
     protected val extensions: List<BlockchainProcessManagerExtension> = bpmExtensions
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
     private val scheduledForStart = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
@@ -63,7 +67,11 @@ open class BaseBlockchainProcessManager(
     companion object : KLogging()
 
     init {
-        initiateChainDiagnosticData()
+        nodeDiagnosticContext.add(
+                DiagnosticProperty.BLOCKCHAIN withLazyValue {
+                    SortedDiagnosticValueCollection(DiagnosticProperty.BLOCKCHAIN, blockchainDiagnostics.values.toMutableSet()).value
+                }
+        )
     }
 
     /**
@@ -182,7 +190,13 @@ open class BaseBlockchainProcessManager(
     ) {
         blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine)
                 .also {
-                    it.registerDiagnosticData(blockchainDiagnostics.getOrPut(blockchainConfig.blockchainRid) { DiagnosticValueMap(DiagnosticProperty.BLOCKCHAIN) })
+                    it.registerDiagnosticData(blockchainDiagnostics.getOrPut(blockchainConfig.blockchainRid) {
+                        DiagnosticData(
+                                DiagnosticProperty.BLOCKCHAIN,
+                                DiagnosticProperty.BLOCKCHAIN_RID withValue blockchainConfig.blockchainRid.toHex(),
+                                DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue { engine.getBlockQueries().getBestHeight().get() },
+                                DiagnosticProperty.BLOCKCHAIN_NODE_PEERS withLazyValue { connectionManager.getNodesTopology(chainId) })
+                    })
                     extensions.forEach { ext -> ext.connectProcess(it) }
                     chainIdToBrid[chainId] = blockchainConfig.blockchainRid
                     bridToChainId[blockchainConfig.blockchainRid] = chainId
@@ -314,21 +328,6 @@ open class BaseBlockchainProcessManager(
         return withReadConnection(storage, chainId) { eContext ->
             blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
         }
-    }
-
-    protected fun initiateChainDiagnosticData() {
-        nodeDiagnosticContext.add(
-                DiagnosticProperty.BLOCKCHAIN withLazyValue {
-                    connectionManager.getNodesTopology().forEach { (blockchainRid, topology) ->
-                        blockchainDiagnostics.computeIfPresent(BlockchainRid.buildFromHex(blockchainRid)) { _, properties ->
-                            properties.apply {
-                                add(DiagnosticProperty.BLOCKCHAIN_NODE_PEERS withLazyValue  { topology })
-                            }
-                        }
-                    }
-                    SortedDiagnosticValueCollection(DiagnosticProperty.BLOCKCHAIN, blockchainDiagnostics.values.toMutableSet()).value
-                }
-        )
     }
 
     protected fun tryAcquireChainLock(chainId: Long): Boolean {
