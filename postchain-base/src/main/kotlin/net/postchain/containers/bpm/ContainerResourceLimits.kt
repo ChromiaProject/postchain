@@ -29,13 +29,13 @@ data class ContainerResourceLimits(
     fun cpuQuota() = getOrDefault(CPU) * cpuPeriod() / 100L
 
     /**
-     * RAM in Mb
+     * RAM in MiB
      */
     fun hasRam() = getOrDefault(RAM) > 0L
     fun ramBytes() = getOrDefault(RAM) * 1024 * 1024L
 
     /**
-     * Storage in Mb
+     * Storage in MiB
      */
     fun hasStorage() = getOrDefault(STORAGE) > 0
     fun storageMb() = getOrDefault(STORAGE)
