@@ -4,15 +4,13 @@ import com.google.gson.JsonObject
 import net.postchain.api.rest.json.JsonFactory
 
 class JsonNodeDiagnosticContext(
-        private val properties: MutableMap<DiagnosticProperty, DiagnosticValue> = mutableMapOf()
+        private val properties: DiagnosticData
 ) : NodeDiagnosticContext,
-        Map<DiagnosticProperty, DiagnosticValue> by properties {
+        MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
 
-    constructor(vararg values: DiagnosticValue): this(values.associateBy { it.property }.toMutableMap())
+    constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>): this(DiagnosticData(*values))
 
     private val json = JsonFactory.makePrettyJson()
-
-    override fun add(v: DiagnosticValue) = properties.put(v.property, v) != null
 
     override fun remove(k: DiagnosticProperty) = properties.remove(k)
     override fun isEmpty() = properties.isEmpty()

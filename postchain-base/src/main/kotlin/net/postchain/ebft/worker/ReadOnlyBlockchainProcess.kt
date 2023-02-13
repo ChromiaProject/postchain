@@ -10,6 +10,7 @@ import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DpNodeType
+import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.SlowSynchronizer
@@ -63,7 +64,7 @@ class ReadOnlyBlockchainProcess(
 
     override fun registerDiagnosticData(diagnosticData: DiagnosticData) {
         super.registerDiagnosticData(diagnosticData)
-        diagnosticData.add(DiagnosticProperty.BLOCKCHAIN_NODE_TYPE withLazyValue { DpNodeType.NODE_TYPE_REPLICA.prettyName })
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = LazyDiagnosticValue { DpNodeType.NODE_TYPE_REPLICA.prettyName }
     }
 
 }

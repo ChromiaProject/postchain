@@ -23,10 +23,10 @@ class DefaultDebugInfoQueryTest {
 
     @Test
     fun testNonEmptyContext() {
-        val debugContext = JsonNodeDiagnosticContext().apply {
-            add(DiagnosticProperty.VERSION withValue  "1.1.1")
-            add(DiagnosticProperty.CONTAINER_NAME withLazyValue  { "my-container" })
-        }
+        val debugContext = JsonNodeDiagnosticContext(
+                DiagnosticProperty.VERSION withValue "1.1.1",
+                DiagnosticProperty.CONTAINER_NAME withLazyValue { "my-container" })
+
         val sut = DefaultDebugInfoQuery(debugContext)
 
         // Actions
@@ -41,10 +41,9 @@ class DefaultDebugInfoQueryTest {
 
     @Test
     fun testError_When_Subquery_IsGiven() {
-        val debugContext = JsonNodeDiagnosticContext().apply {
-            add(DiagnosticProperty.VERSION withValue "1.1.1")
-            add(DiagnosticProperty.CONTAINER_NAME withLazyValue { "my-container" })
-        }
+        val debugContext = JsonNodeDiagnosticContext(
+                DiagnosticProperty.VERSION withValue "1.1.1",
+                DiagnosticProperty.CONTAINER_NAME withLazyValue { "my-container" })
         val sut = DefaultDebugInfoQuery(debugContext)
 
         // Actions

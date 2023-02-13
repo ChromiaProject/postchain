@@ -19,6 +19,7 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.JsonNodeDiagnosticContext
+import net.postchain.debug.StandardDiagnosticValue
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
@@ -60,11 +61,12 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
         blockQueriesProvider.processManager = processManager
 
-        with(
-        postchainContext.nodeDiagnosticContext) {
-            add(DiagnosticProperty.VERSION withValue getVersion())
-            add(DiagnosticProperty.PUB_KEY withValue appConfig.pubKey)
-            add(DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE withValue blockchainInfrastructure.javaClass.simpleName)
+        with(postchainContext.nodeDiagnosticContext) {
+            putAll(mapOf(
+                    DiagnosticProperty.VERSION withValue getVersion(),
+                    DiagnosticProperty.PUB_KEY withValue appConfig.pubKey,
+                    DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE withValue blockchainInfrastructure.javaClass.simpleName)
+            )
         }
     }
 

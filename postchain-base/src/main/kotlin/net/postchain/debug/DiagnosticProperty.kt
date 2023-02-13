@@ -23,8 +23,8 @@ enum class DiagnosticProperty(val prettyName: String) {
     @Deprecated("POS-90")
     PEERS_TOPOLOGY("peers-topology");
 
-    infix fun withLazyValue(value: () -> Any?) = LazyDiagnosticValue(this, value)
-    infix fun withValue(value: Any?) = StandardDiagnosticValue(this, value)
+    infix fun withLazyValue(value: () -> Any?) = this to LazyDiagnosticValue(value)
+    infix fun withValue(value: Any?) = this to StandardDiagnosticValue(value)
 }
 
 enum class DpNodeType(val prettyName: String) {

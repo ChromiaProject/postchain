@@ -13,10 +13,7 @@ import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
-import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DiagnosticData
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.LazyDiagnosticValueCollection
+import net.postchain.debug.*
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
@@ -67,7 +64,7 @@ open class BaseBlockchainProcessManager(
     companion object : KLogging()
 
     init {
-        nodeDiagnosticContext.add(LazyDiagnosticValueCollection(DiagnosticProperty.BLOCKCHAIN) { blockchainDiagnostics.values.toMutableSet() })
+        nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN] = LazyDiagnosticValueCollection { blockchainDiagnostics.values.toMutableSet() }
     }
 
     /**
@@ -188,9 +185,9 @@ open class BaseBlockchainProcessManager(
                 .also {
                     it.registerDiagnosticData(blockchainDiagnostics.getOrPut(blockchainConfig.blockchainRid) {
                         DiagnosticData(
-                                DiagnosticProperty.BLOCKCHAIN_RID withValue blockchainConfig.blockchainRid.toHex(),
-                                DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue { engine.getBlockQueries().getBestHeight().get() },
-                                DiagnosticProperty.BLOCKCHAIN_NODE_PEERS withLazyValue { connectionManager.getNodesTopology(chainId) })
+                                DiagnosticProperty.BLOCKCHAIN_RID to StandardDiagnosticValue(blockchainConfig.blockchainRid.toHex()),
+                                DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT to LazyDiagnosticValue { engine.getBlockQueries().getBestHeight().get() },
+                                DiagnosticProperty.BLOCKCHAIN_NODE_PEERS to LazyDiagnosticValue { connectionManager.getNodesTopology(chainId) })
                     })
                     extensions.forEach { ext -> ext.connectProcess(it) }
                     chainIdToBrid[chainId] = blockchainConfig.blockchainRid

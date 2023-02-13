@@ -8,12 +8,12 @@ class LazyDiagnosticValueCollectionTest {
     @Test
     fun lazyCollectionIsUpdated() {
         var name = "initial-name"
-        val collection = mutableSetOf<DiagnosticValue>(DiagnosticProperty.CONTAINER_NAME withLazyValue { name })
-        val lazyCollection = LazyDiagnosticValueCollection(DiagnosticProperty.NULL) { collection.toMutableSet() }
+        val collection = mutableSetOf<DiagnosticValue>(LazyDiagnosticValue { name })
+        val lazyCollection = LazyDiagnosticValueCollection { collection.toMutableSet() }
         assert(lazyCollection.value).containsExactly("initial-name")
         name = "updated-name"
         assert(lazyCollection.value).containsExactly("updated-name")
-        collection.add(DiagnosticProperty.VERSION withValue "1")
+        collection.add(StandardDiagnosticValue("1"))
         assert(lazyCollection.value).containsExactly("updated-name", "1")
     }
 }
