@@ -5,7 +5,6 @@ package net.postchain.base
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.InitialBlockData
@@ -86,13 +85,13 @@ class BaseBlockHeader(override val rawData: ByteArray, private val merkleHashCal
      * @param txHashes All hashes are the leaves part of this Merkle tree
      * @return The Merkle proof tree for [txHash]
      */
-    fun merklePath(txHash: WrappedByteArray, txHashes: Array<WrappedByteArray>): GtvMerkleProofTree {
+    fun merkleProofTree(txHash: WrappedByteArray, txHashes: Array<WrappedByteArray>): GtvMerkleProofTree {
         //println("looking for tx hash: ${txHash.toHex()} in array where first is: ${txHashes[0].toHex()}")
         val positionOfOurTxToProve = txHashes.indexOf(txHash) //txHash.positionInArray(txHashes)
         if (positionOfOurTxToProve < 0) {
             throw UserMistake("We cannot prove this transaction (hash: ${txHash.toHex()}), because it is not in the block")
         }
-        val gtvArray = gtv(txHashes.map { gtv(it.data)})
+        val gtvArray = gtv(txHashes.map { gtv(it.data) })
         return gtvArray.generateProof(listOf(positionOfOurTxToProve), merkleHashCalculator)
     }
 
