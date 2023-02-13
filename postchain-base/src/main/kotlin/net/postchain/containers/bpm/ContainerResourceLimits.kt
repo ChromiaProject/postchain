@@ -41,7 +41,7 @@ data class ContainerResourceLimits(
     fun storageMb() = getOrDefault(STORAGE)
 
     /**
-     * IO read/write limits in Mb
+     * IO read/write limits in MiB/s
      */
     fun hasIoRead() = ioReadBytes() in 1..Int.MAX_VALUE
     fun ioReadBytes() = getOrDefault(IO_READ) * 1024 * 1024L
