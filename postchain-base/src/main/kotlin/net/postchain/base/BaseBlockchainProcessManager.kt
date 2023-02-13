@@ -16,7 +16,7 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DiagnosticValueCollection
+import net.postchain.debug.LazyDiagnosticValueCollection
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
@@ -67,11 +67,7 @@ open class BaseBlockchainProcessManager(
     companion object : KLogging()
 
     init {
-        nodeDiagnosticContext.add(
-                DiagnosticProperty.BLOCKCHAIN withLazyValue {
-                    DiagnosticValueCollection(DiagnosticProperty.BLOCKCHAIN, blockchainDiagnostics.values.toMutableSet()).value
-                }
-        )
+        nodeDiagnosticContext.add(LazyDiagnosticValueCollection(DiagnosticProperty.BLOCKCHAIN) { blockchainDiagnostics.values.toMutableSet() })
     }
 
     /**

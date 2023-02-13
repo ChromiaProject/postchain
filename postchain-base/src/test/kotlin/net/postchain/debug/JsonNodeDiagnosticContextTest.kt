@@ -80,7 +80,7 @@ class JsonNodeDiagnosticContextTest {
                 DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue { 1 }
         )
 
-        val blockchains = DiagnosticValueCollection(DiagnosticProperty.BLOCKCHAIN, mutableSetOf(map))
+        val blockchains = LazyDiagnosticValueCollection(DiagnosticProperty.BLOCKCHAIN) { mutableSetOf(map) }
 
         sut.add(blockchains)
 
