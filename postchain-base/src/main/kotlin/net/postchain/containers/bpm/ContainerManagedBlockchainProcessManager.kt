@@ -296,8 +296,9 @@ open class ContainerManagedBlockchainProcessManager(
         // 3. Asserting subnode is connected and running
         if (dockerContainer != null && job.chainsToStart.isNotEmpty()) {
             psContainer.containerId = dockerContainer.id()
-            if (dockerContainer.state() == "exited" || dockerContainer.state() == "created" || dockerContainer.state() == "paused") {
-                logger.info { dcLog("stopped and will be started", psContainer) }
+            val dcState = dockerContainer.state()
+            if (dcState in listOf("exited", "created", "paused")) {
+                logger.info { dcLog("$dcState and will be started", psContainer) }
                 dockerClient.startContainer(psContainer.containerId)
             }
             if (psContainer.state != RUNNING) {
