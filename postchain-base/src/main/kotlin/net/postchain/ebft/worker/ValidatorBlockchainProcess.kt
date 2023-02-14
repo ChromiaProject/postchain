@@ -9,6 +9,7 @@ import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DpNodeType
+import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
@@ -84,6 +85,6 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
 
     override fun registerDiagnosticData(diagnosticData: DiagnosticData) {
         super.registerDiagnosticData(diagnosticData)
-        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = LazyDiagnosticValue { DpNodeType.NODE_TYPE_VALIDATOR.prettyName }
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_VALIDATOR.prettyName)
     }
 }
