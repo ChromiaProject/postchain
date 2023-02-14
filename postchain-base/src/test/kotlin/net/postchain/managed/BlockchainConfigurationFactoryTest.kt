@@ -3,7 +3,7 @@ package net.postchain.managed
 import net.postchain.PostchainContext
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
-import net.postchain.debug.DefaultNodeDiagnosticContext
+import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
@@ -23,7 +23,7 @@ class BlockchainConfigurationFactoryTest {
 
     private val contextMock: PostchainContext = mock {
         on { appConfig } doReturn appConfigMock
-        on { nodeDiagnosticContext } doReturn DefaultNodeDiagnosticContext()
+        on { nodeDiagnosticContext } doReturn JsonNodeDiagnosticContext()
     }
 
     private val bpm = spy(ManagedBlockchainProcessManagerMock(contextMock))

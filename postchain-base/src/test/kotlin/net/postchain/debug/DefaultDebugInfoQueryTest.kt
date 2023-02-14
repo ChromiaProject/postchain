@@ -11,7 +11,7 @@ class DefaultDebugInfoQueryTest {
 
     @Test
     fun testEmptyContext() {
-        val sut = DefaultDebugInfoQuery(DefaultNodeDiagnosticContext())
+        val sut = DefaultDebugInfoQuery(JsonNodeDiagnosticContext())
 
         // Actions
         val json = sut.queryDebugInfo(null)
@@ -23,10 +23,10 @@ class DefaultDebugInfoQueryTest {
 
     @Test
     fun testNonEmptyContext() {
-        val debugContext = DefaultNodeDiagnosticContext().apply {
-            addProperty(DiagnosticProperty.VERSION, "1.1.1")
-            addProperty(DiagnosticProperty.CONTAINER_NAME) { "my-container" }
-        }
+        val debugContext = JsonNodeDiagnosticContext(
+                DiagnosticProperty.VERSION withValue "1.1.1",
+                DiagnosticProperty.CONTAINER_NAME withLazyValue { "my-container" })
+
         val sut = DefaultDebugInfoQuery(debugContext)
 
         // Actions
@@ -41,10 +41,9 @@ class DefaultDebugInfoQueryTest {
 
     @Test
     fun testError_When_Subquery_IsGiven() {
-        val debugContext = DefaultNodeDiagnosticContext().apply {
-            addProperty(DiagnosticProperty.VERSION, "1.1.1")
-            addProperty(DiagnosticProperty.CONTAINER_NAME) { "my-container" }
-        }
+        val debugContext = JsonNodeDiagnosticContext(
+                DiagnosticProperty.VERSION withValue "1.1.1",
+                DiagnosticProperty.CONTAINER_NAME withLazyValue { "my-container" })
         val sut = DefaultDebugInfoQuery(debugContext)
 
         // Actions
@@ -66,7 +65,7 @@ class DefaultDebugInfoQueryTest {
 
         // Asserts
         assertEquals(1, actual.size())
-        assert(actual.has("Error"))
+        assert(actual.has("error"))
     }
 
 }

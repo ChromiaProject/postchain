@@ -17,8 +17,8 @@ import net.postchain.core.Shutdownable
 import net.postchain.core.block.BlockQueriesProviderImpl
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DefaultNodeDiagnosticContext
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
@@ -52,19 +52,20 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 storage,
                 infrastructureFactory.makeConnectionManager(appConfig),
                 blockQueriesProvider,
-                DefaultNodeDiagnosticContext(),
+                JsonNodeDiagnosticContext(),
                 blockchainConfigProvider,
                 appConfig.debug
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
+
+        postchainContext.nodeDiagnosticContext.putAll(mapOf(
+                DiagnosticProperty.VERSION withValue version,
+                DiagnosticProperty.PUB_KEY withValue appConfig.pubKey,
+                DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE withValue blockchainInfrastructure.javaClass.simpleName))
+
+
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
         blockQueriesProvider.processManager = processManager
-
-        postchainContext.nodeDiagnosticContext.apply {
-            addProperty(DiagnosticProperty.VERSION, getVersion())
-            addProperty(DiagnosticProperty.PUB_KEY, appConfig.pubKey)
-            addProperty(DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE, blockchainInfrastructure.javaClass.simpleName)
-        }
     }
 
     fun startBlockchain(chainId: Long): BlockchainRid {
@@ -138,7 +139,5 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
         }
     }
 
-    private fun getVersion(): String {
-        return javaClass.getPackage()?.implementationVersion ?: "null"
-    }
+    private val version get() = javaClass.getPackage()?.implementationVersion ?: "null"
 }

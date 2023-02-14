@@ -18,7 +18,10 @@ import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DpNodeType
+import net.postchain.debug.EagerDiagnosticValue
+import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
@@ -357,8 +360,8 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         }
     }
 
-    override fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) {
+    override fun registerDiagnosticData(diagnosticData: DiagnosticData) {
         super.registerDiagnosticData(diagnosticData)
-        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = { DpNodeType.NODE_TYPE_HISTORIC_REPLICA.prettyName }
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] =  EagerDiagnosticValue(DpNodeType.NODE_TYPE_HISTORIC_REPLICA.prettyName)
     }
 }

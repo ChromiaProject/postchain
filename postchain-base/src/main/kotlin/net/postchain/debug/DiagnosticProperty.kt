@@ -20,7 +20,10 @@ enum class DiagnosticProperty(val prettyName: String) {
     CONTAINER_ID("container-id"),
 
     @Deprecated("POS-90")
-    PEERS_TOPOLOGY("peers-topology")
+    PEERS_TOPOLOGY("peers-topology");
+
+    infix fun withLazyValue(value: () -> Any?) = this to LazyDiagnosticValue(value)
+    infix fun withValue(value: Any?) = this to EagerDiagnosticValue(value)
 }
 
 enum class DpNodeType(val prettyName: String) {
