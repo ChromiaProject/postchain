@@ -9,7 +9,7 @@ class LazyDiagnosticValueCollectionTest {
     fun lazyCollectionIsUpdated() {
         var name = "initial-name"
         val collection = mutableSetOf<DiagnosticValue>(LazyDiagnosticValue { name })
-        val lazyCollection = LazyDiagnosticValueCollection { collection.toMutableSet() }
+        val lazyCollection = LazyDiagnosticValueCollection { collection }
         assert(lazyCollection.value).containsExactly("initial-name")
         name = "updated-name"
         assert(lazyCollection.value).containsExactly("updated-name")

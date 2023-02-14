@@ -69,7 +69,7 @@ open class BaseBlockchainProcessManager(
     companion object : KLogging()
 
     init {
-        nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN] = LazyDiagnosticValueCollection { blockchainDiagnostics.values.toMutableSet() }
+        nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN] = LazyDiagnosticValueCollection { blockchainDiagnostics.values }
     }
 
     /**
