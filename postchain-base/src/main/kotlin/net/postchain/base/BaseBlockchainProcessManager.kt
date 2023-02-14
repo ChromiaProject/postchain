@@ -13,7 +13,12 @@ import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
-import net.postchain.debug.*
+import net.postchain.debug.BlockchainProcessName
+import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.LazyDiagnosticValue
+import net.postchain.debug.LazyDiagnosticValueCollection
+import net.postchain.debug.StandardDiagnosticValue
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
