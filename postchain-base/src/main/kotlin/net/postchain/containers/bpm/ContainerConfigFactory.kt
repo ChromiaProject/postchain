@@ -51,6 +51,7 @@ object ContainerConfigFactory : KLogging() {
 
         if (containerNodeConfig.subnodeUser != null) {
             volumes.add(HostConfig.Bind.builder().from("/etc/passwd").to("/etc/passwd").readOnly(true).build())
+            volumes.add(HostConfig.Bind.builder().from("/etc/group").to("/etc/group").readOnly(true).build())
         }
 
         val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
