@@ -13,7 +13,7 @@ class LazyDiagnosticValueCollectionTest {
         assert(lazyCollection.value).containsExactly("initial-name")
         name = "updated-name"
         assert(lazyCollection.value).containsExactly("updated-name")
-        collection.add(StandardDiagnosticValue("1"))
+        collection.add(EagerDiagnosticValue("1"))
         assert(lazyCollection.value).containsExactly("updated-name", "1")
     }
 }

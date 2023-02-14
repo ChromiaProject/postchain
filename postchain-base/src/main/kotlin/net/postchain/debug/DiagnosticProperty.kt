@@ -4,7 +4,6 @@ package net.postchain.debug
 
 enum class DiagnosticProperty(val prettyName: String) {
 
-    NULL(""),
     VERSION("version"),
 
     PUB_KEY("pub-key"),
@@ -24,7 +23,7 @@ enum class DiagnosticProperty(val prettyName: String) {
     PEERS_TOPOLOGY("peers-topology");
 
     infix fun withLazyValue(value: () -> Any?) = this to LazyDiagnosticValue(value)
-    infix fun withValue(value: Any?) = this to StandardDiagnosticValue(value)
+    infix fun withValue(value: Any?) = this to EagerDiagnosticValue(value)
 }
 
 enum class DpNodeType(val prettyName: String) {

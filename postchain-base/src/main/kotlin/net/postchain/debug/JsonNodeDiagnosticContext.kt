@@ -8,7 +8,7 @@ class JsonNodeDiagnosticContext(
 ) : NodeDiagnosticContext,
         MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
 
-    constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>): this(DiagnosticData(*values))
+    constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values))
 
     private val json = JsonFactory.makePrettyJson()
 
