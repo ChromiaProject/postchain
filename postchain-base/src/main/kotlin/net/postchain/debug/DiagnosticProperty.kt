@@ -18,6 +18,7 @@ enum class DiagnosticProperty(val prettyName: String) {
     // Containers
     CONTAINER_NAME("container-name"),
     CONTAINER_ID("container-id"),
+    ERROR("error"),
 
     @Deprecated("POS-90")
     PEERS_TOPOLOGY("peers-topology");

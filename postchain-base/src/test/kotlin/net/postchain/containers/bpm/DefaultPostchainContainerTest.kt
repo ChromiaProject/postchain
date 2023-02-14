@@ -28,7 +28,7 @@ class DefaultPostchainContainerTest {
         }
 
         // sut
-        val sut = DefaultPostchainContainer(dataSource, containerName, mock(), mock(), mock())
+        val sut = DefaultPostchainContainer(dataSource, containerName, mock(), mock(), mock(), mapOf())
 
         // interaction(s)
         // 1. no updates

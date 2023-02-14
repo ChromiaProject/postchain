@@ -1,8 +1,12 @@
 package net.postchain.containers.bpm
 
 import mu.KLogging
+import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.docker.DockerTools
 import net.postchain.containers.bpm.rpc.SubnodeAdminClient
+import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DiagnosticQueue
 import net.postchain.managed.DirectoryDataSource
 
 class DefaultPostchainContainer(
@@ -11,6 +15,7 @@ class DefaultPostchainContainer(
         override var containerPorts: ContainerPorts,
         override var state: ContainerState,
         private val subnodeAdminClient: SubnodeAdminClient,
+        private val diagnosticData: Map<BlockchainRid, DiagnosticData>,
         override var containerId: String? = null,
 ) : PostchainContainer {
 
@@ -57,7 +62,10 @@ class DefaultPostchainContainer(
                 if (it) processes[process.chainId] = process
             }
         } else {
-            logger.error { "Can't start process: config at height 0 is absent" }
+            val errorQueue = diagnosticData[process.blockchainRid]?.get(DiagnosticProperty.ERROR)?.let { it as DiagnosticQueue<String> }
+            val msg = "Can't start process: config at height 0 is absent"
+            errorQueue?.add(msg)
+            logger.error { msg }
             false
         }
     }

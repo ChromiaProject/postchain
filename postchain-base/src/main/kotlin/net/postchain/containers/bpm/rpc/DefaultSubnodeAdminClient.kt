@@ -12,6 +12,9 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.containers.bpm.ContainerPorts
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DiagnosticQueue
 import net.postchain.server.grpc.AddConfigurationRequest
 import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.DebugRequest
@@ -29,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class DefaultSubnodeAdminClient(
         private val containerNodeConfig: ContainerNodeConfig,
         private val containerPorts: ContainerPorts,
+        private val blockchainDiagnostics: Map<BlockchainRid, DiagnosticData>
 ) : SubnodeAdminClient {
 
     companion object : KLogging() {
@@ -105,6 +109,7 @@ class DefaultSubnodeAdminClient(
     }
 
     override fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid, config: ByteArray): Boolean {
+        val errorQueue = blockchainDiagnostics[blockchainRid]?.get(DiagnosticProperty.ERROR)?.let { it as DiagnosticQueue<String> }
         return try {
             val request = InitializeBlockchainRequest.newBuilder()
                     .setChainId(chainId)
@@ -120,10 +125,12 @@ class DefaultSubnodeAdminClient(
                 logger.debug { "startBlockchain(${chainId}) -- blockchain started ${response.brid}" }
                 true
             } else {
-                logger.error { "startBlockchain(${chainId}) -- can't start blockchain" }
+                errorQueue?.add("Can't start blockchain: ${response.message}")
+                logger.error { "startBlockchain(${chainId}) -- can't start blockchain: ${response.message}" }
                 false
             }
         } catch (e: Exception) {
+            errorQueue?.add("Can't start blockchain: ${e.message}")
             logger.error { "startBlockchain(${chainId}) -- can't start blockchain: ${e.message}" }
             false
         }
