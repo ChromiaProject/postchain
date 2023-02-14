@@ -193,9 +193,11 @@ class DefaultSubnodeAdminClient(
     }
 
     override fun shutdown() {
-        channel.shutdownNow()
-        channel.awaitTermination(1000, TimeUnit.MILLISECONDS)
         executor.shutdown()
+        if (::channel.isInitialized) {
+            channel.shutdownNow()
+            channel.awaitTermination(1000, TimeUnit.MILLISECONDS)
+        }
     }
 
 }
