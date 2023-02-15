@@ -333,7 +333,7 @@ open class ContainerManagedBlockchainProcessManager(
         }
 
         // 6. Stop container if it is empty
-        if (psContainer.isEmpty()) {
+        if (job.chainsToStart.isEmpty() && psContainer.isEmpty()) {
             logger.info { "[${nodeName()}]: $scope -- Container is empty and will be stopped: ${job.containerName}" }
             psContainer.stop()
             postchainContainers.remove(psContainer.containerName)
