@@ -55,9 +55,9 @@ class ZfsFileSystem(private val containerConfig: ContainerNodeConfig) : FileSyst
         return root
     }
 
-    override fun applyLimits(containerName: ContainerName, updates: ContainerResourceLimits) {
-        if (updates.hasStorage()) {
-            runCommand(arrayOf("zfs", "set", "quota=${getQuotaBytes(updates)}", getFs(containerName)))?.let {
+    override fun applyLimits(containerName: ContainerName, resourceLimits: ContainerResourceLimits) {
+        if (resourceLimits.hasStorage()) {
+            runCommand(arrayOf("zfs", "set", "quota=${getQuotaBytes(resourceLimits)}", getFs(containerName)))?.let {
                 logger.warn("Unable to set ZFS quota: $it")
             }
         }

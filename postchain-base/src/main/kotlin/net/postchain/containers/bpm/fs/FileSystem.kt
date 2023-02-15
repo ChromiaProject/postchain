@@ -43,7 +43,7 @@ interface FileSystem {
      */
     fun createContainerRoot(containerName: ContainerName, resourceLimits: ContainerResourceLimits): Path?
 
-    fun applyLimits(containerName: ContainerName, updates: ContainerResourceLimits)
+    fun applyLimits(containerName: ContainerName, resourceLimits: ContainerResourceLimits)
 
     /**
      * Returns root of container in the master (container) filesystem
