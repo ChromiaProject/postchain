@@ -393,10 +393,12 @@ open class ContainerManagedBlockchainProcessManager(
                     logger.warn { "[${nodeName()}]: $scope -- Container chains have been terminated: $chainIds" }
                 }
 
+                /*
                 if (psContainer.isEmpty()) {
                     psContainer.stop()
                     postchainContainers.remove(cname)
                 }
+                 */
             }
         }
 
