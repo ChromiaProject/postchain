@@ -3,6 +3,9 @@ package net.postchain.debug
 class LazyDiagnosticValueCollection(
         private val lazyCollection: () -> Collection<DiagnosticValue>
 ) : DiagnosticValue {
+
+    val collection get() = lazyCollection()
+
     override val value
-        get() = lazyCollection().map { it.value }
+        get() = collection.map { it.value }
 }
