@@ -29,6 +29,8 @@ class LocalFileSystem(private val containerConfig: ContainerNodeConfig) : FileSy
         return root
     }
 
+    override fun applyLimits(containerName: ContainerName, updates: ContainerResourceLimits) {}
+
     override fun rootOf(containerName: ContainerName): Path =
             Paths.get(containerConfig.masterMountDir, containerName.name)
 

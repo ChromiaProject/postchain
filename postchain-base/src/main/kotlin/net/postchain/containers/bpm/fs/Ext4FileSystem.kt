@@ -32,8 +32,6 @@ class Ext4FileSystem(private val containerConfig: ContainerNodeConfig) : FileSys
         if (resourceLimits.hasStorage()) {
             val quota = resourceLimits.storageMb()
 
-            logger.info("Setting storage quota: $quota MiB")
-
             runCommand(arrayOf(
                     "chattr",
                     "+P",
@@ -43,14 +41,7 @@ class Ext4FileSystem(private val containerConfig: ContainerNodeConfig) : FileSys
                 return null
             }
 
-            runCommand(arrayOf(
-                    "setquota",
-                    "-P", containerName.containerIID.toString(),
-                    "0", "${quota}M", "0", "0",
-                    containerConfig.masterMountDir))?.let {
-                logger.warn("Unable to set quota for project ${containerName.containerIID}: $it")
-                return null
-            }
+            if (!setQuota(containerName, quota)) return null
         }
 
         val hostPgdata = hostPgdataOf(containerName)
@@ -70,4 +61,23 @@ class Ext4FileSystem(private val containerConfig: ContainerNodeConfig) : FileSys
 
     override fun hostRootOf(containerName: ContainerName): Path =
             Paths.get(containerConfig.hostMountDir, containerName.name)
+
+    override fun applyLimits(containerName: ContainerName, updates: ContainerResourceLimits) {
+        if (updates.hasStorage()) {
+            setQuota(containerName, updates.storageMb())
+        }
+    }
+
+    private fun setQuota(containerName: ContainerName, quota: Long): Boolean {
+        logger.info("Setting storage quota: $quota MiB")
+
+        return runCommand(arrayOf(
+                "setquota",
+                "-P", containerName.containerIID.toString(),
+                "0", "${quota}M", "0", "0",
+                containerConfig.masterMountDir))?.let {
+            logger.warn("Unable to set quota for project ${containerName.containerIID}: $it")
+            false
+        } ?: true
+    }
 }
