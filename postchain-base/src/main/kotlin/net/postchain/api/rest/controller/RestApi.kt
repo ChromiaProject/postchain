@@ -7,6 +7,7 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import kong.unirest.Unirest
+import kong.unirest.UnirestException
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_METHODS
@@ -25,6 +26,9 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.PmEngineIsAlreadyClosed
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.JsonNodeDiagnosticContext
+import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
@@ -34,6 +38,7 @@ import net.postchain.gtv.GtvType
 import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtx.GtxQuery
+import org.apache.http.NoHttpResponseException
 import spark.Request
 import spark.Response
 import spark.Service
@@ -46,7 +51,8 @@ class RestApi(
         private val listenPort: Int,
         private val basePath: String,
         private val tlsCertificate: String? = null,
-        private val tlsCertificatePassword: String? = null
+        private val tlsCertificatePassword: String? = null,
+        private val nodeDiagnosticContext: NodeDiagnosticContext = JsonNodeDiagnosticContext()
 ) : Modellable {
 
     private val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
@@ -544,10 +550,17 @@ class RestApi(
     private fun chainModel(request: Request): ChainModel {
         val blockchainRID = checkBlockchainRID(request)
         val model = models[blockchainRID.uppercase()]
-                ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRID")
+                ?: throw NotFoundError(checkDiagnosticError(blockchainRID)
+                        ?: "Can't find blockchain with blockchainRID: $blockchainRID")
 
         if (!model.live) throw UnavailableException("Blockchain is unavailable")
         return model
+    }
+
+    private fun checkDiagnosticError(blockchainRid: String): String? {
+        val blockchains = nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN]?.value as Collection<Map<String, Any>>?
+        val errors = blockchains?.find { it["brid"] as String? == blockchainRid }?.get("error")
+        return errors?.toString()
     }
 
     private fun model(request: Request): Model {
@@ -561,19 +574,28 @@ class RestApi(
     }
 
     private fun redirectGet(responseType: String = JSON_CONTENT_TYPE, localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
-        return { request, response ->
+        return handler@ { request, response ->
             response.type(responseType)
             val model = chainModel(request)
             if (model is ExternalModel) {
                 logger.trace { "External REST API model found: $model" }
                 val url = model.path + request.uri() + (request.queryString()?.let { "?$it" } ?: "")
                 logger.trace { "Redirecting get request to $url" }
-                val externalResponse = Unirest.get(url)
-                        .header("Accept", request.headers("Accept"))
-                        .asBytes()
-                response.status(externalResponse.status)
-                response.type(externalResponse.headers.get("Content-Type").firstOrNull())
-                externalResponse.body
+                val blockchainRid = checkBlockchainRID(request)
+                return@handler try {
+                    val externalResponse = Unirest.get(url)
+                            .header("Accept", request.headers("Accept"))
+                            .asBytes()
+                    response.status(externalResponse.status)
+                    response.type(externalResponse.headers.get("Content-Type").firstOrNull())
+                    val chainErrors = if (externalResponse.status != 200) {
+                        checkDiagnosticError(blockchainRid)?.let { JsonObject().apply { addProperty("error", it) }.toString() }
+                    } else null
+                    chainErrors ?: externalResponse.body
+                } catch (e: UnirestException) {
+                    checkDiagnosticError(blockchainRid)?.let { JsonObject().apply { addProperty("error", it) }.toString() }
+                            ?: "Can't find blockchain $blockchainRid"
+                }
             } else {
                 logger.trace { "Local REST API model found: $model" }
                 localHandler(request, response)

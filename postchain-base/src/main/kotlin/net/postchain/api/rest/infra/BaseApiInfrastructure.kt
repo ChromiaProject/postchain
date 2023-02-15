@@ -28,11 +28,11 @@ open class BaseApiInfrastructure(
                         port,
                         basePath,
                         tlsCertificate,
-                        tlsCertificatePassword)
+                        tlsCertificatePassword, nodeDiagnosticContext)
             } else {
                 RestApi(
                         port,
-                        basePath)
+                        basePath, nodeDiagnosticContext = nodeDiagnosticContext)
             }
         } else {
             null
