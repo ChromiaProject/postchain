@@ -30,8 +30,8 @@ import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.LocalBlockchainInfo
@@ -280,6 +280,10 @@ open class ContainerManagedBlockchainProcessManager(
         if (dockerContainer == null && job.chainsToStart.isNotEmpty()) {
             logger.debug { dcLog("not found", null) }
 
+            if (psContainer.updateResourceLimits()) {
+                fs.applyLimits(psContainer.containerName, psContainer.resourceLimits)
+            }
+
             // creating container
             val config = ContainerConfigFactory.createConfig(fs, appConfig, containerNodeConfig, psContainer)
             psContainer.containerId = dockerClient.createContainer(config, job.containerName.toString()).id()!!
@@ -300,6 +304,9 @@ open class ContainerManagedBlockchainProcessManager(
             val dcState = dockerContainer.state()
             if (dcState in listOf("exited", "created", "paused")) {
                 logger.info { dcLog("$dcState and will be started", psContainer) }
+                if (psContainer.updateResourceLimits()) {
+                    fs.applyLimits(psContainer.containerName, psContainer.resourceLimits)
+                }
                 dockerClient.startContainer(psContainer.containerId)
             }
             if (psContainer.state != RUNNING) {
@@ -371,9 +378,9 @@ open class ContainerManagedBlockchainProcessManager(
                 val psContainer = postchainContainers[cname]!!
 
                 // Check for resource limit updates
-                val updates = psContainer.checkForResourceLimitsUpdates()
-                if (updates.first) {
-                    logger.warn { "Resource limits for container ${cname.name} have been changed from ${psContainer.resourceLimits} to ${updates.second}" }
+                val currentResourceLimits = psContainer.resourceLimits
+                if (psContainer.updateResourceLimits()) {
+                    logger.warn { "Resource limits for container ${cname.name} have been changed from $currentResourceLimits to ${psContainer.resourceLimits}" }
                 }
 
                 val dc = running.firstOrNull { it.hasName(cname.name) }

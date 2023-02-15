@@ -10,6 +10,8 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.doReturnConsecutively
 import org.mockito.kotlin.mock
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class DefaultPostchainContainerTest {
 
@@ -32,13 +34,12 @@ class DefaultPostchainContainerTest {
 
         // interaction(s)
         // 1. no updates
-        val updates = sut.checkForResourceLimitsUpdates()
-        assertEquals(false, updates.first)
-        assertEquals(null, updates.second)
+        val before = sut.resourceLimits
+        assertFalse(sut.updateResourceLimits())
+        assertEquals(before, sut.resourceLimits)
 
         // 2. updates available
-        val updates2 = sut.checkForResourceLimitsUpdates()
-        assertEquals(true, updates2.first)
-        assertEquals(limits2, updates2.second)
+        assertTrue(sut.updateResourceLimits())
+        assertEquals(limits2, sut.resourceLimits)
     }
 }
