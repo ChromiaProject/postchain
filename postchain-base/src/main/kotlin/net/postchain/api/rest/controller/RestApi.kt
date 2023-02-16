@@ -5,6 +5,7 @@ package net.postchain.api.rest.controller
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import kong.unirest.Unirest
+import kong.unirest.UnirestException
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_METHODS
@@ -23,15 +24,15 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.PmEngineIsAlreadyClosed
-import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvType
-import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.gtvToJSON
+import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtx.GtxQuery
@@ -131,6 +132,12 @@ class RestApi(
 
         http.exception(PmEngineIsAlreadyClosed::class.java) { error, _, response ->
             response.status(503) // Service unavailable
+            setErrorResponseBody(response, error)
+        }
+
+        http.exception(UnirestException::class.java) { error, _, response ->
+            logger.warn("Unable to redirect to subnode: ${error.message}")
+            response.status(500)
             setErrorResponseBody(response, error)
         }
 
