@@ -329,7 +329,11 @@ open class ContainerManagedBlockchainProcessManager(
         job.chainsToStart.forEach { chain ->
             val process = createBlockchainProcess(chain, psContainer)
             logger.debug { "[${nodeName()}]: $scope -- ContainerBlockchainProcess created: $process" }
-            logger.info { "[${nodeName()}]: $scope -- Blockchain started: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+            if (process == null) {
+                logger.error { "[${nodeName()}]: $scope -- Blockchain didn't start: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+            } else {
+                logger.info { "[${nodeName()}]: $scope -- Blockchain started: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+            }
         }
 
         // 6. Stop container if it is empty
