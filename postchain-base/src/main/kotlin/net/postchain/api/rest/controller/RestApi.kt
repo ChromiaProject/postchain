@@ -560,7 +560,7 @@ class RestApi(
     }
 
     private fun checkDiagnosticError(blockchainRid: String): String? {
-        val blockchains = (nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN] as LazyDiagnosticValueCollection)?.collection as Collection<DiagnosticData>?
+        val blockchains = (nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN] as LazyDiagnosticValueCollection?)?.collection as Collection<DiagnosticData>?
         val errors = blockchains?.find { it[DiagnosticProperty.BLOCKCHAIN_RID]?.value as String? == blockchainRid }?.get(DiagnosticProperty.ERROR)?.value
         return errors?.toString()
     }
