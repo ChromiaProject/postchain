@@ -280,9 +280,8 @@ open class ContainerManagedBlockchainProcessManager(
         if (dockerContainer == null && job.chainsToStart.isNotEmpty()) {
             logger.debug { dcLog("not found", null) }
 
-            if (psContainer.updateResourceLimits()) {
-                fs.applyLimits(psContainer.containerName, psContainer.resourceLimits)
-            }
+            psContainer.updateResourceLimits()
+            fs.applyLimits(psContainer.containerName, psContainer.resourceLimits)
 
             // creating container
             val config = ContainerConfigFactory.createConfig(fs, appConfig, containerNodeConfig, psContainer)
@@ -304,9 +303,8 @@ open class ContainerManagedBlockchainProcessManager(
             val dcState = dockerContainer.state()
             if (dcState in listOf("exited", "created", "paused")) {
                 logger.info { dcLog("$dcState and will be started", psContainer) }
-                if (psContainer.updateResourceLimits()) {
-                    fs.applyLimits(psContainer.containerName, psContainer.resourceLimits)
-                }
+                psContainer.updateResourceLimits()
+                fs.applyLimits(psContainer.containerName, psContainer.resourceLimits)
                 dockerClient.startContainer(psContainer.containerId)
             }
             if (psContainer.state != RUNNING) {
