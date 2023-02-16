@@ -27,11 +27,7 @@ class ZfsFileSystem(private val containerConfig: ContainerNodeConfig) : FileSyst
                 val createCommand = if (containerConfig.zfsPoolInitScript != null && File(containerConfig.zfsPoolInitScript).exists()) {
                     arrayOf("/bin/sh", containerConfig.zfsPoolInitScript, fs, quotaBytes.toString())
                 } else {
-                    if (resourceLimits.hasStorage()) {
-                        arrayOf("zfs", "create", "-u", "-o", "quota=${quotaBytes}", "-o", "reservation=50m", fs)
-                    } else {
-                        arrayOf("zfs", "create", "-u", fs)
-                    }
+                    arrayOf("zfs", "create", "-u", fs)
                 }
                 runCommand(createCommand)?.let {
                     logger.warn("Unable to create ZFS file system: $it")
