@@ -3,6 +3,8 @@
 package net.postchain.base.data
 
 import mu.KLogging
+import net.postchain.base.data.SqlUtils.isClosed
+import net.postchain.base.data.SqlUtils.isFatal
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionFailed
 import net.postchain.common.exception.TransactionIncorrect
@@ -17,6 +19,8 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.BlockWitnessBuilder
 import net.postchain.core.block.ManagedBlockBuilder
+import java.sql.SQLException
+import kotlin.system.exitProcess
 
 /**
  * Wrapper around BlockBuilder providing more control over the process of building blocks,
@@ -57,6 +61,20 @@ class BaseManagedBlockBuilder(
 
         try {
             return fn()
+        } catch (e: SQLException) {
+            if (e.isFatal()) {
+                logger.error("Fatal database error occurred: ${e.message}")
+                if (storage.exitOnFatalError) {
+                    exitProcess(1)
+                }
+                // no point in doing rollback here, since it will inevitably fail
+            } else if (e.isClosed()) {
+                logger.error("Database connection has been closed")
+                // no point in doing rollback here, since it will inevitably fail
+            } else {
+                rollback()
+            }
+            throw e
         } catch (e: Exception) {
             rollback()
             throw e

@@ -37,6 +37,7 @@ object StorageBuilder {
                 writeDataSource,
                 db,
                 appConfig.databaseReadConcurrency,
+                appConfig.exitOnFatalError,
                 db.isSavepointSupported())
     }
 
