@@ -435,7 +435,7 @@ open class ContainerManagedBlockchainProcessManager(
                     DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue  { psContainer.getBlockchainLastHeight(process.chainId) },
                     DiagnosticProperty.CONTAINER_NAME withValue psContainer.containerName.toString(),
                     DiagnosticProperty.CONTAINER_ID withValue (psContainer.shortContainerId() ?: ""),
-                    DiagnosticProperty.ERROR to DiagnosticQueue<String>(5, false)
+                    DiagnosticProperty.ERROR to DiagnosticQueue<String>(5)
             )
         }
 
