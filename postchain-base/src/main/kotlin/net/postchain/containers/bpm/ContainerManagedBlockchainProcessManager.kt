@@ -336,11 +336,15 @@ open class ContainerManagedBlockchainProcessManager(
         job.chainsToStart.forEach { chain ->
             val process = createBlockchainProcess(chain, psContainer)
             logger.debug { "[${nodeName()}]: $scope -- ContainerBlockchainProcess created: $process" }
-            logger.info { "[${nodeName()}]: $scope -- Blockchain started: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+            if (process == null) {
+                logger.error { "[${nodeName()}]: $scope -- Blockchain didn't start: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+            } else {
+                logger.info { "[${nodeName()}]: $scope -- Blockchain started: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+            }
         }
 
         // 6. Stop container if it is empty
-        if (psContainer.isEmpty()) {
+        if (job.chainsToStart.isEmpty() && psContainer.isEmpty()) {
             logger.info { "[${nodeName()}]: $scope -- Container is empty and will be stopped: ${job.containerName}" }
             psContainer.stop()
             postchainContainers.remove(psContainer.containerName)
@@ -399,11 +403,6 @@ open class ContainerManagedBlockchainProcessManager(
                 if (chainIds.isNotEmpty()) {
                     logger.warn { "[${nodeName()}]: $scope -- Container chains have been terminated: $chainIds" }
                 }
-
-                if (psContainer.isEmpty()) {
-                    psContainer.stop()
-                    postchainContainers.remove(cname)
-                }
             }
         }
 
@@ -443,10 +442,10 @@ open class ContainerManagedBlockchainProcessManager(
             extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
                     .forEach { it.connectRemoteProcess(process) }
             blockchainDiagnostics[chain.brid] = DiagnosticData(
-                    DiagnosticProperty.BLOCKCHAIN_RID withLazyValue  { process.blockchainRid.toHex() },
-                    DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue  { psContainer.getBlockchainLastHeight(process.chainId) },
-                    DiagnosticProperty.CONTAINER_NAME withLazyValue  { psContainer.containerName.toString() },
-                    DiagnosticProperty.CONTAINER_ID withLazyValue  { psContainer.shortContainerId() ?: "" }
+                    DiagnosticProperty.BLOCKCHAIN_RID withLazyValue { process.blockchainRid.toHex() },
+                    DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue { psContainer.getBlockchainLastHeight(process.chainId) },
+                    DiagnosticProperty.CONTAINER_NAME withLazyValue { psContainer.containerName.toString() },
+                    DiagnosticProperty.CONTAINER_ID withLazyValue { psContainer.shortContainerId() ?: "" }
             )
         }
 
