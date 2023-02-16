@@ -30,8 +30,8 @@ import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.LocalBlockchainInfo
@@ -392,13 +392,6 @@ open class ContainerManagedBlockchainProcessManager(
                 if (chainIds.isNotEmpty()) {
                     logger.warn { "[${nodeName()}]: $scope -- Container chains have been terminated: $chainIds" }
                 }
-
-                /*
-                if (psContainer.isEmpty()) {
-                    psContainer.stop()
-                    postchainContainers.remove(cname)
-                }
-                 */
             }
         }
 
@@ -438,10 +431,10 @@ open class ContainerManagedBlockchainProcessManager(
             extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
                     .forEach { it.connectRemoteProcess(process) }
             blockchainDiagnostics[chain.brid] = DiagnosticData(
-                    DiagnosticProperty.BLOCKCHAIN_RID withLazyValue  { process.blockchainRid.toHex() },
-                    DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue  { psContainer.getBlockchainLastHeight(process.chainId) },
-                    DiagnosticProperty.CONTAINER_NAME withLazyValue  { psContainer.containerName.toString() },
-                    DiagnosticProperty.CONTAINER_ID withLazyValue  { psContainer.shortContainerId() ?: "" }
+                    DiagnosticProperty.BLOCKCHAIN_RID withLazyValue { process.blockchainRid.toHex() },
+                    DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue { psContainer.getBlockchainLastHeight(process.chainId) },
+                    DiagnosticProperty.CONTAINER_NAME withLazyValue { psContainer.containerName.toString() },
+                    DiagnosticProperty.CONTAINER_ID withLazyValue { psContainer.shortContainerId() ?: "" }
             )
         }
 
