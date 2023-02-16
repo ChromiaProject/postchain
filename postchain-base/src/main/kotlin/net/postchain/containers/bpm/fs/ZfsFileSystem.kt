@@ -17,8 +17,8 @@ class ZfsFileSystem(private val containerConfig: ContainerNodeConfig) : FileSyst
         if (root.toFile().exists()) {
             logger.info("Container dir exists: $root")
         } else {
-            val fs = "${containerConfig.zfsPoolName}/${containerName.name}"
-            val quotaBytes = resourceLimits.storageMb() * 1024 * 1024
+            val fs = getFs(containerName)
+            val quotaBytes = getQuotaBytes(resourceLimits)
 
             if (runCommand(arrayOf("zfs", "get", "all", fs)) == null) {
                 logger.info("ZFS volume exists: $fs")
@@ -54,6 +54,20 @@ class ZfsFileSystem(private val containerConfig: ContainerNodeConfig) : FileSyst
 
         return root
     }
+
+    override fun applyLimits(containerName: ContainerName, resourceLimits: ContainerResourceLimits) {
+        if (resourceLimits.hasStorage()) {
+            runCommand(arrayOf("zfs", "set", "quota=${getQuotaBytes(resourceLimits)}", getFs(containerName)))?.let {
+                logger.warn("Unable to set ZFS quota: $it")
+            }
+        }
+    }
+
+    private fun getFs(containerName: ContainerName) =
+            "${containerConfig.zfsPoolName}/${containerName.name}"
+
+    private fun getQuotaBytes(resourceLimits: ContainerResourceLimits) =
+            resourceLimits.storageMb() * 1024 * 1024
 
     override fun rootOf(containerName: ContainerName): Path = hostRootOf(containerName)
 

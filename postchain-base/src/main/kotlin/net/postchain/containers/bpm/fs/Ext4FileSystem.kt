@@ -29,28 +29,13 @@ class Ext4FileSystem(private val containerConfig: ContainerNodeConfig) : FileSys
             }
         }
 
-        if (resourceLimits.hasStorage()) {
-            val quota = resourceLimits.storageMb()
-
-            logger.info("Setting storage quota: $quota MiB")
-
-            runCommand(arrayOf(
-                    "chattr",
-                    "+P",
-                    "-p", containerName.containerIID.toString(),
-                    root.toString()))?.let {
-                logger.warn("Unable to assign project ID ${containerName.containerIID} to directory $root: $it")
-                return null
-            }
-
-            runCommand(arrayOf(
-                    "setquota",
-                    "-P", containerName.containerIID.toString(),
-                    "0", "${quota}M", "0", "0",
-                    containerConfig.masterMountDir))?.let {
-                logger.warn("Unable to set quota for project ${containerName.containerIID}: $it")
-                return null
-            }
+        runCommand(arrayOf(
+                "chattr",
+                "+P",
+                "-p", containerName.containerIID.toString(),
+                root.toString()))?.let {
+            logger.warn("Unable to assign project ID ${containerName.containerIID} to directory $root: $it")
+            return null
         }
 
         val hostPgdata = hostPgdataOf(containerName)
@@ -62,6 +47,10 @@ class Ext4FileSystem(private val containerConfig: ContainerNodeConfig) : FileSys
             }
         }
 
+        if (resourceLimits.hasStorage()) {
+            if (!setQuota(containerName, resourceLimits.storageMb())) return null
+        }
+
         return root
     }
 
@@ -70,4 +59,23 @@ class Ext4FileSystem(private val containerConfig: ContainerNodeConfig) : FileSys
 
     override fun hostRootOf(containerName: ContainerName): Path =
             Paths.get(containerConfig.hostMountDir, containerName.name)
+
+    override fun applyLimits(containerName: ContainerName, resourceLimits: ContainerResourceLimits) {
+        if (resourceLimits.hasStorage()) {
+            setQuota(containerName, resourceLimits.storageMb())
+        }
+    }
+
+    private fun setQuota(containerName: ContainerName, quota: Long): Boolean {
+        logger.info("Setting storage quota: $quota MiB")
+
+        return runCommand(arrayOf(
+                "setquota",
+                "-P", containerName.containerIID.toString(),
+                "0", "${quota}M", "0", "0",
+                containerConfig.masterMountDir))?.let {
+            logger.warn("Unable to set quota for project ${containerName.containerIID}: $it")
+            false
+        } ?: true
+    }
 }
