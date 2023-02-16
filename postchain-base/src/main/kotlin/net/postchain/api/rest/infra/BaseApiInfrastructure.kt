@@ -18,7 +18,7 @@ open class BaseApiInfrastructure(
         restApiConfig: RestApiConfig,
         val nodeDiagnosticContext: NodeDiagnosticContext,
         val configurationProvider: BlockchainConfigurationProvider,
-        val enableDebugApi: Boolean
+        private val enableDebugApi: Boolean
 ) : ApiInfrastructure {
 
     val restApi: RestApi? = with(restApiConfig) {
@@ -28,11 +28,13 @@ open class BaseApiInfrastructure(
                         port,
                         basePath,
                         tlsCertificate,
-                        tlsCertificatePassword, nodeDiagnosticContext)
+                        tlsCertificatePassword,
+                        nodeDiagnosticContext)
             } else {
                 RestApi(
                         port,
-                        basePath, nodeDiagnosticContext = nodeDiagnosticContext)
+                        basePath,
+                        nodeDiagnosticContext = nodeDiagnosticContext)
             }
         } else {
             null

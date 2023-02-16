@@ -590,7 +590,7 @@ class RestApi(
                             .asBytes()
                     response.status(externalResponse.status)
                     response.type(externalResponse.headers.get("Content-Type").firstOrNull())
-                    val chainErrors = if (externalResponse.status != 200) {
+                    val chainErrors = if (externalResponse.status !in 200..299) {
                         checkDiagnosticError(blockchainRid)?.let { JsonObject().apply { addProperty("error", it) }.toString() }
                     } else null
                     chainErrors ?: externalResponse.body
