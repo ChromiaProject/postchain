@@ -5,13 +5,13 @@ import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.ContainerPorts
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Shutdownable
-import net.postchain.debug.DiagnosticData
+import net.postchain.debug.NodeDiagnosticContext
 
 interface SubnodeAdminClient : Shutdownable {
 
     companion object {
-        fun create(containerNodeConfig: ContainerNodeConfig, containerPorts: ContainerPorts, blockchainDiagnosticData: Map<BlockchainRid, DiagnosticData>): SubnodeAdminClient {
-            return DefaultSubnodeAdminClient(containerNodeConfig, containerPorts, blockchainDiagnosticData)
+        fun create(containerNodeConfig: ContainerNodeConfig, containerPorts: ContainerPorts, nodeDiagnosticContext: NodeDiagnosticContext): SubnodeAdminClient {
+            return DefaultSubnodeAdminClient(containerNodeConfig, containerPorts, nodeDiagnosticContext)
         }
     }
 

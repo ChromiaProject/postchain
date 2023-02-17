@@ -6,7 +6,7 @@ import net.postchain.common.BlockchainRid
 
 class JsonNodeDiagnosticContext(
         private val properties: DiagnosticData,
-        override val blockchainDiagnosticData: MutableMap<BlockchainRid, DiagnosticData>
+        private val blockchainDiagnosticData: MutableMap<BlockchainRid, DiagnosticData>
 ) : NodeDiagnosticContext,
         MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
 
@@ -17,12 +17,24 @@ class JsonNodeDiagnosticContext(
     )
 
     constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values), mutableMapOf())
+    private val json = JsonFactory.makePrettyJson()
 
     init {
         properties[DiagnosticProperty.BLOCKCHAIN] = LazyDiagnosticValueCollection { blockchainDiagnosticData.values }
     }
 
-    private val json = JsonFactory.makePrettyJson()
+    override fun blockchainErrorQueue(blockchainRid: BlockchainRid) = blockchainData(blockchainRid)[DiagnosticProperty.ERROR] as DiagnosticQueue<String>
+
+    override fun blockchainData(blockchainRid: BlockchainRid) = blockchainDiagnosticData.getOrPut(blockchainRid) {
+        DiagnosticData(
+                DiagnosticProperty.BLOCKCHAIN_RID withValue blockchainRid.toHex(),
+                DiagnosticProperty.ERROR to DiagnosticQueue<String>(5)
+        )
+    }
+
+    override fun removeBlockchainData(blockchainRid: BlockchainRid?) = blockchainDiagnosticData.remove(blockchainRid)
+
+    override fun clearBlockchainData() = blockchainDiagnosticData.clear()
 
     override fun remove(k: DiagnosticProperty) = properties.remove(k)
     override fun isEmpty() = properties.isEmpty()

@@ -46,12 +46,7 @@ class PostchainService(private val postchainNode: PostchainNode) {
             }
             if (initialized) brid else null
         } catch (e: Exception) {
-            val bcData = postchainNode.postchainContext.nodeDiagnosticContext.blockchainDiagnosticData.getOrPut(brid) {
-                DiagnosticData(DiagnosticProperty.BLOCKCHAIN_RID to EagerDiagnosticValue(brid.toHex()),
-                        DiagnosticProperty.ERROR to DiagnosticQueue<String>(5))
-            }
-            val errors = bcData[DiagnosticProperty.ERROR] as DiagnosticQueue<String>
-            errors.add(e.message)
+            postchainNode.postchainContext.nodeDiagnosticContext.blockchainErrorQueue(brid).add(e.message)
             null
         }
 

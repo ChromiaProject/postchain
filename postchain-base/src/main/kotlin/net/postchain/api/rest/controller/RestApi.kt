@@ -18,6 +18,7 @@ import net.postchain.api.rest.controller.HttpHelper.Companion.SUBQUERY
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
+import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
@@ -159,8 +160,7 @@ class RestApi(
     }
     private fun checkDiagnosticError(blockchainRid: String?): String? {
         if (blockchainRid == null) return null
-        val blockchains = (nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN] as LazyDiagnosticValueCollection?)?.collection as Collection<DiagnosticData>?
-        val errors = blockchains?.find { it[DiagnosticProperty.BLOCKCHAIN_RID]?.value as String? == blockchainRid }?.get(DiagnosticProperty.ERROR)?.value
+        val errors = nodeDiagnosticContext.blockchainErrorQueue(BlockchainRid.buildFromHex(blockchainRid))
         return errors?.toString()
     }
 

@@ -30,8 +30,6 @@ import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DiagnosticData
-import net.postchain.debug.DiagnosticQueue
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.DirectoryDataSource
@@ -257,9 +255,9 @@ open class ContainerManagedBlockchainProcessManager(
             }
 
             // Building PostchainContainer
-            val subnodeAdminClient = SubnodeAdminClient.create(containerNodeConfig, containerPorts, blockchainDiagnostics)
+            val subnodeAdminClient = SubnodeAdminClient.create(containerNodeConfig, containerPorts, nodeDiagnosticContext)
             psContainer = DefaultPostchainContainer(
-                    directoryDataSource, job.containerName, containerPorts, STARTING, subnodeAdminClient, blockchainDiagnostics)
+                    directoryDataSource, job.containerName, containerPorts, STARTING, subnodeAdminClient, nodeDiagnosticContext)
             logger.debug { "[${nodeName()}]: $scope -- PostchainContainer created" }
             val dir = initContainerWorkingDir(fs, psContainer)
             if (dir != null) {
@@ -434,15 +432,11 @@ open class ContainerManagedBlockchainProcessManager(
                 psContainer
         )
 
-        blockchainDiagnostics.getOrPut(chain.brid) {
-            DiagnosticData(
-                    DiagnosticProperty.BLOCKCHAIN_RID withValue process.blockchainRid.toHex(),
-                    DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue  { psContainer.getBlockchainLastHeight(process.chainId) },
-                    DiagnosticProperty.CONTAINER_NAME withValue psContainer.containerName.toString(),
-                    DiagnosticProperty.CONTAINER_ID withValue (psContainer.shortContainerId() ?: ""),
-                    DiagnosticProperty.ERROR to DiagnosticQueue<String>(5)
-            )
-        }
+        nodeDiagnosticContext.blockchainData(chain.brid).putAll(mapOf(
+                DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue { psContainer.getBlockchainLastHeight(process.chainId) },
+                DiagnosticProperty.CONTAINER_NAME withValue psContainer.containerName.toString(),
+                DiagnosticProperty.CONTAINER_ID withValue (psContainer.shortContainerId() ?: ""),
+        ))
 
         val started = psContainer.startProcess(process)
         if (started) {
@@ -462,7 +456,7 @@ open class ContainerManagedBlockchainProcessManager(
                             .forEach { it.disconnectRemoteProcess(process) }
                     masterBlockchainInfra.exitMasterBlockchainProcess(process)
                     val blockchainRid = chainIdToBrid.remove(chainId)
-                    blockchainDiagnostics.remove(blockchainRid)
+                    nodeDiagnosticContext.removeBlockchainData(blockchainRid)
                     bridToChainId.remove(blockchainRid)
                     chains.remove(chainId)
                     process.shutdown()
