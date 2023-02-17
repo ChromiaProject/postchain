@@ -4,8 +4,7 @@ package net.postchain.api.rest.controller
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
-import kong.unirest.Unirest
-import kong.unirest.UnirestException
+import kong.unirest.HttpMethod
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_METHODS
@@ -132,12 +131,6 @@ class RestApi(
 
         http.exception(PmEngineIsAlreadyClosed::class.java) { error, _, response ->
             response.status(503) // Service unavailable
-            setErrorResponseBody(response, error)
-        }
-
-        http.exception(UnirestException::class.java) { error, _, response ->
-            logger.warn("Unable to redirect to subnode: ${error.message}")
-            response.status(500)
             setErrorResponseBody(response, error)
         }
 
@@ -582,47 +575,28 @@ class RestApi(
     }
 
     private fun redirectGet(responseType: String = JSON_CONTENT_TYPE, localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
-        return { request, response ->
-            response.type(responseType)
-            val model = chainModel(request)
-            if (model is ExternalModel) {
-                logger.trace { "External REST API model found: $model" }
-                val url = model.path + request.uri() + (request.queryString()?.let { "?$it" } ?: "")
-                logger.trace { "Redirecting get request to $url" }
-                val externalResponse = Unirest.get(url)
-                        .header("Accept", request.headers("Accept"))
-                        .asBytes()
-                response.status(externalResponse.status)
-                response.type(externalResponse.headers.get("Content-Type").firstOrNull())
-                externalResponse.body
-            } else {
-                logger.trace { "Local REST API model found: $model" }
-                localHandler(request, response)
-            }
-        }
+        return redirect(HttpMethod.GET, responseType, localHandler)
     }
 
     private fun redirectPost(responseType: String = JSON_CONTENT_TYPE, localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
+        return redirect(HttpMethod.POST, responseType, localHandler)
+    }
+
+    private fun redirect(method: HttpMethod, responseType: String = JSON_CONTENT_TYPE, localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
         return { request, response ->
             response.type(responseType)
             val model = chainModel(request)
             if (model is ExternalModel) {
                 logger.trace { "External REST API model found: $model" }
-                val url = model.path + request.uri()
-                logger.trace { "Redirecting post request to $url" }
-                val externalResponse = Unirest.post(url)
-                        .header("Accept", request.headers("Accept"))
-                        .header("Content-Type", request.headers("Content-Type"))
-                        .body(request.bodyAsBytes())
-                        .asBytes()
-                response.status(externalResponse.status)
-                response.type(externalResponse.headers.get("Content-Type").firstOrNull())
-                externalResponse.body
+                when (method) {
+                    HttpMethod.GET -> model.get(request, response)
+                    HttpMethod.POST -> model.post(request, response)
+                    else -> throw UnsupportedOperationException("Unsupported HTTP method: $method")
+                }
             } else {
                 logger.trace { "Local REST API model found: $model" }
                 localHandler(request, response)
             }
         }
     }
-
 }
