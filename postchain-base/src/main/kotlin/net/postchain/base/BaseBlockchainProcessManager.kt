@@ -69,10 +69,6 @@ open class BaseBlockchainProcessManager(
 
     companion object : KLogging()
 
-    init {
-        nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN] = LazyDiagnosticValueCollection { nodeDiagnosticContext.blockchainDiagnosticData.values }
-    }
-
     /**
      * Put the startup operation of chainId in the [executor]'s work queue.
      *
@@ -130,9 +126,7 @@ open class BaseBlockchainProcessManager(
                         stopBlockchain(chainId, bTrace, true)
 
                         startInfo("Starting of blockchain", chainId)
-                        logger.error { "Starting blockchain $chainId" }
                         val blockchainConfig = makeBlockchainConfiguration(chainId)
-                        logger.error { "blockchain config created for chain $chainId" }
 
                         withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()) {
                             val processName = BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
@@ -159,9 +153,6 @@ open class BaseBlockchainProcessManager(
                             )
                         }
                         blockchainConfig.blockchainRid
-                    } catch (e: Exception) {
-                        logger.error { "Exception caught starting chain $chainId: ${e.message}" }
-                        throw e
                     } finally {
                         scheduledForStart.remove(chainId)
                     }

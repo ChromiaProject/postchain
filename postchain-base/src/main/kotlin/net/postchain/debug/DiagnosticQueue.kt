@@ -1,6 +1,7 @@
 package net.postchain.debug
 
-import java.util.*
+import java.util.AbstractQueue
+import kotlin.collections.LinkedHashMap
 
 class DiagnosticQueue<E>(
         private val capacity: Int

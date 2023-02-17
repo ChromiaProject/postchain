@@ -12,6 +12,10 @@ class JsonNodeDiagnosticContext(
 
     constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values), mutableMapOf())
 
+    init {
+        properties[DiagnosticProperty.BLOCKCHAIN] = LazyDiagnosticValueCollection { blockchainDiagnosticData.values }
+    }
+
     private val json = JsonFactory.makePrettyJson()
 
     override fun remove(k: DiagnosticProperty) = properties.remove(k)

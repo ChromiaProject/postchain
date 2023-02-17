@@ -5,6 +5,7 @@ import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import net.postchain.api.rest.controller.DisabledDebugInfoQuery
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import assertk.assert
 
 
 class DefaultDebugInfoQueryTest {
@@ -18,7 +19,8 @@ class DefaultDebugInfoQueryTest {
         val actual = JsonParser.parseString(json).asJsonObject
 
         // Asserts
-        assertEquals(0, actual.size())
+        assertEquals(1, actual.size())
+        assert(actual.has("blockchain"))
     }
 
     @Test
@@ -34,7 +36,7 @@ class DefaultDebugInfoQueryTest {
         val actual = JsonParser.parseString(json).asJsonObject
 
         // Asserts
-        assertEquals(2, actual.size())
+        assertEquals(3, actual.size())
         assertEquals("1.1.1", actual.get(DiagnosticProperty.VERSION.prettyName).asString)
         assertEquals("my-container", actual.get(DiagnosticProperty.CONTAINER_NAME.prettyName).asString)
     }
