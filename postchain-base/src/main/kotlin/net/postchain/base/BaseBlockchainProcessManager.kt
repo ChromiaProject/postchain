@@ -5,6 +5,7 @@ package net.postchain.base
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
@@ -17,9 +18,8 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DiagnosticQueue
-import net.postchain.debug.LazyDiagnosticValue
-import net.postchain.debug.LazyDiagnosticValueCollection
 import net.postchain.debug.EagerDiagnosticValue
+import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
@@ -153,6 +153,21 @@ open class BaseBlockchainProcessManager(
                             )
                         }
                         blockchainConfig.blockchainRid
+                    } catch (e: Exception) {
+                        withReadConnection(storage, chainId) {
+                            val diagnosticData = DatabaseAccess.of(it).getBlockchainRid(it)?.let { brid ->
+                                blockchainDiagnostics.getOrPut(brid) {
+                                    DiagnosticData(
+                                            DiagnosticProperty.BLOCKCHAIN_RID withValue brid.toHex(),
+                                            DiagnosticProperty.ERROR to DiagnosticQueue<String>(5)
+                                    )
+                                }
+                            }
+                            val errorQueue = diagnosticData?.get(DiagnosticProperty.ERROR) as DiagnosticQueue<String>
+                            errorQueue.add(e.message)
+                        }
+
+                        throw e
                     } finally {
                         scheduledForStart.remove(chainId)
                     }
