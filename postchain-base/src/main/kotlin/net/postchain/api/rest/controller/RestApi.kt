@@ -4,6 +4,7 @@ package net.postchain.api.rest.controller
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import kong.unirest.HttpMethod
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
@@ -149,16 +150,16 @@ class RestApi(
 
     private fun transformErrorResponseFromDiagnostics(request: Request, response: Response, error: Exception) {
         val blockchainRid = if (request.params(PARAM_BLOCKCHAIN_RID) != null) checkBlockchainRID(request) else null
-        checkDiagnosticError(blockchainRid)?.let { errorMsg ->
+        checkDiagnosticError(blockchainRid)?.let { errorBody ->
             response.status(500)
             response.type(JSON_CONTENT_TYPE)
-            response.body(gson.toJson(ErrorBody(errorMsg)))
+            response.body(gson.toJson(errorBody))
         } ?: setErrorResponseBody(response, error)
     }
-    private fun checkDiagnosticError(blockchainRid: String?): String? {
+    private fun checkDiagnosticError(blockchainRid: String?): JsonObject? {
         if (blockchainRid == null) return null
         if (!nodeDiagnosticContext.hasBlockchainErrors(BlockchainRid.buildFromHex(blockchainRid))) return null
-        return nodeDiagnosticContext.blockchainErrorQueue(BlockchainRid.buildFromHex(blockchainRid)).toString()
+        return JsonObject().apply { add("error", gson.toJsonTree(nodeDiagnosticContext.blockchainErrorQueue(BlockchainRid.buildFromHex(blockchainRid)).value)) }
     }
 
     private fun setErrorResponseBody(response: Response, error: Exception) {
