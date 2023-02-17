@@ -40,11 +40,11 @@ class PostchainService(private val postchainNode: PostchainNode) {
         val brid = maybeBrid
                 ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config, postchainNode.postchainContext.cryptoSystem)
 
-        try {
+        return try {
             val initialized = withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
                 BlockchainApi.initializeBlockchain(ctx, brid, override, config, givenDependencies)
             }
-            return if (initialized) brid else null
+            if (initialized) brid else null
         } catch (e: Exception) {
             val bcData = postchainNode.postchainContext.nodeDiagnosticContext.blockchainDiagnosticData.getOrPut(brid) {
                 DiagnosticData(DiagnosticProperty.BLOCKCHAIN_RID to EagerDiagnosticValue(brid.toHex()),
@@ -52,7 +52,7 @@ class PostchainService(private val postchainNode: PostchainNode) {
             }
             val errors = bcData[DiagnosticProperty.ERROR] as DiagnosticQueue<String>
             errors.add(e.message)
-            return null
+            null
         }
 
     }

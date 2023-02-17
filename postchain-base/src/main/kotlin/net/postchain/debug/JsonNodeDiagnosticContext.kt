@@ -10,6 +10,12 @@ class JsonNodeDiagnosticContext(
 ) : NodeDiagnosticContext,
         MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
 
+    constructor(version: String, pubKey: String, infrastructure: String) : this(
+            DiagnosticProperty.VERSION withValue version,
+            DiagnosticProperty.PUB_KEY withValue pubKey,
+            DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE withValue infrastructure
+    )
+
     constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values), mutableMapOf())
 
     init {
