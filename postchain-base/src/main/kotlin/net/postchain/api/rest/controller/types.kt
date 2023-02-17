@@ -10,6 +10,8 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GtxQuery
+import spark.Request
+import spark.Response
 
 interface ChainModel {
     val chainIID: Long
@@ -18,6 +20,8 @@ interface ChainModel {
 
 interface ExternalModel : ChainModel {
     val path: String
+    fun get(request: Request, response: Response): Any
+    fun post(request: Request, response: Response): Any
 }
 
 interface Model : ChainModel {
