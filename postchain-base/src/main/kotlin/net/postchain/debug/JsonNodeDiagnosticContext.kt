@@ -24,6 +24,7 @@ class JsonNodeDiagnosticContext(
     }
 
     override fun blockchainErrorQueue(blockchainRid: BlockchainRid) = blockchainData(blockchainRid)[DiagnosticProperty.ERROR] as DiagnosticQueue<String>
+    override fun hasBlockchainErrors(blockchainRid: BlockchainRid) = blockchainDiagnosticData.containsKey(blockchainRid) && blockchainErrorQueue(blockchainRid).isNotEmpty()
 
     override fun blockchainData(blockchainRid: BlockchainRid) = blockchainDiagnosticData.getOrPut(blockchainRid) {
         DiagnosticData(

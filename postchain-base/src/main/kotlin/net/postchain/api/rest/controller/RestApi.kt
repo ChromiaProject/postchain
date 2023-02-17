@@ -24,10 +24,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.PmEngineIsAlreadyClosed
-import net.postchain.debug.DiagnosticData
-import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.JsonNodeDiagnosticContext
-import net.postchain.debug.LazyDiagnosticValueCollection
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
@@ -160,8 +157,8 @@ class RestApi(
     }
     private fun checkDiagnosticError(blockchainRid: String?): String? {
         if (blockchainRid == null) return null
-        val errors = nodeDiagnosticContext.blockchainErrorQueue(BlockchainRid.buildFromHex(blockchainRid))
-        return errors?.toString()
+        if (!nodeDiagnosticContext.hasBlockchainErrors(BlockchainRid.buildFromHex(blockchainRid))) return null
+        return nodeDiagnosticContext.blockchainErrorQueue(BlockchainRid.buildFromHex(blockchainRid)).toString()
     }
 
     private fun setErrorResponseBody(response: Response, error: Exception) {

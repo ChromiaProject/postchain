@@ -47,10 +47,11 @@ class PostchainService(private val postchainNode: PostchainNode) {
             if (initialized) brid else null
         } catch (e: Exception) {
             postchainNode.postchainContext.nodeDiagnosticContext.blockchainErrorQueue(brid).add(e.message)
-            null
+            throw InitializationError(e.message)
         }
 
     }
+    class InitializationError(m: String?) : RuntimeException(m)
 
     fun findBlockchain(chainId: Long): Triple<BlockchainRid?, Boolean?, Long> =
             withReadConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
