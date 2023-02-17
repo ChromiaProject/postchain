@@ -4,7 +4,7 @@ import net.postchain.containers.bpm.resources.ResourceLimitType.*
 
 enum class ResourceLimitType {
 
-    CPU, RAM, STORAGE;
+    CPU, RAM, STORAGE, IO_READ, IO_WRITE;
 
     companion object {
         fun from(type: String?): ResourceLimitType? = values().firstOrNull { it.name == type }
@@ -21,6 +21,8 @@ sealed interface ResourceLimit {
                 is Cpu -> CPU
                 is Ram -> RAM
                 is Storage -> STORAGE
+                is IoRead -> IO_READ
+                is IoWrite -> IO_WRITE
             }
         }
     }
@@ -35,6 +37,12 @@ value class Ram(override val value: Long) : ResourceLimit
 @JvmInline
 value class Storage(override val value: Long) : ResourceLimit
 
+@JvmInline
+value class IoRead(override val value: Long) : ResourceLimit
+
+@JvmInline
+value class IoWrite(override val value: Long) : ResourceLimit
+
 
 object ResourceLimitFactory {
 
@@ -46,6 +54,8 @@ object ResourceLimitFactory {
                         CPU -> Cpu(value)
                         RAM -> Ram(value)
                         STORAGE -> Storage(value)
+                        IO_READ -> IoRead(value)
+                        IO_WRITE -> IoWrite(value)
                     }
                 }
     }

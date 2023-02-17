@@ -131,10 +131,6 @@ open class PostchainModel(
         }
     }
 
-    override fun query(query: Query): QueryResult {
-        return QueryResult(blockQueries.query(query.json).get())
-    }
-
     override fun query(query: GtxQuery): Gtv {
         return blockQueries.query(query.name, query.args).get()
     }

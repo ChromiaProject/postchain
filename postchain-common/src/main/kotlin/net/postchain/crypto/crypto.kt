@@ -32,7 +32,7 @@ interface SigMaker {
 typealias Verifier = (ByteArray, Signature) -> Boolean
 
 /**
- * Cryptosystem implements necessary cryptographic functionalities
+ * CryptoSystem implements necessary cryptographic functionalities.
  */
 interface CryptoSystem {
     fun digest(bytes: ByteArray): ByteArray
@@ -50,4 +50,6 @@ interface CryptoSystem {
     fun getRandomBytes(size: Int): ByteArray
 
     fun generateKeyPair(): KeyPair
+
+    fun validatePubKey(pubKey: ByteArray): Boolean
 }

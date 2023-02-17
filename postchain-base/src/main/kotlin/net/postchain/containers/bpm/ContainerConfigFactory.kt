@@ -49,19 +49,9 @@ object ContainerConfigFactory : KLogging() {
             volumes.add(pgdataVol)
         }
 
-        val userSpec = try {
-            val unixSystem = com.sun.security.auth.module.UnixSystem()
-            if (unixSystem.uid == 0L) null else "${unixSystem.uid}:${unixSystem.gid}"
-        } catch (e: Exception) {
-            logger.warn("Unable to fetch current user id: $e")
-            null
-        } catch (le: LinkageError) {
-            logger.warn("Fetching current user id is unsupported: $le")
-            null
-        }
-
-        if (userSpec != null) {
+        if (containerNodeConfig.subnodeUser != null) {
             volumes.add(HostConfig.Bind.builder().from("/etc/passwd").to("/etc/passwd").readOnly(true).build())
+            volumes.add(HostConfig.Bind.builder().from("/etc/group").to("/etc/group").readOnly(true).build())
         }
 
         val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
@@ -106,6 +96,26 @@ object ContainerConfigFactory : KLogging() {
                     }
                 }
                 .apply {
+                    if (resources.hasIoRead()) {
+                        blkioDeviceReadBps(listOf(
+                                HostConfig.BlkioDeviceRate.builder()
+                                        .path(containerNodeConfig.hostMountDevice)
+                                        .rate(resources.ioReadBytes().toInt())
+                                        .build()
+                        ))
+                    }
+                }
+                .apply {
+                    if (resources.hasIoWrite()) {
+                        blkioDeviceWriteBps(listOf(
+                                HostConfig.BlkioDeviceRate.builder()
+                                        .path(containerNodeConfig.hostMountDevice)
+                                        .rate(resources.ioWriteBytes().toInt())
+                                        .build()
+                        ))
+                    }
+                }
+                .apply {
                     if (containerNodeConfig.network != null) {
                         logger.info("Setting container network to ${containerNodeConfig.network}")
                         networkMode(containerNodeConfig.network)
@@ -115,8 +125,7 @@ object ContainerConfigFactory : KLogging() {
 
         return ContainerConfig.builder()
                 .apply {
-                    if (userSpec != null)
-                        user(userSpec)
+                    containerNodeConfig.subnodeUser?.let { user(it) }
                 }
                 .image(containerNodeConfig.containerImage)
                 .hostConfig(hostConfig)
@@ -163,8 +172,11 @@ object ContainerConfigFactory : KLogging() {
         add("POSTCHAIN_MASTER_HOST=${containerNodeConfig.masterHost}")
         add("POSTCHAIN_MASTER_PORT=${containerNodeConfig.masterPort}")
         add("POSTCHAIN_HOST_MOUNT_DIR=${containerNodeConfig.hostMountDir}")
+        add("POSTCHAIN_HOST_MOUNT_DEVICE=${containerNodeConfig.hostMountDevice}")
         add("POSTCHAIN_SUBNODE_DOCKER_IMAGE=${containerNodeConfig.containerImage}")
         add("POSTCHAIN_SUBNODE_HOST=${containerNodeConfig.subnodeHost}")
         add("POSTCHAIN_SUBNODE_NETWORK=${containerNodeConfig.network}")
+
+        add("POSTCHAIN_EXIT_ON_FATAL_ERROR=true")
     }
 }

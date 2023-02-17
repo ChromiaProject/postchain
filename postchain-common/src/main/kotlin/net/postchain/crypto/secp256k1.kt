@@ -117,6 +117,15 @@ fun secp256k1_derivePubKey(privKey: ByteArray): ByteArray {
     return q.getEncoded(true)
 }
 
+fun secp256k_validatePubKey(pubKey: ByteArray): Boolean = try {
+    ECPublicKeyParameters(CURVE.curve.decodePoint(pubKey), CURVE)
+    true
+} catch (_: IllegalArgumentException) {
+    false
+} catch (_: ArrayIndexOutOfBoundsException) {
+    false
+}
+
 fun secp256k1_ecdh(privKey: ByteArray, pubKey: ByteArray): ByteArray {
     val d = BigInteger(1, privKey)
     val Q = CURVE.curve.decodePoint(pubKey)
@@ -201,6 +210,8 @@ open class Secp256K1CryptoSystem : CryptoSystem {
             secp256k1_verify(digest(data), signature.subjectID, signature.data)
         }
     }
+
+    override fun validatePubKey(pubKey: ByteArray): Boolean = secp256k_validatePubKey(pubKey)
 
     /**
      * Generate some amount of random bytes

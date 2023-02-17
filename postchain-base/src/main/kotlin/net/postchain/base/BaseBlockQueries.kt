@@ -187,10 +187,6 @@ open class BaseBlockQueries(
         workerPool.shutdown()
     }
 
-    override fun query(query: String): CompletionStage<String> {
-        return CompletableFuture.failedFuture(UserMistake("Queries are not supported"))
-    }
-
     override fun query(name: String, args: Gtv): CompletionStage<Gtv> {
         return CompletableFuture.failedFuture(UserMistake("Queries are not supported"))
     }
@@ -201,7 +197,7 @@ open class BaseBlockQueries(
                 val decodedWitness = blockchainConfiguration.decodeWitness(material.witness)
                 val decodedBlockHeader = blockchainConfiguration.decodeBlockHeader(material.header) as BaseBlockHeader
 
-                val merkleProofTree = decodedBlockHeader.merklePath(material.txHash, material.txHashes)
+                val merkleProofTree = decodedBlockHeader.merkleProofTree(material.txHash, material.txHashes)
                 ConfirmationProof(
                         material.txHash.data,
                         material.header,

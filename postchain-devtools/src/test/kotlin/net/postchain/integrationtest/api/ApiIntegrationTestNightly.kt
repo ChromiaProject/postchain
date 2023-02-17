@@ -2,6 +2,9 @@
 
 package net.postchain.integrationtest.api
 
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
+import com.google.gson.JsonParser
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
 import net.postchain.base.BaseBlockHeader
@@ -51,7 +54,6 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
     private val gtxTestModule = GTXTestModule()
     private val chainIid = 1
 
-
     private fun doSystemSetup(nodeCount: Int, bcConfFileName: String): SystemSetup {
         configOverrides.setProperty("testpeerinfos", createPeerInfos(nodeCount))
         val bcConfFileMap = mapOf(chainIid to bcConfFileName)
@@ -78,7 +80,6 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
         }
 
         val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem)
-
 
         val blockHeight = 0 // If we set it to zero the node with index 0 will get the post
         val tx = postGtxTransaction(factory, 1, blockHeight, nodeCount, blockchainRIDBytes)
@@ -289,7 +290,6 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
         val blockHeight = 0
         var currentId = 0
 
-
         // ----- TX = 1 ------
         val tx1 = TestOneOpGtxTransaction(factory, currentId)
         val strHexData1 = tx1.getRawData().toHex()
@@ -348,6 +348,51 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
                 .statusCode(400)
     }
 
+    @Test
+    fun `Get Transactions should return blocks and transactions in descending order`() {
+        val nodeCount = 1
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
+        val sysSetup = doSystemSetup(nodeCount, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem)
+        val blocks = mutableListOf<List<TestOneOpGtxTransaction>>()
+        val blockCount = 3
+        val txPerBlockCount = 3
+
+        // create blocks
+        var currentId = 0
+        for (blockHeight in 0 until blockCount) {
+            val transactions = mutableListOf<TestOneOpGtxTransaction>()
+            for (txInBlock in 0 until txPerBlockCount) {
+                transactions.add(postGtxTransaction(factory, ++currentId, blockHeight, nodeCount, blockchainRIDBytes))
+            }
+            buildBlockAndCommit(nodes[0])
+            blocks.add(transactions)
+        }
+
+        // get transactions
+        val body = given().port(nodes[0].getRestApiHttpPort())
+                .get("/transactions/$blockchainRID")
+                .then()
+                .statusCode(200)
+                .extract().body().asString()
+
+        // verify order of blocks and transactions
+        val jsonArray = JsonParser.parseString(body) as JsonArray
+        assertEquals(blockCount * txPerBlockCount, jsonArray.size())
+        var itemInArray = 0
+        for (blockHeight in blockCount - 1 downTo 0) {
+            val transactions = blocks[blockHeight]
+            for (txInBlock in txPerBlockCount - 1 downTo 0) {
+                val txObject: JsonObject = jsonArray[itemInArray] as JsonObject
+                assertEquals(txObject["blockHeight"].asInt, blockHeight)
+                assertContentEquals(txObject["txRID"].asString.hexStringToByteArray(), transactions[txInBlock].getRID())
+                itemInArray++
+            }
+        }
+    }
+
     /**
      * Will create and post a transaction to the servers
      *
@@ -360,7 +405,6 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
             nodeCount: Int,
             bcRid: BlockchainRid
     ): TestOneOpGtxTransaction {
-
         val tx = TestOneOpGtxTransaction(factory, currentId)
         val strHexData = tx.getRawData().toHex()
         //println("Sending TX: $strHexData:")

@@ -62,6 +62,8 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
         )
     }
 
+    val exitOnFatalError: Boolean = getEnvOrBoolean("POSTCHAIN_EXIT_ON_FATAL_ERROR", "exit-on-fatal-error", false)
+
     /**
      * Configuration provider
      */

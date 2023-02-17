@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
+import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
@@ -29,9 +30,9 @@ import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticQueue
+import net.postchain.debug.DiagnosticProperty
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.LocalBlockchainInfo
@@ -280,6 +281,9 @@ open class ContainerManagedBlockchainProcessManager(
         if (dockerContainer == null && job.chainsToStart.isNotEmpty()) {
             logger.debug { dcLog("not found", null) }
 
+            psContainer.updateResourceLimits()
+            fs.applyLimits(psContainer.containerName, psContainer.resourceLimits)
+
             // creating container
             val config = ContainerConfigFactory.createConfig(fs, appConfig, containerNodeConfig, psContainer)
             psContainer.containerId = dockerClient.createContainer(config, job.containerName.toString()).id()!!
@@ -297,8 +301,11 @@ open class ContainerManagedBlockchainProcessManager(
         // 3. Asserting subnode is connected and running
         if (dockerContainer != null && job.chainsToStart.isNotEmpty()) {
             psContainer.containerId = dockerContainer.id()
-            if (dockerContainer.state() == "exited" || dockerContainer.state() == "created" || dockerContainer.state() == "paused") {
-                logger.info { dcLog("stopped and will be started", psContainer) }
+            val dcState = dockerContainer.state()
+            if (dcState in listOf("exited", "created", "paused")) {
+                logger.info { dcLog("$dcState and will be started", psContainer) }
+                psContainer.updateResourceLimits()
+                fs.applyLimits(psContainer.containerName, psContainer.resourceLimits)
                 dockerClient.startContainer(psContainer.containerId)
             }
             if (psContainer.state != RUNNING) {
@@ -328,11 +335,15 @@ open class ContainerManagedBlockchainProcessManager(
         job.chainsToStart.forEach { chain ->
             val process = createBlockchainProcess(chain, psContainer)
             logger.debug { "[${nodeName()}]: $scope -- ContainerBlockchainProcess created: $process" }
-            logger.info { "[${nodeName()}]: $scope -- Blockchain started: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+            if (process == null) {
+                logger.error { "[${nodeName()}]: $scope -- Blockchain didn't start: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+            } else {
+                logger.info { "[${nodeName()}]: $scope -- Blockchain started: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+            }
         }
 
         // 6. Stop container if it is empty
-        if (psContainer.isEmpty()) {
+        if (job.chainsToStart.isEmpty() && psContainer.isEmpty()) {
             logger.info { "[${nodeName()}]: $scope -- Container is empty and will be stopped: ${job.containerName}" }
             psContainer.stop()
             postchainContainers.remove(psContainer.containerName)
@@ -349,7 +360,6 @@ open class ContainerManagedBlockchainProcessManager(
 
     private fun initContainerWorkingDir(fs: FileSystem, container: PostchainContainer): Path? =
             fs.createContainerRoot(container.containerName, container.resourceLimits)
-                    ?.also { fs.hostPgdataOf(container.containerName).toFile().mkdirs() }
 
     private fun containerHealthcheckJobHandler(containersInProgress: Set<String>) {
         val start = System.currentTimeMillis()
@@ -371,9 +381,9 @@ open class ContainerManagedBlockchainProcessManager(
                 val psContainer = postchainContainers[cname]!!
 
                 // Check for resource limit updates
-                val updates = psContainer.checkForResourceLimitsUpdates()
-                if (updates.first) {
-                    logger.warn { "Resource limits for container ${cname.name} have been changed from ${psContainer.resourceLimits} to ${updates.second}" }
+                val currentResourceLimits = psContainer.resourceLimits
+                if (psContainer.updateResourceLimits()) {
+                    logger.warn { "Resource limits for container ${cname.name} have been changed from $currentResourceLimits to ${psContainer.resourceLimits}" }
                 }
 
                 val dc = running.firstOrNull { it.hasName(cname.name) }
@@ -391,11 +401,6 @@ open class ContainerManagedBlockchainProcessManager(
                 }
                 if (chainIds.isNotEmpty()) {
                     logger.warn { "[${nodeName()}]: $scope -- Container chains have been terminated: $chainIds" }
-                }
-
-                if (psContainer.isEmpty()) {
-                    psContainer.stop()
-                    postchainContainers.remove(cname)
                 }
             }
         }
@@ -480,15 +485,18 @@ open class ContainerManagedBlockchainProcessManager(
         return chains.computeIfAbsent(chainId) {
             val brid = getBridByChainId(chainId)
             val container = directoryDataSource.getContainerForBlockchain(brid)
-            val containerName = ContainerName.create(appConfig, container)
+            val containerIid = getContainerIid(container)
+            val containerName = ContainerName.create(appConfig, container, containerIid)
             Chain(containerName, chainId, brid)
         }
     }
 
-    private fun getBridByChainId(chainId: Long): BlockchainRid {
-        return withReadConnection(storage, chainId) { ctx ->
-            DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
-        }
+    private fun getBridByChainId(chainId: Long): BlockchainRid = withReadConnection(storage, chainId) { ctx ->
+        DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
+    }
+
+    private fun getContainerIid(name: String): Int = storage.withWriteConnection { ctx ->
+        DatabaseAccess.of(ctx).getContainerIid(ctx, name) ?: DatabaseAccess.of(ctx).createContainer(ctx, name)
     }
 
     private fun removeContainersIfExist() {

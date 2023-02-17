@@ -24,7 +24,8 @@ class DefaultPostchainContainer(
     private val processes = mutableMapOf<Long, ContainerBlockchainProcess>()
 
     // NB: Resources are per directoryContainerName, not nodeContainerName
-    override val resourceLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
+    @Volatile
+    override var resourceLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
 
     override fun shortContainerId(): String? {
         return DockerTools.shortContainerId(containerId)
@@ -98,9 +99,14 @@ class DefaultPostchainContainer(
 
     override fun isSubnodeConnected() = subnodeAdminClient.isSubnodeConnected()
 
-    override fun checkForResourceLimitsUpdates(): Pair<Boolean, ContainerResourceLimits?> {
-        val newLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
-                .takeIf { resourceLimits != it }
-        return (newLimits != null) to newLimits
+    override fun updateResourceLimits(): Boolean {
+        val oldResourceLimits = resourceLimits
+        val newResourceLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
+        return if (newResourceLimits != oldResourceLimits) {
+            resourceLimits = newResourceLimits
+            true
+        } else {
+            false
+        }
     }
 }
