@@ -4,8 +4,7 @@ package net.postchain.api.rest.controller
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
-import kong.unirest.Unirest
-import kong.unirest.UnirestException
+import kong.unirest.HttpMethod
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_METHODS
@@ -103,10 +102,10 @@ class RestApi(
     }
 
     private fun buildErrorHandler(http: Service) {
-        http.exception(NotFoundError::class.java) { error, _, response ->
+        http.exception(NotFoundError::class.java) { error, request, response ->
             logger.warn("NotFound: ${error.message}")
             response.status(404)
-            setErrorResponseBody(response, error)
+            transformErrorResponseFromDiagnostics(request, response, error)
         }
 
         http.exception(BadFormatError::class.java) { error, _, response ->
@@ -131,9 +130,9 @@ class RestApi(
             setErrorResponseBody(response, error)
         }
 
-        http.exception(UnavailableException::class.java) { error, _, response ->
+        http.exception(UnavailableException::class.java) { error, request, response ->
             response.status(503) // Service unavailable
-            setErrorResponseBody(response, error)
+            transformErrorResponseFromDiagnostics(request, response, error)
         }
 
         http.exception(PmEngineIsAlreadyClosed::class.java) { error, _, response ->
@@ -141,19 +140,28 @@ class RestApi(
             setErrorResponseBody(response, error)
         }
 
-        http.exception(UnirestException::class.java) { error, _, response ->
-            logger.warn("Unable to redirect to subnode: ${error.message}")
-            response.status(500)
-            setErrorResponseBody(response, error)
-        }
-
-        http.exception(Exception::class.java) { error, _, response ->
+        http.exception(Exception::class.java) { error, request, response ->
             logger.error("Exception: $error", error)
             response.status(500)
-            setErrorResponseBody(response, error)
+            transformErrorResponseFromDiagnostics(request, response, error)
         }
 
         http.notFound { _, _ -> toJson(UserMistake("Not found")) }
+    }
+
+    private fun transformErrorResponseFromDiagnostics(request: Request, response: Response, error: Exception) {
+        val blockchainRid = if (request.params(PARAM_BLOCKCHAIN_RID) != null) checkBlockchainRID(request) else null
+        checkDiagnosticError(blockchainRid)?.let { errorMsg ->
+            response.status(500)
+            response.type(JSON_CONTENT_TYPE)
+            response.body(gson.toJson(ErrorBody(errorMsg)))
+        } ?: setErrorResponseBody(response, error)
+    }
+    private fun checkDiagnosticError(blockchainRid: String?): String? {
+        if (blockchainRid == null) return null
+        val blockchains = (nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN] as LazyDiagnosticValueCollection?)?.collection as Collection<DiagnosticData>?
+        val errors = blockchains?.find { it[DiagnosticProperty.BLOCKCHAIN_RID]?.value as String? == blockchainRid }?.get(DiagnosticProperty.ERROR)?.value
+        return errors?.toString()
     }
 
     private fun setErrorResponseBody(response: Response, error: Exception) {
@@ -571,17 +579,10 @@ class RestApi(
     private fun chainModel(request: Request): ChainModel {
         val blockchainRID = checkBlockchainRID(request)
         val model = models[blockchainRID.uppercase()]
-                ?: throw NotFoundError(checkDiagnosticError(blockchainRID)
-                        ?: "Can't find blockchain with blockchainRID: $blockchainRID")
+                ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRID")
 
         if (!model.live) throw UnavailableException("Blockchain is unavailable")
         return model
-    }
-
-    private fun checkDiagnosticError(blockchainRid: String): String? {
-        val blockchains = (nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN] as LazyDiagnosticValueCollection?)?.collection as Collection<DiagnosticData>?
-        val errors = blockchains?.find { it[DiagnosticProperty.BLOCKCHAIN_RID]?.value as String? == blockchainRid }?.get(DiagnosticProperty.ERROR)?.value
-        return errors?.toString()
     }
 
     private fun model(request: Request): Model {
@@ -595,27 +596,23 @@ class RestApi(
     }
 
     private fun redirectGet(responseType: String = JSON_CONTENT_TYPE, localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
-        return handler@ { request, response ->
+        return redirect(HttpMethod.GET, responseType, localHandler)
+    }
+
+    private fun redirectPost(responseType: String = JSON_CONTENT_TYPE, localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
+        return redirect(HttpMethod.POST, responseType, localHandler)
+    }
+
+    private fun redirect(method: HttpMethod, responseType: String = JSON_CONTENT_TYPE, localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
+        return { request, response ->
             response.type(responseType)
             val model = chainModel(request)
             if (model is ExternalModel) {
                 logger.trace { "External REST API model found: $model" }
-                val url = model.path + request.uri() + (request.queryString()?.let { "?$it" } ?: "")
-                logger.trace { "Redirecting get request to $url" }
-                val blockchainRid = checkBlockchainRID(request)
-                return@handler try {
-                    val externalResponse = Unirest.get(url)
-                            .header("Accept", request.headers("Accept"))
-                            .asBytes()
-                    response.status(externalResponse.status)
-                    response.type(externalResponse.headers.get("Content-Type").firstOrNull())
-                    val chainErrors = if (externalResponse.status !in 200..299) {
-                        checkDiagnosticError(blockchainRid)?.let { JsonObject().apply { addProperty("error", it) }.toString() }
-                    } else null
-                    chainErrors ?: externalResponse.body
-                } catch (e: UnirestException) {
-                    checkDiagnosticError(blockchainRid)?.let { JsonObject().apply { addProperty("error", it) }.toString() }
-                            ?: "Can't find blockchain $blockchainRid"
+                when (method) {
+                    HttpMethod.GET -> model.get(request, response)
+                    HttpMethod.POST -> model.post(request, response)
+                    else -> throw UnsupportedOperationException("Unsupported HTTP method: $method")
                 }
             } else {
                 logger.trace { "Local REST API model found: $model" }
@@ -623,28 +620,4 @@ class RestApi(
             }
         }
     }
-
-    private fun redirectPost(responseType: String = JSON_CONTENT_TYPE, localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
-        return { request, response ->
-            response.type(responseType)
-            val model = chainModel(request)
-            if (model is ExternalModel) {
-                logger.trace { "External REST API model found: $model" }
-                val url = model.path + request.uri()
-                logger.trace { "Redirecting post request to $url" }
-                val externalResponse = Unirest.post(url)
-                        .header("Accept", request.headers("Accept"))
-                        .header("Content-Type", request.headers("Content-Type"))
-                        .body(request.bodyAsBytes())
-                        .asBytes()
-                response.status(externalResponse.status)
-                response.type(externalResponse.headers.get("Content-Type").firstOrNull())
-                externalResponse.body
-            } else {
-                logger.trace { "Local REST API model found: $model" }
-                localHandler(request, response)
-            }
-        }
-    }
-
 }

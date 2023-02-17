@@ -2,13 +2,15 @@ package net.postchain.debug
 
 import com.google.gson.JsonObject
 import net.postchain.api.rest.json.JsonFactory
+import net.postchain.common.BlockchainRid
 
 class JsonNodeDiagnosticContext(
-        private val properties: DiagnosticData
+        private val properties: DiagnosticData,
+        override val blockchainDiagnosticData: MutableMap<BlockchainRid, DiagnosticData>
 ) : NodeDiagnosticContext,
         MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
 
-    constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values))
+    constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values), mutableMapOf())
 
     private val json = JsonFactory.makePrettyJson()
 

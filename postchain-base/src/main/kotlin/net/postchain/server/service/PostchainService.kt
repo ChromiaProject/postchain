@@ -9,6 +9,10 @@ import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BadDataMistake
 import net.postchain.crypto.PubKey
+import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DiagnosticQueue
+import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.gtv.Gtv
 
 class PostchainService(private val postchainNode: PostchainNode) {
@@ -36,11 +40,21 @@ class PostchainService(private val postchainNode: PostchainNode) {
         val brid = maybeBrid
                 ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config, postchainNode.postchainContext.cryptoSystem)
 
-        val initialized = withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
-            BlockchainApi.initializeBlockchain(ctx, brid, override, config, givenDependencies)
+        try {
+            val initialized = withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
+                BlockchainApi.initializeBlockchain(ctx, brid, override, config, givenDependencies)
+            }
+            return if (initialized) brid else null
+        } catch (e: Exception) {
+            val bcData = postchainNode.postchainContext.nodeDiagnosticContext.blockchainDiagnosticData.getOrPut(brid) {
+                DiagnosticData(DiagnosticProperty.BLOCKCHAIN_RID to EagerDiagnosticValue(brid.toHex()),
+                        DiagnosticProperty.ERROR to DiagnosticQueue<String>(5))
+            }
+            val errors = bcData[DiagnosticProperty.ERROR] as DiagnosticQueue<String>
+            errors.add(e.message)
+            return null
         }
 
-        return if (initialized) brid else null
     }
 
     fun findBlockchain(chainId: Long): Triple<BlockchainRid?, Boolean?, Long> =

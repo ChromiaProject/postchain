@@ -16,6 +16,7 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DiagnosticQueue
 import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.debug.LazyDiagnosticValueCollection
 import net.postchain.debug.EagerDiagnosticValue
@@ -57,7 +58,7 @@ open class BaseBlockchainProcessManager(
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val bridToChainId = mutableMapOf<BlockchainRid, Long>()
-    protected val blockchainDiagnostics = mutableMapOf<BlockchainRid, DiagnosticData>()
+    protected val blockchainDiagnostics get() = nodeDiagnosticContext.blockchainDiagnosticData
     protected val extensions: List<BlockchainProcessManagerExtension> = bpmExtensions
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
     private val scheduledForStart = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
@@ -69,7 +70,7 @@ open class BaseBlockchainProcessManager(
     companion object : KLogging()
 
     init {
-        nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN] = LazyDiagnosticValueCollection { blockchainDiagnostics.values }
+        nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN] = LazyDiagnosticValueCollection { nodeDiagnosticContext.blockchainDiagnosticData.values }
     }
 
     /**
@@ -129,7 +130,9 @@ open class BaseBlockchainProcessManager(
                         stopBlockchain(chainId, bTrace, true)
 
                         startInfo("Starting of blockchain", chainId)
+                        logger.error { "Starting blockchain $chainId" }
                         val blockchainConfig = makeBlockchainConfiguration(chainId)
+                        logger.error { "blockchain config created for chain $chainId" }
 
                         withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()) {
                             val processName = BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
@@ -156,6 +159,9 @@ open class BaseBlockchainProcessManager(
                             )
                         }
                         blockchainConfig.blockchainRid
+                    } catch (e: Exception) {
+                        logger.error { "Exception caught starting chain $chainId: ${e.message}" }
+                        throw e
                     } finally {
                         scheduledForStart.remove(chainId)
                     }
@@ -192,7 +198,8 @@ open class BaseBlockchainProcessManager(
                         DiagnosticData(
                                 DiagnosticProperty.BLOCKCHAIN_RID to EagerDiagnosticValue(blockchainConfig.blockchainRid.toHex()),
                                 DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT to LazyDiagnosticValue { engine.getBlockQueries().getBestHeight().get() },
-                                DiagnosticProperty.BLOCKCHAIN_NODE_PEERS to LazyDiagnosticValue { connectionManager.getNodesTopology(chainId) })
+                                DiagnosticProperty.BLOCKCHAIN_NODE_PEERS to LazyDiagnosticValue { connectionManager.getNodesTopology(chainId) },
+                                DiagnosticProperty.ERROR to DiagnosticQueue<String>(5))
                     })
                     extensions.forEach { ext -> ext.connectProcess(it) }
                     chainIdToBrid[chainId] = blockchainConfig.blockchainRid
