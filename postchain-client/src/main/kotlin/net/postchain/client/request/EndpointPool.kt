@@ -1,8 +1,7 @@
 package net.postchain.client.request
 
-interface EndpointPool {
-    fun size(): Int
-    fun next(): Endpoint
+interface EndpointPool : Iterable<Endpoint> {
+    val size: Int
 
     companion object {
         @JvmStatic

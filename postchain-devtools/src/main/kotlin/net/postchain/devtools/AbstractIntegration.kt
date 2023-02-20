@@ -1,6 +1,7 @@
 package net.postchain.devtools
 
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockTrace

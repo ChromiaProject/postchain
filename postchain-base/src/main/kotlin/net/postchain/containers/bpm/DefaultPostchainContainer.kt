@@ -1,8 +1,13 @@
 package net.postchain.containers.bpm
 
 import mu.KLogging
+import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.docker.DockerTools
 import net.postchain.containers.bpm.rpc.SubnodeAdminClient
+import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DiagnosticQueue
+import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.managed.DirectoryDataSource
 
 class DefaultPostchainContainer(
@@ -11,6 +16,7 @@ class DefaultPostchainContainer(
         override var containerPorts: ContainerPorts,
         override var state: ContainerState,
         private val subnodeAdminClient: SubnodeAdminClient,
+        private val nodeDiagnosticContext: NodeDiagnosticContext,
         override var containerId: String? = null,
 ) : PostchainContainer {
 
@@ -19,7 +25,8 @@ class DefaultPostchainContainer(
     private val processes = mutableMapOf<Long, ContainerBlockchainProcess>()
 
     // NB: Resources are per directoryContainerName, not nodeContainerName
-    override val resourceLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
+    @Volatile
+    override var resourceLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
 
     override fun shortContainerId(): String? {
         return DockerTools.shortContainerId(containerId)
@@ -57,7 +64,10 @@ class DefaultPostchainContainer(
                 if (it) processes[process.chainId] = process
             }
         } else {
-            logger.error { "Can't start process: config at height 0 is absent" }
+            val errorQueue = nodeDiagnosticContext.blockchainErrorQueue(process.blockchainRid)
+            val msg = "Can't start process: config at height 0 is absent"
+            errorQueue?.add(msg)
+            logger.error { msg }
             false
         }
     }
@@ -89,4 +99,15 @@ class DefaultPostchainContainer(
     override fun isEmpty() = processes.isEmpty()
 
     override fun isSubnodeConnected() = subnodeAdminClient.isSubnodeConnected()
+
+    override fun updateResourceLimits(): Boolean {
+        val oldResourceLimits = resourceLimits
+        val newResourceLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
+        return if (newResourceLimits != oldResourceLimits) {
+            resourceLimits = newResourceLimits
+            true
+        } else {
+            false
+        }
+    }
 }

@@ -1,14 +1,11 @@
 package net.postchain.gtx
 
-import com.beanit.jasn1.ber.types.BerOctetString
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.gtxmessages.RawGtxBody
-import net.postchain.gtv.gtxmessages.RawGtxBody.Signers
 import net.postchain.gtv.merkle.MerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.data.ExtOpData
@@ -36,12 +33,6 @@ class GtxBody(
             ExtOpData.build(op, idx, this)
         }.toTypedArray()
     }
-
-    internal fun toRaw() = RawGtxBody(
-        BerOctetString(blockchainRid.data),
-        RawGtxBody.Operations(operations.map { it.toRaw() }),
-        Signers(signers.map { BerOctetString(it) })
-    )
 
     /**
      * Elements are structured like an ordered array with elements:
@@ -81,14 +72,6 @@ class GtxBody(
     }
 
     companion object {
-        @JvmStatic
-        internal fun fromAsn(body: RawGtxBody): GtxBody {
-            return GtxBody(
-                BlockchainRid(body.blockchainRid.value),
-                body.operations.seqOf.map { GtxOp.fromAsn(it) },
-                body.signers.seqOf.map { it.value }
-            )
-        }
 
         @JvmStatic
         fun fromGtv(gtv: Gtv): GtxBody {

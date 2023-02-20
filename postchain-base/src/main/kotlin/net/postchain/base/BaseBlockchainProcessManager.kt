@@ -5,15 +5,18 @@ package net.postchain.base
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
+import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
-import net.postchain.core.block.*
+import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
@@ -52,23 +55,15 @@ open class BaseBlockchainProcessManager(
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val bridToChainId = mutableMapOf<BlockchainRid, Long>()
-    protected val blockchainProcessesDiagnosticData = mutableMapOf<BlockchainRid, MutableMap<DiagnosticProperty, () -> Any>>()
     protected val extensions: List<BlockchainProcessManagerExtension> = bpmExtensions
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
     private val scheduledForStart = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
-
-    // FYI: [et]: For integration testing. Will be removed or refactored later
-    private val blockchainProcessesLoggers = mutableMapOf<Long, Timer>() // TODO: [POS-90]: ?
 
     // For DEBUG only
     var insideATest = false
     var blockDebug: BlockTrace? = null
 
     companion object : KLogging()
-
-    init {
-        initiateChainDiagnosticData()
-    }
 
     /**
      * Put the startup operation of chainId in the [executor]'s work queue.
@@ -154,6 +149,13 @@ open class BaseBlockchainProcessManager(
                             )
                         }
                         blockchainConfig.blockchainRid
+                    } catch (e: Exception) {
+                        withReadConnection(storage, chainId) {
+                            DatabaseAccess.of(it).getBlockchainRid(it)?.let { brid ->
+                                nodeDiagnosticContext.blockchainErrorQueue(brid).add(e.message)
+                            }
+                        }
+                        throw e
                     } finally {
                         scheduledForStart.remove(chainId)
                     }
@@ -186,7 +188,11 @@ open class BaseBlockchainProcessManager(
     ) {
         blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine)
                 .also {
-                    it.registerDiagnosticData(blockchainProcessesDiagnosticData.getOrPut(blockchainConfig.blockchainRid) { mutableMapOf() })
+                    val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainConfig.blockchainRid).also { data ->
+                        data[DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT] = LazyDiagnosticValue { engine.getBlockQueries().getBestHeight().get() }
+                        data[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS] = LazyDiagnosticValue { connectionManager.getNodesTopology(chainId) }
+                    }
+                    it.registerDiagnosticData(diagnosticData)
                     extensions.forEach { ext -> ext.connectProcess(it) }
                     chainIdToBrid[chainId] = blockchainConfig.blockchainRid
                     bridToChainId[blockchainConfig.blockchainRid] = chainId
@@ -194,11 +200,17 @@ open class BaseBlockchainProcessManager(
     }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
-        return blockchainProcesses[chainId]
+        return chainSynchronizers[chainId]?.withLock {
+            blockchainProcesses[chainId]
+        }
     }
 
     override fun retrieveBlockchain(blockchainRid: BlockchainRid): BlockchainProcess? {
-        return blockchainProcesses[bridToChainId[blockchainRid]]
+        return bridToChainId[blockchainRid]?.let {
+            chainSynchronizers[it]?.withLock {
+                blockchainProcesses[it]
+            }
+        }
     }
 
     /**
@@ -219,13 +231,15 @@ open class BaseBlockchainProcessManager(
                 }
             }
         }
-        if (!restart) chainSynchronizers.remove(chainId)
+        if (!restart) {
+            chainIdToBrid.remove(chainId).also { bridToChainId.remove(it) }
+            chainSynchronizers.remove(chainId)
+        }
     }
 
     protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
-        val blockchainRid = chainIdToBrid.remove(chainId)
-        blockchainProcessesDiagnosticData.remove(blockchainRid)
-        bridToChainId.remove(blockchainRid)
+        val blockchainRid = chainIdToBrid[chainId]
+        nodeDiagnosticContext.removeBlockchainData(blockchainRid)
         blockchainProcesses.remove(chainId)?.also {
             stopInfoDebug("Stopping of blockchain", chainId, bTrace)
             extensions.forEach { ext -> ext.disconnectProcess(it) }
@@ -250,7 +264,7 @@ open class BaseBlockchainProcessManager(
             it.shutdown()
         }
         blockchainProcesses.clear()
-        blockchainProcessesDiagnosticData.clear()
+        nodeDiagnosticContext.clearBlockchainData()
         chainIdToBrid.clear()
         bridToChainId.clear()
         logger.debug("[${nodeName()}]: Stopped BlockchainProcessManager")
@@ -309,24 +323,6 @@ open class BaseBlockchainProcessManager(
     protected fun isConfigurationChanged(chainId: Long): Boolean {
         return withReadConnection(storage, chainId) { eContext ->
             blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
-        }
-    }
-
-    protected fun initiateChainDiagnosticData() {
-        nodeDiagnosticContext?.addProperty(DiagnosticProperty.BLOCKCHAIN) {
-            val diagnosticData = blockchainProcessesDiagnosticData.toMutableMap()
-
-            connectionManager.getNodesTopology().forEach { (blockchainRid, topology) ->
-                diagnosticData.computeIfPresent(BlockchainRid.buildFromHex(blockchainRid)) { _, properties ->
-                    properties.apply {
-                        put(DiagnosticProperty.BLOCKCHAIN_NODE_PEERS) { topology }
-                    }
-                }
-            }
-
-            diagnosticData.mapValues { (_, v) ->
-                v.map { e -> e.key.prettyName to e.value() }.toMap()
-            }.values.toTypedArray()
         }
     }
 

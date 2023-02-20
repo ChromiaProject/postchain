@@ -9,12 +9,14 @@ import net.postchain.api.rest.model.TxRID
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.ConfirmationProof
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.toHex
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.merkle.path.ArrayGtvPathElement
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.gtv.merkle.proof.ProofNodeGtvArrayHead
 import net.postchain.gtv.merkle.proof.ProofValueGtvLeaf
-import org.hamcrest.Matchers.isEmptyString
 import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -24,7 +26,7 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 /**
- * [GetConfirmation] and [GetTx] endpoints have common part,
+ * `GetConfirmation` and `GetTx` endpoints have common part,
  * so see [RestApiGetTxEndpointTest] for additional tests
  */
 class RestApiGetConfirmationProofEndpointTest {
@@ -32,6 +34,7 @@ class RestApiGetConfirmationProofEndpointTest {
     private val basePath = "/api/v1"
     private lateinit var restApi: RestApi
     private lateinit var model: Model
+    private lateinit var proof: GtvMerkleProofTree
     private val blockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
     private val txHashHex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
@@ -43,11 +46,8 @@ class RestApiGetConfirmationProofEndpointTest {
         }
 
         restApi = RestApi(0, basePath)
-    }
 
-    @AfterEach
-    fun tearDown() {
-        restApi.stop()
+        proof = buildDummyProof()
     }
 
     private fun buildDummyProof(): GtvMerkleProofTree {
@@ -62,15 +62,20 @@ class RestApiGetConfirmationProofEndpointTest {
         return GtvMerkleProofTree(rootProofElem)
     }
 
+    @AfterEach
+    fun tearDown() {
+        restApi.stop()
+    }
+
     @Test
     fun test_getConfirmationProof_ok() {
         val expectedObject = ConfirmationProof(
-                txHashHex.toByteArray(),
+                txHashHex.hexStringToByteArray(),
                 byteArrayOf(0x0a, 0x0b, 0x0c),
                 BaseBlockWitness(
                         byteArrayOf(0x0b),
                         arrayOf()),
-                buildDummyProof()
+                proof
         )
 
         whenever(model.getConfirmationProof(TxRID(txHashHex.hexStringToByteArray())))
@@ -82,9 +87,6 @@ class RestApiGetConfirmationProofEndpointTest {
                 .get("/tx/$blockchainRID/$txHashHex/confirmationProof")
                 .then()
                 .statusCode(200)
-                .body("hash", org.hamcrest.Matchers.not(isEmptyString()))
-                .body("blockHeader", equalTo("0A0B0C"))
-                .body("signatures.size()", equalTo(0))
-                .body("merkleProofTree.size()", equalTo(5))
+                .body("proof", equalTo(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(expectedObject)).toHex()))
     }
 }

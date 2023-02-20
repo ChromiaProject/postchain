@@ -13,6 +13,7 @@ import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withWriteConnection
 import net.postchain.common.hexStringToByteArray
+import net.postchain.concurrent.util.get
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker

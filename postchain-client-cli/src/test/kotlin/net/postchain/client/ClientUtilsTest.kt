@@ -2,12 +2,12 @@ package net.postchain.client
 
 import assertk.assert
 import assertk.assertions.isEqualTo
-import net.postchain.client.cli.encodeArg
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
+import net.postchain.gtv.parse.GtvParser
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -17,13 +17,13 @@ internal class ClientUtilsTest {
     @ParameterizedTest
     @MethodSource("validData")
     fun validEncodingTest(input: String, expected: Gtv) {
-        assert(encodeArg(input)).isEqualTo(expected)
+        assert(GtvParser.parse(input)).isEqualTo(expected)
     }
 
     @ParameterizedTest
     @MethodSource("invalidData")
     fun invalidEncodingTest(input: String) {
-        assertThrows<IllegalArgumentException> { encodeArg(input) }
+        assertThrows<IllegalArgumentException> { GtvParser.parse(input) }
     }
 
     companion object {

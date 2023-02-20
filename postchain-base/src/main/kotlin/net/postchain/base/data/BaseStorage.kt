@@ -5,18 +5,22 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.BaseAppContext
 import net.postchain.base.BaseEContext
+import net.postchain.base.data.SqlUtils.isFatal
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.AppContext
 import net.postchain.core.EContext
 import net.postchain.core.Storage
+import java.sql.Connection
 import java.sql.SQLException
 import javax.sql.DataSource
+import kotlin.system.exitProcess
 
 class BaseStorage(
         private val readDataSource: DataSource,
         private val writeDataSource: DataSource,
         private val db: DatabaseAccess,
         override val readConcurrency: Int,
+        override val exitOnFatalError: Boolean,
         private val savepointSupport: Boolean = true
 ) : Storage {
 
@@ -31,10 +35,7 @@ class BaseStorage(
     }
 
     override fun closeReadConnection(context: AppContext) {
-        if (!context.conn.isReadOnly) {
-            throw ProgrammerMistake("Trying to close a writable connection as a read-only connection")
-        }
-        context.conn.close()
+        closeReadConnection(context.conn)
     }
 
     override fun openWriteConnection(): AppContext {
@@ -42,16 +43,7 @@ class BaseStorage(
     }
 
     override fun closeWriteConnection(context: AppContext, commit: Boolean) {
-        with(context.conn) {
-            when {
-                isReadOnly -> throw ProgrammerMistake(
-                        "Trying to close a read-only connection as a writeable connection")
-                commit -> commit()
-                else -> rollback()
-            }
-
-            close()
-        }
+        closeWriteConnection(context.conn, commit)
     }
 
     override fun openReadConnection(chainID: Long): EContext {
@@ -63,10 +55,7 @@ class BaseStorage(
     }
 
     override fun closeReadConnection(context: EContext) {
-        if (!context.conn.isReadOnly) {
-            throw ProgrammerMistake("trying to close a writable connection as a read-only connection")
-        }
-        context.conn.close()
+        closeReadConnection(context.conn)
     }
 
     override fun openWriteConnection(chainID: Long): EContext {
@@ -74,17 +63,7 @@ class BaseStorage(
     }
 
     override fun closeWriteConnection(context: EContext, commit: Boolean) {
-        with(context.conn) {
-            //            logger.debug("${context.nodeID} BaseStorage.closeWriteConnection()")
-            when {
-                isReadOnly -> throw ProgrammerMistake(
-                        "trying to close a read-only connection as a writeable connection")
-                commit -> commit()
-                else -> rollback()
-            }
-
-            close()
-        }
+        closeWriteConnection(context.conn, commit)
     }
 
     override fun isSavepointSupported(): Boolean = savepointSupport
@@ -117,7 +96,40 @@ class BaseStorage(
         } catch (e: SQLException) {
             logger.debug(e) { "SQLException in BaseStorage.close()" }
         }
+    }
 
+    private fun closeReadConnection(connection: Connection) {
+        if (!connection.isReadOnly) {
+            throw ProgrammerMistake("trying to close a writable connection as a read-only connection")
+        }
+        connection.close()
+    }
+
+    private fun closeWriteConnection(connection: Connection, commit: Boolean) {
+        try {
+            with(connection) {
+                when {
+                    isReadOnly -> throw ProgrammerMistake(
+                            "trying to close a read-only connection as a writeable connection")
+
+                    commit -> commit()
+                    else -> rollback()
+                }
+
+                close()
+            }
+        } catch (e: SQLException) {
+            if (e.isFatal()) {
+                logger.error("Fatal database error occurred: ${e.message}")
+                if (exitOnFatalError) {
+                    exitProcess(1)
+                } else {
+                    throw e
+                }
+            } else {
+                throw e
+            }
+        }
     }
 
     private fun buildAppContext(dataSource: DataSource): AppContext =

@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.7.1</version>
+        <version>3.8.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
@@ -52,6 +52,10 @@
             <artifactId>http4k-client-apache</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-client-apache-async</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.google.code.gson</groupId>
             <artifactId>gson</artifactId>
         </dependency>
@@ -68,6 +72,16 @@
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
             <scope>runtime</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-collections</groupId>
+                    <artifactId>commons-collections</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>

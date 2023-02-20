@@ -3,7 +3,6 @@
 package net.postchain.api.rest.controller
 
 import com.google.gson.JsonObject
-import net.postchain.api.rest.json.JsonFactory
 import net.postchain.debug.NodeDiagnosticContext
 
 interface DebugInfoQuery {
@@ -14,39 +13,28 @@ interface DebugInfoQuery {
     fun queryDebugInfo(query: String?): String
 }
 
-class DefaultDebugInfoQuery(val nodeDiagnosticContext: NodeDiagnosticContext?) : DebugInfoQuery {
+class DisabledDebugInfoQuery: DebugInfoQuery {
+    override fun queryDebugInfo(query: String?): String {
+        return JsonObject().apply {
+            addProperty("error", "Debug endpoint is not enabled. Use --debug cli option to enable it.")
+        }.toString()
+    }
+}
 
-    private val jsonBuilder = JsonFactory.makePrettyJson()
+class DefaultDebugInfoQuery(val nodeDiagnosticContext: NodeDiagnosticContext) : DebugInfoQuery {
 
     override fun queryDebugInfo(query: String?): String {
-        return if (nodeDiagnosticContext != null) {
-            when (query) {
-                null -> collectDebugInfo()
-                else -> unknownQuery(query)
-            }
-        } else {
-            debugDisabled()
+        return when (query) {
+            null -> collectDebugInfo()
+            else -> unknownQuery(query)
         }
     }
 
-    private fun collectDebugInfo(): String {
-        return JsonObject()
-                .apply {
-                    nodeDiagnosticContext?.getProperties()?.forEach { (property, value) ->
-                        add(property, jsonBuilder.toJsonTree(value))
-                    }
-                }.let(jsonBuilder::toJson)
-    }
+    private fun collectDebugInfo() = nodeDiagnosticContext.format()
 
     private fun unknownQuery(query: String): String {
         return JsonObject().apply {
             addProperty("Error", "Unknown query: $query")
-        }.toString()
-    }
-
-    private fun debugDisabled(): String {
-        return JsonObject().apply {
-            addProperty("Error", "Debug mode is not enabled. Use --debug cli option to enable it.")
         }.toString()
     }
 }

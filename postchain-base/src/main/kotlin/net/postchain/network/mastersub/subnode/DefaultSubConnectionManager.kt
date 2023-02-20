@@ -3,6 +3,7 @@ package net.postchain.network.mastersub.subnode
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
+import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.NodeRid
@@ -10,6 +11,7 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.common.ChainsWithOneConnection
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.common.LazyPacket
+import net.postchain.network.mastersub.MasterSubQueryManager
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.MsCodec
 import net.postchain.network.mastersub.protocol.MsConnectedPeersMessage
@@ -27,6 +29,7 @@ import kotlin.concurrent.schedule
  * [net.postchain.network.mastersub.master.MasterConnectionManager] of master node.
  */
 interface SubConnectionManager : ConnectionManager {
+    val masterSubQueryManager: MasterSubQueryManager
 
     /**
      * Call this method before [connectChain] to add MsMessage handler for chain [chainId].
@@ -38,7 +41,7 @@ interface SubConnectionManager : ConnectionManager {
     /**
      * Sends a [MsMessage] to the Master node
      */
-    fun sendMessageToMaster(chainId: Long, message: MsMessage)
+    fun sendMessageToMaster(chainId: Long, message: MsMessage): Boolean
 
 }
 
@@ -54,6 +57,8 @@ class DefaultSubConnectionManager(
 
     companion object : KLogging()
 
+    override val masterSubQueryManager = MasterSubQueryManager(::sendMessageToMaster)
+
     // We don't bother with factory here
     private val subConnector = NettySubConnector(this)
 
@@ -64,7 +69,7 @@ class DefaultSubConnectionManager(
             ChainWithOneMasterConnection>()
     private val connectedPeers = ConcurrentHashMap<BlockchainRid, List<NodeRid>>()
 
-    private val preAddedMsMessageHandlers = mutableMapOf<Long, MsMessageHandler>()
+    private val preAddedMsMessageHandlers = mutableMapOf<Long, MutableList<MsMessageHandler>>()
     private val reconnectionTimer = Timer("Reconnection timer")
     private val reconnectionScheduled = AtomicBoolean(false)
     private var isShutDown = false
@@ -89,8 +94,9 @@ class DefaultSubConnectionManager(
             }
 
             val chain = ChainWithOneMasterConnection(chainPeersConfig)
-            chain.addMsMessageHandler(preAddedMsMessageHandlers.remove(chainPeersConfig.chainId))
+            preAddedMsMessageHandlers.remove(chainPeersConfig.chainId)?.forEach { chain.addMsMessageHandler(it) }
             chain.addMsMessageHandler(connectedPeersHandler)
+            chain.addMsMessageHandler(masterSubQueryManager)
             chains.add(chain)
             connectToMaster(chain)
 
@@ -237,15 +243,17 @@ class DefaultSubConnectionManager(
     // ----------------------------------
 
     override fun preAddMsMessageHandler(chainId: Long, handler: MsMessageHandler) {
-        preAddedMsMessageHandlers[chainId] = handler
+        preAddedMsMessageHandlers.computeIfAbsent(chainId) { mutableListOf() }.add(handler)
     }
 
-    override fun sendMessageToMaster(chainId: Long, message: MsMessage) {
+    override fun sendMessageToMaster(chainId: Long, message: MsMessage): Boolean {
         val chain = chains.getOrThrow(chainId)
-        if (chain.isConnected()) {
+        return if (chain.isConnected()) {
             chain.getConnection()!!.sendPacket { MsCodec.encode(message) }
+            true
         } else {
-            logger.error("${logger(chain)}: Can't send packet b/c no connection to master node for ${chain.log()}")
+            logger.error("${logger(chain)}: Can't send packet b/c no connection to master node for chainId=${chain.log()} blockchainRid=${message.blockchainRid.toHex()}")
+            false
         }
     }
 

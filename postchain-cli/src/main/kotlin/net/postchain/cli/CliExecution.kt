@@ -3,7 +3,6 @@
 package net.postchain.cli
 
 import mu.KLogging
-import mu.withLoggingContext
 import net.postchain.PostchainNode
 import net.postchain.StorageBuilder
 import net.postchain.api.internal.BlockchainApi
@@ -13,8 +12,6 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.NotFound
-import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.AppContext
@@ -23,8 +20,6 @@ import net.postchain.core.BadDataType
 import net.postchain.core.EContext
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
-import net.postchain.metrics.CHAIN_IID_TAG
-import net.postchain.metrics.NODE_PUBKEY_TAG
 import org.apache.commons.configuration2.ex.ConfigurationException
 import org.apache.commons.dbcp2.BasicDataSource
 import java.sql.Connection
@@ -54,7 +49,7 @@ object CliExecution : KLogging() {
             givenDependencies: List<BlockchainRelatedInfo> = listOf()
     ): BlockchainRid {
         // If brid is specified in nodeConfigFile, use that instead of calculating it from blockchain configuration.
-        val keyString = "brid.chainid." + chainId.toString()
+        val keyString = "brid.chainid.$chainId"
         val brid = if (appConfig.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.getString(keyString)) else
             GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, appConfig.cryptoSystem)
 
@@ -155,20 +150,7 @@ object CliExecution : KLogging() {
     fun runNode(appConfig: AppConfig, chainIds: List<Long>, debug: Boolean) {
         with(PostchainNode(appConfig, wipeDb = false)) {
             chainIds.forEach {
-                withLoggingContext(
-                        NODE_PUBKEY_TAG to appConfig.pubKey,
-                        CHAIN_IID_TAG to it.toString()
-                ) {
-                    try {
-                        startBlockchain(it)
-                    } catch (e: NotFound) {
-                        logger.error(e.message)
-                    } catch (e: UserMistake) {
-                        logger.error(e.message)
-                    } catch (e: Exception) {
-                        logger.error(e) { e.message }
-                    }
-                }
+                tryStartBlockchain(it)
             }
         }
     }
@@ -223,5 +205,4 @@ object CliExecution : KLogging() {
             throw CliException("Failed to read configuration")
         }
     }
-
 }

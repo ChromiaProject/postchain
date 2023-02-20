@@ -34,6 +34,11 @@ object MsCodec {
             NextBlockchainConfig -> MsNextBlockchainConfigMessage(brid, payload)
             ConnectedPeers -> MsConnectedPeersMessage(brid, payload)
             CommittedBlock -> MsCommittedBlockMessage(brid, payload)
+            QueryRequest -> MsQueryRequest(brid, payload)
+            QueryResponse -> MsQueryResponse(brid, payload)
+            QueryFailure -> MsQueryFailure(brid, payload)
+            BlockAtHeightRequest -> MsBlockAtHeightRequest(brid, payload)
+            BlockAtHeightResponse -> MsBlockAtHeightResponse(brid, payload)
         }
     }
 }

@@ -4,6 +4,7 @@ package net.postchain.devtools.gtx
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
+import net.postchain.concurrent.util.get
 import net.postchain.core.Transaction
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -24,33 +25,33 @@ class GTXIntegrationTest : IntegrationTestSetup() {
 
     fun makeNOPGTX(bcRid: BlockchainRid): ByteArray {
         val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS)
-            .addOperation(GtxNop.OP_NAME, gtv(42))
-            .finish()
-            .sign(myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
-            .buildGtx()
+                .addOperation(GtxNop.OP_NAME, gtv(42))
+                .finish()
+                .sign(myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
+                .buildGtx()
         return b.encode()
     }
 
     fun makeTestTx(id: Long, value: String, bcRid: BlockchainRid): ByteArray {
         val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS)
-            .addOperation("gtx_test", gtv(id), gtv(value))
-            .finish()
-            .sign(myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
-            .buildGtx()
+                .addOperation("gtx_test", gtv(id), gtv(value))
+                .finish()
+                .sign(myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
+                .buildGtx()
         return b.encode()
     }
 
     fun makeTimeBTx(from: Long, to: Long?, bcRid: BlockchainRid): ByteArray {
         val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS)
-            .addOperation("timeb",
-                    gtv(from),
-                    if (to != null) gtv(to) else GtvNull
-            )
-            // Need to add a valid dummy operation to make the entire TX valid
-            .addOperation("gtx_test", gtv(1), gtv("true"))
-            .finish()
-            .sign(myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
-            .buildGtx()
+                .addOperation("timeb",
+                        gtv(from),
+                        if (to != null) gtv(to) else GtvNull
+                )
+                // Need to add a valid dummy operation to make the entire TX valid
+                .addOperation("gtx_test", gtv(1), gtv("true"))
+                .finish()
+                .sign(myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
+                .buildGtx()
         return b.encode()
     }
 
@@ -78,13 +79,13 @@ class GTXIntegrationTest : IntegrationTestSetup() {
         fun makeSureBlockIsBuiltCorrectly() {
             currentBlockHeight += 1
             buildBlockAndCommit(node.getBlockchainInstance().blockchainEngine)
-           assertEquals(currentBlockHeight, getBestHeight(node))
+            assertEquals(currentBlockHeight, getBestHeight(node))
             val ridsAtHeight = getTxRidsAtHeight(node, currentBlockHeight)
             for (vtx in validTxs) {
                 val vtxRID = vtx.getRID()
-               assertTrue(ridsAtHeight.any { it.contentEquals(vtxRID) })
+                assertTrue(ridsAtHeight.any { it.contentEquals(vtxRID) })
             }
-           assertEquals(validTxs.size, ridsAtHeight.size)
+            assertEquals(validTxs.size, ridsAtHeight.size)
             validTxs.clear()
         }
 
@@ -126,7 +127,11 @@ class GTXIntegrationTest : IntegrationTestSetup() {
         makeSureBlockIsBuiltCorrectly()
 
         val value = node.getBlockchainInstance().blockchainEngine.getBlockQueries().query(
-                """{"type"="gtx_test_get_value", "txRID"="${validTx1.getRID().toHex()}"}""")
-       assertEquals("\"true\"", value.get())
+                "gtx_test_get_value",
+                gtv(mapOf(
+                        "txRID" to gtv(validTx1.getRID().toHex())
+                ))
+        )
+        assertEquals(gtv("true"), value.get())
     }
 }

@@ -98,18 +98,17 @@ class SlowSyncStateMachine(
     }
 
     /**
-     * @param processedBlocks - is the number of blocks we queued to commit
+     * @param heightToCommit - the height of the block we are waiting for to be committed
      */
-    fun updateToWaitForCommit(processedBlocks: Int, nowMs: Long) {
-        if (state != SlowSyncStates.WAIT_FOR_REPLY) {
-            throw ProgrammerMistake("updateToWaitForCommit(): Incorrect state: $state")
-        }
-        if (processedBlocks > 0) {
+    fun updateToWaitForCommit(heightToCommit: Long, nowMs: Long) {
+        if (state != SlowSyncStates.WAIT_FOR_COMMIT) {
+            if (state != SlowSyncStates.WAIT_FOR_REPLY) {
+                throw ProgrammerMistake("updateToWaitForCommit(): Incorrect state: $state")
+            }
             state = SlowSyncStates.WAIT_FOR_COMMIT
-            lastUncommittedBlockHeight = (waitForHeight!! + processedBlocks - 1)
-        } else {
-            state = SlowSyncStates.WAIT_FOR_ACTION
         }
+
+        lastUncommittedBlockHeight = heightToCommit
         waitTime = nowMs
     }
 

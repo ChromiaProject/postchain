@@ -16,6 +16,7 @@ import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
 import java.math.BigInteger
 import kotlin.reflect.KClass
+import kotlin.reflect.full.companionObjectInstance
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.hasAnnotation
@@ -113,7 +114,7 @@ object GtvObjectMapper {
         }
     }
 
-    fun <T: Any> toGtvArray(obj: T): GtvArray {
+    fun <T : Any> toGtvArray(obj: T): GtvArray {
         requireAllowedAnnotations(obj)
 
         val gtv = when (obj) {
@@ -122,6 +123,7 @@ object GtvObjectMapper {
                     gtv(classToGtv(it.key!!), classToGtv(it.value!!))
                 }
             }
+
             is Collection<*> -> obj.map { classToGtv(it!!) }
             else -> {
                 obj::class.primaryConstructor!!.parameters.map { parameter ->
@@ -133,7 +135,7 @@ object GtvObjectMapper {
         return gtv(gtv)
     }
 
-    fun <T: Any> toGtvDictionary(obj: T): GtvDictionary {
+    fun <T : Any> toGtvDictionary(obj: T): GtvDictionary {
         requireAllowedAnnotations(obj)
         val map = when (obj) {
             is Map<*, *> -> {
@@ -142,6 +144,7 @@ object GtvObjectMapper {
                     key to (value?.let { v -> classToGtv(v) { toGtvDictionary(it) } } ?: GtvNull)
                 }
             }
+
             is List<*> -> throw IllegalArgumentException("List types not supported")
             is Set<*> -> throw IllegalArgumentException("Set types not supported")
             else -> {
@@ -156,6 +159,7 @@ object GtvObjectMapper {
         }.toMap()
         return gtv(map)
     }
+
     private fun <T : Any> requireAllowedAnnotations(obj: T) {
         obj::class.constructors.first().parameters.forEach {
             require(!it.hasAnnotation<RawGtv>()) { "Raw Gtv Annotation not permitted" }
@@ -165,7 +169,7 @@ object GtvObjectMapper {
     }
 }
 
-private fun classToGtv(obj: Any, other: (Any) -> Gtv =  { GtvObjectMapper.toGtvArray(it) }): Gtv {
+private fun classToGtv(obj: Any, other: (Any) -> Gtv = { GtvObjectMapper.toGtvArray(it) }): Gtv {
     return when {
         obj::class.java.isString() -> gtv(obj as String)
         obj::class.java.isLong() -> gtv(obj as Long)
@@ -178,6 +182,7 @@ private fun classToGtv(obj: Any, other: (Any) -> Gtv =  { GtvObjectMapper.toGtvA
         obj::class.java.isPubkey() -> gtv((obj as PubKey).data)
         obj::class.java.isBlockchainRid() -> gtv((obj as BlockchainRid))
         obj is Collection<*> -> gtv(obj.map { classToGtv(it!!, other) })
+        obj is ToGtv -> obj.toGtv()
         else -> other(obj)
     }
 }
@@ -189,15 +194,17 @@ private fun annotatedParameterToValue(param: Parameter, gtv: GtvDictionary, tran
         param.isAnnotationPresent(Nested::class.java) && param.isAnnotationPresent(Name::class.java) -> {
             val path = param.getAnnotation(Nested::class.java).path
             val gtvNode = path.fold(gtv) { acc, s ->
-                if (acc[s] == null)  return@fold gtv(mapOf())
+                if (acc[s] == null) return@fold gtv(mapOf())
                 if (acc[s] !is GtvDictionary) throw IllegalArgumentException("Expected path $s to be GtvDictionary")
                 acc[s] as GtvDictionary
             }
             return annotationToValue(gtvNode, param, transient)
         }
+
         param.isAnnotationPresent(Name::class.java) -> {
             return annotationToValue(gtv, param, transient)
         }
+
         else -> {
             throw IllegalArgumentException("No annotation for parameter ${param.name} is present.")
         }
@@ -265,7 +272,7 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, 
     if (gtv == null) return null
     return when {
         classType.isGtv() -> gtv
-        classType.isEnum -> getEnumValue(classType.name , gtv.asString())
+        classType.isEnum -> getEnumValue(classType.name, gtv.asString())
         classType.isLong() -> gtv.asInteger()
         classType.isString() -> gtv.asString()
         classType.isBoolean() -> gtv.asBoolean()
@@ -275,16 +282,23 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, 
         classType.isBlockchainRid() -> BlockchainRid(gtv.asByteArray())
         classType.isRowId() -> RowId(gtv.asInteger())
         classType.isBigInteger() -> gtv.asBigInteger()
+
         else -> {
-            if (gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be a dictionary, but is: ${gtv.type} with values $gtv")
-            if (classType.constructors.isEmpty()) throw IllegalArgumentException("Type $classType must have primary constructor")
-            val n = classType.constructors[0].parameters.map {
-                annotatedParameterToValue(it, gtv, transient)
+            val companionObject = classType.kotlin.companionObjectInstance
+            if (companionObject is FromGtv<*>) {
+                companionObject.fromGtv(gtv)
+            } else {
+                if (gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be a dictionary, but is: ${gtv.type} with values $gtv")
+                if (classType.constructors.isEmpty()) throw IllegalArgumentException("Type $classType must have primary constructor")
+                val n = classType.constructors[0].parameters.map {
+                    annotatedParameterToValue(it, gtv, transient)
+                }
+                classType.constructors[0].newInstance(*n.toTypedArray())
             }
-            classType.constructors[0].newInstance(*n.toTypedArray())
         }
     }
 }
+
 fun getEnumValue(enumClassName: String, enumValue: String): Any {
     @Suppress("UNCHECKED_CAST") val enum = Class.forName(enumClassName).enumConstants as Array<Enum<*>>
     return enum.first { it.name == enumValue }

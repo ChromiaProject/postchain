@@ -12,7 +12,7 @@ import javax.sql.DataSource
 
 object StorageBuilder {
 
-    private const val DB_VERSION = 2
+    private const val DB_VERSION = 3
 
     fun buildStorage(appConfig: AppConfig, wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION): Storage {
         val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
@@ -37,6 +37,7 @@ object StorageBuilder {
                 writeDataSource,
                 db,
                 appConfig.databaseReadConcurrency,
+                appConfig.exitOnFatalError,
                 db.isSavepointSupported())
     }
 
@@ -72,7 +73,7 @@ object StorageBuilder {
                 /**
                  * [POS-129]: After setting up defaultSchema property by `DataSource.setDefaultSchema(...)`
                  * DataSource.getConnection().schema is null in docker container which is run by
-                 * [com.spotify.docker.client.DockerClient] on Windows/WSL2:
+                 * DockerClient on Windows/WSL2:
                  *      Database error: sql-state: 3F000, error-code: 0, message: ERROR: no schema has been selected to create in
                  *        Position: 14 Query: CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT) Parameters: []
                  *

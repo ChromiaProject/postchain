@@ -10,20 +10,18 @@ import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.core.TxRid
-import net.postchain.client.request.Endpoint
+import net.postchain.client.exception.ClientError
 import net.postchain.client.transaction.TransactionBuilder
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.crypto.KeyPair
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
-import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxQuery
 import org.apache.commons.io.input.BoundedInputStream
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.apache.hc.client5.http.config.RequestConfig
@@ -36,16 +34,13 @@ import org.http4k.core.HttpHandler
 import org.http4k.core.Method
 import org.http4k.core.Request
 import org.http4k.core.Response
-import org.http4k.core.Status
-import java.io.BufferedReader
 import java.io.IOException
-import java.io.InputStream
 import java.lang.Thread.sleep
 import java.time.Duration
 
 class PostchainClientImpl(
         override val config: PostchainClientConfig,
-        private val httpClient: HttpHandler = ApacheClient(HttpClients.custom()
+        httpClient: HttpHandler = ApacheClient(HttpClients.custom()
                 .setDefaultRequestConfig(RequestConfig.custom()
                         .setRedirectsEnabled(false)
                         .setCookieSpec(StandardCookieSpec.IGNORE)
@@ -58,12 +53,12 @@ class PostchainClientImpl(
         const val MAX_TX_STATUS_SIZE = 64 * 1024L
     }
 
-    private fun nextEndpoint() = config.endpointPool.next()
     private val blockchainRIDHex = config.blockchainRid.toHex()
     private val blockchainRIDOrID = config.queryByChainId?.let { "iid_$it" } ?: blockchainRIDHex
     private val cryptoSystem = config.cryptoSystem
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
     private val gson = Gson()
+    private val requestStrategy = config.requestStrategy.create(config, httpClient)
 
     override fun transactionBuilder() = transactionBuilder(config.signers)
 
@@ -76,49 +71,40 @@ class PostchainClientImpl(
     )
 
     @Throws(IOException::class)
-    override fun query(name: String, args: Gtv): Gtv {
-        var queryResult: Response? = null
-        var responseStream: BoundedInputStream? = null
-        for (j in 1..config.endpointPool.size()) {
-            val endpoint = nextEndpoint()
-            val request = createQueryRequest(name, args, endpoint)
-            endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
-                queryResult = queryTo(request, endpoint)
-                responseStream = BoundedInputStream(queryResult.body.stream, config.maxResponseSize.toLong())
-                when (queryResult.status) {
-                    Status.OK -> return GtvDecoder.decodeGtv(responseStream)
-                    Status.BAD_REQUEST -> throw buildExceptionFromGTV(responseStream, queryResult.status)
-                    Status.INTERNAL_SERVER_ERROR -> throw buildExceptionFromGTV(responseStream, queryResult.status)
-                    Status.NOT_FOUND -> throw buildExceptionFromGTV(responseStream, queryResult.status)
-                    Status.UNKNOWN_HOST -> break@endpoint
-                    Status.SERVICE_UNAVAILABLE -> break@endpoint
-                }
-                sleep(config.failOverConfig.attemptInterval.toMillis())
-            }
-        }
-        throw buildExceptionFromGTV(responseStream!!, queryResult!!.status)
-    }
-
-    private fun createQueryRequest(
-            name: String,
-            args: Gtv,
-            endpoint: Endpoint,
-    ): Request {
-        val gtxQuery = gtv(gtv(name), args)
-        val encodedQuery = GtvEncoder.encodeGtv(gtxQuery)
-        return Request(Method.POST, "${endpoint.url}/query_gtv/$blockchainRIDOrID")
+    override fun query(name: String, args: Gtv): Gtv = requestStrategy.request({ endpoint ->
+        val gtxQuery = GtxQuery(name, args)
+        Request(Method.POST, "${endpoint.url}/query_gtv/$blockchainRIDOrID")
                 .header("Content-Type", ContentType.OCTET_STREAM.value)
                 .header("Accept", ContentType.OCTET_STREAM.value)
-                .body(encodedQuery.inputStream())
-    }
+                .body(gtxQuery.encode().inputStream())
+    }, ::decodeGtv, ::buildExceptionFromGTV, true)
 
-    private fun queryTo(request: Request, endpoint: Endpoint): Response {
-        val response = httpClient(request)
-        if (response.status == Status.SERVICE_UNAVAILABLE) endpoint.setUnreachable()
-        return response
-    }
+    @Throws(IOException::class)
+    override fun currentBlockHeight(): Long = requestStrategy.request({ endpoint ->
+        Request(Method.GET, "${endpoint.url}/node/$blockchainRIDOrID/height")
+                .header("Accept", ContentType.APPLICATION_JSON.value)
+    }, { response ->
+        parseJson(response, 1024, CurrentBlockHeight::class.java)?.blockHeight
+                ?: throw IOException("Json parsing failed")
+    }, { response ->
+        val msg = parseJson(response, 1024, ErrorResponse::class.java)?.error ?: "Unknown error"
+        throw ClientError("Cannot fetch current block height: ${response.status} $msg")
+    }, false)
 
-    private fun buildExceptionFromGTV(responseStream: InputStream, status: Status): UserMistake {
+    @Throws(IOException::class)
+    override fun blockAtHeight(height: Long): BlockDetail? = requestStrategy.request({ endpoint ->
+        Request(Method.GET, "${endpoint.url}/blocks/$blockchainRIDOrID/height/$height")
+                .header("Accept", ContentType.OCTET_STREAM.value)
+    }, { response ->
+        val gtv = decodeGtv(response)
+        if (gtv.isNull()) null else GtvObjectMapper.fromGtv(gtv, BlockDetail::class)
+    }, ::buildExceptionFromGTV, true)
+
+    private fun decodeGtv(response: Response) =
+            GtvDecoder.decodeGtv(BoundedInputStream(response.body.stream, config.maxResponseSize.toLong()))
+
+    private fun buildExceptionFromGTV(response: Response): Nothing {
+        val responseStream = BoundedInputStream(response.body.stream, config.maxResponseSize.toLong())
         val errorMessage = try {
             GtvDecoder.decodeGtv(responseStream).asString()
         } catch (e: IOException) {
@@ -126,71 +112,25 @@ class PostchainClientImpl(
             // Dump it as a string and hope it is either empty or readable text
             String(responseStream.readAllBytes())
         }
-        return UserMistake("Can not make a query: $status $errorMessage")
-    }
-
-    @Throws(IOException::class)
-    override fun currentBlockHeight(): Long {
-        val endpoint = nextEndpoint()
-        val request = Request(Method.GET, "${endpoint.url}/node/$blockchainRIDOrID/height")
-                .header("Accept", ContentType.APPLICATION_JSON.value)
-        val response = queryTo(request, endpoint)
-        val body = BoundedInputStream(response.body.stream, 1024).bufferedReader()
-        if (response.status != Status.OK) {
-            val msg = parseJson(body, ErrorResponse::class.java)?.error ?: "Unknown error"
-            throw UserMistake("Can not make a query: ${response.status} $msg")
-        }
-        return parseJson(body, CurrentBlockHeight::class.java)?.blockHeight ?: throw IOException("Json parsing failed")
-    }
-
-    @Throws(IOException::class)
-    override fun blockAtHeight(height: Long): BlockDetail? {
-        val endpoint = nextEndpoint()
-        val request = Request(Method.GET, "${endpoint.url}/blocks/$blockchainRIDOrID/height/$height")
-                .header("Accept", ContentType.OCTET_STREAM.value)
-        val response = queryTo(request, endpoint)
-        val responseStream = BoundedInputStream(response.body.stream, config.maxResponseSize.toLong())
-        if (response.status != Status.OK) {
-            throw buildExceptionFromGTV(responseStream, response.status)
-        }
-
-        val gtv = GtvDecoder.decodeGtv(responseStream)
-        return if (gtv.isNull()) null else GtvObjectMapper.fromGtv(gtv, BlockDetail::class)
+        throw ClientError("Can not make a query: ${response.status} $errorMessage")
     }
 
     @Throws(IOException::class)
     override fun postTransaction(tx: Gtx): TransactionResult {
-        var result: TransactionResult? = null
-        for (j in 1..config.endpointPool.size()) {
-            val endpoint = nextEndpoint()
-            endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
-                result = postTransactionTo(tx, endpoint)
-                when (result.httpStatusCode) {
-                    Status.OK.code, Status.BAD_REQUEST.code, Status.NOT_FOUND.code, Status.CONFLICT.code -> return result
-                    Status.SERVICE_UNAVAILABLE.code -> break@endpoint
-                }
-                sleep(config.failOverConfig.attemptInterval.toMillis())
-            }
-        }
-        return result!!
-    }
-
-    private fun postTransactionTo(tx: Gtx, endpoint: Endpoint): TransactionResult {
         val txRid = TxRid(tx.calculateTxRid(calculator).toHex())
-        val request = Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex")
-                .header("Content-Type", ContentType.APPLICATION_JSON.value)
-                .header("Accept", ContentType.APPLICATION_JSON.value)
-                .body(gson.toJson(Tx(tx.encodeHex())))
-        val response = httpClient(request)
-        if (response.status == Status.SERVICE_UNAVAILABLE) endpoint.setUnreachable()
-        val status = if (response.status == Status.OK) WAITING else REJECTED
-        val rejectReason = if (status == REJECTED) {
-            val body = BoundedInputStream(response.body.stream, MAX_TX_STATUS_SIZE).bufferedReader()
-            parseJson(body, ErrorResponse::class.java)?.error ?: response.status.description
-        } else {
-            response.status.description
-        }
-        return TransactionResult(txRid, status, response.status.code, rejectReason)
+        return requestStrategy.request({ endpoint ->
+            Request(Method.POST, "${endpoint.url}/tx/$blockchainRIDHex")
+                    .header("Content-Type", ContentType.APPLICATION_JSON.value)
+                    .header("Accept", ContentType.APPLICATION_JSON.value)
+                    .body(gson.toJson(Tx(tx.encodeHex())))
+        }, { response ->
+            TransactionResult(txRid, WAITING, response.status.code, response.status.description)
+        }, { response ->
+            val rejectReason =
+                    parseJson(response, MAX_TX_STATUS_SIZE, ErrorResponse::class.java)?.error
+                            ?: response.status.description
+            TransactionResult(txRid, REJECTED, response.status.code, rejectReason)
+        }, false)
     }
 
     @Throws(IOException::class)
@@ -221,27 +161,33 @@ class PostchainClientImpl(
         return lastKnownTxResult
     }
 
-    override fun checkTxStatus(txRid: TxRid): TransactionResult {
-        val endpoint = nextEndpoint()
-        val validationRequest = Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/status")
+    override fun checkTxStatus(txRid: TxRid): TransactionResult = requestStrategy.request({ endpoint ->
+        Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/status")
                 .header("Accept", ContentType.APPLICATION_JSON.value)
-        val response = queryTo(validationRequest, endpoint)
-        val responseStream = BoundedInputStream(response.body.stream, MAX_TX_STATUS_SIZE)
-        val txStatus = parseJson(responseStream.bufferedReader(), TxStatus::class.java)
-        return TransactionResult(
+    }, { response ->
+        val txStatus = parseJson(response, MAX_TX_STATUS_SIZE, TxStatus::class.java)
+        TransactionResult(
                 txRid,
                 TransactionStatus.valueOf(txStatus?.status?.uppercase() ?: "UNKNOWN"),
                 response.status.code,
                 txStatus?.rejectReason
         )
-    }
+    }, { response ->
+        val msg = parseJson(response, 1024, ErrorResponse::class.java)?.error ?: "Unknown error"
+        throw ClientError("Can not check transaction status: ${response.status} $msg")
+    }, true)
 
-    private fun <T> parseJson(body: BufferedReader, cls: Class<T>): T? = try {
+    private fun <T> parseJson(response: Response, maxSize: Long, cls: Class<T>): T? = try {
+        val body = BoundedInputStream(response.body.stream, maxSize).bufferedReader()
         gson.fromJson(body, cls)
     } catch (e: JsonParseException) {
         val rootCause = ExceptionUtils.getRootCause(e)
         if (rootCause is IOException) throw rootCause
         else throw IOException("Json parsing failed", e)
+    }
+
+    override fun close() {
+        requestStrategy.close()
     }
 
     /* JSON structures */

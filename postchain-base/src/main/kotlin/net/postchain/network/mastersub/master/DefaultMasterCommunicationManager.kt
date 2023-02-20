@@ -3,16 +3,20 @@ package net.postchain.network.mastersub.master
 import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
+import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.bpm.bcconfig.BlockchainConfigVerifier
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.BlockRid
 import net.postchain.core.NodeRid
+import net.postchain.core.block.BlockQueriesProvider
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
+import net.postchain.network.mastersub.protocol.MsBlockAtHeightRequest
+import net.postchain.network.mastersub.protocol.MsBlockAtHeightResponse
 import net.postchain.network.mastersub.protocol.MsCommittedBlockMessage
 import net.postchain.network.mastersub.protocol.MsConnectedPeersMessage
 import net.postchain.network.mastersub.protocol.MsDataMessage
@@ -20,10 +24,14 @@ import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessag
 import net.postchain.network.mastersub.protocol.MsHandshakeMessage
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
+import net.postchain.network.mastersub.protocol.MsQueryFailure
+import net.postchain.network.mastersub.protocol.MsQueryRequest
+import net.postchain.network.mastersub.protocol.MsQueryResponse
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
 import java.util.*
+import java.util.concurrent.CompletableFuture
 
 /**
  * Manages communication for the give chain
@@ -43,6 +51,7 @@ open class DefaultMasterCommunicationManager(
         private val dataSource: DirectoryDataSource,
         private val processName: BlockchainProcessName,
         private val afterSubnodeCommitListeners: Set<AfterSubnodeCommitListener>,
+        private val blockQueriesProvider: BlockQueriesProvider,
 ) : AbstractMasterCommunicationManager() {
 
     companion object : KLogging()
@@ -119,6 +128,121 @@ open class DefaultMasterCommunicationManager(
                                     witnessData = message.witnessData
                             )
                         }
+                    }
+
+                    is MsQueryRequest -> {
+                        if (message.targetBlockchainRid == null) {
+                            try {
+                                val response = dataSource.query(message.name, message.args)
+                                masterConnectionManager.sendPacketToSub(MsQueryResponse(
+                                        message.blockchainRid,
+                                        message.requestId,
+                                        response
+                                ))
+                            } catch (e: Exception) {
+                                masterConnectionManager.sendPacketToSub(MsQueryFailure(
+                                        message.blockchainRid,
+                                        message.requestId,
+                                        e.toString()
+                                ))
+                            }
+                        } else {
+                            val blockQueries = blockQueriesProvider.getBlockQueries(message.targetBlockchainRid)
+                            if (blockQueries != null) {
+                                blockQueries.query(message.name, message.args).whenCompleteUnwrapped { response, exception ->
+                                    if (exception == null) {
+                                        masterConnectionManager.sendPacketToSub(MsQueryResponse(
+                                                message.blockchainRid,
+                                                message.requestId,
+                                                response
+                                        ))
+                                    } else {
+                                        masterConnectionManager.sendPacketToSub(MsQueryFailure(
+                                                message.blockchainRid,
+                                                message.requestId,
+                                                exception.toString()
+                                        ))
+                                    }
+                                }
+                            } else {
+                                logger.trace { "Forwarding message to subnode with target blockchain-rid ${message.targetBlockchainRid}, message blockchain-rid ${message.blockchainRid.toHex()} and request id ${message.requestId}" }
+                                masterConnectionManager.masterSubQueryManager.query(
+                                        chainId,
+                                        message.targetBlockchainRid,
+                                        message.targetBlockchainRid,
+                                        message.name,
+                                        message.args
+                                ).whenCompleteUnwrapped() { response, error ->
+                                    if (error == null) {
+                                        logger.trace { "Got response from subnode with target blockchain-rid ${message.targetBlockchainRid}, message blockchain-rid ${message.blockchainRid.toHex()} and request id ${message.requestId}" }
+                                        masterConnectionManager.sendPacketToSub(MsQueryResponse(
+                                                message.blockchainRid,
+                                                message.requestId,
+                                                response
+                                        ))
+                                    } else {
+                                        logger.trace { "Failed to forward request with target blockchain-rid ${message.targetBlockchainRid}, message blockchain-rid ${message.blockchainRid.toHex()} and request id ${message.requestId} to subnode, error: ${error.message}" }
+                                        masterConnectionManager.sendPacketToSub(MsQueryFailure(
+                                                message.blockchainRid,
+                                                message.requestId,
+                                                error.toString()
+                                        ))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    is MsBlockAtHeightRequest -> {
+                        val blockQueries = blockQueriesProvider.getBlockQueries(message.targetBlockchainRid)
+                        if (blockQueries != null) {
+                            blockQueries.getBlockRid(message.height).thenCompose {
+                                if (it == null) {
+                                    CompletableFuture.completedFuture(null)
+                                } else {
+                                    blockQueries.getBlock(it, true)
+                                }
+                            }.whenCompleteUnwrapped { response, exception ->
+                                if (exception == null) {
+                                    masterConnectionManager.sendPacketToSub(MsBlockAtHeightResponse(
+                                            message.blockchainRid,
+                                            message.requestId,
+                                            response
+                                    ))
+                                } else {
+                                    masterConnectionManager.sendPacketToSub(MsQueryFailure(
+                                            message.blockchainRid,
+                                            message.requestId,
+                                            exception.toString()
+                                    ))
+                                }
+                            }
+                        } else {
+                            masterConnectionManager.masterSubQueryManager.blockAtHeight(
+                                    chainId,
+                                    message.targetBlockchainRid,
+                                    message.targetBlockchainRid,
+                                    message.height
+                            ).whenCompleteUnwrapped { response, error ->
+                                if (error == null) {
+                                    masterConnectionManager.sendPacketToSub(MsBlockAtHeightResponse(
+                                            message.blockchainRid,
+                                            message.requestId,
+                                            response
+                                    ))
+                                } else {
+                                    masterConnectionManager.sendPacketToSub(MsQueryFailure(
+                                            message.blockchainRid,
+                                            message.requestId,
+                                            error.toString()
+                                    ))
+                                }
+                            }
+                        }
+                    }
+
+                    is MsQueryResponse, is MsBlockAtHeightResponse, is MsQueryFailure -> {
+                        masterConnectionManager.masterSubQueryManager.onMessage(message)
                     }
                 }
             }

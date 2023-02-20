@@ -2,6 +2,8 @@ package net.postchain.containers
 
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.resources.Cpu
+import net.postchain.containers.bpm.resources.IoRead
+import net.postchain.containers.bpm.resources.IoWrite
 import net.postchain.containers.bpm.resources.Ram
 import net.postchain.containers.bpm.resources.Storage
 import org.junit.jupiter.api.Test
@@ -19,14 +21,18 @@ class ContainerResourceLimitsTest {
         assertFalse { sut.hasCpu() }
         assertFalse { sut.hasRam() }
         assertFalse { sut.hasStorage() }
+        assertFalse { sut.hasIoRead() }
+        assertFalse { sut.hasIoWrite() }
     }
 
     @Test
     fun testZeroValues() {
-        val sut = ContainerResourceLimits(Cpu(0), Ram(0), Storage(0))
+        val sut = ContainerResourceLimits(Cpu(0), Ram(0), Storage(0), IoRead(0), IoWrite(0))
         assertFalse { sut.hasCpu() }
         assertFalse { sut.hasRam() }
         assertFalse { sut.hasStorage() }
+        assertFalse { sut.hasIoRead() }
+        assertFalse { sut.hasIoWrite() }
     }
 
     @ParameterizedTest(name = "[{index}] cpu: {0}, expectedQuota: {1}")
@@ -55,5 +61,14 @@ class ContainerResourceLimitsTest {
         val sut = ContainerResourceLimits(Storage(123))
         assertTrue { sut.hasStorage() }
         assertEquals(123L, sut.storageMb())
+    }
+
+    @Test
+    fun testIo() {
+        val sut = ContainerResourceLimits(IoRead(500), IoWrite(500))
+        assertTrue { sut.hasIoRead() }
+        assertTrue { sut.hasIoWrite() }
+        assertEquals(500 * 1024 * 1024L, sut.ioReadBytes())
+        assertEquals(500 * 1024 * 1024L, sut.ioWriteBytes())
     }
 }

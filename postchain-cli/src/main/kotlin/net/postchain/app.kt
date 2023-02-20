@@ -10,7 +10,6 @@ import net.postchain.cli.CommandBlockchainReplicaAdd
 import net.postchain.cli.CommandBlockchainReplicaRemove
 import net.postchain.cli.CommandCheckBlockchain
 import net.postchain.cli.CommandGenerateContainerZfsInitScript
-import net.postchain.cli.CommandKeygen
 import net.postchain.cli.CommandListConfigurations
 import net.postchain.cli.CommandMustSyncUntil
 import net.postchain.cli.CommandPeerInfoAdd
@@ -25,6 +24,7 @@ import net.postchain.cli.CommandRunServer
 import net.postchain.cli.CommandWaitDb
 import net.postchain.cli.CommandWipeDb
 import java.io.File
+import java.io.IOException
 import java.lang.management.ManagementFactory
 
 
@@ -47,7 +47,6 @@ fun main(args: Array<String>) {
                     CommandBlockchainReplicaRemove(),
                     CommandCheckBlockchain(),
                     CommandGenerateContainerZfsInitScript(),
-                    CommandKeygen(),
                     CommandMustSyncUntil(),
                     CommandPeerInfoAdd(),
                     CommandPeerInfoFind(),
@@ -66,5 +65,9 @@ fun main(args: Array<String>) {
 fun dumpPid() {
     val processName = ManagementFactory.getRuntimeMXBean().name
     val pid = processName.split("@")[0]
-    File("postchain.pid").writeText(pid)
+    try {
+        File("postchain.pid").writeText(pid)
+    } catch (e: IOException) { // might fail due to permission error in containers
+        println("Postchain PID: $pid")
+    }
 }

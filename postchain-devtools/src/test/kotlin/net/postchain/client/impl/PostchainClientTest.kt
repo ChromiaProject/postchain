@@ -2,8 +2,10 @@
 
 package net.postchain.client.impl
 
+import net.postchain.api.rest.controller.Model
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClient
+import net.postchain.client.exception.NodesDisagree
 import net.postchain.client.request.EndpointPool
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.BlockchainRid
@@ -15,12 +17,16 @@ import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtx.GtxQuery
 import org.awaitility.Awaitility.await
 import org.awaitility.kotlin.matches
 import org.awaitility.kotlin.untilCallTo
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
@@ -103,7 +109,7 @@ class PostchainClientTest : IntegrationTestSetup() {
 
     @Test
     fun testPostTransactionApiConfirmLevelUnverified() {
-        createTestNodes(3, "/net/postchain/devtools/api/blockchain_config.xml")
+        createTestNodes(4, "/net/postchain/devtools/api/blockchain_config.xml")
         val blockchainRid = systemSetup.blockchainMap[1]!!.rid
         val client = createPostChainClient(blockchainRid)
         val builder = createSignedNopTx(client, blockchainRid)
@@ -113,7 +119,7 @@ class PostchainClientTest : IntegrationTestSetup() {
 
     @Test
     fun testQueryGtxClientApi() {
-        createTestNodes(3, "/net/postchain/devtools/api/blockchain_config.xml")
+        createTestNodes(4, "/net/postchain/devtools/api/blockchain_config.xml")
         val blockchainRid = systemSetup.blockchainMap[1]!!.rid
         val client = createPostChainClient(blockchainRid)
         val builder = createSignedNopTx(client, blockchainRid)
@@ -125,5 +131,43 @@ class PostchainClientTest : IntegrationTestSetup() {
         } matches { resp ->
             resp?.asString() == randomStr
         }
+    }
+
+    @ParameterizedTest(name = "majority query with {0} disagreeing nodes should work {1}")
+    @CsvSource(
+            "0,true",
+            "1,true",
+            "2,false"
+    )
+    fun testQueryMajority(disagreeingNodes: Int, shouldWork: Boolean) {
+        createTestNodes(4, "/net/postchain/devtools/api/blockchain_config.xml")
+        val blockchainRid = systemSetup.blockchainMap[1]!!.rid
+        val urls = nodes.map { "http://127.0.0.1:${it.getRestApiHttpPort()}" }
+        val client = PostchainClientProviderImpl().createClient(
+                PostchainClientConfig(
+                        blockchainRid,
+                        EndpointPool.default(urls),
+                        listOf(KeyPair(pubKey0, privKey0)),
+                        requestStrategy = QueryMajorityRequestStrategyFactory()
+                ))
+        val builder = createSignedNopTx(client, blockchainRid)
+        val result = builder.postAwaitConfirmation()
+        val gtv = gtv("txRID" to gtv(result.txRid.rid))
+
+        for (n in 0 until disagreeingNodes) {
+            nodes[n].overrideRestApiModel(MockModel(nodes[n].getRestApiModel()))
+        }
+
+        if (shouldWork) {
+            assertEquals(randomStr, client.query("gtx_test_get_value", gtv).asString())
+        } else {
+            assertThrows<NodesDisagree> {
+                client.query("gtx_test_get_value", gtv)
+            }
+        }
+    }
+
+    class MockModel(delegate: Model) : Model by delegate {
+        override fun query(query: GtxQuery): Gtv = gtv("bogus")
     }
 }

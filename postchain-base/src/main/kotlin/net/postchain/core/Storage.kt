@@ -8,6 +8,7 @@ package net.postchain.core
 interface Storage : AutoCloseable {
 
     val readConcurrency: Int
+    val exitOnFatalError: Boolean
 
     // AppContext
     fun openReadConnection(): AppContext

@@ -26,7 +26,10 @@ class PostchainAdminClientCommand : CliktCommand(
 
     override fun run() {
         // Store in context so that subcommands can use it
-        currentContext.findOrSetObject { TlsConfig(tls or ssl, certificateFile) }
+        currentContext.findOrSetObject {
+            @Suppress("DEPRECATION")
+            TlsConfig(tls or ssl, certificateFile)
+        }
     }
 }
 

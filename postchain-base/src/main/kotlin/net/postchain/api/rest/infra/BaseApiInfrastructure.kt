@@ -3,9 +3,11 @@
 package net.postchain.api.rest.infra
 
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
+import net.postchain.api.rest.controller.DisabledDebugInfoQuery
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.base.BaseBlockQueries
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.debug.NodeDiagnosticContext
@@ -13,8 +15,10 @@ import net.postchain.ebft.rest.model.PostchainEBFTModel
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 
 open class BaseApiInfrastructure(
-    protected val restApiConfig: RestApiConfig,
-    val nodeDiagnosticContext: NodeDiagnosticContext?
+        restApiConfig: RestApiConfig,
+        val nodeDiagnosticContext: NodeDiagnosticContext,
+        val configurationProvider: BlockchainConfigurationProvider,
+        private val enableDebugApi: Boolean
 ) : ApiInfrastructure {
 
     val restApi: RestApi? = with(restApiConfig) {
@@ -24,11 +28,13 @@ open class BaseApiInfrastructure(
                         port,
                         basePath,
                         tlsCertificate,
-                        tlsCertificatePassword)
+                        tlsCertificatePassword,
+                        nodeDiagnosticContext)
             } else {
                 RestApi(
                         port,
-                        basePath)
+                        basePath,
+                        nodeDiagnosticContext = nodeDiagnosticContext)
             }
         } else {
             null
@@ -44,6 +50,7 @@ open class BaseApiInfrastructure(
             val engine = process.blockchainEngine
             val apiModel: PostchainModel
 
+            val debugInfoQuery = if (enableDebugApi) DefaultDebugInfoQuery(nodeDiagnosticContext) else DisabledDebugInfoQuery()
             if (process is ValidatorBlockchainProcess) { // TODO: EBFT-specific code, but pretty harmless
                 apiModel = PostchainEBFTModel(
                         engine.getConfiguration().chainID,
@@ -51,8 +58,10 @@ open class BaseApiInfrastructure(
                         process.networkAwareTxQueue,
                         engine.getConfiguration().getTransactionFactory(),
                         engine.getBlockQueries() as BaseBlockQueries, // TODO: [et]: Resolve type cast
-                        DefaultDebugInfoQuery(nodeDiagnosticContext),
-                        engine.getConfiguration().blockchainRid
+                        debugInfoQuery,
+                        engine.getConfiguration().blockchainRid,
+                        configurationProvider,
+                        engine.storage
                 )
             } else {
                 apiModel = PostchainModel(
@@ -60,8 +69,10 @@ open class BaseApiInfrastructure(
                         engine.getTransactionQueue(),
                         engine.getConfiguration().getTransactionFactory(),
                         engine.getBlockQueries() as BaseBlockQueries,
-                        DefaultDebugInfoQuery(nodeDiagnosticContext),
-                        engine.getConfiguration().blockchainRid
+                        debugInfoQuery,
+                        engine.getConfiguration().blockchainRid,
+                        configurationProvider,
+                        engine.storage
                 )
             }
 

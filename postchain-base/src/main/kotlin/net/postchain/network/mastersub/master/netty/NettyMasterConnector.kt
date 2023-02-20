@@ -15,7 +15,6 @@ class NettyMasterConnector(
 
     private lateinit var server: NettyServer
 
-    // TODO: [POS-129]: Put MsCodec here
     override fun init(port: Int) {
         server = NettyServer().apply {
             setCreateChannelHandler {
@@ -31,7 +30,7 @@ class NettyMasterConnector(
                 }
             }
 
-            run(port) // TODO: [POS-129]: Change port (add the port to AppConfig)
+            run(port)
         }
     }
 

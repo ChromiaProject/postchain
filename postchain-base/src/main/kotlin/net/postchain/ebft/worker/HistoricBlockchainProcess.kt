@@ -8,6 +8,8 @@ import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.concurrent.util.get
+import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.core.EContext
@@ -16,14 +18,16 @@ import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DpNodeType
+import net.postchain.debug.EagerDiagnosticValue
+import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
-import net.postchain.ebft.CompletionPromise
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.SyncParameters
-import nl.komponents.kovenant.Promise
 import java.lang.Thread.sleep
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -39,7 +43,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class HistoricBlockchainProcess(val workerContext: WorkerContext,
                                 private val historicBlockchainContext: HistoricBlockchainContext
-                               ) : AbstractBlockchainProcess("historic-${workerContext.processName}", workerContext.engine) {
+) : AbstractBlockchainProcess("historic-${workerContext.processName}", workerContext.engine) {
 
     companion object : KLogging()
 
@@ -174,7 +178,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                     verifyBlockAtHeightIsTheSame(fromBstore, fromCtx, ourHeight)
                 }
                 heightToCopy = ourHeight + 1
-                var pendingPromise: CompletionPromise? = null
+                var pendingFuture: CompletableFuture<Unit>? = null
                 val readMoreBlocks = AtomicBoolean(true)
                 while (isProcessRunning() && readMoreBlocks.get()) {
                     if (newBlockDatabase.getQueuedBlockCount() > 3) {
@@ -188,14 +192,15 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                     } else {
                         val bTrace: BlockTrace? = getCopyBTrace(heightToCopy)
                         if (isProcessRunning() && readMoreBlocks.get()) {
-                            pendingPromise = newBlockDatabase.addBlock(historicBlock, pendingPromise, bTrace)
+                            pendingFuture = newBlockDatabase.addBlock(historicBlock, pendingFuture, bTrace)
                             val myHeightToCopy = heightToCopy
-                            pendingPromise.success {
-                                copyTrace("Successfully added", bTrace, myHeightToCopy) // Now we should have the block RID in the debug
-                            }
-                            pendingPromise.fail {
-                                copyErr("Failed to add", myHeightToCopy, it)
-                                readMoreBlocks.set(false)
+                            pendingFuture.whenCompleteUnwrapped { _: Any?, exception ->
+                                if (exception == null) {
+                                    copyTrace("Successfully added", bTrace, myHeightToCopy) // Now we should have the block RID in the debug
+                                } else {
+                                    copyErr("Failed to add", myHeightToCopy, exception)
+                                    readMoreBlocks.set(false)
+                                }
                             }
                             copyLog("Got promise to add", heightToCopy)
                             heightToCopy += 1
@@ -203,7 +208,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                     }
                 }
 
-                if (pendingPromise != null) awaitPromise(pendingPromise, heightToCopy) // wait pending block
+                if (pendingFuture != null) awaitFuture(pendingFuture, heightToCopy) // wait pending block
                 copyLog("End at height", heightToCopy)
             }
         } finally {
@@ -218,9 +223,9 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
      *
      * @return "true" if we got something from the promise, "false" if we have a shutdown
      */
-    private fun awaitPromise(pendingPromise: Promise<Unit, java.lang.Exception>, height: Long): Boolean {
+    private fun awaitFuture(pendingFuture: CompletableFuture<Unit>, height: Long): Boolean {
         while (isProcessRunning()) {
-            if (pendingPromise.isDone()) {
+            if (pendingFuture.isDone) {
                 awaitTrace("done", height)
                 return true
             } else {
@@ -317,7 +322,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         }
     }
 
-    private fun copyErr(str: String, heightToCopy: Long, e: Exception) {
+    private fun copyErr(str: String, heightToCopy: Long, e: Throwable) {
         logger.error("copyBlocksLocally() - $str: $heightToCopy locally from blockchain ${historicBlockchainContext.historicBrid}", e)
     }
 
@@ -355,8 +360,8 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         }
     }
 
-    override fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) {
+    override fun registerDiagnosticData(diagnosticData: DiagnosticData) {
         super.registerDiagnosticData(diagnosticData)
-        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = { DpNodeType.NODE_TYPE_HISTORIC_REPLICA.prettyName }
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] =  EagerDiagnosticValue(DpNodeType.NODE_TYPE_HISTORIC_REPLICA.prettyName)
     }
 }

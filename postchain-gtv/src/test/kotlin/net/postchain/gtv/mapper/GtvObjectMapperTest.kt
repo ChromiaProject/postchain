@@ -18,14 +18,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.math.BigInteger
 
-data class Simple(@Name("key") val value: Long)
-
-data class BasicDict(@Name("dict") val simple: Simple)
-
-enum class SimpleEnum {
-    A, B
-}
-
 internal class GtvObjectMapperTest {
 
     @Test
@@ -42,6 +34,12 @@ internal class GtvObjectMapperTest {
     fun annotationIsRespected() {
         val dummy = gtv(mapOf("key" to gtv(123L)))
         assert(GtvObjectMapper.fromGtv(dummy, Simple::class)).isEqualTo(Simple(123))
+    }
+
+    @Test
+    fun fromGtv() {
+        val dummy = gtv(mapOf("foo" to gtv("FOO"), "bar" to gtv("<<<BAR>>>")))
+        assert(GtvObjectMapper.fromGtv(dummy, WithCustom::class)).isEqualTo(WithCustom("FOO", Custom("BAR")))
     }
 
     @Test
@@ -347,5 +345,11 @@ internal class GtvObjectMapperTest {
             g.toObject<WrongMapType>()
         }
 
+    }
+
+    @Test
+    fun javaClass() {
+        val dummy = gtv(mapOf("value" to gtv("FOO")))
+        assert(GtvObjectMapper.fromGtv(dummy, AJavaClass::class)).isEqualTo(AJavaClass("FOO"))
     }
 }

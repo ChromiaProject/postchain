@@ -20,8 +20,8 @@ class PeerConnectionDescriptor(
 
     fun loggingPrefix(): String {
         return BlockchainProcessName(
-            nodeId.toString(),
-            bcRid
+                nodeId.toString(),
+                bcRid
         ).toString()
     }
 
@@ -38,9 +38,9 @@ object PeerConnectionDescriptorFactory {
      */
     fun createFromIdentPacketInfo(identPacketInfo: IdentPacketInfo): PeerConnectionDescriptor {
         return PeerConnectionDescriptor(
-            identPacketInfo.blockchainRid,
-            identPacketInfo.nodeId,
-            ConnectionDirection.INCOMING
+                identPacketInfo.blockchainRid,
+                identPacketInfo.nodeId,
+                ConnectionDirection.INCOMING
         )
     }
 

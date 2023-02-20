@@ -38,6 +38,8 @@ class MockCryptoSystem : CryptoSystem {
         }
     }
 
+    override fun validatePubKey(pubKey: ByteArray): Boolean = true
+
     override fun getRandomBytes(size: Int): ByteArray {
         return ByteArray(size)
     }

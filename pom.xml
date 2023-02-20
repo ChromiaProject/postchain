@@ -1,11 +1,12 @@
 <!-- Copyright (c) 2020 ChromaWay AB. See README for license information. -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>net.postchain</groupId>
     <artifactId>postchain</artifactId>
-    <version>3.7.1</version>
+    <version>3.8.0</version>
     <modules>
         <module>postchain-common</module>
         <module>postchain-gtv</module>
@@ -26,7 +27,7 @@
     <properties>
         <doclint>none</doclint>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.build.outputTimestamp>1673427981</project.build.outputTimestamp>
+        <project.build.outputTimestamp>1676901087</project.build.outputTimestamp>
 
         <!-- Kotlin -->
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
@@ -57,13 +58,12 @@
         <log4j2.version>2.19.0</log4j2.version>
 
         <!-- 3rd party -->
-        <netty.version>4.1.85.Final</netty.version>
+        <netty.version>4.1.86.Final</netty.version>
         <jasn.version>1.11.3</jasn.version>
         <spark-core.version>2.9.4</spark-core.version>
         <json.version>20170516</json.version>
         <jaxb.version>4.0.1</jaxb.version>
         <jackson.version>2.14.0</jackson.version>
-        <kovenant-core.version>3.3.0</kovenant-core.version>
         <gson.version>2.10</gson.version>
         <gitflow.maven.plugin.version>1.19.0</gitflow.maven.plugin.version>
         <commons-dbutils.version>1.7</commons-dbutils.version>
@@ -187,6 +187,11 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>4.13.1</version>
+            </dependency>
 
             <dependency>
                 <groupId>org.mockito.kotlin</groupId>
@@ -222,6 +227,11 @@
             <dependency>
                 <groupId>org.http4k</groupId>
                 <artifactId>http4k-client-apache</artifactId>
+                <version>4.34.0.4</version>
+            </dependency>
+            <dependency>
+                <groupId>org.http4k</groupId>
+                <artifactId>http4k-client-apache-async</artifactId>
                 <version>4.34.0.4</version>
             </dependency>
 
@@ -277,40 +287,33 @@
                 <version>1.13</version>
             </dependency>
 
+            <!-- DockerClient -->
             <dependency>
-                <groupId>com.spotify</groupId>
+                <groupId>org.mandas</groupId>
                 <artifactId>docker-client</artifactId>
-                <version>8.16.0</version>
-                <exclusions>
-                    <exclusion>
-                        <groupId>com.github.jnr</groupId>
-                        <artifactId>jffi</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>com.github.jnr</groupId>
-                        <artifactId>jnr-ffi</artifactId>
-                    </exclusion>
-                    <exclusion>
-                        <groupId>org.bouncycastle</groupId>
-                        <artifactId>bcpkix-jdk15on</artifactId>
-                    </exclusion>
-                </exclusions>
+                <version>7.0.0</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.jersey.core</groupId>
                 <artifactId>jersey-client</artifactId>
-                <version>2.22.2</version>
+                <version>3.1.0</version>
             </dependency>
             <dependency>
-                <groupId>com.github.jnr</groupId>
-                <artifactId>jffi</artifactId>
-                <version>1.3.10</version>
+                <groupId>org.glassfish.jersey.inject</groupId>
+                <artifactId>jersey-hk2</artifactId>
+                <version>3.1.0</version>
             </dependency>
             <dependency>
-                <groupId>com.github.jnr</groupId>
-                <artifactId>jnr-ffi</artifactId>
-                <version>2.2.13</version>
+                <groupId>org.glassfish.jersey.connectors</groupId>
+                <artifactId>jersey-apache-connector</artifactId>
+                <version>3.1.0</version>
             </dependency>
+            <dependency>
+                <groupId>org.glassfish.jersey.media</groupId>
+                <artifactId>jersey-media-json-jackson</artifactId>
+                <version>3.1.0</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-compress</artifactId>
@@ -364,11 +367,6 @@
                 <version>${commons-dbutils.version}</version>
             </dependency>
             <dependency>
-                <groupId>nl.komponents.kovenant</groupId>
-                <artifactId>kovenant-core</artifactId>
-                <version>${kovenant-core.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
                 <version>42.5.1</version>
@@ -398,7 +396,19 @@
                 <groupId>commons-beanutils</groupId>
                 <artifactId>commons-beanutils</artifactId>
                 <version>1.9.4</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>commons-collections</groupId>
+                        <artifactId>commons-collections</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-collections4</artifactId>
+                <version>4.4</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-text</artifactId>
@@ -461,11 +471,6 @@
                 <groupId>org.bitcoinj</groupId>
                 <artifactId>bitcoinj-core</artifactId>
                 <version>0.16.1</version>
-            </dependency>
-            <dependency>
-                <groupId>com.google.protobuf</groupId>
-                <artifactId>protobuf-javalite</artifactId>
-                <version>3.21.7</version>
             </dependency>
             <dependency>
                 <groupId>com.google.guava</groupId>
@@ -585,6 +590,16 @@
                     <artifactId>jaxb30-maven-plugin</artifactId>
                     <version>0.15.0</version>
                 </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>${maven.surefire.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <version>${maven.failsafe.plugin.version}</version>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -632,23 +647,31 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>${maven.surefire.plugin.version}</version>
                 <configuration>
                     <excludes>
                         <exclude>**/*IT.java</exclude>
                         <exclude>**/*Nightly.java</exclude>
                     </excludes>
+                    <properties>
+                        <configurationParameters>
+                            junit.jupiter.execution.timeout.default=5m
+                        </configurationParameters>
+                    </properties>
                 </configuration>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
-                <version>${maven.failsafe.plugin.version}</version>
                 <configuration>
                     <includes>
                         <include>**/*IT.java</include>
                     </includes>
+                    <properties>
+                        <configurationParameters>
+                            junit.jupiter.execution.timeout.default=5m
+                        </configurationParameters>
+                    </properties>
                 </configuration>
                 <executions>
                     <execution>
@@ -749,7 +772,6 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                        <version>${maven.failsafe.plugin.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/*IT.java</include>
@@ -761,6 +783,47 @@
                                 <goals>
                                     <goal>integration-test</goal>
                                     <goal>verify</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>dependency-check</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <skipTests>true</skipTests>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <skipTests>true</skipTests>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.owasp</groupId>
+                        <artifactId>dependency-check-maven</artifactId>
+                        <version>8.0.2</version>
+                        <configuration>
+                            <prettyPrint>true</prettyPrint>
+                            <failBuildOnAnyVulnerability>true</failBuildOnAnyVulnerability>
+                            <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
+                            <suppressionFiles>
+                                <suppressionFile>dependencies-suppression.xml</suppressionFile>
+                            </suppressionFiles>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>check</goal>
                                 </goals>
                             </execution>
                         </executions>

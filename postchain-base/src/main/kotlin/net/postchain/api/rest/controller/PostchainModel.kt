@@ -10,18 +10,22 @@ import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
 import net.postchain.base.BaseBlockQueries
 import net.postchain.base.ConfirmationProof
+import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
-import net.postchain.common.TimeLog
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.common.wrap
+import net.postchain.concurrent.util.get
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.Gtv
+import net.postchain.gtx.GtxQuery
 import net.postchain.metrics.PostchainModelMetrics
 
 open class PostchainModel(
@@ -30,7 +34,9 @@ open class PostchainModel(
         private val transactionFactory: TransactionFactory,
         val blockQueries: BaseBlockQueries,
         private val debugInfoQuery: DebugInfoQuery,
-        blockchainRid: BlockchainRid
+        blockchainRid: BlockchainRid,
+        val configurationProvider: BlockchainConfigurationProvider,
+        val storage: Storage
 ) : Model {
 
     companion object : KLogging()
@@ -42,38 +48,36 @@ open class PostchainModel(
     override fun postTransaction(tx: ApiTx) {
         val sample = Timer.start(Metrics.globalRegistry)
 
-        var nonce = TimeLog.startSumConc("PostchainModel.postTransaction().decodeTransaction")
         val decodedTransaction = transactionFactory.decodeTransaction(tx.bytes)
-        TimeLog.end("PostchainModel.postTransaction().decodeTransaction", nonce)
 
-        nonce = TimeLog.startSumConc("PostchainModel.postTransaction().isCorrect")
         if (!decodedTransaction.isCorrect()) {
             throw UserMistake("Transaction ${decodedTransaction.getRID().toHex()} is not correct")
         }
-        TimeLog.end("PostchainModel.postTransaction().isCorrect", nonce)
-        nonce = TimeLog.startSumConc("PostchainModel.postTransaction().enqueue")
         when (txQueue.enqueue(decodedTransaction)) {
             EnqueueTransactionResult.FULL -> {
                 sample.stop(metrics.fullTransactions)
                 throw UnavailableException("Transaction queue is full")
             }
+
             EnqueueTransactionResult.INVALID -> {
                 sample.stop(metrics.invalidTransactions)
                 throw InvalidTnxException("Transaction is invalid")
             }
+
             EnqueueTransactionResult.DUPLICATE -> {
                 sample.stop(metrics.duplicateTransactions)
                 throw DuplicateTnxException("Transaction already in queue")
             }
+
             EnqueueTransactionResult.UNKNOWN -> {
                 sample.stop(metrics.unknownTransactions)
                 throw UserMistake("Unknown error")
             }
+
             EnqueueTransactionResult.OK -> {
                 sample.stop(metrics.okTransactions)
             }
         }
-        TimeLog.end("PostchainModel.postTransaction().enqueue", nonce)
     }
 
     override fun getTransaction(txRID: TxRID): ApiTx? {
@@ -127,18 +131,26 @@ open class PostchainModel(
         }
     }
 
-    override fun query(query: Query): QueryResult {
-        return QueryResult(blockQueries.query(query.json).get())
-    }
-
-    override fun query(query: Gtv): Gtv {
-        return blockQueries.query(query[0].asString(), query[1]).get()
+    override fun query(query: GtxQuery): Gtv {
+        return blockQueries.query(query.name, query.args).get()
     }
 
     override fun nodeQuery(subQuery: String): String = throw NotSupported("NotSupported: $subQuery")
 
     override fun debugQuery(subQuery: String?): String {
         return debugInfoQuery.queryDebugInfo(subQuery)
+    }
+
+    override fun getBlockchainConfiguration(height: Long): ByteArray? {
+        return withReadConnection(storage, chainIID) { ctx ->
+            if (height < 0) {
+                configurationProvider.getActiveBlocksConfiguration(ctx, chainIID)
+            } else {
+                val historicConfigHeight = configurationProvider.getHistoricConfigurationHeight(ctx, chainIID, height)
+                        ?: throw UserMistake("Unknown chain")
+                configurationProvider.getHistoricConfiguration(ctx, chainIID, historicConfigHeight)
+            }
+        }
     }
 
     override fun toString(): String {

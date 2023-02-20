@@ -15,8 +15,8 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.ManagedBlockBuilder
 import net.postchain.core.block.MultiSigBlockWitnessBuilder
 import net.postchain.crypto.Signature
-import nl.komponents.kovenant.Promise
-import nl.komponents.kovenant.deferred
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
@@ -53,24 +53,23 @@ class BaseBlockDatabase(
     companion object : KLogging()
 
     fun stop() {
-        logger.debug{ "stop() - Begin, node: $nodeIndex" }
+        logger.debug { "stop() - Begin, node: $nodeIndex" }
         executor.shutdownNow()
         executor.awaitTermination(1000, TimeUnit.MILLISECONDS) // TODO: [et]: 1000 ms
         maybeRollback()
-        logger.debug{ "stop() - End, node: $nodeIndex" }
+        logger.debug { "stop() - End, node: $nodeIndex" }
     }
 
     override fun getQueuedBlockCount(): Int {
         return queuedBlockCount.get()
     }
 
-    private fun <RT> runOpAsync(name: String, op: () -> RT): Promise<RT, Exception> {
+    private fun <RT> runOpAsync(name: String, op: () -> RT): CompletableFuture<RT> {
         if (logger.isTraceEnabled) {
             logger.trace("runOpAsync() - $nodeIndex putting job $name on queue")
         }
 
-        val deferred = deferred<RT, Exception>()
-        executor.execute {
+        return CompletableFuture.supplyAsync({
             try {
                 if (logger.isDebugEnabled) {
                     logger.debug("Starting job $name")
@@ -79,20 +78,18 @@ class BaseBlockDatabase(
                 if (logger.isDebugEnabled) {
                     logger.debug("Finished job $name")
                 }
-                deferred.resolve(res)
+                res
             } catch (e: Exception) {
-                logger.debug(e) { "Failed job $name" } // Shouldn't this be at leas WARN?
-                deferred.reject(e)
+                logger.warn(e) { "Failed job $name" }
+                throw e
             }
-        }
-
-        return deferred.promise
+        }, executor)
     }
 
     private fun maybeRollback() {
-        logger.trace{ "maybeRollback() node: $nodeIndex." }
+        logger.trace { "maybeRollback() node: $nodeIndex." }
         if (blockBuilder != null) {
-            logger.debug{ "maybeRollback() node: $nodeIndex, blockBuilder is not null." }
+            logger.debug { "maybeRollback() node: $nodeIndex, blockBuilder is not null." }
             engine.getTransactionQueue().retryAllTakenTransactions()
         }
         blockBuilder?.rollback()
@@ -107,26 +104,24 @@ class BaseBlockDatabase(
      * The [BlockchainEngine] creates a new [BlockBuilder] instance for each "addBlock()" call,
      * BUT unlike the other methods in this class "addBlock()" doesn't update the blockBuilder member field.
      *
-     * This is why we there is no use setting the [BlockTrace] for this method, we have to send the bTrace instance
+     * This is why there is no use setting the [BlockTrace] for this method, we have to send the bTrace instance
      *
      * @param block to be added
-     * @param dependsOn is the promise for the previous block (by the time we access this promise it will be "done").
+     * @param dependsOn is the future for the previous block (by the time we access this promise it will be "done").
      * @param existingBTrace is the trace data of the block we have at current moment. For production this is "null"
      */
-    override fun addBlock(block: BlockDataWithWitness, dependsOn: CompletionPromise?,
-                          existingBTrace: BlockTrace?): Promise<Unit, Exception> {
+    override fun addBlock(block: BlockDataWithWitness, dependsOn: CompletableFuture<Unit>?,
+                          existingBTrace: BlockTrace?): CompletableFuture<Unit> {
         queuedBlockCount.incrementAndGet()
         return runOpAsync("addBlock ${block.header.blockRID.toHex()}") {
             queuedBlockCount.decrementAndGet()
             if (dependsOn != null) {
-                if (!dependsOn.isSuccess()) {
-                    if (dependsOn.isFailure()) {
-                        throw BDBAbortException(block, dependsOn)
-                    } else {
-                        // The [ThreadPoolExecutor] guarantees prev promise will be "done" at this point.
-                        // If we get here the caller must have sent the incorrect promise.
-                        throw ProgrammerMistake("Previous completion is unfinished ${dependsOn.isDone()}")
-                    }
+                if (dependsOn.isCompletedExceptionally) {
+                    throw BDBAbortException(block, dependsOn)
+                }
+                if (!dependsOn.isDone) {
+                    // If we get here the caller must have sent the incorrect future.
+                    throw ProgrammerMistake("Previous completion is unfinished ${dependsOn.isDone}")
                 }
             }
             addBlockLog("Begin")
@@ -147,7 +142,7 @@ class BaseBlockDatabase(
         }
     }
 
-    override fun loadUnfinishedBlock(block: BlockData): Promise<Signature, Exception> {
+    override fun loadUnfinishedBlock(block: BlockData): CompletionStage<Signature> {
         return runOpAsync("loadUnfinishedBlock ${block.header.blockRID.toHex()}") {
             maybeRollback()
             val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block)
@@ -165,7 +160,7 @@ class BaseBlockDatabase(
         }
     }
 
-    override fun commitBlock(signatures: Array<Signature?>): Promise<Unit, Exception> {
+    override fun commitBlock(signatures: Array<Signature?>): CompletionStage<Unit> {
         return runOpAsync("commitBlock") {
             // TODO: process signatures
             blockBuilder!!.commit(witnessBuilder!!.getWitness())
@@ -174,7 +169,7 @@ class BaseBlockDatabase(
         }
     }
 
-    override fun buildBlock(): Promise<Pair<BlockData, Signature>, Exception> {
+    override fun buildBlock(): CompletionStage<Pair<BlockData, Signature>> {
         return runOpAsync("buildBlock") {
             maybeRollback()
             val (theBlockBuilder, exception) = engine.buildBlock()
@@ -206,11 +201,11 @@ class BaseBlockDatabase(
         }
     }
 
-    override fun getBlockSignature(blockRID: ByteArray): Promise<Signature, Exception> {
+    override fun getBlockSignature(blockRID: ByteArray): CompletionStage<Signature> {
         return blockQueries.getBlockSignature(blockRID)
     }
 
-    override fun getBlockAtHeight(height: Long, includeTransactions: Boolean): Promise<BlockDataWithWitness?, Exception> {
+    override fun getBlockAtHeight(height: Long, includeTransactions: Boolean): CompletionStage<BlockDataWithWitness?> {
         return blockQueries.getBlockAtHeight(height, includeTransactions)
     }
 
@@ -245,6 +240,7 @@ class BaseBlockDatabase(
             logger.debug("addBlock() -- $str")
         }
     }
+
     fun addBlockLog(str: String, bTrace: BlockTrace?) {
         if (logger.isTraceEnabled) {
             logger.trace("addBlock() -- $str, from block: $bTrace")

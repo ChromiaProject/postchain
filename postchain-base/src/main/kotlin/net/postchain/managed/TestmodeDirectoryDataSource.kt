@@ -15,25 +15,22 @@ class TestmodeDirectoryDataSource(
         private val containerNodeConfig: ContainerNodeConfig,
 ) : BaseDirectoryDataSource(queryRunner, appConfig) {
 
-    override fun getContainerForBlockchain(brid: BlockchainRid): String {
-        return if (containerNodeConfig.testmode) {
-            val short = brid.toHex().uppercase().take(8)
-            containerNodeConfig.testmodeDappsContainers[short] ?: "cont0"
-        } else {
-            super.getContainerForBlockchain(brid)
-        }
-    }
+    override fun getContainerForBlockchain(brid: BlockchainRid): String =
+            if (containerNodeConfig.testmode) {
+                val short = brid.toHex().uppercase().take(8)
+                containerNodeConfig.testmodeDappsContainers[short] ?: "cont0"
+            } else {
+                super.getContainerForBlockchain(brid)
+            }
 
-    override fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits {
-        return if (containerNodeConfig.testmode) {
-            ContainerResourceLimits(
-                    Cpu(containerNodeConfig.testmodeResourceLimitsCPU),
-                    Ram(containerNodeConfig.testmodeResourceLimitsRAM),
-                    Storage(containerNodeConfig.testmodeResourceLimitsSTORAGE)
-            )
-        } else {
-            super.getResourceLimitForContainer(containerId)
-        }
-    }
-
+    override fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits =
+            if (containerNodeConfig.testmode) {
+                ContainerResourceLimits(
+                        Cpu(containerNodeConfig.testmodeResourceLimitsCPU),
+                        Ram(containerNodeConfig.testmodeResourceLimitsRAM),
+                        Storage(containerNodeConfig.testmodeResourceLimitsSTORAGE)
+                )
+            } else {
+                super.getResourceLimitForContainer(containerId)
+            }
 }

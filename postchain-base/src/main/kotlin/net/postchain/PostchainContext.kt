@@ -1,6 +1,7 @@
 package net.postchain
 
 import net.postchain.config.app.AppConfig
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.Storage
 import net.postchain.core.block.BlockQueriesProvider
@@ -13,7 +14,9 @@ data class PostchainContext(
         val storage: Storage,
         val connectionManager: ConnectionManager,
         val blockQueriesProvider: BlockQueriesProvider,
-        val nodeDiagnosticContext: NodeDiagnosticContext?
+        val nodeDiagnosticContext: NodeDiagnosticContext,
+        val configurationProvider: BlockchainConfigurationProvider,
+        val debug: Boolean
 ) {
     val cryptoSystem get() = appConfig.cryptoSystem
 

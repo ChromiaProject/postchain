@@ -9,6 +9,7 @@ import net.postchain.client.core.PostchainClientProvider
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.parse.GtvParser
 
 class QueryCommand(private val clientProvider: PostchainClientProvider) : CliktCommand(name = "query", help = "Make a query towards a postchain node") {
     private val configFile by configFileOption()
@@ -23,13 +24,11 @@ class QueryCommand(private val clientProvider: PostchainClientProvider) : CliktC
         return when {
             args.isEmpty() -> gtv(mapOf())
             args.size == 1 && args[0].startsWith("{") && args[0].endsWith("}") -> verifyAndEncodeDict(args[0])
-            else -> encodeArg("{${args.joinToString(",")}}")
+            else -> GtvParser.parse("{${args.joinToString(",")}}")
         }
     }
 
-    private fun verifyAndEncodeDict(arg: String): Gtv {
-        return encodeArg(arg)
-    }
+    private fun verifyAndEncodeDict(arg: String): Gtv = GtvParser.parse(arg)
 
     override fun run() {
         val clientConfig = PostchainClientConfig.fromProperties(configFile?.absolutePath)

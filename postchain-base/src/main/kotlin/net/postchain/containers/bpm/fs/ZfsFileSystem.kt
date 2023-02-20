@@ -7,48 +7,66 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.concurrent.TimeUnit
 
-class ZfsFileSystem(private val config: ContainerNodeConfig) : FileSystem {
+class ZfsFileSystem(private val containerConfig: ContainerNodeConfig) : FileSystem {
 
     companion object : KLogging()
 
     override fun createContainerRoot(containerName: ContainerName, resourceLimits: ContainerResourceLimits): Path? {
         val root = rootOf(containerName)
-        return if (root.toFile().exists()) {
+        if (root.toFile().exists()) {
             logger.info("Container dir exists: $root")
-            root
         } else {
-            try {
-                val script = config.zfsPoolInitScript
-                if (!File(script).exists()) {
-                    logger.error("Can't find zfs init script: $script")
-                    null
+            val fs = getFs(containerName)
+            val quotaBytes = getQuotaBytes(resourceLimits)
+
+            if (runCommand(arrayOf("zfs", "get", "all", fs)) == null) {
+                logger.info("ZFS volume exists: $fs")
+            } else {
+                logger.info("Creating ZFS volume: $fs")
+                val createCommand = if (containerConfig.zfsPoolInitScript != null && File(containerConfig.zfsPoolInitScript).exists()) {
+                    arrayOf("/bin/sh", containerConfig.zfsPoolInitScript, fs, quotaBytes.toString())
                 } else {
-                    val fs = "${config.zfsPoolName}/${containerName.name}"
-                    val quota = resourceLimits.storageMb().toString()
-                    val cmd = arrayOf("/bin/sh", script, fs, quota)
-                    Runtime.getRuntime().exec(cmd).waitFor(10, TimeUnit.SECONDS)
-                    if (root.toFile().exists()) {
-                        logger.info("Container dir has been created: $root")
-                        root
-                    } else {
-                        logger.error("Container dir hasn't been created: $root")
-                        null
-                    }
+                    arrayOf("zfs", "create", "-u", fs)
                 }
-            } catch (e: Exception) {
-                logger.error("Can't create container dir: $root", e)
-                null
+                runCommand(createCommand)?.let {
+                    logger.warn("Unable to create ZFS file system: $it")
+                }
+            }
+
+            runCommand(arrayOf("zfs", "mount", fs))?.let {
+                logger.warn("Unable to mount ZFS file system: $it")
+            }
+            if (root.toFile().exists()) {
+                logger.info("Container dir has been created: $root")
+            } else {
+                logger.error("Container dir hasn't been created: $root")
+                return null
+            }
+        }
+
+        val hostPgdata = hostPgdataOf(containerName)
+        hostPgdata.toFile().mkdirs()
+
+        return root
+    }
+
+    override fun applyLimits(containerName: ContainerName, resourceLimits: ContainerResourceLimits) {
+        if (resourceLimits.hasStorage()) {
+            runCommand(arrayOf("zfs", "set", "quota=${getQuotaBytes(resourceLimits)}", getFs(containerName)))?.let {
+                logger.warn("Unable to set ZFS quota: $it")
             }
         }
     }
 
-    override fun rootOf(containerName: ContainerName): Path {
-        return hostRootOf(containerName)
-    }
+    private fun getFs(containerName: ContainerName) =
+            "${containerConfig.zfsPoolName}/${containerName.name}"
 
-    override fun hostRootOf(containerName: ContainerName): Path {
-        return Paths.get(File.separator, config.zfsPoolName, containerName.name)
-    }
+    private fun getQuotaBytes(resourceLimits: ContainerResourceLimits) =
+            resourceLimits.storageMb() * 1024 * 1024
+
+    override fun rootOf(containerName: ContainerName): Path = hostRootOf(containerName)
+
+    override fun hostRootOf(containerName: ContainerName): Path =
+            Paths.get(File.separator, containerConfig.zfsPoolName, containerName.name)
 }

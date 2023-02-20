@@ -4,6 +4,9 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
+import net.postchain.common.toHex
+import net.postchain.concurrent.util.get
+import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.*
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockHeader
@@ -65,7 +68,7 @@ class FastSynchronizer(
         var witness: BlockWitness? = null
         var block: BlockDataWithWitness? = null
         var blockCommitting = false
-        var addBlockException: Exception? = null
+        var addBlockException: Throwable? = null
         val startTime = System.currentTimeMillis()
         var hasRestartFailed = false
         override fun toString(): String {
@@ -219,8 +222,8 @@ class FastSynchronizer(
                 logger.info {
                     "processDoneJob() - ${
                         "Previous block mismatch. " +
-                                "Previous block ${lastJob?.header?.blockRID} received from ${lastJob?.peerId}, " +
-                                "This block ${j.header?.blockRID} received from ${j.peerId}."
+                                "Previous block ${lastJob?.header?.blockRID?.toHex()} received from ${lastJob?.peerId}, " +
+                                "This block ${j.header?.blockRID?.toHex()} received from ${j.peerId}."
                     }"
                 }
                 throw exception
@@ -516,7 +519,7 @@ class FastSynchronizer(
 
     private fun commitJobsAsNecessary(bTrace: BlockTrace?) {
         // We have to make sure blocks are committed in the correct order. If we are missing a block we have to wait for it.
-        for (job in jobs.values) {
+        for ((index, job) in jobs.values.withIndex()) {
             if (!isProcessRunning()) return
 
             // The values are iterated in key-ascending order (see TreeMap)
@@ -527,7 +530,7 @@ class FastSynchronizer(
             }
             if (!job.blockCommitting) {
                 unfinishedTrace("Committing block for $job")
-                commitBlock(job, bTrace)
+                commitBlock(job, bTrace, index == 0)
             }
         }
     }
@@ -554,28 +557,30 @@ class FastSynchronizer(
      * NOTE:
      * If one block fails to commit, don't worry about the blocks coming after. This is handled in the BBD.addBlock().
      */
-    private fun commitBlock(job: Job, bTrace: BlockTrace?) {
+    private fun commitBlock(job: Job, bTrace: BlockTrace?, hasNoPrecedingJob: Boolean) {
         // Once we set this flag we must add the job to finishedJobs otherwise we risk a deadlock
         job.blockCommitting = true
 
-        if (addBlockCompletionPromise?.isDone() == true) {
-            addBlockCompletionPromise = null // We want to do cleanup, since the old promise is used in "addBlock()" below.
+        // This job has no preceding job that it has to check status for
+        if (hasNoPrecedingJob) {
+            addBlockCompletionFuture = null // We want to do cleanup, since the old future is used in "addBlock()" below.
         }
 
         // We are free to commit this Job, go on and add it to DB
-        // (this is usually slow and is therefore handled via a promise).
-        addBlockCompletionPromise = blockDatabase
-                .addBlock(job.block!!, addBlockCompletionPromise, bTrace)
-                .fail {
-                    // peer and try another peer
-                    if (it is PmEngineIsAlreadyClosed || it is BDBAbortException) {
-                        logger.warn { "Exception committing block $job: ${it.message}" }
-                    } else {
-                        logger.warn(it) { "Exception committing block $job" }
+        // (this is usually slow and is therefore handled via a future).
+        addBlockCompletionFuture = blockDatabase
+                .addBlock(job.block!!, addBlockCompletionFuture, bTrace)
+                .whenCompleteUnwrapped { _: Any?, exception ->
+                    if (exception != null) {
+                        if (exception is PmEngineIsAlreadyClosed || exception is BDBAbortException) {
+                            logger.warn { "Exception committing block $job: ${exception.message}" }
+                        } else {
+                            logger.warn(exception) { "Exception committing block $job" }
+                        }
+                        job.addBlockException = exception
                     }
-                    job.addBlockException = it
+                    finishedJobs.add(job)
                 }
-                .always { finishedJobs.add(job) }
     }
 
     private fun processMessages() {
@@ -625,5 +630,9 @@ class FastSynchronizer(
 
     private fun headerDebug(message: String, e: Exception? = null) {
         logger.debug(e) { "handleBlockHeader() -- $message" }
+    }
+
+    private fun unfinishedTrace(message: String, e: Exception? = null) {
+        logger.trace(e) { "handleUnfinishedBlock() -- $message" }
     }
 }

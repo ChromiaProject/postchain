@@ -1,8 +1,5 @@
 package net.postchain.containers.bpm
 
-import com.spotify.docker.client.messages.ContainerConfig
-import com.spotify.docker.client.messages.HostConfig
-import com.spotify.docker.client.messages.PortBinding
 import mu.KLogging
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.config.app.AppConfig
@@ -11,6 +8,9 @@ import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Infrastructure
 import net.postchain.ebft.syncmanager.common.SyncParameters
+import org.mandas.docker.client.messages.ContainerConfig
+import org.mandas.docker.client.messages.HostConfig
+import org.mandas.docker.client.messages.PortBinding
 
 object ContainerConfigFactory : KLogging() {
 
@@ -34,7 +34,7 @@ object ContainerConfigFactory : KLogging() {
          */
 
         // target volume
-        val targetVol = HostConfig.Bind
+        val targetVol = HostConfig.Bind.builder()
                 .from(fs.hostRootOf(container.containerName).toString())
                 .to(FileSystem.CONTAINER_TARGET_PATH)
                 .build()
@@ -42,11 +42,16 @@ object ContainerConfigFactory : KLogging() {
 
         // pgdata volume
         if (containerNodeConfig.bindPgdataVolume) {
-            val pgdataVol = HostConfig.Bind
+            val pgdataVol = HostConfig.Bind.builder()
                     .from(fs.hostPgdataOf(container.containerName).toString())
                     .to(FileSystem.CONTAINER_PGDATA_PATH)
                     .build()
             volumes.add(pgdataVol)
+        }
+
+        if (containerNodeConfig.subnodeUser != null) {
+            volumes.add(HostConfig.Bind.builder().from("/etc/passwd").to("/etc/passwd").readOnly(true).build())
+            volumes.add(HostConfig.Bind.builder().from("/etc/group").to("/etc/group").readOnly(true).build())
         }
 
         val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
@@ -79,7 +84,7 @@ object ContainerConfigFactory : KLogging() {
         // Host config
         val resources = container.resourceLimits
         val hostConfig = HostConfig.builder()
-                .appendBinds(*volumes.toTypedArray())
+                .binds(*volumes.toTypedArray())
                 .portBindings(portBindings)
                 .publishAllPorts(false)
                 .apply {
@@ -91,6 +96,26 @@ object ContainerConfigFactory : KLogging() {
                     }
                 }
                 .apply {
+                    if (resources.hasIoRead()) {
+                        blkioDeviceReadBps(listOf(
+                                HostConfig.BlkioDeviceRate.builder()
+                                        .path(containerNodeConfig.hostMountDevice)
+                                        .rate(resources.ioReadBytes().toInt())
+                                        .build()
+                        ))
+                    }
+                }
+                .apply {
+                    if (resources.hasIoWrite()) {
+                        blkioDeviceWriteBps(listOf(
+                                HostConfig.BlkioDeviceRate.builder()
+                                        .path(containerNodeConfig.hostMountDevice)
+                                        .rate(resources.ioWriteBytes().toInt())
+                                        .build()
+                        ))
+                    }
+                }
+                .apply {
                     if (containerNodeConfig.network != null) {
                         logger.info("Setting container network to ${containerNodeConfig.network}")
                         networkMode(containerNodeConfig.network)
@@ -99,6 +124,9 @@ object ContainerConfigFactory : KLogging() {
                 .build()
 
         return ContainerConfig.builder()
+                .apply {
+                    containerNodeConfig.subnodeUser?.let { user(it) }
+                }
                 .image(containerNodeConfig.containerImage)
                 .hostConfig(hostConfig)
                 .exposedPorts(portBindings.keys)
@@ -143,9 +171,12 @@ object ContainerConfigFactory : KLogging() {
 
         add("POSTCHAIN_MASTER_HOST=${containerNodeConfig.masterHost}")
         add("POSTCHAIN_MASTER_PORT=${containerNodeConfig.masterPort}")
-        add("POSTCHAIN_MASTER_REST_API_PORT=${containerNodeConfig.masterRestApiPort}")
         add("POSTCHAIN_HOST_MOUNT_DIR=${containerNodeConfig.hostMountDir}")
+        add("POSTCHAIN_HOST_MOUNT_DEVICE=${containerNodeConfig.hostMountDevice}")
         add("POSTCHAIN_SUBNODE_DOCKER_IMAGE=${containerNodeConfig.containerImage}")
+        add("POSTCHAIN_SUBNODE_HOST=${containerNodeConfig.subnodeHost}")
         add("POSTCHAIN_SUBNODE_NETWORK=${containerNodeConfig.network}")
+
+        add("POSTCHAIN_EXIT_ON_FATAL_ERROR=true")
     }
 }

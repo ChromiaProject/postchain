@@ -4,8 +4,6 @@ package net.postchain.api.rest
 
 import mu.KLogging
 import net.postchain.api.rest.controller.Model
-import net.postchain.api.rest.controller.Query
-import net.postchain.api.rest.controller.QueryResult
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.ApiTx
@@ -20,8 +18,13 @@ import net.postchain.common.tx.TransactionStatus
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
+import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
+import net.postchain.gtx.GtxQuery
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 class RestApiMockForClientManual {
@@ -38,6 +41,7 @@ class RestApiMockForClientManual {
         logger.debug { "Stopped" }
     }
 
+    @Disabled
     @Test
     fun startMockRestApi() {
         val model = MockModel()
@@ -130,20 +134,15 @@ class RestApiMockForClientManual {
             }
         }
 
-        override fun query(query: Query): QueryResult {
-            return QueryResult(when (query.json) {
-                """{"a":"oknullresponse","c":3}""" -> ""
-                """{"a":"okemptyresponse","c":3}""" -> """{}"""
-                """{"a":"oksimpleresponse","c":3}""" -> """{"test":"hi"}"""
-                """{"a":"usermistake","c":3}""" -> throw UserMistake("expected error")
-                """{"a":"programmermistake","c":3}""" -> throw ProgrammerMistake("expected error")
+        override fun query(query: GtxQuery): Gtv {
+            return when (query.args) {
+                gtv(mapOf("a" to gtv("oknullresponse"), "c" to gtv(3))) -> GtvNull
+                gtv(mapOf("a" to gtv("okemptyresponse"), "c" to gtv(3))) -> gtv(mapOf())
+                gtv(mapOf("a" to gtv("oksimpleresponse"), "c" to gtv(3))) -> gtv(mapOf("test" to gtv("hi")))
+                gtv(mapOf("a" to gtv("usermistake"), "c" to gtv(3))) -> throw UserMistake("expected error")
+                gtv(mapOf("a" to gtv("programmermistake"), "c" to gtv(3))) -> throw ProgrammerMistake("expected error")
                 else -> throw ProgrammerMistake("unexpected error")
-            })
-        }
-
-        //TODO Should tests in base have knowledge of GTV? If yes, convert getTransactionsInfo to use GTV
-        override fun query(query: Gtv): Gtv {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
         }
 
         override fun nodeQuery(subQuery: String): String = TODO()
@@ -182,6 +181,10 @@ class RestApiMockForClientManual {
 
         override fun debugQuery(subQuery: String?): String {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
+        override fun getBlockchainConfiguration(height: Long): ByteArray? {
+            TODO("Not yet implemented")
         }
 
     }

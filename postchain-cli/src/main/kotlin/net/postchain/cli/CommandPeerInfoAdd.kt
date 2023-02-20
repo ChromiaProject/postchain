@@ -14,8 +14,7 @@ import net.postchain.config.app.AppConfig
 
 class CommandPeerInfoAdd : CliktCommand(name = "peerinfo-add", help = "Add peer information to database") {
 
-    // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption().required()
+    private val nodeConfigFile by nodeConfigOption()
 
     private val host by hostOption().required()
 
@@ -26,7 +25,7 @@ class CommandPeerInfoAdd : CliktCommand(name = "peerinfo-add", help = "Add peer 
     private val force by forceOption().help("Force the addition of peerinfo which already exists with the same host:port")
 
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         val added = CliExecution.peerinfoAdd(appConfig, host, port, pubKey, force)
         when {
             added -> println("Peerinfo has been added successfully")

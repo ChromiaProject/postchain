@@ -5,13 +5,14 @@ package net.postchain.api.rest.endpoint
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
-import net.postchain.api.rest.controller.Query
-import net.postchain.api.rest.controller.QueryResult
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.gtvToJSON
+import net.postchain.gtv.make_gtv_gson
+import net.postchain.gtx.GtxQuery
 import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -31,6 +32,7 @@ class RestApiQueryEndpointTest {
 
     private val basePath = "/api/v1"
     private val blockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
+    private val gson = make_gtv_gson()
     private lateinit var restApi: RestApi
     private lateinit var model: Model
 
@@ -51,22 +53,54 @@ class RestApiQueryEndpointTest {
 
     @Test
     fun test_query() {
-        val queryString = """{"a"="b", "c"=3}"""
-        val query = Query(queryString)
+        val queryMap = mapOf(
+                "type" to gtv("test_query"),
+                "a" to gtv("b"),
+                "c" to gtv(3)
+        )
 
-        val answerString = """{"d"=false}"""
-        val answer = QueryResult(answerString)
+        val queryString = gtvToJSON(gtv(queryMap), gson)
+        val query = GtxQuery("test_query", gtv(queryMap.filterKeys { it != "type" }))
+
+        val answerString = """{"d":0}"""
+        val answer = gtv(mapOf("d" to gtv(false)))
 
         whenever(model.query(query)).thenReturn(answer)
 
         restApi.attachModel(blockchainRID, model)
 
         RestAssured.given().basePath(basePath).port(restApi.actualPort())
-            .body(queryString)
-            .post("/query/$blockchainRID")
-            .then()
-            .statusCode(200)
-            .body(equalTo(answerString))
+                .body(queryString)
+                .post("/query/$blockchainRID")
+                .then()
+                .statusCode(200)
+                .body(equalTo(answerString))
+    }
+
+    @Test
+    fun test_get_query() {
+        val queryMap = mapOf(
+                "type" to gtv("test_query"),
+                "a" to gtv("b"),
+                "c" to gtv(3)
+        )
+
+        val queryString = queryMap.map { "${it.key}=${it.value.toString().trim('"')}" }.joinToString("&")
+        val query = GtxQuery("test_query", gtv(queryMap.filterKeys { it != "type" }))
+
+        val answerString = """{"d":0}"""
+        val answer = gtv(mapOf("d" to gtv(false)))
+
+        whenever(model.query(query)).thenReturn(answer)
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .body(queryString)
+                .get("/query/$blockchainRID?$queryString")
+                .then()
+                .statusCode(200)
+                .body(equalTo(answerString))
     }
 
     /**
@@ -76,8 +110,14 @@ class RestApiQueryEndpointTest {
      */
     @Test
     fun test_query_error() {
-        val queryString = """{"a"="b", "c"=3}"""
-        val query = Query(queryString)
+        val queryMap = mapOf(
+                "type" to gtv("test_query"),
+                "a" to gtv("b"),
+                "c" to gtv(3)
+        )
+
+        val queryString = gtvToJSON(gtv(queryMap), gson)
+        val query = GtxQuery("test_query", gtv(queryMap.filterKeys { it != "type" }))
 
         val answerString = """{"error":"Bad bad stuff."}"""
 
@@ -103,8 +143,14 @@ class RestApiQueryEndpointTest {
      */
     @Test
     fun test_query_other_error() {
-        val queryString = """{"a"="b", "c"=3}"""
-        val query = Query(queryString)
+        val queryMap = mapOf(
+                "type" to gtv("test_query"),
+                "a" to gtv("b"),
+                "c" to gtv(3)
+        )
+
+        val queryString = gtvToJSON(gtv(queryMap), gson)
+        val query = GtxQuery("test_query", gtv(queryMap.filterKeys { it != "type" }))
 
         val answerMessage = "expected error"
         val answerBody = """{"error":"expected error"}"""
@@ -126,14 +172,20 @@ class RestApiQueryEndpointTest {
      */
     @Test
     fun test_query_UserError() {
-        val queryString = """{"a"="b", "c"=3}"""
-        val query = Query(queryString)
+        val queryMap = mapOf(
+                "type" to gtv("test_query"),
+                "a" to gtv("b"),
+                "c" to gtv(3)
+        )
+
+        val queryString = gtvToJSON(gtv(queryMap), gson)
+        val query = GtxQuery("test_query", gtv(queryMap.filterKeys { it != "type" }))
 
         val answerMessage = "expected error"
         val answerBody = """{"error":"expected error"}"""
 
         whenever(model.query(query)).thenThrow(
-            UserMistake(answerMessage))
+                UserMistake(answerMessage))
 
         restApi.attachModel(blockchainRID, model)
 
@@ -192,7 +244,7 @@ class RestApiQueryEndpointTest {
 
     @Test
     fun gtvRequestAndResponseTypes() {
-        val query = gtv(listOf(gtv("test_query"), gtv(mapOf("arg" to gtv("value")))))
+        val query = GtxQuery("test_query", gtv(mapOf("type" to gtv("value"))))
         val answer = gtv("answer")
 
         whenever(model.query(query)).thenReturn(answer)
@@ -200,7 +252,7 @@ class RestApiQueryEndpointTest {
         restApi.attachModel(blockchainRID, model)
 
         val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .body(GtvEncoder.encodeGtv(query))
+                .body(query.encode())
                 .post("/query_gtv/${blockchainRID}")
                 .then()
                 .statusCode(200)
@@ -211,7 +263,7 @@ class RestApiQueryEndpointTest {
 
     @Test
     fun `Errors are in GTV format when querying for GTV`() {
-        val query = gtv(listOf(gtv("test_query"), gtv(mapOf("arg" to gtv("value")))))
+        val query = GtxQuery("test_query", gtv(mapOf("arg" to gtv("value"))))
 
         val errorMessage = "Unknown query"
         whenever(model.query(query)).thenThrow(UserMistake(errorMessage))
@@ -219,7 +271,7 @@ class RestApiQueryEndpointTest {
         restApi.attachModel(blockchainRID, model)
 
         val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .body(GtvEncoder.encodeGtv(query))
+                .body(query.encode())
                 .post("/query_gtv/${blockchainRID}")
                 .then()
                 .statusCode(400)
