@@ -4,6 +4,7 @@ package net.postchain.api.rest.controller
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
+import com.google.gson.JsonObject
 import kong.unirest.HttpMethod
 import mu.KLogging
 import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
@@ -18,11 +19,14 @@ import net.postchain.api.rest.controller.HttpHelper.Companion.SUBQUERY
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
+import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.PmEngineIsAlreadyClosed
+import net.postchain.debug.JsonNodeDiagnosticContext
+import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvDictionary
@@ -47,7 +51,8 @@ class RestApi(
         private val listenPort: Int,
         private val basePath: String,
         private val tlsCertificate: String? = null,
-        private val tlsCertificatePassword: String? = null
+        private val tlsCertificatePassword: String? = null,
+        private val nodeDiagnosticContext: NodeDiagnosticContext = JsonNodeDiagnosticContext()
 ) : Modellable {
 
     private val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
@@ -96,10 +101,10 @@ class RestApi(
     }
 
     private fun buildErrorHandler(http: Service) {
-        http.exception(NotFoundError::class.java) { error, _, response ->
+        http.exception(NotFoundError::class.java) { error, request, response ->
             logger.warn("NotFound: ${error.message}")
             response.status(404)
-            setErrorResponseBody(response, error)
+            transformErrorResponseFromDiagnostics(request, response, error)
         }
 
         http.exception(BadFormatError::class.java) { error, _, response ->
@@ -124,9 +129,9 @@ class RestApi(
             setErrorResponseBody(response, error)
         }
 
-        http.exception(UnavailableException::class.java) { error, _, response ->
+        http.exception(UnavailableException::class.java) { error, request, response ->
             response.status(503) // Service unavailable
-            setErrorResponseBody(response, error)
+            transformErrorResponseFromDiagnostics(request, response, error)
         }
 
         http.exception(PmEngineIsAlreadyClosed::class.java) { error, _, response ->
@@ -134,13 +139,27 @@ class RestApi(
             setErrorResponseBody(response, error)
         }
 
-        http.exception(Exception::class.java) { error, _, response ->
+        http.exception(Exception::class.java) { error, request, response ->
             logger.error("Exception: $error", error)
             response.status(500)
-            setErrorResponseBody(response, error)
+            transformErrorResponseFromDiagnostics(request, response, error)
         }
 
         http.notFound { _, _ -> toJson(UserMistake("Not found")) }
+    }
+
+    private fun transformErrorResponseFromDiagnostics(request: Request, response: Response, error: Exception) {
+        val blockchainRid = if (request.params(PARAM_BLOCKCHAIN_RID) != null) checkBlockchainRID(request) else null
+        checkDiagnosticError(blockchainRid)?.let { errorBody ->
+            response.status(500)
+            response.type(JSON_CONTENT_TYPE)
+            response.body(gson.toJson(errorBody))
+        } ?: setErrorResponseBody(response, error)
+    }
+    private fun checkDiagnosticError(blockchainRid: String?): JsonObject? {
+        if (blockchainRid == null) return null
+        if (!nodeDiagnosticContext.hasBlockchainErrors(BlockchainRid.buildFromHex(blockchainRid))) return null
+        return JsonObject().apply { add("error", gson.toJsonTree(nodeDiagnosticContext.blockchainErrorQueue(BlockchainRid.buildFromHex(blockchainRid)).value)) }
     }
 
     private fun setErrorResponseBody(response: Response, error: Exception) {

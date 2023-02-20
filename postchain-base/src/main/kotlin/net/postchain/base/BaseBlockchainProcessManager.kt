@@ -5,6 +5,7 @@ package net.postchain.base
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
@@ -14,11 +15,8 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.LazyDiagnosticValue
-import net.postchain.debug.LazyDiagnosticValueCollection
-import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
@@ -57,7 +55,6 @@ open class BaseBlockchainProcessManager(
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val bridToChainId = mutableMapOf<BlockchainRid, Long>()
-    protected val blockchainDiagnostics = mutableMapOf<BlockchainRid, DiagnosticData>()
     protected val extensions: List<BlockchainProcessManagerExtension> = bpmExtensions
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
     private val scheduledForStart = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
@@ -67,10 +64,6 @@ open class BaseBlockchainProcessManager(
     var blockDebug: BlockTrace? = null
 
     companion object : KLogging()
-
-    init {
-        nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN] = LazyDiagnosticValueCollection { blockchainDiagnostics.values }
-    }
 
     /**
      * Put the startup operation of chainId in the [executor]'s work queue.
@@ -156,6 +149,13 @@ open class BaseBlockchainProcessManager(
                             )
                         }
                         blockchainConfig.blockchainRid
+                    } catch (e: Exception) {
+                        withReadConnection(storage, chainId) {
+                            DatabaseAccess.of(it).getBlockchainRid(it)?.let { brid ->
+                                nodeDiagnosticContext.blockchainErrorQueue(brid).add(e.message)
+                            }
+                        }
+                        throw e
                     } finally {
                         scheduledForStart.remove(chainId)
                     }
@@ -188,12 +188,11 @@ open class BaseBlockchainProcessManager(
     ) {
         blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine)
                 .also {
-                    it.registerDiagnosticData(blockchainDiagnostics.getOrPut(blockchainConfig.blockchainRid) {
-                        DiagnosticData(
-                                DiagnosticProperty.BLOCKCHAIN_RID to EagerDiagnosticValue(blockchainConfig.blockchainRid.toHex()),
-                                DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT to LazyDiagnosticValue { engine.getBlockQueries().getBestHeight().get() },
-                                DiagnosticProperty.BLOCKCHAIN_NODE_PEERS to LazyDiagnosticValue { connectionManager.getNodesTopology(chainId) })
-                    })
+                    val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainConfig.blockchainRid).also { data ->
+                        data[DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT] = LazyDiagnosticValue { engine.getBlockQueries().getBestHeight().get() }
+                        data[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS] = LazyDiagnosticValue { connectionManager.getNodesTopology(chainId) }
+                    }
+                    it.registerDiagnosticData(diagnosticData)
                     extensions.forEach { ext -> ext.connectProcess(it) }
                     chainIdToBrid[chainId] = blockchainConfig.blockchainRid
                     bridToChainId[blockchainConfig.blockchainRid] = chainId
@@ -240,7 +239,7 @@ open class BaseBlockchainProcessManager(
 
     protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
         val blockchainRid = chainIdToBrid[chainId]
-        blockchainDiagnostics.remove(blockchainRid)
+        nodeDiagnosticContext.removeBlockchainData(blockchainRid)
         blockchainProcesses.remove(chainId)?.also {
             stopInfoDebug("Stopping of blockchain", chainId, bTrace)
             extensions.forEach { ext -> ext.disconnectProcess(it) }
@@ -265,7 +264,7 @@ open class BaseBlockchainProcessManager(
             it.shutdown()
         }
         blockchainProcesses.clear()
-        blockchainDiagnostics.clear()
+        nodeDiagnosticContext.clearBlockchainData()
         chainIdToBrid.clear()
         bridToChainId.clear()
         logger.debug("[${nodeName()}]: Stopped BlockchainProcessManager")

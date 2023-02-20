@@ -9,6 +9,10 @@ import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BadDataMistake
 import net.postchain.crypto.PubKey
+import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DiagnosticQueue
+import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.gtv.Gtv
 
 class PostchainService(private val postchainNode: PostchainNode) {
@@ -36,12 +40,18 @@ class PostchainService(private val postchainNode: PostchainNode) {
         val brid = maybeBrid
                 ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config, postchainNode.postchainContext.cryptoSystem)
 
-        val initialized = withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
-            BlockchainApi.initializeBlockchain(ctx, brid, override, config, givenDependencies)
+        return try {
+            val initialized = withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
+                BlockchainApi.initializeBlockchain(ctx, brid, override, config, givenDependencies)
+            }
+            if (initialized) brid else null
+        } catch (e: Exception) {
+            postchainNode.postchainContext.nodeDiagnosticContext.blockchainErrorQueue(brid).add(e.message)
+            throw InitializationError(e.message)
         }
 
-        return if (initialized) brid else null
     }
+    class InitializationError(m: String?) : RuntimeException(m)
 
     fun findBlockchain(chainId: Long): Triple<BlockchainRid?, Boolean?, Long> =
             withReadConnection(postchainNode.postchainContext.storage, chainId) { ctx ->

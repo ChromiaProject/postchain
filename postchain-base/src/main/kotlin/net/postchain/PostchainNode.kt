@@ -53,17 +53,11 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 storage,
                 infrastructureFactory.makeConnectionManager(appConfig),
                 blockQueriesProvider,
-                JsonNodeDiagnosticContext(),
+                JsonNodeDiagnosticContext(version, appConfig.pubKey, appConfig.infrastructure),
                 blockchainConfigProvider,
                 appConfig.debug
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
-
-        postchainContext.nodeDiagnosticContext.putAll(mapOf(
-                DiagnosticProperty.VERSION withValue version,
-                DiagnosticProperty.PUB_KEY withValue appConfig.pubKey,
-                DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE withValue blockchainInfrastructure.javaClass.simpleName))
-
 
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
         blockQueriesProvider.processManager = processManager

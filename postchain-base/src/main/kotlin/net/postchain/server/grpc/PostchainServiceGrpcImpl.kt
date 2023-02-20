@@ -125,6 +125,11 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
             responseObserver.onError(
                     Status.INTERNAL.withDescription(e.message).asRuntimeException()
             )
+        } catch (e: PostchainService.InitializationError) {
+            responseObserver.onError(
+                    Status.CANCELLED.withDescription(e.message).asRuntimeException()
+            )
+
         }
     }
 

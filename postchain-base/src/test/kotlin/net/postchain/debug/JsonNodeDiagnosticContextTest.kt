@@ -10,7 +10,7 @@ class JsonNodeDiagnosticContextTest {
     @Test
     fun testEmptyContext() {
         val sut = JsonNodeDiagnosticContext()
-        assert(sut.isEmpty())
+        assert(sut.isNotEmpty())
     }
 
     @Test
@@ -34,13 +34,13 @@ class JsonNodeDiagnosticContextTest {
         sut[DiagnosticProperty.CONTAINER_NAME] = LazyDiagnosticValue { "my-container" }
 
         // Asserts
-        assert(sut.size).isEqualTo(3)
+        assert(sut.size).isEqualTo(4)
 
         // Remove
         sut.remove(DiagnosticProperty.PUB_KEY)
 
         // Asserts
-        assert(sut.size).isEqualTo(2)
+        assert(sut.size).isEqualTo(3)
         assert(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
         assert(sut[DiagnosticProperty.CONTAINER_NAME]?.value).isEqualTo("my-container")
     }

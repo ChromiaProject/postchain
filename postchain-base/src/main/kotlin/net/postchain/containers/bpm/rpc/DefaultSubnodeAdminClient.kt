@@ -14,6 +14,10 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.containers.bpm.ContainerPorts
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DiagnosticQueue
+import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.server.grpc.AddConfigurationRequest
 import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.DebugServiceGrpc
@@ -30,6 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class DefaultSubnodeAdminClient(
         private val containerNodeConfig: ContainerNodeConfig,
         private val containerPorts: ContainerPorts,
+        private val nodeDiagnosticContext: NodeDiagnosticContext
 ) : SubnodeAdminClient {
 
     companion object : KLogging() {
@@ -123,10 +128,12 @@ class DefaultSubnodeAdminClient(
                 logger.debug { "startBlockchain(${chainId}) -- blockchain started ${response.brid}" }
                 true
             } else {
-                logger.error { "startBlockchain(${chainId}) -- can't start blockchain" }
+                nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add("Can't start blockchain: ${response.message}")
+                logger.error { "startBlockchain(${chainId}) -- can't start blockchain: ${response.message}" }
                 false
             }
         } catch (e: Exception) {
+            nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add("Can't start blockchain: ${e.message}")
             logger.error { "startBlockchain(${chainId}) -- can't start blockchain: ${e.message}" }
             false
         }

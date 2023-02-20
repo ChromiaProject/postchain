@@ -18,6 +18,7 @@ import net.postchain.common.tx.TransactionStatus
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
+import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
