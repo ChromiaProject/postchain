@@ -8,6 +8,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.BaseInfrastructureFactoryProvider
@@ -66,6 +67,22 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
 
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
         blockQueriesProvider.processManager = processManager
+    }
+
+    fun tryStartBlockchain(chainId: Long) {
+        withLoggingContext(
+                NODE_PUBKEY_TAG to appConfig.pubKey,
+                CHAIN_IID_TAG to chainId.toString()) {
+            try {
+                startBlockchain(chainId)
+            } catch (e: NotFound) {
+                logger.error(e.message)
+            } catch (e: UserMistake) {
+                logger.error(e.message)
+            } catch (e: Exception) {
+                logger.error(e) { e.message }
+            }
+        }
     }
 
     fun startBlockchain(chainId: Long): BlockchainRid {
