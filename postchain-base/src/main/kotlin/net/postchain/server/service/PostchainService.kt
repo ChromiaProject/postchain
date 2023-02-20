@@ -3,16 +3,13 @@ package net.postchain.server.service
 import net.postchain.PostchainNode
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BadDataMistake
 import net.postchain.crypto.PubKey
-import net.postchain.debug.DiagnosticData
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DiagnosticQueue
-import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.gtv.Gtv
 
 class PostchainService(private val postchainNode: PostchainNode) {
@@ -29,7 +26,14 @@ class PostchainService(private val postchainNode: PostchainNode) {
      */
     fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: Gtv, allowUnknownSigners: Boolean = false): Boolean =
             withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
-                BlockchainApi.addConfiguration(ctx, height, override, config, allowUnknownSigners)
+                try {
+                    BlockchainApi.addConfiguration(ctx, height, override, config, allowUnknownSigners)
+                } catch (e: Exception) {
+                    DatabaseAccess.of(ctx).getBlockchainRid(ctx)?.let { brid ->
+                        postchainNode.postchainContext.nodeDiagnosticContext.blockchainErrorQueue(brid).add(e.message)
+                    }
+                    throw InitializationError(e.message)
+                }
             }
 
     /**
@@ -51,6 +55,7 @@ class PostchainService(private val postchainNode: PostchainNode) {
         }
 
     }
+
     class InitializationError(m: String?) : RuntimeException(m)
 
     fun findBlockchain(chainId: Long): Triple<BlockchainRid?, Boolean?, Long> =

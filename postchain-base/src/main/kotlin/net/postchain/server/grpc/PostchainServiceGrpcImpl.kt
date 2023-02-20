@@ -83,6 +83,10 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
             responseObserver.onError(
                     Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
             )
+        } catch (e: PostchainService.InitializationError) {
+            responseObserver.onError(
+                    Status.CANCELLED.withDescription(e.message).asRuntimeException()
+            )
         }
     }
 
@@ -129,7 +133,6 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
             responseObserver.onError(
                     Status.CANCELLED.withDescription(e.message).asRuntimeException()
             )
-
         }
     }
 

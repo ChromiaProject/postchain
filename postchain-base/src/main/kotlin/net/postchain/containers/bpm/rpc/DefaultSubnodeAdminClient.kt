@@ -92,7 +92,7 @@ class DefaultSubnodeAdminClient(
         false
     }
 
-    override fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: ByteArray): Boolean {
+    override fun addConfiguration(chainId: Long, blockchainRid: BlockchainRid, height: Long, override: Boolean, config: ByteArray): Boolean {
         return try {
             val request = AddConfigurationRequest.newBuilder()
                     .setChainId(chainId)
@@ -106,6 +106,7 @@ class DefaultSubnodeAdminClient(
             logger.debug { "addConfiguration(${chainId}) -- ${response.message}" }
             true
         } catch (e: Exception) {
+            nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add("Can't add configuration: ${e.message}")
             logger.error { "addConfiguration(${chainId}) -- can't add configuration: ${e.message}" }
             false
         }

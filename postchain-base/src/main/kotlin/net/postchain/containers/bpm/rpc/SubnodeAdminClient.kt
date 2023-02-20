@@ -17,7 +17,7 @@ interface SubnodeAdminClient : Shutdownable {
 
     fun connect()
     fun isSubnodeConnected(): Boolean
-    fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: ByteArray): Boolean
+    fun addConfiguration(chainId: Long, blockchainRid: BlockchainRid, height: Long, override: Boolean, config: ByteArray): Boolean
     fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid, config: ByteArray): Boolean
     fun stopBlockchain(chainId: Long): Boolean
     fun isBlockchainRunning(chainId: Long): Boolean

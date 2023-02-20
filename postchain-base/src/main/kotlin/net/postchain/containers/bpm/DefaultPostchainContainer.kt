@@ -55,7 +55,7 @@ class DefaultPostchainContainer(
                 val currentConfig = dataSource.getConfiguration(process.blockchainRid.data, currentHeight)
                 if (currentConfig != null) {
                     logger.info { "Chain ${process.chainId} config at height $currentHeight will be added to subnode" }
-                    subnodeAdminClient.addConfiguration(process.chainId, currentHeight, true, currentConfig)
+                    subnodeAdminClient.addConfiguration(process.chainId, process.blockchainRid, currentHeight, true, currentConfig)
                 } else {
                     logger.info { "There is no a config at height $currentHeight for chain ${process.chainId}" }
                 }
