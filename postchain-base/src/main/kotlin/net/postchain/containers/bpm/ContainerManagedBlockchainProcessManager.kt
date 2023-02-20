@@ -1,6 +1,7 @@
 package net.postchain.containers.bpm
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.PostchainContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
@@ -37,6 +38,10 @@ import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
+import net.postchain.metrics.BLOCKCHAIN_RID_TAG
+import net.postchain.metrics.CHAIN_IID_TAG
+import net.postchain.metrics.CONTAINER_NAME_TAG
+import net.postchain.metrics.NODE_PUBKEY_TAG
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 import org.mandas.docker.client.DockerClient
 import org.mandas.docker.client.messages.Container
@@ -98,13 +103,17 @@ open class ContainerManagedBlockchainProcessManager(
         }
         Runtime.getRuntime().addShutdownHook(
                 Thread {
-                    logger.info("Shutting down master node - stopping subnode containers...")
-                    for ((name, psContainer) in postchainContainers) {
-                        logger.info("Stopping subnode $name...")
-                        psContainer.stop()
-                        dockerClient.stopContainer(psContainer.containerId, 10)
+                    withLoggingContext(NODE_PUBKEY_TAG to appConfig.pubKey) {
+                        logger.info("Shutting down master node - stopping subnode containers...")
+                        for ((name, psContainer) in postchainContainers) {
+                            withLoggingContext(CONTAINER_NAME_TAG to psContainer.containerName.name) {
+                                logger.info("Stopping subnode $name...")
+                                psContainer.stop()
+                                dockerClient.stopContainer(psContainer.containerId, 10)
+                            }
+                        }
+                        logger.info("Stopping subnode containers done")
                     }
-                    logger.info("Stopping subnode containers done")
                 }
         )
     }
@@ -223,6 +232,12 @@ open class ContainerManagedBlockchainProcessManager(
     }
 
     private fun containerJobHandler(job: ContainerJob) {
+        withLoggingContext(NODE_PUBKEY_TAG to appConfig.pubKey, CONTAINER_NAME_TAG to job.containerName.name) {
+            containerJobHandlerInternal(job)
+        }
+    }
+
+    private fun containerJobHandlerInternal(job: ContainerJob) {
         val scope = "ContainerJobHandler"
         logger.info {
             "[${nodeName()}]: $scope -- Job for container will be handled: " +
@@ -326,18 +341,22 @@ open class ContainerManagedBlockchainProcessManager(
         // 4. Stop chains
         job.chainsToStop.forEach { chain ->
             val process = terminateBlockchainProcess(chain.chainId, psContainer)
-            logger.debug { "[${nodeName()}]: $scope -- ContainerBlockchainProcess terminated: $process" }
-            logger.info { "[${nodeName()}]: $scope -- Blockchain stopped: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+            withLoggingContext(CHAIN_IID_TAG to chain.chainId.toString(), BLOCKCHAIN_RID_TAG to chain.brid.toHex()) {
+                logger.debug { "[${nodeName()}]: $scope -- ContainerBlockchainProcess terminated: $process" }
+                logger.info { "[${nodeName()}]: $scope -- Blockchain stopped: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+            }
         }
 
         // 5. Start chains
         job.chainsToStart.forEach { chain ->
-            val process = createBlockchainProcess(chain, psContainer)
-            logger.debug { "[${nodeName()}]: $scope -- ContainerBlockchainProcess created: $process" }
-            if (process == null) {
-                logger.error { "[${nodeName()}]: $scope -- Blockchain didn't start: ${chain.chainId} / ${chain.brid.toShortHex()} " }
-            } else {
-                logger.info { "[${nodeName()}]: $scope -- Blockchain started: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+            withLoggingContext(CHAIN_IID_TAG to chain.chainId.toString(), BLOCKCHAIN_RID_TAG to chain.brid.toHex()) {
+                val process = createBlockchainProcess(chain, psContainer)
+                logger.debug { "[${nodeName()}]: $scope -- ContainerBlockchainProcess created: $process" }
+                if (process == null) {
+                    logger.error { "[${nodeName()}]: $scope -- Blockchain didn't start: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+                } else {
+                    logger.info { "[${nodeName()}]: $scope -- Blockchain started: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+                }
             }
         }
 
@@ -361,6 +380,12 @@ open class ContainerManagedBlockchainProcessManager(
             fs.createContainerRoot(container.containerName, container.resourceLimits)
 
     private fun containerHealthcheckJobHandler(containersInProgress: Set<String>) {
+        withLoggingContext(NODE_PUBKEY_TAG to appConfig.pubKey) {
+            containerHealthcheckJobHandlerInternal(containersInProgress)
+        }
+    }
+
+    private fun containerHealthcheckJobHandlerInternal(containersInProgress: Set<String>) {
         val start = System.currentTimeMillis()
         val scope = "ContainerHealthcheckJobHandler"
         logger.debug { "[${nodeName()}]: $scope -- BEGIN" }
@@ -377,29 +402,31 @@ open class ContainerManagedBlockchainProcessManager(
         if (containersToCheck.isNotEmpty()) {
             val running = dockerClient.listContainers() // running containers only
             containersToCheck.values.forEach { cname ->
-                val psContainer = postchainContainers[cname]!!
+                withLoggingContext(CONTAINER_NAME_TAG to cname.name) {
+                    val psContainer = postchainContainers[cname]!!
 
-                // Check for resource limit updates
-                val currentResourceLimits = psContainer.resourceLimits
-                if (psContainer.updateResourceLimits()) {
-                    logger.warn { "Resource limits for container ${cname.name} have been changed from $currentResourceLimits to ${psContainer.resourceLimits}" }
-                }
+                    // Check for resource limit updates
+                    val currentResourceLimits = psContainer.resourceLimits
+                    if (psContainer.updateResourceLimits()) {
+                        logger.warn { "Resource limits for container ${cname.name} have been changed from $currentResourceLimits to ${psContainer.resourceLimits}" }
+                    }
 
-                val dc = running.firstOrNull { it.hasName(cname.name) }
-                val chainIds = if (dc == null) {
-                    logger.warn { "[${nodeName()}]: $scope -- Docker container is not running and will be restarted: ${cname.name}" }
-                    fixed.add(cname)
-                    psContainer.getAllChains().toSet()
-                } else {
-                    logger.debug { "[${nodeName()}]: $scope -- Docker container is running: ${cname.name}" }
-                    psContainer.getStoppedChains().toSet()
-                }
+                    val dc = running.firstOrNull { it.hasName(cname.name) }
+                    val chainIds = if (dc == null) {
+                        logger.warn { "[${nodeName()}]: $scope -- Docker container is not running and will be restarted: ${cname.name}" }
+                        fixed.add(cname)
+                        psContainer.getAllChains().toSet()
+                    } else {
+                        logger.debug { "[${nodeName()}]: $scope -- Docker container is running: ${cname.name}" }
+                        psContainer.getStoppedChains().toSet()
+                    }
 
-                chainIds.forEach {
-                    terminateBlockchainProcess(it, psContainer)
-                }
-                if (chainIds.isNotEmpty()) {
-                    logger.warn { "[${nodeName()}]: $scope -- Container chains have been terminated: $chainIds" }
+                    chainIds.forEach {
+                        terminateBlockchainProcess(it, psContainer)
+                    }
+                    if (chainIds.isNotEmpty()) {
+                        logger.warn { "[${nodeName()}]: $scope -- Container chains have been terminated: $chainIds" }
+                    }
                 }
             }
         }
@@ -505,18 +532,20 @@ open class ContainerManagedBlockchainProcessManager(
             }
 
             toStop.forEach {
-                try {
-                    dockerClient.stopContainer(it.id(), 20)
-                    logger.info { "Container has been stopped: ${containerName(it)} / ${shortContainerId(it.id())}" }
-                } catch (e: Exception) {
-                    logger.error("Can't stop container: " + it.id(), e)
-                }
+                withLoggingContext(CONTAINER_NAME_TAG to containerName(it).drop(1)) {
+                    try {
+                        dockerClient.stopContainer(it.id(), 20)
+                        logger.info { "Container has been stopped: ${containerName(it)} / ${shortContainerId(it.id())}" }
+                    } catch (e: Exception) {
+                        logger.error("Can't stop container: " + it.id(), e)
+                    }
 
-                try {
-                    dockerClient.removeContainer(it.id(), DockerClient.RemoveContainerParam.forceKill())
-                    logger.info { "Container has been removed: ${containerName(it)} / ${shortContainerId(it.id())}" }
-                } catch (e: Exception) {
-                    logger.error("Can't remove container: " + it.id(), e)
+                    try {
+                        dockerClient.removeContainer(it.id(), DockerClient.RemoveContainerParam.forceKill())
+                        logger.info { "Container has been removed: ${containerName(it)} / ${shortContainerId(it.id())}" }
+                    } catch (e: Exception) {
+                        logger.error("Can't remove container: " + it.id(), e)
+                    }
                 }
             }
         }

@@ -5,13 +5,8 @@ import io.grpc.InsecureServerCredentials
 import io.grpc.Server
 import io.grpc.TlsServerCredentials
 import mu.KLogging
-import mu.withLoggingContext
 import net.postchain.PostchainNode
-import net.postchain.common.exception.NotFound
-import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
-import net.postchain.metrics.CHAIN_IID_TAG
-import net.postchain.metrics.NODE_PUBKEY_TAG
 import net.postchain.server.config.PostchainServerConfig
 import net.postchain.server.grpc.DebugServiceGrpcImpl
 import net.postchain.server.grpc.PeerServiceGrpcImpl
@@ -38,7 +33,9 @@ class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, private val
 
     fun start(initialChainIds: List<Long>? = null) {
         server.start()
-        initialChainIds?.forEach(::startBlockchain)
+        initialChainIds?.forEach {
+            postchainNode.tryStartBlockchain(it)
+        }
         logger.info("Postchain server started, listening on ${config.port}")
         Runtime.getRuntime().addShutdownHook(
                 Thread {
@@ -47,23 +44,6 @@ class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, private val
                     logger.info("*** server shut down ***")
                 }
         )
-    }
-
-    private fun startBlockchain(chainId: Long) {
-        withLoggingContext(
-            NODE_PUBKEY_TAG to postchainNode.appConfig.pubKey,
-            CHAIN_IID_TAG to chainId.toString()
-        ) {
-            try {
-                postchainNode.startBlockchain(chainId)
-            } catch (e: NotFound) {
-                logger.error(e.message)
-            } catch (e: UserMistake) {
-                logger.error(e.message)
-            } catch (e: Exception) {
-                logger.error(e) { e.message }
-            }
-        }
     }
 
     private fun stop() {
