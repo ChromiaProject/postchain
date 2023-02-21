@@ -18,7 +18,6 @@ import net.postchain.core.Shutdownable
 import net.postchain.core.block.BlockQueriesProviderImpl
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.CHAIN_IID_TAG
