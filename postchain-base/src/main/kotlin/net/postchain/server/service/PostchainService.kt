@@ -9,10 +9,6 @@ import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BadDataMistake
 import net.postchain.crypto.PubKey
-import net.postchain.debug.DiagnosticData
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DiagnosticQueue
-import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.gtv.Gtv
 
 class PostchainService(private val postchainNode: PostchainNode) {
