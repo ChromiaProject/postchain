@@ -103,7 +103,9 @@ open class ContainerManagedBlockchainProcessManager(
         Runtime.getRuntime().addShutdownHook(
                 Thread {
                     withLoggingContext(NODE_PUBKEY_TAG to appConfig.pubKey) {
-                        logger.info("Shutting down master node - stopping subnode containers...")
+                        logger.info("Shutting down master node")
+                        shutdown()
+                        logger.info("Stopping subnode containers...")
                         for ((name, psContainer) in postchainContainers) {
                             withLoggingContext(CONTAINER_NAME_TAG to psContainer.containerName.name) {
                                 logger.info("Stopping subnode $name...")
