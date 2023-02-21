@@ -326,13 +326,13 @@ open class ContainerManagedBlockchainProcessManager(
                 job.postpone(5_000)
                 return result(false)
             }
-            if (!psContainer.isSubnodeConnected()) {
-                logger.warn { "[${nodeName()}]: $scope -- Subnode is not connected, container: ${job.containerName}" }
+            if (!psContainer.isSubnodeHealthy()) {
+                logger.warn { "[${nodeName()}]: $scope -- Subnode is unhealthy, container: ${job.containerName}" }
                 job.postpone(5_000)
                 return result(false)
             }
 
-            logger.info { "[${nodeName()}]: $scope -- Subnode is connected, container: ${job.containerName}" }
+            logger.info { "[${nodeName()}]: $scope -- Subnode is healthy, container: ${job.containerName}" }
         } else {
             logger.debug { "[${nodeName()}]: $scope -- DockerContainer is not running, 'is subnode connected' check will be skipped, container: ${job.containerName}" }
         }
@@ -410,21 +410,25 @@ open class ContainerManagedBlockchainProcessManager(
                         logger.warn { "Resource limits for container ${cname.name} have been changed from $currentResourceLimits to ${psContainer.resourceLimits}" }
                     }
 
-                    val dc = running.firstOrNull { it.hasName(cname.name) }
-                    val chainIds = if (dc == null) {
-                        logger.warn { "[${nodeName()}]: $scope -- Docker container is not running and will be restarted: ${cname.name}" }
+                    val chainsToTerminate = if (running.firstOrNull { it.hasName(cname.name) } == null) {
+                        logger.warn { "[${nodeName()}]: $scope -- Subnode container is not running and will be restarted: ${cname.name}" }
                         fixed.add(cname)
                         psContainer.getAllChains().toSet()
+                    } else if (!psContainer.isSubnodeHealthy()) {
+                        logger.warn { "[${nodeName()}]: $scope -- Subnode container is unhealthy and will be restarted: ${cname.name}" }
+                        fixed.add(cname)
+                        dockerClient.stopContainer(cname.name, 10)
+                        psContainer.getAllChains().toSet()
                     } else {
-                        logger.debug { "[${nodeName()}]: $scope -- Docker container is running: ${cname.name}" }
+                        logger.debug { "[${nodeName()}]: $scope -- Subnode container is running and healthy: ${cname.name}" }
                         psContainer.getStoppedChains().toSet()
                     }
 
-                    chainIds.forEach {
+                    chainsToTerminate.forEach {
                         terminateBlockchainProcess(it, psContainer)
                     }
-                    if (chainIds.isNotEmpty()) {
-                        logger.warn { "[${nodeName()}]: $scope -- Container chains have been terminated: $chainIds" }
+                    if (chainsToTerminate.isNotEmpty()) {
+                        logger.warn { "[${nodeName()}]: $scope -- Container chains have been terminated: $chainsToTerminate" }
                     }
                 }
             }

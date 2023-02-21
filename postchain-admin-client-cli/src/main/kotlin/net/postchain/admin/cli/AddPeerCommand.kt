@@ -30,9 +30,9 @@ class AddPeerCommand : CliktCommand(help = "Add peer information to database") {
                 .build()
 
             val reply = channel.addPeer(request)
-            println(reply.message)
+            echo(reply.message)
         } catch (e: StatusRuntimeException) {
-            println("Failed with: ${e.message}")
+            echo("Failed with: ${e.message}")
         }
     }
 }

@@ -15,9 +15,9 @@ class DebugCommand : CliktCommand(help = "Query for debug information") {
                 .build()
 
             val reply = channel.debugInfo(request)
-            println(reply.message)
+            echo(reply.message)
         } catch (e: StatusRuntimeException) {
-            println("Failed with: ${e.message}")
+            echo("Failed with: ${e.message}")
         }
     }
 }

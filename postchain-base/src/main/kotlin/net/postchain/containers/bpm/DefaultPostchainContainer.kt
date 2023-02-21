@@ -94,7 +94,7 @@ class DefaultPostchainContainer(
 
     override fun isEmpty() = processes.isEmpty()
 
-    override fun isSubnodeConnected() = subnodeAdminClient.isSubnodeConnected()
+    override fun isSubnodeHealthy() = subnodeAdminClient.isSubnodeHealthy()
 
     override fun updateResourceLimits(): Boolean {
         val oldResourceLimits = resourceLimits

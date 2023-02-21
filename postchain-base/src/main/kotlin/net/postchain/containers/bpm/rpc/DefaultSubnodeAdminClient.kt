@@ -1,12 +1,15 @@
 package net.postchain.containers.bpm.rpc
 
 import com.google.protobuf.ByteString
-import io.grpc.ConnectivityState
 import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.ManagedChannel
 import io.grpc.Status
 import io.grpc.Status.ALREADY_EXISTS
+import io.grpc.health.v1.HealthCheckRequest
+import io.grpc.health.v1.HealthCheckResponse
+import io.grpc.health.v1.HealthGrpc
+import io.grpc.protobuf.services.HealthStatusManager
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
@@ -17,7 +20,6 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.server.grpc.AddConfigurationRequest
 import net.postchain.server.grpc.AddPeerRequest
-import net.postchain.server.grpc.DebugServiceGrpc
 import net.postchain.server.grpc.FindBlockchainRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
@@ -50,7 +52,7 @@ class DefaultSubnodeAdminClient(
     private var peerService: PeerServiceGrpc.PeerServiceBlockingStub? = null
 
     @Volatile
-    private var healthcheckService: DebugServiceGrpc.DebugServiceBlockingStub? = null
+    private var healthcheckService: HealthGrpc.HealthBlockingStub? = null
 
     private val executor: ExecutorService = Executors.newSingleThreadExecutor {
         Thread(it, "${clientCount.incrementAndGet()}-DefaultSubnodeAdminClient")
@@ -66,7 +68,7 @@ class DefaultSubnodeAdminClient(
                     channel = Grpc.newChannelBuilder(target, creds).build()
                     service = PostchainServiceGrpc.newBlockingStub(channel)
                     peerService = PeerServiceGrpc.newBlockingStub(channel)
-                    healthcheckService = DebugServiceGrpc.newBlockingStub(channel)
+                    healthcheckService = HealthGrpc.newBlockingStub(channel)
                     logger.info { "connect() -- Subnode container connection established on $target" }
                     return@submit
                 } catch (e: Exception) {
@@ -82,11 +84,16 @@ class DefaultSubnodeAdminClient(
         }
     }
 
-    override fun isSubnodeConnected(): Boolean = try {
-        channel?.getState(true) == ConnectivityState.READY
-    } catch (e: Exception) {
-        logger.error { e.message }
-        false
+    override fun isSubnodeHealthy(): Boolean {
+        return try {
+            logger.debug { "isSubnodeHealthy -- doing health check" }
+            val request = HealthCheckRequest.newBuilder().setService(HealthStatusManager.SERVICE_NAME_ALL_SERVICES).build()
+            val reply = healthcheckService?.check(request) ?: return false
+            reply.status == HealthCheckResponse.ServingStatus.SERVING
+        } catch (e: Exception) {
+            logger.warn { "isSubnodeHealthy -- can't do health check: ${e.message}" }
+            false
+        }
     }
 
     override fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: ByteArray): Boolean {

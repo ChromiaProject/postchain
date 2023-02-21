@@ -8,6 +8,7 @@ import io.grpc.ChannelCredentials
 import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.TlsChannelCredentials
+import io.grpc.health.v1.HealthGrpc
 import net.postchain.server.grpc.DebugServiceGrpc
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
@@ -33,12 +34,16 @@ fun buildTlsCredentials(tlsOptions: TlsConfig): ChannelCredentials {
 
 fun CliktCommand.blockingPostchainServiceChannelOption() = channelOption()
     .convert { PostchainServiceGrpc.newBlockingStub(it) }
-    .required()
+        .required()
 
 fun CliktCommand.blockingPeerServiceChannelOption() = channelOption()
-    .convert { PeerServiceGrpc.newBlockingStub(it) }
-    .required()
+        .convert { PeerServiceGrpc.newBlockingStub(it) }
+        .required()
 
 fun CliktCommand.blockingDebugServiceChannelOption() = channelOption()
-    .convert { DebugServiceGrpc.newBlockingStub(it) }
-    .required()
+        .convert { DebugServiceGrpc.newBlockingStub(it) }
+        .required()
+
+fun CliktCommand.blockingHealthServiceChannelOption() = channelOption()
+        .convert { HealthGrpc.newBlockingStub(it) }
+        .required()

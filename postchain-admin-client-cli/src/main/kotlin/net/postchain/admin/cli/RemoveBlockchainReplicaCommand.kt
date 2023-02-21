@@ -22,9 +22,9 @@ class RemoveBlockchainReplicaCommand : CliktCommand("Remove a replica for a bloc
             val request = RemoveBlockchainReplicaRequest.newBuilder().setBrid(brid).setPubkey(pubkey).build()
 
             val reply = channel.removeBlockchainReplica(request)
-            println(reply)
+            echo(reply)
         } catch (e: StatusRuntimeException) {
-            println("Failed with: ${e.message}")
+            echo("Failed with: ${e.message}")
         }
     }
 }
