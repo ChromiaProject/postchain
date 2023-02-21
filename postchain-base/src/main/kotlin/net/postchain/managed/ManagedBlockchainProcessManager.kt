@@ -161,7 +161,9 @@ open class ManagedBlockchainProcessManager(
             // Checking out for a chain configuration changes
             wrTrace("chainN, begin", chainId, bTrace)
 
-            return if (isConfigurationChanged(chainId)) {
+            val isConfigurationChanged = dataSource.pcuGetPendingBlockchainConfiguration()
+//            return if (isConfigurationChanged(chainId)) {
+            return if (isConfigurationChanged != null) {
                 wrTrace("chainN, restart needed", chainId, bTrace)
                 startBlockchainAsync(chainId, bTrace)
                 true

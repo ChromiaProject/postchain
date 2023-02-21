@@ -17,4 +17,7 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
      * null if no future configurations found or if blockchain doesn't exist.
      */
     fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long?
+
+    // PCU
+    fun pcuGetPendingBlockchainConfiguration(): ByteArray?
 }
