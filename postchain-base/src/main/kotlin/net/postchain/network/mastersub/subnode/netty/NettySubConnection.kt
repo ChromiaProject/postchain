@@ -37,12 +37,11 @@ class NettySubConnection(
 
         nettyClient.apply {
             setChannelHandler(this@NettySubConnection)
-            val future = connect(masterAddress()).await()
-            if (future.isSuccess) {
-                onConnected()
-            } else {
-                logger.info("Connection failed", future.cause())
-                onDisconnected()
+            connect(masterAddress()).await().apply {
+                if (!isSuccess) {
+                    logger.info("Connection failed: ${cause().message}")
+                    onDisconnected()
+                }
             }
         }
     }
