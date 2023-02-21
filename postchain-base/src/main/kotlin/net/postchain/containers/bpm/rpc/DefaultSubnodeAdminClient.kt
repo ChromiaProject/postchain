@@ -4,8 +4,7 @@ import com.google.protobuf.ByteString
 import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.ManagedChannel
-import io.grpc.Status
-import io.grpc.Status.ALREADY_EXISTS
+import io.grpc.Status.*
 import io.grpc.health.v1.HealthCheckRequest
 import io.grpc.health.v1.HealthCheckResponse
 import io.grpc.health.v1.HealthGrpc
@@ -91,7 +90,9 @@ class DefaultSubnodeAdminClient(
             val reply = healthcheckService?.check(request) ?: return false
             reply.status == HealthCheckResponse.ServingStatus.SERVING
         } catch (e: Exception) {
-            logger.warn { "isSubnodeHealthy -- can't do health check: ${e.message}" }
+            if (fromThrowable(e).code != UNAVAILABLE.code) {
+                logger.warn { "isSubnodeHealthy -- can't do health check: ${e.message}" }
+            }
             false
         }
     }
@@ -110,7 +111,11 @@ class DefaultSubnodeAdminClient(
             logger.debug { "addConfiguration(${chainId}) -- ${response.message}" }
             true
         } catch (e: Exception) {
-            logger.error { "addConfiguration(${chainId}) -- can't add configuration: ${e.message}" }
+            if (fromThrowable(e).code in setOf(ALREADY_EXISTS.code, FAILED_PRECONDITION.code)) {
+                logger.warn { "addConfiguration(${chainId}) -- ${e.message}" }
+            } else {
+                logger.error { "addConfiguration(${chainId}) -- exception occurred: ${e.message}" }
+            }
             false
         }
     }
@@ -203,7 +208,7 @@ class DefaultSubnodeAdminClient(
             logger.debug { response.message }
             true
         } catch (e: Exception) {
-            if (Status.fromThrowable(e).code == ALREADY_EXISTS.code) {
+            if (fromThrowable(e).code == ALREADY_EXISTS.code) {
                 logger.info { "addPeerInfo($peerInfo) -- ${e.message}" }
             } else {
                 logger.error { "addPeerInfo($peerInfo) -- exception occurred: ${e.message}" }
