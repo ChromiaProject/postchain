@@ -22,7 +22,7 @@ interface PostchainContainer {
     fun start()
     fun stop()
     fun isEmpty(): Boolean
-    fun isSubnodeConnected(): Boolean
+    fun isSubnodeHealthy(): Boolean
 
     /** @return `true` if there are updates */
     fun updateResourceLimits(): Boolean

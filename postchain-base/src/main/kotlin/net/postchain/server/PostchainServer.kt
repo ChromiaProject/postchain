@@ -9,9 +9,11 @@ import net.postchain.PostchainNode
 import net.postchain.config.app.AppConfig
 import net.postchain.server.config.PostchainServerConfig
 import net.postchain.server.grpc.DebugServiceGrpcImpl
+import net.postchain.server.grpc.HealthServiceGrpcImpl
 import net.postchain.server.grpc.PeerServiceGrpcImpl
 import net.postchain.server.grpc.PostchainServiceGrpcImpl
 import net.postchain.server.service.DebugService
+import net.postchain.server.service.HealthService
 import net.postchain.server.service.PeerService
 import net.postchain.server.service.PostchainService
 
@@ -24,6 +26,7 @@ class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, private val
         TlsServerCredentials.create(it.certChainFile, it.privateKeyFile)
     } ?: InsecureServerCredentials.create()
     private val server: Server = Grpc.newServerBuilderForPort(config.port, credentials)
+            .addService(HealthServiceGrpcImpl(HealthService(postchainNode.postchainContext.storage)))
             .addService(PostchainServiceGrpcImpl(PostchainService(postchainNode)))
             .addService(PeerServiceGrpcImpl(PeerService(postchainNode.postchainContext)))
             .apply {

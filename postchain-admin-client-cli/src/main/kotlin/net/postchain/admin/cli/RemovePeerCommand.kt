@@ -19,9 +19,9 @@ class RemovePeerCommand : CliktCommand(help = "Remove peer information from data
                 .build()
 
             val reply = channel.removePeer(request)
-            println(reply.message)
+            echo(reply.message)
         } catch (e: StatusRuntimeException) {
-            println("Failed with: ${e.message}")
+            echo("Failed with: ${e.message}")
         }
     }
 }

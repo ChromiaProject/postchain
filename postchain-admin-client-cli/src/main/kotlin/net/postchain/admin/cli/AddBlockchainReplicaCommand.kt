@@ -22,9 +22,9 @@ class AddBlockchainReplicaCommand : CliktCommand("Add a peer as replica for a bl
             val request = AddBlockchainReplicaRequest.newBuilder().setBrid(brid).setPubkey(pubkey).build()
 
             val reply = channel.addBlockchainReplica(request)
-            println(reply)
+            echo(reply)
         } catch (e: StatusRuntimeException) {
-            println("Failed with: ${e.message}")
+            echo("Failed with: ${e.message}")
         }
     }
 }

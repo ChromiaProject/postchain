@@ -19,9 +19,9 @@ class FindBlockchainCommand : CliktCommand(help = "Find blockchain rid from id")
                 .build()
 
             val reply = channel.findBlockchain(request)
-            println(reply.brid)
+            echo(reply.brid)
         } catch (e: StatusRuntimeException) {
-            println("Failed with: ${e.message}")
+            echo("Failed with: ${e.message}")
         }
     }
 }
