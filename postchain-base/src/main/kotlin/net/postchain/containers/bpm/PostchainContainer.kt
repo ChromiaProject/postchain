@@ -16,6 +16,7 @@ interface PostchainContainer {
     fun getAllChains(): Set<Long>
     fun getStoppedChains(): Set<Long>
     fun startProcess(process: ContainerBlockchainProcess): Boolean
+    fun removeProcess(chainId: Long): ContainerBlockchainProcess?
     fun terminateProcess(chainId: Long): ContainerBlockchainProcess?
     fun terminateAllProcesses(): Set<Long>
     fun getBlockchainLastHeight(chainId: Long): Long

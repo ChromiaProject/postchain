@@ -68,6 +68,8 @@ class DefaultPostchainContainer(
         }
     }
 
+    override fun removeProcess(chainId: Long): ContainerBlockchainProcess? = processes.remove(chainId)
+
     override fun terminateProcess(chainId: Long): ContainerBlockchainProcess? {
         return processes.remove(chainId)?.also {
             subnodeAdminClient.stopBlockchain(chainId)

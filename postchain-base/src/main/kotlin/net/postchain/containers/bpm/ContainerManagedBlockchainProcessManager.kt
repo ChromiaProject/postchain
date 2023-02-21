@@ -425,7 +425,7 @@ open class ContainerManagedBlockchainProcessManager(
                     }
 
                     chainsToTerminate.forEach {
-                        terminateBlockchainProcess(it, psContainer)
+                        removeBlockchainProcess(it, psContainer)
                     }
                     if (chainsToTerminate.isNotEmpty()) {
                         logger.warn { "[${nodeName()}]: $scope -- Container chains have been terminated: $chainsToTerminate" }
@@ -480,18 +480,23 @@ open class ContainerManagedBlockchainProcessManager(
         return process.takeIf { started }
     }
 
-    private fun terminateBlockchainProcess(chainId: Long, psContainer: PostchainContainer): ContainerBlockchainProcess? {
-        return psContainer.terminateProcess(chainId)
-                ?.also { process ->
-                    extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
-                            .forEach { it.disconnectRemoteProcess(process) }
-                    masterBlockchainInfra.exitMasterBlockchainProcess(process)
-                    val blockchainRid = chainIdToBrid.remove(chainId)
-                    nodeDiagnosticContext.removeBlockchainData(blockchainRid)
-                    bridToChainId.remove(blockchainRid)
-                    chains.remove(chainId)
-                    process.shutdown()
-                }
+    private fun removeBlockchainProcess(chainId: Long, psContainer: PostchainContainer): ContainerBlockchainProcess? =
+            psContainer.removeProcess(chainId)
+                    ?.also { cleanUpBlockchainProcess(chainId, it) }
+
+    private fun terminateBlockchainProcess(chainId: Long, psContainer: PostchainContainer): ContainerBlockchainProcess? =
+            psContainer.terminateProcess(chainId)
+                    ?.also { cleanUpBlockchainProcess(chainId, it) }
+
+    private fun cleanUpBlockchainProcess(chainId: Long, process: ContainerBlockchainProcess) {
+        extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
+                .forEach { it.disconnectRemoteProcess(process) }
+        masterBlockchainInfra.exitMasterBlockchainProcess(process)
+        val blockchainRid = chainIdToBrid.remove(chainId)
+        nodeDiagnosticContext.removeBlockchainData(blockchainRid)
+        bridToChainId.remove(blockchainRid)
+        chains.remove(chainId)
+        process.shutdown()
     }
 
     private fun findDockerContainer(containerName: ContainerName): Container? {
