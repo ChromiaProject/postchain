@@ -193,11 +193,6 @@ class RestApi(
             res.header(ACCESS_CONTROL_REQUEST_METHOD, "POST, GET, OPTIONS")
             //res.header("Access-Control-Allow-Headers", "")
             res.type(JSON_CONTENT_TYPE)
-
-            // This is to provide compatibility with old postchain-client code
-            req.pathInfo()
-                    .takeIf { it.endsWith("/") }
-                    ?.also { res.redirect(it.dropLast(1)) }
         }
 
         http.after { _, res ->
