@@ -150,16 +150,18 @@ class RestApi(
 
     private fun transformErrorResponseFromDiagnostics(request: Request, response: Response, error: Exception) {
         val blockchainRid = if (request.params(PARAM_BLOCKCHAIN_RID) != null) checkBlockchainRID(request) else null
-        checkDiagnosticError(blockchainRid)?.let { errorBody ->
+        blockchainRid?.let { checkDiagnosticError(BlockchainRid.buildFromHex(blockchainRid)) }?.let { errorBody ->
             response.status(500)
             response.type(JSON_CONTENT_TYPE)
             response.body(gson.toJson(errorBody))
         } ?: setErrorResponseBody(response, error)
     }
-    private fun checkDiagnosticError(blockchainRid: String?): JsonObject? {
-        if (blockchainRid == null) return null
-        if (!nodeDiagnosticContext.hasBlockchainErrors(BlockchainRid.buildFromHex(blockchainRid))) return null
-        return JsonObject().apply { add("error", gson.toJsonTree(nodeDiagnosticContext.blockchainErrorQueue(BlockchainRid.buildFromHex(blockchainRid)).value)) }
+
+    private fun checkDiagnosticError(blockchainRid: BlockchainRid): JsonObject? {
+        if (!nodeDiagnosticContext.hasBlockchainErrors(blockchainRid)) return null
+        return nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).let {
+            JsonObject().apply { add("error", gson.toJsonTree(it.value)) }
+        }
     }
 
     private fun setErrorResponseBody(response: Response, error: Exception) {
