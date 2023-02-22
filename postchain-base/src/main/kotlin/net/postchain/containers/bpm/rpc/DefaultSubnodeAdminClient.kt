@@ -138,12 +138,12 @@ class DefaultSubnodeAdminClient(
                 true
             } else {
                 nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add("Can't start blockchain: ${response.message}")
-                logger.error { "startBlockchain(${chainId}) -- can't start blockchain: ${response.message}" }
+                logger.error { "startBlockchain(${chainId}:${blockchainRid.toShortHex()}) -- can't start blockchain: ${response.message}" }
                 false
             }
         } catch (e: Exception) {
             nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add("Can't start blockchain: ${e.message}")
-            logger.error { "startBlockchain(${chainId}) -- can't start blockchain: ${e.message}" }
+            logger.error { "startBlockchain(${chainId}:${blockchainRid.toShortHex()}) -- can't start blockchain: ${e.message}" }
             false
         }
     }
