@@ -7,6 +7,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.network.common.ConnectionManager
 
 /**
@@ -20,7 +21,7 @@ interface SynchronizationInfrastructure : Shutdownable {
     fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            awaitPermissionToProcessMessages: (exitCondition: () -> Boolean) -> Boolean
+            messageProcessingLatch: MessageProcessingLatch
     ): BlockchainProcess
 
     /**

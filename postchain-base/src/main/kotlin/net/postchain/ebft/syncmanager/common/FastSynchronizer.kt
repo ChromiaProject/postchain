@@ -587,7 +587,7 @@ class FastSynchronizer(
         for (packet in communicationManager.getPackets()) {
             // We do this check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
-            if (!workerContext.awaitPermissionToProcessMessages { !isProcessRunning() || exitCondition() }) {
+            if (!workerContext.messageProcessingLatch.awaitPermission { !isProcessRunning() || exitCondition() }) {
                 return
             }
 

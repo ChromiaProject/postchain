@@ -18,6 +18,7 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.devtools.NameHelper.peerName
+import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
@@ -137,7 +138,7 @@ open class BaseBlockchainProcessManager(
                                     blockchainConfig,
                                     processName,
                                     engine,
-                                    awaitPermissionToProcessMessages(blockchainConfig)
+                                    buildMessageProcessingLatch(blockchainConfig)
                             )
                             logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
@@ -186,9 +187,9 @@ open class BaseBlockchainProcessManager(
             blockchainConfig: BlockchainConfiguration,
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            awaitPermissionToProcessMessages: (exitCondition: () -> Boolean) -> Boolean
+            messageProcessingLatch: MessageProcessingLatch
     ) {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, awaitPermissionToProcessMessages)
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, messageProcessingLatch)
                 .also {
                     val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainConfig.blockchainRid).also { data ->
                         data[DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT] = LazyDiagnosticValue { engine.getBlockQueries().getBestHeight().get() }
@@ -201,7 +202,7 @@ open class BaseBlockchainProcessManager(
                 }
     }
 
-    protected open fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (() -> Boolean) -> Boolean = { _ -> true }
+    protected open fun buildMessageProcessingLatch(blockchainConfig: BlockchainConfiguration) = MessageProcessingLatch { true }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
         return chainSynchronizers[chainId]?.withLock {

@@ -100,7 +100,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         for (packet in communicationManager.getPackets()) {
             // We do this check for each network message because
             // communicationManager.getPackets() might give a big portion of messages.
-            if (!workerContext.awaitPermissionToProcessMessages { !isProcessRunning() }) {
+            if (!workerContext.messageProcessingLatch.awaitPermission { !isProcessRunning() }) {
                 return
             }
 

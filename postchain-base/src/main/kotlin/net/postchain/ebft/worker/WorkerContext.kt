@@ -21,7 +21,7 @@ class WorkerContext(val processName: BlockchainProcessName,
                     val peerCommConfiguration: PeerCommConfiguration,
                     val appConfig: AppConfig,
                     val nodeConfig: NodeConfig,
-                    val awaitPermissionToProcessMessages: (exitCondition: () -> Boolean) -> Boolean
+                    val messageProcessingLatch: MessageProcessingLatch
 ) {
     fun shutdown() {
         engine.shutdown()

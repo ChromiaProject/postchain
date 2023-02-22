@@ -14,6 +14,7 @@ import net.postchain.core.*
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.worker.HistoricBlockchainProcess
+import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
@@ -42,7 +43,7 @@ open class EBFTSynchronizationInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            awaitPermissionToProcessMessages: (exitCondition: () -> Boolean) -> Boolean
+            messageProcessingLatch: MessageProcessingLatch
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
         val currentNodeConfig = nodeConfig
@@ -85,7 +86,7 @@ open class EBFTSynchronizationInfrastructure(
                     peerCommConfiguration,
                     postchainContext.appConfig,
                     currentNodeConfig,
-                    awaitPermissionToProcessMessages
+                    messageProcessingLatch
             )
 
             /*
@@ -123,7 +124,7 @@ open class EBFTSynchronizationInfrastructure(
                             historicPeerCommConfiguration,
                             postchainContext.appConfig,
                             currentNodeConfig,
-                            awaitPermissionToProcessMessages
+                            messageProcessingLatch
                     )
 
                 }
