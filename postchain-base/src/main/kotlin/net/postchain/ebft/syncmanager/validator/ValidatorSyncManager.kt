@@ -54,7 +54,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val blockManager: BlockManager,
                            private val blockDatabase: BlockDatabase,
                            private val nodeStateTracker: NodeStateTracker,
-                           isProcessRunning: () -> Boolean,
+                           private val isProcessRunning: () -> Boolean,
                            startInFastSync: Boolean
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
@@ -98,6 +98,12 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun dispatchMessages() {
         for (packet in communicationManager.getPackets()) {
+            // We do this check for each network message because
+            // communicationManager.getPackets() might give a big portion of messages.
+            if (!workerContext.awaitPermissionToProcessMessages { !isProcessRunning() }) {
+                return
+            }
+
             val (xPeerId, message) = packet
 
             val nodeIndex = indexOfValidator(xPeerId)

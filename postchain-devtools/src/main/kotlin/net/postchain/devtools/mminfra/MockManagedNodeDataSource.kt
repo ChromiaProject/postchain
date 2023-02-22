@@ -69,6 +69,10 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         return null
     }
 
+    override fun pcuGetPendingBlockchainConfiguration(): ByteArray? {
+        TODO("Not yet implemented")
+    }
+
     override fun query(name: String, args: Gtv): Gtv {
         TODO("Not yet implemented")
     }

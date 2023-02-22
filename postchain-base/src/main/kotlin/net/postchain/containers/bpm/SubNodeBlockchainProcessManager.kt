@@ -34,7 +34,7 @@ open class SubNodeBlockchainProcessManager(
     private val subnodeBcCfgListeners: MutableMap<Long, SubnodeBlockchainConfigListener> = ConcurrentHashMap()
     private val configVerifier = BlockchainConfigVerifier(appConfig)
 
-    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine) {
+    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine, awaitPermissionToProcessMessages: (exitCondition: () -> Boolean) -> Boolean) {
         val subConnectionManager = connectionManager as SubConnectionManager
         subnodeBcCfgListeners[chainId] = BlockWiseSubnodeBlockchainConfigListener(
                 subnodeBcCfgConfig,
@@ -46,7 +46,7 @@ open class SubNodeBlockchainProcessManager(
                 storage
         )
         subConnectionManager.preAddMsMessageHandler(chainId, SubQueryHandler(chainId, postchainContext.blockQueriesProvider, subConnectionManager))
-        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine)
+        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, awaitPermissionToProcessMessages)
     }
 
     override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
