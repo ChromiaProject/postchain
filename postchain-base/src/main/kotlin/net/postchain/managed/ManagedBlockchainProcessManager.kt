@@ -89,7 +89,9 @@ open class ManagedBlockchainProcessManager(
 
         // Setting up managed data source to the blockchainConfig
         (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
-                ?.setDataSource(dataSource)
+                ?.apply {
+                    this.dataSource = dataSource
+                }
                 ?: logger.warn { "Blockchain config is not managed" }
     }
 
@@ -109,6 +111,11 @@ open class ManagedBlockchainProcessManager(
                                     "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass)", e
                     )
                 }
+            }
+
+    override fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (() -> Boolean) -> Boolean =
+            {
+                blockchainConfigProvider.isDataSourceReady()
             }
 
     /**

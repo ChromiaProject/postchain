@@ -56,4 +56,8 @@ open class BaseDirectoryDataSource(
     override fun setLimitsForContainer(containerId: String, ramLimit: Long, cpuQuota: Long) {
         TODO("Will not be used")
     }
+
+    override fun pcuIsPendingConfigApproved(): Boolean {
+        TODO("Not yet implemented")
+    }
 }

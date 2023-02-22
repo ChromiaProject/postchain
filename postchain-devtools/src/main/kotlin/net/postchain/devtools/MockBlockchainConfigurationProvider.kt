@@ -66,5 +66,7 @@ class MockBlockchainConfigurationProvider():
     override fun findNextConfigurationHeight(eContext: EContext, height: Long): Long? {
         TODO("Not implemented yet")
     }
+
+    override fun isDataSourceReady(): Boolean = true
 }
 

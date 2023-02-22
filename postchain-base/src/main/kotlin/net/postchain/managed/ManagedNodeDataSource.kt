@@ -20,4 +20,6 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
 
     // PCU
     fun pcuGetPendingBlockchainConfiguration(): ByteArray?
+
+    fun pcuIsPendingConfigApproved(): Boolean
 }

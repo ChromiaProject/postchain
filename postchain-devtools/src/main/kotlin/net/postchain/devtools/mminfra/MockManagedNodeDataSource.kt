@@ -73,6 +73,10 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         TODO("Not yet implemented")
     }
 
+    override fun pcuIsPendingConfigApproved(): Boolean {
+        TODO("Not yet implemented")
+    }
+
     override fun query(name: String, args: Gtv): Gtv {
         TODO("Not yet implemented")
     }

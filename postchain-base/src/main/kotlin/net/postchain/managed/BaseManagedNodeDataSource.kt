@@ -89,6 +89,10 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         return null
     }
 
+    override fun pcuIsPendingConfigApproved(): Boolean {
+        TODO("Not yet implemented")
+    }
+
     override fun getSyncUntilHeight(): Map<BlockchainRid, Long> {
         return if (nmApiVersion >= 2) {
             val blockchains = computeBlockchainInfoList()

@@ -15,16 +15,12 @@ import net.postchain.core.EContext
  * If you need to use local configuration, the recommended way is to switch to manual mode (instead doing the
  * override in managed mode).
  */
-class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
+open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
 
-    private lateinit var dataSource: ManagedNodeDataSource
+    lateinit var dataSource: ManagedNodeDataSource
     private val systemProvider = ManualBlockchainConfigurationProvider() // Used mainly to access Chain0 (we don't want to use Chain0 to check it's own config changes, too strange)
 
     companion object : KLogging()
-
-    fun setDataSource(dataSource: ManagedNodeDataSource) {
-        this.dataSource = dataSource
-    }
 
     /**
      * We read the config in this way:
@@ -131,19 +127,19 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
 
         if (nextConfigHeight == null) {
             if (logger.isDebugEnabled) {
-                logger.debug( "checkNeedConfChangeViaDataSource() - no future configurations found for " +
-                            "chain: ${eContext.chainID} , activeHeight : $activeHeight"
+                logger.debug("checkNeedConfChangeViaDataSource() - no future configurations found for " +
+                        "chain: ${eContext.chainID} , activeHeight : $activeHeight"
                 )
             }
         } else if (nextConfigHeight > activeHeight) {
             if (logger.isDebugEnabled) {
-                logger.debug( "checkNeedConfChangeViaDataSource() - Closest configurations found at height: " +
+                logger.debug("checkNeedConfChangeViaDataSource() - Closest configurations found at height: " +
                         "$nextConfigHeight for chain: ${eContext.chainID}, activeHeight : $activeHeight."
                 )
             }
         } else if (nextConfigHeight < activeHeight) {
-           logger.error("checkNeedConfChangeViaDataSource() - didn't expect to find a future conf at lower height: " +
-                   "$nextConfigHeight that our active height: $activeHeight, chain: ${eContext.chainID}")
+            logger.error("checkNeedConfChangeViaDataSource() - didn't expect to find a future conf at lower height: " +
+                    "$nextConfigHeight that our active height: $activeHeight, chain: ${eContext.chainID}")
         }
 
         return nextConfigHeight != null && activeHeight == nextConfigHeight  // Since we are looking for future configs here it's ok to get null back
@@ -165,6 +161,8 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
         val brid = db.getBlockchainRid(eContext)
         return dataSource.findNextConfigurationHeight(brid!!.data, height)
     }
+
+    override fun isDataSourceReady(): Boolean = true
 
     private fun getConfigurationFromDataSource(eContext: EContext): ByteArray? {
         val dba = DatabaseAccess.of(eContext)
