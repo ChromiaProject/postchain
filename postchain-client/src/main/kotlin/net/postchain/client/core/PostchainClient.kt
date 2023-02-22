@@ -44,4 +44,9 @@ interface PostchainClient : PostchainBlockClient, PostchainQuery, Closeable {
      * Query current block height.
      */
     fun currentBlockHeight(): Long
+
+    /**
+     * Get confirmation proof for transaction.
+     */
+    fun confirmationProof(txRid: TxRid): ByteArray?
 }
