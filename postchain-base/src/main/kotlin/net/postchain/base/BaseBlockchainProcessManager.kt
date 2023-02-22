@@ -136,7 +136,8 @@ open class BaseBlockchainProcessManager(
                                     chainId,
                                     blockchainConfig,
                                     processName,
-                                    engine
+                                    engine,
+                                    awaitPermissionToProcessMessages(blockchainConfig)
                             )
                             logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
@@ -184,9 +185,10 @@ open class BaseBlockchainProcessManager(
             chainId: Long,
             blockchainConfig: BlockchainConfiguration,
             processName: BlockchainProcessName,
-            engine: BlockchainEngine
+            engine: BlockchainEngine,
+            awaitPermissionToProcessMessages: (exitCondition: () -> Boolean) -> Boolean
     ) {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine)
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, awaitPermissionToProcessMessages)
                 .also {
                     val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainConfig.blockchainRid).also { data ->
                         data[DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT] = LazyDiagnosticValue { engine.getBlockQueries().getBestHeight().get() }
@@ -198,6 +200,8 @@ open class BaseBlockchainProcessManager(
                     bridToChainId[blockchainConfig.blockchainRid] = chainId
                 }
     }
+
+    protected open fun awaitPermissionToProcessMessages(blockchainConfig: BlockchainConfiguration): (() -> Boolean) -> Boolean = { _ -> true }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
         return chainSynchronizers[chainId]?.withLock {

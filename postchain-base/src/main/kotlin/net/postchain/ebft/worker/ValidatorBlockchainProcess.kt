@@ -23,7 +23,10 @@ import java.lang.Thread.sleep
  *
  * @param workerContext The stuff needed to start working.
  */
-class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFastSync: Boolean) : AbstractBlockchainProcess("validator-${workerContext.processName}", workerContext.engine) {
+class ValidatorBlockchainProcess(
+        val workerContext: WorkerContext,
+        startWithFastSync: Boolean
+) : AbstractBlockchainProcess("validator-${workerContext.processName}", workerContext.engine) {
 
     companion object : KLogging()
 
@@ -73,8 +76,10 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     fun isInFastSyncMode() = syncManager.isInFastSync()
 
     override fun action() {
-        syncManager.update()
-        sleep(20)
+        if (workerContext.awaitPermissionToProcessMessages { !isProcessRunning() }) {
+            syncManager.update()
+            sleep(20)
+        }
     }
 
     override fun cleanup() {

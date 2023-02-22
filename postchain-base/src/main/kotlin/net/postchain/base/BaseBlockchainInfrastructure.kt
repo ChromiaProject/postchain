@@ -100,11 +100,12 @@ open class BaseBlockchainInfrastructure(
 
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
-            engine: BlockchainEngine
+            engine: BlockchainEngine,
+            awaitPermissionToProcessMessages: (exitCondition: () -> Boolean) -> Boolean
     ): BlockchainProcess {
         val configuration = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
-        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine)
+        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, awaitPermissionToProcessMessages)
         try {
             connectProcess(configuration, process)
         } catch (e: Exception) {
