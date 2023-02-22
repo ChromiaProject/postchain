@@ -4,7 +4,6 @@ import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
-import net.postchain.common.toHex
 import net.postchain.core.AppContext
 import net.postchain.crypto.PubKey
 import net.postchain.devtools.AbstractSyncTest

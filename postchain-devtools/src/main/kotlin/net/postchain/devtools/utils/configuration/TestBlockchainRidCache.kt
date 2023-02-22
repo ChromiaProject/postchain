@@ -28,7 +28,7 @@ object TestBlockchainRidCache {
     fun getRid(chainId: Int, bcGtv: Gtv): BlockchainRid = cacheRid[chainId] ?: calcAndAdd(chainId, bcGtv)
 
     fun getChainId(rid: BlockchainRid): Int = cacheChainId[rid]
-            ?: throw IllegalStateException("Is ${rid.toShortHex()} a dependency bc RID? This chain must be added to the cache before it can be found. (${this.toString()}")
+            ?: throw IllegalStateException("Is ${rid.toShortHex()} a dependency bc RID? This chain must be added to the cache before it can be found. (${this}")
 
     fun calcAndAdd(chainId: Int, bcGtv: Gtv): BlockchainRid {
         val newRid = GtvToBlockchainRidFactory.calculateBlockchainRid(bcGtv, Secp256K1CryptoSystem())

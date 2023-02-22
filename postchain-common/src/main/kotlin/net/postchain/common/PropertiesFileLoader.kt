@@ -15,7 +15,7 @@ object PropertiesFileLoader {
                 .setFileName(filename)
                 .setListDelimiterHandler(DefaultListDelimiterHandler(','))
 
-        return FileBasedConfigurationBuilder<PropertiesConfiguration>(PropertiesConfiguration::class.java)
+        return FileBasedConfigurationBuilder(PropertiesConfiguration::class.java)
                 .configure(params)
                 .configuration
     }

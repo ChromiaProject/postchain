@@ -59,7 +59,7 @@ class Ext4FileSystem(private val containerConfig: ContainerNodeConfig) : FileSys
     override fun applyLimits(containerName: ContainerName, resourceLimits: ContainerResourceLimits) {
         if (resourceLimits.hasStorage()) {
             val quota = resourceLimits.storageMb()
-            logger.info("Setting storage quota: ${quota} MiB")
+            logger.info("Setting storage quota: $quota MiB")
             runCommand(arrayOf(
                     "setquota",
                     "-P", containerName.containerIID.toString(),

@@ -17,11 +17,10 @@ import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
 import net.postchain.core.framework.AbstractBlockchainProcess
-import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.EagerDiagnosticValue
-import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
@@ -67,7 +66,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)
 
         val bestHeightSoFar = blockchainEngine.getBlockQueries().getBestHeight().get()
-        initDebug("Historic sync bc ${myBRID}, height: ${bestHeightSoFar}")
+        initDebug("Historic sync bc ${myBRID}, height: $bestHeightSoFar")
 
         // try local sync first
         for (brid in chainsToSyncFrom) {
@@ -250,7 +249,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         if (historictBlockRID != ourLastBlockRID) {
             throw BadDataMistake(BadDataType.OTHER,
                     "Historic blockchain and fork chain disagree on block RID at height" +
-                            "${ourHeight}. Historic: $historictBlockRID, fork: ${ourLastBlockRID}")
+                            "${ourHeight}. Historic: $historictBlockRID, fork: $ourLastBlockRID")
         }
     }
 

@@ -11,10 +11,10 @@ class SlowSyncStateMachineTest {
     val nodeHex = "121212"
     val theOnlyOtherNode = NodeRid(nodeHex.hexStringToByteArray())
 
-    fun dummySend(nowMs: Long, sssm: SlowSyncStateMachine, node: NodeRid? = null): Unit {
+    fun dummySend(nowMs: Long, sssm: SlowSyncStateMachine, node: NodeRid? = null) {
         val height = sssm.getStartHeight()
         println("sending request for $height")
-        sssm.updateToWaitForReply(theOnlyOtherNode, height,1L)
+        sssm.updateToWaitForReply(theOnlyOtherNode, height, 1L)
     }
 
     @Test

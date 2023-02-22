@@ -18,7 +18,7 @@ class ExponentialDelay (
         }
 
         fun getDelayMillisAndIncrease(): Long {
-            val result = delayCounterMillis;
+            val result = delayCounterMillis
             if (delayCounterMillis < MAX_DELAY_MILLIS) {
                 executionCounter += 1
                 // must calculate new delay

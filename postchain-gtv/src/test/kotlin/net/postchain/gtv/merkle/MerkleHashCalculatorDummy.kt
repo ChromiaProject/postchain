@@ -59,7 +59,7 @@ fun dummyAddOneHashFun(bArr: ByteArray, cryptoSystem: CryptoSystem?): Hash {
  *
  * @property memoization is possible to override with some other version (for example that prunes more often)
  */
-class MerkleHashCalculatorDummy(): MerkleHashCalculator<Gtv>(null) {
+class MerkleHashCalculatorDummy : MerkleHashCalculator<Gtv>(null) {
 
 
     override fun calculateLeafHash(value: Gtv): Hash {
@@ -69,7 +69,7 @@ class MerkleHashCalculatorDummy(): MerkleHashCalculator<Gtv>(null) {
     }
 
     override fun calculateNodeHash(prefix: Byte, hashLeft: Hash, hashRight: Hash): Hash {
-        return calculateNodeHashInternal(prefix ,hashLeft, hashRight, ::dummyAddOneHashFun)
+        return calculateNodeHashInternal(prefix, hashLeft, hashRight, ::dummyAddOneHashFun)
     }
 
     override fun isContainerProofValueLeaf(value: Gtv): Boolean {

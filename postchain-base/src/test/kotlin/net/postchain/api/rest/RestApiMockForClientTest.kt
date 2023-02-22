@@ -18,7 +18,6 @@ import net.postchain.common.tx.TransactionStatus
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
-import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -62,12 +61,12 @@ class RestApiMockForClientManual {
         val statusNotFound = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
         val statusWaiting = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 
-        val blocks = listOf<BlockDetail>(
+        val blocks = listOf(
                 BlockDetail(
                         "blockRid001".toByteArray(),
                         blockchainRID.toByteArray(), "some header".toByteArray(),
                         0,
-                        listOf<TxDetail>(),
+                        listOf(),
                         "signatures".toByteArray(),
                         1574849700),
                 BlockDetail(
@@ -75,7 +74,7 @@ class RestApiMockForClientManual {
                         "blockRid001".toByteArray(),
                         "some other header".toByteArray(),
                         1,
-                        listOf<TxDetail>(TxDetail("tx1".toByteArray(), "tx1".toByteArray(), "tx1".toByteArray())),
+                        listOf(TxDetail("tx1".toByteArray(), "tx1".toByteArray(), "tx1".toByteArray())),
                         "signatures".toByteArray(),
                         1574849760),
                 BlockDetail(
@@ -83,7 +82,7 @@ class RestApiMockForClientManual {
                         "blockRid002".toByteArray(),
                         "yet another header".toByteArray(),
                         2,
-                        listOf<TxDetail>(),
+                        listOf(),
                         "signatures".toByteArray(),
                         1574849880),
                 BlockDetail(
@@ -91,7 +90,7 @@ class RestApiMockForClientManual {
                         "blockRid003".toByteArray(),
                         "guess what? Another header".toByteArray(),
                         3,
-                        listOf<TxDetail>(
+                        listOf(
                                 TxDetail("tx2".toByteArray(), "tx2".toByteArray(), "tx2".toByteArray()),
                                 TxDetail("tx3".toByteArray(), "tx3".toByteArray(), "tx3".toByteArray()),
                                 TxDetail("tx4".toByteArray(), "tx4".toByteArray(), "tx4".toByteArray())
@@ -169,7 +168,7 @@ class RestApiMockForClientManual {
 
         override fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt> {
             var queryBlocks = blocks
-            var transactionsInfo: MutableList<TransactionInfoExt> = mutableListOf()
+            val transactionsInfo: MutableList<TransactionInfoExt> = mutableListOf()
             queryBlocks = queryBlocks.sortedByDescending { blockDetail -> blockDetail.height }
             for (block in queryBlocks) {
                 for (tx in block.transactions) {

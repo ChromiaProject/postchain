@@ -36,7 +36,7 @@ class FastSyncPeerStatusesKnownStateTest {
 
         // Initial state
         assertTrue(state.isSyncable(1))
-        var now = 7L
+        val now = 7L
         assertFalse(state.isUnresponsive(now))
 
         state.unresponsive("Bad node", now)
@@ -80,7 +80,7 @@ class FastSyncPeerStatusesKnownStateTest {
         assertTrue(state.isSyncable(1)) // Syncable again
 
         // We have to make sure it works again, but at some later time
-        val currentTime = timeIter + expectedTimeout * 3;
+        val currentTime = timeIter + expectedTimeout * 3
         timeIter = makePeerBlacklisted(state, currentTime)
         assertFalse(state.isSyncable(1))
         assertTrue(state.isBlacklisted(timeIter))
