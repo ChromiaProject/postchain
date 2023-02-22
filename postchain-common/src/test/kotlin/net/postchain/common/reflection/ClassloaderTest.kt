@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 class TestClass(val value: Long)
-class TestClassNoArg()
+class TestClassNoArg
 
 internal class ClassloaderTest {
 

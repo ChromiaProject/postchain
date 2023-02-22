@@ -5,11 +5,14 @@ package net.postchain.gtx.gtxml
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.crypto.devtools.MockCryptoSystem
-import net.postchain.gtv.*
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvString
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
-import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -51,7 +54,7 @@ class GTXMLTransactionParserSignersSignaturesAndOperationsTest {
 
         val actual = GTXMLTransactionParser.parseGTXMLTransaction(xml, TransactionContext.empty(), MockCryptoSystem())
 
-        Assertions.assertEquals(expectedTx, actual)
+        assertEquals(expectedTx, actual)
     }
 
     @Test

@@ -81,7 +81,7 @@ open class BaseBlockBuilder(
      * Adds an [TxEventSink] to this block builder.
      */
     fun installEventProcessor(type: String, sink: TxEventSink) {
-        if (type in eventProcessors) throw ProgrammerMistake("Conflicting event processors in block builder, type ${type}")
+        if (type in eventProcessors) throw ProgrammerMistake("Conflicting event processors in block builder, type $type")
         eventProcessors[type] = sink
     }
 

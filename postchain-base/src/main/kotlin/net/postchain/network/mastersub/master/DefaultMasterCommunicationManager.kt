@@ -172,7 +172,7 @@ open class DefaultMasterCommunicationManager(
                                         message.targetBlockchainRid,
                                         message.name,
                                         message.args
-                                ).whenCompleteUnwrapped() { response, error ->
+                                ).whenCompleteUnwrapped { response, error ->
                                     if (error == null) {
                                         logger.trace { "Got response from subnode with target blockchain-rid ${message.targetBlockchainRid}, message blockchain-rid ${message.blockchainRid.toHex()} and request id ${message.requestId}" }
                                         masterConnectionManager.sendPacketToSub(MsQueryResponse(

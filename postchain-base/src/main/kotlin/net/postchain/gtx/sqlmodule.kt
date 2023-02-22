@@ -85,7 +85,7 @@ private fun convertArgs(argNames: Array<String>, argTypes: Array<String>, opName
             "text" -> Pair(GtvType.STRING, false)
             "gtx_signer" -> Pair(GtvType.BYTEARRAY, true)
             "bytea" -> Pair(GtvType.BYTEARRAY, false)
-            else -> throw UserMistake("Unsupported argument type ${argTypes[i]} in ${opName}")
+            else -> throw UserMistake("Unsupported argument type ${argTypes[i]} in $opName")
         }
         // only signer is not nullable
         args.add(SQLOpArg(argNames[i], gtxType.first, gtxType.second, !gtxType.second))
@@ -133,7 +133,7 @@ class SQLGTXOperation(val opDesc: SQLOpDesc, opData: ExtOpData) :
 
     override fun apply(ctx: TxEContext): Boolean {
         val r = QueryRunner()
-        return r.query(ctx.conn, opDesc.query, ScalarHandler<Boolean>(),
+        return r.query(ctx.conn, opDesc.query, ScalarHandler(),
                 "(${ctx.chainID}, ${ctx.txIID}, ${data.opIndex})",
                 *args)
     }
@@ -171,7 +171,7 @@ class SQLGTXModule(private val moduleFiles: Array<String>) : GTXModule {
         val opDesc = queries.get(name)
 
         if (opDesc == null) {
-            throw UserMistake("Query of type ${name} is not available")
+            throw UserMistake("Query of type $name is not available")
         }
 
         if (args !is GtvDictionary) {
@@ -207,7 +207,7 @@ class SQLGTXModule(private val moduleFiles: Array<String>) : GTXModule {
                     null -> GtvNull
                     else -> throw ProgrammerMistake("Unsupported return type" +
                             " ${dbValue.javaClass.simpleName} of column ${it.key} " +
-                            "from query ${name}")
+                            "from query $name")
                 }
                 obj.set(it.key, gtv)
             }
@@ -271,7 +271,7 @@ class SQLGTXModule(private val moduleFiles: Array<String>) : GTXModule {
                     GTXSchemaManager.setModuleVersion(ctx, moduleName, 0)
                 } catch (e: Exception) {
                     logger.error(e) { "Failed to load SQL GTX module ${filename}: $e" }
-                    throw UserMistake("Failed to load SQL GTX module ${filename}", e)
+                    throw UserMistake("Failed to load SQL GTX module $filename", e)
                 }
             }
         }

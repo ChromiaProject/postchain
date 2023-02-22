@@ -4,7 +4,12 @@ package net.postchain.integrationtest.managedmode
 
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.EContext
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.integrationtest.managedmode.TestModulesHelper.argCurrentHeight
@@ -129,7 +134,7 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
     }
 }
 
-class ManagedTestModuleTwoPeersConnect0() : ManagedTestModuleTwoPeersConnect(Companion.Nodes.Node0)
+class ManagedTestModuleTwoPeersConnect0 : ManagedTestModuleTwoPeersConnect(Companion.Nodes.Node0)
 
-class ManagedTestModuleTwoPeersConnect1() : ManagedTestModuleTwoPeersConnect(Companion.Nodes.Node1)
+class ManagedTestModuleTwoPeersConnect1 : ManagedTestModuleTwoPeersConnect(Companion.Nodes.Node1)
 

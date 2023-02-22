@@ -337,7 +337,7 @@ class MsQueryFailure(
 // ----------------
 
 fun encodePeers(singers: List<ByteArray>): ByteArray {
-    val gtv = singers.map { gtv(it) }.let { gtv(it) }
+    val gtv = gtv(singers.map { gtv(it) })
     return GtvEncoder.encodeGtv(gtv)
 }
 

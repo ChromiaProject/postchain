@@ -3,7 +3,6 @@
 package net.postchain
 
 import assertk.Assert
-import assertk.assertions.containsAll
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotEmpty
 import assertk.assertions.isNullOrEmpty

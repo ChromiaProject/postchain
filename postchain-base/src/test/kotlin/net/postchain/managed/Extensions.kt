@@ -18,4 +18,5 @@ class AnyBlockchainConfigFactory : BlockchainConfigurationFactory {
         TODO("Not yet implemented")
     }
 }
-class ExtendedBcConfigFactory() : GTXBlockchainConfigurationFactory()
+
+class ExtendedBcConfigFactory : GTXBlockchainConfigurationFactory()

@@ -62,7 +62,7 @@ class RestApiGetStatusEndpointTest {
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
-                .get("/tx/iid_${chainIid.toInt().toString()}/$txHashHex/status")
+                .get("/tx/iid_${chainIid.toInt()}/$txHashHex/status")
                 .then()
                 .statusCode(200)
                 .body("status", equalToIgnoringCase("CONFIRMED"))

@@ -113,7 +113,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         if (name in qmap) {
             return qmap[name]!!.query(ctxt, name, args)
         } else {
-            throw UserMistake("Unknown query: ${name}")
+            throw UserMistake("Unknown query: $name")
         }
     }
 

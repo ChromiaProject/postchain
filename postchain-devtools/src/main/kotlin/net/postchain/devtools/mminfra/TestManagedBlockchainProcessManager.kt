@@ -60,7 +60,7 @@ class TestManagedBlockchainProcessManager(
 
     private fun getQueue(chainId: Long): BlockingQueue<Long> {
         return blockchainStarts.computeIfAbsent(chainId) {
-            LinkedBlockingQueue<Long>()
+            LinkedBlockingQueue()
         }
     }
 
@@ -95,7 +95,7 @@ class TestManagedBlockchainProcessManager(
      */
     fun awaitStarted(nodeIndex: Int, chainId: Long, atLeastHeight: Long) {
         awaitDebug("++++++ AWAIT node idx: " + nodeIndex + ", chain: " + chainId + ", height: " + atLeastHeight)
-        while (lastHeightStarted.get(chainId) ?: -2L < atLeastHeight) {
+        while ((lastHeightStarted[chainId] ?: -2L) < atLeastHeight) {
             Thread.sleep(10)
         }
         awaitDebug("++++++ WAIT OVER! node idx: " + nodeIndex + ", chain: " + chainId + ", height: " + atLeastHeight)

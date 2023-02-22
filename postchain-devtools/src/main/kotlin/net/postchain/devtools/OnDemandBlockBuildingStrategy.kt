@@ -22,7 +22,6 @@ import kotlin.time.Duration
  * Not only can we tell the blockchain when to build blocks [buildBlocksUpTo()], we can also wait for a block
  * to get done [awaitCommitted()].
  */
-@Suppress("UNUSED_PARAMETER")
 class OnDemandBlockBuildingStrategy(
         val configData: BaseBlockBuildingStrategyConfigurationData,
         val blockQueries: BlockQueries,

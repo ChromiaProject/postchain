@@ -95,7 +95,7 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     }
 
     fun addExtraReplica(brid: BlockchainRid, replica: NodeRid) {
-        extraReplicas.computeIfAbsent(brid) { mutableSetOf<NodeRid>() }.add(replica)
+        extraReplicas.computeIfAbsent(brid) { mutableSetOf() }.add(replica)
     }
 
     fun getBuiltConfiguration(chainId: Long, rawConfigurationData: ByteArray): BlockchainConfiguration {
