@@ -12,6 +12,7 @@ import net.postchain.client.impl.PostchainClientImpl.*
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder.encodeGtv
@@ -298,6 +299,16 @@ internal class PostchainClientImplTest {
         assertThrows<ClientError> {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl("http://invalidhost"))).currentBlockHeight()
         }
+    }
+
+    @Test
+    fun `Confirmation proof can be parsed`() {
+        val proofString = "A48202C5308202C13081B80C0B626C6F636B486561646572A181A80481A5A581A230819FA122042082"
+        val proof: ByteArray? = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+            override fun invoke(request: Request) =
+                    Response(Status.OK).body("""{"proof":"$proofString"}""")
+        }).confirmationProof(TxRid("42"))
+        assertEquals(proofString, proof!!.toHex())
     }
 
     private fun assertQueryUrlEndsWith(config: PostchainClientConfig, suffix: String) {

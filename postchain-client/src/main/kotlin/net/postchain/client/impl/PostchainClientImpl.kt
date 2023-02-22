@@ -12,6 +12,7 @@ import net.postchain.client.core.TransactionResult
 import net.postchain.client.core.TxRid
 import net.postchain.client.exception.ClientError
 import net.postchain.client.transaction.TransactionBuilder
+import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.tx.TransactionStatus.*
@@ -176,6 +177,18 @@ class PostchainClientImpl(
         val msg = parseJson(response, 1024, ErrorResponse::class.java)?.error ?: "Unknown error"
         throw ClientError("Can not check transaction status: ${response.status} $msg")
     }, true)
+
+    override fun confirmationProof(txRid: TxRid): ByteArray? = requestStrategy.request({ endpoint ->
+        Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/confirmationProof")
+                .header("Accept", ContentType.APPLICATION_JSON.value)
+    }, { response ->
+        val confirmationProof = parseJson(response, MAX_TX_STATUS_SIZE, ConfirmationProof::class.java)
+        confirmationProof?.proof?.hexStringToByteArray()
+    }, { response ->
+        val msg = parseJson(response, 1024, ErrorResponse::class.java)?.error ?: "Unknown error"
+        throw ClientError("Can not fetch confirmation proof status: ${response.status} $msg")
+    }, true)
+
 
     private fun <T> parseJson(response: Response, maxSize: Long, cls: Class<T>): T? = try {
         val body = BoundedInputStream(response.body.stream, maxSize).bufferedReader()
