@@ -90,7 +90,7 @@ class BlockWiseSubnodeBlockchainConfigListener(
                         GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(message.rawConfig), blockchainRid)
                         true
                     } catch (e: Exception) {
-                        logger.warn { "Received invalid configuration: ${e.message}" }
+                        logger.warn { "$pref Remote config was invalid and will be acknowledged but not stored: ${e.message}" }
                         false
                     }
 
