@@ -43,7 +43,7 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
         val configHeight = DatabaseAccess.of(eContext).findConfigurationHeightForBlock(eContext, activeHeight)
 
         return if (configHeight == null) {
-            logger.warn("getActiveBlocksConfiguration() - Chain: $chainId doesn't have a configuration in DB")
+            logger.debug("getActiveBlocksConfiguration() - Chain: $chainId doesn't have a configuration in DB")
             null
         } else {
             DatabaseAccess.of(eContext).getConfigurationData(eContext, configHeight)!!
