@@ -139,7 +139,6 @@ open class ContainerManagedBlockchainProcessManager(
         { blockTrace: BlockTrace?, blockHeight: Long, _: Long ->
             try {
                 rTrace("Before", chainId, blockTrace)
-                rTrace("Before", chainId, blockTrace)
                 for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
 
                 // Preloading blockchain configuration
