@@ -103,19 +103,18 @@ class BlockWiseSubnodeBlockchainConfigListenerTest {
         assertEquals(20L, msg2.nextHeight)
 
         // Response's nextHeight = 15 < 20 AND corrupted rawData
-        val config15 = validConfig
-        val hash15 = configVerifier.calculateHash(config15)
-        val config15corrupted = config15.copyOf(config15.size - 1)
+        val corruptedConfig = validConfig.copyOf(validConfig.size - 1)
         val response1corrupted = MsNextBlockchainConfigMessage(
-                ZERO_RID.data, 1L, 15L, config15corrupted, hash15)
+                ZERO_RID.data, 1L, 15L, corruptedConfig, configVerifier.calculateHash(validConfig))
         val response1invalid = MsNextBlockchainConfigMessage(
                 ZERO_RID.data, 1L, 15L, invalidConfig, configVerifier.calculateHash(invalidConfig))
         // Response's nextHeight = 15 < 20 AND correct rawData
         val response1 = MsNextBlockchainConfigMessage(
-                ZERO_RID.data, 1L, 15L, config15, hash15)
+                ZERO_RID.data, 1L, 16L, validConfig, configVerifier.calculateHash(validConfig))
         connectionManager.mockResponses[1L to 20L] = mutableListOf(response1corrupted, response1invalid, response1)
         sut.commit(1L)
-        verify(mock0.db).addConfigurationData(any(), eq(15L), eq(config15))
+        sut.commit(1L)
+        verify(mock0.db).addConfigurationData(any(), eq(16L), eq(validConfig))
     }
 
     @Test
