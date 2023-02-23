@@ -54,9 +54,11 @@ open class DefaultMasterCommunicationManager(
         private val processName: BlockchainProcessName,
         private val afterSubnodeCommitListeners: Set<AfterSubnodeCommitListener>,
         private val blockQueriesProvider: BlockQueriesProvider,
-) : AbstractMasterCommunicationManager() {
+) : MasterCommunicationManager {
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        private val peerTaskScheduler = ScheduledThreadPoolExecutor(1)
+    }
 
     private lateinit var sendConnectedPeersTask: ScheduledFuture<*>
     private val configVerifier = BlockchainConfigVerifier(appConfig)
@@ -66,7 +68,7 @@ open class DefaultMasterCommunicationManager(
         masterConnectionManager.initSubChainConnection(processName, subnodeChainConfig)
 
         // Scheduling SendConnectedPeers task
-        sendConnectedPeersTask = ScheduledThreadPoolExecutor(1).scheduleAtFixedRate({
+        sendConnectedPeersTask = peerTaskScheduler.scheduleAtFixedRate({
             val peers = connectionManager.getConnectedNodes(chainId)
             val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.data })
             masterConnectionManager.sendPacketToSub(msg)
