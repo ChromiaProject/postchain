@@ -30,8 +30,10 @@ import net.postchain.network.mastersub.protocol.MsQueryResponse
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
-import java.util.*
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.ScheduledThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 /**
  * Manages communication for the give chain
@@ -56,7 +58,7 @@ open class DefaultMasterCommunicationManager(
 
     companion object : KLogging()
 
-    private lateinit var sendConnectedPeersTask: TimerTask
+    private lateinit var sendConnectedPeersTask: ScheduledFuture<*>
     private val configVerifier = BlockchainConfigVerifier(appConfig)
 
     override fun init() {
@@ -64,11 +66,11 @@ open class DefaultMasterCommunicationManager(
         masterConnectionManager.initSubChainConnection(processName, subnodeChainConfig)
 
         // Scheduling SendConnectedPeers task
-        sendConnectedPeersTask = scheduleTask(containerNodeConfig.sendMasterConnectedPeersPeriod) {
+        sendConnectedPeersTask = ScheduledThreadPoolExecutor(1).scheduleAtFixedRate({
             val peers = connectionManager.getConnectedNodes(chainId)
             val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.data })
             masterConnectionManager.sendPacketToSub(msg)
-        }
+        }, 0, containerNodeConfig.sendMasterConnectedPeersPeriod, TimeUnit.MILLISECONDS)
     }
 
     fun subnodePacketConsumer(): MsMessageHandler {
@@ -303,7 +305,7 @@ open class DefaultMasterCommunicationManager(
     override fun shutdown() {
         // Canceling SendConnectedPeers task
         if (::sendConnectedPeersTask.isInitialized) {
-            sendConnectedPeersTask.cancel()
+            sendConnectedPeersTask.cancel(true)
         }
 
         val prefixFun: () -> String = { processName.toString() }
