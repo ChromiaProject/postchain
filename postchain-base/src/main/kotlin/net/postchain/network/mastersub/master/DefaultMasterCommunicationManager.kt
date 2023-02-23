@@ -1,5 +1,6 @@
 package net.postchain.network.mastersub.master
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
@@ -31,8 +32,8 @@ import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
 /**
@@ -57,7 +58,7 @@ open class DefaultMasterCommunicationManager(
 ) : MasterCommunicationManager {
 
     companion object : KLogging() {
-        private val peerTaskScheduler = ScheduledThreadPoolExecutor(1)
+        private val peerTaskScheduler = Executors.newSingleThreadScheduledExecutor(ThreadFactoryBuilder().setNameFormat("PeerTaskScheduler").build())
     }
 
     private lateinit var sendConnectedPeersTask: ScheduledFuture<*>
