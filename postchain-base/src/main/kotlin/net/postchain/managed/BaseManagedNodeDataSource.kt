@@ -98,6 +98,19 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         return if (res.isNull()) null else res.asByteArray()
     }
 
+    override fun isPendingBlockchainConfigurationApproved(blockchainRid: BlockchainRid, height: Long): Boolean {
+        if (nmApiVersion < 5) return false
+
+        val res = query(
+                "nm_get_pending_blockchain_configuration_approved",
+                buildArgs(
+                        "blockchain_rid" to gtv(blockchainRid.data),
+                        "height" to gtv(height))
+        )
+
+        return res.asBoolean()
+    }
+
     override fun getSyncUntilHeight(): Map<BlockchainRid, Long> {
         return if (nmApiVersion >= 2) {
             val blockchains = computeBlockchainInfoList()

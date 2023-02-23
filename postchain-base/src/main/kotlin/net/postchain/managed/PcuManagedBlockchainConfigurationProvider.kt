@@ -4,6 +4,7 @@ package net.postchain.managed
 
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.BlockchainRid
 import net.postchain.config.blockchain.AbstractBlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.EContext
@@ -55,6 +56,10 @@ class PcuManagedBlockchainConfigurationProvider : AbstractBlockchainConfiguratio
     override fun getHistoricConfiguration(eContext: EContext, chainId: Long, historicBlockHeight: Long): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
         return systemProvider.getHistoricConfiguration(eContext, chainId, historicBlockHeight)
+    }
+
+    fun isPendingBlockchainConfigurationApproved(blockchainRid: BlockchainRid, height: Long): Boolean {
+        return dataSource.isPendingBlockchainConfigurationApproved(blockchainRid, height)
     }
 
     // --------- Private --------
