@@ -1,5 +1,6 @@
 package net.postchain.network.mastersub.master
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
@@ -30,8 +31,10 @@ import net.postchain.network.mastersub.protocol.MsQueryResponse
 import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeersCommConfigFactory
 import net.postchain.network.peer.XChainPeersConfiguration
-import java.util.*
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 
 /**
  * Manages communication for the give chain
@@ -52,11 +55,13 @@ open class DefaultMasterCommunicationManager(
         private val processName: BlockchainProcessName,
         private val afterSubnodeCommitListeners: Set<AfterSubnodeCommitListener>,
         private val blockQueriesProvider: BlockQueriesProvider,
-) : AbstractMasterCommunicationManager() {
+) : MasterCommunicationManager {
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        private val peerTaskScheduler = Executors.newSingleThreadScheduledExecutor(ThreadFactoryBuilder().setNameFormat("PeerTaskScheduler").build())
+    }
 
-    private lateinit var sendConnectedPeersTask: TimerTask
+    private lateinit var sendConnectedPeersTask: ScheduledFuture<*>
     private val configVerifier = BlockchainConfigVerifier(appConfig)
 
     override fun init() {
@@ -64,11 +69,11 @@ open class DefaultMasterCommunicationManager(
         masterConnectionManager.initSubChainConnection(processName, subnodeChainConfig)
 
         // Scheduling SendConnectedPeers task
-        sendConnectedPeersTask = scheduleTask(containerNodeConfig.sendMasterConnectedPeersPeriod) {
+        sendConnectedPeersTask = peerTaskScheduler.scheduleAtFixedRate({
             val peers = connectionManager.getConnectedNodes(chainId)
             val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.data })
             masterConnectionManager.sendPacketToSub(msg)
-        }
+        }, 0, containerNodeConfig.sendMasterConnectedPeersPeriod, TimeUnit.MILLISECONDS)
     }
 
     fun subnodePacketConsumer(): MsMessageHandler {
@@ -303,7 +308,7 @@ open class DefaultMasterCommunicationManager(
     override fun shutdown() {
         // Canceling SendConnectedPeers task
         if (::sendConnectedPeersTask.isInitialized) {
-            sendConnectedPeersTask.cancel()
+            sendConnectedPeersTask.cancel(true)
         }
 
         val prefixFun: () -> String = { processName.toString() }
