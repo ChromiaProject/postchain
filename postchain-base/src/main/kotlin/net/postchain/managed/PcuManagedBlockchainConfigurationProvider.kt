@@ -9,14 +9,14 @@ import net.postchain.config.blockchain.AbstractBlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.EContext
 
-class PcuManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
+open class PcuManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
 
-    private lateinit var dataSource: ManagedNodeDataSource
+    protected lateinit var dataSource: ManagedNodeDataSource
     private val systemProvider = ManualBlockchainConfigurationProvider() // Used mainly to access Chain0 (we don't want to use Chain0 to check it's own config changes, too strange)
 
     companion object : KLogging()
 
-    fun setDataSource(dataSource: ManagedNodeDataSource) {
+    fun setManagedDataSource(dataSource: ManagedNodeDataSource) {
         this.dataSource = dataSource
     }
 
@@ -58,13 +58,16 @@ class PcuManagedBlockchainConfigurationProvider : AbstractBlockchainConfiguratio
         return systemProvider.getHistoricConfiguration(eContext, chainId, historicBlockHeight)
     }
 
-    fun isPendingBlockchainConfigurationApproved(blockchainRid: BlockchainRid, height: Long): Boolean {
-        return dataSource.isPendingBlockchainConfigurationApproved(blockchainRid, height)
+    open fun isPendingBlockchainConfigurationApproved(eContext: EContext): Boolean {
+        val dba = DatabaseAccess.of(eContext)
+        val blockchainRid = dba.getBlockchainRid(eContext)!!
+        val activeHeight = getActiveBlocksHeight(eContext, dba)
+        return dataSource.isPendingBlockchainConfigurationApproved(blockchainRid, activeHeight)
     }
 
     // --------- Private --------
 
-    private fun getActiveBlockPendingConfiguration(eContext: EContext): ByteArray? {
+    protected fun getActiveBlockPendingConfiguration(eContext: EContext): ByteArray? {
         val dba = DatabaseAccess.of(eContext)
         val blockchainRid = dba.getBlockchainRid(eContext)
         val activeHeight = getActiveBlocksHeight(eContext, dba)

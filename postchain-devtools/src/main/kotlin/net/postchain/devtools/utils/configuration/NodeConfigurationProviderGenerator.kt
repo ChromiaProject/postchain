@@ -71,9 +71,9 @@ object NodeConfigurationProviderGenerator {
         setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
     ): NodeConfigurationProvider {
         val compositeConfig = CompositeConfiguration().apply {
+            addConfiguration(baseConfig)
             addConfiguration(nodeSetup.nodeSpecificConfigs) // The node might have unique config settings, must add these first to "override"
             addConfiguration(configOverrides)
-            addConfiguration(baseConfig)
         }
 
         val appConfig = AppConfig(compositeConfig)

@@ -1,34 +1,35 @@
-package net.postchain.devtools.mminfra
+package net.postchain.devtools.mminfra.pcu
 
 import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
-import net.postchain.devtools.MockBlockchainConfigurationProvider
+import net.postchain.devtools.mminfra.TestManagedBlockchainInfrastructure
+import net.postchain.devtools.mminfra.TestManagedEBFTInfrastructureFactory
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
-import net.postchain.managed.ManagedEBFTInfrastructureFactory
+import net.postchain.managed.PcuManagedBlockchainConfigurationProvider
 
-open class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() {
-
-    lateinit var nodeConfig: NodeConfig
-    lateinit var dataSource: MockManagedNodeDataSource
+open class TestPcuManagedEBFTInfrastructureFactory : TestManagedEBFTInfrastructureFactory() {
 
     override fun makeProcessManager(
             postchainContext: PostchainContext,
             blockchainInfrastructure: BlockchainInfrastructure,
-            blockchainConfigurationProvider: BlockchainConfigurationProvider): BlockchainProcessManager {
-        return TestManagedBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider, dataSource)
+            blockchainConfigurationProvider: BlockchainConfigurationProvider
+    ): BlockchainProcessManager {
+        return TestPcuManagedBlockchainProcessManager(
+                postchainContext,
+                blockchainInfrastructure,
+                blockchainConfigurationProvider,
+                dataSource
+        )
     }
 
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
-            dataSource = appConfig.getProperty("infrastructure.datasource") as MockManagedNodeDataSource
-
-            val mockBlockQueriesProvider = configurationProvider as MockBlockchainConfigurationProvider
-            mockBlockQueriesProvider.mockDataSource = dataSource
+            dataSource = appConfig.getProperty("infrastructure.datasource") as MockPcuManagedNodeDataSource
+            (configurationProvider as PcuManagedBlockchainConfigurationProvider).setManagedDataSource(dataSource)
 
             val syncInfra = EBFTSynchronizationInfrastructure(this)
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
@@ -38,6 +39,6 @@ open class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFacto
     }
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
-        return MockBlockchainConfigurationProvider()
+        return TestPcuManagedBlockchainConfigurationProvider()
     }
 }
