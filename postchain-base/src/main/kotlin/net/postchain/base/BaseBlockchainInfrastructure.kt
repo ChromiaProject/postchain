@@ -25,6 +25,7 @@ import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 open class BaseBlockchainInfrastructure(
         val defaultSynchronizationInfrastructure: SynchronizationInfrastructure,
@@ -77,7 +78,19 @@ open class BaseBlockchainInfrastructure(
 
         val factory = bcConfigurationFactory.supply(blockConfData.configurationFactory)
 
-        return factory.makeBlockchainConfiguration(blockConfData, partialContext, blockSigMaker, eContext, postchainContext.cryptoSystem)
+        val masterSubQueryManager = when (postchainContext.connectionManager) {
+            is SubConnectionManager -> postchainContext.connectionManager.masterSubQueryManager
+            else -> null
+        }
+        return factory.makeBlockchainConfiguration(
+                blockConfData,
+                partialContext,
+                blockSigMaker,
+                eContext,
+                postchainContext.cryptoSystem,
+                postchainContext.blockQueriesProvider,
+                masterSubQueryManager
+        )
     }
 
     override fun makeBlockchainEngine(

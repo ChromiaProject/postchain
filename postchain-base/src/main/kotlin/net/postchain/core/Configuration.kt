@@ -9,11 +9,13 @@ import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockQueriesProvider
 import net.postchain.core.block.BlockWitness
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
+import net.postchain.network.mastersub.MasterSubQueryManager
 
 /**
  * [BlockchainConfiguration] describes an individual blockchain instance (within Postchain system).
@@ -48,9 +50,13 @@ fun interface BlockchainConfigurationFactorySupplier {
 }
 
 interface BlockchainConfigurationFactory {
-    fun makeBlockchainConfiguration(configurationData: Any,
-                                    partialContext: BlockchainContext,
-                                    blockSigMaker: SigMaker,
-                                    eContext: EContext,
-                                    cryptoSystem: CryptoSystem = Secp256K1CryptoSystem()): BlockchainConfiguration
+    fun makeBlockchainConfiguration(
+            configurationData: Any,
+            partialContext: BlockchainContext,
+            blockSigMaker: SigMaker,
+            eContext: EContext,
+            cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
+            blockQueriesProvider: BlockQueriesProvider?,
+            masterSubQueryManager: MasterSubQueryManager?
+    ): BlockchainConfiguration
 }

@@ -6,10 +6,12 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.BlockchainContext
 import net.postchain.core.EContext
+import net.postchain.core.block.BlockQueriesProvider
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.mapper.toObject
+import net.postchain.network.mastersub.MasterSubQueryManager
 
 /**
  * TODO: (Olle) This should be in the "net.postchain.base.gtx" package (setting it apart from the GTX module),
@@ -18,16 +20,24 @@ import net.postchain.gtv.mapper.toObject
 open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
 
     companion object {
-        fun validateConfiguration(config: Gtv, blockchainRid: BlockchainRid) {
+        fun validateConfiguration(
+                config: Gtv,
+                blockchainRid: BlockchainRid
+        ) {
             val configurationData = try {
                 config.toObject<BlockchainConfigurationData>()
             } catch (e: IllegalArgumentException) {
                 throw UserMistake("Unable to parse configuration: ${e.message}", e)
             }
-            makeGtxModule(blockchainRid, configurationData)
+            makeGtxModule(blockchainRid, configurationData, null, null)
         }
 
-        private fun makeGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData): GTXModule {
+        private fun makeGtxModule(
+                blockchainRID: BlockchainRid,
+                data: BlockchainConfigurationData,
+                blockQueriesProvider: BlockQueriesProvider?,
+                masterSubQueryManager: MasterSubQueryManager?
+        ): GTXModule {
             val gtxConfig = data.gtx?.toObject() ?: GtxConfigurationData.default
             val list = gtxConfig.modules.distinct()
             if (list.isEmpty()) {
@@ -44,7 +54,8 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
                 val moduleClass = Class.forName(className).getConstructor()
                 return when (val instance = moduleClass.newInstance()) {
                     is GTXModule -> instance
-                    is GTXModuleFactory -> instance.makeModule(data.rawConfig, blockchainRID) //TODO
+                    is GTXModuleFactory -> instance.makeModule(data.rawConfig, blockchainRID)
+                    is BlockQueriesGTXModuleFactory -> instance.makeModule(blockQueriesProvider, masterSubQueryManager)
                     else -> throw UserMistake("Module class not recognized")
                 }
             }
@@ -58,11 +69,15 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
         }
     }
 
-    override fun makeBlockchainConfiguration(configurationData: Any,
-                                             partialContext: BlockchainContext,
-                                             blockSigMaker: SigMaker,
-                                             eContext: EContext,
-                                             cryptoSystem: CryptoSystem): GTXBlockchainConfiguration {
+    override fun makeBlockchainConfiguration(
+            configurationData: Any,
+            partialContext: BlockchainContext,
+            blockSigMaker: SigMaker,
+            eContext: EContext,
+            cryptoSystem: CryptoSystem,
+            blockQueriesProvider: BlockQueriesProvider?,
+            masterSubQueryManager: MasterSubQueryManager?
+    ): GTXBlockchainConfiguration {
         val cfData = configurationData as BlockchainConfigurationData
         val effectiveBRID = cfData.historicBrid ?: partialContext.blockchainRID
         return GTXBlockchainConfiguration(
@@ -70,12 +85,18 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
                 cryptoSystem,
                 partialContext,
                 blockSigMaker,
-                createGtxModule(effectiveBRID, configurationData, eContext)
+                createGtxModule(effectiveBRID, configurationData, eContext, blockQueriesProvider, masterSubQueryManager)
         )
     }
 
-    open fun createGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData, eContext: EContext): GTXModule =
-            makeGtxModule(blockchainRID, data).apply {
+    open fun createGtxModule(
+            blockchainRID: BlockchainRid,
+            data: BlockchainConfigurationData,
+            eContext: EContext,
+            blockQueriesProvider: BlockQueriesProvider?,
+            masterSubQueryManager: MasterSubQueryManager?
+    ): GTXModule =
+            makeGtxModule(blockchainRID, data, blockQueriesProvider, masterSubQueryManager).apply {
                 GTXSchemaManager.initializeDB(eContext)
                 initializeDB(eContext)
             }

@@ -308,7 +308,10 @@ open class ManagedBlockchainProcessManager(
                                 "and will be loaded into it from managed-mode module"
                     }
                     val config = dataSource.getConfiguration(brid.data, nextConfigHeight)!!
-                    GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(config), brid)
+                    GTXBlockchainConfigurationFactory.validateConfiguration(
+                            GtvDecoder.decodeGtv(config),
+                            brid
+                    )
                     db.addConfigurationData(ctx, nextConfigHeight, config)
                 }
             }

@@ -9,9 +9,11 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
 import net.postchain.core.Shutdownable
 import net.postchain.core.Transactor
+import net.postchain.core.block.BlockQueriesProvider
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
+import net.postchain.network.mastersub.MasterSubQueryManager
 
 /**
  * The GTX Module is the basis of a "Dapp".
@@ -30,6 +32,10 @@ interface GTXModule : Shutdownable {
 
 interface GTXModuleFactory {
     fun makeModule(config: Gtv, blockchainRID: BlockchainRid): GTXModule
+}
+
+interface BlockQueriesGTXModuleFactory {
+    fun makeModule(blockQueriesProvider: BlockQueriesProvider?, masterSubQueryManager: MasterSubQueryManager?): GTXModule
 }
 
 /**

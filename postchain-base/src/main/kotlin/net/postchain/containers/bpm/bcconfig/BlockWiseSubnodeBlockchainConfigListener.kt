@@ -86,7 +86,10 @@ class BlockWiseSubnodeBlockchainConfigListener(
                         return
                     }
                     try {
-                        GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(message.rawConfig), blockchainRid)
+                        GTXBlockchainConfigurationFactory.validateConfiguration(
+                                GtvDecoder.decodeGtv(message.rawConfig),
+                                blockchainRid
+                        )
                     } catch (e: Exception) {
                         logger.warn { "${e.message}" }
                         return
