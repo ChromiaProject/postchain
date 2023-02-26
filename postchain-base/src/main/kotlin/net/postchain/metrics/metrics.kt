@@ -46,16 +46,21 @@ fun initMetrics(appConfig: AppConfig) {
 }
 
 private fun initPrometheus(registry: CompositeMeterRegistry, port: Int) {
-    registry.config().meterFilter(object : MeterFilter {
-        override fun configure(id: Meter.Id, config: DistributionStatisticConfig): DistributionStatisticConfig {
-            return DistributionStatisticConfig.builder()
-                .percentiles(0.9, 0.95, 0.99)
-                .build()
-                .merge(config)
-        }
-    })
-    val prometheusRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
-    registry.add(prometheusRegistry)
-    HTTPServer(InetSocketAddress(port), prometheusRegistry.prometheusRegistry, true)
-    PostchainNode.logger.info("Exposing Prometheus metrics on port $port")
+    try {
+        registry.config().meterFilter(object : MeterFilter {
+            override fun configure(id: Meter.Id, config: DistributionStatisticConfig): DistributionStatisticConfig {
+                return DistributionStatisticConfig.builder()
+                        .percentiles(0.9, 0.95, 0.99)
+                        .build()
+                        .merge(config)
+            }
+        })
+        val prometheusRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
+        registry.add(prometheusRegistry)
+        HTTPServer(InetSocketAddress(port), prometheusRegistry.prometheusRegistry, true)
+        PostchainNode.logger.info("Exposing Prometheus metrics on port $port")
+    } catch (e: Exception) {
+        PostchainNode.logger.error("Error when starting Prometheus metrics on $port")
+        PostchainNode.logger.error(e.stackTraceToString())
+    }
 }
