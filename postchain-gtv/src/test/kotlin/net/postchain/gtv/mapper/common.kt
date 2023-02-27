@@ -25,3 +25,5 @@ data class Custom(private val v: String) : ToGtv {
 }
 
 data class WithCustom(@Name("foo") val foo: String, @Name("bar") val bar: Custom)
+
+data class UnsupportedConstructorParamType(@Name("foo") val foo: Int)
