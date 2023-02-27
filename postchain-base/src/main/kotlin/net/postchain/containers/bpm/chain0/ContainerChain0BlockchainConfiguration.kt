@@ -6,7 +6,7 @@ import net.postchain.core.BlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleAware
-import net.postchain.managed.TestmodeDirectoryDataSource
+import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.config.ManagedDataSourceAware
 import net.postchain.managed.query.QueryRunnerFactory.createChain0QueryRunner
 
@@ -16,6 +16,6 @@ class ContainerChain0BlockchainConfiguration(
         val containerNodeConfig: ContainerNodeConfig,
 ) : BlockchainConfiguration by configuration, ManagedDataSourceAware, GTXModuleAware {
 
-    override val dataSource = TestmodeDirectoryDataSource(
-            createChain0QueryRunner(module, appConfig), appConfig, containerNodeConfig)
+    override val dataSource = BaseDirectoryDataSource(
+            createChain0QueryRunner(module, appConfig), appConfig)
 }
