@@ -11,7 +11,6 @@ import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.ContainerConfigFactory
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.server.config.PostchainServerConfig
-import org.apache.commons.configuration2.Configuration
 
 /**
  * Container chains configuration
@@ -66,11 +65,6 @@ data class ContainerNodeConfig(
         val zfsPoolName: String,
         val zfsPoolInitScript: String?,
         val bindPgdataVolume: Boolean,
-        val testmode: Boolean,
-        val testmodeResourceLimitsCPU: Long,
-        val testmodeResourceLimitsRAM: Long,
-        val testmodeResourceLimitsSTORAGE: Long,
-        val testmodeDappsContainers: Map<String, String>,
 ) : Config {
     companion object {
         const val DEFAULT_CONTAINER_ZFS_INIT_SCRIPT = "container-zfs-init-script.sh"
@@ -94,9 +88,6 @@ data class ContainerNodeConfig(
         const val KEY_ZFS_POOL_NAME = "zfs.pool-name"
         const val KEY_ZFS_POOL_INIT_SCRIPT = "zfs.pool-init-script"
         const val KEY_BIND_PGDATA_VOLUME = "bind-pgdata-volume"
-        const val KEY_TESTMODE_RESOURCE_LIMITS_CPU = "testmode.resource-limits-cpu"
-        const val KEY_TESTMODE_RESOURCE_LIMITS_RAM = "testmode.resource-limits-ram"
-        const val KEY_TESTMODE_RESOURCE_LIMITS_STORAGE = "testmode.resource-limits-storage"
 
         fun fullKey(subKey: String) = "$KEY_CONTAINER_PREFIX.${subKey}"
 
@@ -143,32 +134,8 @@ data class ContainerNodeConfig(
                         getEnvOrStringProperty("POSTCHAIN_MASTER_MOUNT_DIR", KEY_MASTER_MOUNT_DIR, hostMountDir),
                         getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_NAME", KEY_ZFS_POOL_NAME, FileSystem.ZFS_POOL_NAME),
                         getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_INIT_SCRIPT", KEY_ZFS_POOL_INIT_SCRIPT),
-                        getEnvOrBooleanProperty("POSTCHAIN_BIND_PGDATA_VOLUME", KEY_BIND_PGDATA_VOLUME, true),
-                        getTestmode(),
-                        getLong(KEY_TESTMODE_RESOURCE_LIMITS_CPU, -1),
-                        getLong(KEY_TESTMODE_RESOURCE_LIMITS_RAM, -1),
-                        getLong(KEY_TESTMODE_RESOURCE_LIMITS_STORAGE, -1),
-                        initTestmodeDappsContainers()
+                        getEnvOrBooleanProperty("POSTCHAIN_BIND_PGDATA_VOLUME", KEY_BIND_PGDATA_VOLUME, true)
                 )
-            }
-        }
-
-        private fun Configuration.getTestmode() = getBoolean("testmode", false)
-
-        /*
-            Example:
-                container.cont0=331A9436,B99F6E8B,BB73F0CA
-                container.cont1=323ECC01,A9599992,86E2043D
-                container.cont2=EB7387FD,94F29578
-                container.cont3=0B942264
-        */
-        private fun Configuration.initTestmodeDappsContainers(): Map<String, String> {
-            return if (getTestmode()) {
-                listOf("cont0", "cont1", "cont2", "cont3")
-                        .flatMap { cont -> getStringArray(cont).map { brid -> brid to cont } }
-                        .toMap()
-            } else {
-                mapOf()
             }
         }
     }
