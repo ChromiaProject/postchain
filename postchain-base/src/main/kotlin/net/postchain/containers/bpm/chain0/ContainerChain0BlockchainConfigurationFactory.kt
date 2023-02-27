@@ -21,6 +21,6 @@ class ContainerChain0BlockchainConfigurationFactory(
                                              eContext: EContext,
                                              cryptoSystem: CryptoSystem): ContainerChain0BlockchainConfiguration {
         val conf = factory.makeBlockchainConfiguration(configurationData, partialContext, blockSigMaker, eContext, cryptoSystem)
-        return ContainerChain0BlockchainConfiguration(conf, conf.module, appConfig, containerNodeConfig)
+        return ContainerChain0BlockchainConfiguration(conf, appConfig, containerNodeConfig)
     }
 }

@@ -16,10 +16,6 @@ open class Chain0BlockchainConfigurationFactory(val factory: GTXBlockchainConfig
                                              eContext: EContext,
                                              cryptoSystem: CryptoSystem): Chain0BlockchainConfiguration {
         val configuration = factory.makeBlockchainConfiguration(configurationData, partialContext, blockSigMaker, eContext, cryptoSystem)
-        return Chain0BlockchainConfiguration(
-                configuration,
-                configuration.module,
-                appConfig
-        )
+        return Chain0BlockchainConfiguration(configuration, appConfig)
     }
 }
