@@ -39,6 +39,8 @@ class ObjectToGtvDictionaryTest {
     companion object {
 
         data class NullableType(@Nullable @Name("foo") val foo: Long?)
+        data class NonAnnotatedConstructorParam(val foo: Long)
+
         @JvmStatic
         fun acceptedTypes() = listOf(
                 arrayOf(Simple(1), gtv("key" to gtv(1))),
@@ -51,6 +53,8 @@ class ObjectToGtvDictionaryTest {
         fun illegalTypes() = listOf(
                 arrayOf(listOf("foo")),
                 arrayOf(setOf("foo")),
+                arrayOf(NonAnnotatedConstructorParam(3)),
+                arrayOf(UnsupportedConstructorParamType(3))
         )
     }
 }
