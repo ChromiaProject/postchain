@@ -75,18 +75,21 @@ class RestApiGetConfirmationProofEndpointTest {
                 BaseBlockWitness(
                         byteArrayOf(0x0b),
                         arrayOf()),
-                proof
+                proof,
+                8 // Position of TX in the block
         )
+        val expectedDict = GtvObjectMapper.toGtvDictionary(expectedObject)
 
         whenever(model.getConfirmationProof(TxRID(txHashHex.hexStringToByteArray())))
                 .doReturn(expectedObject)
 
         restApi.attachModel(blockchainRID, model)
 
+
         given().basePath(basePath).port(restApi.actualPort())
                 .get("/tx/$blockchainRID/$txHashHex/confirmationProof")
                 .then()
                 .statusCode(200)
-                .body("proof", equalTo(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(expectedObject)).toHex()))
+                .body("proof", equalTo(GtvEncoder.encodeGtv(expectedDict).toHex()))
     }
 }
