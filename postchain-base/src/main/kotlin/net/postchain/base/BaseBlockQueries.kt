@@ -20,7 +20,6 @@ import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.mapper.Name
-import net.postchain.gtv.merkle.path.GtvPath
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import java.sql.SQLException
 import java.util.concurrent.CompletableFuture
