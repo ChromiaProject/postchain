@@ -110,8 +110,7 @@ open class BaseBlockchainProcessManager(
      * @throws UserMistake if failed
      */
     override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid {
-        chainSynchronizers.putIfAbsent(chainId, ReentrantLock())
-        chainSynchronizers[chainId]!!.withLock {
+        chainSynchronizers.getOrPut(chainId) { ReentrantLock() }.withLock {
             return synchronized(synchronizer) {
                 withLoggingContext(
                         NODE_PUBKEY_TAG to appConfig.pubKey,
@@ -280,19 +279,39 @@ open class BaseBlockchainProcessManager(
      * the sublcass [net.postchain.managed.ManagedBlockchainProcessManager].
      */
     protected open fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
-        return { bTrace, height, _ ->
+        return { bTrace, blockHeight, _ ->
+            try {
+                // If chain is already being stopped/restarted by another thread we will not get the lock and may return
+                if (!tryAcquireChainLock(chainId)) {
+                    false
+                } else {
+                    invokeAfterCommitHooks(chainId, blockHeight)
 
-            for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, height)
-            val doRestart = withReadConnection(storage, chainId) { eContext ->
-                blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
+                    val doRestart = withReadConnection(storage, chainId) { eContext ->
+                        blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
+                    }
+
+                    if (doRestart) {
+                        testDebug("BaseBlockchainProcessManager, need restart of: $chainId", bTrace)
+                        startBlockchainAsync(chainId, bTrace)
+                    }
+
+                    doRestart
+                }
+            } finally {
+                releaseChainLock(chainId)
             }
+        }
+    }
 
-            if (doRestart) {
-                testDebug("BaseBlockchainProcessManager, need restart of: $chainId", bTrace)
-                startBlockchainAsync(chainId, bTrace)
+    protected fun invokeAfterCommitHooks(chainId: Long, blockHeight: Long) {
+        val blockchainProcess = blockchainProcesses[chainId]
+        if (blockchainProcess != null) {
+            for (e in extensions) {
+                e.afterCommit(blockchainProcess, blockHeight)
             }
-
-            doRestart
+        } else {
+            logger.warn("No blockchain process for $chainId")
         }
     }
 
