@@ -11,7 +11,9 @@ import net.postchain.core.EContext
 class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
 
     private lateinit var dataSource: ManagedNodeDataSource
-    private val localProvider = ManualBlockchainConfigurationProvider() // Used mainly to access Chain0 (we don't want to use Chain0 to check it's own config changes, too strange)
+
+    // Used to access Chain0 configs which are preloaded and validated in ManagedBlockchainProcessManager.preloadChain0Configuration().
+    private val localProvider = ManualBlockchainConfigurationProvider()
 
     companion object : KLogging()
 
