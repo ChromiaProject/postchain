@@ -55,15 +55,17 @@ class SlowSynchronizer(
 
             val sleepData = SlowSyncSleepData()
             while (isProcessRunning()) {
-                if (stateMachine.state == SlowSyncStates.WAIT_FOR_COMMIT) {
-                    // We shouldn't need to handle failed commits here, since we have the callback
-                    logger.warn("Why didn't we manage to commit all blocks after the sleep? " +
-                            "Expected height: ${stateMachine.lastUncommittedBlockHeight} but " +
-                            "actual height: ${stateMachine.lastCommittedBlockHeight}")
-                } else {
-                    processMessages(sleepData)
-                    val now = System.currentTimeMillis()
-                    stateMachine.maybeGetBlockRange(now, ::sendRequest) // It's up to the state machine if we should send a new request
+                synchronized(stateMachine) {
+                    if (stateMachine.state == SlowSyncStates.WAIT_FOR_COMMIT) {
+                        // We shouldn't need to handle failed commits here, since we have the callback
+                        logger.warn("Why didn't we manage to commit all blocks after the sleep? " +
+                                "Expected height: ${stateMachine.lastUncommittedBlockHeight} but " +
+                                "actual height: ${stateMachine.lastCommittedBlockHeight}")
+                    } else {
+                        processMessages(sleepData)
+                        val now = System.currentTimeMillis()
+                        stateMachine.maybeGetBlockRange(now, ::sendRequest) // It's up to the state machine if we should send a new request
+                    }
                 }
                 Thread.sleep(sleepData.currentSleepMs)
             }
@@ -271,29 +273,31 @@ class SlowSynchronizer(
         addBlockCompletionFuture = blockDatabase
                 .addBlock(block, addBlockCompletionFuture, bTrace)
                 .whenCompleteUnwrapped { _: Any?, exception ->
-                    if (exception == null) {
-                        logger.debug { "commitBlock() - Block height: $height committed successfully." }
-                        try {
-                            stateMachine.updateAfterSuccessfulCommit(height)
-                            blockHeight = height
-                        } catch (t: Throwable) {
-                            logger.warn(t) { "Failed to update after successful commit" }
-                        }
-                    } else {
-                        if (exception is PmEngineIsAlreadyClosed || exception is BDBAbortException) {
-                            if (logger.isTraceEnabled) {
-                                logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}, cause: ${exception.cause}, from bTrace: ${bTrace?.toString()}" }
-                            } else {
-                                logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}, cause: ${exception.cause}" }
+                    synchronized(stateMachine) {
+                        if (exception == null) {
+                            logger.debug { "commitBlock() - Block height: $height committed successfully." }
+                            try {
+                                stateMachine.updateAfterSuccessfulCommit(height)
+                                blockHeight = height
+                            } catch (t: Throwable) {
+                                logger.warn(t) { "Failed to update after successful commit" }
                             }
                         } else {
-                            if (logger.isTraceEnabled) {
-                                logger.warn(exception) { "Exception committing block height $height from peer: $peerId from bTrace: ${bTrace?.toString()}" }
+                            if (exception is PmEngineIsAlreadyClosed || exception is BDBAbortException) {
+                                if (logger.isTraceEnabled) {
+                                    logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}, cause: ${exception.cause}, from bTrace: ${bTrace?.toString()}" }
+                                } else {
+                                    logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}, cause: ${exception.cause}" }
+                                }
                             } else {
-                                logger.warn(exception) { "Exception committing block height $height from peer: $peerId" }
+                                if (logger.isTraceEnabled) {
+                                    logger.warn(exception) { "Exception committing block height $height from peer: $peerId from bTrace: ${bTrace?.toString()}" }
+                                } else {
+                                    logger.warn(exception) { "Exception committing block height $height from peer: $peerId" }
+                                }
                             }
+                            stateMachine.updateAfterFailedCommit(height)
                         }
-                        stateMachine.updateAfterFailedCommit(height)
                     }
                 }
     }
