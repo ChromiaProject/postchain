@@ -46,7 +46,6 @@ open class BaseBlockchainProcessManager(
 ) : BlockchainProcessManager {
 
     override val synchronizer = Any()
-    protected val chainSynchronizers = mutableMapOf<Long, ReentrantLock>()
 
     val appConfig = postchainContext.appConfig
     val connectionManager = postchainContext.connectionManager
@@ -58,6 +57,11 @@ open class BaseBlockchainProcessManager(
     protected val extensions: List<BlockchainProcessManagerExtension> = bpmExtensions
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
     private val scheduledForStart = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
+
+    /*
+        These chain synchronizers should only be used when starting/stopping chains since we rely on them to figure out if a restart is in progress or not in the after commit handlers.
+    */
+    private val chainStartAndStopSynchronizers = ConcurrentHashMap<Long, ReentrantLock>()
 
     // For DEBUG only
     var insideATest = false
@@ -110,7 +114,7 @@ open class BaseBlockchainProcessManager(
      * @throws UserMistake if failed
      */
     override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid {
-        chainSynchronizers.getOrPut(chainId) { ReentrantLock() }.withLock {
+        chainStartAndStopSynchronizers.getOrPut(chainId) { ReentrantLock() }.withLock {
             return synchronized(synchronizer) {
                 withLoggingContext(
                         NODE_PUBKEY_TAG to appConfig.pubKey,
@@ -199,16 +203,14 @@ open class BaseBlockchainProcessManager(
     }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
-        return chainSynchronizers[chainId]?.withLock {
+        return synchronized(synchronizer) {
             blockchainProcesses[chainId]
         }
     }
 
     override fun retrieveBlockchain(blockchainRid: BlockchainRid): BlockchainProcess? {
-        return bridToChainId[blockchainRid]?.let {
-            chainSynchronizers[it]?.withLock {
-                blockchainProcesses[it]
-            }
+        return synchronized(synchronizer) {
+            bridToChainId[blockchainRid]?.let { blockchainProcesses[it] }
         }
     }
 
@@ -218,7 +220,7 @@ open class BaseBlockchainProcessManager(
      * @param chainId is the chain to be stopped.
      */
     override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean) {
-        chainSynchronizers[chainId]?.withLock {
+        chainStartAndStopSynchronizers[chainId]?.withLock {
             synchronized(synchronizer) {
                 withLoggingContext(
                         NODE_PUBKEY_TAG to appConfig.pubKey,
@@ -228,11 +230,12 @@ open class BaseBlockchainProcessManager(
                     stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
                     stopDebug("Blockchain process has been purged", chainId, bTrace)
                 }
+
+                if (!restart) {
+                    chainIdToBrid.remove(chainId).also { bridToChainId.remove(it) }
+                    chainStartAndStopSynchronizers.remove(chainId)
+                }
             }
-        }
-        if (!restart) {
-            chainIdToBrid.remove(chainId).also { bridToChainId.remove(it) }
-            chainSynchronizers.remove(chainId)
         }
     }
 
@@ -346,12 +349,12 @@ open class BaseBlockchainProcessManager(
     }
 
     protected fun tryAcquireChainLock(chainId: Long): Boolean {
-        return chainSynchronizers[chainId]?.tryLock()
+        return chainStartAndStopSynchronizers[chainId]?.tryLock()
                 ?: throw ProgrammerMistake("No lock instance exists for chain $chainId")
     }
 
     protected fun releaseChainLock(chainId: Long) {
-        chainSynchronizers[chainId]?.apply {
+        chainStartAndStopSynchronizers[chainId]?.apply {
             if (isHeldByCurrentThread) {
                 unlock()
             }

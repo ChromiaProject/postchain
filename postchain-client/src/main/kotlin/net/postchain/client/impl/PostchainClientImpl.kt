@@ -50,9 +50,7 @@ class PostchainClientImpl(
                         .build()).build()),
 ) : PostchainClient {
 
-    companion object : KLogging() {
-        const val MAX_TX_STATUS_SIZE = 64 * 1024L
-    }
+    companion object : KLogging()
 
     private val blockchainRIDHex = config.blockchainRid.toHex()
     private val blockchainRIDOrID = config.queryByChainId?.let { "iid_$it" } ?: blockchainRIDHex
@@ -85,10 +83,10 @@ class PostchainClientImpl(
         Request(Method.GET, "${endpoint.url}/node/$blockchainRIDOrID/height")
                 .header("Accept", ContentType.APPLICATION_JSON.value)
     }, { response ->
-        parseJson(response, 1024, CurrentBlockHeight::class.java)?.blockHeight
+        parseJson(response, CurrentBlockHeight::class.java)?.blockHeight
                 ?: throw IOException("Json parsing failed")
     }, { response ->
-        val msg = parseJson(response, 1024, ErrorResponse::class.java)?.error ?: "Unknown error"
+        val msg = parseJson(response, ErrorResponse::class.java)?.error ?: "Unknown error"
         throw ClientError("Cannot fetch current block height: ${response.status} $msg")
     }, false)
 
@@ -128,7 +126,7 @@ class PostchainClientImpl(
             TransactionResult(txRid, WAITING, response.status.code, response.status.description)
         }, { response ->
             val rejectReason =
-                    parseJson(response, MAX_TX_STATUS_SIZE, ErrorResponse::class.java)?.error
+                    parseJson(response, ErrorResponse::class.java)?.error
                             ?: response.status.description
             TransactionResult(txRid, REJECTED, response.status.code, rejectReason)
         }, false)
@@ -166,7 +164,7 @@ class PostchainClientImpl(
         Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/status")
                 .header("Accept", ContentType.APPLICATION_JSON.value)
     }, { response ->
-        val txStatus = parseJson(response, MAX_TX_STATUS_SIZE, TxStatus::class.java)
+        val txStatus = parseJson(response, TxStatus::class.java)
         TransactionResult(
                 txRid,
                 TransactionStatus.valueOf(txStatus?.status?.uppercase() ?: "UNKNOWN"),
@@ -174,7 +172,7 @@ class PostchainClientImpl(
                 txStatus?.rejectReason
         )
     }, { response ->
-        val msg = parseJson(response, 1024, ErrorResponse::class.java)?.error ?: "Unknown error"
+        val msg = parseJson(response, ErrorResponse::class.java)?.error ?: "Unknown error"
         throw ClientError("Can not check transaction status: ${response.status} $msg")
     }, true)
 
@@ -182,16 +180,27 @@ class PostchainClientImpl(
         Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/confirmationProof")
                 .header("Accept", ContentType.APPLICATION_JSON.value)
     }, { response ->
-        val confirmationProof = parseJson(response, MAX_TX_STATUS_SIZE, ConfirmationProof::class.java)
+        val confirmationProof = parseJson(response, ConfirmationProof::class.java)
         confirmationProof?.proof?.hexStringToByteArray()
     }, { response ->
-        val msg = parseJson(response, 1024, ErrorResponse::class.java)?.error ?: "Unknown error"
-        throw ClientError("Can not fetch confirmation proof status: ${response.status} $msg")
+        val msg = parseJson(response, ErrorResponse::class.java)?.error ?: "Unknown error"
+        throw ClientError("Can not fetch confirmation proof: ${response.status} $msg")
+    }, true)
+
+    override fun getTransaction(txRid: TxRid): ByteArray? = requestStrategy.request({ endpoint ->
+        Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}")
+                .header("Accept", ContentType.APPLICATION_JSON.value)
+    }, { response ->
+        val txResponse = parseJson(response, Transaction::class.java)
+        txResponse?.tx?.hexStringToByteArray()
+    }, { response ->
+        val msg = parseJson(response, ErrorResponse::class.java)?.error ?: "Unknown error"
+        throw ClientError("Can not fetch transaction: ${response.status} $msg")
     }, true)
 
 
-    private fun <T> parseJson(response: Response, maxSize: Long, cls: Class<T>): T? = try {
-        val body = BoundedInputStream(response.body.stream, maxSize).bufferedReader()
+    private fun <T> parseJson(response: Response, cls: Class<T>): T? = try {
+        val body = BoundedInputStream(response.body.stream, config.maxResponseSize.toLong()).bufferedReader()
         gson.fromJson(body, cls)
     } catch (e: JsonParseException) {
         val rootCause = ExceptionUtils.getRootCause(e)
