@@ -177,11 +177,12 @@ open class ManagedBlockchainProcessManager(
         fun wrappedAfterCommitHandler(bTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long): Boolean {
             return try {
                 wrTrace("Before", chainId, bTrace)
-                for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
 
                 wrTrace("Sync", chainId, bTrace)
                 // If chain is already being stopped/restarted by another thread we will not get the lock and may return
                 if (!tryAcquireChainLock(chainId)) return false
+
+                invokeAfterCommitHooks(chainId, blockHeight)
 
                 val restart = if (chainId == CHAIN0) {
                     afterCommitHandlerChain0(bTrace, blockTimestamp)

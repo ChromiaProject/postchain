@@ -65,25 +65,35 @@ open class SubNodeBlockchainProcessManager(
         val baseHandler = super.buildAfterCommitHandler(chainId)
 
         return { bTrace: BlockTrace?, height: Long, blockTimestamp: Long ->
-            try {
-                val blockchainRid = blockchainProcesses[chainId]!!.blockchainEngine.getConfiguration().blockchainRid
-                val committedBlockMessage = withReadConnection(storage, chainId) { eContext ->
-                    val db = DatabaseAccess.of(eContext)
-                    val blockRid = db.getBlockRID(eContext, height)!!
-                    val blockHeader = db.getBlockHeader(eContext, blockRid)
-                    val witnessData = db.getWitnessData(eContext, blockRid)
-                    MsCommittedBlockMessage(
-                            blockchainRid = blockchainRid.data,
-                            blockRid = blockRid,
-                            blockHeader = blockHeader,
-                            witnessData = witnessData
-                    )
+            val blockchainProcess = blockchainProcesses[chainId]
+            if (blockchainProcess != null) {
+                try {
+                    val blockchainRid = blockchainProcess.blockchainEngine.getConfiguration().blockchainRid
+                    val committedBlockMessage = withReadConnection(storage, chainId) { eContext ->
+                        val db = DatabaseAccess.of(eContext)
+                        val blockRid = db.getBlockRID(eContext, height)!!
+                        val blockHeader = db.getBlockHeader(eContext, blockRid)
+                        val witnessData = db.getWitnessData(eContext, blockRid)
+                        MsCommittedBlockMessage(
+                                blockchainRid = blockchainRid.data,
+                                blockRid = blockRid,
+                                blockHeader = blockHeader,
+                                witnessData = witnessData
+                        )
+                    }
+                    (connectionManager as SubConnectionManager).sendMessageToMaster(chainId, committedBlockMessage)
+                } catch (e: Exception) {
+                    logger.error(e) { "Error when sending committed block message: $e" }
                 }
-                (connectionManager as SubConnectionManager).sendMessageToMaster(chainId, committedBlockMessage)
-            } catch (e: Exception) {
-                logger.error(e) { "Error when sending committed block message: $e" }
+            } else {
+                logger.warn("No blockchain process for $chainId")
             }
-            subnodeBcCfgListeners[chainId]!!.commit(height)
+            val subnodeBlockchainConfigListener = subnodeBcCfgListeners[chainId]
+            if (subnodeBlockchainConfigListener != null) {
+                subnodeBlockchainConfigListener.commit(height)
+            } else {
+                logger.warn("No subnode config listener for $chainId")
+            }
             baseHandler(bTrace, height, blockTimestamp)
         }
     }

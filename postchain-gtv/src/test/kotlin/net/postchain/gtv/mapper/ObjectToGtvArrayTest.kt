@@ -105,4 +105,9 @@ class ObjectToGtvArrayTest {
         // [[k1, v1], [k2, v2], ...]
         assert(GtvObjectMapper.toGtvArray(mapOf("a" to 1L))).isEqualTo(gtv(gtv(gtv("a"), gtv(1))))
     }
+
+    @Test
+    fun unsupportedTypes() {
+        assertThrows<IllegalArgumentException> { GtvObjectMapper.toGtvArray(UnsupportedConstructorParamType(1)) }
+    }
 }
