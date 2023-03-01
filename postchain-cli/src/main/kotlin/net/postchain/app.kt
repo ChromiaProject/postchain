@@ -2,6 +2,7 @@
 
 package net.postchain
 
+import com.github.ajalt.clikt.completion.completionOption
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import net.postchain.cli.CommandAddBlockchain
@@ -29,12 +30,16 @@ import java.lang.management.ManagementFactory
 
 
 class Postchain : CliktCommand(name = "postchain") {
+    init {
+        completionOption()
+    }
+
     override fun run() = Unit
 }
 
 fun main(args: Array<String>) {
     dumpPid()
-    if (args.isNotEmpty()) {
+    if (args.isNotEmpty() && args[0] != "--generate-completion") {
         println("${args[0]} will be executed with: ${args.toList().subList(1, args.size).joinToString(" ", "", "")}")
     }
     return Postchain()
