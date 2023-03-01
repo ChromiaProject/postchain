@@ -46,7 +46,7 @@ open class BaseBlockchainProcessManager(
 ) : BlockchainProcessManager {
 
     override val synchronizer = Any()
-    protected val chainSynchronizers = mutableMapOf<Long, ReentrantLock>()
+    protected val chainSynchronizers = ConcurrentHashMap<Long, ReentrantLock>()
 
     val appConfig = postchainContext.appConfig
     val connectionManager = postchainContext.connectionManager
@@ -199,16 +199,14 @@ open class BaseBlockchainProcessManager(
     }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
-        return chainSynchronizers[chainId]?.withLock {
+        return synchronized(synchronizer) {
             blockchainProcesses[chainId]
         }
     }
 
     override fun retrieveBlockchain(blockchainRid: BlockchainRid): BlockchainProcess? {
-        return bridToChainId[blockchainRid]?.let {
-            chainSynchronizers[it]?.withLock {
-                blockchainProcesses[it]
-            }
+        return synchronized(synchronizer) {
+            bridToChainId[blockchainRid]?.let { blockchainProcesses[it] }
         }
     }
 
@@ -228,11 +226,12 @@ open class BaseBlockchainProcessManager(
                     stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
                     stopDebug("Blockchain process has been purged", chainId, bTrace)
                 }
+
+                if (!restart) {
+                    chainIdToBrid.remove(chainId).also { bridToChainId.remove(it) }
+                    chainSynchronizers.remove(chainId)
+                }
             }
-        }
-        if (!restart) {
-            chainIdToBrid.remove(chainId).also { bridToChainId.remove(it) }
-            chainSynchronizers.remove(chainId)
         }
     }
 
