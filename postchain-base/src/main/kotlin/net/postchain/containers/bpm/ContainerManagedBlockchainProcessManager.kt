@@ -135,11 +135,15 @@ open class ContainerManagedBlockchainProcessManager(
                 }
             }
 
-    override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler = if (chainId == CHAIN0) {
-        { blockTrace: BlockTrace?, blockHeight: Long, _: Long ->
-            try {
+    override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
+        fun chain0AfterCommitHandler(blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long): Boolean {
+            return try {
                 rTrace("Before", chainId, blockTrace)
-                for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
+
+                // If chain is already being stopped/restarted by another thread we will not get the lock and may return
+                if (!tryAcquireChainLock(chainId)) return false
+
+                invokeAfterCommitHooks(chainId, blockHeight)
 
                 // Preloading blockchain configuration
                 preloadChain0Configuration()
@@ -172,10 +176,16 @@ open class ContainerManagedBlockchainProcessManager(
                 logger.error(e) { "Exception in RestartHandler: $e" }
                 startBlockchainAsync(chainId, blockTrace)
                 true // let's hope restarting a blockchain fixes the problem
+            } finally {
+                releaseChainLock(chainId)
             }
         }
-    } else {
-        super.buildAfterCommitHandler(chainId)
+
+        return if (chainId == CHAIN0) {
+            ::chain0AfterCommitHandler
+        } else {
+            super.buildAfterCommitHandler(chainId)
+        }
     }
 
     /**
