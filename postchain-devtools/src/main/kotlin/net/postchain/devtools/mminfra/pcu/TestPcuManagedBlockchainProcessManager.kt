@@ -31,10 +31,11 @@ class TestPcuManagedBlockchainProcessManager(
             if (blockchainConfig.chainID == CHAIN0) {
                 true // Chain0 runs in a (regular) managed mode
             } else {
-                withReadConnection(storage, blockchainConfig.chainID) { ctx ->
-                    (blockchainConfigProvider as? PcuManagedBlockchainConfigurationProvider)
-                            ?.isPendingBlockchainConfigurationApproved(ctx) ?: false
-                }
+                (blockchainConfigProvider as? PcuManagedBlockchainConfigurationProvider)?.run {
+                    withReadConnection(storage, blockchainConfig.chainID) { ctx ->
+                        isPendingBlockchainConfigurationApproved(ctx)
+                    }
+                } ?: false
             }
         }
     }
