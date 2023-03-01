@@ -311,6 +311,16 @@ internal class PostchainClientImplTest {
         assertEquals(proofString, proof!!.toHex())
     }
 
+    @Test
+    fun `Transaction data can be parsed`() {
+        val txString = "A58209213082091DA582091530820911A12204208F77E7DC903AE184A1569E60F8097CAFFB105F741D"
+        val transaction: ByteArray? = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+            override fun invoke(request: Request) =
+                    Response(Status.OK).body("""{"tx":"$txString"}""")
+        }).getTransaction(TxRid("42"))
+        assertEquals(txString, transaction!!.toHex())
+    }
+
     private fun assertQueryUrlEndsWith(config: PostchainClientConfig, suffix: String) {
         PostchainClientImpl(config, httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
