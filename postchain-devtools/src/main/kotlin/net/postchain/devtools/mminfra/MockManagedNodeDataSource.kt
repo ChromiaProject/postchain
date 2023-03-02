@@ -25,6 +25,9 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         myNode = nodeSetup
     }
 
+    override val nmApiVersion: Int
+        get() = TODO("Not yet implemented")
+
     override fun getPeerListVersion(): Long {
         return 1L
     }

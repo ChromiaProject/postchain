@@ -52,7 +52,7 @@ class TestPcuManagedBlockchainConfigurationProvider : ManagedBlockchainConfigura
         return dataSource.getConfiguration(ChainUtil.ridOf(chainId).data, historicBlockHeight)
     }
 
-    override fun isPendingBlockchainConfigurationApproved(eContext: EContext): Boolean {
+    override fun isManagedDatasourceReady(eContext: EContext): Boolean {
         val dba = DatabaseAccess.of(eContext)
         val blockchainRid = dba.getBlockchainRid(eContext)!!
         val activeHeight = getActiveBlocksHeight(eContext, dba)
