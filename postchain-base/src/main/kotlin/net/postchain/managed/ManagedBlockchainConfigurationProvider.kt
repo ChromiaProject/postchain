@@ -18,7 +18,12 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
 
     companion object : KLogging()
 
-    protected open fun isPcuEnabled() = false
+    // Feature toggle
+    protected open fun isPcuEnabled(): Boolean {
+        return if (dataSource is BaseManagedNodeDataSource) {
+            (dataSource as BaseManagedNodeDataSource).nmApiVersion >= 5
+        } else false
+    }
 
     fun setManagedDataSource(dataSource: ManagedNodeDataSource) {
         this.dataSource = dataSource
