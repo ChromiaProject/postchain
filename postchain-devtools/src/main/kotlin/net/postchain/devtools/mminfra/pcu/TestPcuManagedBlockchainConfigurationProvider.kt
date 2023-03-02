@@ -3,9 +3,11 @@ package net.postchain.devtools.mminfra.pcu
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
 import net.postchain.devtools.utils.ChainUtil
-import net.postchain.managed.PcuManagedBlockchainConfigurationProvider
+import net.postchain.managed.ManagedBlockchainConfigurationProvider
 
-class TestPcuManagedBlockchainConfigurationProvider : PcuManagedBlockchainConfigurationProvider() {
+class TestPcuManagedBlockchainConfigurationProvider : ManagedBlockchainConfigurationProvider() {
+
+    override fun isPcuEnabled() = true
 
     override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
@@ -17,7 +19,7 @@ class TestPcuManagedBlockchainConfigurationProvider : PcuManagedBlockchainConfig
         return if (chainId == 0L || activeHeight == 0L) {
             dataSource.getConfiguration(ChainUtil.ridOf(chainId).data, activeHeight)
         } else {
-            getActiveBlockPendingConfiguration(eContext)
+            super.getActiveBlocksConfiguration(eContext, chainId)
         }
     }
 
@@ -32,7 +34,7 @@ class TestPcuManagedBlockchainConfigurationProvider : PcuManagedBlockchainConfig
             logger.debug("needsConfigurationChange() - active height: $activeHeight, next conf at: $nextConfigHeight")
             nextConfigHeight != null && activeHeight == nextConfigHeight
         } else {
-            getActiveBlockPendingConfiguration(eContext) != null
+            super.activeBlockNeedsConfigurationChange(eContext, chainId)
         }
     }
 
@@ -60,5 +62,4 @@ class TestPcuManagedBlockchainConfigurationProvider : PcuManagedBlockchainConfig
             dataSource.isPendingBlockchainConfigurationApproved(blockchainRid, activeHeight)
         }
     }
-
 }

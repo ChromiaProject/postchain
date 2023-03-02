@@ -8,6 +8,7 @@ import net.postchain.devtools.currentHeight
 import net.postchain.devtools.mminfra.MockManagedNodeDataSource
 import net.postchain.devtools.mminfra.pcu.MockPcuManagedNodeDataSource
 import net.postchain.devtools.mminfra.pcu.TestPcuManagedEBFTInfrastructureFactory
+import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.gtv.GtvFactory.gtv
 import org.awaitility.Awaitility
 import org.awaitility.Duration
@@ -22,9 +23,13 @@ class PcuManagedModeTest : ManagedModeTest() {
 
     override fun createManagedNodeDataSource(): MockManagedNodeDataSource = dataSource
 
+    override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
+        super.addNodeConfigurationOverrides(nodeSetup)
+        nodeSetup.nodeSpecificConfigs.setProperty("infrastructure", TestPcuManagedEBFTInfrastructureFactory::class.qualifiedName)
+    }
+
     @Test
     fun basicTest() {
-        configOverrides.setProperty("infrastructure", TestPcuManagedEBFTInfrastructureFactory::class.qualifiedName!!)
         startManagedSystem(1, 0, TestPcuManagedEBFTInfrastructureFactory::class.qualifiedName!!)
 
         val chain = startNewBlockchain(setOf(0), setOf(), null)

@@ -9,16 +9,18 @@ import net.postchain.config.blockchain.AbstractBlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.EContext
 
-class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
+open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
 
-    private lateinit var dataSource: ManagedNodeDataSource
+    protected lateinit var dataSource: ManagedNodeDataSource
 
     // Used to access Chain0 configs which are preloaded and validated in ManagedBlockchainProcessManager.preloadChain0Configuration().
     private val localProvider = ManualBlockchainConfigurationProvider()
 
     companion object : KLogging()
 
-    fun setDataSource(dataSource: ManagedNodeDataSource) {
+    protected open fun isPcuEnabled() = false
+
+    fun setManagedDataSource(dataSource: ManagedNodeDataSource) {
         this.dataSource = dataSource
     }
 
@@ -48,6 +50,17 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
             } else {
                 throw IllegalStateException("Using managed blockchain configuration provider before it's properly initialized")
             }
+        }
+    }
+
+    open fun isPendingBlockchainConfigurationApproved(eContext: EContext): Boolean {
+        return if (isPcuEnabled()) {
+            val dba = DatabaseAccess.of(eContext)
+            val blockchainRid = getBlockchainRid(eContext, dba)
+            val activeHeight = getActiveBlocksHeight(eContext, dba)
+            dataSource.isPendingBlockchainConfigurationApproved(blockchainRid, activeHeight)
+        } else {
+            true
         }
     }
 
@@ -91,24 +104,27 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
         val blockchainRid = getBlockchainRid(eContext, dba)
         val lastSavedBlockHeight = dba.getLastBlockHeight(eContext)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
-        val nextConfigHeight = dataSource.findNextConfigurationHeight(blockchainRid.data, lastSavedBlockHeight)
 
-        if (nextConfigHeight == null) {
-            logger.debug {
-                "checkNeedConfChangeViaDataSource() - no future configurations found for " +
-                        "chain: ${eContext.chainID}, activeHeight: $activeHeight"
+        return if (isPcuEnabled()) {
+            val nextConfigHeight = dataSource.findNextConfigurationHeight(blockchainRid.data, lastSavedBlockHeight)
+            if (nextConfigHeight == null) {
+                logger.debug {
+                    "checkNeedConfChangeViaDataSource() - no future configurations found for " +
+                            "chain: ${eContext.chainID}, activeHeight: $activeHeight"
+                }
+            } else if (nextConfigHeight >= activeHeight) {
+                logger.debug {
+                    "checkNeedConfChangeViaDataSource() - Closest configurations found at height: " +
+                            "$nextConfigHeight for chain: ${eContext.chainID}, activeHeight: $activeHeight."
+                }
+            } else { // (nextConfigHeight < activeHeight)
+                logger.error("checkNeedConfChangeViaDataSource() - didn't expect to find a future conf at lower height: " +
+                        "$nextConfigHeight that our active height: $activeHeight, chain: ${eContext.chainID}")
             }
-        } else if (nextConfigHeight >= activeHeight) {
-            logger.debug {
-                "checkNeedConfChangeViaDataSource() - Closest configurations found at height: " +
-                        "$nextConfigHeight for chain: ${eContext.chainID}, activeHeight: $activeHeight."
-            }
-        } else { // (nextConfigHeight < activeHeight)
-            logger.error("checkNeedConfChangeViaDataSource() - didn't expect to find a future conf at lower height: " +
-                    "$nextConfigHeight that our active height: $activeHeight, chain: ${eContext.chainID}")
+            nextConfigHeight != null && activeHeight == nextConfigHeight  // Since we are looking for future configs here it's ok to get null back
+        } else {
+            dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight) != null
         }
-
-        return nextConfigHeight != null && activeHeight == nextConfigHeight  // Since we are looking for future configs here it's ok to get null back
     }
 
     override fun findNextConfigurationHeight(eContext: EContext, height: Long): Long? {
@@ -121,7 +137,11 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
         val dba = DatabaseAccess.of(eContext)
         val blockchainRid = getBlockchainRid(eContext, dba)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
-        return dataSource.getConfiguration(blockchainRid.data, activeHeight)
+        return if (isPcuEnabled()) {
+            dataSource.getConfiguration(blockchainRid.data, activeHeight)
+        } else {
+            dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight)
+        }
     }
 
     private fun getBlockchainRid(eContext: EContext, dba: DatabaseAccess): BlockchainRid {

@@ -102,7 +102,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         if (nmApiVersion < 5) return false
 
         val res = query(
-                "nm_get_pending_blockchain_configuration_approved",
+                "nm_is_pending_blockchain_configuration_approved",
                 buildArgs(
                         "blockchain_rid" to gtv(blockchainRid.data),
                         "height" to gtv(height))
