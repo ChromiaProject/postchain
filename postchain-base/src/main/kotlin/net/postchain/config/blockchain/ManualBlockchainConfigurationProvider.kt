@@ -63,6 +63,6 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
     }
 
     override fun findNextConfigurationHeight(eContext: EContext, height: Long): Long? {
-        return DatabaseAccess.of(eContext).findConfigurationHeightForBlock(eContext, height)
+        return DatabaseAccess.of(eContext).findNextConfigurationHeight(eContext, height)
     }
 }
