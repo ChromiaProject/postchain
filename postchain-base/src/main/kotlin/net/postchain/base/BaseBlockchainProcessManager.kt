@@ -289,17 +289,12 @@ open class BaseBlockchainProcessManager(
                     false
                 } else {
                     invokeAfterCommitHooks(chainId, blockHeight)
-
-                    val doRestart = withReadConnection(storage, chainId) { eContext ->
-                        blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
+                    isConfigurationChanged(chainId).also {
+                        if (it) {
+                            testDebug("BaseBlockchainProcessManager, need restart of: $chainId", bTrace)
+                            startBlockchainAsync(chainId, bTrace)
+                        }
                     }
-
-                    if (doRestart) {
-                        testDebug("BaseBlockchainProcessManager, need restart of: $chainId", bTrace)
-                        startBlockchainAsync(chainId, bTrace)
-                    }
-
-                    doRestart
                 }
             } finally {
                 releaseChainLock(chainId)

@@ -15,16 +15,15 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
 
         val dba = DatabaseAccess.of(eContext)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
-        val configHeight = DatabaseAccess.of(eContext).findConfigurationHeightForBlock(eContext, activeHeight)
+        val configHeight = dba.findConfigurationHeightForBlock(eContext, activeHeight)
 
         // Some safety checks
         if (configHeight == null) {
             logger.warn("activeBlockNeedsNewConfig() - Chain: $chainId doesn't have a configuration in DB")
         } else if (configHeight < activeHeight) {
-            if (logger.isDebugEnabled) {
-                logger.debug("activeBlockNeedsNewConfig() - No need to reload config, since active height: " +
+            logger.debug {
+                "activeBlockNeedsNewConfig() - No need to reload config, since active height: " +
                         "$activeHeight, should still use conf at: $configHeight "
-                )
             }
         } else if (configHeight > activeHeight) {
             logger.error("activeBlockNeedsNewConfig() - Why did we find a next config height: " +
@@ -40,13 +39,13 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
 
         val dba = DatabaseAccess.of(eContext)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
-        val configHeight = DatabaseAccess.of(eContext).findConfigurationHeightForBlock(eContext, activeHeight)
+        val configHeight = dba.findConfigurationHeightForBlock(eContext, activeHeight)
 
         return if (configHeight == null) {
             logger.debug("getActiveBlocksConfiguration() - Chain: $chainId doesn't have a configuration in DB")
             null
         } else {
-            DatabaseAccess.of(eContext).getConfigurationData(eContext, configHeight)!!
+            dba.getConfigurationData(eContext, configHeight)!!
         }
     }
 
