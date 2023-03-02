@@ -98,14 +98,15 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         return if (res.isNull()) null else res.asByteArray()
     }
 
-    override fun isPendingBlockchainConfigurationApproved(blockchainRid: BlockchainRid, height: Long): Boolean {
+    override fun isPendingBlockchainConfigurationApplied(blockchainRid: BlockchainRid, height: Long, configHash: ByteArray): Boolean {
         if (nmApiVersion < 5) return false
 
         val res = query(
-                "nm_is_pending_blockchain_configuration_approved",
+                "nm_is_pending_blockchain_configuration_applied",
                 buildArgs(
                         "blockchain_rid" to gtv(blockchainRid.data),
-                        "height" to gtv(height))
+                        "height" to gtv(height),
+                        "config_hash" to gtv(configHash))
         )
 
         return res.asBoolean()

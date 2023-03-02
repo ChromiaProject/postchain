@@ -27,16 +27,19 @@ class MockPcuManagedNodeDataSource : MockManagedNodeDataSource() {
                 }
     }
 
-    override fun isPendingBlockchainConfigurationApproved(blockchainRid: BlockchainRid, height: Long): Boolean {
+    override fun isPendingBlockchainConfigurationApplied(blockchainRid: BlockchainRid, height: Long, configHash: ByteArray): Boolean {
+        // TODO use configHash
         return when {
             !pendingConfigs.containsKey(height) -> {
                 logNoDuplicates("No pending config $height")
                 true
             }
+
             pendingConfigs[height] == true -> {
                 logNoDuplicates("Config $height got approval")
                 true
             }
+
             else -> {
                 logNoDuplicates("Config $height is not approved")
                 false

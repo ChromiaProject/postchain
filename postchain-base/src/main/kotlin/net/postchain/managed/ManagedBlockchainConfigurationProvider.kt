@@ -61,7 +61,8 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
             val dba = DatabaseAccess.of(eContext)
             val blockchainRid = getBlockchainRid(eContext, dba)
             val activeHeight = getActiveBlocksHeight(eContext, dba)
-            dataSource.isPendingBlockchainConfigurationApproved(blockchainRid, activeHeight)
+            val configHash = ByteArray(0) // TODO get configHash
+            dataSource.isPendingBlockchainConfigurationApplied(blockchainRid, activeHeight, configHash)
         } else {
             true
         }

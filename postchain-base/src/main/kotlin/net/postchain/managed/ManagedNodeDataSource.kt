@@ -24,5 +24,5 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
 
     fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): ByteArray?
 
-    fun isPendingBlockchainConfigurationApproved(blockchainRid: BlockchainRid, height: Long): Boolean
+    fun isPendingBlockchainConfigurationApplied(blockchainRid: BlockchainRid, height: Long, configHash: ByteArray): Boolean
 }

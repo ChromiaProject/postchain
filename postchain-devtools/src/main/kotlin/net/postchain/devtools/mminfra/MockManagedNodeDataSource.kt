@@ -76,7 +76,7 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         TODO("Not yet implemented")
     }
 
-    override fun isPendingBlockchainConfigurationApproved(blockchainRid: BlockchainRid, height: Long): Boolean {
+    override fun isPendingBlockchainConfigurationApplied(blockchainRid: BlockchainRid, height: Long, configHash: ByteArray): Boolean {
         TODO("Not yet implemented")
     }
 

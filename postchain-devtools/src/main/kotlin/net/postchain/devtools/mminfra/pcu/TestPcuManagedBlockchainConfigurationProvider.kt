@@ -59,7 +59,8 @@ class TestPcuManagedBlockchainConfigurationProvider : ManagedBlockchainConfigura
         return if (eContext.chainID == 0L || activeHeight == 0L) {
             true
         } else {
-            dataSource.isPendingBlockchainConfigurationApproved(blockchainRid, activeHeight)
+            val configHash = ByteArray(0) // TODO get configHash
+            dataSource.isPendingBlockchainConfigurationApplied(blockchainRid, activeHeight, configHash)
         }
     }
 }
