@@ -16,7 +16,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
 
     companion object : KLogging()
 
-    val nmApiVersion by lazy {
+    override val nmApiVersion by lazy {
         query("nm_api_version", buildArgs()).asInteger().toInt()
     }
 

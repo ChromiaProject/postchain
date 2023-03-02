@@ -118,7 +118,7 @@ open class ManagedBlockchainProcessManager(
         } else {
             (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)?.run {
                 withReadConnection(storage, blockchainConfig.chainID) { ctx ->
-                    isPendingBlockchainConfigurationApproved(ctx)
+                    isManagedDatasourceReady(ctx)
                 }
             } ?: false
         }

@@ -20,9 +20,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
 
     // Feature toggle
     protected open fun isPcuEnabled(): Boolean {
-        return if (dataSource is BaseManagedNodeDataSource) {
-            (dataSource as BaseManagedNodeDataSource).nmApiVersion >= 5
-        } else false
+        return dataSource.nmApiVersion >= 5
     }
 
     fun setManagedDataSource(dataSource: ManagedNodeDataSource) {
@@ -58,7 +56,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         }
     }
 
-    open fun isPendingBlockchainConfigurationApproved(eContext: EContext): Boolean {
+    open fun isManagedDatasourceReady(eContext: EContext): Boolean {
         return if (isPcuEnabled()) {
             val dba = DatabaseAccess.of(eContext)
             val blockchainRid = getBlockchainRid(eContext, dba)
