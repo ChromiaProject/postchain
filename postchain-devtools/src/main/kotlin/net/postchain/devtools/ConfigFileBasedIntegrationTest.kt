@@ -359,16 +359,13 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
         var allAtHeight = false
         while (!allAtHeight) {
             allAtHeight = true
-            run checkHeights@{
-                nodeList.forEach {
-                    val strategy = getStrategySafely(it)
-                    // If chain has restarted we need to update height in the new strategy instance
-                    strategy?.buildBlocksUpTo(toHeight)
+            nodeList.forEach {
+                val strategy = getStrategySafely(it)
+                // If chain has restarted we need to update height in the new strategy instance
+                strategy?.buildBlocksUpTo(toHeight)
 
-                    if (strategy == null || strategy.shouldBuildBlock()) {
-                        allAtHeight = false
-                        return@checkHeights
-                    }
+                if (strategy == null || strategy.shouldBuildBlock()) {
+                    allAtHeight = false
                 }
             }
         }
