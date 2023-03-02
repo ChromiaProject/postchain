@@ -4,6 +4,7 @@ package net.postchain.managed
 
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.BlockchainRid
 import net.postchain.config.blockchain.AbstractBlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.EContext
@@ -61,9 +62,9 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
         } else {
             // We ignore local setting, go to Chain0 directly
             val dba = DatabaseAccess.of(eContext)
-            val blockchainRID = dba.getBlockchainRid(eContext)
+            val blockchainRid = getBlockchainRid(eContext, dba)
             val lastSavedBlockHeight = dba.getLastBlockHeight(eContext)
-            dataSource.findNextConfigurationHeight(blockchainRID!!.data, lastSavedBlockHeight)
+            dataSource.findNextConfigurationHeight(blockchainRid.data, lastSavedBlockHeight)
         }
     }
 
@@ -78,7 +79,8 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
         } else {
             logger.debug { "getHistoricConfiguration() - Fetching configuration from chain0 (for chain: $chainId and height: $historicBlockHeight)" }
             val dba = DatabaseAccess.of(eContext)
-            return getHeightAwareConfigFromDatasource(eContext, dba, historicBlockHeight)
+            val blockchainRid = getBlockchainRid(eContext, dba)
+            return dataSource.getConfiguration(blockchainRid.data, historicBlockHeight)
         }
     }
 
@@ -86,10 +88,10 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
 
     private fun checkNeedConfChangeViaDataSource(eContext: EContext): Boolean {
         val dba = DatabaseAccess.of(eContext)
-        val blockchainRID = dba.getBlockchainRid(eContext)
+        val blockchainRid = getBlockchainRid(eContext, dba)
         val lastSavedBlockHeight = dba.getLastBlockHeight(eContext)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
-        val nextConfigHeight = dataSource.findNextConfigurationHeight(blockchainRID!!.data, lastSavedBlockHeight)
+        val nextConfigHeight = dataSource.findNextConfigurationHeight(blockchainRid.data, lastSavedBlockHeight)
 
         if (nextConfigHeight == null) {
             logger.debug {
@@ -110,19 +112,21 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
     }
 
     override fun findNextConfigurationHeight(eContext: EContext, height: Long): Long? {
-        val db = DatabaseAccess.of(eContext)
-        val brid = db.getBlockchainRid(eContext)
-        return dataSource.findNextConfigurationHeight(brid!!.data, height)
+        val dba = DatabaseAccess.of(eContext)
+        val blockchainRid = getBlockchainRid(eContext, dba)
+        return dataSource.findNextConfigurationHeight(blockchainRid.data, height)
     }
 
     private fun getConfigurationFromDataSource(eContext: EContext): ByteArray? {
         val dba = DatabaseAccess.of(eContext)
+        val blockchainRid = getBlockchainRid(eContext, dba)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
-        return getHeightAwareConfigFromDatasource(eContext, dba, activeHeight)
+        return dataSource.getConfiguration(blockchainRid.data, activeHeight)
     }
 
-    private fun getHeightAwareConfigFromDatasource(eContext: EContext, dba: DatabaseAccess, height: Long): ByteArray? {
-        val blockchainRID = dba.getBlockchainRid(eContext)
-        return dataSource.getConfiguration(blockchainRID!!.data, height)
+    private fun getBlockchainRid(eContext: EContext, dba: DatabaseAccess): BlockchainRid {
+        val blockchainRid = dba.getBlockchainRid(eContext)
+        checkNotNull(blockchainRid) { "Unknown chainId: ${eContext.chainID}" }
+        return blockchainRid
     }
 }
