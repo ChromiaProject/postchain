@@ -36,12 +36,14 @@ import java.util.concurrent.atomic.AtomicInteger
  * @param blockHeader The block header the [hash] is supposedly in
  * @param witness The block witness
  * @param merkleProofTree a proof including [hash] (in its raw form)
+ * @param txIndex is the index of the proven transaction in the block (i.e. our "path").
  */
 class ConfirmationProof(
         @Name("hash") val hash: ByteArray,
         @Name("blockHeader") val blockHeader: ByteArray,
         @Name("witness") val witness: BaseBlockWitness,
-        @Name("merkleProofTree") val merkleProofTree: GtvMerkleProofTree
+        @Name("merkleProofTree") val merkleProofTree: GtvMerkleProofTree,
+        @Name("txIndex") val txIndex: Long
 )
 
 /**
@@ -197,12 +199,16 @@ open class BaseBlockQueries(
                 val decodedWitness = blockchainConfiguration.decodeWitness(material.witness)
                 val decodedBlockHeader = blockchainConfiguration.decodeBlockHeader(material.header) as BaseBlockHeader
 
-                val merkleProofTree = decodedBlockHeader.merkleProofTree(material.txHash, material.txHashes)
+                val result = decodedBlockHeader.merkleProofTree(material.txHash, material.txHashes)
+                val txIndex = result.first
+                val merkleProofTree = result.second
                 ConfirmationProof(
                         material.txHash.data,
                         material.header,
                         decodedWitness as BaseBlockWitness,
-                        merkleProofTree)
+                        merkleProofTree,
+                        txIndex
+                )
             }
         }
     }
