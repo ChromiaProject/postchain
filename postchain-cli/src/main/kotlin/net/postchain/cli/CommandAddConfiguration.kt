@@ -73,6 +73,7 @@ class CommandAddConfiguration : CliktCommand(
             return
         }
 
+        // 😁
         runOnChain(appConfig, chainId) {
             try {
                 CliExecution.addConfiguration(appConfig, gtv, chainId, height0, force, allowUnknownSigners)
