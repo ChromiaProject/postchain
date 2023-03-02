@@ -76,11 +76,11 @@ class CommandAddConfiguration : CliktCommand(
         runOnChain(appConfig, chainId) {
             try {
                 CliExecution.addConfiguration(appConfig, gtv, chainId, height0, force, allowUnknownSigners)
-                println("Configuration has been added successfully")
+                println("\uD83D\uDE00 Configuration has been added successfully")
             } catch (e: CliException) {
                 println(e.message)
             } catch (e: Exception) {
-                println("Can't not add configuration: ${e.message}")
+                println("\uD83D\uDE27 Can't not add configuration: ${e.message}")
             }
         }
     }
