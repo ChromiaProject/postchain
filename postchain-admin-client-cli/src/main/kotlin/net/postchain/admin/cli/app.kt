@@ -5,6 +5,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.versionOption
 import com.github.ajalt.clikt.parameters.types.file
 import net.postchain.admin.cli.util.TlsConfig
 
@@ -14,6 +15,7 @@ class PostchainAdminClientCommand : CliktCommand(
 ) {
     init {
         completionOption()
+        versionOption(this::class.java.`package`.implementationVersion ?: "(unknown)")
     }
 
     private val tls by option("--tls", envvar = "POSTCHAIN_TLS").flag()

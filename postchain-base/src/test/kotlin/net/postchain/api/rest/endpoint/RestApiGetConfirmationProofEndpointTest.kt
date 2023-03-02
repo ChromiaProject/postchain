@@ -67,6 +67,10 @@ class RestApiGetConfirmationProofEndpointTest {
         restApi.stop()
     }
 
+    /**
+     * NOTE: Our "model" is just a mock, so this test won't execute any logic outside of the REST API itself.
+     * To verify if the proof really looks as intended, see the test [BaseBlockHeaderMerkleProofTest].
+     */
     @Test
     fun test_getConfirmationProof_ok() {
         val expectedObject = ConfirmationProof(
@@ -75,18 +79,21 @@ class RestApiGetConfirmationProofEndpointTest {
                 BaseBlockWitness(
                         byteArrayOf(0x0b),
                         arrayOf()),
-                proof
+                proof,
+                1L // Position of TX in the block
         )
+        val expectedDict = GtvObjectMapper.toGtvDictionary(expectedObject)
 
         whenever(model.getConfirmationProof(TxRID(txHashHex.hexStringToByteArray())))
                 .doReturn(expectedObject)
 
         restApi.attachModel(blockchainRID, model)
 
+
         given().basePath(basePath).port(restApi.actualPort())
                 .get("/tx/$blockchainRID/$txHashHex/confirmationProof")
                 .then()
                 .statusCode(200)
-                .body("proof", equalTo(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(expectedObject)).toHex()))
+                .body("proof", equalTo(GtvEncoder.encodeGtv(expectedDict).toHex()))
     }
 }
