@@ -160,7 +160,7 @@ class RestApi(
     private fun checkDiagnosticError(blockchainRid: BlockchainRid): JsonObject? {
         if (!nodeDiagnosticContext.hasBlockchainErrors(blockchainRid)) return null
         return nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).let {
-            JsonObject().apply { add("error", gson.toJsonTree(it.value)) }
+            JsonObject().apply { addProperty("error", it.value.toString()) }
         }
     }
 
