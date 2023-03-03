@@ -3,12 +3,16 @@ package net.postchain.integrationtest
 import assertk.assert
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
-import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
+import net.postchain.base.configuration.KEY_SIGNERS
+import net.postchain.base.extension.BASE_CONFIG_HASH_EXTRA_HEADER
+import net.postchain.base.extension.FULL_CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.concurrent.util.get
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.PostchainTestNode
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Test
@@ -23,11 +27,14 @@ class ConfigConsensusTestNightly : ConfigFileBasedIntegrationTest() {
         createNodes(4, blockchainConfig1FileName)
         buildBlock(0)
 
-        val initialHash = GtvToBlockchainRidFactory.calculateBlockchainRid(readBlockchainConfig(blockchainConfig1FileName), cryptoSystem).data
+        val initialFullConfig = readBlockchainConfig(blockchainConfig1FileName)
+        val initialBaseHash = GtvToBlockchainRidFactory.calculateBlockchainRid(baseConfig(initialFullConfig), cryptoSystem).data
+        val initialFullHash = GtvToBlockchainRidFactory.calculateBlockchainRid(initialFullConfig, cryptoSystem).data
         nodes.forEach {
             val initialBlock = it.blockQueries().getBlockAtHeight(0L).get()!!
             val decodedBlock = BlockHeaderData.fromBinary(initialBlock.header.rawData)
-            assert(decodedBlock.getExtra()[CONFIG_HASH_EXTRA_HEADER]!!.asByteArray().contentEquals(initialHash)).isTrue()
+            assert(decodedBlock.getExtra()[BASE_CONFIG_HASH_EXTRA_HEADER]!!.asByteArray().contentEquals(initialBaseHash)).isTrue()
+            assert(decodedBlock.getExtra()[FULL_CONFIG_HASH_EXTRA_HEADER]!!.asByteArray().contentEquals(initialFullHash)).isTrue()
         }
 
         // Add new config
@@ -35,12 +42,20 @@ class ConfigConsensusTestNightly : ConfigFileBasedIntegrationTest() {
             it.addConfiguration(PostchainTestNode.DEFAULT_CHAIN_IID, 2, blockchainConfig2)
         }
         buildBlocksWithChainRestart(2)
-        val newConfigHash = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig2, cryptoSystem).data
+        val newBaseHash = GtvToBlockchainRidFactory.calculateBlockchainRid(baseConfig(blockchainConfig2), cryptoSystem).data
+        val newFullHash = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig2, cryptoSystem).data
         nodes.forEach {
             val newConfigBlock = it.blockQueries().getBlockAtHeight(2L).get()!!
             val decodedBlock = BlockHeaderData.fromBinary(newConfigBlock.header.rawData)
-            assert(decodedBlock.getExtra()[CONFIG_HASH_EXTRA_HEADER]!!.asByteArray().contentEquals(newConfigHash)).isTrue()
+            assert(decodedBlock.getExtra()[BASE_CONFIG_HASH_EXTRA_HEADER]!!.asByteArray().contentEquals(newBaseHash)).isTrue()
+            assert(decodedBlock.getExtra()[FULL_CONFIG_HASH_EXTRA_HEADER]!!.asByteArray().contentEquals(newFullHash)).isTrue()
         }
+    }
+
+    private fun baseConfig(fullConfig: Gtv): Gtv {
+        val configMap = fullConfig.asDict().toMutableMap()
+        configMap.remove(KEY_SIGNERS)
+        return gtv(configMap)
     }
 
     @Test
