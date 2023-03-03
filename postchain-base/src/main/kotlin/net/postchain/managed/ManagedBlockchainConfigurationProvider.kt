@@ -120,6 +120,8 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         val activeHeight = getActiveBlocksHeight(eContext, dba)
 
         return if (isPcuEnabled()) {
+            dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight) != null
+        } else {
             val nextConfigHeight = dataSource.findNextConfigurationHeight(blockchainRid.data, lastSavedBlockHeight)
             if (nextConfigHeight == null) {
                 logger.debug {
@@ -136,8 +138,6 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
                         "$nextConfigHeight that our active height: $activeHeight, chain: ${eContext.chainID}")
             }
             nextConfigHeight != null && activeHeight == nextConfigHeight  // Since we are looking for future configs here it's ok to get null back
-        } else {
-            dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight) != null
         }
     }
 
@@ -152,12 +152,12 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         val blockchainRid = getBlockchainRid(eContext, dba)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
         return if (isPcuEnabled()) {
-            dataSource.getConfiguration(blockchainRid.data, activeHeight)
-        } else {
             dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight)
                     ?.also {
                         pendingConfigurations[eContext.chainID] = it
                     }?.baseConfig?.data
+        } else {
+            dataSource.getConfiguration(blockchainRid.data, activeHeight)
         }
     }
 
