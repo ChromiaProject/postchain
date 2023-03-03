@@ -1,6 +1,7 @@
 package net.postchain.managed
 
 import net.postchain.common.types.WrappedByteArray
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
@@ -11,7 +12,7 @@ import net.postchain.gtv.merkleHash
 
 data class PendingBlockchainConfiguration(
         val baseConfig: WrappedByteArray,
-        val signers: Gtv
+        val signers: List<PubKey>
 ) {
 
     private val decodedBaseConfig: Gtv by lazy {
@@ -24,7 +25,7 @@ data class PendingBlockchainConfiguration(
 
     val fullConfig: ByteArray by lazy {
         val base = decodedBaseConfig.asDict().toMutableMap()
-        base["signers"] = signers
+        base["signers"] = gtv(signers.map { gtv(it.data) })
         encodeGtv(gtv(base))
     }
 }
