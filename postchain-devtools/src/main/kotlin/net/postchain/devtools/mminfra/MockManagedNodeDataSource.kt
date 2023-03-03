@@ -12,6 +12,7 @@ import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.gtv.Gtv
 import net.postchain.managed.BlockchainInfo
 import net.postchain.managed.ManagedNodeDataSource
+import net.postchain.managed.PendingBlockchainConfiguration
 
 open class MockManagedNodeDataSource : ManagedNodeDataSource {
     // Brid -> (height -> Pair(BlockchainConfiguration, binaryBlockchainConfig)
@@ -72,7 +73,7 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         return null
     }
 
-    override fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): ByteArray? {
+    override fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): PendingBlockchainConfiguration? {
         TODO("Not yet implemented")
     }
 

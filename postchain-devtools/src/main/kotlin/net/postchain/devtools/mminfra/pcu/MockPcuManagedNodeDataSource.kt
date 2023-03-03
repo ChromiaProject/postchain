@@ -2,7 +2,10 @@ package net.postchain.devtools.mminfra.pcu
 
 import mu.KLogging
 import net.postchain.common.BlockchainRid
+import net.postchain.common.wrap
 import net.postchain.devtools.mminfra.MockManagedNodeDataSource
+import net.postchain.gtv.GtvNull
+import net.postchain.managed.PendingBlockchainConfiguration
 
 class MockPcuManagedNodeDataSource : MockManagedNodeDataSource() {
 
@@ -18,28 +21,27 @@ class MockPcuManagedNodeDataSource : MockManagedNodeDataSource() {
     }
 
     @Synchronized
-    override fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): ByteArray? {
+    override fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): PendingBlockchainConfiguration? {
         logger.info { "getPendingBlockchainConfiguration(${blockchainRid.toShortHex()}, $height)" }
-        return bridToConfigs[blockchainRid]!![height]?.second
-                ?.also {
-                    pendingConfigs[height] = false
-                    logger.info { "Config found" }
-                }
+        val config = bridToConfigs[blockchainRid]!![height]?.second
+        return if (config != null) {
+            pendingConfigs[height] = false
+            logger.info { "Config found" }
+            PendingBlockchainConfiguration(config.wrap(), GtvNull)
+        } else null
+
     }
 
     override fun isPendingBlockchainConfigurationApplied(blockchainRid: BlockchainRid, height: Long, configHash: ByteArray): Boolean {
-        // TODO use configHash
         return when {
             !pendingConfigs.containsKey(height) -> {
                 logNoDuplicates("No pending config $height")
                 true
             }
-
             pendingConfigs[height] == true -> {
                 logNoDuplicates("Config $height got approval")
                 true
             }
-
             else -> {
                 logNoDuplicates("Config $height is not approved")
                 false

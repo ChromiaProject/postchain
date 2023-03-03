@@ -8,6 +8,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.config.blockchain.AbstractBlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.EContext
+import java.util.concurrent.ConcurrentHashMap
 
 open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
 
@@ -15,6 +16,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
 
     // Used to access Chain0 configs which are preloaded and validated in ManagedBlockchainProcessManager.preloadChain0Configuration().
     private val localProvider = ManualBlockchainConfigurationProvider()
+    protected val pendingConfigurations = ConcurrentHashMap<Long, PendingBlockchainConfiguration>()
 
     companion object : KLogging()
 
@@ -61,8 +63,16 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
             val dba = DatabaseAccess.of(eContext)
             val blockchainRid = getBlockchainRid(eContext, dba)
             val activeHeight = getActiveBlocksHeight(eContext, dba)
-            val configHash = ByteArray(0) // TODO get configHash
-            dataSource.isPendingBlockchainConfigurationApplied(blockchainRid, activeHeight, configHash)
+            val pendingConfig = pendingConfigurations[eContext.chainID]
+            if (pendingConfig != null) {
+                val applied = dataSource.isPendingBlockchainConfigurationApplied(blockchainRid, activeHeight, pendingConfig.baseConfigHash)
+                if (applied) {
+                    pendingConfigurations.remove(eContext.chainID)
+                }
+                applied
+            } else {
+                true
+            }
         } else {
             true
         }
@@ -145,6 +155,9 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
             dataSource.getConfiguration(blockchainRid.data, activeHeight)
         } else {
             dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight)
+                    ?.also {
+                        pendingConfigurations[eContext.chainID] = it
+                    }?.baseConfig?.data
         }
     }
 

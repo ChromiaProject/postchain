@@ -54,13 +54,11 @@ class TestPcuManagedBlockchainConfigurationProvider : ManagedBlockchainConfigura
 
     override fun isManagedDatasourceReady(eContext: EContext): Boolean {
         val dba = DatabaseAccess.of(eContext)
-        val blockchainRid = dba.getBlockchainRid(eContext)!!
         val activeHeight = getActiveBlocksHeight(eContext, dba)
         return if (eContext.chainID == 0L || activeHeight == 0L) {
             true
         } else {
-            val configHash = ByteArray(0) // TODO get configHash
-            dataSource.isPendingBlockchainConfigurationApplied(blockchainRid, activeHeight, configHash)
+            super.isManagedDatasourceReady(eContext)
         }
     }
 }

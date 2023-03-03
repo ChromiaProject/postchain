@@ -22,7 +22,7 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
      */
     fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long?
 
-    fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): ByteArray?
+    fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): PendingBlockchainConfiguration?
 
     fun isPendingBlockchainConfigurationApplied(blockchainRid: BlockchainRid, height: Long, configHash: ByteArray): Boolean
 }

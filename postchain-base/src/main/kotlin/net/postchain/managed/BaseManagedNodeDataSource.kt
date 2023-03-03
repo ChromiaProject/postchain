@@ -5,6 +5,7 @@ package net.postchain.managed
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
+import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
 import net.postchain.gtv.Gtv
@@ -85,7 +86,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         return if (res.isNull()) null else res.asInteger()
     }
 
-    override fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): ByteArray? {
+    override fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): PendingBlockchainConfiguration? {
         if (nmApiVersion < 5) return null
 
         val res = query(
@@ -95,7 +96,12 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
                         "height" to gtv(height))
         )
 
-        return if (res.isNull()) null else res.asByteArray()
+        return if (res.isNull()) null else {
+            PendingBlockchainConfiguration(
+                    res["base_config"]!!.asByteArray().wrap(),
+                    res["signers"]!!
+            )
+        }
     }
 
     override fun isPendingBlockchainConfigurationApplied(blockchainRid: BlockchainRid, height: Long, configHash: ByteArray): Boolean {
