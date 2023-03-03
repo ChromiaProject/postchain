@@ -9,6 +9,7 @@ import net.postchain.core.NodeRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
 import net.postchain.managed.query.QueryRunner
 import org.junit.jupiter.params.ParameterizedTest
@@ -101,6 +102,34 @@ class BaseManagedNodeDataSourceTest {
         }
         val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
         assertEquals(expected, sut.getBlockchainReplicaNodeMap())
+    }
+
+    @ParameterizedTest
+    @MethodSource("getPendingBlockchainConfigurationTestData")
+    fun testGetPendingBlockchainConfiguration(gtvResult: Gtv, expected: PendingBlockchainConfiguration?) {
+        val appConfig: AppConfig = mock {
+            on { pubKeyByteArray } doReturn byteArrayOf(0)
+        }
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(5)
+            on { query(eq("nm_get_pending_blockchain_configuration"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
+        assertEquals(expected, sut.getPendingBlockchainConfiguration(ZERO_RID, 0L))
+    }
+
+    @ParameterizedTest
+    @MethodSource("isPendingBlockchainConfigurationAppliedTestData")
+    fun testIsPendingBlockchainConfigurationApplied(gtvResult: Gtv, expected: Boolean) {
+        val appConfig: AppConfig = mock {
+            on { pubKeyByteArray } doReturn byteArrayOf(0)
+        }
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(5)
+            on { query(eq("nm_is_pending_blockchain_configuration_applied"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
+        assertEquals(expected, sut.isPendingBlockchainConfigurationApplied(ZERO_RID, 0L, byteArrayOf()))
     }
 
     companion object {
@@ -228,5 +257,28 @@ class BaseManagedNodeDataSourceTest {
                     arrayOf(gtvResult, expected)
             )
         }
+
+        @JvmStatic
+        fun getPendingBlockchainConfigurationTestData(): List<Array<Any?>> {
+            val gtvResult0 = gtv(mapOf(
+                    "base_config" to gtv(byteArrayOf(1, 2)),
+                    "signers" to gtv(byteArrayOf(10, 20))
+            ))
+
+            val expected0 = PendingBlockchainConfiguration(
+                    byteArrayOf(1, 2).wrap(), gtv(byteArrayOf(10, 20))
+            )
+
+            return listOf(
+                    arrayOf(GtvNull, null),
+                    arrayOf(gtvResult0, expected0)
+            )
+        }
+
+        @JvmStatic
+        fun isPendingBlockchainConfigurationAppliedTestData(): List<Array<Any?>> = listOf(
+                arrayOf(GtvInteger(0), false),
+                arrayOf(GtvInteger(1), true)
+        )
     }
 }

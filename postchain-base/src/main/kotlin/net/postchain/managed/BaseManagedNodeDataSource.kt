@@ -4,6 +4,7 @@ package net.postchain.managed
 
 import mu.KLogging
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
@@ -99,7 +100,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         return if (res.isNull()) null else {
             PendingBlockchainConfiguration(
                     res["base_config"]!!.asByteArray().wrap(),
-                    res["signers"]!!
+                    res[KEY_SIGNERS]!!
             )
         }
     }
