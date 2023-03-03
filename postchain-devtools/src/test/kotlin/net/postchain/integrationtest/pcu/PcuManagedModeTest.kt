@@ -13,8 +13,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Test
-import java.util.*
-import kotlin.concurrent.schedule
+import java.util.concurrent.TimeUnit
 import kotlin.test.assertEquals
 
 class PcuManagedModeTest : ManagedModeTest() {
@@ -43,9 +42,8 @@ class PcuManagedModeTest : ManagedModeTest() {
                 mapOf(KEY_QUEUE_CAPACITY to gtv(expectedConfigParamValue))
         )
 
-        Timer().schedule(2000L) {
-            dataSource.approveConfig(reconfigHeight)
-        }
+        // Applying a pending config
+        executor.schedule({ dataSource.approveConfig(reconfigHeight) }, 2000L, TimeUnit.MILLISECONDS)
 
         // initial value is 2500
         assertEquals(2500L, getTxQueueSize(chain))
