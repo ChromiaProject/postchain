@@ -65,7 +65,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
             val activeHeight = getActiveBlocksHeight(eContext, dba)
             val pendingConfig = pendingConfigurations[eContext.chainID]
             if (pendingConfig != null) {
-                val applied = dataSource.isPendingBlockchainConfigurationApplied(blockchainRid, activeHeight, pendingConfig.baseConfigHash)
+                val applied = dataSource.isPendingBlockchainConfigurationApplied(blockchainRid, activeHeight, pendingConfig.baseConfigHash.data)
                 if (applied) {
                     pendingConfigurations.remove(eContext.chainID)
                 }
@@ -155,7 +155,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
             dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight)
                     ?.also {
                         pendingConfigurations[eContext.chainID] = it
-                    }?.baseConfig?.data
+                    }?.fullConfig
         } else {
             dataSource.getConfiguration(blockchainRid.data, activeHeight)
         }

@@ -6,11 +6,16 @@ import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
+import net.postchain.crypto.PubKey
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 import net.postchain.managed.query.QueryRunner
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -109,6 +114,7 @@ class BaseManagedNodeDataSourceTest {
     fun testGetPendingBlockchainConfiguration(gtvResult: Gtv, expected: PendingBlockchainConfiguration?) {
         val appConfig: AppConfig = mock {
             on { pubKeyByteArray } doReturn byteArrayOf(0)
+            on { cryptoSystem } doReturn Secp256K1CryptoSystem()
         }
         val queryRunner: QueryRunner = mock {
             on { query(eq("nm_api_version"), any()) } doReturn gtv(5)
@@ -133,6 +139,8 @@ class BaseManagedNodeDataSourceTest {
     }
 
     companion object {
+
+        private val hashCalculator: GtvMerkleHashCalculator = GtvMerkleHashCalculator(Secp256K1CryptoSystem())
 
         @JvmStatic
         fun getPeerInfosTestData(): List<Array<Any>> {
@@ -260,13 +268,19 @@ class BaseManagedNodeDataSourceTest {
 
         @JvmStatic
         fun getPendingBlockchainConfigurationTestData(): List<Array<Any?>> {
+            val pubKey0 = PubKey(ByteArray(33) { 0 })
+
+            val baseConfig0: Gtv = gtv(mapOf())
+            val encodedConfig0 = GtvEncoder.encodeGtv(baseConfig0)
             val gtvResult0 = gtv(mapOf(
-                    "base_config" to gtv(byteArrayOf(1, 2)),
-                    "signers" to gtv(byteArrayOf(10, 20))
+                    "base_config" to gtv(encodedConfig0),
+                    "signers" to gtv(listOf(gtv(pubKey0.data)))
             ))
 
             val expected0 = PendingBlockchainConfiguration(
-                    byteArrayOf(1, 2).wrap(), gtv(byteArrayOf(10, 20))
+                    baseConfig0,
+                    baseConfig0.merkleHash(hashCalculator).wrap(),
+                    listOf(pubKey0)
             )
 
             return listOf(

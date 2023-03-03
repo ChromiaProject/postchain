@@ -10,13 +10,20 @@ import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 import net.postchain.managed.query.QueryRunner
 
 open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig: AppConfig)
     : ManagedNodeDataSource, QueryRunner by queryRunner {
 
     companion object : KLogging()
+
+    private val hashCalculator: GtvMerkleHashCalculator by lazy {
+        GtvMerkleHashCalculator(appConfig.cryptoSystem)
+    }
 
     override val nmApiVersion by lazy {
         query("nm_api_version", buildArgs()).asInteger().toInt()
@@ -98,8 +105,10 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         )
 
         return if (res.isNull()) null else {
+            val gtvBaseConfig = GtvDecoder.decodeGtv(res["base_config"]!!.asByteArray())
             PendingBlockchainConfiguration(
-                    res["base_config"]!!.asByteArray().wrap(),
+                    gtvBaseConfig,
+                    gtvBaseConfig.merkleHash(hashCalculator).wrap(),
                     res["signers"]!!.asArray().map { PubKey(it.asByteArray()) }
             )
         }
