@@ -7,11 +7,13 @@ import net.postchain.base.withReadWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.block.BlockTrace
 import net.postchain.devtools.awaitDebug
 import net.postchain.devtools.utils.ChainUtil
+import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedNodeDataSource
@@ -82,6 +84,10 @@ open class TestManagedBlockchainProcessManager(
         val height = queries.getBestHeight().get()
         lastHeightStarted[chainId] = height
         return blockchainRid
+    }
+
+    override fun buildMessageProcessingLatch(blockchainConfig: BlockchainConfiguration) = MessageProcessingLatch {
+        true
     }
 
     /**
