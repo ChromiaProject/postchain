@@ -12,6 +12,7 @@ import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.gtv.Gtv
 import net.postchain.managed.BlockchainInfo
 import net.postchain.managed.ManagedNodeDataSource
+import net.postchain.managed.PendingBlockchainConfiguration
 
 open class MockManagedNodeDataSource : ManagedNodeDataSource {
     // Brid -> (height -> Pair(BlockchainConfiguration, binaryBlockchainConfig)
@@ -24,6 +25,9 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         nodes = nodeMap
         myNode = nodeSetup
     }
+
+    override val nmApiVersion: Int
+        get() = TODO("Not yet implemented")
 
     override fun getPeerListVersion(): Long {
         return 1L
@@ -67,6 +71,14 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
             }
         }
         return null
+    }
+
+    override fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): PendingBlockchainConfiguration? {
+        TODO("Not yet implemented")
+    }
+
+    override fun isPendingBlockchainConfigurationApplied(blockchainRid: BlockchainRid, height: Long, baseConfigHash: ByteArray): Boolean {
+        TODO("Not yet implemented")
     }
 
     override fun query(name: String, args: Gtv): Gtv {

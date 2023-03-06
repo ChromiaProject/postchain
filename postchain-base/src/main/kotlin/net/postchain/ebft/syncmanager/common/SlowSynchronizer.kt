@@ -116,6 +116,12 @@ class SlowSynchronizer(
      */
     private fun processMessages(sleepData: SlowSyncSleepData) {
         for (packet in communicationManager.getPackets()) {
+            // We do this check for each network message because
+            // communicationManager.getPackets() might give a big portion of messages.
+            if (!workerContext.messageProcessingLatch.awaitPermission { !isProcessRunning() }) {
+                return
+            }
+
             val peerId = packet.first
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue

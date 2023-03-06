@@ -10,6 +10,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.core.AppContext
+import net.postchain.core.Infrastructure
 import net.postchain.core.NodeRid
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
@@ -36,7 +37,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
      * @param replicaCount is the number of replicas we need
      * @return the newly created [NodeSetup]s.
      */
-    protected fun runNodes(signerNodeCount: Int, replicaCount: Int): Array<NodeSetup> {
+    protected fun runNodes(signerNodeCount: Int, replicaCount: Int, infra: String = Infrastructure.Ebft.get()): Array<NodeSetup> {
         signerCount = signerNodeCount
         configOverrides.setProperty("fastsync.exit_delay", "2000")
 
@@ -68,7 +69,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
                 true,
                 "managed",
                 "unused", // Doesn't matter, not used as of now
-                "base/ebft",
+                infra,
                 true
         )
 

@@ -5,10 +5,15 @@ package net.postchain.managed
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
+import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
+import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 import net.postchain.managed.query.QueryRunner
 
 open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig: AppConfig)
@@ -16,7 +21,11 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
 
     companion object : KLogging()
 
-    val nmApiVersion by lazy {
+    private val hashCalculator: GtvMerkleHashCalculator by lazy {
+        GtvMerkleHashCalculator(appConfig.cryptoSystem)
+    }
+
+    override val nmApiVersion by lazy {
         query("nm_api_version", buildArgs()).asInteger().toInt()
     }
 
@@ -83,6 +92,40 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         )
 
         return if (res.isNull()) null else res.asInteger()
+    }
+
+    override fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): PendingBlockchainConfiguration? {
+        if (nmApiVersion < 5) return null
+
+        val res = query(
+                "nm_get_pending_blockchain_configuration",
+                buildArgs(
+                        "blockchain_rid" to gtv(blockchainRid.data),
+                        "height" to gtv(height))
+        )
+
+        return if (res.isNull()) null else {
+            val gtvBaseConfig = GtvDecoder.decodeGtv(res["base_config"]!!.asByteArray())
+            PendingBlockchainConfiguration(
+                    gtvBaseConfig,
+                    gtvBaseConfig.merkleHash(hashCalculator).wrap(),
+                    res["signers"]!!.asArray().map { PubKey(it.asByteArray()) }
+            )
+        }
+    }
+
+    override fun isPendingBlockchainConfigurationApplied(blockchainRid: BlockchainRid, height: Long, baseConfigHash: ByteArray): Boolean {
+        if (nmApiVersion < 5) return false
+
+        val res = query(
+                "nm_is_pending_blockchain_configuration_applied",
+                buildArgs(
+                        "blockchain_rid" to gtv(blockchainRid.data),
+                        "height" to gtv(height),
+                        "base_config_hash" to gtv(baseConfigHash))
+        )
+
+        return res.asBoolean()
     }
 
     override fun getSyncUntilHeight(): Map<BlockchainRid, Long> {

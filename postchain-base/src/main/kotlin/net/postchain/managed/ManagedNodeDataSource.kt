@@ -2,10 +2,14 @@
 
 package net.postchain.managed
 
+import net.postchain.common.BlockchainRid
 import net.postchain.config.node.PeerInfoDataSource
 import net.postchain.managed.query.QueryRunner
 
 interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
+
+    val nmApiVersion: Int
+
     fun getPeerListVersion(): Long
     fun computeBlockchainList(): List<ByteArray>
     fun computeBlockchainInfoList(): List<BlockchainInfo>
@@ -17,4 +21,8 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
      * null if no future configurations found or if blockchain doesn't exist.
      */
     fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long?
+
+    fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): PendingBlockchainConfiguration?
+
+    fun isPendingBlockchainConfigurationApplied(blockchainRid: BlockchainRid, height: Long, baseConfigHash: ByteArray): Boolean
 }

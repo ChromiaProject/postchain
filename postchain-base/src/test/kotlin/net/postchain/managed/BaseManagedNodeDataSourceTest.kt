@@ -6,10 +6,16 @@ import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
+import net.postchain.crypto.PubKey
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 import net.postchain.managed.query.QueryRunner
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -103,7 +109,38 @@ class BaseManagedNodeDataSourceTest {
         assertEquals(expected, sut.getBlockchainReplicaNodeMap())
     }
 
+    @ParameterizedTest
+    @MethodSource("getPendingBlockchainConfigurationTestData")
+    fun testGetPendingBlockchainConfiguration(gtvResult: Gtv, expected: PendingBlockchainConfiguration?) {
+        val appConfig: AppConfig = mock {
+            on { pubKeyByteArray } doReturn byteArrayOf(0)
+            on { cryptoSystem } doReturn Secp256K1CryptoSystem()
+        }
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(5)
+            on { query(eq("nm_get_pending_blockchain_configuration"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
+        assertEquals(expected, sut.getPendingBlockchainConfiguration(ZERO_RID, 0L))
+    }
+
+    @ParameterizedTest
+    @MethodSource("isPendingBlockchainConfigurationAppliedTestData")
+    fun testIsPendingBlockchainConfigurationApplied(gtvResult: Gtv, expected: Boolean) {
+        val appConfig: AppConfig = mock {
+            on { pubKeyByteArray } doReturn byteArrayOf(0)
+        }
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(5)
+            on { query(eq("nm_is_pending_blockchain_configuration_applied"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
+        assertEquals(expected, sut.isPendingBlockchainConfigurationApplied(ZERO_RID, 0L, byteArrayOf()))
+    }
+
     companion object {
+
+        private val hashCalculator: GtvMerkleHashCalculator = GtvMerkleHashCalculator(Secp256K1CryptoSystem())
 
         @JvmStatic
         fun getPeerInfosTestData(): List<Array<Any>> {
@@ -228,5 +265,34 @@ class BaseManagedNodeDataSourceTest {
                     arrayOf(gtvResult, expected)
             )
         }
+
+        @JvmStatic
+        fun getPendingBlockchainConfigurationTestData(): List<Array<Any?>> {
+            val pubKey0 = PubKey(ByteArray(33) { 0 })
+
+            val baseConfig0: Gtv = gtv(mapOf())
+            val encodedConfig0 = GtvEncoder.encodeGtv(baseConfig0)
+            val gtvResult0 = gtv(mapOf(
+                    "base_config" to gtv(encodedConfig0),
+                    "signers" to gtv(listOf(gtv(pubKey0.data)))
+            ))
+
+            val expected0 = PendingBlockchainConfiguration(
+                    baseConfig0,
+                    baseConfig0.merkleHash(hashCalculator).wrap(),
+                    listOf(pubKey0)
+            )
+
+            return listOf(
+                    arrayOf(GtvNull, null),
+                    arrayOf(gtvResult0, expected0)
+            )
+        }
+
+        @JvmStatic
+        fun isPendingBlockchainConfigurationAppliedTestData(): List<Array<Any?>> = listOf(
+                arrayOf(GtvInteger(0), false),
+                arrayOf(GtvInteger(1), true)
+        )
     }
 }

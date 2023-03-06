@@ -82,7 +82,7 @@ class FastSynchronizer(
             syncDebug("Start", blockHeight)
             while (isProcessRunning() && !exitCondition()) {
                 refillJobs()
-                processMessages()
+                processMessages(exitCondition)
                 processDoneJobs()
                 processStaleJobs()
                 sleep(params.loopInterval)
@@ -583,8 +583,14 @@ class FastSynchronizer(
                 }
     }
 
-    private fun processMessages() {
+    private fun processMessages(exitCondition: () -> Boolean) {
         for (packet in communicationManager.getPackets()) {
+            // We do this check for each network message because
+            // communicationManager.getPackets() might give a big portion of messages.
+            if (!workerContext.messageProcessingLatch.awaitPermission { !isProcessRunning() || exitCondition() }) {
+                return
+            }
+
             val peerId = packet.first
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue

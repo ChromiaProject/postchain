@@ -15,6 +15,7 @@ import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.network.mastersub.protocol.MsCommittedBlockMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 import net.postchain.network.mastersub.subnode.SubQueryHandler
@@ -34,7 +35,13 @@ open class SubNodeBlockchainProcessManager(
     private val subnodeBcCfgListeners: MutableMap<Long, SubnodeBlockchainConfigListener> = ConcurrentHashMap()
     private val configVerifier = BlockchainConfigVerifier(appConfig)
 
-    override fun createAndRegisterBlockchainProcess(chainId: Long, blockchainConfig: BlockchainConfiguration, processName: BlockchainProcessName, engine: BlockchainEngine) {
+    override fun createAndRegisterBlockchainProcess(
+            chainId: Long,
+            blockchainConfig: BlockchainConfiguration,
+            processName: BlockchainProcessName,
+            engine: BlockchainEngine,
+            messageProcessingLatch: MessageProcessingLatch
+    ) {
         val subConnectionManager = connectionManager as SubConnectionManager
         subnodeBcCfgListeners[chainId] = BlockWiseSubnodeBlockchainConfigListener(
                 subnodeBcCfgConfig,
@@ -46,7 +53,7 @@ open class SubNodeBlockchainProcessManager(
                 storage
         )
         subConnectionManager.preAddMsMessageHandler(chainId, SubQueryHandler(chainId, postchainContext.blockQueriesProvider, subConnectionManager))
-        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine)
+        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, messageProcessingLatch)
     }
 
     override fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {

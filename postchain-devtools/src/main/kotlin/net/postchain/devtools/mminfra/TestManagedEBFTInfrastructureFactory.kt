@@ -12,8 +12,10 @@ import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 
 open class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() {
+
     lateinit var nodeConfig: NodeConfig
     lateinit var dataSource: MockManagedNodeDataSource
+
     override fun makeProcessManager(
             postchainContext: PostchainContext,
             blockchainInfrastructure: BlockchainInfrastructure,

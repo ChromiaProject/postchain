@@ -13,6 +13,7 @@ import net.postchain.config.node.ManagedNodeConfig
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
+import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
@@ -70,14 +71,6 @@ open class ManagedBlockchainProcessManager(
 
     companion object : KLogging()
 
-    override fun makeBlockchainConfiguration(chainId: Long): BlockchainConfiguration {
-        return super.makeBlockchainConfiguration(chainId).also {
-            if (chainId == CHAIN0 && it is ManagedDataSourceAware) {
-                initManagedEnvironment(it)
-            }
-        }
-    }
-
     protected open fun initManagedEnvironment(blockchainConfig: ManagedDataSourceAware) {
         dataSource = blockchainConfig.dataSource
         peerListVersion = dataSource.getPeerListVersion()
@@ -89,8 +82,16 @@ open class ManagedBlockchainProcessManager(
 
         // Setting up managed data source to the blockchainConfig
         (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
-                ?.setDataSource(dataSource)
+                ?.setManagedDataSource(dataSource)
                 ?: logger.warn { "Blockchain config is not managed" }
+    }
+
+    override fun makeBlockchainConfiguration(chainId: Long): BlockchainConfiguration {
+        return super.makeBlockchainConfiguration(chainId).also {
+            if (chainId == CHAIN0 && it is ManagedDataSourceAware) {
+                initManagedEnvironment(it)
+            }
+        }
     }
 
     override fun getBlockchainConfigurationFactory(chainId: Long): BlockchainConfigurationFactorySupplier =
@@ -110,6 +111,18 @@ open class ManagedBlockchainProcessManager(
                     )
                 }
             }
+
+    override fun buildMessageProcessingLatch(blockchainConfig: BlockchainConfiguration) = MessageProcessingLatch {
+        if (blockchainConfig.chainID == CHAIN0) {
+            true // Chain0 runs in a (regular) managed mode
+        } else {
+            (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)?.run {
+                withReadConnection(storage, blockchainConfig.chainID) { ctx ->
+                    isManagedDatasourceReady(ctx)
+                }
+            } ?: false
+        }
+    }
 
     /**
      * @return a [AfterCommitHandler] which is a lambda (This lambda will be called by the Engine after each block
