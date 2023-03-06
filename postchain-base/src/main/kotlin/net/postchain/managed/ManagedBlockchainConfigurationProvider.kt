@@ -22,7 +22,9 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
 
     // Feature toggle
     protected open fun isPcuEnabled(): Boolean {
-        return dataSource.nmApiVersion >= 5
+//        return dataSource.nmApiVersion >= 5
+        return (dataSource as? BaseManagedNodeDataSource)?.appConfig?.getBoolean("pcu", false)
+                ?: false
     }
 
     fun setManagedDataSource(dataSource: ManagedNodeDataSource) {
