@@ -153,11 +153,24 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         val dba = DatabaseAccess.of(eContext)
         val blockchainRid = getBlockchainRid(eContext, dba)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
+
+        logger.error { "@@@: chainId: ${eContext.chainID}, activeHeight: $activeHeight, isPcuEnabled(): ${isPcuEnabled()}" }
+
         return if (isPcuEnabled()) {
-            dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight)
-                    ?.also {
-                        pendingConfigurations[eContext.chainID] = it
-                    }?.fullConfig
+            if (activeHeight == 0L) {
+                logger.error { "@@@: initial config will be loaded from DataSource" }
+                dataSource.getConfiguration(blockchainRid.data, 0L)
+            } else {
+                val config = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight)
+                if (config != null) {
+                    logger.error { "@@@: pending config found for activeHeight: $activeHeight, and will loaded" }
+                    pendingConfigurations[eContext.chainID] = config
+                    config.fullConfig
+                } else {
+                    logger.error { "@@@: pending config is absent for activeHeight: $activeHeight, config will be loaded from DataSource" }
+                    dataSource.getConfiguration(blockchainRid.data, activeHeight)
+                }
+            }
         } else {
             dataSource.getConfiguration(blockchainRid.data, activeHeight)
         }
