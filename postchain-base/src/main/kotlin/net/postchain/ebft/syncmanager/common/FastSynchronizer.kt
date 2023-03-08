@@ -448,13 +448,9 @@ class FastSynchronizer(
         val w = blockchainConfiguration.decodeWitness(witness)
         val validator = blockchainConfiguration.getBlockHeaderValidator()
         val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(h)
-        if (validator.validateWitness(w, witnessBuilder)) {
-            j.header = h
-            j.witness = w
-            logger.trace { "handleBlockHeader() -- ${"Header for $j received"}" }
-            peerStatuses.headerReceived(peerId, peerBestHeight)
-            return true
-        } else {
+        try {
+            validator.validateWitness(w, witnessBuilder)
+        } catch (e: Exception) {
             // There may be two reasons for verification failures.
             // 1. The peer is a scumbag, sending us invalid headers
             // 2. The header is from a configuration that we haven't activated yet.
@@ -465,9 +461,15 @@ class FastSynchronizer(
             // sync process will restart fresh with new configuration. Worst case is if
             // we download parallelism blocks before restarting.
             val dbg = debugJobString(j, requestedHeight, peerId)
-            peerStatuses.maybeBlacklist(peerId, "Synch: Invalid header received. $dbg")
+            peerStatuses.maybeBlacklist(peerId, "Synch: Invalid header received (${e.message}). $dbg")
             return false
         }
+
+        j.header = h
+        j.witness = w
+        logger.trace { "handleBlockHeader() -- ${"Header for $j received"}" }
+        peerStatuses.headerReceived(peerId, peerBestHeight)
+        return true
     }
 
     private fun handleUnfinishedBlock(peerId: NodeRid, header: ByteArray, txs: List<ByteArray>) {

@@ -18,6 +18,7 @@ import java.util.concurrent.CompletionStage
 interface BlockWitnessBuilder {
     fun isComplete(): Boolean
     fun getWitness(): BlockWitness // throws when not complete
+    val threshold: Int // Minimum amount of signatures necessary for witness to be valid
 }
 
 interface MultiSigBlockWitnessBuilder : BlockWitnessBuilder {

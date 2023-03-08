@@ -236,11 +236,12 @@ class SlowSynchronizer(
         val validator = blockchainConfiguration.getBlockHeaderValidator()
         val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(h)
 
-        return if (validator.validateWitness(w, witnessBuilder)) {
+        return try {
+            validator.validateWitness(w, witnessBuilder)
             logger.trace { "handleBlockHeader() -- Header for height $requestedHeight received" }
             Pair(h, w)
-        } else {
-            peerStatuses.maybeBlacklist(peerId, "Slow Sync: Invalid header received. Height: $requestedHeight")
+        } catch (e: Exception) {
+            peerStatuses.maybeBlacklist(peerId, "Slow Sync: Invalid header received (${e.message}). Height: $requestedHeight")
             null
         }
     }

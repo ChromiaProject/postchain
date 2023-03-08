@@ -3,7 +3,12 @@ package net.postchain.base.data
 import net.postchain.base.BaseBlockWitnessBuilder
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.core.block.*
+import net.postchain.common.exception.UserMistake
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockWitness
+import net.postchain.core.block.BlockWitnessBuilder
+import net.postchain.core.block.MultiSigBlockWitness
+import net.postchain.core.block.MultiSigBlockWitnessBuilder
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.getBFTRequiredSignatureCount
@@ -23,44 +28,27 @@ import net.postchain.getBFTRequiredSignatureCount
  * @property subjects Public keys for nodes authorized to sign blocks
  */
 class BaseBlockWitnessProvider(
-    private val cryptoSystem: CryptoSystem,
-    private val blockSigMaker: SigMaker,
-    private val subjects: Array<ByteArray>
+        private val cryptoSystem: CryptoSystem,
+        private val blockSigMaker: SigMaker,
+        private val subjects: Array<ByteArray>
 ) : BlockWitnessProvider {
 
-    /**
-     * @param header is the header we need a witness builder for
-     * @return a fresh [BlockWitnessBuilder] without any signatures
-     */
     override fun createWitnessBuilderWithoutOwnSignature(header: BlockHeader): BlockWitnessBuilder {
         return BaseBlockWitnessBuilder(cryptoSystem, header, subjects, getBFTRequiredSignatureCount(subjects.size))
     }
 
-    /**
-     * @param header is the header we need a witness builder for
-     * @return a fresh [BlockWitnessBuilder] signed by us
-     */
     override fun createWitnessBuilderWithOwnSignature(
-        header: BlockHeader
+            header: BlockHeader
     ): BlockWitnessBuilder {
         val witnessBuilder = createWitnessBuilderWithoutOwnSignature(header) as BaseBlockWitnessBuilder
         witnessBuilder.applySignature(blockSigMaker.signDigest(header.blockRID)) // TODO: POS-04_sig
         return witnessBuilder
     }
 
-    /**
-     * TODO: move to witness impl
-     * Validates the following:
-     *  - Witness and witness builder are multi sig
-     *  - The signatures are valid with respect to the block being signed
-     *  - The number of signatures exceeds the threshold necessary to deem the block itself valid
-     *
-     *  @param blockWitness is the witness data with signatures we will check
-     *  @param witnessBuilder includes the header we should validate
-     *  @throws ProgrammerMistake Invalid BlockWitness implementation
-     *  @return true if valid
-     */
-    override fun validateWitness(blockWitness: BlockWitness, witnessBuilder: BlockWitnessBuilder): Boolean {
+    // TODO: move to witness impl
+    // Validates the following:
+    //  - Witness and witness builder are multi sig
+    override fun validateWitness(blockWitness: BlockWitness, witnessBuilder: BlockWitnessBuilder) {
         if (blockWitness !is MultiSigBlockWitness) {
             throw ProgrammerMistake("Invalid BlockWitness, we need multi sig for the base validation.")
         }
@@ -68,11 +56,17 @@ class BaseBlockWitnessProvider(
             throw ProgrammerMistake("Invalid BlockWitnessBuilder, we need a multi sig for the base validation.")
         }
 
-        // A bit counter intuitive maybe, but we are using the given [BlockWitnessBuilder] to re-create the witnesses
+        if (blockWitness.getSignatures().size < witnessBuilder.threshold) {
+            throw UserMistake("Insufficient number of witness (needs at least ${witnessBuilder.threshold} but got only ${blockWitness.getSignatures().size})")
+        }
+
+        // A bit counterintuitive maybe, but we are using the given [BlockWitnessBuilder] to re-create the witnesses
         // by applying the signatures again to see if it works ("applySignature()" will do a lot of verifications).
         for (signature in blockWitness.getSignatures()) {
             witnessBuilder.applySignature(signature) // Will explode if signature isn't valid.
         }
-        return witnessBuilder.isComplete()
+        if (!witnessBuilder.isComplete()) {
+            throw UserMistake("Insufficient number of valid witness signatures")
+        }
     }
 }
