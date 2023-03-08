@@ -3,6 +3,7 @@
 package net.postchain.base.configuration
 
 import mu.KLogging
+import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.base.BaseBlockHeader
@@ -199,6 +200,8 @@ open class BaseBlockchainConfiguration(
                     "unable to finish. Class name given: $strategyClassName, Msg: ${e.message}")
         }
     }
+
+    override fun initializeModules(postchainContext: PostchainContext) {}
 
     override fun shutdownModules() {}
 

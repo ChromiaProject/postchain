@@ -3,6 +3,7 @@
 package net.postchain.gtx
 
 import mu.KLogging
+import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.BaseBlockQueries
 import net.postchain.base.SpecialTransactionHandler
@@ -66,6 +67,13 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
             }
 
         }
+    }
+
+    override fun initializeModules(postchainContext: PostchainContext) {
+        if (module is PostchainContextAware) {
+            module.initializeContext(this, postchainContext)
+        }
+        super.initializeModules(postchainContext)
     }
 
     override fun shutdownModules() {
