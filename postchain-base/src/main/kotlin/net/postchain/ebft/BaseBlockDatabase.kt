@@ -80,7 +80,7 @@ class BaseBlockDatabase(
                 }
                 res
             } catch (e: Exception) {
-                logger.warn(e) { "Failed job $name" }
+                logger.debug(e) { "Failed job $name" }
                 throw e
             }
         }, executor)
