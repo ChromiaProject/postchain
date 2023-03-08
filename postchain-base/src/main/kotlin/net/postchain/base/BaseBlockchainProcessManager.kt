@@ -175,7 +175,7 @@ open class BaseBlockchainProcessManager(
             if (configuration != null) {
                 blockchainInfrastructure.makeBlockchainConfiguration(
                         configuration, eContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory(chainId)
-                )
+                ).also { it.initializeModules(postchainContext) }
             } else {
                 throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
             }.also { DependenciesValidator.validateBlockchainRids(eContext, it.blockchainDependencies) }

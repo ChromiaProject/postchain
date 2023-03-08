@@ -3,9 +3,11 @@
 package net.postchain.gtx
 
 import mu.KLogging
+import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.EContext
 import net.postchain.core.Shutdownable
 import net.postchain.core.Transactor
@@ -26,6 +28,10 @@ interface GTXModule : Shutdownable {
     fun getSpecialTxExtensions(): List<GTXSpecialTxExtension>
 
     override fun shutdown() {}
+}
+
+interface PostchainContextAware {
+    fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext)
 }
 
 interface GTXModuleFactory {
@@ -73,7 +79,7 @@ abstract class SimpleGTXModule<ConfT>(
     }
 }
 
-class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean) : GTXModule {
+class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean) : GTXModule, PostchainContextAware {
 
     lateinit var opmap: Map<String, GTXModule>
     lateinit var qmap: Map<String, GTXModule>
@@ -141,6 +147,10 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         ops = opmap.keys
         _queries = qmap.keys
         _specialTxExtensions = _stxs.toList()
+    }
+
+    override fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext) {
+        modules.filterIsInstance(PostchainContextAware::class.java).forEach { it.initializeContext(configuration, postchainContext) }
     }
 
     override fun shutdown() {
