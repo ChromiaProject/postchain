@@ -91,7 +91,7 @@ class BaseBlockWitness(private val _rawData: ByteArray, private val _signatures:
 class BaseBlockWitnessBuilder(val cryptoSystem: CryptoSystem,
                               val blockHeader: BlockHeader,
                               private val subjects: Array<ByteArray>,
-                              private val threshold: Int) : MultiSigBlockWitnessBuilder {
+                              override val threshold: Int) : MultiSigBlockWitnessBuilder {
 
     /**
      * Signatures from [subjects] that have signed the [blockHeader]
