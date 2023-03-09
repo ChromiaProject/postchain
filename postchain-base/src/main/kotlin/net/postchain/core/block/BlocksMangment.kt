@@ -122,4 +122,5 @@ interface BlockBuildingStrategy {
     fun shouldBuildBlock(): Boolean
     fun blockCommitted(blockData: BlockData)
     fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean
+    fun blockFailed()
 }

@@ -183,6 +183,7 @@ class BaseBlockManager(
                         } else {
                             logger.error(msg, exception)
                         }
+                        blockStrategy.blockFailed()
                     })
                 }
 

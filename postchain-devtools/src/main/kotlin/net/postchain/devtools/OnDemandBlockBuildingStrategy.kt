@@ -83,4 +83,6 @@ class OnDemandBlockBuildingStrategy(
         val abb = bb as AbstractBlockBuilder
         return abb.transactions.size >= configData.maxBlockTransactions
     }
+
+    override fun blockFailed() {}
 }
