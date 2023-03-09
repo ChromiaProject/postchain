@@ -15,6 +15,7 @@ import net.postchain.crypto.PubKey
 fun CliktCommand.nodeConfigOption() =
         option("-nc", "--node-config", help = "Configuration file of node (.properties file)", envvar = "POSTCHAIN_CONFIG")
                 .file(mustExist = true, canBeFile = true, canBeDir = false, mustBeReadable = true)
+                .required()
 
 fun CliktCommand.blockchainConfigOption() = option(
         "-bc",
