@@ -12,7 +12,7 @@ data class BaseBlockBuildingStrategyConfigurationData(
         @RawGtv
         val rawGtv: Gtv,
         @Name(KEY_BLOCKSTRATEGY_MAXBLOCKSIZE)
-        @DefaultValue(defaultLong =  (26 * 1024 * 1024)) // default is 26 MiB)
+        @DefaultValue(defaultLong = (26 * 1024 * 1024)) // default is 26 MiB)
         val maxBlockSize: Long,
         @Name(KEY_BLOCKSTRATEGY_MAXBLOCKTRANSACTIONS)
         @DefaultValue(defaultLong = 100)
@@ -26,9 +26,15 @@ data class BaseBlockBuildingStrategyConfigurationData(
         @Name(KEY_BLOCKSTRATEGY_MAXTXDELAY)
         @DefaultValue(defaultLong = 1000) // 1 sec
         val maxTxDelay: Long,
+        @Name(KEY_BLOCKSTRATEGY_MINBACKOFFTIME)
+        @DefaultValue(defaultLong = 20) // 20 ms
+        val minBackoffTime: Long,
+        @Name(KEY_BLOCKSTRATEGY_MAXBACKOFFTIME)
+        @DefaultValue(defaultLong = 2000) // 2 sec
+        val maxBackoffTime: Long,
 ) {
-        companion object {
-                @JvmStatic
-                val default = gtv(mapOf()).toObject<BaseBlockBuildingStrategyConfigurationData>()
-        }
+    companion object {
+        @JvmStatic
+        val default = gtv(mapOf()).toObject<BaseBlockBuildingStrategyConfigurationData>()
+    }
 }
