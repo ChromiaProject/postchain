@@ -4,6 +4,8 @@ package net.postchain.base.data
 
 import mu.KLogging
 import net.postchain.base.*
+import net.postchain.base.SpecialTransactionPosition.Begin
+import net.postchain.base.SpecialTransactionPosition.End
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
@@ -55,7 +57,7 @@ open class BaseBlockBuilder(
         val maxBlockSize: Long,
         val maxBlockTransactions: Long,
         maxTxExecutionTime: Long
-): AbstractBlockBuilder(eContext, blockchainRID, store, txFactory, maxTxExecutionTime) {
+) : AbstractBlockBuilder(eContext, blockchainRID, store, txFactory, maxTxExecutionTime) {
 
     companion object : KLogging()
 
@@ -113,8 +115,8 @@ open class BaseBlockBuilder(
         }
         super.begin(partialBlockHeader)
         for (x in extensions) x.init(this.bctx, this)
-        if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.Begin)) {
-            val stx = specialTxHandler.createSpecialTransaction(SpecialTransactionPosition.Begin, bctx)
+        if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(Begin)) {
+            val stx = specialTxHandler.createSpecialTransaction(Begin, bctx)
             appendTransaction(stx)
         }
     }
@@ -227,8 +229,8 @@ open class BaseBlockBuilder(
      * @return the new [BlockHeader] we are about to create.
      */
     override fun finalizeBlock(): BlockHeader {
-        if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End))
-            appendTransaction(specialTxHandler.createSpecialTransaction(SpecialTransactionPosition.End, bctx))
+        if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(End))
+            appendTransaction(specialTxHandler.createSpecialTransaction(End, bctx))
         return super.finalizeBlock()
     }
 
@@ -239,8 +241,8 @@ open class BaseBlockBuilder(
      * @param blockHeader is the header for the block we are working on.
      */
     override fun finalizeAndValidate(blockHeader: BlockHeader) {
-        if (specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End) && !haveSpecialEndTransaction)
-            throw BadDataMistake(BadDataType.BAD_BLOCK,"End special transaction is missing")
+        if (specialTxHandler.needsSpecialTransaction(End) && !haveSpecialEndTransaction)
+            throw BadDataMistake(BadDataType.BAD_BLOCK, "End special transaction is missing")
         val extraData = finalizeExtensions()
         val validationResult = validateBlockHeader(blockHeader, extraData)
         when (validationResult.result) {
@@ -258,20 +260,20 @@ open class BaseBlockBuilder(
         if (haveSpecialEndTransaction) {
             throw BlockValidationMistake("Cannot append transactions after end special transaction")
         }
-        val expectBeginTx = specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.Begin) && transactions.size == 0
+        val expectBeginTx = specialTxHandler.needsSpecialTransaction(Begin) && transactions.size == 0
         if (tx.isSpecial()) {
             if (expectBeginTx) {
-                if (!specialTxHandler.validateSpecialTransaction(SpecialTransactionPosition.Begin, tx, bctx)) {
-                    throw BlockValidationMistake("Special transaction validation failed")
+                if (!specialTxHandler.validateSpecialTransaction(Begin, tx, bctx)) {
+                    throw BlockValidationMistake("Special transaction validation failed: $Begin")
                 }
                 return // all is well, the first transaction is special and valid
             }
-            val needEndTx = specialTxHandler.needsSpecialTransaction(SpecialTransactionPosition.End)
+            val needEndTx = specialTxHandler.needsSpecialTransaction(End)
             if (!needEndTx) {
                 throw BlockValidationMistake("Found unexpected special transaction")
             }
-            if (!specialTxHandler.validateSpecialTransaction(SpecialTransactionPosition.End, tx, bctx)) {
-                throw BlockValidationMistake("Special transaction validation failed")
+            if (!specialTxHandler.validateSpecialTransaction(End, tx, bctx)) {
+                throw BlockValidationMistake("Special transaction validation failed: $End")
             }
             haveSpecialEndTransaction = true
         } else if (expectBeginTx) {
@@ -301,13 +303,13 @@ open class BaseBlockBuilder(
     internal fun validateBlockHeader(blockHeader: BlockHeader, extraData: Map<String, Gtv> = mapOf()): ValidationResult {
         val nrOfDependencies = blockchainDependencies?.all()?.size ?: 0
         return GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(
-            blockHeader,
-            initialBlockData,
-            ::computeMerkleRootHash,
-            ::getBlockRidAtHeight,
-            bctx.timestamp,
-            nrOfDependencies,
-            extraData
+                blockHeader,
+                initialBlockData,
+                ::computeMerkleRootHash,
+                ::getBlockRidAtHeight,
+                bctx.timestamp,
+                nrOfDependencies,
+                extraData
         )
     }
 }
