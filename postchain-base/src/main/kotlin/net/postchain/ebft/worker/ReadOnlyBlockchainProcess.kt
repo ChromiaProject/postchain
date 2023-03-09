@@ -51,10 +51,15 @@ class ReadOnlyBlockchainProcess(
      * When the nodes are drained we move to slow sync instead.
      */
     override fun action() {
-        fastSynchronizer.syncUntilResponsiveNodesDrained()
-
-        // Move to slow sync and proceed until shutdown
-        slowSynchronizer.syncUntil()
+        if (params.slowSyncEnabled) {
+            logger.debug { "Using slow sync for read only bc process" }
+            fastSynchronizer.syncUntilResponsiveNodesDrained()
+            // Move to slow sync and proceed until shutdown
+            slowSynchronizer.syncUntil()
+        } else {
+            logger.debug { "Using fast sync for read only bc process" }
+            fastSynchronizer.syncUntil { !isProcessRunning() }
+        }
     }
 
     override fun cleanup() {

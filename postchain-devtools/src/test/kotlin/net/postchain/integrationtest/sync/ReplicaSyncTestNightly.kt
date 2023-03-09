@@ -72,6 +72,14 @@ class ReplicaSyncTestNightly : AbstractSyncTest() {
         runSyncTest(1, 2, setOf(1), setOf(0), 1)
     }
 
+    @Test
+    @Timeout(2, unit = TimeUnit.MINUTES)
+    fun testRemoveAndAddAgainWithForcedFastSync() {
+        configOverrides.setProperty("slowsync.enabled", "false")
+        addReplica = true
+        runSyncTest(1, 2, setOf(1), setOf(0), 1)
+    }
+
     override fun addPeerInfo(dbAccess: DatabaseAccess, ctx: AppContext, peerInfo: PeerInfo, brid: BlockchainRid, isPeerSigner: Boolean) {
         dbAccess.addPeerInfo(ctx, peerInfo)
         if (!isPeerSigner && addReplica) {
