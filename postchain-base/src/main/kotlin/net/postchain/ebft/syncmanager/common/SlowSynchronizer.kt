@@ -64,9 +64,10 @@ class SlowSynchronizer(
                 synchronized(stateMachine) {
                     if (stateMachine.state == SlowSyncStates.WAIT_FOR_COMMIT) {
                         // We shouldn't need to handle failed commits here, since we have the callback
-                        logger.warn("Why didn't we manage to commit all blocks after the sleep? " +
-                                "Expected height: ${stateMachine.lastUncommittedBlockHeight} but " +
-                                "actual height: ${stateMachine.lastCommittedBlockHeight}")
+                        logger.debug {
+                            "Still waiting for block at height ${stateMachine.lastUncommittedBlockHeight} to be committed. " +
+                                    "Last committed height: ${stateMachine.lastCommittedBlockHeight}. Going back to sleep."
+                        }
                     } else {
                         processMessages(sleepData)
                         val now = System.currentTimeMillis()
