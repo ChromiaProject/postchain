@@ -53,6 +53,12 @@ open class PostchainModel(
         if (!decodedTransaction.isCorrect()) {
             throw UserMistake("Transaction ${decodedTransaction.getRID().toHex()} is not correct")
         }
+
+        if (blockQueries.isTransactionConfirmed(decodedTransaction.getRID()).get()) {
+            sample.stop(metrics.duplicateTransactions)
+            throw DuplicateTnxException("Transaction already in database")
+        }
+
         when (txQueue.enqueue(decodedTransaction)) {
             EnqueueTransactionResult.FULL -> {
                 sample.stop(metrics.fullTransactions)
