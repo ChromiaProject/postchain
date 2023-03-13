@@ -308,7 +308,7 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    protected fun invokeAfterCommitHooks(chainId: Long, blockHeight: Long) {
+    protected open fun invokeAfterCommitHooks(chainId: Long, blockHeight: Long) {
         val blockchainProcess = blockchainProcesses[chainId]
         if (blockchainProcess != null) {
             for (e in extensions) {
