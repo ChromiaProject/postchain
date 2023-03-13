@@ -392,6 +392,30 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
         }
     }
 
+    @Test
+    fun testDuplicateTx() {
+        val nodeCount = 4
+        val sysSetup = doSystemSetup(nodeCount, "/net/postchain/devtools/api/blockchain_config.xml")
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+
+        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem)
+        val tx = TestOneOpGtxTransaction(factory, 1)
+
+        testStatusPost(
+                0,
+                "/tx/${blockchainRIDBytes.toHex()}",
+                "{\"tx\": \"${tx.getRawData().toHex()}\"}",
+                200)
+        awaitConfirmed(blockchainRID, tx.getRID())
+
+        testStatusPost(
+                0,
+                "/tx/${blockchainRIDBytes.toHex()}",
+                "{\"tx\": \"${tx.getRawData().toHex()}\"}",
+                409)
+    }
+
     /**
      * Will create and post a transaction to the servers
      *
