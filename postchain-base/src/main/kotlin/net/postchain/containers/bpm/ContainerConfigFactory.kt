@@ -10,6 +10,7 @@ import net.postchain.core.Infrastructure
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import org.mandas.docker.client.messages.ContainerConfig
 import org.mandas.docker.client.messages.HostConfig
+import org.mandas.docker.client.messages.LogConfig
 import org.mandas.docker.client.messages.PortBinding
 
 object ContainerConfigFactory : KLogging() {
@@ -119,6 +120,13 @@ object ContainerConfigFactory : KLogging() {
                     if (containerNodeConfig.network != null) {
                         logger.info("Setting container network to ${containerNodeConfig.network}")
                         networkMode(containerNodeConfig.network)
+                    }
+                }
+                .apply {
+                    val dockerLogConf = containerNodeConfig.dockerLogConf
+                    if (dockerLogConf != null) {
+                        logger.info("Setting docker log configuration to $dockerLogConf")
+                        logConfig(LogConfig.create(dockerLogConf.driver, dockerLogConf.opts))
                     }
                 }
                 .build()
