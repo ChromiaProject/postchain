@@ -65,12 +65,15 @@ data class ContainerNodeConfig(
         val zfsPoolName: String,
         val zfsPoolInitScript: String?,
         val bindPgdataVolume: Boolean,
+        val dockerLogConf: DockerLogConfig?,
 ) : Config {
     companion object {
         const val DEFAULT_CONTAINER_ZFS_INIT_SCRIPT = "container-zfs-init-script.sh"
 
         const val KEY_CONTAINER_PREFIX = "container"
         const val KEY_DOCKER_IMAGE = "docker-image"
+        const val KEY_DOCKER_LOG_DRIVER = "docker-log-driver"
+        const val KEY_DOCKER_LOG_OPTS = "docker-log-opts"
         const val KEY_MASTER_HOST = "master-host"
         const val KEY_MASTER_PORT = "master-port"
         const val KEY_NETWORK = "network"
@@ -116,6 +119,10 @@ data class ContainerNodeConfig(
                     null
                 }
 
+                val logDriver = getEnvOrStringProperty("POSTCHAIN_DOCKER_LOG_DRIVER", KEY_DOCKER_LOG_DRIVER, "")
+                val logOpts = getEnvOrStringProperty("POSTCHAIN_DOCKER_LOG_OPTS", KEY_DOCKER_LOG_OPTS, "")
+                val logConf = DockerLogConfig.fromStrings(logDriver, logOpts)
+
                 ContainerNodeConfig(
                         config.pubKey,
                         subnodeImage,
@@ -134,7 +141,8 @@ data class ContainerNodeConfig(
                         getEnvOrStringProperty("POSTCHAIN_MASTER_MOUNT_DIR", KEY_MASTER_MOUNT_DIR, hostMountDir),
                         getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_NAME", KEY_ZFS_POOL_NAME, FileSystem.ZFS_POOL_NAME),
                         getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_INIT_SCRIPT", KEY_ZFS_POOL_INIT_SCRIPT),
-                        getEnvOrBooleanProperty("POSTCHAIN_BIND_PGDATA_VOLUME", KEY_BIND_PGDATA_VOLUME, true)
+                        getEnvOrBooleanProperty("POSTCHAIN_BIND_PGDATA_VOLUME", KEY_BIND_PGDATA_VOLUME, true),
+                        logConf
                 )
             }
         }
