@@ -21,7 +21,11 @@ class JsonNodeDiagnosticContext(
     private val json = JsonFactory.makePrettyJson()
 
     init {
-        properties[DiagnosticProperty.BLOCKCHAIN] = LazyDiagnosticValueCollection { blockchainDiagnosticData.values }
+        properties[DiagnosticProperty.BLOCKCHAIN] = LazyDiagnosticValueCollection {
+            blockchainDiagnosticData
+                    .toSortedMap { a, b -> a.toHex().compareTo(b.toHex()) }
+                    .values
+        }
     }
 
     override fun blockchainErrorQueue(blockchainRid: BlockchainRid) = blockchainData(blockchainRid)[DiagnosticProperty.ERROR] as DiagnosticQueue<String>
