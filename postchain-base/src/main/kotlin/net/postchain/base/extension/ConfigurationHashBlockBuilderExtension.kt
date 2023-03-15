@@ -6,17 +6,13 @@ import net.postchain.core.BlockEContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 
-const val BASE_CONFIG_HASH_EXTRA_HEADER = "base_config_hash"
-const val FULL_CONFIG_HASH_EXTRA_HEADER = "full_config_hash"
+const val CONFIG_HASH_EXTRA_HEADER = "config_hash"
 
-class ConfigurationHashBlockBuilderExtension(
-        private val baseConfigHash: ByteArray,
-        private val fullConfigHash: ByteArray) : BaseBlockBuilderExtension {
+class ConfigurationHashBlockBuilderExtension(private val configHash: ByteArray) : BaseBlockBuilderExtension {
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {}
 
     override fun finalize(): Map<String, Gtv> = mapOf(
-            BASE_CONFIG_HASH_EXTRA_HEADER to gtv(baseConfigHash),
-            FULL_CONFIG_HASH_EXTRA_HEADER to gtv(fullConfigHash)
+            CONFIG_HASH_EXTRA_HEADER to gtv(configHash)
     )
 }

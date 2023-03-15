@@ -35,15 +35,15 @@ class MockPcuManagedNodeDataSource : MockManagedNodeDataSource() {
             val signers = fullConfig["signers"]!!.asArray().map { PubKey(it.asByteArray()) }
             fullConfig.remove("signers")
             val baseConfig = GtvFactory.gtv(fullConfig)
-            val baseConfigHash = baseConfig.merkleHash(hashCalculator)
+            val configHash = GtvFactory.gtv(fullConfig).merkleHash(hashCalculator)
             pendingConfigs.computeIfAbsent(height) { false }
             logger.info { "Config found" }
-            PendingBlockchainConfiguration(baseConfig, baseConfigHash.wrap(), signers)
+            PendingBlockchainConfiguration(baseConfig, configHash.wrap(), signers)
         } else null
 
     }
 
-    override fun isPendingBlockchainConfigurationApplied(blockchainRid: BlockchainRid, height: Long, baseConfigHash: ByteArray): Boolean {
+    override fun isPendingBlockchainConfigurationApplied(blockchainRid: BlockchainRid, height: Long, configHash: ByteArray): Boolean {
         return when {
             !pendingConfigs.containsKey(height) -> {
                 logNoDuplicates("No pending config $height")
