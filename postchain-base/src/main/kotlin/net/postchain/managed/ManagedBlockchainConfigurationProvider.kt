@@ -69,7 +69,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
                 logger.debug { "$logPrefix: pending config detected for chain ${eContext.chainID}: $pendingConfig" }
                 if (pendingConfig.isBlockBuilt) {
                     logger.debug { "$logPrefix: block at height ${pendingConfig.height} is already built with a pending config" }
-                    val applied = dataSource.isPendingBlockchainConfigurationApplied(blockchainRid, activeHeight, pendingConfig.config.baseConfigHash.data)
+                    val applied = dataSource.isPendingBlockchainConfigurationApplied(blockchainRid, activeHeight, pendingConfig.config.configHash.data)
                     if (applied) {
                         pendingConfigurations.remove(eContext.chainID)
                         logger.debug { "$logPrefix: pending config is applied" }

@@ -8,7 +8,7 @@ import net.postchain.gtv.GtvFactory.gtv
 
 data class PendingBlockchainConfiguration(
         val baseConfig: Gtv,
-        val baseConfigHash: WrappedByteArray,
+        val configHash: WrappedByteArray,
         val signers: List<PubKey>
 ) {
     val fullConfig: ByteArray by lazy {
@@ -25,7 +25,6 @@ class PendingBlockchainConfigurationStatus(
 
     var isBlockBuilt: Boolean = false
 
-    override fun toString(): String {
-        return "PendingBlockchainConfigurationStatus(height=$height, baseConfigHash=${config.baseConfigHash}, isBlockBuilt=$isBlockBuilt)"
-    }
+    override fun toString(): String =
+            "PendingBlockchainConfigurationStatus(height=$height, configHash=${config.configHash}, isBlockBuilt=$isBlockBuilt)"
 }

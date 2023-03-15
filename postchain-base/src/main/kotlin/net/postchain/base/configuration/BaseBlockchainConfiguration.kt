@@ -78,8 +78,7 @@ open class BaseBlockchainConfiguration(
     final override val signers get() = configData.signers
     final override val transactionQueueSize: Int
         get() = configData.txQueueSize.toInt()
-    val baseConfigHash = GtvToBlockchainRidFactory.calculateBlockchainRid(baseConfig, cryptoSystem).data
-    val fullConfigHash = GtvToBlockchainRidFactory.calculateBlockchainRid(rawConfig, cryptoSystem).data
+    private val configHash = GtvToBlockchainRidFactory.calculateBlockchainRid(rawConfig, cryptoSystem).data
 
     private fun resolveNodeID(nodeID: Int, subjectID: ByteArray): Int {
         return if (nodeID == NODE_ID_AUTO) {
@@ -207,6 +206,6 @@ open class BaseBlockchainConfiguration(
 
     private fun makeDefaultBBExtensions(): List<BaseBlockBuilderExtension> =
             if (configData.configConsensusStrategy == ConfigConsensusStrategy.HEADER_HASH) {
-                listOf(ConfigurationHashBlockBuilderExtension(baseConfigHash = baseConfigHash, fullConfigHash = fullConfigHash))
+                listOf(ConfigurationHashBlockBuilderExtension(configHash))
             } else listOf()
 }

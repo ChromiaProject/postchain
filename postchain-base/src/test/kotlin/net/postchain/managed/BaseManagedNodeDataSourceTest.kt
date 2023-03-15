@@ -1,6 +1,7 @@
 package net.postchain.managed
 
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.wrap
@@ -277,9 +278,11 @@ class BaseManagedNodeDataSourceTest {
                     "signers" to gtv(listOf(gtv(pubKey0.data)))
             ))
 
+            val fullConfig = baseConfig0.asDict().toMutableMap()
+            fullConfig[KEY_SIGNERS] = gtv(listOf(gtv(pubKey0.data)))
             val expected0 = PendingBlockchainConfiguration(
                     baseConfig0,
-                    baseConfig0.merkleHash(hashCalculator).wrap(),
+                    gtv(fullConfig).merkleHash(hashCalculator).wrap(),
                     listOf(pubKey0)
             )
 
