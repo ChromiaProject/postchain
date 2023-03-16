@@ -68,7 +68,7 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
         grpcCleanupRule.register(
                 InProcessServerBuilder.forName(peerServiceServerName)
                         .directExecutor()
-                        .addService(PeerServiceGrpcImpl(PeerService(node.postchainContext)))
+                        .addService(PeerServiceGrpcImpl(PeerService(node.storage)))
                         .build()
                         .start()
         )

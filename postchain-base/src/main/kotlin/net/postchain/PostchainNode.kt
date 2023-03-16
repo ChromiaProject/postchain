@@ -15,7 +15,6 @@ import net.postchain.core.BaseInfrastructureFactoryProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.Shutdownable
-import net.postchain.core.Storage
 import net.postchain.core.block.BlockQueriesProviderImpl
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
@@ -32,24 +31,20 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
 
     protected val blockchainInfrastructure: BlockchainInfrastructure
     val processManager: BlockchainProcessManager
-    val storage: Storage
-    val nodeDiagnosticContext: NodeDiagnosticContext?
+    val storage = StorageBuilder.buildStorage(appConfig, wipeDb)
+    val nodeDiagnosticContext = JsonNodeDiagnosticContext(version, appConfig.pubKey, appConfig.infrastructure)
     protected val postchainContext: PostchainContext
-    private val logPrefix: String
+    private val logPrefix = peerName(appConfig.pubKey)
 
     companion object : KLogging()
 
     init {
         initMetrics(appConfig)
 
-        storage = StorageBuilder.buildStorage(appConfig, wipeDb)
-
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
-        logPrefix = peerName(appConfig.pubKey)
 
         val blockQueriesProvider = BlockQueriesProviderImpl()
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
-        nodeDiagnosticContext = JsonNodeDiagnosticContext(version, appConfig.pubKey, appConfig.infrastructure)
         postchainContext = PostchainContext(
                 appConfig,
                 NodeConfigurationProviderFactory.createProvider(appConfig) { storage },

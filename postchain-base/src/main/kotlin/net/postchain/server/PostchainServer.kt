@@ -30,7 +30,7 @@ class PostchainServer(appConfig: AppConfig, wipeDb: Boolean = false, private val
             .addService(PostchainServiceGrpcImpl(PostchainService(postchainNode)))
             .addService(PeerServiceGrpcImpl(PeerService(postchainNode.storage)))
             .apply {
-                if (postchainNode.debug) addService(DebugServiceGrpcImpl(DebugService(postchainNode.nodeDiagnosticContext)))
+                if (postchainNode.appConfig.debug) addService(DebugServiceGrpcImpl(DebugService(postchainNode.nodeDiagnosticContext)))
             }
             .build()
 
