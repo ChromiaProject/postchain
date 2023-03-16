@@ -10,6 +10,7 @@ import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.core.TxRid
+import net.postchain.client.defaultHttpHandler
 import net.postchain.client.exception.ClientError
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.hexStringToByteArray
@@ -41,13 +42,7 @@ import java.time.Duration
 
 class PostchainClientImpl(
         override val config: PostchainClientConfig,
-        httpClient: HttpHandler = ApacheClient(HttpClients.custom()
-                .setDefaultRequestConfig(RequestConfig.custom()
-                        .setRedirectsEnabled(false)
-                        .setCookieSpec(StandardCookieSpec.IGNORE)
-                        .setConnectionRequestTimeout(Timeout.ofMilliseconds(config.connectTimeout.toMillis()))
-                        .setResponseTimeout(Timeout.ofMilliseconds(config.responseTimeout.toMillis()))
-                        .build()).build()),
+        httpClient: HttpHandler = defaultHttpHandler(config),
 ) : PostchainClient {
 
     companion object : KLogging()
