@@ -30,14 +30,19 @@ class QueryMajorityRequestStrategy(
     private val failureThreshold = config.endpointPool.size - bftMajorityThreshold + 1
     private val timeout = config.connectTimeout.toMillis() + config.responseTimeout.toMillis()
 
-    override fun <R> request(createRequest: (Endpoint) -> Request, success: (Response) -> R, failure: (Response) -> R, queryMultiple: Boolean): R =
+    override fun <R> request(createRequest: (Endpoint) -> Request,
+                             success: (Response) -> R,
+                             failure: (Response, Endpoint) -> R,
+                             queryMultiple: Boolean): R =
             if (queryMultiple) {
                 requestMultiple(createRequest, success, failure)
             } else {
                 singleStrategy.request(createRequest, success, failure, false)
             }
 
-    private fun <R> requestMultiple(createRequest: (Endpoint) -> Request, success: (Response) -> R, failure: (Response) -> R): R {
+    private fun <R> requestMultiple(createRequest: (Endpoint) -> Request,
+                                    success: (Response) -> R,
+                                    failure: (Response, Endpoint) -> R): R {
         val outcomes = ArrayBlockingQueue<Outcome>(config.endpointPool.size)
 
         config.endpointPool.forEach { endpoint ->
@@ -54,7 +59,7 @@ class QueryMajorityRequestStrategy(
                         endpoint.setUnreachable(unreachableDuration(response.status))
                     }
                     try {
-                        Failure(failure(response) ?: nullValue)
+                        Failure(failure(response, endpoint) ?: nullValue)
                     } catch (e: Exception) {
                         Error(e)
                     }
