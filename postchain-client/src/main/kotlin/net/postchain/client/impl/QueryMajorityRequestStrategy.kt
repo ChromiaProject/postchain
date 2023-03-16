@@ -3,15 +3,11 @@ package net.postchain.client.impl
 import mu.KLogging
 import net.postchain.client.bftMajority
 import net.postchain.client.config.PostchainClientConfig
+import net.postchain.client.defaultAsyncHttpHandler
 import net.postchain.client.exception.NodesDisagree
 import net.postchain.client.request.Endpoint
 import net.postchain.client.request.RequestStrategy
 import net.postchain.client.request.RequestStrategyFactory
-import org.apache.hc.client5.http.config.RequestConfig
-import org.apache.hc.client5.http.cookie.StandardCookieSpec
-import org.apache.hc.client5.http.impl.async.HttpAsyncClients
-import org.apache.hc.core5.util.Timeout
-import org.http4k.client.ApacheAsyncClient
 import org.http4k.client.AsyncHttpHandler
 import org.http4k.core.HttpHandler
 import org.http4k.core.Request
@@ -131,12 +127,5 @@ class Responses(successResponses: Collection<Any>) {
 
 class QueryMajorityRequestStrategyFactory(private val asyncHttpClient: AsyncHttpHandler? = null) : RequestStrategyFactory {
     override fun create(config: PostchainClientConfig, httpClient: HttpHandler): RequestStrategy =
-            QueryMajorityRequestStrategy(config, httpClient, asyncHttpClient
-                    ?: ApacheAsyncClient(HttpAsyncClients.custom()
-                            .setDefaultRequestConfig(RequestConfig.custom()
-                                    .setRedirectsEnabled(false)
-                                    .setCookieSpec(StandardCookieSpec.IGNORE)
-                                    .setConnectionRequestTimeout(Timeout.ofMilliseconds(config.connectTimeout.toMillis()))
-                                    .setResponseTimeout(Timeout.ofMilliseconds(config.responseTimeout.toMillis()))
-                                    .build()).build().apply { start() }))
+            QueryMajorityRequestStrategy(config, httpClient, asyncHttpClient ?: defaultAsyncHttpHandler(config))
 }
