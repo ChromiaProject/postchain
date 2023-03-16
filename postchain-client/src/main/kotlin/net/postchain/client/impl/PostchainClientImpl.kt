@@ -12,6 +12,7 @@ import net.postchain.client.core.TransactionResult
 import net.postchain.client.core.TxRid
 import net.postchain.client.defaultHttpHandler
 import net.postchain.client.exception.ClientError
+import net.postchain.client.request.Endpoint
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
@@ -26,11 +27,6 @@ import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxQuery
 import org.apache.commons.io.input.BoundedInputStream
 import org.apache.commons.lang3.exception.ExceptionUtils
-import org.apache.hc.client5.http.config.RequestConfig
-import org.apache.hc.client5.http.cookie.StandardCookieSpec
-import org.apache.hc.client5.http.impl.classic.HttpClients
-import org.apache.hc.core5.util.Timeout
-import org.http4k.client.ApacheClient
 import org.http4k.core.ContentType
 import org.http4k.core.HttpHandler
 import org.http4k.core.Method
@@ -80,9 +76,9 @@ class PostchainClientImpl(
     }, { response ->
         parseJson(response, CurrentBlockHeight::class.java)?.blockHeight
                 ?: throw IOException("Json parsing failed")
-    }, { response ->
+    }, { response, endpoint ->
         val msg = parseJson(response, ErrorResponse::class.java)?.error ?: "Unknown error"
-        throw ClientError("Cannot fetch current block height: ${response.status} $msg")
+        throw ClientError("Cannot fetch current block height", response.status, msg, endpoint)
     }, false)
 
     @Throws(IOException::class)
@@ -97,7 +93,7 @@ class PostchainClientImpl(
     private fun decodeGtv(response: Response) =
             GtvDecoder.decodeGtv(BoundedInputStream(response.body.stream, config.maxResponseSize.toLong()))
 
-    private fun buildExceptionFromGTV(response: Response): Nothing {
+    private fun buildExceptionFromGTV(response: Response, endpoint: Endpoint): Nothing {
         val responseStream = BoundedInputStream(response.body.stream, config.maxResponseSize.toLong())
         val errorMessage = try {
             GtvDecoder.decodeGtv(responseStream).asString()
@@ -106,7 +102,7 @@ class PostchainClientImpl(
             // Dump it as a string and hope it is either empty or readable text
             String(responseStream.readAllBytes())
         }
-        throw ClientError("Can not make a query: ${response.status} $errorMessage")
+        throw ClientError("Can not make a query", response.status, errorMessage, endpoint)
     }
 
     @Throws(IOException::class)
@@ -119,7 +115,7 @@ class PostchainClientImpl(
                     .body(gson.toJson(Tx(tx.encodeHex())))
         }, { response ->
             TransactionResult(txRid, WAITING, response.status.code, response.status.description)
-        }, { response ->
+        }, { response, _ ->
             val rejectReason =
                     parseJson(response, ErrorResponse::class.java)?.error
                             ?: response.status.description
@@ -166,9 +162,9 @@ class PostchainClientImpl(
                 response.status.code,
                 txStatus?.rejectReason
         )
-    }, { response ->
+    }, { response, endpoint ->
         val msg = parseJson(response, ErrorResponse::class.java)?.error ?: "Unknown error"
-        throw ClientError("Can not check transaction status: ${response.status} $msg")
+        throw ClientError("Can not check transaction status", response.status, msg, endpoint)
     }, true)
 
     override fun confirmationProof(txRid: TxRid): ByteArray? = requestStrategy.request({ endpoint ->
@@ -177,9 +173,9 @@ class PostchainClientImpl(
     }, { response ->
         val confirmationProof = parseJson(response, ConfirmationProof::class.java)
         confirmationProof?.proof?.hexStringToByteArray()
-    }, { response ->
+    }, { response, endpoint ->
         val msg = parseJson(response, ErrorResponse::class.java)?.error ?: "Unknown error"
-        throw ClientError("Can not fetch confirmation proof: ${response.status} $msg")
+        throw ClientError("Can not fetch confirmation proof", response.status, msg, endpoint)
     }, true)
 
     override fun getTransaction(txRid: TxRid): ByteArray? = requestStrategy.request({ endpoint ->
@@ -188,9 +184,9 @@ class PostchainClientImpl(
     }, { response ->
         val txResponse = parseJson(response, Transaction::class.java)
         txResponse?.tx?.hexStringToByteArray()
-    }, { response ->
+    }, { response, endpoint ->
         val msg = parseJson(response, ErrorResponse::class.java)?.error ?: "Unknown error"
-        throw ClientError("Can not fetch transaction: ${response.status} $msg")
+        throw ClientError("Can not fetch transaction", response.status, msg, endpoint)
     }, true)
 
 
