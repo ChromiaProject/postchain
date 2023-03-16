@@ -1,42 +1,18 @@
 Configuration:
   name: Default
-  monitorInterval: 30 # sec.
-
-  Properties:
-    Property:
-    - name: logs
-      value: "logs"
-    - name: logfile
-      value: "debug.log"
-    - name: logpattern
-      value: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
 
   Appenders:
     Console:
       name: ConsoleAppender
       PatternLayout:
-        pattern: ${logpattern}
-    RollingFile:
-      name: FileAppender
-      fileName: "${logs}/${logfile}"
-      filePattern: "${logs}/${logfile}.%d{yyyy-MM-dd-hh-mm}.log"
-      Policies:
-        SizeBasedTriggeringPolicy:
-          size: 1 MB
-      DefaultRollOverStrategy:
-          max: 10
-      PatternLayout:
-        pattern: ${logpattern}
+        pattern: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
 
   Loggers:
-
     Root:
-      level: debug
+      level: info
       AppenderRef:
-      - ref: ConsoleAppender
-      - ref: FileAppender
+        - ref: ConsoleAppender
 
     Logger:
-
     - name: net.postchain
       level: debug
