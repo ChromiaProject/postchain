@@ -20,6 +20,7 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.network.common.LazyPacket
+import net.postchain.network.mastersub.MasterSubQueryManager
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessage
 import net.postchain.network.mastersub.protocol.MsMessage
@@ -33,7 +34,6 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
-import org.mockito.kotlin.verifyNoInteractions
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
@@ -121,7 +121,7 @@ class BlockWiseSubnodeBlockchainConfigListenerTest {
     @Test
     fun `Life cycle test when config fetching is disabled`() {
         val connectionManager: SubConnectionManager = mock()
-        val config: SubnodeBlockchainConfigurationConfig = mock() {
+        val config: SubnodeBlockchainConfigurationConfig = mock {
             on { enabled } doReturn false
         }
         val appConfig: AppConfig = mock {
@@ -139,6 +139,7 @@ class BlockWiseSubnodeBlockchainConfigListenerTest {
     }
 
     class MockSubConnectionManager : SubConnectionManager {
+        override val masterSubQueryManager = MasterSubQueryManager(::sendMessageToMaster)
         val receivedMessages = mutableListOf<MsFindNextBlockchainConfigMessage>()
         val mockResponses = mutableMapOf<Pair<Long, Long>, MutableList<MsNextBlockchainConfigMessage>>()
         lateinit var configListener: MsMessageHandler
@@ -149,7 +150,7 @@ class BlockWiseSubnodeBlockchainConfigListenerTest {
             configListener = handler
         }
 
-        override fun sendMessageToMaster(chainId: Long, message: MsMessage) {
+        override fun sendMessageToMaster(chainId: Long, message: MsMessage): Boolean {
             if (message is MsFindNextBlockchainConfigMessage) {
                 receivedMessages.add(message)
 
@@ -165,7 +166,9 @@ class BlockWiseSubnodeBlockchainConfigListenerTest {
                             null
                     ))
                 }
+                return true
             }
+            return false
         }
 
         private fun sendMessage(message: MsMessage) {

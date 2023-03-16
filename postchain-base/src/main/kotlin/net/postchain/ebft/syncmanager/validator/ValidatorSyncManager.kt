@@ -6,6 +6,8 @@ import mu.KLogging
 import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
+import net.postchain.concurrent.util.get
+import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.NodeRid
 import net.postchain.crypto.Signature
 import net.postchain.ebft.BlockDatabase
@@ -41,8 +43,8 @@ import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.gtv.mapper.toObject
-import nl.komponents.kovenant.task
 import java.util.*
+import java.util.concurrent.CompletableFuture
 
 /**
  * The ValidatorSyncManager handles communications with our peers.
@@ -52,7 +54,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val blockManager: BlockManager,
                            private val blockDatabase: BlockDatabase,
                            private val nodeStateTracker: NodeStateTracker,
-                           isProcessRunning: () -> Boolean,
+                           private val isProcessRunning: () -> Boolean,
                            startInFastSync: Boolean
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
@@ -96,8 +98,13 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun dispatchMessages() {
         for (packet in communicationManager.getPackets()) {
-            val (xPeerId, message) = packet
+            // We do this check for each network message because
+            // communicationManager.getPackets() might give a big portion of messages.
+            if (!workerContext.messageProcessingLatch.awaitPermission { !isProcessRunning() }) {
+                return
+            }
 
+            val (xPeerId, message) = packet
             val nodeIndex = indexOfValidator(xPeerId)
             val isReadOnlyNode = nodeIndex == -1 // This must be a read-only node since not in the validator list
 
@@ -108,9 +115,9 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                     // same case for replica and validator node
                     is GetBlockAtHeight -> sendBlockAtHeight(xPeerId, message.height)
                     is GetBlockRange -> sendBlockRangeFromHeight(xPeerId, message.startAtHeight,
-                        this.statusManager.myStatus.height - 1)
+                            this.statusManager.myStatus.height - 1)
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(xPeerId, message.height,
-                        this.statusManager.myStatus.height - 1)
+                            this.statusManager.myStatus.height - 1)
                     else -> {
                         if (!isReadOnlyNode) { // TODO: [POS-90]: Is it necessary here `isReadOnlyNode`?
                             // validator consensus logic
@@ -191,11 +198,10 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun handleTransaction(message: Transaction) {
         // TODO: reject if queue is full
-        task {
+        CompletableFuture.runAsync {
             val tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(message.data)
             workerContext.engine.getTransactionQueue().enqueue(tx)
         }
-
     }
 
     /**
@@ -220,11 +226,13 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             return
         }
         val blockSignature = blockDatabase.getBlockSignature(blockRID)
-        blockSignature success {
-            val packet = BlockSignature(blockRID, net.postchain.ebft.message.Signature(it.subjectID, it.data))
-            communicationManager.sendPacket(packet, validatorAtIndex(nodeIndex))
-        } fail {
-            logger.debug(it) { "$processName: Error sending BlockSignature" }
+        blockSignature.whenCompleteUnwrapped { response, error ->
+            if (error == null) {
+                val packet = BlockSignature(blockRID, net.postchain.ebft.message.Signature(response.subjectID, response.data))
+                communicationManager.sendPacket(packet, validatorAtIndex(nodeIndex))
+            } else {
+                logger.debug(error) { "$processName: Error sending BlockSignature" }
+            }
         }
     }
 
@@ -264,7 +272,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun fetchBlockAtHeight(height: Long) {
         val nodeIndex = selectRandomNode { it.height > height } ?: return
-        logger.debug{ "$processName: Fetching block at height $height from node $nodeIndex" }
+        logger.debug { "$processName: Fetching block at height $height from node $nodeIndex" }
         communicationManager.sendPacket(GetBlockAtHeight(height), validatorAtIndex(nodeIndex))
     }
 
@@ -290,7 +298,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         val nodeIndex = selectRandomNode {
             it.height == height && (it.blockRID?.contentEquals(blockRID) ?: false)
         } ?: return
-        logger.debug{ "$processName: Fetching unfinished block with RID ${blockRID.toHex()} from node $nodeIndex " }
+        logger.debug { "$processName: Fetching unfinished block with RID ${blockRID.toHex()} from node $nodeIndex " }
         communicationManager.sendPacket(GetUnfinishedBlock(blockRID), validatorAtIndex(nodeIndex))
     }
 
@@ -337,7 +345,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             } else {
                 "(prim = ${statusManager.primaryIndex()}),"
             }
-            logger.debug{ "$processName: (Fast sync) Height: $currentBlockHeight. My node: ${statusManager.getMyIndex()}, $primary block mngr: $bmIntent, status mngr: $smIntent" }
+            logger.debug { "$processName: (Fast sync) Height: $currentBlockHeight. My node: ${statusManager.getMyIndex()}, $primary block mngr: $bmIntent, status mngr: $smIntent" }
         }
         for ((idx, ns) in statusManager.nodeStatuses.withIndex()) {
             val blockRID = ns.blockRID
@@ -366,7 +374,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             } else {
                 "(prim = ${statusManager.primaryIndex()}),"
             }
-            logger.debug{ "$processName: My node: ${statusManager.getMyIndex()}, $primary block mngr: $bmIntent, status mngr: $smIntent" }
+            logger.debug { "$processName: My node: ${statusManager.getMyIndex()}, $primary block mngr: $bmIntent, status mngr: $smIntent" }
         }
         for ((idx, ns) in statusManager.nodeStatuses.withIndex()) {
             val blockRID = ns.blockRID
@@ -448,7 +456,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private fun getRevoltConfiguration(): RevoltConfigurationData {
         return if (blockchainConfiguration is BaseBlockchainConfiguration) {
             blockchainConfiguration.configData.revoltConfigData?.toObject()
-                ?: RevoltConfigurationData.default
+                    ?: RevoltConfigurationData.default
         } else {
             RevoltConfigurationData.default
         }

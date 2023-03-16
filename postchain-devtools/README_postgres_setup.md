@@ -21,15 +21,15 @@ Once the Postgres software has been installed we must create a "postchain" user 
 When we are inside we create the standard developer's default setup. "<YOUR_NAME>" below is the name of your Linux user.
 
 ```sql
-  6 postgres=# create database postchain;
+  6 postgres=# CREATE DATABASE postchain WITH TEMPLATE = template0 LC_COLLATE = 'C.UTF-8' LC_CTYPE = 'C.UTF-8' ENCODING 'UTF-8';
   7  CREATE DATABASE
-  8 postgres=# create user postchain with encrypted password 'postchain';
+  8 postgres=# CREATE USER postchain WITH ENCRYPTED PASSWORD 'postchain';
   9  CREATE ROLE
- 10 postgres=# grant all privileges on database postchain to postchain;
+ 10 postgres=# GRANT ALL PRIVILEGES ON DATABASE postchain TO postchain;
  11  GRANT
- 12 postgres=# create user <YOUR_NAME> with encrypted password '<YOUR_PW>';
+ 12 postgres=# CREATE USER <YOUR_NAME> WITH ENCRYPTED PASSWORD '<YOUR_PW>';
  13  CREATE ROLE
- 14 postgres=# grant postchain to <YOUR_NAME>;
+ 14 postgres=# GRANT postchain TO <YOUR_NAME>;
  15  GRANT ROLE
  16 postgres-# \q
  17
@@ -124,4 +124,3 @@ This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
-

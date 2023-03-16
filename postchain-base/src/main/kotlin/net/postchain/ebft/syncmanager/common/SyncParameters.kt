@@ -55,6 +55,7 @@ data class SyncParameters(
     var mustSyncUntilHeight: Long = -1,
     var maxErrorsBeforeBlacklisting: Int = 10,
     val disconnectTimeout: Long = 10000,
+    val slowSyncEnabled: Boolean = true,
     /**
      * 10 minutes in milliseconds
      */
@@ -65,7 +66,8 @@ data class SyncParameters(
             return SyncParameters(
                     exitDelay = config.getEnvOrLong("POSTCHAIN_FASTSYNC_EXIT_DELAY", "fastsync.exit_delay", 60000),
                     jobTimeout = config.getEnvOrLong("POSTCHAIN_FASTSYNC_JOB_TIMEOUT", "fastsync.job_timeout", 10000),
-                    disconnectTimeout = config.getEnvOrLong("POSTCHAIN_FASTSYNC_DISCONNECT_TIMEOUT", "fastsync.disconnect_timeout", 10000)
+                    disconnectTimeout = config.getEnvOrLong("POSTCHAIN_FASTSYNC_DISCONNECT_TIMEOUT", "fastsync.disconnect_timeout", 10000),
+                    slowSyncEnabled = config.getEnvOrBoolean("POSTCHAIN_SLOWSYNC_ENABLED", "slowsync.enabled", true)
             ).also(init)
         }
     }

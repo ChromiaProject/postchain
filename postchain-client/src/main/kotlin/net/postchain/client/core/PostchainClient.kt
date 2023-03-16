@@ -4,9 +4,10 @@ import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.transaction.TransactionBuilder
 import net.postchain.crypto.KeyPair
 import net.postchain.gtx.Gtx
+import java.io.Closeable
 import java.time.Duration
 
-interface PostchainClient : PostchainBlockClient, PostchainQuery {
+interface PostchainClient : PostchainBlockClient, PostchainQuery, Closeable {
     val config: PostchainClientConfig
 
     /**
@@ -22,7 +23,6 @@ interface PostchainClient : PostchainBlockClient, PostchainQuery {
     /**
      * Post a [Gtx] transaction.
      */
-
     fun postTransaction(tx: Gtx): TransactionResult
 
     /**
@@ -39,4 +39,19 @@ interface PostchainClient : PostchainBlockClient, PostchainQuery {
      * Check the current status of a [TxRid]
      */
     fun checkTxStatus(txRid: TxRid): TransactionResult
+
+    /**
+     * Query current block height.
+     */
+    fun currentBlockHeight(): Long
+
+    /**
+     * Get confirmation proof for transaction.
+     */
+    fun confirmationProof(txRid: TxRid): ByteArray?
+
+    /**
+     * Get raw transaction data
+     */
+    fun getTransaction(txRid: TxRid): ByteArray?
 }

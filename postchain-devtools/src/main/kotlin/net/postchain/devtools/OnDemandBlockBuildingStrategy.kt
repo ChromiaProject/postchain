@@ -5,6 +5,7 @@ package net.postchain.devtools
 import mu.KLogging
 import net.postchain.base.AbstractBlockBuilder
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
+import net.postchain.concurrent.util.get
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
@@ -21,7 +22,6 @@ import kotlin.time.Duration
  * Not only can we tell the blockchain when to build blocks [buildBlocksUpTo()], we can also wait for a block
  * to get done [awaitCommitted()].
  */
-@Suppress("UNUSED_PARAMETER")
 class OnDemandBlockBuildingStrategy(
         val configData: BaseBlockBuildingStrategyConfigurationData,
         val blockQueries: BlockQueries,
@@ -83,4 +83,6 @@ class OnDemandBlockBuildingStrategy(
         val abb = bb as AbstractBlockBuilder
         return abb.transactions.size >= configData.maxBlockTransactions
     }
+
+    override fun blockFailed() {}
 }

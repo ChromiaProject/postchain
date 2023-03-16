@@ -21,17 +21,17 @@ class SyncTestNightly : AbstractSyncTest() {
                 // Single block test
                 arrayOf(1, 1, setOf(0), setOf<Int>(), 1),
                 arrayOf(1, 1, setOf(1), setOf<Int>(), 1),
-                arrayOf(1, 2, setOf(1), setOf<Int>(0), 1),
+                arrayOf(1, 2, setOf(1), setOf(0), 1),
                 arrayOf(2, 0, setOf(1), setOf<Int>(), 1),
 
                 // Multi block test
                 arrayOf(1, 1, setOf(0), setOf<Int>(), 50),
                 arrayOf(1, 1, setOf(1), setOf<Int>(), 50),
-                arrayOf(1, 2, setOf(1), setOf<Int>(0), 50),
+                arrayOf(1, 2, setOf(1), setOf(0), 50),
                 arrayOf(2, 0, setOf(1), setOf<Int>(), 50),
 
                 // Multi node multi blocks
-                arrayOf(4, 4, setOf(0, 1, 2, 4, 5), setOf<Int>(3, 6), 50)
+                arrayOf(4, 4, setOf(0, 1, 2, 4, 5), setOf(3, 6), 50)
 
         )
     }

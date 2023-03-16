@@ -3,6 +3,7 @@
 package net.postchain.integrationtest
 
 import mu.KLogging
+import net.postchain.concurrent.util.get
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.testinfra.TestTransaction
 import org.junit.jupiter.api.Assertions.assertArrayEquals

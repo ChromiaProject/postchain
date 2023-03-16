@@ -92,12 +92,12 @@ open class TestOneOpGtxTransaction(
      */
     open fun buildTheTx() {
         val arg0 = GtvFactory.gtv(1.toLong())
-        val arg1 = GtvFactory.gtv("${id} and ${id}")
+        val arg1 = GtvFactory.gtv("$id and $id")
         val gtx = GtxBuilder(blockchainRID, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
-            .addOperation(op_name, arg0, arg1)
-            .finish()
-            .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))
-            .buildGtx()
+                .addOperation(op_name, arg0, arg1)
+                .finish()
+                .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))
+                .buildGtx()
         cachedGtx = gtx
 
         // So, the question here is: are we doing any work twice? I don't think so

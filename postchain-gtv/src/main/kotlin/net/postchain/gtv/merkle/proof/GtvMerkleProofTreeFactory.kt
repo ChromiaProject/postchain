@@ -205,7 +205,7 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
                 DictGtvPathElement(null, src.string)
             }
             is GtvInteger -> {
-                val l = src.integer.toLong()
+                val l = src.integer
                 if (l != GtvMerkleBasics.UNKNOWN_COLLECTION_POSITION) {
                     if (logger.isTraceEnabled) { logger.trace("Deserialize proof path array path index : $l") }
                     ArrayGtvPathElement(null, l.toInt())

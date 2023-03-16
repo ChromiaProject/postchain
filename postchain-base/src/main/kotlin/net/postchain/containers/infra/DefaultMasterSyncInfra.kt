@@ -47,7 +47,8 @@ open class DefaultMasterSyncInfra(
                 masterConnectionManager,
                 dataSource,
                 processName,
-                afterSubnodeCommitListeners
+                afterSubnodeCommitListeners,
+                postchainContext.blockQueriesProvider
         ).apply { init() }
 
         return DefaultContainerBlockchainProcess(

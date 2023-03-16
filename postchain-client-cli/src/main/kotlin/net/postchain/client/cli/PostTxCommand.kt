@@ -9,6 +9,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.PostchainClientProvider
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.parse.GtvParser
 
 class PostTxCommand(private val clientProvider: PostchainClientProvider) : CliktCommand(name = "post-tx", help = "Posts transactions to a postchain node") {
 
@@ -23,7 +24,7 @@ class PostTxCommand(private val clientProvider: PostchainClientProvider) : Clikt
     ))
             .multiple()
             .transformAll { args ->
-                args.map{ encodeArg(it) }
+                args.map { GtvParser.parse(it) }
             }
 
     private val configFile by configFileOption()

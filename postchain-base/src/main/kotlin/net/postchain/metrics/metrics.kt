@@ -21,6 +21,7 @@ import net.postchain.config.app.AppConfig
 import java.net.InetSocketAddress
 
 const val NODE_PUBKEY_TAG = "node.pubkey"
+const val CONTAINER_NAME_TAG = "containerName"
 const val CHAIN_IID_TAG = "chainIID"
 const val BLOCKCHAIN_RID_TAG = "blockchainRID"
 const val RESULT_TAG = "result"
@@ -48,13 +49,17 @@ private fun initPrometheus(registry: CompositeMeterRegistry, port: Int) {
     registry.config().meterFilter(object : MeterFilter {
         override fun configure(id: Meter.Id, config: DistributionStatisticConfig): DistributionStatisticConfig {
             return DistributionStatisticConfig.builder()
-                .percentiles(0.9, 0.95, 0.99)
-                .build()
-                .merge(config)
+                    .percentiles(0.9, 0.95, 0.99)
+                    .build()
+                    .merge(config)
         }
     })
     val prometheusRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT)
     registry.add(prometheusRegistry)
-    HTTPServer(InetSocketAddress(port), prometheusRegistry.prometheusRegistry, true)
-    PostchainNode.logger.info("Exposing Prometheus metrics on port $port")
+    try {
+        HTTPServer(InetSocketAddress(port), prometheusRegistry.prometheusRegistry, true)
+        PostchainNode.logger.info("Exposing Prometheus metrics on port $port")
+    } catch (e: Exception) {
+        PostchainNode.logger.error(e) { "Error when starting Prometheus metrics on $port" }
+    }
 }

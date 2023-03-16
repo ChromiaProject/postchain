@@ -34,7 +34,7 @@ open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
         with(postchainContext) {
             val syncInfra = EBFTSynchronizationInfrastructure(this)
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext)
+            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, configurationProvider, debug)
             return BaseBlockchainInfrastructure(syncInfra, apiInfra, this)
         }
     }

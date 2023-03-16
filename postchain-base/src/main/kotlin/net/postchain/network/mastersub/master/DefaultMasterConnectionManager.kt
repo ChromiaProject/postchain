@@ -6,6 +6,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.common.ChainsWithOneConnection
+import net.postchain.network.mastersub.MasterSubQueryManager
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.master.netty.NettyMasterConnector
 import net.postchain.network.mastersub.protocol.MsCodec
@@ -20,6 +21,8 @@ class DefaultMasterConnectionManager(
 ) : MasterConnectionManager, MasterConnectorEvents {
 
     companion object : KLogging()
+
+    override val masterSubQueryManager = MasterSubQueryManager { _, message -> sendPacketToSub(message) }
 
     var isShutDown = false
 
@@ -59,11 +62,11 @@ class DefaultMasterConnectionManager(
     }
 
     @Synchronized
-    override fun sendPacketToSub(message: MsMessage) {
+    override fun sendPacketToSub(message: MsMessage): Boolean {
         logger.debug { "sendPacketToSub() - begin, type: ${message.type}" }
         val bcRid = BlockchainRid(message.blockchainRid)
         val chain = chainsWithOneSubConnection.get(bcRid)
-        if (chain != null) {
+        return if (chain != null) {
             val conn = chain.getConnection()
             if (conn != null) {
                 conn.sendPacket { MsCodec.encode(message) }
@@ -71,8 +74,10 @@ class DefaultMasterConnectionManager(
             } else {
                 logger.debug { "sendPacketToSub() - end: conn not found" }
             }
+            true
         } else {
             logger.debug { "sendPacketToSub() - end: chain not found: ${bcRid.toShortHex()}" }
+            false
         }
     }
 

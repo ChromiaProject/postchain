@@ -9,6 +9,9 @@ import net.postchain.base.ConfirmationProof
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.Gtv
+import net.postchain.gtx.GtxQuery
+import spark.Request
+import spark.Response
 
 interface ChainModel {
     val chainIID: Long
@@ -17,6 +20,8 @@ interface ChainModel {
 
 interface ExternalModel : ChainModel {
     val path: String
+    fun get(request: Request, response: Response): Any
+    fun post(request: Request, response: Response): Any
 }
 
 interface Model : ChainModel {
@@ -30,14 +35,12 @@ interface Model : ChainModel {
     fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
     fun getConfirmationProof(txRID: TxRID): ConfirmationProof?
     fun getStatus(txRID: TxRID): ApiStatus
-    fun query(query: Query): QueryResult
-    fun query(query: Gtv): Gtv
+    fun query(query: GtxQuery): Gtv
     fun nodeQuery(subQuery: String): String
     fun debugQuery(subQuery: String?): String
+    fun getBlockchainConfiguration(height: Long = -1): ByteArray?
 }
 
-data class Query(val json: String)
-data class QueryResult(val json: String)
 data class BlockHeight(val blockHeight: Long)
 data class ErrorBody(val error: String = "")
 

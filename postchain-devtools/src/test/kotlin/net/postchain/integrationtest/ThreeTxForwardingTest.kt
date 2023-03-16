@@ -5,6 +5,7 @@ package net.postchain.integrationtest
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.model.ApiTx
 import net.postchain.common.toHex
+import net.postchain.concurrent.util.get
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.testinfra.TestTransaction

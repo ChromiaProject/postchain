@@ -20,6 +20,7 @@ stages:
   - build
   - nightly-tests
   - deploy
+  - dependency-check
   - release
 
 deploy:
@@ -35,6 +36,7 @@ deploy:
 build:
   extends: .setup
   stage: build
+  interruptible: true
   except:
     - dev
     - master
@@ -54,6 +56,16 @@ nightly-tests:
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly verify
   when: manual
+
+dependency-check:
+  extends: .setup
+  stage: dependency-check
+  interruptible: true
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles dependency-check verify
+  only:
+    variables:
+      - $RUN_DEPENDENCY_CHECK == "true"
 
 release:
   stage: release
@@ -88,6 +100,7 @@ variables:
   POSTGRES_USER: postchain
   POSTGRES_PASSWORD: postchain
   POSTCHAIN_DB_URL: jdbc:postgresql://postgres/postchain
+  POSTGRES_INITDB_ARGS: "--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
 
 services:
   - postgres

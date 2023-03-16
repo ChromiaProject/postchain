@@ -3,6 +3,7 @@
 package net.postchain.specialtx
 
 import net.postchain.common.BlockchainRid
+import net.postchain.concurrent.util.get
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.specialtx.SpecialTxTestGTXModule
@@ -32,19 +33,19 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
 
     private fun txBegin(id: Int): GTXTransaction {
         return TestOneOpGtxTransaction(
-            gtxTxFactory,
-            id,
-            GTXAutoSpecialTxExtension.OP_BEGIN_BLOCK,
-            arrayOf()
+                gtxTxFactory,
+                id,
+                GTXAutoSpecialTxExtension.OP_BEGIN_BLOCK,
+                arrayOf()
         ).getGTXTransaction()
     }
 
     private fun txEnd(id: Int): GTXTransaction {
         return TestOneOpGtxTransaction(
-            gtxTxFactory,
-            id,
-            GTXAutoSpecialTxExtension.OP_END_BLOCK,
-            arrayOf()
+                gtxTxFactory,
+                id,
+                GTXAutoSpecialTxExtension.OP_END_BLOCK,
+                arrayOf()
         ).getGTXTransaction()
     }
 
@@ -69,28 +70,28 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
         // --------------------
         var currentHeight = 0L
         buildBlockNoWait(
-            nodes, chainId, currentHeight,
-            txBegin(0), // We MUST start with a special begin TX (or we will get an exception)
-            tx(1),
-            txEnd(2) // We MUST end with a special TX
+                nodes, chainId, currentHeight,
+                txBegin(0), // We MUST start with a special begin TX (or we will get an exception)
+                tx(1),
+                txEnd(2) // We MUST end with a special TX
         )
         awaitHeight(chainId, currentHeight)
 
         currentHeight++
         buildBlockNoWait(
-            nodes, chainId, currentHeight,
-            txBegin(3),
-            tx(4),
-            txEnd(5)
+                nodes, chainId, currentHeight,
+                txBegin(3),
+                tx(4),
+                txEnd(5)
         )
         awaitHeight(chainId, currentHeight)
 
         currentHeight++
         buildBlockNoWait(
-            nodes, chainId, currentHeight,
-            txBegin(6),
-            tx(7),
-            txEnd(8)
+                nodes, chainId, currentHeight,
+                txBegin(6),
+                tx(7),
+                txEnd(8)
         )
         awaitHeight(chainId, currentHeight)
 

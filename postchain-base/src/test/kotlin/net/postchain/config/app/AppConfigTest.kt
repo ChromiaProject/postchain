@@ -9,6 +9,7 @@ import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
 import org.junit.jupiter.api.Test
 import java.io.File
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 
 class AppConfigTest {
 
@@ -36,6 +37,31 @@ class AppConfigTest {
         assertIsDefaultOrEqualsToEnvVar(appConfig.databaseSchema, "public", "POSTCHAIN_DB_SCHEMA")
         assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUsername, "POSTCHAIN_DB_USERNAME")
         assertIsEmptyOrEqualsToEnvVar(appConfig.databasePassword, "POSTCHAIN_DB_PASSWORD")
+    }
+
+    @Test
+    fun overridesFileTest() {
+        val appConfig = AppConfig.fromPropertiesFile(
+                File(javaClass.getResource("/net/postchain/config/sub.properties")!!.file)
+        )
+        assertEquals("postchain", appConfig.databaseUsername)
+        assertFalse(appConfig.containsKey("foo"))
+
+        val appConfigOverridden = AppConfig.fromPropertiesFile(
+                File(javaClass.getResource("/net/postchain/config/sub.properties")!!.file),
+                overrides = mapOf("database.username" to "postchain2", "foo" to 123)
+        )
+        assertEquals("postchain2", appConfigOverridden.databaseUsername)
+        assertEquals(123, appConfigOverridden.getInt("foo"))
+    }
+
+    @Test
+    fun overridesEnvTest() {
+        val appConfig = AppConfig.fromEnvironment(false)
+        assertFalse(appConfig.containsKey("foo"))
+
+        val appConfigOverridden = AppConfig.fromEnvironment(false, overrides = mapOf("foo" to 123))
+        assertEquals(123, appConfigOverridden.getInt("foo"))
     }
 
     private fun loadFromResource(filename: String): AppConfig {

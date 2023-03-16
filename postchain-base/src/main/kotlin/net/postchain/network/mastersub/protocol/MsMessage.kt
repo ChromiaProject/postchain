@@ -1,11 +1,16 @@
 package net.postchain.network.mastersub.protocol
 
+import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
+import net.postchain.core.block.BlockDetail
+import net.postchain.core.block.BlockQueries
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.mapper.GtvObjectMapper
+import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.mastersub.protocol.MsMessageType.*
 
 // TODO: [POS-164]: Fix kdoc
@@ -40,7 +45,12 @@ enum class MsMessageType {
     FindNextBlockchainConfig,
     NextBlockchainConfig,
     ConnectedPeers,
-    CommittedBlock
+    CommittedBlock,
+    QueryRequest,
+    QueryResponse,
+    QueryFailure,
+    BlockAtHeightRequest,
+    BlockAtHeightResponse
 }
 
 /**
@@ -189,12 +199,145 @@ class MsCommittedBlockMessage(
     }
 }
 
+/**
+ * Make a query to a chain running on another (sub)node.
+ */
+class MsQueryRequest(
+        override val blockchainRid: ByteArray,
+        val requestId: Long,
+
+        /** `null` means to query chain0 using [DirectoryDataSource], otherwise use [BlockQueries] to query specific chain. */
+        val targetBlockchainRid: BlockchainRid?,
+
+        val name: String,
+        val args: Gtv
+) : MsMessage {
+    override val type = QueryRequest.ordinal
+
+    constructor(blockchainRid: ByteArray, payload: Gtv) : this(
+            blockchainRid,
+            payload[0].asInteger(),
+            if (payload[1].isNull()) null else BlockchainRid(payload[1].asByteArray()),
+            payload[2].asString(),
+            payload[3],
+    )
+
+    override fun getPayload(): Gtv {
+        return gtv(
+                gtv(requestId),
+                if (targetBlockchainRid != null) gtv(targetBlockchainRid) else GtvNull,
+                gtv(name),
+                args,
+        )
+    }
+}
+
+/**
+ * Successful response to [MsQueryRequest].
+ */
+class MsQueryResponse(
+        override val blockchainRid: ByteArray,
+        val requestId: Long,
+        val result: Gtv
+) : MsMessage {
+    override val type = QueryResponse.ordinal
+
+    constructor(blockchainRid: ByteArray, payload: Gtv) : this(
+            blockchainRid,
+            payload[0].asInteger(),
+            payload[1],
+    )
+
+    override fun getPayload(): Gtv {
+        return gtv(
+                gtv(requestId),
+                result,
+        )
+    }
+}
+
+/**
+ * Request a block from a chain running on another (sub)node.
+ */
+class MsBlockAtHeightRequest(
+        override val blockchainRid: ByteArray,
+        val requestId: Long,
+        val targetBlockchainRid: BlockchainRid,
+        val height: Long
+) : MsMessage {
+    override val type = BlockAtHeightRequest.ordinal
+
+    constructor(blockchainRid: ByteArray, payload: Gtv) : this(
+            blockchainRid,
+            payload[0].asInteger(),
+            BlockchainRid(payload[1].asByteArray()),
+            payload[2].asInteger()
+    )
+
+    override fun getPayload(): Gtv {
+        return gtv(
+                gtv(requestId),
+                gtv(targetBlockchainRid),
+                gtv(height)
+        )
+    }
+}
+
+/**
+ * Successful response to [MsBlockAtHeightRequest].
+ */
+class MsBlockAtHeightResponse(
+        override val blockchainRid: ByteArray,
+        val requestId: Long,
+        /** `null` means block not found. */
+        val block: BlockDetail?
+) : MsMessage {
+    override val type = BlockAtHeightResponse.ordinal
+
+    constructor(blockchainRid: ByteArray, payload: Gtv) : this(
+            blockchainRid,
+            payload[0].asInteger(),
+            if (payload[1].isNull()) null else GtvObjectMapper.fromGtv(payload[1], BlockDetail::class),
+    )
+
+    override fun getPayload(): Gtv {
+        return gtv(
+                gtv(requestId),
+                if (block == null) GtvNull else GtvObjectMapper.toGtvDictionary(block),
+        )
+    }
+}
+
+/**
+ * Unsuccessful response to [MsQueryRequest] or [MsBlockAtHeightRequest].
+ */
+class MsQueryFailure(
+        override val blockchainRid: ByteArray,
+        val requestId: Long,
+        val errorMessage: String
+) : MsMessage {
+    override val type = QueryFailure.ordinal
+
+    constructor(blockchainRid: ByteArray, payload: Gtv) : this(
+            blockchainRid,
+            payload[0].asInteger(),
+            payload[1].asString(),
+    )
+
+    override fun getPayload(): Gtv {
+        return gtv(
+                gtv(requestId),
+                gtv(errorMessage),
+        )
+    }
+}
+
 // ----------------
 // Utility functions
 // ----------------
 
 fun encodePeers(singers: List<ByteArray>): ByteArray {
-    val gtv = singers.map { gtv(it) }.let { gtv(it) }
+    val gtv = gtv(singers.map { gtv(it) })
     return GtvEncoder.encodeGtv(gtv)
 }
 

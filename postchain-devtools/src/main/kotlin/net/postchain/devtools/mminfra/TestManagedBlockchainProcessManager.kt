@@ -5,27 +5,32 @@ import net.postchain.PostchainContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadWriteConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.config.node.ManagedNodeConfigurationProvider
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.block.BlockTrace
 import net.postchain.devtools.awaitDebug
 import net.postchain.devtools.utils.ChainUtil
+import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.managed.LocalBlockchainInfo
+import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedNodeDataSource
+import net.postchain.managed.config.ManagedDataSourceAware
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
 
-class TestManagedBlockchainProcessManager(
+open class TestManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure,
         blockchainConfigProvider: BlockchainConfigurationProvider,
         val testDataSource: ManagedNodeDataSource,
         bpmExtensions: List<BlockchainProcessManagerExtension> = listOf()
-)
-    : ManagedBlockchainProcessManager(
+) : ManagedBlockchainProcessManager(
         postchainContext,
         blockchainInfrastructure,
         blockchainConfigProvider,
@@ -35,6 +40,13 @@ class TestManagedBlockchainProcessManager(
     companion object : KLogging()
 
     private val blockchainStarts = ConcurrentHashMap<Long, BlockingQueue<Long>>()
+
+    override fun initManagedEnvironment(blockchainConfig: ManagedDataSourceAware) {
+        dataSource = blockchainConfig.dataSource
+        peerListVersion = dataSource.getPeerListVersion()
+        (postchainContext.nodeConfigProvider as? ManagedNodeConfigurationProvider)?.setPeerInfoDataSource(dataSource)
+        (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)?.setManagedDataSource(dataSource)
+    }
 
     /**
      * Overriding the original method, so that we now, instead of checking the DB for what
@@ -60,7 +72,7 @@ class TestManagedBlockchainProcessManager(
 
     private fun getQueue(chainId: Long): BlockingQueue<Long> {
         return blockchainStarts.computeIfAbsent(chainId) {
-            LinkedBlockingQueue<Long>()
+            LinkedBlockingQueue()
         }
     }
 
@@ -84,6 +96,10 @@ class TestManagedBlockchainProcessManager(
         return blockchainRid
     }
 
+    override fun buildMessageProcessingLatch(blockchainConfig: BlockchainConfiguration) = MessageProcessingLatch {
+        true
+    }
+
     /**
      * Awaits a start/restart of a BC.
      *
@@ -95,7 +111,7 @@ class TestManagedBlockchainProcessManager(
      */
     fun awaitStarted(nodeIndex: Int, chainId: Long, atLeastHeight: Long) {
         awaitDebug("++++++ AWAIT node idx: " + nodeIndex + ", chain: " + chainId + ", height: " + atLeastHeight)
-        while (lastHeightStarted.get(chainId) ?: -2L < atLeastHeight) {
+        while ((lastHeightStarted[chainId] ?: -2L) < atLeastHeight) {
             Thread.sleep(10)
         }
         awaitDebug("++++++ WAIT OVER! node idx: " + nodeIndex + ", chain: " + chainId + ", height: " + atLeastHeight)

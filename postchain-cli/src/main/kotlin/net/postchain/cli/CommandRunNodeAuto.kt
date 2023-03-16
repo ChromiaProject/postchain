@@ -112,7 +112,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
                                                 println(e.message)
                                                 return@run
                                             } catch (e: Exception) {
-                                                println("Can't not add configuration: ${e.message}")
+                                                println("Can't add configuration: ${e.message}")
                                                 return@run
                                             }
 
@@ -124,7 +124,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
                                             } catch (e: CliException) {
                                                 println(e.message)
                                             } catch (e: Exception) {
-                                                println("Can't not add configuration: ${e.message}")
+                                                println("Can't add configuration: ${e.message}")
                                             }
                                         }
                                     }

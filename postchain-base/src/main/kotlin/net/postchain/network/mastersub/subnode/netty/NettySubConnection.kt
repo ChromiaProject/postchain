@@ -15,7 +15,6 @@ import net.postchain.network.mastersub.subnode.SubConnection
 import net.postchain.network.mastersub.subnode.SubConnectionDescriptor
 import net.postchain.network.netty2.NettyClient
 import net.postchain.network.netty2.Transport
-import nl.komponents.kovenant.task
 import java.net.InetSocketAddress
 import java.net.SocketAddress
 
@@ -38,12 +37,11 @@ class NettySubConnection(
 
         nettyClient.apply {
             setChannelHandler(this@NettySubConnection)
-            val future = connect(masterAddress()).await()
-            if (future.isSuccess) {
-                onConnected()
-            } else {
-                logger.info("Connection failed", future.cause())
-                onDisconnected()
+            connect(masterAddress()).await().apply {
+                if (!isSuccess) {
+                    logger.info("Connection failed: ${cause().message}")
+                    onDisconnected()
+                }
             }
         }
     }
@@ -82,9 +80,7 @@ class NettySubConnection(
     }
 
     override fun close() {
-        task {
-            nettyClient.shutdown()
-        }
+        nettyClient.shutdownAsync()
     }
 
     override fun descriptor(): SubConnectionDescriptor {

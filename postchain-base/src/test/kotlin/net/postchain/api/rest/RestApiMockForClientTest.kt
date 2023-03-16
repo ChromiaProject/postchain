@@ -4,8 +4,6 @@ package net.postchain.api.rest
 
 import mu.KLogging
 import net.postchain.api.rest.controller.Model
-import net.postchain.api.rest.controller.Query
-import net.postchain.api.rest.controller.QueryResult
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.ApiTx
@@ -21,7 +19,11 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
+import net.postchain.gtx.GtxQuery
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 class RestApiMockForClientManual {
@@ -38,6 +40,7 @@ class RestApiMockForClientManual {
         logger.debug { "Stopped" }
     }
 
+    @Disabled
     @Test
     fun startMockRestApi() {
         val model = MockModel()
@@ -58,12 +61,12 @@ class RestApiMockForClientManual {
         val statusNotFound = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
         val statusWaiting = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 
-        val blocks = listOf<BlockDetail>(
+        val blocks = listOf(
                 BlockDetail(
                         "blockRid001".toByteArray(),
                         blockchainRID.toByteArray(), "some header".toByteArray(),
                         0,
-                        listOf<TxDetail>(),
+                        listOf(),
                         "signatures".toByteArray(),
                         1574849700),
                 BlockDetail(
@@ -71,7 +74,7 @@ class RestApiMockForClientManual {
                         "blockRid001".toByteArray(),
                         "some other header".toByteArray(),
                         1,
-                        listOf<TxDetail>(TxDetail("tx1".toByteArray(), "tx1".toByteArray(), "tx1".toByteArray())),
+                        listOf(TxDetail("tx1".toByteArray(), "tx1".toByteArray(), "tx1".toByteArray())),
                         "signatures".toByteArray(),
                         1574849760),
                 BlockDetail(
@@ -79,7 +82,7 @@ class RestApiMockForClientManual {
                         "blockRid002".toByteArray(),
                         "yet another header".toByteArray(),
                         2,
-                        listOf<TxDetail>(),
+                        listOf(),
                         "signatures".toByteArray(),
                         1574849880),
                 BlockDetail(
@@ -87,7 +90,7 @@ class RestApiMockForClientManual {
                         "blockRid003".toByteArray(),
                         "guess what? Another header".toByteArray(),
                         3,
-                        listOf<TxDetail>(
+                        listOf(
                                 TxDetail("tx2".toByteArray(), "tx2".toByteArray(), "tx2".toByteArray()),
                                 TxDetail("tx3".toByteArray(), "tx3".toByteArray(), "tx3".toByteArray()),
                                 TxDetail("tx4".toByteArray(), "tx4".toByteArray(), "tx4".toByteArray())
@@ -130,20 +133,15 @@ class RestApiMockForClientManual {
             }
         }
 
-        override fun query(query: Query): QueryResult {
-            return QueryResult(when (query.json) {
-                """{"a":"oknullresponse","c":3}""" -> ""
-                """{"a":"okemptyresponse","c":3}""" -> """{}"""
-                """{"a":"oksimpleresponse","c":3}""" -> """{"test":"hi"}"""
-                """{"a":"usermistake","c":3}""" -> throw UserMistake("expected error")
-                """{"a":"programmermistake","c":3}""" -> throw ProgrammerMistake("expected error")
+        override fun query(query: GtxQuery): Gtv {
+            return when (query.args) {
+                gtv(mapOf("a" to gtv("oknullresponse"), "c" to gtv(3))) -> GtvNull
+                gtv(mapOf("a" to gtv("okemptyresponse"), "c" to gtv(3))) -> gtv(mapOf())
+                gtv(mapOf("a" to gtv("oksimpleresponse"), "c" to gtv(3))) -> gtv(mapOf("test" to gtv("hi")))
+                gtv(mapOf("a" to gtv("usermistake"), "c" to gtv(3))) -> throw UserMistake("expected error")
+                gtv(mapOf("a" to gtv("programmermistake"), "c" to gtv(3))) -> throw ProgrammerMistake("expected error")
                 else -> throw ProgrammerMistake("unexpected error")
-            })
-        }
-
-        //TODO Should tests in base have knowledge of GTV? If yes, convert getTransactionsInfo to use GTV
-        override fun query(query: Gtv): Gtv {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            }
         }
 
         override fun nodeQuery(subQuery: String): String = TODO()
@@ -170,7 +168,7 @@ class RestApiMockForClientManual {
 
         override fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt> {
             var queryBlocks = blocks
-            var transactionsInfo: MutableList<TransactionInfoExt> = mutableListOf()
+            val transactionsInfo: MutableList<TransactionInfoExt> = mutableListOf()
             queryBlocks = queryBlocks.sortedByDescending { blockDetail -> blockDetail.height }
             for (block in queryBlocks) {
                 for (tx in block.transactions) {
@@ -182,6 +180,10 @@ class RestApiMockForClientManual {
 
         override fun debugQuery(subQuery: String?): String {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
+        override fun getBlockchainConfiguration(height: Long): ByteArray? {
+            TODO("Not yet implemented")
         }
 
     }

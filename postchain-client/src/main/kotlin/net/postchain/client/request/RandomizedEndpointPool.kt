@@ -1,5 +1,6 @@
 package net.postchain.client.request
 
+import net.postchain.client.bftMajority
 import java.security.SecureRandom
 
 class RandomizedEndpointPool(urls: List<String>) : EndpointPool {
@@ -10,10 +11,12 @@ class RandomizedEndpointPool(urls: List<String>) : EndpointPool {
         require(urls.isNotEmpty()) { "Must provide at least one url" }
     }
 
+    override val size: Int = endpoints.size
+
     override fun iterator(): Iterator<Endpoint> {
         if (endpoints.size == 1) return endpoints.iterator()
         val reachableEndpoints = endpoints.filter { it.isReachable() }
-        if (reachableEndpoints.isEmpty()) {
+        if (reachableEndpoints.size < bftMajority(size)) {
             endpoints.forEach { it.setReachable() }
             return iterator()
         }

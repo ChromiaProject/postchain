@@ -4,6 +4,7 @@ import assertk.assert
 import assertk.assertions.isEqualTo
 import net.postchain.PostchainContext
 import net.postchain.common.BlockchainRid
+import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.EContext
 import net.postchain.core.SynchronizationInfrastructureExtension

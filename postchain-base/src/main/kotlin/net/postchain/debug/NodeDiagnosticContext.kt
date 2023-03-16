@@ -1,32 +1,13 @@
-// Copyright (c) 2020 ChromaWay AB. See README for license information.
-
 package net.postchain.debug
 
-interface NodeDiagnosticContext {
+import net.postchain.common.BlockchainRid
 
-    /**
-     * Adds [DiagnosticProperty] property to the context
-     */
-    fun addProperty(property: DiagnosticProperty, value: Any?)
+interface NodeDiagnosticContext : MutableMap<DiagnosticProperty, DiagnosticValue> {
+    fun format(): String
 
-    /**
-     * Adds lazy [DiagnosticProperty] property to the context
-     */
-    fun addProperty(property: DiagnosticProperty, lazyValue: () -> Any?)
-
-    /**
-     * Returns [DiagnosticProperty] property by key
-     */
-    fun getProperty(property: DiagnosticProperty): Any?
-
-    /**
-     * Returns properties key-value map where key is [DiagnosticProperty.prettyName]
-     */
-    fun getProperties(): Map<String, Any?>
-
-    /**
-     * Removes property by [DiagnosticProperty] key
-     */
-    fun removeProperty(property: DiagnosticProperty)
+    fun hasBlockchainErrors(blockchainRid: BlockchainRid): Boolean
+    fun blockchainErrorQueue(blockchainRid: BlockchainRid): DiagnosticQueue<String>
+    fun blockchainData(blockchainRid: BlockchainRid): DiagnosticData
+    fun removeBlockchainData(blockchainRid: BlockchainRid?): DiagnosticData?
+    fun clearBlockchainData()
 }
-

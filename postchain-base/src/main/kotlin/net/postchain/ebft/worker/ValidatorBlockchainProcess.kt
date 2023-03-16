@@ -4,9 +4,12 @@ package net.postchain.ebft.worker
 
 import mu.KLogging
 import net.postchain.base.NetworkAwareTxQueue
+import net.postchain.concurrent.util.get
 import net.postchain.core.framework.AbstractBlockchainProcess
+import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DpNodeType
+import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
@@ -20,7 +23,10 @@ import java.lang.Thread.sleep
  *
  * @param workerContext The stuff needed to start working.
  */
-class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFastSync: Boolean) : AbstractBlockchainProcess("validator-${workerContext.processName}", workerContext.engine) {
+class ValidatorBlockchainProcess(
+        val workerContext: WorkerContext,
+        startWithFastSync: Boolean
+) : AbstractBlockchainProcess("validator-${workerContext.processName}", workerContext.engine) {
 
     companion object : KLogging()
 
@@ -70,8 +76,10 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
     fun isInFastSyncMode() = syncManager.isInFastSync()
 
     override fun action() {
-        syncManager.update()
-        sleep(20)
+        if (workerContext.messageProcessingLatch.awaitPermission { !isProcessRunning() }) {
+            syncManager.update()
+            sleep(20)
+        }
     }
 
     override fun cleanup() {
@@ -79,8 +87,8 @@ class ValidatorBlockchainProcess(val workerContext: WorkerContext, startWithFast
         workerContext.shutdown()
     }
 
-    override fun registerDiagnosticData(diagnosticData: MutableMap<DiagnosticProperty, () -> Any>) {
+    override fun registerDiagnosticData(diagnosticData: DiagnosticData) {
         super.registerDiagnosticData(diagnosticData)
-        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = { DpNodeType.NODE_TYPE_VALIDATOR.prettyName }
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_VALIDATOR.prettyName)
     }
 }

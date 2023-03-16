@@ -18,6 +18,12 @@ class ResourceLimitTypesTest {
         assertEquals(STORAGE, ResourceLimitType.from("STORAGE"))
         assertEquals(null, ResourceLimitType.from("storage"))
 
+        assertEquals(IO_READ, ResourceLimitType.from("IO_READ"))
+        assertEquals(null, ResourceLimitType.from("io_read"))
+
+        assertEquals(IO_WRITE, ResourceLimitType.from("IO_WRITE"))
+        assertEquals(null, ResourceLimitType.from("io_write"))
+
         assertEquals(null, ResourceLimitType.from("foo"))
     }
 
@@ -26,6 +32,8 @@ class ResourceLimitTypesTest {
         assertEquals(CPU, ResourceLimit.limitType(Cpu(1)))
         assertEquals(RAM, ResourceLimit.limitType(Ram(1)))
         assertEquals(STORAGE, ResourceLimit.limitType(Storage(1)))
+        assertEquals(IO_READ, ResourceLimit.limitType(IoRead(1)))
+        assertEquals(IO_WRITE, ResourceLimit.limitType(IoWrite(1)))
     }
 
     @Test
@@ -38,6 +46,12 @@ class ResourceLimitTypesTest {
 
         assertEquals(Storage(30), ResourceLimitFactory.fromPair("storage" to 30L))
         assertEquals(Storage(31), ResourceLimitFactory.fromPair("STORAGE" to 31L))
+
+        assertEquals(IoRead(50), ResourceLimitFactory.fromPair("io_read" to 50L))
+        assertEquals(IoRead(31), ResourceLimitFactory.fromPair("IO_READ" to 31L))
+
+        assertEquals(IoWrite(50), ResourceLimitFactory.fromPair("io_write" to 50L))
+        assertEquals(IoWrite(31), ResourceLimitFactory.fromPair("IO_WRITE" to 31L))
 
         // unknown key
         assertEquals(null, ResourceLimitFactory.fromPair("foo" to 31L))

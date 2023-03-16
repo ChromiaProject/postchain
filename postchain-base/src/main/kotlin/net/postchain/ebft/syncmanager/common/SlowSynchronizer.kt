@@ -3,6 +3,8 @@ package net.postchain.ebft.syncmanager.common
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.concurrent.util.get
+import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.core.NodeRid
@@ -12,7 +14,13 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
 import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.BlockDatabase
-import net.postchain.ebft.message.*
+import net.postchain.ebft.message.BlockHeader
+import net.postchain.ebft.message.BlockRange
+import net.postchain.ebft.message.CompleteBlock
+import net.postchain.ebft.message.GetBlockAtHeight
+import net.postchain.ebft.message.GetBlockHeaderAndBlock
+import net.postchain.ebft.message.GetBlockRange
+import net.postchain.ebft.message.Status
 import net.postchain.ebft.worker.WorkerContext
 
 /**
@@ -34,7 +42,7 @@ class SlowSynchronizer(
         val isProcessRunning: () -> Boolean
 ) : AbstractSynchronizer(wrkrCntxt) {
 
-    private var stateMachine = SlowSyncStateMachine.buildWithChain(blockchainConfiguration.chainID.toInt())
+    private val stateMachine = SlowSyncStateMachine.buildWithChain(blockchainConfiguration.chainID.toInt())
 
     val peerStatuses = SlowSyncPeerStatuses(params) // Don't want to put this in [AbstractSynchronizer] b/c too much generics.
 
@@ -53,15 +61,18 @@ class SlowSynchronizer(
 
             val sleepData = SlowSyncSleepData()
             while (isProcessRunning()) {
-                if (stateMachine.state == SlowSyncStates.WAIT_FOR_COMMIT) {
-                    // We shouldn't need to handle failed commits here, since we have the callback
-                    logger.warn("Why didn't we manage to commit all blocks after the sleep? " +
-                            "Expected height: ${stateMachine.lastUncommittedBlockHeight} but " +
-                            "actual height: ${stateMachine.lastCommittedBlockHeight}")
-                } else {
-                    processMessages(sleepData)
-                    val now = System.currentTimeMillis()
-                    stateMachine.maybeGetBlockRange(now, ::sendRequest) // It's up to the state machine if we should send a new request
+                synchronized(stateMachine) {
+                    if (stateMachine.state == SlowSyncStates.WAIT_FOR_COMMIT) {
+                        // We shouldn't need to handle failed commits here, since we have the callback
+                        logger.debug {
+                            "Still waiting for block at height ${stateMachine.lastUncommittedBlockHeight} to be committed. " +
+                                    "Last committed height: ${stateMachine.lastCommittedBlockHeight}. Going back to sleep."
+                        }
+                    } else {
+                        processMessages(sleepData)
+                        val now = System.currentTimeMillis()
+                        stateMachine.maybeGetBlockRange(now, ::sendRequest) // It's up to the state machine if we should send a new request
+                    }
                 }
                 Thread.sleep(sleepData.currentSleepMs)
             }
@@ -102,11 +113,16 @@ class SlowSynchronizer(
      * The only data we expect to receive is [BlockRange] from now on, we'll drop all other data packages
      * (however we will accept and handle Get-requests for blocks from other nodes)
      *
-     * @param oldSleepData is the sleep information from the previous sleep cycle
      * @return SleepData we should use to sleep
      */
     private fun processMessages(sleepData: SlowSyncSleepData) {
         for (packet in communicationManager.getPackets()) {
+            // We do this check for each network message because
+            // communicationManager.getPackets() might give a big portion of messages.
+            if (!workerContext.messageProcessingLatch.awaitPermission { !isProcessRunning() }) {
+                return
+            }
+
             val peerId = packet.first
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue
@@ -127,7 +143,7 @@ class SlowSynchronizer(
                         val processedBlocks = handleBlockRange(peerId, message.blocks, message.startAtHeight)
                         sleepData.updateData(processedBlocks)
                     }
-                    is Status ->  { ; } // Do nothing, we don't measure drained
+                    is Status -> {} // Do nothing, we don't measure drained
                     else -> logger.debug { "Unhandled type $message from peer $peerId" }
                 }
             } catch (e: Exception) {
@@ -162,27 +178,29 @@ class SlowSynchronizer(
                     "(We wanted ${stateMachine.waitForNodeId} to do it).")
         }
 
-        logger.info("Got ${blocks.size} from peer $peerId (starting at height $startingAtHeight).")
+        logger.debug("Got ${blocks.size} from peer $peerId (starting at height $startingAtHeight).")
         var expectedHeight = startingAtHeight
         for (block in blocks) {
             val blockData = block.data
             val headerWitnessPair = handleBlockHeader(peerId, blockData.header, block.witness, expectedHeight)
                 ?: return (expectedHeight - startingAtHeight).toInt() // Header failed for some reason. Just give up
-            handleUnfinishedBlock(
-                peerId,
-                headerWitnessPair.first,
-                headerWitnessPair.second,
-                expectedHeight,
-                blockData.transactions
+            handleBlock(
+                    peerId,
+                    headerWitnessPair.first,
+                    headerWitnessPair.second,
+                    expectedHeight,
+                    blockData.transactions
             )
             expectedHeight++ // We expect blocks to be in the correct order in the list
         }
         val processedBlocks = (expectedHeight - startingAtHeight).toInt()
         if (processedBlocks != blocks.size) {
+            stateMachine.state = SlowSyncStates.WAIT_FOR_ACTION
             throw ProgrammerMistake("processedBlocks != blocks.size")
         }
-
-        stateMachine.updateToWaitForCommit(processedBlocks, System.currentTimeMillis())
+        if (processedBlocks == 0) {
+            stateMachine.state = SlowSyncStates.WAIT_FOR_ACTION
+        }
         return processedBlocks
     }
 
@@ -190,10 +208,10 @@ class SlowSynchronizer(
      * @return true if we could extract the header and it was considered valid.
      */
     private fun handleBlockHeader(
-        peerId: NodeRid,
-        header: ByteArray,
-        witness: ByteArray,
-        requestedHeight: Long
+            peerId: NodeRid,
+            header: ByteArray,
+            witness: ByteArray,
+            requestedHeight: Long
     ): Pair<net.postchain.core.block.BlockHeader, BlockWitness>? {
 
         if (header.isEmpty()) {
@@ -219,30 +237,31 @@ class SlowSynchronizer(
         val validator = blockchainConfiguration.getBlockHeaderValidator()
         val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(h)
 
-        return if (validator.validateWitness(w, witnessBuilder)) {
+        return try {
+            validator.validateWitness(w, witnessBuilder)
             logger.trace { "handleBlockHeader() -- Header for height $requestedHeight received" }
             Pair(h, w)
-        } else {
-            peerStatuses.maybeBlacklist(peerId, "Slow Sync: Invalid header received. Height: $requestedHeight")
+        } catch (e: Exception) {
+            peerStatuses.maybeBlacklist(peerId, "Slow Sync: Invalid header received (${e.message}). Height: $requestedHeight")
             null
         }
     }
 
-    private fun handleUnfinishedBlock(
-        peerId: NodeRid,
-        header: net.postchain.core.block.BlockHeader,
-        witness: BlockWitness,
-        height: Long,
-        txs: List<ByteArray>
+    private fun handleBlock(
+            peerId: NodeRid,
+            header: net.postchain.core.block.BlockHeader,
+            witness: BlockWitness,
+            height: Long,
+            txs: List<ByteArray>
     ) {
         if (header !is BaseBlockHeader) {
             throw BadDataMistake(BadDataType.BAD_MESSAGE, "Expected BaseBlockHeader")
         }
 
-        unfinishedTrace("Received for height: $height")
+        logger.trace { "handleBlock() - Received for height: $height" }
         var bTrace: BlockTrace? = null
         if (logger.isTraceEnabled) {
-            logger.trace { "handleUnfinishedBlock() - Creating block trace with procname: $procName , height: $height " }
+            logger.trace("handleBlock() - Creating block trace with procname: $procName , height: $height")
 
             bTrace = BlockTrace.build(procName, header.blockRID, height)
         }
@@ -250,6 +269,7 @@ class SlowSynchronizer(
         // The witness has already been verified in handleBlockHeader().
         val block = BlockDataWithWitness(header, txs, witness)
 
+        stateMachine.updateToWaitForCommit(height, System.currentTimeMillis())
         commitBlock(peerId, bTrace, block, height)
     }
 
@@ -258,35 +278,41 @@ class SlowSynchronizer(
      * If one block fails to commit, don't worry about the blocks coming after. This is handled in the BBD.addBlock().
      */
     private fun commitBlock(peerId: NodeRid, bTrace: BlockTrace?, block: BlockDataWithWitness, height: Long) {
-        if (addBlockCompletionPromise?.isDone() == true) {
-            addBlockCompletionPromise = null // If it's done we don't need the promise
+        if (addBlockCompletionFuture?.isDone == true) {
+            addBlockCompletionFuture = null // If it's done we don't need the future
         }
 
-        // (this is usually slow and is therefore handled via a promise).
-        addBlockCompletionPromise = blockDatabase
-            .addBlock(block, addBlockCompletionPromise, bTrace)
-            .success {
-                logger.debug { "commitBlock() - Block height: $height committed successfully." }
-                stateMachine.updateAfterSuccessfulCommit(height)
-                blockHeight = height
-            }
-            .fail {
-                // peer and try another peer
-                if (it is PmEngineIsAlreadyClosed || it is BDBAbortException) {
-                    if (logger.isTraceEnabled) {
-                        logger.warn { "Exception committing block height $height from peer: $peerId: ${it.message}, cause: {${it.cause}, from bTrace: ${bTrace?.toString()}" }
-                    } else {
-                        logger.warn { "Exception committing block height $height from peer: $peerId: ${it.message}, cause: {${it.cause}" }
-                    }
-                } else {
-                    if (logger.isTraceEnabled) {
-                        logger.warn(it) { "Exception committing block height $height from peer: $peerId from bTrace: ${bTrace?.toString()}" }
-                    } else {
-                        logger.warn(it) { "Exception committing block height $height from peer: $peerId" }
+        // (this is usually slow and is therefore handled via a future).
+        addBlockCompletionFuture = blockDatabase
+                .addBlock(block, addBlockCompletionFuture, bTrace)
+                .whenCompleteUnwrapped { _: Any?, exception ->
+                    synchronized(stateMachine) {
+                        if (exception == null) {
+                            logger.debug { "commitBlock() - Block height: $height committed successfully." }
+                            try {
+                                stateMachine.updateAfterSuccessfulCommit(height)
+                                blockHeight = height
+                            } catch (t: Throwable) {
+                                logger.warn(t) { "Failed to update after successful commit" }
+                            }
+                        } else {
+                            if (exception is PmEngineIsAlreadyClosed || exception is BDBAbortException) {
+                                if (logger.isTraceEnabled) {
+                                    logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}, cause: ${exception.cause}, from bTrace: ${bTrace?.toString()}" }
+                                } else {
+                                    logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}, cause: ${exception.cause}" }
+                                }
+                            } else {
+                                if (logger.isTraceEnabled) {
+                                    logger.warn(exception) { "Exception committing block height $height from peer: $peerId from bTrace: ${bTrace?.toString()}" }
+                                } else {
+                                    logger.warn(exception) { "Exception committing block height $height from peer: $peerId" }
+                                }
+                            }
+                            stateMachine.updateAfterFailedCommit(height)
+                        }
                     }
                 }
-                stateMachine.updateAfterFailedCommit(height)
-            }
     }
 
     // -------------

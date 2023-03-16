@@ -12,6 +12,11 @@ import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.core.block.MultiSigBlockWitnessBuilder
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Signature
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.mapper.FromGtv
+import net.postchain.gtv.mapper.ToGtv
 import java.nio.ByteBuffer
 
 /**
@@ -21,7 +26,7 @@ import java.nio.ByteBuffer
  * @param _signatures Serialized signatures
  */
 class BaseBlockWitness(private val _rawData: ByteArray, private val _signatures: Array<Signature>)
-    : MultiSigBlockWitness {
+    : MultiSigBlockWitness, ToGtv {
 
     override fun getSignatures(): Array<Signature> {
         return _signatures
@@ -31,7 +36,7 @@ class BaseBlockWitness(private val _rawData: ByteArray, private val _signatures:
         return _rawData
     }
 
-    companion object Factory {
+    companion object Factory : FromGtv<BaseBlockWitness> {
         /**
          * Create BlockWitness given the deserialized signatures
          */
@@ -68,7 +73,11 @@ class BaseBlockWitness(private val _rawData: ByteArray, private val _signatures:
             }
             BaseBlockWitness(bytes.array(), signatures)
         }
+
+        override fun fromGtv(gtv: Gtv): BaseBlockWitness = fromBytes(gtv.asByteArray())
     }
+
+    override fun toGtv(): GtvByteArray = gtv(_rawData)
 }
 
 /**
@@ -76,13 +85,13 @@ class BaseBlockWitness(private val _rawData: ByteArray, private val _signatures:
  * Will collect signatures and release a BlockWitness instance when a threshold number is reached.
  *
  * @property blockHeader The header of the block to which [signatures] applies
- * @property subjects Public keys elligable for signing a block
+ * @property subjects Public keys eligible for signing a block
  * @property threshold Minimum amount of signatures necessary for witness to be valid
  */
 class BaseBlockWitnessBuilder(val cryptoSystem: CryptoSystem,
                               val blockHeader: BlockHeader,
                               private val subjects: Array<ByteArray>,
-                              private val threshold: Int) : MultiSigBlockWitnessBuilder {
+                              override val threshold: Int) : MultiSigBlockWitnessBuilder {
 
     /**
      * Signatures from [subjects] that have signed the [blockHeader]

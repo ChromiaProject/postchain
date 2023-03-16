@@ -5,19 +5,15 @@ import assertk.assertions.isEqualTo
 import net.postchain.StorageBuilder
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
-import net.postchain.common.PropertiesFileLoader
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.Storage
 import net.postchain.gtv.GtvFileReader
-import org.bitcoinj.crypto.MnemonicException.MnemonicLengthException
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.io.File
 import java.nio.file.Paths
-import kotlin.io.path.absolutePathString
 import kotlin.test.assertContains
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -45,21 +41,6 @@ class CliIntegrationIT {
         // add-blockchain goes here
         val gtv = GtvFileReader.readFile(fullPath("blockchain_config.xml"))
         CliExecution.addBlockchain(AppConfig.fromPropertiesFile(nodeConfigPath), chainId, gtv, AlreadyExistMode.FORCE)
-    }
-
-    @Test
-    fun keygen() {
-        val file = kotlin.io.path.createTempFile()
-        CommandKeygen().parse(arrayOf("-m", "fever donor long", "-s", file.absolutePathString()))
-
-        val keys = PropertiesFileLoader.load(file.absolutePathString())
-        assert(keys.getString("pubkey")).isEqualTo("02B819304E8CFF69D7ACE3C9B2B41346216347972818CCC07F02F05E1FA01D6E63")
-        assert(keys.getString("privkey")).isEqualTo("55682A0F")
-
-        val exception = assertThrows<MnemonicLengthException> {
-            CommandKeygen().parse(arrayOf("-m", "invalid mnemonic"))
-        }
-        assert(exception.message).isEqualTo("Word list size must be multiple of three words.")
     }
 
     @Test

@@ -16,8 +16,8 @@ import net.postchain.network.mastersub.protocol.MsHandshakeMessage
 import net.postchain.network.netty2.Transport
 
 class NettyMasterConnection :
-    ChannelInboundHandlerAdapter(),  // Make it "Netty"
-    MasterConnection {
+        ChannelInboundHandlerAdapter(),  // Make it "Netty"
+        MasterConnection {
 
     private lateinit var context: ChannelHandlerContext
     private var messageHandler: MsMessageHandler? = null
@@ -44,7 +44,6 @@ class NettyMasterConnection :
         context.close()
     }
 
-    // TODO: [POS-129]: Make it generic: <MsMessage> (i.e. extract MsCodec, see `NettyConnector`)
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         val messageBytes = Transport.unwrapMessage(msg as ByteBuf)
         when (val message = MsCodec.decode(messageBytes)) {

@@ -7,26 +7,25 @@ import net.postchain.client.request.RequestStrategyFactory
 import org.http4k.core.HttpHandler
 import org.http4k.core.Request
 import org.http4k.core.Response
-import org.http4k.core.Status
 
 class SingleEndpointRequestStrategy(
         private val config: PostchainClientConfig,
         private val httpClient: HttpHandler) : RequestStrategy {
-    override fun <R> request(createRequest: (Endpoint) -> Request, success: (Response) -> R, failure: (Response) -> R): R {
+    override fun <R> request(createRequest: (Endpoint) -> Request, success: (Response) -> R, failure: (Response) -> R, queryMultiple: Boolean): R {
         var response: Response? = null
         val endpoint = config.endpointPool.iterator().next()
         val request = createRequest(endpoint)
         for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
             response = httpClient(request)
-            if (response.status == Status.SERVICE_UNAVAILABLE) endpoint.setUnreachable()
-            when (response.status) {
-                Status.OK -> return success(response)
+            when {
+                isSuccess(response.status) -> return success(response)
 
-                Status.BAD_REQUEST,
-                Status.NOT_FOUND,
-                Status.CONFLICT -> return failure(response)
+                isClientFailure(response.status) -> return failure(response)
 
-                Status.UNKNOWN_HOST -> return failure(response)
+                isServerFailure(response.status) -> {
+                    endpoint.setUnreachable(unreachableDuration(response.status))
+                    return failure(response)
+                }
 
                 // else retry same endpoint
             }
@@ -34,6 +33,8 @@ class SingleEndpointRequestStrategy(
         }
         return failure(response!!)
     }
+
+    override fun close() {}
 }
 
 class SingleEndpointRequestStrategyFactory : RequestStrategyFactory {

@@ -6,8 +6,9 @@ import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
 import net.postchain.crypto.Signature
-import nl.komponents.kovenant.Promise
 import java.util.*
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionStage
 
 interface ErrContext {
     fun fatal(msg: String)
@@ -36,18 +37,16 @@ class NodeStatus(var height: Long, var serial: Long) {
     constructor () : this(0, -1)
 }
 
-typealias CompletionPromise = Promise<Unit, java.lang.Exception>
-
 interface BlockDatabase {
     fun getQueuedBlockCount(): Int
-    fun addBlock(block: BlockDataWithWitness, dependsOn: CompletionPromise?, existingBTrace: BlockTrace?): CompletionPromise // add a complete block after the current one
-    fun loadUnfinishedBlock(block: BlockData): Promise<Signature, Exception> // returns block signature if successful
-    fun commitBlock(signatures: Array<Signature?>): CompletionPromise
-    fun buildBlock(): Promise<Pair<BlockData, Signature>, Exception>
+    fun addBlock(block: BlockDataWithWitness, dependsOn: CompletableFuture<Unit>?, existingBTrace: BlockTrace?): CompletableFuture<Unit> // add a complete block after the current one
+    fun loadUnfinishedBlock(block: BlockData): CompletionStage<Signature> // returns block signature if successful
+    fun commitBlock(signatures: Array<Signature?>): CompletionStage<Unit>
+    fun buildBlock(): CompletionStage<Pair<BlockData, Signature>>
 
     fun verifyBlockSignature(s: Signature): Boolean
-    fun getBlockSignature(blockRID: ByteArray): Promise<Signature, Exception>
-    fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): Promise<BlockDataWithWitness?, Exception>
+    fun getBlockSignature(blockRID: ByteArray): CompletionStage<Signature>
+    fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): CompletionStage<BlockDataWithWitness?>
 
     fun setBlockTrace(blockTrace: BlockTrace) // Only debugging
 }
@@ -168,5 +167,5 @@ interface StatusManager {
     fun getLatestStatusTimestamp(nodeIndex: Int): Long
 }
 
-class BDBAbortException(val block: BlockDataWithWitness, val prev: CompletionPromise) :
+class BDBAbortException(val block: BlockDataWithWitness, val prev: CompletableFuture<Unit>) :
         RuntimeException("BlockDatabase aborted execution of an addBlock task because previous task failed")

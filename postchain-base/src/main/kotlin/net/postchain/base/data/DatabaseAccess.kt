@@ -54,6 +54,12 @@ interface DatabaseAccess {
     fun setCurrentSchema(connection: Connection, schema: String)
     fun dropSchemaCascade(connection: Connection, schema: String)
 
+    /**
+     * @return iid of the newly created container
+     */
+    fun createContainer(ctx: AppContext, name: String): Int
+    fun getContainerIid(ctx: AppContext, name: String): Int?
+
     fun initializeApp(connection: Connection, expectedDbVersion: Int)
     fun initializeBlockchain(ctx: EContext, blockchainRid: BlockchainRid)
     fun getChainId(ctx: EContext, blockchainRid: BlockchainRid): Long?
@@ -76,7 +82,7 @@ interface DatabaseAccess {
     fun getLastBlockTimestamp(ctx: EContext): Long
     fun getBlockHeightInfo(ctx: EContext, bcRid: BlockchainRid): Pair<Long, ByteArray>?
     fun getTxRIDsAtHeight(ctx: EContext, height: Long): Array<ByteArray>
-    fun getBlockInfo(ctx: EContext, txRID: ByteArray): BlockInfo
+    fun getBlockInfo(ctx: EContext, txRID: ByteArray): BlockInfo?
     fun getTxHash(ctx: EContext, txRID: ByteArray): ByteArray
     fun getBlockTxRIDs(ctx: EContext, blockIid: Long): List<ByteArray>
     fun getBlockTxHashes(ctx: EContext, blockIid: Long): List<ByteArray>

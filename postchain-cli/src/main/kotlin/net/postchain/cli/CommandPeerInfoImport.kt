@@ -3,7 +3,6 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.PeerInfo
 import net.postchain.base.runStorageCommand
@@ -15,8 +14,7 @@ import java.io.File
 
 class CommandPeerInfoImport : CliktCommand(name = "peerinfo-import", help = "Import peer information") {
 
-    // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption().required()
+    private val nodeConfigFile by nodeConfigOption()
 
     override fun run() {
         val imported = peerinfoImport(nodeConfigFile)
@@ -32,8 +30,8 @@ class CommandPeerInfoImport : CliktCommand(name = "peerinfo-import", help = "Imp
 
     }
 
-    private fun peerinfoImport(nodeConfigFile: File): Array<PeerInfo> {
-        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+    private fun peerinfoImport(nodeConfigFile: File?): Array<PeerInfo> {
+        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         val nodeConfig = PropertiesNodeConfigurationProvider(appConfig).getConfiguration()
 
         return if (nodeConfig.peerInfoMap.isEmpty()) {

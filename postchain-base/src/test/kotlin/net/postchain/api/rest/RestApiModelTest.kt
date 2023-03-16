@@ -360,13 +360,13 @@ class RestApiModelTest {
     fun testGetBlocksWithoutParams() {
 
         val blocks = listOf(
-                BlockDetail("blockRid001".toByteArray(), blockchainRID3.toByteArray(), "some header".toByteArray(), 0, listOf<TxDetail>(), "signatures".toByteArray(), 1574849700),
+                BlockDetail("blockRid001".toByteArray(), blockchainRID3.toByteArray(), "some header".toByteArray(), 0, listOf(), "signatures".toByteArray(), 1574849700),
                 BlockDetail(
                         "blockRid002".toByteArray(),
                         "blockRid001".toByteArray(),
                         "some other header".toByteArray(),
                         1,
-                        listOf<TxDetail>(
+                        listOf(
                                 TxDetail(
                                         cryptoSystem.digest("tx1".toByteArray()),
                                         "tx1 - 001".toByteArray().slice(IntRange(0, 4)).toByteArray(),
@@ -381,7 +381,7 @@ class RestApiModelTest {
                         "blockRid002".toByteArray(),
                         "yet another header".toByteArray(),
                         2,
-                        listOf<TxDetail>(),
+                        listOf(),
                         "signatures".toByteArray(),
                         1574849880
                 ),
@@ -390,7 +390,7 @@ class RestApiModelTest {
                         "blockRid003".toByteArray(),
                         "guess what? Another header".toByteArray(),
                         3,
-                        listOf<TxDetail>(
+                        listOf(
                                 TxDetail(
                                         cryptoSystem.digest("tx2".toByteArray()),
                                         "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(),
@@ -427,7 +427,7 @@ class RestApiModelTest {
     @Test
     fun testGetTransactionsWithLimit() {
 
-        val response = listOf<TransactionInfoExt>(
+        val response = listOf(
                 TransactionInfoExt(BlockRid.buildRepeat(2).data, 1, "some other header".toByteArray(), "signatures".toByteArray(), 1574849760, cryptoSystem.digest("tx1".toByteArray()), "tx1 - 001".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx1".toByteArray()),
                 TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx2".toByteArray()), "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx2".toByteArray()),
                 TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx3".toByteArray()), "tx3 - 003".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx3".toByteArray()),

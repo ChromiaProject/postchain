@@ -13,6 +13,8 @@ import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withWriteConnection
 import net.postchain.common.hexStringToByteArray
+import net.postchain.concurrent.util.get
+import net.postchain.core.Infrastructure
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
@@ -26,6 +28,7 @@ import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSeqNumber
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDictionary
@@ -56,7 +59,7 @@ open class ManagedModeTest : AbstractSyncTest() {
         return mockDataSources.filterKeys { nodeIdsInChain.contains(it) }
     }
 
-    fun addBlockchainConfiguration(chainId: Long, signerKeys: Map<Int, ByteArray>, historicChain: Long?, height: Long) {
+    fun addBlockchainConfiguration(chainId: Long, signerKeys: Map<Int, ByteArray>, historicChain: Long?, height: Long, overrides: Map<String, Gtv> = emptyMap()) {
         val brid = ChainUtil.ridOf(chainId)
 
         val signerGtvs = signerKeys.values.map { GtvByteArray(it) }
@@ -78,6 +81,8 @@ open class ManagedModeTest : AbstractSyncTest() {
         ))
         data.setValue(KEY_GTX, GtvFactory.gtv(gtx))
 
+        overrides.forEach { (k, v) -> data.setValue(k, v) }
+
         mockDataSources.forEach { (nodeId, dataSource) ->
             val pubkey = if (chainId == 0L) {
                 signerKeys[nodeId] ?: KeyPairHelper.pubKey(-1 - nodeId)
@@ -95,10 +100,11 @@ open class ManagedModeTest : AbstractSyncTest() {
 
     fun setupDataSources(nrOfNodes: Int) {
         for (i in 0 until nrOfNodes) {
-            val dataSource = MockManagedNodeDataSource()
-            mockDataSources[i] = dataSource
+            mockDataSources[i] = createManagedNodeDataSource()
         }
     }
+
+    protected open fun createManagedNodeDataSource() = MockManagedNodeDataSource()
 
     protected open fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long) {
         val pm = nodes[index].processManager as TestManagedBlockchainProcessManager
@@ -128,7 +134,7 @@ open class ManagedModeTest : AbstractSyncTest() {
      * In this case we want unique configs per node (the mock datasource)
      */
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
-        var className = TestManagedEBFTInfrastructureFactory::class.qualifiedName
+        val className = TestManagedEBFTInfrastructureFactory::class.qualifiedName
         nodeSetup.nodeSpecificConfigs.setProperty("infrastructure", className)
         nodeSetup.nodeSpecificConfigs.setProperty(
                 "infrastructure.datasource",
@@ -136,11 +142,11 @@ open class ManagedModeTest : AbstractSyncTest() {
         )
     }
 
-    fun startManagedSystem(signers: Int, replicas: Int) {
+    fun startManagedSystem(signers: Int, replicas: Int, infra: String = Infrastructure.Ebft.get()) {
         setupDataSources(signers + replicas)
         val signerKeys = (0 until signers).associateWith { KeyPairHelper.pubKey(it) }
         addBlockchainConfiguration(0, signerKeys, null, 0)
-        runNodes(signers, replicas)
+        runNodes(signers, replicas, infra)
         mockDataSources.forEach { (nodeId, dataSource) -> dataSource.addNodeSetup(systemSetup.nodeMap, systemSetup.nodeMap[NodeSeqNumber(nodeId)]!!) }
         buildBlock(c0, 0)
     }

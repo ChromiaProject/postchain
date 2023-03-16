@@ -63,7 +63,7 @@ class SlowSyncStateMachine(
             SlowSyncStates.WAIT_FOR_ACTION -> {
                 val startingAtHeight = getStartHeight()
                 logger.debug { "maybeGetBlockRange() - ChainIid: $chainIid, not waiting for anything, so get height $startingAtHeight and above." }
-                sendRequest(startingAtHeight, this, null) // We don't mind asking the old peer
+                sendRequest(nowMs, this, null) // We don't mind asking the old peer
             }
             SlowSyncStates.WAIT_FOR_REPLY -> {
                 if (nowMs > (waitTime!! + SlowSyncSleepConst.MAX_PEER_WAIT_TIME_MS)) {
@@ -73,7 +73,7 @@ class SlowSyncStateMachine(
                                 "and above (but don't ask ${NameHelper.peerName(waitForNodeId!!)} )."
                     }
                     state = SlowSyncStates.WAIT_FOR_ACTION // Reset
-                    sendRequest(waitForHeight!!, this, waitForNodeId!!)
+                    sendRequest(nowMs, this, waitForNodeId!!)
                 } else {
                     logger.debug { "maybeGetBlockRange() - ChainIid: $chainIid still waiting for height: $waitForHeight, go back to sleep." }
                     // Still waiting for last request, go back to sleep
@@ -98,18 +98,17 @@ class SlowSyncStateMachine(
     }
 
     /**
-     * @param processedBlocks - is the number of blocks we queued to commit
+     * @param heightToCommit - the height of the block we are waiting for to be committed
      */
-    fun updateToWaitForCommit(processedBlocks: Int, nowMs: Long) {
-        if (state != SlowSyncStates.WAIT_FOR_REPLY) {
-            throw ProgrammerMistake("updateToWaitForCommit(): Incorrect state: $state")
-        }
-        if (processedBlocks > 0) {
+    fun updateToWaitForCommit(heightToCommit: Long, nowMs: Long) {
+        if (state != SlowSyncStates.WAIT_FOR_COMMIT) {
+            if (state != SlowSyncStates.WAIT_FOR_REPLY) {
+                throw ProgrammerMistake("updateToWaitForCommit(): Incorrect state: $state")
+            }
             state = SlowSyncStates.WAIT_FOR_COMMIT
-            lastUncommittedBlockHeight = (waitForHeight!! + processedBlocks - 1)
-        } else {
-            state = SlowSyncStates.WAIT_FOR_ACTION
         }
+
+        lastUncommittedBlockHeight = heightToCommit
         waitTime = nowMs
     }
 

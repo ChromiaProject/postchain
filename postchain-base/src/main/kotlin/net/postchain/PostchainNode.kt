@@ -8,6 +8,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.BaseInfrastructureFactoryProvider
@@ -18,15 +19,11 @@ import net.postchain.core.Storage
 import net.postchain.core.block.BlockQueriesProviderImpl
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.debug.DefaultNodeDiagnosticContext
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
 import net.postchain.metrics.initMetrics
-import nl.komponents.kovenant.Kovenant
-
 
 /**
  * Postchain node instantiates infrastructure and blockchain process manager.
@@ -45,36 +42,43 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
     init {
         initMetrics(appConfig)
 
-        Kovenant.context {
-            workerContext.dispatcher {
-                name = "main"
-                concurrentTasks = 5
-            }
-        }
         storage = StorageBuilder.buildStorage(appConfig, wipeDb)
 
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
         logPrefix = peerName(appConfig.pubKey)
 
         val blockQueriesProvider = BlockQueriesProviderImpl()
-        nodeDiagnosticContext = if (appConfig.debug) DefaultNodeDiagnosticContext() else null
+        val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
+        nodeDiagnosticContext = JsonNodeDiagnosticContext(version, appConfig.pubKey, appConfig.infrastructure)
         postchainContext = PostchainContext(
                 appConfig,
                 NodeConfigurationProviderFactory.createProvider(appConfig) { storage },
                 storage,
                 infrastructureFactory.makeConnectionManager(appConfig),
                 blockQueriesProvider,
-                nodeDiagnosticContext
+                nodeDiagnosticContext,
+                blockchainConfigProvider,
+                appConfig.debug
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
-        val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
+
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
         blockQueriesProvider.processManager = processManager
+    }
 
-        postchainContext.nodeDiagnosticContext?.apply {
-            addProperty(DiagnosticProperty.VERSION, getVersion())
-            addProperty(DiagnosticProperty.PUB_KEY, appConfig.pubKey)
-            addProperty(DiagnosticProperty.BLOCKCHAIN_INFRASTRUCTURE, blockchainInfrastructure.javaClass.simpleName)
+    fun tryStartBlockchain(chainId: Long) {
+        withLoggingContext(
+                NODE_PUBKEY_TAG to appConfig.pubKey,
+                CHAIN_IID_TAG to chainId.toString()) {
+            try {
+                startBlockchain(chainId)
+            } catch (e: NotFound) {
+                logger.error(e.message)
+            } catch (e: UserMistake) {
+                logger.error(e.message)
+            } catch (e: Exception) {
+                logger.error(e) { e.message }
+            }
         }
     }
 
@@ -149,7 +153,5 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
         }
     }
 
-    private fun getVersion(): String {
-        return javaClass.getPackage()?.implementationVersion ?: "null"
-    }
+    private val version get() = javaClass.getPackage()?.implementationVersion ?: "null"
 }

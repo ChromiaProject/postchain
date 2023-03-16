@@ -5,26 +5,28 @@ package net.postchain.ebft
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.common.toHex
+import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import nl.komponents.kovenant.Promise
+import java.util.concurrent.CompletionStage
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * Manages intents and acts as a wrapper for [blockDatabase] and [statusManager]
+ * Manages intents and acts as a wrapper for [BlockDatabase] and [StatusManager]
  */
 class BaseBlockManager(
-    private val processName: BlockchainProcessName,
-    private val blockDB: BlockDatabase,
-    private val statusManager: StatusManager,
-    val blockStrategy: BlockBuildingStrategy
+        private val processName: BlockchainProcessName,
+        private val blockDB: BlockDatabase,
+        private val statusManager: StatusManager,
+        private val blockStrategy: BlockBuildingStrategy
 ) : BlockManager {
 
-    @Volatile
-    private var processing = false
+    private var isOperationRunning = AtomicBoolean(false)
+
     @Volatile
     private var intent: BlockIntent = DoNothingIntent
 
@@ -36,25 +38,31 @@ class BaseBlockManager(
     @Volatile
     override var currentBlock: BlockData? = null
 
-    private fun <RT> runDBOp(op: () -> Promise<RT, Exception>, onSuccess: (RT) -> Unit, onFailure: (Exception) -> Unit = {}) {
-        if (!processing) {
-            synchronized(statusManager) {
-                processing = true
-                intent = DoNothingIntent
-
-                op() success { res ->
-                    synchronized(statusManager) {
-                        onSuccess(res)
-                        processing = false
-                    }
-                } fail { err ->
-                    synchronized(statusManager) {
-                        onFailure(err)
-                        processing = false
-                        logger.debug(err) { "Error in runDBOp()" }
-                    }
+    private fun <RT> runDBOp(op: () -> CompletionStage<RT>, onSuccess: (RT) -> Unit, onFailure: (Throwable) -> Unit = {}) {
+        if (isOperationRunning.compareAndSet(false, true)) {
+            intent = DoNothingIntent
+            op().whenCompleteUnwrapped { res, throwable ->
+                if (throwable == null) {
+                    onSuccessfulOperation(res, onSuccess)
+                } else {
+                    onFailedOperation(throwable, onFailure)
                 }
             }
+        }
+    }
+
+    private fun onFailedOperation(throwable: Throwable, onFailure: (Throwable) -> Unit) {
+        synchronized(statusManager) {
+            onFailure(throwable)
+            isOperationRunning.set(false)
+            logger.debug(throwable) { "Error in runDBOp()" }
+        }
+    }
+
+    private fun <RT> onSuccessfulOperation(res: RT, onSuccess: (RT) -> Unit) {
+        synchronized(statusManager) {
+            onSuccess(res)
+            isOperationRunning.set(false)
         }
     }
 
@@ -114,78 +122,78 @@ class BaseBlockManager(
         }
     }
 
-    // this is called only in getBlockIntent which is synchronized on status manager
     private fun update() {
-        if (processing) return
-        val blockIntent = statusManager.getBlockIntent()
-        intent = DoNothingIntent
-        when (blockIntent) {
+        synchronized(statusManager) {
+            if (isOperationRunning.get()) return
+            val blockIntent = statusManager.getBlockIntent()
+            intent = DoNothingIntent
+            when (blockIntent) {
 
-            is CommitBlockIntent -> {
-                if (currentBlock == null) {
-                    logger.error("$processName: Don't have a block StatusManager wants me to commit")
-                    return
-                }
-                if (logger.isTraceEnabled) {
-                    logger.trace("$processName: Schedule commit of block ${currentBlock!!.header.blockRID.toHex()}")
-                }
-
-                runDBOp({
-                    blockTrace(blockIntent)
-                    blockDB.commitBlock(statusManager.commitSignatures)
-                }, {
-                    statusManager.onCommittedBlock(currentBlock!!.header.blockRID)
-                    lastBlockTimestamp = blockTimestamp(currentBlock!!)
-                    currentBlock = null
-                }, { exception ->
-                    logger.error("$processName: Can't commit block ${currentBlock!!.header.blockRID.toHex()}: " +
-                            "${exception.message}")
-                })
-            }
-
-            is BuildBlockIntent -> {
-                // It's our turn to build a block. But we need to consult the
-                // BlockBuildingStrategy in order to figure out if this is the
-                // right time. For example, the strategy may decide that
-                // we won't build a block until we have at least three transactions
-                // in the transaction queue. Or it will only build a block every 10 minutes.
-                // Be careful not to have a BlockBuildingStrategy that conflicts with the
-                // RevoltTracker of ValidatorSyncManager.
-                if (!blockStrategy.shouldBuildBlock()) {
-                    return
-                }
-                if (logger.isTraceEnabled) {
-                    logger.trace("$processName: Schedule build block. ${statusManager.myStatus.height + 1}")
-                }
-
-                runDBOp({
-                    blockTrace(blockIntent)
-                    blockDB.buildBlock()
-                }, { blockAndSignature ->
-                    val block = blockAndSignature.first
-                    val signature = blockAndSignature.second
-                    if (statusManager.onBuiltBlock(block.header.blockRID, signature)) {
-                        currentBlock = block
-                        lastBlockTimestamp = blockTimestamp(block)
+                is CommitBlockIntent -> {
+                    if (currentBlock == null) {
+                        logger.error("$processName: Don't have a block StatusManager wants me to commit")
+                        return
                     }
-                }, { exception ->
-                    val msg = "$processName: Can't build block at height ${statusManager.myStatus.height + 1}: ${exception.message}"
-                    if (exception is PmEngineIsAlreadyClosed) {
-                        logger.debug(msg)
-                    } else {
-                        logger.error(msg, exception)
+                    if (logger.isTraceEnabled) {
+                        logger.trace("$processName: Schedule commit of block ${currentBlock!!.header.blockRID.toHex()}")
                     }
-                })
-            }
 
-            else -> intent = blockIntent
+                    runDBOp({
+                        blockTrace(blockIntent)
+                        blockDB.commitBlock(statusManager.commitSignatures)
+                    }, {
+                        statusManager.onCommittedBlock(currentBlock!!.header.blockRID)
+                        lastBlockTimestamp = blockTimestamp(currentBlock!!)
+                        currentBlock = null
+                    }, { exception ->
+                        logger.error("$processName: Can't commit block ${currentBlock!!.header.blockRID.toHex()}: " +
+                                "${exception.message}")
+                    })
+                }
+
+                is BuildBlockIntent -> {
+                    // It's our turn to build a block. But we need to consult the
+                    // BlockBuildingStrategy in order to figure out if this is the
+                    // right time. For example, the strategy may decide that
+                    // we won't build a block until we have at least three transactions
+                    // in the transaction queue. Or it will only build a block every 10 minutes.
+                    // Be careful not to have a BlockBuildingStrategy that conflicts with the
+                    // RevoltTracker of ValidatorSyncManager.
+                    if (!blockStrategy.shouldBuildBlock()) {
+                        return
+                    }
+                    if (logger.isTraceEnabled) {
+                        logger.trace("$processName: Schedule build block. ${statusManager.myStatus.height + 1}")
+                    }
+
+                    runDBOp({
+                        blockTrace(blockIntent)
+                        blockDB.buildBlock()
+                    }, { blockAndSignature ->
+                        val block = blockAndSignature.first
+                        val signature = blockAndSignature.second
+                        if (statusManager.onBuiltBlock(block.header.blockRID, signature)) {
+                            currentBlock = block
+                            lastBlockTimestamp = blockTimestamp(block)
+                        }
+                    }, { exception ->
+                        val msg = "$processName: Can't build block at height ${statusManager.myStatus.height + 1}: ${exception.message}"
+                        if (exception is PmEngineIsAlreadyClosed) {
+                            logger.debug(msg)
+                        } else {
+                            logger.error(msg, exception)
+                        }
+                        blockStrategy.blockFailed()
+                    })
+                }
+
+                else -> intent = blockIntent
+            }
         }
     }
 
     override fun processBlockIntent(): BlockIntent {
-        synchronized(statusManager) {
-            update()
-        }
+        update()
         return intent
     }
 

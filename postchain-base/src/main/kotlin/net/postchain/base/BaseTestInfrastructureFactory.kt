@@ -9,10 +9,16 @@ import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
-import net.postchain.core.*
+import net.postchain.core.BlockchainEngine
+import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.BlockchainProcess
+import net.postchain.core.BlockchainProcessManager
+import net.postchain.core.InfrastructureFactory
+import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
+import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.peer.DefaultPeerConnectionManager
 
@@ -43,7 +49,8 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
-            engine: BlockchainEngine
+            engine: BlockchainEngine,
+            messageProcessingLatch: MessageProcessingLatch
     ): BlockchainProcess {
         return TestBlockchainProcess(engine)
     }
@@ -71,7 +78,7 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
         with(postchainContext) {
             val syncInfra = TestSynchronizationInfrastructure()
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext)
+            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, configurationProvider, true)
 
             return BaseBlockchainInfrastructure(syncInfra, apiInfra, this)
         }

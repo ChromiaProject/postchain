@@ -3,12 +3,12 @@
 package net.postchain.gtx
 
 import mu.KLogging
+import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.BaseBlockQueries
 import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
-import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainContext
 import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
@@ -16,11 +16,9 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.gtvToJSON
-import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.special.GTXSpecialTxHandler
-import nl.komponents.kovenant.Promise
+import java.util.concurrent.CompletionStage
 
 open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
                                       cryptoSystem: CryptoSystem,
@@ -61,24 +59,21 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
     override fun makeBlockQueries(storage: Storage): BlockQueries {
         return object : BaseBlockQueries(this@GTXBlockchainConfiguration, storage, blockStore,
                 chainID, blockchainContext.nodeRID!!) {
-            private val gson = make_gtv_gson()
 
-            override fun query(query: String): Promise<String, Exception> {
-                val gtxQuery = gson.fromJson<Gtv>(query, Gtv::class.java)
-                return runOp {
-                    val type = gtxQuery.asDict()["type"] ?: throw UserMistake("Missing query type")
-                    val queryResult = module.query(it, type.asString(), gtxQuery)
-                    gtvToJSON(queryResult, gson)
-                }
-            }
-
-            override fun query(name: String, args: Gtv): Promise<Gtv, Exception> {
+            override fun query(name: String, args: Gtv): CompletionStage<Gtv> {
                 return runOp {
                     module.query(it, name, args)
                 }
             }
 
         }
+    }
+
+    override fun initializeModules(postchainContext: PostchainContext) {
+        if (module is PostchainContextAware) {
+            module.initializeContext(this, postchainContext)
+        }
+        super.initializeModules(postchainContext)
     }
 
     override fun shutdownModules() {

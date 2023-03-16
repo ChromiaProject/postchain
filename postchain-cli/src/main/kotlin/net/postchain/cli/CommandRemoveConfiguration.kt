@@ -17,15 +17,14 @@ import net.postchain.core.EContext
 
 class CommandRemoveConfiguration : CliktCommand(name = "remove-configuration", help = "Remove configuration at a given height for a blockchain.") {
 
-    // TODO: Eliminate it later or reduce to DbConfig only
-    private val nodeConfigFile by nodeConfigOption().required()
+    private val nodeConfigFile by nodeConfigOption()
 
     private val chainId by chainIdOption().required()
 
     private val height by option("-h", "--height", help = "Height of configuration to remove").long().required()
 
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         runOnChain(appConfig, chainId) {
             runStorageCommand(appConfig, chainId) { ctx: EContext ->
                 val config = BlockchainApi.getConfiguration(ctx, height)

@@ -1,6 +1,7 @@
 package net.postchain.devtools
 
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockTrace
@@ -11,6 +12,8 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.gtvml.GtvMLParser
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 
 
 /**
@@ -34,6 +37,7 @@ import net.postchain.gtv.gtvml.GtvMLParser
 abstract class AbstractIntegration {
 
     val cryptoSystem = Secp256K1CryptoSystem()
+    protected val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
 
     /**
      * Put logic in here that should run after each test (the "@after" annotation will guarantee execution)

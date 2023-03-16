@@ -2,6 +2,7 @@
 
 package net.postchain.core.block
 
+import net.postchain.base.ConfirmationProofMaterial
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.core.BlockEContext
@@ -12,11 +13,12 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxEContext
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
-import nl.komponents.kovenant.Promise
+import java.util.concurrent.CompletionStage
 
 interface BlockWitnessBuilder {
     fun isComplete(): Boolean
     fun getWitness(): BlockWitness // throws when not complete
+    val threshold: Int // Minimum amount of signatures necessary for witness to be valid
 }
 
 interface MultiSigBlockWitnessBuilder : BlockWitnessBuilder {
@@ -52,30 +54,29 @@ interface BlockStore {
     fun getBlockTransactions(ctx: EContext, blockRID: ByteArray): List<ByteArray>
 
     fun isTransactionConfirmed(ctx: EContext, txRID: ByteArray): Boolean
-    fun getConfirmationProofMaterial(ctx: EContext, txRID: ByteArray): Any
+    fun getConfirmationProofMaterial(ctx: EContext, txRID: ByteArray): ConfirmationProofMaterial?
 }
 
 /**
  * A collection of methods for various blockchain related queries
  */
 interface BlockQueries : Shutdownable {
-    fun getBlockSignature(blockRID: ByteArray): Promise<Signature, Exception>
-    fun getBestHeight(): Promise<Long, Exception>
-    fun getLastBlockTimestamp(): Promise<Long, Exception>
-    fun getBlockRid(height: Long): Promise<ByteArray?, Exception>
-    fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): Promise<BlockDataWithWitness?, Exception>
-    fun getBlockHeader(blockRID: ByteArray): Promise<BlockHeader, Exception>
-    fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): Promise<List<BlockDetail>, Exception>
-    fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): Promise<List<BlockDetail>, Exception>
-    fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): Promise<BlockDetail?, Exception>
+    fun getBlockSignature(blockRID: ByteArray): CompletionStage<Signature>
+    fun getBestHeight(): CompletionStage<Long>
+    fun getLastBlockTimestamp(): CompletionStage<Long>
+    fun getBlockRid(height: Long): CompletionStage<ByteArray?>
+    fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): CompletionStage<BlockDataWithWitness?>
+    fun getBlockHeader(blockRID: ByteArray): CompletionStage<BlockHeader>
+    fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>>
+    fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>>
+    fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): CompletionStage<BlockDetail?>
 
-    fun getBlockTransactionRids(blockRID: ByteArray): Promise<List<ByteArray>, Exception>
-    fun getTransaction(txRID: ByteArray): Promise<Transaction?, Exception>
-    fun getTransactionInfo(txRID: ByteArray): Promise<TransactionInfoExt?, Exception>
-    fun getTransactionsInfo(beforeTime: Long, limit: Int): Promise<List<TransactionInfoExt>, Exception>
-    fun query(query: String): Promise<String, Exception>
-    fun query(name: String, args: Gtv): Promise<Gtv, Exception>
-    fun isTransactionConfirmed(txRID: ByteArray): Promise<Boolean, Exception>
+    fun getBlockTransactionRids(blockRID: ByteArray): CompletionStage<List<ByteArray>>
+    fun getTransaction(txRID: ByteArray): CompletionStage<Transaction?>
+    fun getTransactionInfo(txRID: ByteArray): CompletionStage<TransactionInfoExt?>
+    fun getTransactionsInfo(beforeTime: Long, limit: Int): CompletionStage<List<TransactionInfoExt>>
+    fun query(name: String, args: Gtv): CompletionStage<Gtv>
+    fun isTransactionConfirmed(txRID: ByteArray): CompletionStage<Boolean>
 }
 
 /**
@@ -121,4 +122,5 @@ interface BlockBuildingStrategy {
     fun shouldBuildBlock(): Boolean
     fun blockCommitted(blockData: BlockData)
     fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean
+    fun blockFailed()
 }

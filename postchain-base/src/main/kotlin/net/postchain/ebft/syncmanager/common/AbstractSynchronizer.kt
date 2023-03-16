@@ -2,20 +2,21 @@ package net.postchain.ebft.syncmanager.common
 
 import net.postchain.base.BaseBlockHeader
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.concurrent.util.get
 import net.postchain.core.block.BlockHeader
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.CompletionPromise
 import net.postchain.ebft.worker.WorkerContext
+import java.util.concurrent.CompletableFuture
 
-abstract class AbstractSynchronizer (
-    val workerContext: WorkerContext
+abstract class AbstractSynchronizer(
+        val workerContext: WorkerContext
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
 
     protected val blockchainConfiguration = workerContext.engine.getConfiguration()
     protected val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
 
     // this is used to track pending asynchronous BlockDatabase.addBlock tasks to make sure failure to commit propagates properly
-    protected var addBlockCompletionPromise: CompletionPromise? = null
+    protected var addBlockCompletionFuture: CompletableFuture<Unit>? = null
 
     var blockHeight: Long = blockQueries.getBestHeight().get()
 
@@ -38,17 +39,7 @@ abstract class AbstractSynchronizer (
     }
 
     protected val procName = BlockchainProcessName(
-        workerContext.appConfig.pubKey,
-        blockchainConfiguration.blockchainRid
+            workerContext.appConfig.pubKey,
+            blockchainConfiguration.blockchainRid
     )
-
-
-    // -------------
-    // Only logging below
-    // -------------
-
-    // handleUnfinishedBlock()
-    protected fun unfinishedTrace(message: String, e: Exception? = null) {
-        logger.trace(e) { "handleUnfinishedBlock() -- $message" }
-    }
 }

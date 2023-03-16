@@ -36,12 +36,18 @@ class PostchainService(private val postchainNode: PostchainNode) {
         val brid = maybeBrid
                 ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config, postchainNode.appConfig.cryptoSystem)
 
-        val initialized = withWriteConnection(postchainNode.storage, chainId) { ctx ->
-            BlockchainApi.initializeBlockchain(ctx, brid, override, config, givenDependencies)
+        return try {
+            val initialized = withWriteConnection(postchainNode.storage, chainId) { ctx ->
+                BlockchainApi.initializeBlockchain(ctx, brid, override, config, givenDependencies)
+            }
+            if (initialized) brid else null
+        } catch (e: Exception) {
+            postchainNode.nodeDiagnosticContext.blockchainErrorQueue(brid).add(e.message)
+            throw InitializationError(e.message)
         }
 
-        return if (initialized) brid else null
     }
+    class InitializationError(m: String?) : RuntimeException(m)
 
     fun findBlockchain(chainId: Long): Triple<BlockchainRid?, Boolean?, Long> =
             withReadConnection(postchainNode.storage, chainId) { ctx ->

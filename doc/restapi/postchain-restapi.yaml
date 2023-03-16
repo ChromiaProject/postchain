@@ -53,7 +53,7 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: 3.8.0-SNAPSHOT
+  version: 3.9.0-SNAPSHOT
 paths:
   /tx/{blockchainRid}:
     post:
@@ -225,6 +225,35 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /tx/{blockchainRid}/{txRid}/confirmationProof:
+    get:
+      tags:
+        - transaction
+      summary: Fetch transaction confirmation proof
+      description: Fetch confirmation proof for a transaction from a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/txRid"
+      responses:
+        200:
+          description: Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/confirmationProof"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+                txNotFound:
+                  value:
+                    error: "Can't find tx with hash <hex-string>"
   /tx/{blockchainRid}/{txRid}/status:
     get:
       tags:
@@ -827,6 +856,78 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with chain Iid: <iid> in DB. Did you add this BC to the node?"
+  /config/{blockchainRid}:
+    get:
+      tags:
+        - blockchain
+      summary: Fetch blockchain configuration
+      description: |
+        Fetch configuration for a chain. Specifying a height will fetch the active configuration at that height. 
+        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        otherwise defaults to XML.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - name: height
+          description: Block height
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            default: -1
+          example: 42
+      responses:
+        200:
+          description: Found
+          content:
+            text/xml:
+              description: Blockchain configuration in XML format
+              example: |
+                <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <dict>
+                    <entry key="blockstrategy">
+                        <dict>
+                            <entry key="name">
+                                <string>net.postchain.base.BaseBlockBuildingStrategy</string>
+                            </entry>
+                        </dict>
+                    </entry>
+                    <entry key="configurationfactory">
+                        <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+                    </entry>
+                    <entry key="gtx">
+                        <dict>
+                            <entry key="modules">
+                                <array>
+                                    <string>net.postchain.configurations.GTXTestModule</string>
+                                    <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                                </array>
+                            </entry>
+                        </dict>
+                    </entry>
+                    <entry key="signers">
+                        <array>
+                            <bytea>03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070</bytea>
+                            <bytea>031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F</bytea>
+                            <bytea>03B2EF623E7EC933C478135D1763853CBB91FC31BA909AEC1411CA253FDCC1AC94</bytea>
+                            <bytea>0203C6150397F7E4197FF784A8D74357EF20DAF1D09D823FFF8D3FC9150CBAE85D</bytea>
+                        </array>
+                    </entry>
+                </dict>
+            application/octet-stream: { }
+        400:
+          description: Invalid height
+        404:
+          description: Not found
+          content:
+            text/xml:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
 
 components:
   parameters:
@@ -901,6 +1002,13 @@ components:
         txHash:
           $ref: "#/components/schemas/hash"
         txData:
+          $ref: "#/components/schemas/hex"
+    confirmationProof:
+      type: object
+      required:
+        - proof
+      properties:
+        proof:
           $ref: "#/components/schemas/hex"
     unknown:
       type: object

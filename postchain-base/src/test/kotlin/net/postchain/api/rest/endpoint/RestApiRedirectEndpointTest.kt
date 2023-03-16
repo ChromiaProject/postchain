@@ -3,6 +3,7 @@ package net.postchain.api.rest.endpoint
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.ExternalModel
+import net.postchain.api.rest.controller.HttpExternalModel
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.common.toHex
 import net.postchain.gtv.GtvEncoder
@@ -15,8 +16,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 
@@ -42,12 +41,7 @@ class RestApiRedirectEndpointTest {
 
     @BeforeEach
     fun setup() {
-        model = mock {
-            on { chainIID } doReturn 1L
-            on { live } doReturn true
-            on { path } doReturn "http://localhost:${MockPostchainRestApi.port}"
-        }
-
+        model = HttpExternalModel("http://localhost:${MockPostchainRestApi.port}", 1L)
         restApi = RestApi(0, basePath)
     }
 

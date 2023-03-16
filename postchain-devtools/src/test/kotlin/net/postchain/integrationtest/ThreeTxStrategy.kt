@@ -32,6 +32,8 @@ class ThreeTxStrategy(
         return false
     }
 
+    override fun blockFailed() {}
+
     override fun blockCommitted(blockData: BlockData) {
         blocks.add(blockData)
         logger.debug { "PNode $index committed height ${blocks.size}" }

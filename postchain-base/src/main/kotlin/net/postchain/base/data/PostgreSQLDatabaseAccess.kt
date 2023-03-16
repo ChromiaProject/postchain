@@ -76,6 +76,13 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " child_hashes BYTEA NOT NULL)"
     }
 
+    override fun cmdCreateTableContainers(): String {
+        return "CREATE TABLE ${tableContainers()} " +
+                " (container_iid SERIAL PRIMARY KEY," +
+                " name TEXT NOT NULL," +
+                " UNIQUE (name))"
+    }
+
     override fun cmdCreateTableBlockchains(): String {
         return "CREATE TABLE ${tableBlockchains()} " +
                 " (chain_iid BIGINT PRIMARY KEY," +

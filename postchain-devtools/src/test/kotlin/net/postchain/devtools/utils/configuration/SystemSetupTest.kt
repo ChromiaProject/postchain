@@ -27,7 +27,7 @@ class SystemSetupTest {
     val bcSetup3 = BlockchainPreSetup.buildWithDependencies(chainId3, listOf(nodeNr5), setOf(chainId1)) // chain3 depends on chain1
     val bcSetup4 = BlockchainPreSetup.buildWithDependencies(chainId4, listOf(nodeNr6), setOf(chainId3)) // chain4 depends on chain3
 
-    val bcPreSetupMap = mapOf<Int, BlockchainPreSetup>(
+    val bcPreSetupMap = mapOf(
             chainId1 to bcSetup1,
             chainId2 to bcSetup2,
             chainId3 to bcSetup3,

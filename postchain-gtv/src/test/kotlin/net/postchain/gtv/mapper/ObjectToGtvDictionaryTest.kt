@@ -10,15 +10,16 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 
-data class DictWithList(
-        @Name("simples") val simples: List<Simple>
-)
-
 class ObjectToGtvDictionaryTest {
 
     @Test
     fun basicMap() {
         assert(GtvObjectMapper.toGtvDictionary(mapOf("foo" to 1L))).isEqualTo(gtv(mapOf("foo" to gtv(1))))
+    }
+
+    @Test
+    fun toGtv() {
+        assert(GtvObjectMapper.toGtvDictionary(WithCustom("FOO", Custom("BAR")))).isEqualTo(gtv(mapOf("foo" to gtv("FOO"), "bar" to gtv("<<<BAR>>>"))))
     }
 
     @ParameterizedTest(name = "Mapping from {1} to {2}")
@@ -38,6 +39,8 @@ class ObjectToGtvDictionaryTest {
     companion object {
 
         data class NullableType(@Nullable @Name("foo") val foo: Long?)
+        data class NonAnnotatedConstructorParam(val foo: Long)
+
         @JvmStatic
         fun acceptedTypes() = listOf(
                 arrayOf(Simple(1), gtv("key" to gtv(1))),
@@ -50,6 +53,8 @@ class ObjectToGtvDictionaryTest {
         fun illegalTypes() = listOf(
                 arrayOf(listOf("foo")),
                 arrayOf(setOf("foo")),
+                arrayOf(NonAnnotatedConstructorParam(3)),
+                arrayOf(UnsupportedConstructorParamType(3))
         )
     }
 }

@@ -53,8 +53,6 @@ open class GtxEmptyOp(@Suppress("UNUSED_PARAMETER") u: Unit, opdata: ExtOpData) 
     }
 }
 
-class GtxBeginOp(u: Unit, opdata: ExtOpData) : GtxEmptyOp(u, opdata) {
-}
+class GtxBeginOp(u: Unit, opdata: ExtOpData) : GtxEmptyOp(u, opdata)
 
-class GtxEndOp(u: Unit, opdata: ExtOpData) : GtxEmptyOp(u, opdata) {
-}
+class GtxEndOp(u: Unit, opdata: ExtOpData) : GtxEmptyOp(u, opdata)

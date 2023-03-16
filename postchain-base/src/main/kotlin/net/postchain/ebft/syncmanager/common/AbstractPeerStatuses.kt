@@ -13,7 +13,7 @@ import net.postchain.devtools.NameHelper
  */
 abstract class AbstractPeerStatuses<StateType : KnownState> {
 
-    companion object : KLogging() { }
+    companion object : KLogging()
 
     protected val statuses = HashMap<NodeRid, StateType>()
 

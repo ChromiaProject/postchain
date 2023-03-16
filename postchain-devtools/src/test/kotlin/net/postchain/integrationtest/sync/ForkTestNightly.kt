@@ -1,6 +1,7 @@
 package net.postchain.integrationtest.sync
 
 import net.postchain.common.hexStringToByteArray
+import net.postchain.concurrent.util.get
 import net.postchain.core.NodeRid
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.ManagedModeTest
@@ -212,10 +213,10 @@ class ForkTestNightly : ManagedModeTest() {
      * To do this successfully we must do the different steps in succession, we cannot for example do step1 and step2
      * in parallel, since ConnMgr will not allow us to connect to the same chain  (chain2 on Node2) using different names.
      */
-   @Disabled // Incomplete test, never worked and probably incorrect setup.
+    @Disabled // Incomplete test, never worked and probably incorrect setup.
     @Test
     fun testAncestorNetworkThenLocally() {
-        extraNodeProperties[0] = mapOf("blockchain_ancestors.${ChainUtil.ridOf(3)}" to listOf(ancestor(2,2)))
+        extraNodeProperties[0] = mapOf("blockchain_ancestors.${ChainUtil.ridOf(3)}" to listOf(ancestor(2, 2)))
 
         startManagedSystem(4, 0)
 
@@ -342,10 +343,10 @@ class ForkTestNightly : ManagedModeTest() {
                 awaitChainRestarted(c, configHeight - 1)
                 chains[node] = c
             }
-            val forkHeight = (node-1)*10L
-            buildBlock(chains[node]!!, forkHeight+10)
+            val forkHeight = (node - 1) * 10L
+            buildBlock(chains[node]!!, forkHeight + 10)
             val chainOld = chains[node - 1]!!
-            assertEqualAtHeight(chainOld, chains[node]!!, forkHeight-1)
+            assertEqualAtHeight(chainOld, chains[node]!!, forkHeight - 1)
             assertNotEqualAtHeight(chainOld, chains[node]!!, forkHeight)
         }
 
@@ -417,7 +418,6 @@ class ForkTestNightly : ManagedModeTest() {
      * Here we want to set properties on unique nodes via a special map, just transfer the property to the
      * [NodeSetup] in question
      */
-
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
         super.addNodeConfigurationOverrides(nodeSetup) // Will jack into ManagedModeTest overrides (= set the specific "infrastructure" we need)
         val nodesExtra = extraNodeProperties[nodeSetup.sequenceNumber.nodeNumber]

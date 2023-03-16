@@ -11,7 +11,6 @@ import net.postchain.network.XPacketEncoder
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.peer.PeerConnectionDescriptor
 import net.postchain.network.peer.PeerPacketHandler
-import nl.komponents.kovenant.task
 import java.net.InetSocketAddress
 import java.net.SocketAddress
 
@@ -37,7 +36,7 @@ class NettyClientPeerConnection<PacketType>(
             setChannelHandler(this@NettyClientPeerConnection)
             connect(peerAddress()).await().apply {
                 if (!isSuccess) {
-                    logger.info("Connection failed", cause().message)
+                    logger.info("Connection failed: ${cause().message}")
                     onDisconnected()
                 }
             }
@@ -80,9 +79,7 @@ class NettyClientPeerConnection<PacketType>(
     }
 
     override fun close() {
-        task {
-            nettyClient.shutdown()
-        }
+        nettyClient.shutdownAsync()
     }
 
     override fun descriptor(): PeerConnectionDescriptor = descriptor
