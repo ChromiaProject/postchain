@@ -321,6 +321,15 @@ internal class PostchainClientImplTest {
         assertEquals(txString, transaction!!.toHex())
     }
 
+    @Test
+    fun `Assert trailing slashes are trimmed from endpoint URL`() {
+        val defaultEndpointPool = EndpointPool.default(listOf("http://localhost:7740/", "http://localhost:7741/"))
+        assertEquals(setOf("http://localhost:7740", "http://localhost:7741"), defaultEndpointPool.map { it.url }.toSet())
+
+        val singleEndpointPool = EndpointPool.singleUrl("http://localhost:7740/")
+        assertEquals("http://localhost:7740", singleEndpointPool.first().url)
+    }
+
     private fun assertQueryUrlEndsWith(config: PostchainClientConfig, suffix: String) {
         PostchainClientImpl(config, httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
