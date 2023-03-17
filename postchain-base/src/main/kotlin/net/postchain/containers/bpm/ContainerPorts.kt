@@ -20,12 +20,4 @@ class ContainerPorts(config: ContainerNodeConfig) {
         hostRestApiPort = hostPorts.first
         hostAdminRpcPort = hostPorts.second
     }
-
-    fun verify(): Boolean {
-        return try {
-            hostRestApiPort != hostAdminRpcPort
-        } catch (e: Exception) {
-            false
-        }
-    }
 }
