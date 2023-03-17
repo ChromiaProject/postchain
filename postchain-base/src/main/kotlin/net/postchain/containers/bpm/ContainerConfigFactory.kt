@@ -70,11 +70,11 @@ object ContainerConfigFactory : KLogging() {
         // rest-api-port
         val restApiPort = "${containerPorts.restApiPort}/tcp"
         if (restApiConfig.port > -1) {
-            portBindings[restApiPort] = listOf(PortBinding.of(containerNodeConfig.subnodeHost, containerPorts.hostRestApiPort))
+            portBindings[restApiPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
         }
         // admin-rpc-port
         val adminRpcPort = "${containerPorts.adminRpcPort}/tcp"
-        portBindings[adminRpcPort] = listOf(PortBinding.of(containerNodeConfig.subnodeHost, containerPorts.hostAdminRpcPort))
+        portBindings[adminRpcPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
 
         /**
          * CPU:
