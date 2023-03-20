@@ -38,6 +38,7 @@ interface Model : ChainModel {
     fun query(query: GtxQuery): Gtv
     fun nodeQuery(subQuery: String): String
     fun debugQuery(subQuery: String?): String
+    fun getCurrentBlockHeight(): BlockHeight
     fun getBlockchainConfiguration(height: Long = -1): ByteArray?
 }
 

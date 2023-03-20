@@ -370,6 +370,12 @@ class RestApi(
                 brid
             }
 
+            http.get("/blockchain/$PARAM_BLOCKCHAIN_RID/height", JSON_CONTENT_TYPE, redirectGet { request, _ ->
+                val model = model(request)
+                val result = model.getCurrentBlockHeight()
+                gson.toJson(result)
+            })
+
             http.get("/config/$PARAM_BLOCKCHAIN_RID", XML_CONTENT_TYPE, redirectGet(XML_CONTENT_TYPE) { request, _ ->
                 val configuration = getBlockchainConfiguration(request)
                 GtvMLEncoder.encodeXMLGtv(GtvDecoder.decodeGtv(configuration))

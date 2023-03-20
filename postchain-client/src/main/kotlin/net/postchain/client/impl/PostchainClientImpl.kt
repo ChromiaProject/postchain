@@ -71,7 +71,7 @@ class PostchainClientImpl(
 
     @Throws(IOException::class)
     override fun currentBlockHeight(): Long = requestStrategy.request({ endpoint ->
-        Request(Method.GET, "${endpoint.url}/node/$blockchainRIDOrID/height")
+        Request(Method.GET, "${endpoint.url}/blockchain/$blockchainRIDOrID/height")
                 .header("Accept", ContentType.APPLICATION_JSON.value)
     }, { response ->
         parseJson(response, CurrentBlockHeight::class.java)?.blockHeight

@@ -731,7 +731,7 @@ paths:
     get:
       tags:
         - node
-      summary: Query current block height
+      summary: Query the current block height in node EBFT status
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
@@ -763,7 +763,7 @@ paths:
     get:
       tags:
         - node
-      summary: Query node status
+      summary: Query node EBFT status
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
@@ -787,7 +787,7 @@ paths:
     get:
       tags:
         - node
-      summary: Query nodes status
+      summary: Query all nodes EBFT statuses
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
@@ -856,6 +856,39 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with chain Iid: <iid> in DB. Did you add this BC to the node?"
+  /blockchain/{blockchainRid}/height:
+    get:
+      tags:
+        - blockchain
+      summary: Fetch height of next block to be built/synced
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - blockHeight
+                properties:
+                  blockHeight:
+                    type: integer
+                    format: int64
+              example:
+                blockHeight: 4711
+        404:
+          description: Chain not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
   /config/{blockchainRid}:
     get:
       tags:
