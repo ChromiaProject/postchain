@@ -3,6 +3,7 @@
 package net.postchain.api.rest
 
 import mu.KLogging
+import net.postchain.api.rest.controller.BlockHeight
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.ApiStatus
@@ -159,6 +160,10 @@ class RestApiMockForClientManual {
 
         override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> =
                 blocks.filter { it.height < beforeHeight }.subList(0, limit)
+
+        override fun getCurrentBlockHeight(): BlockHeight {
+            TODO("Not yet implemented")
+        }
 
         override fun getTransactionInfo(txRID: TxRID): TransactionInfoExt {
             val block = blocks.filter { block -> block.transactions.filter { tx -> cryptoSystem.digest(tx.data!!).contentEquals(txRID.bytes) }.size > 0 }[0]
