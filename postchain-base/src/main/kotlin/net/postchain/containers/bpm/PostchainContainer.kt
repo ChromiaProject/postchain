@@ -9,7 +9,7 @@ interface PostchainContainer {
     var state: ContainerState
     var containerId: String?
     val resourceLimits: ContainerResourceLimits
-    val containerPorts: ContainerPorts
+    val containerPortMapping: MutableMap<Int, Int>
 
     fun shortContainerId(): String?
     fun findProcesses(chainId: Long): ContainerBlockchainProcess?
@@ -21,6 +21,7 @@ interface PostchainContainer {
     fun terminateAllProcesses(): Set<Long>
     fun getBlockchainLastHeight(chainId: Long): Long
     fun start()
+    fun reset()
     fun stop()
     fun isEmpty(): Boolean
     fun isSubnodeHealthy(): Boolean

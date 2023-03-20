@@ -4,6 +4,7 @@ package net.postchain.containers.infra
 
 import net.postchain.PostchainContext
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
@@ -54,7 +55,8 @@ open class DefaultMasterSyncInfra(
         return DefaultContainerBlockchainProcess(
                 nodeConfig,
                 containerNodeConfig,
-                targetContainer.containerPorts.hostRestApiPort,
+                targetContainer.containerPortMapping[containerNodeConfig.subnodeRestApiPort]
+                        ?: throw ProgrammerMistake("No port mapping for subnode REST API"),
                 processName,
                 chainId,
                 blockchainRid,

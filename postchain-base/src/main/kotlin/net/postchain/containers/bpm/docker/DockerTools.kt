@@ -20,15 +20,13 @@ object DockerTools {
     }
 
     /**
-     * Tries to find host ports pair by [containerPorts] pair for given [dockerContainerId].
+     * Tries to find host port mappings for [containerPorts] given [dockerContainerId].
      */
-    fun DockerClient.findHostPorts(dockerContainerId: String, containerPorts: Pair<Int, Int>): Pair<Int, Int> {
+    fun DockerClient.findHostPorts(dockerContainerId: String, containerPorts: List<Int>): Map<Int, Int> {
         val info = this.inspectContainer(dockerContainerId)
-        val hostPort1 = info.hostPortFor(containerPorts.first)
-                ?: throw ProgrammerMistake("Container has no mapped port")
-        val hostPort2 = info.hostPortFor(containerPorts.second)
-                ?: throw ProgrammerMistake("Container has no mapped port")
-        return hostPort1 to hostPort2
+        return containerPorts.associateWith {
+            info.hostPortFor(it) ?: throw ProgrammerMistake("Container has no mapped port")
+        }
     }
 
     private fun ContainerInfo.hostPortFor(port: Int) = networkSettings()?.ports()?.get("${port}/tcp")
