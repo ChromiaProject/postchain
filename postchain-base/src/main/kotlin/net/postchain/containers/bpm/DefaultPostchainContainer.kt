@@ -9,7 +9,7 @@ import net.postchain.managed.DirectoryDataSource
 class DefaultPostchainContainer(
         val dataSource: DirectoryDataSource,
         override val containerName: ContainerName,
-        override var containerPorts: ContainerPorts,
+        override var containerPortMapping: MutableMap<Int, Int>,
         override var state: ContainerState,
         private val subnodeAdminClient: SubnodeAdminClient,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
@@ -87,6 +87,11 @@ class DefaultPostchainContainer(
     override fun start() {
         state = ContainerState.RUNNING
         subnodeAdminClient.connect()
+    }
+
+    override fun reset() {
+        subnodeAdminClient.disconnect()
+        state = ContainerState.STARTING
     }
 
     override fun stop() {

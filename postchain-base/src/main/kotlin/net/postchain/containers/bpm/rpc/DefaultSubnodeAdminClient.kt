@@ -14,7 +14,6 @@ import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
-import net.postchain.containers.bpm.ContainerPorts
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.server.grpc.AddConfigurationRequest
@@ -26,12 +25,13 @@ import net.postchain.server.grpc.PostchainServiceGrpc
 import net.postchain.server.grpc.StopBlockchainRequest
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class DefaultSubnodeAdminClient(
         private val containerNodeConfig: ContainerNodeConfig,
-        private val containerPorts: ContainerPorts,
+        private val containerPortMapping: Map<Int, Int>,
         private val nodeDiagnosticContext: NodeDiagnosticContext
 ) : SubnodeAdminClient {
 
@@ -57,9 +57,11 @@ class DefaultSubnodeAdminClient(
         Thread(it, "${clientCount.incrementAndGet()}-DefaultSubnodeAdminClient")
     }
 
+    private var connectJob: Future<*>? = null
+
     override fun connect() {
-        executor.submit {
-            val target = "${containerNodeConfig.subnodeHost}:${containerPorts.hostAdminRpcPort}"
+        connectJob = executor.submit {
+            val target = "${containerNodeConfig.subnodeHost}:${containerPortMapping[containerNodeConfig.subnodeAdminRpcPort]}"
             repeat(MAX_RETRIES) {
                 try {
                     logger.debug { "connect() -- Connecting to subnode container on $target ..." }
@@ -80,6 +82,14 @@ class DefaultSubnodeAdminClient(
                     Thread.sleep(RETRY_INTERVAL.toLong())
                 }
             }
+        }
+    }
+
+    override fun disconnect() {
+        connectJob?.cancel(true)
+        channel?.apply {
+            shutdownNow()
+            awaitTermination(1000, TimeUnit.MILLISECONDS)
         }
     }
 
@@ -218,10 +228,7 @@ class DefaultSubnodeAdminClient(
     }
 
     override fun shutdown() {
+        disconnect()
         executor.shutdown()
-        channel?.apply {
-            shutdownNow()
-            awaitTermination(1000, TimeUnit.MILLISECONDS)
-        }
     }
 }

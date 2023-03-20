@@ -67,6 +67,8 @@ data class ContainerNodeConfig(
         val bindPgdataVolume: Boolean,
         val dockerLogConf: DockerLogConfig?,
 ) : Config {
+    val subnodePorts = listOf(subnodeRestApiPort, subnodeAdminRpcPort)
+
     companion object {
         const val DEFAULT_CONTAINER_ZFS_INIT_SCRIPT = "container-zfs-init-script.sh"
 

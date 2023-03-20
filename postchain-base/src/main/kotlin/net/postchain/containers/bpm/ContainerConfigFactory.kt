@@ -66,14 +66,13 @@ object ContainerConfigFactory : KLogging() {
          * Therefore, use random port selection
          */
         val portBindings = mutableMapOf<String, List<PortBinding>>() // { dockerPort -> hostIp:hostPort }
-        val containerPorts = container.containerPorts
         // rest-api-port
-        val restApiPort = "${containerPorts.restApiPort}/tcp"
+        val restApiPort = "${containerNodeConfig.subnodeRestApiPort}/tcp"
         if (restApiConfig.port > -1) {
             portBindings[restApiPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
         }
         // admin-rpc-port
-        val adminRpcPort = "${containerPorts.adminRpcPort}/tcp"
+        val adminRpcPort = "${containerNodeConfig.subnodeAdminRpcPort}/tcp"
         portBindings[adminRpcPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
 
         /**

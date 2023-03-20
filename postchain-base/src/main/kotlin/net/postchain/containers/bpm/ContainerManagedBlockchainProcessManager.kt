@@ -45,6 +45,7 @@ import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 import org.mandas.docker.client.DockerClient
 import org.mandas.docker.client.messages.Container
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -272,10 +273,10 @@ open class ContainerManagedBlockchainProcessManager(
             logger.debug { "[${nodeName()}]: $scope -- PostchainContainer not found and will be created" }
 
             // Building PostchainContainer
-            val containerPorts = ContainerPorts(containerNodeConfig)
-            val subnodeAdminClient = SubnodeAdminClient.create(containerNodeConfig, containerPorts, nodeDiagnosticContext)
+            val containerPortMapping = ConcurrentHashMap<Int, Int>()
+            val subnodeAdminClient = SubnodeAdminClient.create(containerNodeConfig, containerPortMapping, nodeDiagnosticContext)
             psContainer = DefaultPostchainContainer(
-                    directoryDataSource, job.containerName, containerPorts, STARTING, subnodeAdminClient, nodeDiagnosticContext)
+                    directoryDataSource, job.containerName, containerPortMapping, STARTING, subnodeAdminClient, nodeDiagnosticContext)
             logger.debug { "[${nodeName()}]: $scope -- PostchainContainer created" }
             val dir = initContainerWorkingDir(fs, psContainer)
             if (dir != null) {
@@ -308,15 +309,10 @@ open class ContainerManagedBlockchainProcessManager(
             // starting container
             dockerClient.startContainer(containerId)
 
-            psContainer.apply {
-                this.containerId = containerId
-                containerPorts.setHostPorts(dockerClient.findHostPorts(containerId, containerPorts.getPorts()))
-                start()
-            }
-
+            psContainer.containerId = containerId
             logger.info { dcLog("started", psContainer) }
 
-            job.postpone(5_000)
+            job.postpone(1_000)
             return result(false)
         }
 
@@ -329,11 +325,16 @@ open class ContainerManagedBlockchainProcessManager(
                 psContainer.updateResourceLimits()
                 fs.applyLimits(psContainer.containerName, psContainer.resourceLimits)
                 dockerClient.startContainer(dockerContainer.id())
-                psContainer.apply {
-                    containerPorts.setHostPorts(dockerClient.findHostPorts(dockerContainer.id(), containerPorts.getPorts()))
-                }
+
+                // We may have new ports so let's ensure we re-connect with those
+                if (psContainer.state == RUNNING) psContainer.reset()
+                logger.info { dcLog("restarted", psContainer) }
+
+                job.postpone(1_000)
+                return result(false)
             }
             if (psContainer.state != RUNNING) {
+                psContainer.containerPortMapping.putAll(dockerClient.findHostPorts(dockerContainer.id(), containerNodeConfig.subnodePorts))
                 psContainer.start()
                 job.postpone(5_000)
                 return result(false)
