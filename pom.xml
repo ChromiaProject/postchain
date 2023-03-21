@@ -31,7 +31,7 @@
 
         <!-- Kotlin -->
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
-        <kotlin.version>1.6.21</kotlin.version>
+        <kotlin.version>1.8.10</kotlin.version>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
 
