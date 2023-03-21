@@ -30,6 +30,7 @@ import net.postchain.core.BlockchainConfigurationFactorySupplier
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
+import net.postchain.crypto.PrivKey
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
@@ -336,6 +337,11 @@ open class ContainerManagedBlockchainProcessManager(
             if (psContainer.state != RUNNING) {
                 psContainer.containerPortMapping.putAll(dockerClient.findHostPorts(dockerContainer.id(), containerNodeConfig.subnodePorts))
                 psContainer.start()
+                job.postpone(5_000)
+                return result(false)
+            }
+            if (!psContainer.initializePostchainNode(PrivKey(postchainContext.appConfig.privKey))) {
+                logger.warn { "[${nodeName()}]: $scope -- Failed to initialize Postchain node, container: ${job.containerName}" }
                 job.postpone(5_000)
                 return result(false)
             }
