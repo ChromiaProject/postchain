@@ -4,7 +4,10 @@ import com.google.protobuf.ByteString
 import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.ManagedChannel
-import io.grpc.Status.*
+import io.grpc.Status.ALREADY_EXISTS
+import io.grpc.Status.FAILED_PRECONDITION
+import io.grpc.Status.UNAVAILABLE
+import io.grpc.Status.fromThrowable
 import io.grpc.health.v1.HealthCheckRequest
 import io.grpc.health.v1.HealthCheckResponse
 import io.grpc.health.v1.HealthGrpc
@@ -15,10 +18,13 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.crypto.PrivKey
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.server.grpc.AddConfigurationRequest
 import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.FindBlockchainRequest
+import net.postchain.server.grpc.InitNodeRequest
+import net.postchain.server.grpc.InitServiceGrpc
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
@@ -53,6 +59,9 @@ class DefaultSubnodeAdminClient(
     @Volatile
     private var healthcheckService: HealthGrpc.HealthBlockingStub? = null
 
+    @Volatile
+    private var initService: InitServiceGrpc.InitServiceBlockingStub? = null
+
     private val executor: ExecutorService = Executors.newSingleThreadExecutor {
         Thread(it, "${clientCount.incrementAndGet()}-DefaultSubnodeAdminClient")
     }
@@ -70,6 +79,7 @@ class DefaultSubnodeAdminClient(
                     service = PostchainServiceGrpc.newBlockingStub(channel)
                     peerService = PeerServiceGrpc.newBlockingStub(channel)
                     healthcheckService = HealthGrpc.newBlockingStub(channel)
+                    initService = InitServiceGrpc.newBlockingStub(channel)
                     logger.info { "connect() -- Subnode container connection established on $target" }
                     return@submit
                 } catch (e: Exception) {
@@ -90,6 +100,23 @@ class DefaultSubnodeAdminClient(
         channel?.apply {
             shutdownNow()
             awaitTermination(1000, TimeUnit.MILLISECONDS)
+        }
+    }
+
+    override fun initializePostchainNode(privKey: PrivKey): Boolean {
+        return try {
+            val request = InitNodeRequest.newBuilder().setPrivkey(ByteString.copyFrom(privKey.data)).build()
+            val response = initService?.initNode(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { response.message }
+            true
+        } catch (e: Exception) {
+            if (fromThrowable(e).code == ALREADY_EXISTS.code) {
+                logger.info { "initializePostchainNode -- ${e.message}" }
+            } else {
+                logger.error { "initializePostchainNode -- exception occurred: ${e.message}" }
+            }
+            false
         }
     }
 

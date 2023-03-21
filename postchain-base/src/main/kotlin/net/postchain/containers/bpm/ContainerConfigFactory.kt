@@ -159,7 +159,7 @@ object ContainerConfigFactory : KLogging() {
         add("POSTCHAIN_DB_PASSWORD=${appConfig.databasePassword}")
         add("POSTCHAIN_DB_READ_CONCURRENCY=${appConfig.databaseReadConcurrency}")
         add("POSTCHAIN_CRYPTO_SYSTEM=${appConfig.cryptoSystemClass}")
-        add("POSTCHAIN_PRIVKEY=${appConfig.privKey}")
+        // Do not add privKey. It is supplied through initialization via gRPC
         add("POSTCHAIN_PUBKEY=${appConfig.pubKey}")
         add("POSTCHAIN_PORT=${appConfig.port}")
         add("POSTCHAIN_FASTSYNC_EXIT_DELAY=${SyncParameters.fromAppConfig(appConfig).exitDelay}")

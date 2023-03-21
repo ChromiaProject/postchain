@@ -1,5 +1,7 @@
 package net.postchain.containers.bpm
 
+import net.postchain.crypto.PrivKey
+
 enum class ContainerState {
     STARTING, RUNNING, STOPPING
 }
@@ -25,6 +27,7 @@ interface PostchainContainer {
     fun stop()
     fun isEmpty(): Boolean
     fun isSubnodeHealthy(): Boolean
+    fun initializePostchainNode(privKey: PrivKey): Boolean
 
     /** @return `true` if there are updates */
     fun updateResourceLimits(): Boolean

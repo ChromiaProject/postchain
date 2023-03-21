@@ -3,6 +3,7 @@ package net.postchain.containers.bpm
 import mu.KLogging
 import net.postchain.containers.bpm.docker.DockerTools
 import net.postchain.containers.bpm.rpc.SubnodeAdminClient
+import net.postchain.crypto.PrivKey
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.managed.DirectoryDataSource
 
@@ -102,6 +103,8 @@ class DefaultPostchainContainer(
     override fun isEmpty() = processes.isEmpty()
 
     override fun isSubnodeHealthy() = subnodeAdminClient.isSubnodeHealthy()
+
+    override fun initializePostchainNode(privKey: PrivKey): Boolean = subnodeAdminClient.initializePostchainNode(privKey)
 
     override fun updateResourceLimits(): Boolean {
         val oldResourceLimits = resourceLimits

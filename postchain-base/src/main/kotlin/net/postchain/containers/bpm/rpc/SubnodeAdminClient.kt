@@ -4,6 +4,7 @@ import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Shutdownable
+import net.postchain.crypto.PrivKey
 import net.postchain.debug.NodeDiagnosticContext
 
 interface SubnodeAdminClient : Shutdownable {
@@ -16,6 +17,7 @@ interface SubnodeAdminClient : Shutdownable {
 
     fun connect()
     fun disconnect()
+    fun initializePostchainNode(privKey: PrivKey): Boolean
     fun isSubnodeHealthy(): Boolean
     fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: ByteArray): Boolean
     fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid, config: ByteArray): Boolean
