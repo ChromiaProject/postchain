@@ -148,7 +148,7 @@ open class ManagedBlockchainProcessManager(
             val doReload = isPeerListChanged()
 
             return if (doReload) {
-                logger.info { "Reloading of blockchains are required" }
+                logger.info { "Reloading of all blockchains are required due to change in peer list" }
                 wrTrace("chain0 Reloading of blockchains are required", chainId, bTrace)
                 reloadBlockchainsAsync(bTrace)
                 true
