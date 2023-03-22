@@ -13,7 +13,6 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
@@ -112,7 +111,7 @@ class BaseManagedNodeDataSourceTest {
 
     @ParameterizedTest
     @MethodSource("getPendingBlockchainConfigurationTestData")
-    fun testGetPendingBlockchainConfiguration(gtvResult: Gtv, expected: PendingBlockchainConfiguration?) {
+    fun testGetPendingBlockchainConfiguration(gtvResult: Gtv, expected: List<PendingBlockchainConfiguration>) {
         val appConfig: AppConfig = mock {
             on { pubKeyByteArray } doReturn byteArrayOf(0)
             on { cryptoSystem } doReturn Secp256K1CryptoSystem()
@@ -123,20 +122,6 @@ class BaseManagedNodeDataSourceTest {
         }
         val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
         assertEquals(expected, sut.getPendingBlockchainConfiguration(ZERO_RID, 0L))
-    }
-
-    @ParameterizedTest
-    @MethodSource("isPendingBlockchainConfigurationAppliedTestData")
-    fun testIsPendingBlockchainConfigurationApplied(gtvResult: Gtv, expected: Boolean) {
-        val appConfig: AppConfig = mock {
-            on { pubKeyByteArray } doReturn byteArrayOf(0)
-        }
-        val queryRunner: QueryRunner = mock {
-            on { query(eq("nm_api_version"), any()) } doReturn gtv(5)
-            on { query(eq("nm_is_pending_blockchain_configuration_applied"), any()) } doReturn gtvResult
-        }
-        val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
-        assertEquals(expected, sut.isPendingBlockchainConfigurationApplied(ZERO_RID, 0L, byteArrayOf()))
     }
 
     companion object {
@@ -275,7 +260,8 @@ class BaseManagedNodeDataSourceTest {
             val encodedConfig0 = GtvEncoder.encodeGtv(baseConfig0)
             val gtvResult0 = gtv(mapOf(
                     "base_config" to gtv(encodedConfig0),
-                    "signers" to gtv(listOf(gtv(pubKey0.data)))
+                    "signers" to gtv(listOf(gtv(pubKey0.data))),
+                    "minimum_height" to gtv(5)
             ))
 
             val fullConfig = baseConfig0.asDict().toMutableMap()
@@ -283,19 +269,14 @@ class BaseManagedNodeDataSourceTest {
             val expected0 = PendingBlockchainConfiguration(
                     baseConfig0,
                     gtv(fullConfig).merkleHash(hashCalculator).wrap(),
-                    listOf(pubKey0)
+                    listOf(pubKey0),
+                    5
             )
 
             return listOf(
-                    arrayOf(GtvNull, null),
-                    arrayOf(gtvResult0, expected0)
+                    arrayOf(gtv(listOf()), listOf<PendingBlockchainConfiguration>()),
+                    arrayOf(gtv(listOf(gtvResult0)), listOf(expected0))
             )
         }
-
-        @JvmStatic
-        fun isPendingBlockchainConfigurationAppliedTestData(): List<Array<Any?>> = listOf(
-                arrayOf(GtvInteger(0), false),
-                arrayOf(GtvInteger(1), true)
-        )
     }
 }
