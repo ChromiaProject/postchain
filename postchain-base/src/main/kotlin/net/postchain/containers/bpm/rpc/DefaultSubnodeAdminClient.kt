@@ -1,39 +1,43 @@
 package net.postchain.containers.bpm.rpc
 
 import com.google.protobuf.ByteString
-import io.grpc.ConnectivityState
 import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.ManagedChannel
-import io.grpc.Status
 import io.grpc.Status.ALREADY_EXISTS
+import io.grpc.Status.FAILED_PRECONDITION
+import io.grpc.Status.UNAVAILABLE
+import io.grpc.Status.fromThrowable
+import io.grpc.health.v1.HealthCheckRequest
+import io.grpc.health.v1.HealthCheckResponse
+import io.grpc.health.v1.HealthGrpc
+import io.grpc.protobuf.services.HealthStatusManager
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
-import net.postchain.containers.bpm.ContainerPorts
 import net.postchain.containers.infra.ContainerNodeConfig
-import net.postchain.debug.DiagnosticData
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DiagnosticQueue
+import net.postchain.crypto.PrivKey
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.server.grpc.AddConfigurationRequest
 import net.postchain.server.grpc.AddPeerRequest
-import net.postchain.server.grpc.DebugServiceGrpc
 import net.postchain.server.grpc.FindBlockchainRequest
+import net.postchain.server.grpc.InitNodeRequest
+import net.postchain.server.grpc.InitServiceGrpc
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
 import net.postchain.server.grpc.StopBlockchainRequest
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class DefaultSubnodeAdminClient(
         private val containerNodeConfig: ContainerNodeConfig,
-        private val containerPorts: ContainerPorts,
+        private val containerPortMapping: Map<Int, Int>,
         private val nodeDiagnosticContext: NodeDiagnosticContext
 ) : SubnodeAdminClient {
 
@@ -53,15 +57,20 @@ class DefaultSubnodeAdminClient(
     private var peerService: PeerServiceGrpc.PeerServiceBlockingStub? = null
 
     @Volatile
-    private var healthcheckService: DebugServiceGrpc.DebugServiceBlockingStub? = null
+    private var healthcheckService: HealthGrpc.HealthBlockingStub? = null
+
+    @Volatile
+    private var initService: InitServiceGrpc.InitServiceBlockingStub? = null
 
     private val executor: ExecutorService = Executors.newSingleThreadExecutor {
         Thread(it, "${clientCount.incrementAndGet()}-DefaultSubnodeAdminClient")
     }
 
+    private var connectJob: Future<*>? = null
+
     override fun connect() {
-        executor.submit {
-            val target = "${containerNodeConfig.subnodeHost}:${containerPorts.hostAdminRpcPort}"
+        connectJob = executor.submit {
+            val target = "${containerNodeConfig.subnodeHost}:${containerPortMapping[containerNodeConfig.subnodeAdminRpcPort]}"
             repeat(MAX_RETRIES) {
                 try {
                     logger.debug { "connect() -- Connecting to subnode container on $target ..." }
@@ -69,7 +78,8 @@ class DefaultSubnodeAdminClient(
                     channel = Grpc.newChannelBuilder(target, creds).build()
                     service = PostchainServiceGrpc.newBlockingStub(channel)
                     peerService = PeerServiceGrpc.newBlockingStub(channel)
-                    healthcheckService = DebugServiceGrpc.newBlockingStub(channel)
+                    healthcheckService = HealthGrpc.newBlockingStub(channel)
+                    initService = InitServiceGrpc.newBlockingStub(channel)
                     logger.info { "connect() -- Subnode container connection established on $target" }
                     return@submit
                 } catch (e: Exception) {
@@ -85,11 +95,43 @@ class DefaultSubnodeAdminClient(
         }
     }
 
-    override fun isSubnodeConnected(): Boolean = try {
-        channel?.getState(true) == ConnectivityState.READY
-    } catch (e: Exception) {
-        logger.error { e.message }
-        false
+    override fun disconnect() {
+        connectJob?.cancel(true)
+        channel?.apply {
+            shutdownNow()
+            awaitTermination(1000, TimeUnit.MILLISECONDS)
+        }
+    }
+
+    override fun initializePostchainNode(privKey: PrivKey): Boolean {
+        return try {
+            val request = InitNodeRequest.newBuilder().setPrivkey(ByteString.copyFrom(privKey.data)).build()
+            val response = initService?.initNode(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { response.message }
+            true
+        } catch (e: Exception) {
+            if (fromThrowable(e).code == ALREADY_EXISTS.code) {
+                logger.info { "initializePostchainNode -- ${e.message}" }
+            } else {
+                logger.error { "initializePostchainNode -- exception occurred: ${e.message}" }
+            }
+            false
+        }
+    }
+
+    override fun isSubnodeHealthy(): Boolean {
+        return try {
+            logger.debug { "isSubnodeHealthy -- doing health check" }
+            val request = HealthCheckRequest.newBuilder().setService(HealthStatusManager.SERVICE_NAME_ALL_SERVICES).build()
+            val reply = healthcheckService?.check(request) ?: return false
+            reply.status == HealthCheckResponse.ServingStatus.SERVING
+        } catch (e: Exception) {
+            if (fromThrowable(e).code != UNAVAILABLE.code) {
+                logger.warn { "isSubnodeHealthy -- can't do health check: ${e.message}" }
+            }
+            false
+        }
     }
 
     override fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: ByteArray): Boolean {
@@ -106,7 +148,11 @@ class DefaultSubnodeAdminClient(
             logger.debug { "addConfiguration(${chainId}) -- ${response.message}" }
             true
         } catch (e: Exception) {
-            logger.error { "addConfiguration(${chainId}) -- can't add configuration: ${e.message}" }
+            if (fromThrowable(e).code in setOf(ALREADY_EXISTS.code, FAILED_PRECONDITION.code)) {
+                logger.warn { "addConfiguration(${chainId}) -- ${e.message}" }
+            } else {
+                logger.error { "addConfiguration(${chainId}) -- exception occurred: ${e.message}" }
+            }
             false
         }
     }
@@ -129,12 +175,12 @@ class DefaultSubnodeAdminClient(
                 true
             } else {
                 nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add("Can't start blockchain: ${response.message}")
-                logger.error { "startBlockchain(${chainId}) -- can't start blockchain: ${response.message}" }
+                logger.error { "startBlockchain(${chainId}:${blockchainRid.toShortHex()}) -- can't start blockchain: ${response.message}" }
                 false
             }
         } catch (e: Exception) {
             nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add("Can't start blockchain: ${e.message}")
-            logger.error { "startBlockchain(${chainId}) -- can't start blockchain: ${e.message}" }
+            logger.error { "startBlockchain(${chainId}:${blockchainRid.toShortHex()}) -- can't start blockchain: ${e.message}" }
             false
         }
     }
@@ -199,7 +245,7 @@ class DefaultSubnodeAdminClient(
             logger.debug { response.message }
             true
         } catch (e: Exception) {
-            if (Status.fromThrowable(e).code == ALREADY_EXISTS.code) {
+            if (fromThrowable(e).code == ALREADY_EXISTS.code) {
                 logger.info { "addPeerInfo($peerInfo) -- ${e.message}" }
             } else {
                 logger.error { "addPeerInfo($peerInfo) -- exception occurred: ${e.message}" }
@@ -209,10 +255,7 @@ class DefaultSubnodeAdminClient(
     }
 
     override fun shutdown() {
+        disconnect()
         executor.shutdown()
-        channel?.apply {
-            shutdownNow()
-            awaitTermination(1000, TimeUnit.MILLISECONDS)
-        }
     }
 }

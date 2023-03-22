@@ -4,7 +4,6 @@ import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
-import net.postchain.common.toHex
 import net.postchain.core.AppContext
 import net.postchain.crypto.PubKey
 import net.postchain.devtools.AbstractSyncTest
@@ -69,6 +68,14 @@ class ReplicaSyncTestNightly : AbstractSyncTest() {
     @Test
     @Timeout(2, unit = TimeUnit.MINUTES)
     fun testRemoveAndAddAgain() {
+        addReplica = true
+        runSyncTest(1, 2, setOf(1), setOf(0), 1)
+    }
+
+    @Test
+    @Timeout(2, unit = TimeUnit.MINUTES)
+    fun testRemoveAndAddAgainWithForcedFastSync() {
+        configOverrides.setProperty("slowsync.enabled", "false")
         addReplica = true
         runSyncTest(1, 2, setOf(1), setOf(0), 1)
     }

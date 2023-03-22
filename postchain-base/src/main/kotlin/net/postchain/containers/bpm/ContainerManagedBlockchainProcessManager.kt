@@ -30,6 +30,7 @@ import net.postchain.core.BlockchainConfigurationFactorySupplier
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
+import net.postchain.crypto.PrivKey
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
@@ -45,6 +46,7 @@ import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 import org.mandas.docker.client.DockerClient
 import org.mandas.docker.client.messages.Container
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -103,7 +105,9 @@ open class ContainerManagedBlockchainProcessManager(
         Runtime.getRuntime().addShutdownHook(
                 Thread {
                     withLoggingContext(NODE_PUBKEY_TAG to appConfig.pubKey) {
-                        logger.info("Shutting down master node - stopping subnode containers...")
+                        logger.info("Shutting down master node")
+                        shutdown()
+                        logger.info("Stopping subnode containers...")
                         for ((name, psContainer) in postchainContainers) {
                             withLoggingContext(CONTAINER_NAME_TAG to psContainer.containerName.name) {
                                 logger.info("Stopping subnode $name...")
@@ -133,12 +137,15 @@ open class ContainerManagedBlockchainProcessManager(
                 }
             }
 
-    override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler = if (chainId == CHAIN0) {
-        { blockTrace: BlockTrace?, blockHeight: Long, _: Long ->
-            try {
+    override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
+        fun chain0AfterCommitHandler(blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long): Boolean {
+            return try {
                 rTrace("Before", chainId, blockTrace)
-                rTrace("Before", chainId, blockTrace)
-                for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
+
+                // If chain is already being stopped/restarted by another thread we will not get the lock and may return
+                if (!tryAcquireChainLock(chainId)) return false
+
+                invokeAfterCommitHooks(chainId, blockHeight)
 
                 // Preloading blockchain configuration
                 preloadChain0Configuration()
@@ -171,10 +178,16 @@ open class ContainerManagedBlockchainProcessManager(
                 logger.error(e) { "Exception in RestartHandler: $e" }
                 startBlockchainAsync(chainId, blockTrace)
                 true // let's hope restarting a blockchain fixes the problem
+            } finally {
+                releaseChainLock(chainId)
             }
         }
-    } else {
-        super.buildAfterCommitHandler(chainId)
+
+        return if (chainId == CHAIN0) {
+            ::chain0AfterCommitHandler
+        } else {
+            super.buildAfterCommitHandler(chainId)
+        }
     }
 
     /**
@@ -260,19 +273,11 @@ open class ContainerManagedBlockchainProcessManager(
         if (psContainer == null) {
             logger.debug { "[${nodeName()}]: $scope -- PostchainContainer not found and will be created" }
 
-            // Finding available/existent host ports
-            val containerPorts = ContainerPorts(containerNodeConfig)
-            val hostPorts = dockerClient.findHostPorts(dockerContainer, containerPorts.getPorts())
-            containerPorts.setHostPorts(hostPorts)
-            if (!containerPorts.verify()) {
-                logger.error { "[${nodeName()}]: $scope -- Can't finding available/existent host ports" }
-                return result(false)
-            }
-
             // Building PostchainContainer
-            val subnodeAdminClient = SubnodeAdminClient.create(containerNodeConfig, containerPorts, nodeDiagnosticContext)
+            val containerPortMapping = ConcurrentHashMap<Int, Int>()
+            val subnodeAdminClient = SubnodeAdminClient.create(containerNodeConfig, containerPortMapping, nodeDiagnosticContext)
             psContainer = DefaultPostchainContainer(
-                    directoryDataSource, job.containerName, containerPorts, STARTING, subnodeAdminClient, nodeDiagnosticContext)
+                    directoryDataSource, job.containerName, containerPortMapping, STARTING, subnodeAdminClient, nodeDiagnosticContext)
             logger.debug { "[${nodeName()}]: $scope -- PostchainContainer created" }
             val dir = initContainerWorkingDir(fs, psContainer)
             if (dir != null) {
@@ -299,15 +304,16 @@ open class ContainerManagedBlockchainProcessManager(
 
             // creating container
             val config = ContainerConfigFactory.createConfig(fs, appConfig, containerNodeConfig, psContainer)
-            psContainer.containerId = dockerClient.createContainer(config, job.containerName.toString()).id()!!
+            val containerId = dockerClient.createContainer(config, job.containerName.toString()).id()!!
             logger.debug { dcLog("created", psContainer) }
 
             // starting container
-            dockerClient.startContainer(psContainer.containerId)
-            psContainer.start()
+            dockerClient.startContainer(containerId)
+
+            psContainer.containerId = containerId
             logger.info { dcLog("started", psContainer) }
 
-            job.postpone(5_000)
+            job.postpone(1_000)
             return result(false)
         }
 
@@ -319,20 +325,33 @@ open class ContainerManagedBlockchainProcessManager(
                 logger.info { dcLog("$dcState and will be started", psContainer) }
                 psContainer.updateResourceLimits()
                 fs.applyLimits(psContainer.containerName, psContainer.resourceLimits)
-                dockerClient.startContainer(psContainer.containerId)
+                dockerClient.startContainer(dockerContainer.id())
+
+                // We may have new ports so let's ensure we re-connect with those
+                if (psContainer.state == RUNNING) psContainer.reset()
+                logger.info { dcLog("restarted", psContainer) }
+
+                job.postpone(1_000)
+                return result(false)
             }
             if (psContainer.state != RUNNING) {
+                psContainer.containerPortMapping.putAll(dockerClient.findHostPorts(dockerContainer.id(), containerNodeConfig.subnodePorts))
                 psContainer.start()
                 job.postpone(5_000)
                 return result(false)
             }
-            if (!psContainer.isSubnodeConnected()) {
-                logger.warn { "[${nodeName()}]: $scope -- Subnode is not connected, container: ${job.containerName}" }
+            if (!psContainer.initializePostchainNode(PrivKey(postchainContext.appConfig.privKey))) {
+                logger.warn { "[${nodeName()}]: $scope -- Failed to initialize Postchain node, container: ${job.containerName}" }
+                job.postpone(5_000)
+                return result(false)
+            }
+            if (!psContainer.isSubnodeHealthy()) {
+                logger.warn { "[${nodeName()}]: $scope -- Subnode is unhealthy, container: ${job.containerName}" }
                 job.postpone(5_000)
                 return result(false)
             }
 
-            logger.info { "[${nodeName()}]: $scope -- Subnode is connected, container: ${job.containerName}" }
+            logger.info { "[${nodeName()}]: $scope -- Subnode is healthy, container: ${job.containerName}" }
         } else {
             logger.debug { "[${nodeName()}]: $scope -- DockerContainer is not running, 'is subnode connected' check will be skipped, container: ${job.containerName}" }
         }
@@ -410,21 +429,25 @@ open class ContainerManagedBlockchainProcessManager(
                         logger.warn { "Resource limits for container ${cname.name} have been changed from $currentResourceLimits to ${psContainer.resourceLimits}" }
                     }
 
-                    val dc = running.firstOrNull { it.hasName(cname.name) }
-                    val chainIds = if (dc == null) {
-                        logger.warn { "[${nodeName()}]: $scope -- Docker container is not running and will be restarted: ${cname.name}" }
+                    val chainsToTerminate = if (running.firstOrNull { it.hasName(cname.name) } == null) {
+                        logger.warn { "[${nodeName()}]: $scope -- Subnode container is not running and will be restarted: ${cname.name}" }
                         fixed.add(cname)
                         psContainer.getAllChains().toSet()
+                    } else if (!psContainer.isSubnodeHealthy()) {
+                        logger.warn { "[${nodeName()}]: $scope -- Subnode container is unhealthy and will be restarted: ${cname.name}" }
+                        fixed.add(cname)
+                        dockerClient.stopContainer(cname.name, 10)
+                        psContainer.getAllChains().toSet()
                     } else {
-                        logger.debug { "[${nodeName()}]: $scope -- Docker container is running: ${cname.name}" }
+                        logger.debug { "[${nodeName()}]: $scope -- Subnode container is running and healthy: ${cname.name}" }
                         psContainer.getStoppedChains().toSet()
                     }
 
-                    chainIds.forEach {
-                        terminateBlockchainProcess(it, psContainer)
+                    chainsToTerminate.forEach {
+                        removeBlockchainProcess(it, psContainer)
                     }
-                    if (chainIds.isNotEmpty()) {
-                        logger.warn { "[${nodeName()}]: $scope -- Container chains have been terminated: $chainIds" }
+                    if (chainsToTerminate.isNotEmpty()) {
+                        logger.warn { "[${nodeName()}]: $scope -- Container chains have been terminated: $chainsToTerminate" }
                     }
                 }
             }
@@ -476,18 +499,23 @@ open class ContainerManagedBlockchainProcessManager(
         return process.takeIf { started }
     }
 
-    private fun terminateBlockchainProcess(chainId: Long, psContainer: PostchainContainer): ContainerBlockchainProcess? {
-        return psContainer.terminateProcess(chainId)
-                ?.also { process ->
-                    extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
-                            .forEach { it.disconnectRemoteProcess(process) }
-                    masterBlockchainInfra.exitMasterBlockchainProcess(process)
-                    val blockchainRid = chainIdToBrid.remove(chainId)
-                    nodeDiagnosticContext.removeBlockchainData(blockchainRid)
-                    bridToChainId.remove(blockchainRid)
-                    chains.remove(chainId)
-                    process.shutdown()
-                }
+    private fun removeBlockchainProcess(chainId: Long, psContainer: PostchainContainer): ContainerBlockchainProcess? =
+            psContainer.removeProcess(chainId)
+                    ?.also { cleanUpBlockchainProcess(chainId, it) }
+
+    private fun terminateBlockchainProcess(chainId: Long, psContainer: PostchainContainer): ContainerBlockchainProcess? =
+            psContainer.terminateProcess(chainId)
+                    ?.also { cleanUpBlockchainProcess(chainId, it) }
+
+    private fun cleanUpBlockchainProcess(chainId: Long, process: ContainerBlockchainProcess) {
+        extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
+                .forEach { it.disconnectRemoteProcess(process) }
+        masterBlockchainInfra.exitMasterBlockchainProcess(process)
+        val blockchainRid = chainIdToBrid.remove(chainId)
+        nodeDiagnosticContext.removeBlockchainData(blockchainRid)
+        bridToChainId.remove(blockchainRid)
+        chains.remove(chainId)
+        process.shutdown()
     }
 
     private fun findDockerContainer(containerName: ContainerName): Container? {

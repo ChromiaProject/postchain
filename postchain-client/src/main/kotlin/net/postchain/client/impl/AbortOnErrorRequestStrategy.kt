@@ -10,17 +10,23 @@ import org.http4k.core.Response
 
 class AbortOnErrorRequestStrategy(
         private val config: PostchainClientConfig,
-        private val httpClient: HttpHandler) : RequestStrategy {
-    override fun <R> request(createRequest: (Endpoint) -> Request, success: (Response) -> R, failure: (Response) -> R, queryMultiple: Boolean): R {
+        httpClient: HttpHandler) : SynchronousRequestStrategy(httpClient) {
+    override fun <R> request(createRequest: (Endpoint) -> Request,
+                             success: (Response) -> R,
+                             failure: (Response, Endpoint) -> R,
+                             queryMultiple: Boolean): R {
         var response: Response? = null
-        for (endpoint in config.endpointPool) {
+        var endpoint: Endpoint? = null
+        val iterator = config.endpointPool.iterator()
+        while (iterator.hasNext()) {
+            endpoint = iterator.next()
             val request = createRequest(endpoint)
             endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
-                response = httpClient(request)
+                response = makeRequest(request)
                 when {
                     isSuccess(response.status) -> return success(response)
 
-                    isClientFailure(response.status) -> return failure(response)
+                    isClientFailure(response.status) -> return failure(response, endpoint)
 
                     isServerFailure(response.status) -> {
                         endpoint.setUnreachable(unreachableDuration(response.status))
@@ -32,7 +38,7 @@ class AbortOnErrorRequestStrategy(
                 Thread.sleep(config.failOverConfig.attemptInterval.toMillis())
             }
         }
-        return failure(response!!)
+        return failure(response!!, endpoint!!)
     }
 
     override fun close() {}

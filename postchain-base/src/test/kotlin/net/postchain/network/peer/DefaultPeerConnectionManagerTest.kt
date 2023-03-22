@@ -114,7 +114,7 @@ class DefaultPeerConnectionManagerTest {
 
         try {
             connectionManager.also { it.connectChain(chainPeerConfig, true, mock()) }
-        } catch (e: IllegalArgumentException) {
+        } catch (_: IllegalArgumentException) {
         }
 
         // Then
@@ -176,7 +176,7 @@ class DefaultPeerConnectionManagerTest {
 
         // When / Then exception
         assertThrows<ProgrammerMistake> {
-            DefaultPeerConnectionManager<Int>(
+            DefaultPeerConnectionManager(
                     mock(),
                     df
             ).apply {

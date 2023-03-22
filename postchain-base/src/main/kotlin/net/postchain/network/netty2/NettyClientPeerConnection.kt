@@ -36,7 +36,7 @@ class NettyClientPeerConnection<PacketType>(
             setChannelHandler(this@NettyClientPeerConnection)
             connect(peerAddress()).await().apply {
                 if (!isSuccess) {
-                    logger.info("Connection failed", cause().message)
+                    logger.info("Connection failed: ${cause().message}")
                     onDisconnected()
                 }
             }

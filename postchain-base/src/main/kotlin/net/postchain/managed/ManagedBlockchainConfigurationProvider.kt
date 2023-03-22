@@ -4,74 +4,50 @@ package net.postchain.managed
 
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.BlockchainRid
 import net.postchain.config.blockchain.AbstractBlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.EContext
+import java.util.concurrent.ConcurrentHashMap
 
-/**
- * A complicated mix of local (=DB) reads and external (=Chain0 API) reads.
- * Currently we allow local configuration to override the external configuration, but this is tricky
- * (see below for more).
- * If you need to use local configuration, the recommended way is to switch to manual mode (instead doing the
- * override in managed mode).
- */
-class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
+open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
 
-    private lateinit var dataSource: ManagedNodeDataSource
-    private val systemProvider = ManualBlockchainConfigurationProvider() // Used mainly to access Chain0 (we don't want to use Chain0 to check it's own config changes, too strange)
+    protected lateinit var dataSource: ManagedNodeDataSource
+
+    // Used to access Chain0 configs which are preloaded and validated in ManagedBlockchainProcessManager.preloadChain0Configuration().
+    private val localProvider = ManualBlockchainConfigurationProvider()
+    protected val pendingConfigurations = ConcurrentHashMap<Long, PendingBlockchainConfigurationStatus>()
 
     companion object : KLogging()
 
-    fun setDataSource(dataSource: ManagedNodeDataSource) {
+    // Feature toggle
+    protected open fun isPcuEnabled(): Boolean = dataSource.nmApiVersion >= 5
+            && (dataSource as? BaseManagedNodeDataSource)?.appConfig?.getEnvOrBoolean("POSTCHAIN_PCU", "pcu", false) ?: false
+
+    fun setManagedDataSource(dataSource: ManagedNodeDataSource) {
         this.dataSource = dataSource
     }
 
-    /**
-     * We read the config in this way:
-     * 1. check the local (DB) setting first, if nothing found
-     * 2. check the [ManagedNodeDataSource] for the config
-     *
-     * Note:
-     * This means that even for managed mode, we allow manual override of configurations at specific heights.
-     * This is a very tricky subject, since a manual override can cause the chain to fork!
-     */
     override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         return if (chainId == 0L) {
-            systemProvider.getActiveBlocksConfiguration(eContext, chainId)
+            localProvider.getActiveBlocksConfiguration(eContext, chainId)
         } else {
-            val localOverride = systemProvider.getActiveBlocksConfiguration(eContext, chainId)
-            return if (localOverride != null) {
-                logger.warn("getConfiguration() - You are about to use local configuration to override the " +
-                        "configuration of chain0 (for chain: $chainId)! Very dangerous")
-                localOverride
+            logger.debug { "getConfiguration() - Fetching configuration from chain0 (for chain: $chainId)" }
+            if (::dataSource.isInitialized) {
+                getConfigurationFromDataSource(eContext)
             } else {
-                // No override, fetch from chain0
-                if (logger.isDebugEnabled) {
-                    logger.debug("getConfiguration() - Fetching configuration from chain0 (for chain: $chainId)")
-                }
-                if (::dataSource.isInitialized) {
-                    getConfigurationFromDataSource(eContext)
-                } else {
-                    throw IllegalStateException("Using managed blockchain configuration provider before it's properly initialized")
-                }
+                throw IllegalStateException("Using managed blockchain configuration provider before it's properly initialized")
             }
         }
     }
 
-    /**
-     * Note:
-     * We only check the [ManagedNodeDataSource] for valid heights where new configurations can be found, and will
-     * therefore ignore any override configuration put in the "configuration" table for other heights
-     * (i.e. pretend they don't exist).
-     * Reason: override in managed mode is hard enough as it is, and it's doubtful if it should be allowed.
-     */
     override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long): Boolean {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         return if (chainId == 0L) {
-            systemProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
+            localProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
         } else {
             if (::dataSource.isInitialized) {
                 checkNeedConfChangeViaDataSource(eContext)
@@ -81,6 +57,55 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
         }
     }
 
+    open fun isManagedDatasourceReady(eContext: EContext): Boolean {
+        return if (isPcuEnabled()) {
+            val dba = DatabaseAccess.of(eContext)
+            val blockchainRid = getBlockchainRid(eContext, dba)
+            val activeHeight = getActiveBlocksHeight(eContext, dba)
+            val pendingConfig = pendingConfigurations[eContext.chainID]
+            val logPrefix = "isManagedDatasourceReady(${eContext.chainID})"
+
+            if (pendingConfig != null) {
+                logger.debug { "$logPrefix: pending config detected for chain ${eContext.chainID}: $pendingConfig" }
+                if (pendingConfig.isBlockBuilt) {
+                    logger.debug { "$logPrefix: block at height ${pendingConfig.height} is already built with a pending config" }
+                    val applied = dataSource.isPendingBlockchainConfigurationApplied(blockchainRid, activeHeight, pendingConfig.config.configHash.data)
+                    if (applied) {
+                        pendingConfigurations.remove(eContext.chainID)
+                        logger.debug { "$logPrefix: pending config is applied" }
+                    } else {
+                        logger.debug { "$logPrefix: pending config is not applied yet" }
+                    }
+                    applied
+                } else {
+                    logger.debug { "$logPrefix: block at height ${pendingConfig.height} is not yet built with a pending config" }
+                    true // block is not yet built with a pending config
+                }
+            } else {
+                true // there is no pending config
+            }
+        } else {
+            true // non-PCU mode
+        }
+    }
+
+    fun afterCommit(chainId: Long, height: Long) {
+        val logPrefix = "afterCommit($chainId, $height)"
+        val pendingConfig = pendingConfigurations[chainId]
+        if (pendingConfig != null) {
+            logger.debug { "$logPrefix: pendingConfig detected: $pendingConfig" }
+            if (pendingConfig.height != height) {
+                logger.error { "$logPrefix: unexpected height detected: pendingConfig.height: ${pendingConfig.height}, afterCommit.height: $height" }
+            } else {
+                pendingConfig.isBlockBuilt = true
+                logger.debug { "$logPrefix: block is built at height ${pendingConfig.height} with the pending config" }
+            }
+        } else {
+            logger.debug { "$logPrefix: no pendingConfig detected" }
+        }
+    }
+
+
     /**
      * Same principle for "historic" as for "current"
      */
@@ -88,11 +113,13 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         return if (chainId == 0L) {
-            systemProvider.getHistoricConfigurationHeight(eContext, chainId, historicBlockHeight)
+            localProvider.getHistoricConfigurationHeight(eContext, chainId, historicBlockHeight)
         } else {
             // We ignore local setting, go to Chain0 directly
             val dba = DatabaseAccess.of(eContext)
-            getHeightAwareConfChangeHeightViaDataSource(eContext, dba, historicBlockHeight)
+            val blockchainRid = getBlockchainRid(eContext, dba)
+            val lastSavedBlockHeight = dba.getLastBlockHeight(eContext)
+            dataSource.findNextConfigurationHeight(blockchainRid.data, lastSavedBlockHeight)
         }
     }
 
@@ -103,22 +130,12 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         return if (chainId == 0L) {
-            systemProvider.getHistoricConfiguration(eContext, chainId, historicBlockHeight)
+            localProvider.getHistoricConfiguration(eContext, chainId, historicBlockHeight)
         } else {
-            val localOverride = systemProvider.getHistoricConfiguration(eContext, chainId, historicBlockHeight)
-            return if (localOverride != null) {
-                if (logger.isDebugEnabled) {
-                    logger.debug("getHistoricConfiguration() - Found local configuration to override the configuration of chain0 (for chain: $chainId and height: $historicBlockHeight).")
-                }
-                localOverride
-            } else {
-                // No override, fetch from chain0
-                if (logger.isDebugEnabled) {
-                    logger.debug("getHistoricConfiguration() - Fetching configuration from chain0 (for chain: $chainId and height: $historicBlockHeight)")
-                }
-                val dba = DatabaseAccess.of(eContext)
-                return getHeightAwareConfigFromDatasource(eContext, dba, historicBlockHeight)
-            }
+            logger.debug { "getHistoricConfiguration() - Fetching configuration from chain0 (for chain: $chainId and height: $historicBlockHeight)" }
+            val dba = DatabaseAccess.of(eContext)
+            val blockchainRid = getBlockchainRid(eContext, dba)
+            return dataSource.getConfiguration(blockchainRid.data, historicBlockHeight)
         }
     }
 
@@ -126,55 +143,74 @@ class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationPr
 
     private fun checkNeedConfChangeViaDataSource(eContext: EContext): Boolean {
         val dba = DatabaseAccess.of(eContext)
+        val blockchainRid = getBlockchainRid(eContext, dba)
+        val lastSavedBlockHeight = dba.getLastBlockHeight(eContext)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
-        val nextConfigHeight = getHeightAwareConfChangeHeightViaDataSource(eContext, dba, activeHeight) //
+        val logPrefix = "checkNeedConfChangeViaDataSource(${eContext.chainID})"
 
-        if (nextConfigHeight == null) {
-            if (logger.isDebugEnabled) {
-                logger.debug( "checkNeedConfChangeViaDataSource() - no future configurations found for " +
-                            "chain: ${eContext.chainID} , activeHeight : $activeHeight"
-                )
+        return if (isPcuEnabled()) {
+            if (pendingConfigurations.containsKey(eContext.chainID)) {
+                logger.debug { "$logPrefix: pendingConfig is being applied, so no need to load a new configuration" }
+                false
+            } else {
+                val res = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight) != null
+                logger.debug { "$logPrefix: new pending configuration detected for activeHeight: $activeHeight" }
+                res
             }
-        } else if (nextConfigHeight > activeHeight) {
-            if (logger.isDebugEnabled) {
-                logger.debug( "checkNeedConfChangeViaDataSource() - Closest configurations found at height: " +
-                        "$nextConfigHeight for chain: ${eContext.chainID}, activeHeight : $activeHeight."
-                )
+        } else {
+            val nextConfigHeight = dataSource.findNextConfigurationHeight(blockchainRid.data, lastSavedBlockHeight)
+            if (nextConfigHeight == null) {
+                logger.debug {
+                    "$logPrefix: No future configurations found for chain: ${eContext.chainID}, activeHeight: $activeHeight"
+                }
+            } else if (nextConfigHeight >= activeHeight) {
+                logger.debug {
+                    "$logPrefix: Closest configurations found at height: " +
+                            "$nextConfigHeight for chain: ${eContext.chainID}, activeHeight: $activeHeight."
+                }
+            } else { // (nextConfigHeight < activeHeight)
+                logger.error("$logPrefix: didn't expect to find a future conf at lower height: " +
+                        "$nextConfigHeight that our active height: $activeHeight, chain: ${eContext.chainID}")
             }
-        } else if (nextConfigHeight < activeHeight) {
-           logger.error("checkNeedConfChangeViaDataSource() - didn't expect to find a future conf at lower height: " +
-                   "$nextConfigHeight that our active height: $activeHeight, chain: ${eContext.chainID}")
+            nextConfigHeight != null && activeHeight == nextConfigHeight  // Since we are looking for future configs here it's ok to get null back
         }
-
-        return nextConfigHeight != null && activeHeight == nextConfigHeight  // Since we are looking for future configs here it's ok to get null back
-    }
-
-    /**
-     * Note: Here we use the [ManagedNodeDataSource] that looks for FUTURE config changes (not like manual DB query)
-     *       meaning we might get "null" back as a valid answer
-     */
-    private fun getHeightAwareConfChangeHeightViaDataSource(eContext: EContext, dba: DatabaseAccess, activeHeight: Long): Long? {
-        val blockchainRID = dba.getBlockchainRid(eContext)
-        // Skip override, we go directly to Chain0 to check
-        val savedBlockHeight = activeHeight - 1 // Tricky part, for [ManagedNodeDataSource] we must send the last saved block height
-        return dataSource.findNextConfigurationHeight(blockchainRID!!.data, savedBlockHeight)
     }
 
     override fun findNextConfigurationHeight(eContext: EContext, height: Long): Long? {
-        val db = DatabaseAccess.of(eContext)
-        val brid = db.getBlockchainRid(eContext)
-        return dataSource.findNextConfigurationHeight(brid!!.data, height)
+        val dba = DatabaseAccess.of(eContext)
+        val blockchainRid = getBlockchainRid(eContext, dba)
+        return dataSource.findNextConfigurationHeight(blockchainRid.data, height)
     }
 
     private fun getConfigurationFromDataSource(eContext: EContext): ByteArray? {
         val dba = DatabaseAccess.of(eContext)
+        val blockchainRid = getBlockchainRid(eContext, dba)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
-        return getHeightAwareConfigFromDatasource(eContext, dba, activeHeight)
+        val logPrefix = "getConfigurationFromDataSource(${eContext.chainID})"
+
+        return if (isPcuEnabled()) {
+            if (activeHeight == 0L) {
+                logger.debug { "$logPrefix: the initial config will be loaded from DataSource" }
+                dataSource.getConfiguration(blockchainRid.data, 0L)
+            } else {
+                val config = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight)
+                if (config != null) {
+                    logger.debug { "$logPrefix: pending config detected at height: $activeHeight and will be loaded" }
+                    pendingConfigurations[eContext.chainID] = PendingBlockchainConfigurationStatus(activeHeight, config)
+                    config.fullConfig
+                } else { // This branch is chosen after blockchain restarts and if there is no a pending config at activeHeight
+                    logger.debug { "$logPrefix: pending config is absent at height: $activeHeight, config will be loaded from DataSource" }
+                    dataSource.getConfiguration(blockchainRid.data, activeHeight)
+                }
+            }
+        } else {
+            dataSource.getConfiguration(blockchainRid.data, activeHeight)
+        }
     }
 
-    private fun getHeightAwareConfigFromDatasource(eContext: EContext, dba: DatabaseAccess, height: Long): ByteArray? {
-        val blockchainRID = dba.getBlockchainRid(eContext)
-        return dataSource.getConfiguration(blockchainRID!!.data, height)
+    private fun getBlockchainRid(eContext: EContext, dba: DatabaseAccess): BlockchainRid {
+        val blockchainRid = dba.getBlockchainRid(eContext)
+        checkNotNull(blockchainRid) { "Unknown chainId: ${eContext.chainID}" }
+        return blockchainRid
     }
-
 }

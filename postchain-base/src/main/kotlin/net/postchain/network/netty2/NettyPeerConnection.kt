@@ -15,7 +15,7 @@ abstract class NettyPeerConnection :
         try {
             handler()
         } catch (e: Exception) {
-            logger.error("Error when receiving message from peer ${nodeId}", e)
+            logger.error("Error when receiving message from peer $nodeId", e)
         }
     }
 }

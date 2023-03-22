@@ -2,6 +2,7 @@
 
 package net.postchain.core
 
+import net.postchain.PostchainContext
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.common.BlockchainRid
@@ -40,6 +41,7 @@ interface BlockchainConfiguration {
     fun makeBlockBuilder(ctx: EContext): BlockBuilder
     fun makeBlockQueries(storage: Storage): BlockQueries
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
+    fun initializeModules(postchainContext: PostchainContext)
     fun shutdownModules()
 }
 

@@ -7,11 +7,10 @@ import net.postchain.concurrent.util.get
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.framework.AbstractBlockchainProcess
-import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.EagerDiagnosticValue
-import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.SlowSynchronizer
@@ -52,10 +51,15 @@ class ReadOnlyBlockchainProcess(
      * When the nodes are drained we move to slow sync instead.
      */
     override fun action() {
-        fastSynchronizer.syncUntilResponsiveNodesDrained()
-
-        // Move to slow sync and proceed until shutdown
-        slowSynchronizer.syncUntil()
+        if (params.slowSyncEnabled) {
+            logger.debug { "Using slow sync for read only bc process" }
+            fastSynchronizer.syncUntilResponsiveNodesDrained()
+            // Move to slow sync and proceed until shutdown
+            slowSynchronizer.syncUntil()
+        } else {
+            logger.debug { "Using fast sync for read only bc process" }
+            fastSynchronizer.syncUntil { !isProcessRunning() }
+        }
     }
 
     override fun cleanup() {

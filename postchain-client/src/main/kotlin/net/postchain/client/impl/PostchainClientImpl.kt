@@ -10,8 +10,11 @@ import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.PostchainClient
 import net.postchain.client.core.TransactionResult
 import net.postchain.client.core.TxRid
+import net.postchain.client.defaultHttpHandler
 import net.postchain.client.exception.ClientError
+import net.postchain.client.request.Endpoint
 import net.postchain.client.transaction.TransactionBuilder
+import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.tx.TransactionStatus.*
@@ -24,11 +27,6 @@ import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxQuery
 import org.apache.commons.io.input.BoundedInputStream
 import org.apache.commons.lang3.exception.ExceptionUtils
-import org.apache.hc.client5.http.config.RequestConfig
-import org.apache.hc.client5.http.cookie.StandardCookieSpec
-import org.apache.hc.client5.http.impl.classic.HttpClients
-import org.apache.hc.core5.util.Timeout
-import org.http4k.client.ApacheClient
 import org.http4k.core.ContentType
 import org.http4k.core.HttpHandler
 import org.http4k.core.Method
@@ -40,18 +38,10 @@ import java.time.Duration
 
 class PostchainClientImpl(
         override val config: PostchainClientConfig,
-        httpClient: HttpHandler = ApacheClient(HttpClients.custom()
-                .setDefaultRequestConfig(RequestConfig.custom()
-                        .setRedirectsEnabled(false)
-                        .setCookieSpec(StandardCookieSpec.IGNORE)
-                        .setConnectionRequestTimeout(Timeout.ofMilliseconds(config.connectTimeout.toMillis()))
-                        .setResponseTimeout(Timeout.ofMilliseconds(config.responseTimeout.toMillis()))
-                        .build()).build()),
+        httpClient: HttpHandler = defaultHttpHandler(config),
 ) : PostchainClient {
 
-    companion object : KLogging() {
-        const val MAX_TX_STATUS_SIZE = 64 * 1024L
-    }
+    companion object : KLogging()
 
     private val blockchainRIDHex = config.blockchainRid.toHex()
     private val blockchainRIDOrID = config.queryByChainId?.let { "iid_$it" } ?: blockchainRIDHex
@@ -81,14 +71,14 @@ class PostchainClientImpl(
 
     @Throws(IOException::class)
     override fun currentBlockHeight(): Long = requestStrategy.request({ endpoint ->
-        Request(Method.GET, "${endpoint.url}/node/$blockchainRIDOrID/height")
+        Request(Method.GET, "${endpoint.url}/blockchain/$blockchainRIDOrID/height")
                 .header("Accept", ContentType.APPLICATION_JSON.value)
     }, { response ->
-        parseJson(response, 1024, CurrentBlockHeight::class.java)?.blockHeight
+        parseJson(response, CurrentBlockHeight::class.java)?.blockHeight
                 ?: throw IOException("Json parsing failed")
-    }, { response ->
-        val msg = parseJson(response, 1024, ErrorResponse::class.java)?.error ?: "Unknown error"
-        throw ClientError("Cannot fetch current block height: ${response.status} $msg")
+    }, { response, endpoint ->
+        val msg = parseJson(response, ErrorResponse::class.java)?.error ?: "Unknown error"
+        throw ClientError("Cannot fetch current block height", response.status, msg, endpoint)
     }, false)
 
     @Throws(IOException::class)
@@ -103,7 +93,7 @@ class PostchainClientImpl(
     private fun decodeGtv(response: Response) =
             GtvDecoder.decodeGtv(BoundedInputStream(response.body.stream, config.maxResponseSize.toLong()))
 
-    private fun buildExceptionFromGTV(response: Response): Nothing {
+    private fun buildExceptionFromGTV(response: Response, endpoint: Endpoint): Nothing {
         val responseStream = BoundedInputStream(response.body.stream, config.maxResponseSize.toLong())
         val errorMessage = try {
             GtvDecoder.decodeGtv(responseStream).asString()
@@ -112,7 +102,7 @@ class PostchainClientImpl(
             // Dump it as a string and hope it is either empty or readable text
             String(responseStream.readAllBytes())
         }
-        throw ClientError("Can not make a query: ${response.status} $errorMessage")
+        throw ClientError("Can not make a query", response.status, errorMessage, endpoint)
     }
 
     @Throws(IOException::class)
@@ -125,9 +115,9 @@ class PostchainClientImpl(
                     .body(gson.toJson(Tx(tx.encodeHex())))
         }, { response ->
             TransactionResult(txRid, WAITING, response.status.code, response.status.description)
-        }, { response ->
+        }, { response, _ ->
             val rejectReason =
-                    parseJson(response, MAX_TX_STATUS_SIZE, ErrorResponse::class.java)?.error
+                    parseJson(response, ErrorResponse::class.java)?.error
                             ?: response.status.description
             TransactionResult(txRid, REJECTED, response.status.code, rejectReason)
         }, false)
@@ -165,20 +155,43 @@ class PostchainClientImpl(
         Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/status")
                 .header("Accept", ContentType.APPLICATION_JSON.value)
     }, { response ->
-        val txStatus = parseJson(response, MAX_TX_STATUS_SIZE, TxStatus::class.java)
+        val txStatus = parseJson(response, TxStatus::class.java)
         TransactionResult(
                 txRid,
                 TransactionStatus.valueOf(txStatus?.status?.uppercase() ?: "UNKNOWN"),
                 response.status.code,
                 txStatus?.rejectReason
         )
-    }, { response ->
-        val msg = parseJson(response, 1024, ErrorResponse::class.java)?.error ?: "Unknown error"
-        throw ClientError("Can not check transaction status: ${response.status} $msg")
+    }, { response, endpoint ->
+        val msg = parseJson(response, ErrorResponse::class.java)?.error ?: "Unknown error"
+        throw ClientError("Can not check transaction status", response.status, msg, endpoint)
     }, true)
 
-    private fun <T> parseJson(response: Response, maxSize: Long, cls: Class<T>): T? = try {
-        val body = BoundedInputStream(response.body.stream, maxSize).bufferedReader()
+    override fun confirmationProof(txRid: TxRid): ByteArray? = requestStrategy.request({ endpoint ->
+        Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/confirmationProof")
+                .header("Accept", ContentType.APPLICATION_JSON.value)
+    }, { response ->
+        val confirmationProof = parseJson(response, ConfirmationProof::class.java)
+        confirmationProof?.proof?.hexStringToByteArray()
+    }, { response, endpoint ->
+        val msg = parseJson(response, ErrorResponse::class.java)?.error ?: "Unknown error"
+        throw ClientError("Can not fetch confirmation proof", response.status, msg, endpoint)
+    }, true)
+
+    override fun getTransaction(txRid: TxRid): ByteArray? = requestStrategy.request({ endpoint ->
+        Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}")
+                .header("Accept", ContentType.APPLICATION_JSON.value)
+    }, { response ->
+        val txResponse = parseJson(response, Transaction::class.java)
+        txResponse?.tx?.hexStringToByteArray()
+    }, { response, endpoint ->
+        val msg = parseJson(response, ErrorResponse::class.java)?.error ?: "Unknown error"
+        throw ClientError("Can not fetch transaction", response.status, msg, endpoint)
+    }, true)
+
+
+    private fun <T> parseJson(response: Response, cls: Class<T>): T? = try {
+        val body = BoundedInputStream(response.body.stream, config.maxResponseSize.toLong()).bufferedReader()
         gson.fromJson(body, cls)
     } catch (e: JsonParseException) {
         val rootCause = ExceptionUtils.getRootCause(e)

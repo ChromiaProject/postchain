@@ -21,7 +21,7 @@ import mu.KLogging
  */
 open class KnownState(val params: SyncParameters) {
 
-    companion object: KLogging() {}
+    companion object : KLogging()
 
     protected enum class State {
         BLACKLISTED, UNRESPONSIVE, SYNCABLE, DRAINED

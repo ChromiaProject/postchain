@@ -418,7 +418,6 @@ class ForkTestNightly : ManagedModeTest() {
      * Here we want to set properties on unique nodes via a special map, just transfer the property to the
      * [NodeSetup] in question
      */
-
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
         super.addNodeConfigurationOverrides(nodeSetup) // Will jack into ManagedModeTest overrides (= set the specific "infrastructure" we need)
         val nodesExtra = extraNodeProperties[nodeSetup.sequenceNumber.nodeNumber]

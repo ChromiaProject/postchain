@@ -12,6 +12,7 @@ import net.postchain.client.impl.PostchainClientImpl.*
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder.encodeGtv
@@ -28,6 +29,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.io.EOFException
 import java.io.IOException
+import java.net.SocketException
 import java.time.Duration
 import java.util.concurrent.CompletionException
 import kotlin.test.assertContentEquals
@@ -144,7 +146,17 @@ internal class PostchainClientImplTest {
     }
 
     @Test
-    fun `unknown rell operation tx is immediately rejected with proper reject reason`() {
+    fun `SocketException from HttpHandler is handled`() {
+        val clientError = assertThrows<ClientError> {
+            PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+                override fun invoke(request: Request) = throw SocketException("oops")
+            }).query("foo", gtv(mapOf()))
+        }
+        assertTrue(requireNotNull(clientError.message).contains("oops"))
+    }
+
+    @Test
+    fun `unknown Rell operation tx is immediately rejected with proper reject reason`() {
         val client = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
                 val error = GsonBuilder().create().toJson(ErrorResponse("Unknown operation: add_node"))
@@ -298,6 +310,35 @@ internal class PostchainClientImplTest {
         assertThrows<ClientError> {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl("http://invalidhost"))).currentBlockHeight()
         }
+    }
+
+    @Test
+    fun `Confirmation proof can be parsed`() {
+        val proofString = "A48202C5308202C13081B80C0B626C6F636B486561646572A181A80481A5A581A230819FA122042082"
+        val proof: ByteArray? = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+            override fun invoke(request: Request) =
+                    Response(Status.OK).body("""{"proof":"$proofString"}""")
+        }).confirmationProof(TxRid("42"))
+        assertEquals(proofString, proof!!.toHex())
+    }
+
+    @Test
+    fun `Transaction data can be parsed`() {
+        val txString = "A58209213082091DA582091530820911A12204208F77E7DC903AE184A1569E60F8097CAFFB105F741D"
+        val transaction: ByteArray? = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+            override fun invoke(request: Request) =
+                    Response(Status.OK).body("""{"tx":"$txString"}""")
+        }).getTransaction(TxRid("42"))
+        assertEquals(txString, transaction!!.toHex())
+    }
+
+    @Test
+    fun `Assert trailing slashes are trimmed from endpoint URL`() {
+        val defaultEndpointPool = EndpointPool.default(listOf("http://localhost:7740/", "http://localhost:7741/"))
+        assertEquals(setOf("http://localhost:7740", "http://localhost:7741"), defaultEndpointPool.map { it.url }.toSet())
+
+        val singleEndpointPool = EndpointPool.singleUrl("http://localhost:7740/")
+        assertEquals("http://localhost:7740", singleEndpointPool.first().url)
     }
 
     private fun assertQueryUrlEndsWith(config: PostchainClientConfig, suffix: String) {

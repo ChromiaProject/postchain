@@ -10,6 +10,7 @@ import net.postchain.core.Infrastructure
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import org.mandas.docker.client.messages.ContainerConfig
 import org.mandas.docker.client.messages.HostConfig
+import org.mandas.docker.client.messages.LogConfig
 import org.mandas.docker.client.messages.PortBinding
 
 object ContainerConfigFactory : KLogging() {
@@ -65,15 +66,14 @@ object ContainerConfigFactory : KLogging() {
          * Therefore, use random port selection
          */
         val portBindings = mutableMapOf<String, List<PortBinding>>() // { dockerPort -> hostIp:hostPort }
-        val containerPorts = container.containerPorts
         // rest-api-port
-        val restApiPort = "${containerPorts.restApiPort}/tcp"
+        val restApiPort = "${containerNodeConfig.subnodeRestApiPort}/tcp"
         if (restApiConfig.port > -1) {
-            portBindings[restApiPort] = listOf(PortBinding.of(containerNodeConfig.subnodeHost, containerPorts.hostRestApiPort))
+            portBindings[restApiPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
         }
         // admin-rpc-port
-        val adminRpcPort = "${containerPorts.adminRpcPort}/tcp"
-        portBindings[adminRpcPort] = listOf(PortBinding.of(containerNodeConfig.subnodeHost, containerPorts.hostAdminRpcPort))
+        val adminRpcPort = "${containerNodeConfig.subnodeAdminRpcPort}/tcp"
+        portBindings[adminRpcPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
 
         /**
          * CPU:
@@ -121,6 +121,13 @@ object ContainerConfigFactory : KLogging() {
                         networkMode(containerNodeConfig.network)
                     }
                 }
+                .apply {
+                    val dockerLogConf = containerNodeConfig.dockerLogConf
+                    if (dockerLogConf != null) {
+                        logger.info("Setting docker log configuration to $dockerLogConf")
+                        logConfig(LogConfig.create(dockerLogConf.driver, dockerLogConf.opts))
+                    }
+                }
                 .build()
 
         return ContainerConfig.builder()
@@ -152,7 +159,7 @@ object ContainerConfigFactory : KLogging() {
         add("POSTCHAIN_DB_PASSWORD=${appConfig.databasePassword}")
         add("POSTCHAIN_DB_READ_CONCURRENCY=${appConfig.databaseReadConcurrency}")
         add("POSTCHAIN_CRYPTO_SYSTEM=${appConfig.cryptoSystemClass}")
-        add("POSTCHAIN_PRIVKEY=${appConfig.privKey}")
+        // Do not add privKey. It is supplied through initialization via gRPC
         add("POSTCHAIN_PUBKEY=${appConfig.pubKey}")
         add("POSTCHAIN_PORT=${appConfig.port}")
         add("POSTCHAIN_FASTSYNC_EXIT_DELAY=${SyncParameters.fromAppConfig(appConfig).exitDelay}")

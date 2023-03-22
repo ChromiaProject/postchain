@@ -13,6 +13,7 @@ import net.postchain.config.node.ManagedNodeConfig
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
+import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
@@ -70,14 +71,6 @@ open class ManagedBlockchainProcessManager(
 
     companion object : KLogging()
 
-    override fun makeBlockchainConfiguration(chainId: Long): BlockchainConfiguration {
-        return super.makeBlockchainConfiguration(chainId).also {
-            if (chainId == CHAIN0 && it is ManagedDataSourceAware) {
-                initManagedEnvironment(it)
-            }
-        }
-    }
-
     protected open fun initManagedEnvironment(blockchainConfig: ManagedDataSourceAware) {
         dataSource = blockchainConfig.dataSource
         peerListVersion = dataSource.getPeerListVersion()
@@ -89,8 +82,16 @@ open class ManagedBlockchainProcessManager(
 
         // Setting up managed data source to the blockchainConfig
         (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
-                ?.setDataSource(dataSource)
+                ?.setManagedDataSource(dataSource)
                 ?: logger.warn { "Blockchain config is not managed" }
+    }
+
+    override fun makeBlockchainConfiguration(chainId: Long): BlockchainConfiguration {
+        return super.makeBlockchainConfiguration(chainId).also {
+            if (chainId == CHAIN0 && it is ManagedDataSourceAware) {
+                initManagedEnvironment(it)
+            }
+        }
     }
 
     override fun getBlockchainConfigurationFactory(chainId: Long): BlockchainConfigurationFactorySupplier =
@@ -110,6 +111,18 @@ open class ManagedBlockchainProcessManager(
                     )
                 }
             }
+
+    override fun buildMessageProcessingLatch(blockchainConfig: BlockchainConfiguration) = MessageProcessingLatch {
+        if (blockchainConfig.chainID == CHAIN0) {
+            true // Chain0 runs in a (regular) managed mode
+        } else {
+            (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)?.run {
+                withReadConnection(storage, blockchainConfig.chainID) { ctx ->
+                    isManagedDatasourceReady(ctx)
+                }
+            } ?: false
+        }
+    }
 
     /**
      * @return a [AfterCommitHandler] which is a lambda (This lambda will be called by the Engine after each block
@@ -135,7 +148,7 @@ open class ManagedBlockchainProcessManager(
             val doReload = isPeerListChanged()
 
             return if (doReload) {
-                logger.info { "Reloading of blockchains are required" }
+                logger.info { "Reloading of all blockchains are required due to change in peer list" }
                 wrTrace("chain0 Reloading of blockchains are required", chainId, bTrace)
                 reloadBlockchainsAsync(bTrace)
                 true
@@ -177,11 +190,12 @@ open class ManagedBlockchainProcessManager(
         fun wrappedAfterCommitHandler(bTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long): Boolean {
             return try {
                 wrTrace("Before", chainId, bTrace)
-                for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, blockHeight)
 
                 wrTrace("Sync", chainId, bTrace)
                 // If chain is already being stopped/restarted by another thread we will not get the lock and may return
                 if (!tryAcquireChainLock(chainId)) return false
+
+                invokeAfterCommitHooks(chainId, blockHeight)
 
                 val restart = if (chainId == CHAIN0) {
                     afterCommitHandlerChain0(bTrace, blockTimestamp)
@@ -232,6 +246,12 @@ open class ManagedBlockchainProcessManager(
                         stopBlockchainAsync(it, bTrace)
                     }
         }
+    }
+
+    override fun invokeAfterCommitHooks(chainId: Long, blockHeight: Long) {
+        super.invokeAfterCommitHooks(chainId, blockHeight)
+        (postchainContext.configurationProvider as? ManagedBlockchainConfigurationProvider)
+                ?.afterCommit(chainId, blockHeight)
     }
 
     /**
@@ -302,15 +322,14 @@ open class ManagedBlockchainProcessManager(
             val nextConfigHeight = dataSource.findNextConfigurationHeight(brid.data, height)
             if (nextConfigHeight != null) {
                 logger.info { "Next config height found in managed-mode module: $nextConfigHeight" }
-                if (DatabaseAccess.of(ctx).findConfigurationHeightForBlock(ctx, nextConfigHeight) != nextConfigHeight) {
+                if (db.findConfigurationHeightForBlock(ctx, nextConfigHeight) != nextConfigHeight) {
                     logger.info {
                         "Configuration for the height $nextConfigHeight is not found in ConfigurationDataStore " +
                                 "and will be loaded into it from managed-mode module"
                     }
                     val config = dataSource.getConfiguration(brid.data, nextConfigHeight)!!
                     GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(config), brid)
-                    DatabaseAccess.of(ctx).addConfigurationData(
-                            ctx, nextConfigHeight, config)
+                    db.addConfigurationData(ctx, nextConfigHeight, config)
                 }
             }
 

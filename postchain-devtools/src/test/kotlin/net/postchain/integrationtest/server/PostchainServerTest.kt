@@ -21,6 +21,7 @@ import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.getModules
 import net.postchain.integrationtest.reconfiguration.DummyModule1
 import net.postchain.integrationtest.reconfiguration.DummyModule2
+import net.postchain.server.NodeProvider
 import net.postchain.server.grpc.AddBlockchainReplicaRequest
 import net.postchain.server.grpc.AddConfigurationRequest
 import net.postchain.server.grpc.AddPeerRequest
@@ -55,12 +56,12 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
     fun setup() {
         val nodes = createNodes(1, "/net/postchain/devtools/server/blockchain_config_1.xml")
         node = nodes[0]
-
+        val nodeProvider = NodeProvider { node }
         val postchainServiceServerName = InProcessServerBuilder.generateName()
         grpcCleanupRule.register(
                 InProcessServerBuilder.forName(postchainServiceServerName)
                         .directExecutor()
-                        .addService(PostchainServiceGrpcImpl(PostchainService(node)))
+                        .addService(PostchainServiceGrpcImpl(PostchainService(nodeProvider)))
                         .build()
                         .start()
         )
@@ -68,7 +69,7 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
         grpcCleanupRule.register(
                 InProcessServerBuilder.forName(peerServiceServerName)
                         .directExecutor()
-                        .addService(PeerServiceGrpcImpl(PeerService(node.postchainContext)))
+                        .addService(PeerServiceGrpcImpl(PeerService(nodeProvider)))
                         .build()
                         .start()
         )

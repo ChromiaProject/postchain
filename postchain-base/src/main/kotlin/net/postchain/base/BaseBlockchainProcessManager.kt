@@ -18,6 +18,7 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.devtools.NameHelper.peerName
+import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
@@ -46,7 +47,6 @@ open class BaseBlockchainProcessManager(
 ) : BlockchainProcessManager {
 
     override val synchronizer = Any()
-    protected val chainSynchronizers = mutableMapOf<Long, ReentrantLock>()
 
     val appConfig = postchainContext.appConfig
     val connectionManager = postchainContext.connectionManager
@@ -58,6 +58,11 @@ open class BaseBlockchainProcessManager(
     protected val extensions: List<BlockchainProcessManagerExtension> = bpmExtensions
     protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
     private val scheduledForStart = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
+
+    /*
+        These chain synchronizers should only be used when starting/stopping chains since we rely on them to figure out if a restart is in progress or not in the after commit handlers.
+    */
+    private val chainStartAndStopSynchronizers = ConcurrentHashMap<Long, ReentrantLock>()
 
     // For DEBUG only
     var insideATest = false
@@ -110,8 +115,7 @@ open class BaseBlockchainProcessManager(
      * @throws UserMistake if failed
      */
     override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid {
-        chainSynchronizers.putIfAbsent(chainId, ReentrantLock())
-        chainSynchronizers[chainId]!!.withLock {
+        chainStartAndStopSynchronizers.getOrPut(chainId) { ReentrantLock() }.withLock {
             return synchronized(synchronizer) {
                 withLoggingContext(
                         NODE_PUBKEY_TAG to appConfig.pubKey,
@@ -136,7 +140,8 @@ open class BaseBlockchainProcessManager(
                                     chainId,
                                     blockchainConfig,
                                     processName,
-                                    engine
+                                    engine,
+                                    buildMessageProcessingLatch(blockchainConfig)
                             )
                             logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
@@ -170,7 +175,7 @@ open class BaseBlockchainProcessManager(
             if (configuration != null) {
                 blockchainInfrastructure.makeBlockchainConfiguration(
                         configuration, eContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory(chainId)
-                )
+                ).also { it.initializeModules(postchainContext) }
             } else {
                 throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
             }.also { DependenciesValidator.validateBlockchainRids(eContext, it.blockchainDependencies) }
@@ -184,9 +189,10 @@ open class BaseBlockchainProcessManager(
             chainId: Long,
             blockchainConfig: BlockchainConfiguration,
             processName: BlockchainProcessName,
-            engine: BlockchainEngine
+            engine: BlockchainEngine,
+            messageProcessingLatch: MessageProcessingLatch
     ) {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine)
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, messageProcessingLatch)
                 .also {
                     val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainConfig.blockchainRid).also { data ->
                         data[DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT] = LazyDiagnosticValue { engine.getBlockQueries().getBestHeight().get() }
@@ -199,17 +205,17 @@ open class BaseBlockchainProcessManager(
                 }
     }
 
+    protected open fun buildMessageProcessingLatch(blockchainConfig: BlockchainConfiguration) = MessageProcessingLatch { true }
+
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
-        return chainSynchronizers[chainId]?.withLock {
+        return synchronized(synchronizer) {
             blockchainProcesses[chainId]
         }
     }
 
     override fun retrieveBlockchain(blockchainRid: BlockchainRid): BlockchainProcess? {
-        return bridToChainId[blockchainRid]?.let {
-            chainSynchronizers[it]?.withLock {
-                blockchainProcesses[it]
-            }
+        return synchronized(synchronizer) {
+            bridToChainId[blockchainRid]?.let { blockchainProcesses[it] }
         }
     }
 
@@ -219,7 +225,7 @@ open class BaseBlockchainProcessManager(
      * @param chainId is the chain to be stopped.
      */
     override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean) {
-        chainSynchronizers[chainId]?.withLock {
+        chainStartAndStopSynchronizers[chainId]?.withLock {
             synchronized(synchronizer) {
                 withLoggingContext(
                         NODE_PUBKEY_TAG to appConfig.pubKey,
@@ -229,11 +235,12 @@ open class BaseBlockchainProcessManager(
                     stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
                     stopDebug("Blockchain process has been purged", chainId, bTrace)
                 }
+
+                if (!restart) {
+                    chainIdToBrid.remove(chainId).also { bridToChainId.remove(it) }
+                    chainStartAndStopSynchronizers.remove(chainId)
+                }
             }
-        }
-        if (!restart) {
-            chainIdToBrid.remove(chainId).also { bridToChainId.remove(it) }
-            chainSynchronizers.remove(chainId)
         }
     }
 
@@ -280,19 +287,35 @@ open class BaseBlockchainProcessManager(
      * the sublcass [net.postchain.managed.ManagedBlockchainProcessManager].
      */
     protected open fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
-        return { bTrace, height, _ ->
+        return { bTrace, blockHeight, _ ->
+            try {
+                // If chain is already being stopped/restarted by another thread we will not get the lock and may return
+                if (!tryAcquireChainLock(chainId)) {
+                    false
+                } else {
+                    invokeAfterCommitHooks(chainId, blockHeight)
 
-            for (e in extensions) e.afterCommit(blockchainProcesses[chainId]!!, height)
-            val doRestart = withReadConnection(storage, chainId) { eContext ->
-                blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId)
+                    val doRestart = isConfigurationChanged(chainId)
+                    if (doRestart) {
+                        testDebug("BaseBlockchainProcessManager, need restart of: $chainId", bTrace)
+                        startBlockchainAsync(chainId, bTrace)
+                    }
+                    doRestart
+                }
+            } finally {
+                releaseChainLock(chainId)
             }
+        }
+    }
 
-            if (doRestart) {
-                testDebug("BaseBlockchainProcessManager, need restart of: $chainId", bTrace)
-                startBlockchainAsync(chainId, bTrace)
+    protected open fun invokeAfterCommitHooks(chainId: Long, blockHeight: Long) {
+        val blockchainProcess = blockchainProcesses[chainId]
+        if (blockchainProcess != null) {
+            for (e in extensions) {
+                e.afterCommit(blockchainProcess, blockHeight)
             }
-
-            doRestart
+        } else {
+            logger.warn("No blockchain process for $chainId")
         }
     }
 
@@ -327,12 +350,12 @@ open class BaseBlockchainProcessManager(
     }
 
     protected fun tryAcquireChainLock(chainId: Long): Boolean {
-        return chainSynchronizers[chainId]?.tryLock()
+        return chainStartAndStopSynchronizers[chainId]?.tryLock()
                 ?: throw ProgrammerMistake("No lock instance exists for chain $chainId")
     }
 
     protected fun releaseChainLock(chainId: Long) {
-        chainSynchronizers[chainId]?.apply {
+        chainStartAndStopSynchronizers[chainId]?.apply {
             if (isHeldByCurrentThread) {
                 unlock()
             }

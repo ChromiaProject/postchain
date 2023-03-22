@@ -7,14 +7,18 @@ import mu.withLoggingContext
 import net.postchain.PostchainNode
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.infra.BaseApiInfrastructure
-import net.postchain.base.*
+import net.postchain.base.BaseBlockchainInfrastructure
+import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.base.withReadWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
-import net.postchain.core.*
+import net.postchain.core.BlockchainProcess
+import net.postchain.core.EContext
+import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockQueries
 import net.postchain.devtools.NameHelper.peerName
@@ -22,7 +26,6 @@ import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
-import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
 import net.postchain.metrics.NODE_PUBKEY_TAG
@@ -31,9 +34,8 @@ import kotlin.properties.Delegates
 /**
  * This node is used in integration tests.
  *
- * @property nodeConfigProvider gives us the configuration of the node
- * @property preWipeDatabase is true if we want to start up clean (usually the case when we run tests)
- *
+ * @constructor appConfig  gives us the configuration of the node
+ * @constructor wipeDb     is true if we want to start up clean (usually the case when we run tests)
  */
 class PostchainTestNode(
         appConfig: AppConfig,
@@ -49,14 +51,7 @@ class PostchainTestNode(
         isInitialized = true
 
         // We don't have specific test classes for Proc Man
-        when (processManager) {
-            is BaseBlockchainProcessManager -> {
-                processManager.insideATest = true
-            }
-            is ManagedBlockchainProcessManager -> {
-                processManager.insideATest = true
-            }
-        }
+        (processManager as? BaseBlockchainProcessManager)?.let { it.insideATest = true }
     }
 
     companion object : KLogging() {
@@ -205,8 +200,8 @@ class PostchainTestNode(
     }
 
     /**
-     * Yeah I know this is a strange way of retrieving the BC RID, but plz change if you think of something better.
-     * (It's only for test, so I didn't ptu much thought into it. )
+     * Yeah, I know this is a strange way of retrieving the BC RID, but plz change if you think of something better.
+     * (It's only for test, so I didn't ptu much thought into it.)
      */
     fun getBlockchainRid(chainId: Long): BlockchainRid? = blockchainRidMap[chainId]
 }

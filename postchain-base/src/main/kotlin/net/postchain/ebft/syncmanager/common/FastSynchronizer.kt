@@ -82,7 +82,7 @@ class FastSynchronizer(
             syncDebug("Start", blockHeight)
             while (isProcessRunning() && !exitCondition()) {
                 refillJobs()
-                processMessages()
+                processMessages(exitCondition)
                 processDoneJobs()
                 processStaleJobs()
                 sleep(params.loopInterval)
@@ -267,7 +267,7 @@ class FastSynchronizer(
         for (j in jobs.values) {
             if (j.hasRestartFailed) {
                 if (j.startTime + params.jobTimeout < now) {
-                    peerStatuses.unresponsive(j.peerId, "Synch: Marking peer for restarted job ${j} unresponsive")
+                    peerStatuses.unresponsive(j.peerId, "Synch: Marking peer for restarted job $j unresponsive")
                 }
                 // These are jobs that couldn't be restarted because there
                 // were no peers available at the time. Try again every
@@ -279,14 +279,14 @@ class FastSynchronizer(
                 // This might be because it's a legacy node and thus doesn't respond to
                 // GetBlockHeaderAndBlock messages or because it's just unresponsive
                 if (peerStatuses.isConfirmedModern(j.peerId)) {
-                    peerStatuses.unresponsive(j.peerId, "Synch: Marking modern peer for job ${j} unresponsive")
+                    peerStatuses.unresponsive(j.peerId, "Synch: Marking modern peer for job $j unresponsive")
                 } else if (!legacyPeers.contains(j.peerId) && peerStatuses.isMaybeLegacy(j.peerId)) {
                     // Peer is marked as legacy, but still appears unresponsive.
                     // This probably wasn't a legacy node, but simply an unresponsive one.
                     // It *could* still be a legacy node, but we give it another chance to
                     // prove itself a modern node after the timeout
                     peerStatuses.setMaybeLegacy(j.peerId, false)
-                    peerStatuses.unresponsive(j.peerId, "Synch: Marking potentially legacy peer for job ${j} unresponsive")
+                    peerStatuses.unresponsive(j.peerId, "Synch: Marking potentially legacy peer for job $j unresponsive")
                 } else {
                     // Let's assume this is a legacy node and use GetCompleteBlock for the
                     // next try.
@@ -397,12 +397,12 @@ class FastSynchronizer(
         // legitimate glitches, for example that the peer has timed
         // out in earlier job but just now comes back with the response.
         if (j == null) {
-            var dbg = debugJobString(j, requestedHeight, peerId)
+            val dbg = debugJobString(j, requestedHeight, peerId)
             peerStatuses.maybeBlacklist(peerId, "Synch: Why do we receive a header for a block height not in our job list? $dbg")
             return false
         }
         if (peerId != j.peerId) {
-            var dbg = debugJobString(j, requestedHeight, peerId)
+            val dbg = debugJobString(j, requestedHeight, peerId)
             peerStatuses.maybeBlacklist(
                     peerId,
                     "Synch: Why do we receive a header from a peer when we didn't ask this peer? $dbg"
@@ -410,7 +410,7 @@ class FastSynchronizer(
             return false
         }
         if (j.header != null) {
-            var dbg = debugJobString(j, requestedHeight, peerId)
+            val dbg = debugJobString(j, requestedHeight, peerId)
             peerStatuses.maybeBlacklist(
                     peerId,
                     "Synch: Why do we receive a header when we already have the header? $dbg"
@@ -426,7 +426,7 @@ class FastSynchronizer(
                 peerStatuses.drained(peerId, -1, now)
                 restartJob(j)
             } else {
-                var dbg = debugJobString(j, requestedHeight, peerId)
+                val dbg = debugJobString(j, requestedHeight, peerId)
                 peerStatuses.maybeBlacklist(peerId, "Synch: Why we get a witness without a header? $dbg")
             }
             return false
@@ -448,13 +448,9 @@ class FastSynchronizer(
         val w = blockchainConfiguration.decodeWitness(witness)
         val validator = blockchainConfiguration.getBlockHeaderValidator()
         val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(h)
-        if (validator.validateWitness(w, witnessBuilder)) {
-            j.header = h
-            j.witness = w
-            logger.trace { "handleBlockHeader() -- ${"Header for $j received"}" }
-            peerStatuses.headerReceived(peerId, peerBestHeight)
-            return true
-        } else {
+        try {
+            validator.validateWitness(w, witnessBuilder)
+        } catch (e: Exception) {
             // There may be two reasons for verification failures.
             // 1. The peer is a scumbag, sending us invalid headers
             // 2. The header is from a configuration that we haven't activated yet.
@@ -465,9 +461,15 @@ class FastSynchronizer(
             // sync process will restart fresh with new configuration. Worst case is if
             // we download parallelism blocks before restarting.
             val dbg = debugJobString(j, requestedHeight, peerId)
-            peerStatuses.maybeBlacklist(peerId, "Synch: Invalid header received. $dbg")
+            peerStatuses.maybeBlacklist(peerId, "Synch: Invalid header received (${e.message}). $dbg")
             return false
         }
+
+        j.header = h
+        j.witness = w
+        logger.trace { "handleBlockHeader() -- ${"Header for $j received"}" }
+        peerStatuses.headerReceived(peerId, peerBestHeight)
+        return true
     }
 
     private fun handleUnfinishedBlock(peerId: NodeRid, header: ByteArray, txs: List<ByteArray>) {
@@ -583,8 +585,14 @@ class FastSynchronizer(
                 }
     }
 
-    private fun processMessages() {
+    private fun processMessages(exitCondition: () -> Boolean) {
         for (packet in communicationManager.getPackets()) {
+            // We do this check for each network message because
+            // communicationManager.getPackets() might give a big portion of messages.
+            if (!workerContext.messageProcessingLatch.awaitPermission { !isProcessRunning() || exitCondition() }) {
+                return
+            }
+
             val peerId = packet.first
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue

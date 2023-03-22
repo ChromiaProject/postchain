@@ -15,7 +15,7 @@ import net.postchain.gtv.merkle.path.PathSet
  *
  * Note: The idea is that you should sub class for each type of element (for example [Gtv]) you want to build.
  */
-abstract class BinaryTreeFactory<T,TPathSet: PathSet>() : KLogging() {
+abstract class BinaryTreeFactory<T, TPathSet : PathSet> : KLogging() {
 
 
     /**

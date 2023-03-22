@@ -3,6 +3,7 @@
 package net.postchain.base.configuration
 
 import mu.KLogging
+import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.base.BaseBlockHeader
@@ -41,6 +42,7 @@ import net.postchain.core.block.BlockWitness
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 
@@ -53,6 +55,12 @@ open class BaseBlockchainConfiguration(
 
     companion object : KLogging()
 
+    val baseConfig: Gtv
+        get() {
+            val fullConfig = rawConfig.asDict().toMutableMap()
+            fullConfig.remove(KEY_SIGNERS)
+            return gtv(fullConfig)
+        }
     final override val rawConfig: Gtv
         get() = configData.rawConfig
     final override val blockchainContext: BlockchainContext = BaseBlockchainContext(
@@ -70,7 +78,7 @@ open class BaseBlockchainConfiguration(
     final override val signers get() = configData.signers
     final override val transactionQueueSize: Int
         get() = configData.txQueueSize.toInt()
-    val configHash = GtvToBlockchainRidFactory.calculateBlockchainRid(rawConfig, cryptoSystem).data
+    private val configHash = GtvToBlockchainRidFactory.calculateBlockchainRid(rawConfig, cryptoSystem).data
 
     private fun resolveNodeID(nodeID: Int, subjectID: ByteArray): Int {
         return if (nodeID == NODE_ID_AUTO) {
@@ -118,7 +126,7 @@ open class BaseBlockchainConfiguration(
     }
 
     open fun getSpecialTxHandler(): SpecialTransactionHandler {
-        return specialTransactionHandler // Must be overridden in sub-class
+        return specialTransactionHandler // Must be overridden in subclass
     }
 
     open fun makeBBExtensions(): List<BaseBlockBuilderExtension> {
@@ -192,11 +200,12 @@ open class BaseBlockchainConfiguration(
         }
     }
 
+    override fun initializeModules(postchainContext: PostchainContext) {}
+
     override fun shutdownModules() {}
 
-    private fun makeDefaultBBExtensions(): List<BaseBlockBuilderExtension> {
-        return if (configData.configConsensusStrategy == ConfigConsensusStrategy.HEADER_HASH) {
-            listOf(ConfigurationHashBlockBuilderExtension(configHash))
-        } else listOf()
-    }
+    private fun makeDefaultBBExtensions(): List<BaseBlockBuilderExtension> =
+            if (configData.configConsensusStrategy == ConfigConsensusStrategy.HEADER_HASH) {
+                listOf(ConfigurationHashBlockBuilderExtension(configHash))
+            } else listOf()
 }

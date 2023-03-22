@@ -1,20 +1,14 @@
 package net.postchain.managed.config
 
 import net.postchain.config.app.AppConfig
-import net.postchain.core.BlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfiguration
-import net.postchain.gtx.GTXModule
-import net.postchain.gtx.GTXModuleAware
 import net.postchain.managed.BaseManagedNodeDataSource
-import net.postchain.managed.ManagedNodeDataSource
-import net.postchain.managed.query.QueryRunnerFactory.createChain0QueryRunner
+import net.postchain.managed.query.GtxModuleQueryRunner
 
 open class Chain0BlockchainConfiguration(
         configuration: GTXBlockchainConfiguration,
-        final override val module: GTXModule,
         val appConfig: AppConfig,
-) : BlockchainConfiguration by configuration, ManagedDataSourceAware, GTXModuleAware {
-
-    override val dataSource: ManagedNodeDataSource = BaseManagedNodeDataSource(
-            createChain0QueryRunner(module, appConfig), appConfig)
-}
+) : ManagedBlockchainConfiguration(
+        configuration,
+        BaseManagedNodeDataSource(GtxModuleQueryRunner(configuration, appConfig), appConfig)
+)

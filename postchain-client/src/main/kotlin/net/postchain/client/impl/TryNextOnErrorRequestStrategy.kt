@@ -11,20 +11,26 @@ import org.http4k.core.Response
 
 class TryNextOnErrorRequestStrategy(
         private val config: PostchainClientConfig,
-        private val httpClient: HttpHandler) : RequestStrategy {
+        httpClient: HttpHandler) : SynchronousRequestStrategy(httpClient) {
     companion object : KLogging()
 
-    override fun <R> request(createRequest: (Endpoint) -> Request, success: (Response) -> R, failure: (Response) -> R, queryMultiple: Boolean): R {
+    override fun <R> request(createRequest: (Endpoint) -> Request,
+                             success: (Response) -> R,
+                             failure: (Response, Endpoint) -> R,
+                             queryMultiple: Boolean): R {
         var response: Response? = null
-        for (endpoint in config.endpointPool) {
+        var endpoint: Endpoint? = null
+        val iterator = config.endpointPool.iterator()
+        while (iterator.hasNext()) {
+            endpoint = iterator.next()
             val request = createRequest(endpoint)
             endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
-                response = httpClient(request)
+                response = makeRequest(request)
                 when {
                     isSuccess(response.status) -> return success(response)
 
                     isClientFailure(response.status) -> {
-                        logger.debug("Got ${response.status} response from ${endpoint.url}, trying next")
+                        logger.debug { "Got ${response.status} response from ${endpoint.url}, trying next" }
                         break@endpoint
                     }
 
@@ -38,7 +44,7 @@ class TryNextOnErrorRequestStrategy(
                 Thread.sleep(config.failOverConfig.attemptInterval.toMillis())
             }
         }
-        return failure(response!!)
+        return failure(response!!, endpoint!!)
     }
 
     override fun close() {}

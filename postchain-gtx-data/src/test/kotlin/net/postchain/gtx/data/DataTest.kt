@@ -18,14 +18,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 
-fun mustThrowError(msg: String, code: () -> Unit) {
-    try {
-        code()
-        fail(msg)
-    } catch (e: Exception) {
-    }
-}
-
 class GTXDataTest {
 
     private fun addOperations(b: GtxBuilder, signerPub: List<ByteArray>) {

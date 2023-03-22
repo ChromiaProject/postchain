@@ -38,7 +38,7 @@ class BaseBlockDatabase(
     // The executor will only execute one thing at a time, in order
     private val executor = ThreadPoolExecutor(1, 1,
             0L, TimeUnit.MILLISECONDS,
-            LinkedBlockingQueue<Runnable>()
+            LinkedBlockingQueue()
     ) { r: Runnable ->
         Thread(r, "$nodeIndex-BaseBlockDatabaseWorker")
                 .apply {
@@ -80,7 +80,7 @@ class BaseBlockDatabase(
                 }
                 res
             } catch (e: Exception) {
-                logger.warn(e) { "Failed job $name" }
+                logger.debug(e) { "Failed job $name" }
                 throw e
             }
         }, executor)

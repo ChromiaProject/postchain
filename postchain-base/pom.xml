@@ -6,7 +6,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.8.0</version>
+        <version>3.9.0</version>
     </parent>
     <artifactId>postchain-base</artifactId>
     <packaging>jar</packaging>
@@ -49,6 +49,17 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j-impl</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- For Log4j2/YAML configuration -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
             <scope>test</scope>
         </dependency>
 

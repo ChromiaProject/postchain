@@ -25,17 +25,17 @@ import net.postchain.gtv.Gtv
  * @property myRID  is the merkle root of the TX body
  * @property cs is the [CryptoSystem] we use
  */
-class GTXTransaction (
-    val _rawData: ByteArray?,
-    val gtvData: Gtv,
-    val gtxData: Gtx,
-    val signers: Array<ByteArray>,
-    val signatures: Array<ByteArray>,
-    val ops: Array<Transactor>,
-    val myHash: Hash,
-    val myRID: ByteArray,
-    val cs: CryptoSystem
-): Transaction {
+class GTXTransaction(
+        val _rawData: ByteArray?,
+        val gtvData: Gtv,
+        val gtxData: Gtx,
+        val signers: Array<ByteArray>,
+        val signatures: Array<ByteArray>,
+        val ops: Array<Transactor>,
+        val myHash: Hash,
+        val myRID: ByteArray,
+        val cs: CryptoSystem
+) : Transaction {
 
     var cachedRawData: ByteArray? = null // We are not sure we have the rawData, and if ever need to calculate it it will be cache here.
     var isChecked: Boolean = false
@@ -77,10 +77,13 @@ class GTXTransaction (
      */
     private fun areOperationsValid(): Boolean {
         var hasCustomOperation = false
-        var foundNop = false
-        var foundTimeB = false
         var totalOps = 0
         var specialOps = 0
+        // A transaction is permitted to have only one occurrence of each operation: nop, __nop, and time.
+        // Otherwise, it is considered spam.
+        var foundNop = false
+        var foundSpecNop = false
+        var foundTimeB = false
 
         for (op in ops) {
 
@@ -88,21 +91,17 @@ class GTXTransaction (
             if (op.isSpecial()) specialOps++
 
             when (op) {
+                is GtxSpecNop -> {
+                    if (foundSpecNop) return false
+                    foundSpecNop = true
+                }
                 is GtxNop -> {
-                    if (foundNop) {
-                        // "This transaction includes multiple nop operations. Classed as spam."
-                        return false
-                    } else {
-                        foundNop = true
-                    }
+                    if (foundNop) return false
+                    foundNop = true
                 }
                 is GtxTimeB -> {
-                    if (foundTimeB) {
-                        // "This transaction includes multiple timeb operations. Classed as spam."
-                        return false
-                    } else {
-                        foundTimeB = true
-                    }
+                    if (foundTimeB) return false
+                    foundTimeB = true
                 }
                 else -> {
                     hasCustomOperation = true
@@ -127,13 +126,13 @@ class GTXTransaction (
             return _rawData
         }
         if (cachedRawData == null) {
-            cachedRawData =  gtxData.encode()
+            cachedRawData = gtxData.encode()
         }
         return cachedRawData!!
     }
 
     override fun getRID(): ByteArray {
-         return myRID
+        return myRID
     }
 
     override fun apply(ctx: TxEContext): Boolean {

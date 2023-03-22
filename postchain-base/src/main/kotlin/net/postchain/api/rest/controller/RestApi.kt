@@ -150,16 +150,18 @@ class RestApi(
 
     private fun transformErrorResponseFromDiagnostics(request: Request, response: Response, error: Exception) {
         val blockchainRid = if (request.params(PARAM_BLOCKCHAIN_RID) != null) checkBlockchainRID(request) else null
-        checkDiagnosticError(blockchainRid)?.let { errorBody ->
+        blockchainRid?.let { checkDiagnosticError(BlockchainRid.buildFromHex(blockchainRid)) }?.let { errorBody ->
             response.status(500)
             response.type(JSON_CONTENT_TYPE)
             response.body(gson.toJson(errorBody))
         } ?: setErrorResponseBody(response, error)
     }
-    private fun checkDiagnosticError(blockchainRid: String?): JsonObject? {
-        if (blockchainRid == null) return null
-        if (!nodeDiagnosticContext.hasBlockchainErrors(BlockchainRid.buildFromHex(blockchainRid))) return null
-        return JsonObject().apply { add("error", gson.toJsonTree(nodeDiagnosticContext.blockchainErrorQueue(BlockchainRid.buildFromHex(blockchainRid)).value)) }
+
+    private fun checkDiagnosticError(blockchainRid: BlockchainRid): JsonObject? {
+        if (!nodeDiagnosticContext.hasBlockchainErrors(blockchainRid)) return null
+        return nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).let {
+            JsonObject().apply { addProperty("error", it.value.toString()) }
+        }
     }
 
     private fun setErrorResponseBody(response: Response, error: Exception) {
@@ -191,11 +193,6 @@ class RestApi(
             res.header(ACCESS_CONTROL_REQUEST_METHOD, "POST, GET, OPTIONS")
             //res.header("Access-Control-Allow-Headers", "")
             res.type(JSON_CONTENT_TYPE)
-
-            // This is to provide compatibility with old postchain-client code
-            req.pathInfo()
-                    .takeIf { it.endsWith("/") }
-                    ?.also { res.redirect(it.dropLast(1)) }
         }
 
         http.after { _, res ->
@@ -372,6 +369,12 @@ class RestApi(
                 response.type("text/plain")
                 brid
             }
+
+            http.get("/blockchain/$PARAM_BLOCKCHAIN_RID/height", JSON_CONTENT_TYPE, redirectGet { request, _ ->
+                val model = model(request)
+                val result = model.getCurrentBlockHeight()
+                gson.toJson(result)
+            })
 
             http.get("/config/$PARAM_BLOCKCHAIN_RID", XML_CONTENT_TYPE, redirectGet(XML_CONTENT_TYPE) { request, _ ->
                 val configuration = getBlockchainConfiguration(request)

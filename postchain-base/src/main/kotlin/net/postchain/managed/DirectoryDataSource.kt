@@ -24,6 +24,4 @@ interface DirectoryDataSource : ManagedNodeDataSource {
      * What is the resource limits for this container?
      */
     fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits
-
-    fun setLimitsForContainer(containerId: String, ramLimit: Long, cpuQuota: Long)
 }

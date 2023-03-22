@@ -48,9 +48,9 @@ class AddConfigurationCommand : CliktCommand(help = "Add and start blockchain fr
                 else -> throw IllegalArgumentException("File must be xml or gtv file")
             }
             val reply = channel.addConfiguration(requestBuilder.build())
-            println(reply.message)
+            echo(reply.message)
         } catch (e: StatusRuntimeException) {
-            println("Failed with: ${e.message}")
+            echo("Failed with: ${e.message}")
         }
     }
 }

@@ -12,7 +12,7 @@ class ConfigurationHashBlockBuilderExtension(private val configHash: ByteArray) 
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {}
 
-    override fun finalize(): Map<String, Gtv> {
-        return mapOf(CONFIG_HASH_EXTRA_HEADER to gtv(configHash))
-    }
+    override fun finalize(): Map<String, Gtv> = mapOf(
+            CONFIG_HASH_EXTRA_HEADER to gtv(configHash)
+    )
 }

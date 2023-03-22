@@ -4,7 +4,6 @@ package net.postchain.integrationtest
 
 import net.postchain.integrationtest.multiple_chains.FullEbftMultipleChainsTestNightly
 import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 

@@ -6,7 +6,7 @@
 
     <groupId>net.postchain</groupId>
     <artifactId>postchain</artifactId>
-    <version>3.8.0</version>
+    <version>3.9.0</version>
     <modules>
         <module>postchain-common</module>
         <module>postchain-gtv</module>
@@ -27,11 +27,11 @@
     <properties>
         <doclint>none</doclint>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.build.outputTimestamp>1676901087</project.build.outputTimestamp>
+        <project.build.outputTimestamp>1679474189</project.build.outputTimestamp>
 
         <!-- Kotlin -->
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
-        <kotlin.version>1.6.21</kotlin.version>
+        <kotlin.version>1.8.10</kotlin.version>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
 
@@ -55,7 +55,7 @@
         <!-- Logging -->
         <kotlin-logging.version>2.1.23</kotlin-logging.version>
         <slf4j.version>1.7.36</slf4j.version>
-        <log4j2.version>2.19.0</log4j2.version>
+        <log4j2.version>2.20.0</log4j2.version>
 
         <!-- 3rd party -->
         <netty.version>4.1.86.Final</netty.version>
@@ -169,12 +169,6 @@
                 <type>pom</type>
             </dependency>
             <dependency>
-                <groupId>org.apache.logging.log4j</groupId>
-                <artifactId>log4j-core</artifactId>
-                <type>test-jar</type>
-                <version>${log4j2.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
@@ -222,17 +216,17 @@
             <dependency>
                 <groupId>org.http4k</groupId>
                 <artifactId>http4k-core</artifactId>
-                <version>4.34.0.4</version>
+                <version>4.36.0.0</version> <!-- Cannot upgrade to 4.37 or later since it requires Kotlin 1.8 -->
             </dependency>
             <dependency>
                 <groupId>org.http4k</groupId>
                 <artifactId>http4k-client-apache</artifactId>
-                <version>4.34.0.4</version>
+                <version>4.36.0.0</version> <!-- Cannot upgrade to 4.37 or later since it requires Kotlin 1.8 -->
             </dependency>
             <dependency>
                 <groupId>org.http4k</groupId>
                 <artifactId>http4k-client-apache-async</artifactId>
-                <version>4.34.0.4</version>
+                <version>4.36.0.0</version> <!-- Cannot upgrade to 4.37 or later since it requires Kotlin 1.8 -->
             </dependency>
 
             <!-- Json -->
@@ -291,7 +285,7 @@
             <dependency>
                 <groupId>org.mandas</groupId>
                 <artifactId>docker-client</artifactId>
-                <version>7.0.0</version>
+                <version>7.0.1</version>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.jersey.core</groupId>

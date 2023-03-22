@@ -20,11 +20,11 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.network.common.LazyPacket
+import net.postchain.network.mastersub.MasterSubQueryManager
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.MsFindNextBlockchainConfigMessage
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.protocol.MsNextBlockchainConfigMessage
-import net.postchain.network.mastersub.MasterSubQueryManager
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 import net.postchain.network.peer.XChainPeersConfiguration
 import org.junit.jupiter.api.Test
@@ -121,7 +121,7 @@ class BlockWiseSubnodeBlockchainConfigListenerTest {
     @Test
     fun `Life cycle test when config fetching is disabled`() {
         val connectionManager: SubConnectionManager = mock()
-        val config: SubnodeBlockchainConfigurationConfig = mock() {
+        val config: SubnodeBlockchainConfigurationConfig = mock {
             on { enabled } doReturn false
         }
         val appConfig: AppConfig = mock {

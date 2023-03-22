@@ -1,19 +1,16 @@
 package net.postchain.containers.bpm
 
 import mu.KLogging
-import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.docker.DockerTools
 import net.postchain.containers.bpm.rpc.SubnodeAdminClient
-import net.postchain.debug.DiagnosticData
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DiagnosticQueue
+import net.postchain.crypto.PrivKey
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.managed.DirectoryDataSource
 
 class DefaultPostchainContainer(
         val dataSource: DirectoryDataSource,
         override val containerName: ContainerName,
-        override var containerPorts: ContainerPorts,
+        override var containerPortMapping: MutableMap<Int, Int>,
         override var state: ContainerState,
         private val subnodeAdminClient: SubnodeAdminClient,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
@@ -66,11 +63,13 @@ class DefaultPostchainContainer(
         } else {
             val errorQueue = nodeDiagnosticContext.blockchainErrorQueue(process.blockchainRid)
             val msg = "Can't start process: config at height 0 is absent"
-            errorQueue?.add(msg)
+            errorQueue.add(msg)
             logger.error { msg }
             false
         }
     }
+
+    override fun removeProcess(chainId: Long): ContainerBlockchainProcess? = processes.remove(chainId)
 
     override fun terminateProcess(chainId: Long): ContainerBlockchainProcess? {
         return processes.remove(chainId)?.also {
@@ -91,6 +90,11 @@ class DefaultPostchainContainer(
         subnodeAdminClient.connect()
     }
 
+    override fun reset() {
+        subnodeAdminClient.disconnect()
+        state = ContainerState.STARTING
+    }
+
     override fun stop() {
         state = ContainerState.STOPPING
         subnodeAdminClient.shutdown()
@@ -98,7 +102,9 @@ class DefaultPostchainContainer(
 
     override fun isEmpty() = processes.isEmpty()
 
-    override fun isSubnodeConnected() = subnodeAdminClient.isSubnodeConnected()
+    override fun isSubnodeHealthy() = subnodeAdminClient.isSubnodeHealthy()
+
+    override fun initializePostchainNode(privKey: PrivKey): Boolean = subnodeAdminClient.initializePostchainNode(privKey)
 
     override fun updateResourceLimits(): Boolean {
         val oldResourceLimits = resourceLimits

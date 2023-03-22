@@ -55,7 +55,7 @@ data class BlockchainSetup(
                 dependencyRid: Set<BlockchainRid>
         ): BlockchainSetup {
             val depChainIds = dependencyRid.map {
-                println("dep chainId: $it, adding to cache");
+                println("dep chainId: $it, adding to cache")
                 TestBlockchainRidCache.getChainId(it)
             }.toSet()
             return BlockchainSetup(chainId, TestBlockchainRidCache.getRid(chainId, bcGtv), bcGtv, signers, depChainIds)

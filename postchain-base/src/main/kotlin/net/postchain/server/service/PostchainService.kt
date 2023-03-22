@@ -9,13 +9,13 @@ import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BadDataMistake
 import net.postchain.crypto.PubKey
-import net.postchain.debug.DiagnosticData
-import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.DiagnosticQueue
-import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.gtv.Gtv
+import net.postchain.server.NodeProvider
 
-class PostchainService(private val postchainNode: PostchainNode) {
+class PostchainService(private val nodeProvider: NodeProvider) {
+
+    private val postchainNode: PostchainNode get() = nodeProvider.get()
+
     fun startBlockchain(chainId: Long): BlockchainRid = postchainNode.startBlockchain(chainId)
 
     fun stopBlockchain(chainId: Long) {
@@ -51,6 +51,7 @@ class PostchainService(private val postchainNode: PostchainNode) {
         }
 
     }
+
     class InitializationError(m: String?) : RuntimeException(m)
 
     fun findBlockchain(chainId: Long): Triple<BlockchainRid?, Boolean?, Long> =

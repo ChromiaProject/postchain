@@ -16,6 +16,7 @@ import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
 import java.math.BigInteger
 import kotlin.reflect.KClass
+import kotlin.reflect.KParameter
 import kotlin.reflect.full.companionObjectInstance
 import kotlin.reflect.full.declaredMemberProperties
 import kotlin.reflect.full.findAnnotation
@@ -126,7 +127,7 @@ object GtvObjectMapper {
 
             is Collection<*> -> obj.map { classToGtv(it!!) }
             else -> {
-                obj::class.primaryConstructor!!.parameters.map { parameter ->
+                getPrimaryConstructorParameters(obj).map { parameter ->
                     val v = obj::class.declaredMemberProperties.find { it.name == parameter.name }?.javaGetter?.invoke(obj)
                     v?.let { classToGtv(it) } ?: GtvNull
                 }
@@ -148,7 +149,7 @@ object GtvObjectMapper {
             is List<*> -> throw IllegalArgumentException("List types not supported")
             is Set<*> -> throw IllegalArgumentException("Set types not supported")
             else -> {
-                obj::class.primaryConstructor!!.parameters.map { parameter ->
+                getPrimaryConstructorParameters(obj).map { parameter ->
                     val parameterValue = obj::class.declaredMemberProperties.find { it.name == parameter.name }?.javaGetter?.invoke(obj)
                     val gtv = parameterValue?.let { value -> classToGtv(value) { toGtvDictionary(it) } } ?: GtvNull
                     if (!parameter.hasAnnotation<Name>()) throw IllegalArgumentException("parameter ${parameter.name} must have Name annotation")
@@ -167,6 +168,14 @@ object GtvObjectMapper {
             require(!it.hasAnnotation<Nested>())
         }
     }
+}
+
+private fun <T : Any> getPrimaryConstructorParameters(obj: T): List<KParameter> {
+    val constructorParameters = obj::class.primaryConstructor?.parameters
+    if (constructorParameters.isNullOrEmpty()) {
+        throw IllegalArgumentException("${obj::class.java} is not supported for mapping since it does not have any primary constructor parameters")
+    }
+    return constructorParameters
 }
 
 private fun classToGtv(obj: Any, other: (Any) -> Gtv = { GtvObjectMapper.toGtvArray(it) }): Gtv {

@@ -12,7 +12,7 @@ import net.postchain.devtools.NameHelper
  */
 class FastSyncPeerStatuses(val params: SyncParameters): AbstractPeerStatuses<FastSyncKnownState>() {
 
-    companion object : KLogging() {}
+    companion object : KLogging()
 
     fun drained(peerId: NodeRid, height: Long, now: Long) {
         val status = stateOf(peerId)

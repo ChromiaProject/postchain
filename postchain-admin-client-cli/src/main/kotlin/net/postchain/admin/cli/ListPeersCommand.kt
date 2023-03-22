@@ -15,9 +15,9 @@ class ListPeersCommand : CliktCommand(help = "List all peer information in the d
                 .build()
 
             val reply = channel.listPeers(request)
-            println(reply.message)
+            echo(reply.message)
         } catch (e: StatusRuntimeException) {
-            println("Failed with: ${e.message}")
+            echo("Failed with: ${e.message}")
         }
     }
 }

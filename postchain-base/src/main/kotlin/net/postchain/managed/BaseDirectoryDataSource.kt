@@ -52,8 +52,4 @@ open class BaseDirectoryDataSource(
 
         return ContainerResourceLimits(*resourceLimits)
     }
-
-    override fun setLimitsForContainer(containerId: String, ramLimit: Long, cpuQuota: Long) {
-        TODO("Will not be used")
-    }
 }
