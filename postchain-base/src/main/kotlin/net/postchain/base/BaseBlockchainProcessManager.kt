@@ -10,6 +10,7 @@ import net.postchain.base.data.DependenciesValidator
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
@@ -147,6 +148,7 @@ open class BaseBlockchainProcessManager(
 
                             startInfoDebug(
                                     "Blockchain has been started",
+                                    blockchainConfig.signers,
                                     processName,
                                     chainId,
                                     blockchainConfig.blockchainRid,
@@ -414,9 +416,9 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    private fun startInfoDebug(str: String, processName: BlockchainProcessName, chainId: Long, bcRid: BlockchainRid, bTrace: BlockTrace?) {
+    private fun startInfoDebug(str: String, signers: List<ByteArray>, processName: BlockchainProcessName, chainId: Long, bcRid: BlockchainRid, bTrace: BlockTrace?) {
         if (logger.isInfoEnabled) {
-            logger.info("$processName: startBlockchain() - $str: chainId: $chainId, Blockchain RID: ${bcRid.toHex()}") // We need to print full BC RID so that users can see in INFO logs what it is.
+            logger.info("$processName: startBlockchain() - $str: chainId: $chainId, Blockchain RID: ${bcRid.toHex()}, signers: ${signers.map { it.toHex() }}") // We need to print full BC RID so that users can see in INFO logs what it is.
         }
         startDebug(str, processName, chainId, bTrace)
     }
