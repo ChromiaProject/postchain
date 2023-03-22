@@ -57,37 +57,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         }
     }
 
-    open fun isManagedDatasourceReady(eContext: EContext): Boolean {
-        return if (isPcuEnabled()) {
-            val dba = DatabaseAccess.of(eContext)
-            val blockchainRid = getBlockchainRid(eContext, dba)
-            val activeHeight = getActiveBlocksHeight(eContext, dba)
-            val pendingConfig = pendingConfigurations[eContext.chainID]
-            val logPrefix = "isManagedDatasourceReady(${eContext.chainID})"
-
-            if (pendingConfig != null) {
-                logger.debug { "$logPrefix: pending config detected for chain ${eContext.chainID}: $pendingConfig" }
-                if (pendingConfig.isBlockBuilt) {
-                    logger.debug { "$logPrefix: block at height ${pendingConfig.height} is already built with a pending config" }
-                    val applied = dataSource.isPendingBlockchainConfigurationApplied(blockchainRid, activeHeight, pendingConfig.config.configHash.data)
-                    if (applied) {
-                        pendingConfigurations.remove(eContext.chainID)
-                        logger.debug { "$logPrefix: pending config is applied" }
-                    } else {
-                        logger.debug { "$logPrefix: pending config is not applied yet" }
-                    }
-                    applied
-                } else {
-                    logger.debug { "$logPrefix: block at height ${pendingConfig.height} is not yet built with a pending config" }
-                    true // block is not yet built with a pending config
-                }
-            } else {
-                true // there is no pending config
-            }
-        } else {
-            true // non-PCU mode
-        }
-    }
+    open fun isManagedDatasourceReady(eContext: EContext): Boolean = true
 
     fun afterCommit(chainId: Long, height: Long) {
         val logPrefix = "afterCommit($chainId, $height)"
@@ -153,8 +123,8 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
                 logger.debug { "$logPrefix: pendingConfig is being applied, so no need to load a new configuration" }
                 false
             } else {
-                val res = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight) != null
-                logger.debug { "$logPrefix: new pending configuration detected for activeHeight: $activeHeight" }
+                val res = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight).isNotEmpty()
+                logger.debug { "$logPrefix: new pending configuration detected for activeHeight: $activeHeight - $res" }
                 res
             }
         } else {
@@ -194,10 +164,11 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
                 dataSource.getConfiguration(blockchainRid.data, 0L)
             } else {
                 val config = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight)
-                if (config != null) {
-                    logger.debug { "$logPrefix: pending config detected at height: $activeHeight and will be loaded" }
-                    pendingConfigurations[eContext.chainID] = PendingBlockchainConfigurationStatus(activeHeight, config)
-                    config.fullConfig
+                if (config.isNotEmpty()) {
+                    // TODO use correct config
+                    logger.debug { "$logPrefix: pending config detected at height: $activeHeight and will be loaded. Signers: ${config.first().signers}" }
+                    pendingConfigurations[eContext.chainID] = PendingBlockchainConfigurationStatus(activeHeight, config.first())
+                    config.first().fullConfig
                 } else { // This branch is chosen after blockchain restarts and if there is no a pending config at activeHeight
                     logger.debug { "$logPrefix: pending config is absent at height: $activeHeight, config will be loaded from DataSource" }
                     dataSource.getConfiguration(blockchainRid.data, activeHeight)

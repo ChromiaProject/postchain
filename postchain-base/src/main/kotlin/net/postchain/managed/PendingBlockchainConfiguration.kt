@@ -9,7 +9,8 @@ import net.postchain.gtv.GtvFactory.gtv
 data class PendingBlockchainConfiguration(
         val baseConfig: Gtv,
         val configHash: WrappedByteArray,
-        val signers: List<PubKey>
+        val signers: List<PubKey>,
+        val minimumHeight: Long
 ) {
     val fullConfig: ByteArray by lazy {
         val base = baseConfig.asDict().toMutableMap()
