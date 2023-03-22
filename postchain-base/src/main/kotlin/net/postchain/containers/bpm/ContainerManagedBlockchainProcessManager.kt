@@ -423,13 +423,16 @@ open class ContainerManagedBlockchainProcessManager(
                 withLoggingContext(CONTAINER_NAME_TAG to cname.name) {
                     val psContainer = postchainContainers[cname]!!
 
-                    // Check for resource limit updates
                     val currentResourceLimits = psContainer.resourceLimits
-                    if (psContainer.updateResourceLimits()) {
-                        logger.warn { "Resource limits for container ${cname.name} have been changed from $currentResourceLimits to ${psContainer.resourceLimits}" }
-                    }
-
-                    val chainsToTerminate = if (running.firstOrNull { it.hasName(cname.name) } == null) {
+                    val containerIsRunning = running.any { it.hasName(cname.name) }
+                    val chainsToTerminate = if (psContainer.updateResourceLimits()) {
+                        logger.info { "[${nodeName()}]: $scope -- Resource limits for container ${cname.name} have been changed from $currentResourceLimits to ${psContainer.resourceLimits} and will be restarted" }
+                        fixed.add(cname)
+                        psContainer.reset()
+                        if (containerIsRunning) dockerClient.stopContainer(cname.name, 10)
+                        dockerClient.removeContainer(cname.name)
+                        psContainer.getAllChains().toSet()
+                    } else if (!containerIsRunning) {
                         logger.warn { "[${nodeName()}]: $scope -- Subnode container is not running and will be restarted: ${cname.name}" }
                         fixed.add(cname)
                         psContainer.getAllChains().toSet()
@@ -447,7 +450,7 @@ open class ContainerManagedBlockchainProcessManager(
                         removeBlockchainProcess(it, psContainer)
                     }
                     if (chainsToTerminate.isNotEmpty()) {
-                        logger.warn { "[${nodeName()}]: $scope -- Container chains have been terminated: $chainsToTerminate" }
+                        logger.info { "[${nodeName()}]: $scope -- Container chains have been terminated: $chainsToTerminate" }
                     }
                 }
             }
@@ -456,7 +459,7 @@ open class ContainerManagedBlockchainProcessManager(
         if (fixed.isEmpty()) {
             logger.info { "[${nodeName()}]: $scope -- Ok" }
         } else {
-            logger.warn { "[${nodeName()}]: $scope -- Fixed: $fixed" }
+            logger.info { "[${nodeName()}]: $scope -- Fixed: $fixed" }
         }
 
         val elapsed = System.currentTimeMillis() - start
