@@ -5,10 +5,9 @@ package net.postchain.base.data
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.Transaction
-import net.postchain.crypto.CryptoSystem
 import java.sql.Connection
 
-class PostgreSQLDatabaseAccess(cryptoSystem: CryptoSystem) : SQLDatabaseAccess(cryptoSystem) {
+class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
 
     override fun isSavepointSupported(): Boolean = true
 

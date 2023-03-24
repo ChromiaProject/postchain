@@ -4,9 +4,15 @@ package net.postchain.gtv.merkle
 
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.crypto.CryptoSystem
-import net.postchain.gtv.*
+import net.postchain.crypto.Digester
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvCollection
 import net.postchain.gtv.GtvEncoder.encodeGtv
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvPrimitive
+import net.postchain.gtv.GtvString
 
 /**
  * This should be the serialization we use in production
@@ -32,8 +38,8 @@ fun serializeGtvToByteArray(gtv: Gtv): ByteArray {
 /**
  * The calculator intended to be used is production for trees that hold [Gtv]
  */
-class GtvMerkleHashCalculator(cryptoSystem: CryptoSystem):
-        MerkleHashCalculator<Gtv>(cryptoSystem) {
+class GtvMerkleHashCalculator(digester: Digester) :
+        MerkleHashCalculator<Gtv>(digester) {
 
     override fun calculateNodeHash(prefix: Byte, hashLeft: Hash, hashRight: Hash): Hash {
         return calculateNodeHashInternal(prefix, hashLeft, hashRight, MerkleBasics::hashingFun)

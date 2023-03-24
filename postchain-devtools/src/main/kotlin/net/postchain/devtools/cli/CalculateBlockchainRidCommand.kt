@@ -6,7 +6,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
-import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.gtvml.GtvMLParser
 import java.io.File
 
@@ -25,7 +25,7 @@ class CalculateBlockchainRidCommand : CliktCommand(
 
         try {
             val gtv = GtvMLParser.parseGtvML(File(blockchainConfigFilename).readText())
-            val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(gtv, Secp256K1CryptoSystem())
+            val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(gtv, ::sha256Digest)
 
             println("Blockchain RID: $blockchainRid")
 

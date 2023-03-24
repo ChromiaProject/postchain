@@ -161,10 +161,7 @@ open class Secp256K1CryptoSystem : CryptoSystem {
      * @param bytes A ByteArray of data consisting of the message we want the hash digest of
      * @return The hash digest of [bytes]
      */
-    override fun digest(bytes: ByteArray): ByteArray {
-        val digest = MessageDigest.getInstance("SHA-256")
-        return digest.digest(bytes)
-    }
+    override fun digest(bytes: ByteArray): ByteArray = sha256Digest(bytes)
 
     /**
      * Builds logic to be used for signing data based on supplied key parameters
