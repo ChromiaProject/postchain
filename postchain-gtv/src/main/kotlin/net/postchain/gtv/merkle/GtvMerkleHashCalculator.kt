@@ -4,6 +4,7 @@ package net.postchain.gtv.merkle
 
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Digester
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
@@ -40,6 +41,8 @@ fun serializeGtvToByteArray(gtv: Gtv): ByteArray {
  */
 class GtvMerkleHashCalculator(digester: Digester) :
         MerkleHashCalculator<Gtv>(digester) {
+
+    constructor(cryptoSystem: CryptoSystem) : this(cryptoSystem as Digester)
 
     override fun calculateNodeHash(prefix: Byte, hashLeft: Hash, hashRight: Hash): Hash {
         return calculateNodeHashInternal(prefix, hashLeft, hashRight, MerkleBasics::hashingFun)
