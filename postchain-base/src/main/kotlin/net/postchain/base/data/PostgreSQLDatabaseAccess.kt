@@ -5,9 +5,10 @@ package net.postchain.base.data
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.Transaction
+import net.postchain.crypto.CryptoSystem
 import java.sql.Connection
 
-class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
+class PostgreSQLDatabaseAccess(cryptoSystem: CryptoSystem) : SQLDatabaseAccess(cryptoSystem) {
 
     override fun isSavepointSupported(): Boolean = true
 
@@ -103,7 +104,19 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
         return "CREATE TABLE IF NOT EXISTS ${tableConfigurations(ctx)} (" +
                 "height BIGINT PRIMARY KEY" +
                 ", configuration_data BYTEA NOT NULL" +
+                ", configuration_hash BYTEA NOT NULL" +
+                ", UNIQUE (configuration_hash)" +
                 ")"
+    }
+
+    override fun cmdUpdateTableConfigurationsV4First(chainId: Long): String {
+        return "ALTER TABLE ${tableConfigurations(chainId)}" +
+                " ADD COLUMN configuration_hash BYTEA NULL"
+    }
+
+    override fun cmdUpdateTableConfigurationsV4Second(chainId: Long): String {
+        return "ALTER TABLE ${tableConfigurations(chainId)}" +
+                " ALTER COLUMN configuration_hash SET NOT NULL"
     }
 
     override fun cmdCreateTablePeerInfos(): String {
@@ -148,8 +161,8 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
     }
 
     override fun cmdInsertConfiguration(ctx: EContext): String {
-        return "INSERT INTO ${tableConfigurations(ctx)} (height, configuration_data) " +
-                "VALUES (?, ?) ON CONFLICT (height) DO UPDATE SET configuration_data = ?"
+        return "INSERT INTO ${tableConfigurations(ctx)} (height, configuration_data, configuration_hash) " +
+                "VALUES (?, ?, ?) ON CONFLICT (height) DO UPDATE SET configuration_data = ?, configuration_hash = ?"
     }
 
     override fun cmdCreateTableGtxModuleVersion(ctx: EContext): String {
@@ -213,6 +226,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
     }
 
     override fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray) {
-        queryRunner.insert(ctx.conn, cmdInsertConfiguration(ctx), longRes, height, data, data)
+        val hash = calcConfigurationHash(data)
+        queryRunner.insert(ctx.conn, cmdInsertConfiguration(ctx), longRes, height, data, hash, data, hash)
     }
 }

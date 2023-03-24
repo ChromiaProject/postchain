@@ -101,6 +101,7 @@ interface DatabaseAccess {
     fun removeConfiguration(ctx: EContext, height: Long): Int
 
     fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
+    fun getConfigurationData(ctx: EContext, hash: ByteArray): ByteArray?
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
 
     // Event and State

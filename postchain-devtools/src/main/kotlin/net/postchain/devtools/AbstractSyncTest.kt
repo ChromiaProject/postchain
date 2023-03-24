@@ -181,7 +181,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
         if (wipeDb) {
             runStorageCommand(appConfig) {
                 val ctx = it
-                val dbAccess = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
+                val dbAccess = DatabaseAccessFactory.createDatabaseAccess(appConfig.cryptoSystem, appConfig.databaseDriverclass)
                 peerInfos.forEachIndexed { index, peerInfo ->
                     val isPeerSigner = index < signerCount
                     addPeerInfo(dbAccess, ctx, peerInfo, brid, isPeerSigner) // Overridden is subclass
