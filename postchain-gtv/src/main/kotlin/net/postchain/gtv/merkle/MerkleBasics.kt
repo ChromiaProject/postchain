@@ -4,7 +4,7 @@ package net.postchain.gtv.merkle
 
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.Digester
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 
@@ -69,14 +69,14 @@ object MerkleBasics {
      * This should be the hashing function we use in production
      *
      * @param bArr is the data to hash
-     * @param cryptoSystem used to get the hash function
+     * @param digester used to get the hash function
      * @return the hash we calculated
      */
-    fun hashingFun(bArr: ByteArray, cryptoSystem: CryptoSystem?): Hash {
-        if (cryptoSystem == null) {
-            throw ProgrammerMistake("In this case we need the CryptoSystem to calculate the hash")
-        }  else {
-            return cryptoSystem.digest(bArr)
+    fun hashingFun(bArr: ByteArray, digester: Digester?): Hash {
+        if (digester == null) {
+            throw ProgrammerMistake("In this case we need the Digester to calculate the hash")
+        } else {
+            return digester.digest(bArr)
         }
     }
 }

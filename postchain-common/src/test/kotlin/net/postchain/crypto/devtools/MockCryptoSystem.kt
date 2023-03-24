@@ -9,14 +9,11 @@ import net.postchain.crypto.Signature
 import net.postchain.crypto.Verifier
 import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.crypto.secp256k1_verify
-import java.security.MessageDigest
+import net.postchain.crypto.sha256Digest
 
 class MockCryptoSystem : CryptoSystem {
 
-    override fun digest(bytes: ByteArray): ByteArray {
-        val digest = MessageDigest.getInstance("SHA-256")
-        return digest.digest(bytes)
-    }
+    override fun digest(bytes: ByteArray): ByteArray = sha256Digest(bytes)
 
     @Deprecated("Pass in KeyPair instead",
             ReplaceWith("buildSigMaker(KeyPair(pubKey, privKey))", imports = ["net.postchain.crypto.KeyPair"]))

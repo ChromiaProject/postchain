@@ -22,8 +22,8 @@ import net.postchain.core.TxDetail
 import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockWitness
-import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
+import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.GtvDecoder
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ColumnListHandler
@@ -34,7 +34,7 @@ import java.sql.Timestamp
 import java.time.Instant
 
 
-abstract class SQLDatabaseAccess(private val cryptoSystem: CryptoSystem) : DatabaseAccess {
+abstract class SQLDatabaseAccess : DatabaseAccess {
 
     protected fun tableMeta(): String = "meta"
     protected fun tableContainers(): String = "containers"
@@ -573,7 +573,7 @@ abstract class SQLDatabaseAccess(private val cryptoSystem: CryptoSystem) : Datab
     }
 
     protected fun calcConfigurationHash(configurationData: ByteArray) = GtvToBlockchainRidFactory.calculateBlockchainRid(
-            GtvDecoder.decodeGtv(configurationData), cryptoSystem).data
+            GtvDecoder.decodeGtv(configurationData), ::sha256Digest).data
 
     override fun createContainer(ctx: AppContext, name: String): Int {
         val sql = "INSERT INTO ${tableContainers()} (name) values (?) RETURNING container_iid"
