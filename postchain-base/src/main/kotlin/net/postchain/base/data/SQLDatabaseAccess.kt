@@ -3,6 +3,7 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.PeerInfo
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.HASH_LENGTH
@@ -21,7 +22,9 @@ import net.postchain.core.TxDetail
 import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockWitness
+import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
+import net.postchain.gtv.GtvDecoder
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ColumnListHandler
 import org.apache.commons.dbutils.handlers.MapListHandler
@@ -31,15 +34,16 @@ import java.sql.Timestamp
 import java.time.Instant
 
 
-abstract class SQLDatabaseAccess : DatabaseAccess {
+abstract class SQLDatabaseAccess(private val cryptoSystem: CryptoSystem) : DatabaseAccess {
 
     protected fun tableMeta(): String = "meta"
     protected fun tableContainers(): String = "containers"
-    protected fun tableBlockchains(): String = "blockchains"
+    internal fun tableBlockchains(): String = "blockchains"
     protected fun tablePeerinfos(): String = "peerinfos"
     protected fun tableBlockchainReplicas(): String = "blockchain_replicas"
     protected fun tableMustSyncUntil(): String = "must_sync_until"
-    protected fun tableConfigurations(ctx: EContext): String = tableName(ctx, "configurations")
+    internal fun tableConfigurations(ctx: EContext): String = tableName(ctx, "configurations")
+    protected fun tableConfigurations(chainId: Long): String = tableName(chainId, "configurations")
     protected fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
     private fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
@@ -67,6 +71,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
     protected abstract fun cmdCreateTablePage(ctx: EContext, name: String): String
 
+    protected abstract fun cmdUpdateTableConfigurationsV4First(chainId: Long): String
+    protected abstract fun cmdUpdateTableConfigurationsV4Second(chainId: Long): String
+
     // Tables not part of the batch creation run
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
     protected abstract fun cmdCreateTableState(ctx: EContext, prefix: String): String
@@ -88,8 +95,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     private val nullableByteArrayRes = ScalarHandler<ByteArray?>()
     private val nullableIntRes = ScalarHandler<Int?>()
     private val nullableLongRes = ScalarHandler<Long?>()
-    private val byteArrayRes = ScalarHandler<ByteArray>()
-    private val mapListHandler = MapListHandler()
+    internal val byteArrayRes = ScalarHandler<ByteArray>()
+    internal val mapListHandler = MapListHandler()
 
     companion object : KLogging() {
         const val TABLE_PEERINFOS_FIELD_HOST = "host"
@@ -469,7 +476,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int) {
-        if (expectedDbVersion !in 1..3) {
+        if (expectedDbVersion !in 1..4) {
             throw UserMistake("Unsupported DB version $expectedDbVersion")
         }
 
@@ -497,6 +504,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 version3(connection)
             }
 
+            if (version < 4 && expectedDbVersion >= 4) {
+                logger.info("Upgrading to version 4")
+                version4(connection)
+            }
+
             if (expectedDbVersion > version) {
                 queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
                 logger.info("Database version has been updated to version: $expectedDbVersion")
@@ -522,6 +534,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             if (expectedDbVersion >= 3) {
                 version3(connection)
             }
+
+            if (expectedDbVersion >= 4) {
+                version4(connection)
+            }
         }
     }
 
@@ -538,6 +554,26 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     private fun version3(connection: Connection) {
         queryRunner.update(connection, cmdCreateTableContainers())
     }
+
+    private fun version4(connection: Connection) {
+        queryRunner.query(connection, "SELECT chain_iid FROM ${tableBlockchains()}", mapListHandler)
+                .map { it["chain_iid"] as Long }
+                .forEach { chainId ->
+                    queryRunner.update(connection, cmdUpdateTableConfigurationsV4First(chainId))
+                    queryRunner.query(connection, "SELECT height, configuration_data FROM ${tableConfigurations(chainId)}", mapListHandler)
+                            .forEach {
+                                val height = it["height"] as Long
+                                val configurationData = it["configuration_data"] as ByteArray
+                                queryRunner.update(connection,
+                                        "UPDATE ${tableConfigurations(chainId)} SET configuration_hash=? WHERE height=?",
+                                        calcConfigurationHash(configurationData), height)
+                            }
+                    queryRunner.update(connection, cmdUpdateTableConfigurationsV4Second(chainId))
+                }
+    }
+
+    protected fun calcConfigurationHash(configurationData: ByteArray) = GtvToBlockchainRidFactory.calculateBlockchainRid(
+            GtvDecoder.decodeGtv(configurationData), cryptoSystem).data
 
     override fun createContainer(ctx: AppContext, name: String): Int {
         val sql = "INSERT INTO ${tableContainers()} (name) values (?) RETURNING container_iid"
@@ -686,8 +722,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height)
     }
 
-    override fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray) {
-        queryRunner.update(ctx.conn, cmdInsertConfiguration(ctx), height, data)
+    override fun getConfigurationData(ctx: EContext, hash: ByteArray): ByteArray? {
+        val sql = "SELECT configuration_data FROM ${tableConfigurations(ctx)} WHERE configuration_hash = ?"
+        val res = queryRunner.query(ctx.conn, sql, mapListHandler, hash)
+        return when (res.size) {
+            0 -> null
+            1 -> res[0]["configuration_data"] as ByteArray
+            else -> throw ProgrammerMistake("Found multiple configurations with hash ${hash.toHex()}")
+        }
     }
 
     override fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo> {
