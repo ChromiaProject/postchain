@@ -26,6 +26,7 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockRid
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainConfigurationFactorySupplier
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcessConnectable
@@ -137,7 +138,7 @@ open class ContainerManagedBlockchainProcessManager(
                 }
             }
 
-    override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
+    override fun buildAfterCommitHandler(chainId: Long, blockchainConfig: BlockchainConfiguration): AfterCommitHandler {
         fun chain0AfterCommitHandler(blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long): Boolean {
             return try {
                 rTrace("Before", chainId, blockTrace)
@@ -186,7 +187,7 @@ open class ContainerManagedBlockchainProcessManager(
         return if (chainId == CHAIN0) {
             ::chain0AfterCommitHandler
         } else {
-            super.buildAfterCommitHandler(chainId)
+            super.buildAfterCommitHandler(chainId, blockchainConfig)
         }
     }
 
