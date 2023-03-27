@@ -61,8 +61,8 @@ open class SubNodeBlockchainProcessManager(
         super.stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
     }
 
-    override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
-        val baseHandler = super.buildAfterCommitHandler(chainId)
+    override fun buildAfterCommitHandler(chainId: Long, blockchainConfig: BlockchainConfiguration): AfterCommitHandler {
+        val baseHandler = super.buildAfterCommitHandler(chainId, blockchainConfig)
 
         return { bTrace: BlockTrace?, height: Long, blockTimestamp: Long ->
             val blockchainProcess = blockchainProcesses[chainId]

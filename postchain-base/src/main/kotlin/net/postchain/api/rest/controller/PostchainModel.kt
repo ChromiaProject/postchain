@@ -10,6 +10,7 @@ import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
 import net.postchain.base.BaseBlockQueries
 import net.postchain.base.ConfirmationProof
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
@@ -18,7 +19,6 @@ import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus.*
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
-import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionInfoExt
@@ -35,7 +35,6 @@ open class PostchainModel(
         val blockQueries: BaseBlockQueries,
         private val debugInfoQuery: DebugInfoQuery,
         blockchainRid: BlockchainRid,
-        val configurationProvider: BlockchainConfigurationProvider,
         val storage: Storage
 ) : Model {
 
@@ -151,15 +150,12 @@ open class PostchainModel(
         return BlockHeight(blockQueries.getBestHeight().get() + 1)
     }
 
-    override fun getBlockchainConfiguration(height: Long): ByteArray? {
-        return withReadConnection(storage, chainIID) { ctx ->
-            if (height < 0) {
-                configurationProvider.getActiveBlocksConfiguration(ctx, chainIID)
-            } else {
-                val historicConfigHeight = configurationProvider.getHistoricConfigurationHeight(ctx, chainIID, height)
-                        ?: throw UserMistake("Unknown chain")
-                configurationProvider.getHistoricConfiguration(ctx, chainIID, historicConfigHeight)
-            }
+    override fun getBlockchainConfiguration(height: Long): ByteArray? = withReadConnection(storage, chainIID) { ctx ->
+        val db = DatabaseAccess.of(ctx)
+        if (height < 0) {
+            db.getConfigurationDataForHeight(ctx, db.getLastBlockHeight(ctx))
+        } else {
+            db.getConfigurationData(ctx, height)
         }
     }
 

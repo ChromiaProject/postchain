@@ -7,7 +7,6 @@ import net.postchain.api.rest.controller.DisabledDebugInfoQuery
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.base.BaseBlockQueries
-import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.debug.NodeDiagnosticContext
@@ -17,7 +16,6 @@ import net.postchain.ebft.worker.ValidatorBlockchainProcess
 open class BaseApiInfrastructure(
         restApiConfig: RestApiConfig,
         val nodeDiagnosticContext: NodeDiagnosticContext,
-        val configurationProvider: BlockchainConfigurationProvider,
         private val enableDebugApi: Boolean
 ) : ApiInfrastructure {
 
@@ -60,7 +58,6 @@ open class BaseApiInfrastructure(
                         engine.getBlockQueries() as BaseBlockQueries, // TODO: [et]: Resolve type cast
                         debugInfoQuery,
                         engine.getConfiguration().blockchainRid,
-                        configurationProvider,
                         engine.storage
                 )
             } else {
@@ -71,7 +68,6 @@ open class BaseApiInfrastructure(
                         engine.getBlockQueries() as BaseBlockQueries,
                         debugInfoQuery,
                         engine.getConfiguration().blockchainRid,
-                        configurationProvider,
                         engine.storage
                 )
             }

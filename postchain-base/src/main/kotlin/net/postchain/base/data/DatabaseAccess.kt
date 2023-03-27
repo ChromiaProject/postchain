@@ -100,7 +100,12 @@ interface DatabaseAccess {
     fun listConfigurations(ctx: EContext): List<Long>
     fun removeConfiguration(ctx: EContext, height: Long): Int
 
+    /** Get configuration data at exactly given height */
     fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
+
+    /** Get configuration data at <= given height */
+    fun getConfigurationDataForHeight(ctx: EContext, height: Long): ByteArray?
+
     fun getConfigurationData(ctx: EContext, hash: ByteArray): ByteArray?
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
 

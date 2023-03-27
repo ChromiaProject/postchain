@@ -133,7 +133,7 @@ open class BaseBlockchainProcessManager(
                             val processName = BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
                             startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
-                            val x: AfterCommitHandler = buildAfterCommitHandler(chainId)
+                            val x: AfterCommitHandler = buildAfterCommitHandler(chainId, blockchainConfig)
                             val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
                             startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
@@ -286,9 +286,9 @@ open class BaseBlockchainProcessManager(
      *
      * @param chainId - the chain we should build the [AfterCommitHandler] for
      * @return a newly created [AfterCommitHandler]. This method will be much more complex is
-     * the sublcass [net.postchain.managed.ManagedBlockchainProcessManager].
+     * the subclass [net.postchain.managed.ManagedBlockchainProcessManager].
      */
-    protected open fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
+    protected open fun buildAfterCommitHandler(chainId: Long, blockchainConfig: BlockchainConfiguration): AfterCommitHandler {
         return { bTrace, blockHeight, _ ->
             try {
                 // If chain is already being stopped/restarted by another thread we will not get the lock and may return

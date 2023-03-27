@@ -15,6 +15,7 @@ import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
@@ -128,7 +129,7 @@ open class ManagedBlockchainProcessManager(
      * @return a [AfterCommitHandler] which is a lambda (This lambda will be called by the Engine after each block
      *          has been committed.)
      */
-    override fun buildAfterCommitHandler(chainId: Long): AfterCommitHandler {
+    override fun buildAfterCommitHandler(chainId: Long, blockchainConfig: BlockchainConfiguration): AfterCommitHandler {
 
         /**
          * If the chain we are checking is the chain zero itself, we must verify if the list of peers have changed.
@@ -167,10 +168,10 @@ open class ManagedBlockchainProcessManager(
          * If it's not the chain zero we are looking at, all we need to do is:
          * a) see if configuration has changed and
          * b) restart the chain if this is the case.
-         *
-         * @param chainId is the chain we should check (cannot be chain zero).
          */
-        fun afterCommitHandlerChainN(bTrace: BlockTrace?): Boolean {
+        fun afterCommitHandlerChainN(bTrace: BlockTrace?, blockHeight: Long): Boolean {
+            saveConfigurationInDatabaseIfNotAlreadyExists(chainId = chainId, blockchainConfig, blockHeight = blockHeight)
+
             // Checking out for a chain configuration changes
             wrTrace("chainN, begin", chainId, bTrace)
 
@@ -200,7 +201,7 @@ open class ManagedBlockchainProcessManager(
                 val restart = if (chainId == CHAIN0) {
                     afterCommitHandlerChain0(bTrace, blockTimestamp)
                 } else {
-                    afterCommitHandlerChainN(bTrace)
+                    afterCommitHandlerChainN(bTrace, blockHeight)
                 }
 
                 wrTrace("After", chainId, bTrace)
@@ -215,6 +216,16 @@ open class ManagedBlockchainProcessManager(
         }
 
         return ::wrappedAfterCommitHandler
+    }
+
+    private fun saveConfigurationInDatabaseIfNotAlreadyExists(chainId: Long, blockchainConfig: BlockchainConfiguration, blockHeight: Long) {
+        withWriteConnection(storage, chainId) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            if (db.getConfigurationData(ctx, blockchainConfig.configHash) == null) {
+                db.addConfigurationData(ctx, blockHeight, encodeGtv(blockchainConfig.rawConfig))
+            }
+            true
+        }
     }
 
     /**
