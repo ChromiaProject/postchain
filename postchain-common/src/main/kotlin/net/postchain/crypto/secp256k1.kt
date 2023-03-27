@@ -15,7 +15,6 @@ import org.bouncycastle.crypto.signers.HMacDSAKCalculator
 import org.bouncycastle.util.Arrays
 import java.math.BigInteger
 import java.security.MessageDigest
-import java.security.SecureRandom
 
 private val logger = KotlinLogging.logger {}
 
@@ -85,19 +84,6 @@ fun secp256k1_decodeSignature(bytes: ByteArray): Array<BigInteger> {
     }
 }*/
 
-fun secp256k1_sign(digest: ByteArray, privateKeyBytes: ByteArray): ByteArray {
-    val signer = ECDSASigner(HMacDSAKCalculator(SHA256Digest()))
-    val privateKey = BigInteger(1, privateKeyBytes)
-    val privKey = ECPrivateKeyParameters(privateKey, CURVE)
-    signer.init(true, privKey)
-    val components = signer.generateSignature(digest)
-    if (components[1] > HALF_CURVE_ORDER) {
-        // canonicalize low S
-        components[1] = CURVE.n.subtract(components[1])
-    }
-    return encodeSignature(components[0], components[1])
-}
-
 fun secp256k1_verify(digest: ByteArray, pubKey: ByteArray, signature: ByteArray): Boolean {
     val signer = ECDSASigner()
     val params = ECPublicKeyParameters(CURVE.curve.decodePoint(pubKey), CURVE)
@@ -115,15 +101,6 @@ fun secp256k1_derivePubKey(privKey: ByteArray): ByteArray {
     val d = BigInteger(1, privKey)
     val q = CURVE_PARAMS.g.multiply(d)
     return q.getEncoded(true)
-}
-
-fun secp256k_validatePubKey(pubKey: ByteArray): Boolean = try {
-    ECPublicKeyParameters(CURVE.curve.decodePoint(pubKey), CURVE)
-    true
-} catch (_: IllegalArgumentException) {
-    false
-} catch (_: ArrayIndexOutOfBoundsException) {
-    false
 }
 
 fun secp256k1_ecdh(privKey: ByteArray, pubKey: ByteArray): ByteArray {
@@ -145,23 +122,27 @@ open class Secp256k1SigMaker(val pubKey: ByteArray, val privKey: ByteArray, val 
     }
 
     override fun signDigest(digest: Hash): Signature {
-        return Signature(pubKey, secp256k1_sign(digest, privKey))
+        return Signature(pubKey, sign(digest, privKey))
+    }
+
+    private fun sign(digest: ByteArray, privateKeyBytes: ByteArray): ByteArray {
+        val signer = ECDSASigner(HMacDSAKCalculator(SHA256Digest()))
+        val privateKey = BigInteger(1, privateKeyBytes)
+        val privKey = ECPrivateKeyParameters(privateKey, CURVE)
+        signer.init(true, privKey)
+        val components = signer.generateSignature(digest)
+        if (components[1] > HALF_CURVE_ORDER) {
+            // canonicalize low S
+            components[1] = CURVE.n.subtract(components[1])
+        }
+        return encodeSignature(components[0], components[1])
     }
 }
 
 /**
  * A collection of cryptographic functions based on the elliptic curve secp256k1
  */
-open class Secp256K1CryptoSystem : CryptoSystem {
-    private val rand = SecureRandom()
-
-    /**
-     * Calculate the hash digest of a message
-     *
-     * @param bytes A ByteArray of data consisting of the message we want the hash digest of
-     * @return The hash digest of [bytes]
-     */
-    override fun digest(bytes: ByteArray): ByteArray = sha256Digest(bytes)
+open class Secp256K1CryptoSystem : BaseCryptoSystem() {
 
     /**
      * Builds logic to be used for signing data based on supplied key parameters
@@ -186,42 +167,16 @@ open class Secp256K1CryptoSystem : CryptoSystem {
         return Secp256k1SigMaker(keyPair.pubKey.data, keyPair.privKey.data, ::digest)
     }
 
-    /**
-     * Verify a signature from hash digest of a message
-     *
-     * @param digest The hash digest of the message we want to verify the signature [s] for
-     * @param s The signature to verify
-     * @return True or false depending on the outcome of the verification
-     */
-    override fun verifyDigest(digest: ByteArray, s: Signature): Boolean {
-        return secp256k1_verify(digest, s.subjectID, s.data)
+    override fun validatePubKey(pubKey: ByteArray): Boolean = try {
+        ECPublicKeyParameters(CURVE.curve.decodePoint(pubKey), CURVE)
+        true
+    } catch (_: IllegalArgumentException) {
+        false
+    } catch (_: ArrayIndexOutOfBoundsException) {
+        false
     }
 
-    /**
-     * Create a function to be used for verifying a signature based on some data
-     *
-     * @return A function that will take a signature and some data and return a boolean
-     */
-    override fun makeVerifier(): Verifier {
-        return { data, signature: Signature ->
-            secp256k1_verify(digest(data), signature.subjectID, signature.data)
-        }
-    }
-
-    override fun validatePubKey(pubKey: ByteArray): Boolean = secp256k_validatePubKey(pubKey)
-
-    /**
-     * Generate some amount of random bytes
-     *
-     * @param size The number of bytes to generate
-     * @return The random bytes in a ByteArray
-     */
-    //TODO: Is it really secure to use SecureRandom()? Needs more research.
-    override fun getRandomBytes(size: Int): ByteArray {
-        val ret = ByteArray(size)
-        rand.nextBytes(ret)
-        return ret
-    }
+    override fun derivePubKey(privKey: PrivKey): PubKey = PubKey(secp256k1_derivePubKey(privKey.data))
 
     /**
      * Generate a random key pair
