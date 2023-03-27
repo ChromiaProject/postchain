@@ -22,8 +22,8 @@ import net.postchain.core.EContext
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PrivKey
 import net.postchain.crypto.SigMaker
-import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.worker.MessageProcessingLatch
 
@@ -42,10 +42,10 @@ open class BaseBlockchainInfrastructure(
     companion object : KLogging()
 
     init {
-        val privKey = postchainContext.appConfig.privKeyByteArray
-        val pubKey = secp256k1_derivePubKey(privKey)
+        val privKey = PrivKey(postchainContext.appConfig.privKeyByteArray)
+        val pubKey = postchainContext.cryptoSystem.derivePubKey(privKey)
         blockSigMaker = postchainContext.cryptoSystem.buildSigMaker(KeyPair(pubKey, privKey))
-        subjectID = pubKey
+        subjectID = pubKey.data
         syncInfraCache[defaultSynchronizationInfrastructure.javaClass.name] = defaultSynchronizationInfrastructure
     }
 

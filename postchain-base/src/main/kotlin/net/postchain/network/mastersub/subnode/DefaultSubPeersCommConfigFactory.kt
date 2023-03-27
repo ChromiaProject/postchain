@@ -5,7 +5,6 @@ import net.postchain.base.PeerCommConfiguration
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainConfiguration
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.network.peer.DefaultPeersCommConfigFactory
 
 class DefaultSubPeersCommConfigFactory : DefaultPeersCommConfigFactory() {
@@ -22,7 +21,7 @@ class DefaultSubPeersCommConfigFactory : DefaultPeersCommConfigFactory() {
 
         return DefaultSubPeerCommConfig.build(
                 relevantPeerMap,
-                Secp256K1CryptoSystem(),
+                appConfig.cryptoSystem,
                 appConfig.privKeyByteArray,
                 appConfig.pubKeyByteArray,
                 blockchainConfig.signers
