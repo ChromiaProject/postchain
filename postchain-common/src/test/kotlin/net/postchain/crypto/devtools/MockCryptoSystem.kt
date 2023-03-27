@@ -37,6 +37,10 @@ class MockCryptoSystem : CryptoSystem {
 
     override fun validatePubKey(pubKey: ByteArray): Boolean = true
 
+    override fun derivePubKey(privKey: PrivKey): PubKey {
+        return PubKey(secp256k1_derivePubKey(privKey.data))
+    }
+
     override fun getRandomBytes(size: Int): ByteArray {
         return ByteArray(size)
     }

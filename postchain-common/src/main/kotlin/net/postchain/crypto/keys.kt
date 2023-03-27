@@ -16,7 +16,7 @@ interface Key {
 
 data class PubKey(override val wData: WrappedByteArray): Key {
     init {
-        require(data.size == 33 || data.size == 65) { "Public key must be 33 or 65 bytes" }
+        require(data.isNotEmpty()) { "Public key must mot be empty" }
     }
 
     constructor(data: ByteArray) : this(WrappedByteArray(data))
@@ -27,7 +27,7 @@ data class PubKey(override val wData: WrappedByteArray): Key {
 
 data class PrivKey(override val wData: WrappedByteArray): Key {
     init {
-        require(data.size == 32) { "Private key must be 32 bytes" }
+        require(data.isNotEmpty()) { "Private key must mot be empty" }
     }
 
     constructor(data: ByteArray) : this(WrappedByteArray(data))
