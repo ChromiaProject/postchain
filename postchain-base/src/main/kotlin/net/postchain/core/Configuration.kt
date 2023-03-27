@@ -5,6 +5,7 @@ package net.postchain.core
 import net.postchain.PostchainContext
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
@@ -14,6 +15,7 @@ import net.postchain.core.block.BlockWitness
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
+import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 
 /**
@@ -43,6 +45,9 @@ interface BlockchainConfiguration {
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
     fun initializeModules(postchainContext: PostchainContext)
     fun shutdownModules()
+
+    val configHash: ByteArray
+        get() = GtvToBlockchainRidFactory.calculateBlockchainRid(rawConfig, ::sha256Digest).data
 }
 
 fun interface BlockchainConfigurationFactorySupplier {

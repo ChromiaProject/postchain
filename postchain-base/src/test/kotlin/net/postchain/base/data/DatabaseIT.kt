@@ -61,6 +61,7 @@ class DatabaseIT {
             assertArrayEquals(encodeGtv(configData1), db.getConfigurationData(ctx, 0L))
             assertArrayEquals(encodeGtv(configData2), db.getConfigurationData(ctx, 5L))
             assertNull(db.getConfigurationData(ctx, 7L))
+            assertArrayEquals(encodeGtv(configData2), db.getConfigurationDataForHeight(ctx, 7L))
             assertArrayEquals(encodeGtv(configData1), db.getConfigurationData(ctx, configurationHash(configData1)))
             assertArrayEquals(encodeGtv(configData2), db.getConfigurationData(ctx, configurationHash(configData2)))
             assertNull(db.getConfigurationData(ctx, configurationHash(configData3)))
