@@ -9,6 +9,7 @@ import java.security.KeyPairGenerator
 import java.security.PrivateKey
 import java.security.PublicKey
 import java.security.Security
+import java.security.spec.InvalidKeySpecException
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 
@@ -40,7 +41,7 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
     override fun validatePubKey(pubKey: ByteArray): Boolean = try {
         decodePublicKey(PubKey(pubKey))
         true
-    } catch (_: Exception) {
+    } catch (_: InvalidKeySpecException) {
         false
     }
 

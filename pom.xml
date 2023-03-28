@@ -286,6 +286,12 @@
                 <groupId>org.mandas</groupId>
                 <artifactId>docker-client</artifactId>
                 <version>7.0.1</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.bouncycastle</groupId>
+                        <artifactId>bcprov-jdk15on</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.jersey.core</groupId>

@@ -9,6 +9,8 @@ import net.postchain.config.app.AppConfig.Companion.DEFAULT_PORT
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.Transaction
+import net.postchain.crypto.devtools.KeyPairCache
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.utils.configuration.*
@@ -153,16 +155,17 @@ open class IntegrationTestSetup : AbstractIntegration() {
             nodesCount: Int,
             blockchainConfigFilename: String,
             preWipeDatabase: Boolean = true,
-            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit },
+            keyPairCache: KeyPairCache = KeyPairHelper
     ): Array<PostchainTestNode> {
 
         // 1. Build the BC Setup
         val blockchainGtvConfig = readBlockchainConfig(blockchainConfigFilename)
         val chainId = 1 // We only have one.
-        val blockchainSetup = BlockchainSetupFactory.buildFromGtv(chainId, blockchainGtvConfig)
+        val blockchainSetup = BlockchainSetupFactory.buildFromGtv(chainId, blockchainGtvConfig, keyPairCache)
 
         // 2. Build the system Setup
-        val sysSetup = SystemSetupFactory.buildSystemSetup(listOf(blockchainSetup))
+        val sysSetup = SystemSetupFactory.buildSystemSetup(listOf(blockchainSetup), keyPairCache)
 
         if (nodesCount != sysSetup.nodeMap.size) {
             throw IllegalArgumentException("The blockchain conf expected ${sysSetup.nodeMap.size} signers, but you expected: $nodesCount")
