@@ -8,7 +8,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.config.blockchain.AbstractBlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.EContext
-import java.util.concurrent.ConcurrentHashMap
 
 open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
 
@@ -16,7 +15,6 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
 
     // Used to access Chain0 configs which are preloaded and validated in ManagedBlockchainProcessManager.preloadChain0Configuration().
     private val localProvider = ManualBlockchainConfigurationProvider()
-    protected val pendingConfigurations = ConcurrentHashMap<Long, PendingBlockchainConfigurationStatus>()
 
     companion object : KLogging()
 
@@ -58,23 +56,6 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
     }
 
     open fun isManagedDatasourceReady(eContext: EContext): Boolean = true
-
-    fun afterCommit(chainId: Long, height: Long) {
-        val logPrefix = "afterCommit($chainId, $height)"
-        val pendingConfig = pendingConfigurations[chainId]
-        if (pendingConfig != null) {
-            logger.debug { "$logPrefix: pendingConfig detected: $pendingConfig" }
-            if (pendingConfig.height != height) {
-                logger.error { "$logPrefix: unexpected height detected: pendingConfig.height: ${pendingConfig.height}, afterCommit.height: $height" }
-            } else {
-                pendingConfig.isBlockBuilt = true
-                logger.debug { "$logPrefix: block is built at height ${pendingConfig.height} with the pending config" }
-            }
-        } else {
-            logger.debug { "$logPrefix: no pendingConfig detected" }
-        }
-    }
-
 
     /**
      * Same principle for "historic" as for "current"
@@ -119,16 +100,11 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         val logPrefix = "checkNeedConfChangeViaDataSource(${eContext.chainID})"
 
         return if (isPcuEnabled()) {
-            if (pendingConfigurations.containsKey(eContext.chainID)) {
-                logger.debug { "$logPrefix: pendingConfig is being applied, so no need to load a new configuration" }
-                false
-            } else {
-                val pendingConfigFound = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight).any {
-                    dba.getConfigurationData(eContext, it.configHash.data) == null
-                }
-                logger.debug { "$logPrefix: new pending configuration detected for activeHeight: $activeHeight - $pendingConfigFound" }
-                pendingConfigFound
+            val pendingConfigFound = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight).any {
+                dba.getConfigurationData(eContext, it.configHash.data) == null
             }
+            logger.debug { "$logPrefix: new pending configuration detected for activeHeight: $activeHeight - $pendingConfigFound" }
+            pendingConfigFound
         } else {
             val nextConfigHeight = dataSource.findNextConfigurationHeight(blockchainRid.data, lastSavedBlockHeight)
             if (nextConfigHeight == null) {
@@ -173,7 +149,6 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
                     }
                     if (configToApply != null) {
                         logger.debug { "$logPrefix: config ${configToApply.configHash} will be loaded. Signers: ${configToApply.signers}" }
-                        pendingConfigurations[eContext.chainID] = PendingBlockchainConfigurationStatus(activeHeight, configToApply)
                         configToApply.fullConfig
                     } else {
                         logger.debug { "$logPrefix: all pending configs already applied, config will be loaded from DataSource" }
