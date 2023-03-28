@@ -18,14 +18,3 @@ data class PendingBlockchainConfiguration(
         encodeGtv(gtv(base))
     }
 }
-
-class PendingBlockchainConfigurationStatus(
-        val height: Long,
-        val config: PendingBlockchainConfiguration
-) {
-
-    var isBlockBuilt: Boolean = false
-
-    override fun toString(): String =
-            "PendingBlockchainConfigurationStatus(height=$height, configHash=${config.configHash}, isBlockBuilt=$isBlockBuilt)"
-}
