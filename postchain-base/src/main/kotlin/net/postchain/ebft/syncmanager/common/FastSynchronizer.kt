@@ -16,6 +16,7 @@ import net.postchain.devtools.NameHelper
 import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.message.*
+import net.postchain.ebft.message.Transaction
 import net.postchain.ebft.worker.WorkerContext
 import java.lang.Thread.sleep
 import java.util.*
@@ -610,6 +611,7 @@ class FastSynchronizer(
                     is UnfinishedBlock -> handleUnfinishedBlock(peerId, message.header, message.transactions)
                     is CompleteBlock -> handleCompleteBlock(peerId, message.data, message.height, message.witness)
                     is Status -> peerStatuses.statusReceived(peerId, message.height - 1)
+                    is Transaction -> logger.info("Got unexpected transaction from peer $peerId, ignoring")
                     else -> logger.warn { "Unhandled message type: ${message.topic} from peer $peerId" } // WARN b/c this might be buggy?
                 }
             } catch (e: Exception) {
