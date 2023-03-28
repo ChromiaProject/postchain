@@ -1,7 +1,6 @@
 package net.postchain.crypto
 
 import org.bouncycastle.pqc.crypto.crystals.dilithium.DilithiumParameters.dilithium2_aes
-import org.bouncycastle.pqc.crypto.crystals.dilithium.DilithiumPublicKeyParameters
 import org.bouncycastle.pqc.jcajce.interfaces.DilithiumPrivateKey
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.bouncycastle.pqc.jcajce.spec.DilithiumParameterSpec
@@ -39,9 +38,9 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
     }
 
     override fun validatePubKey(pubKey: ByteArray): Boolean = try {
-        DilithiumPublicKeyParameters(dilithiumParameters, pubKey)
+        decodePublicKey(PubKey(pubKey))
         true
-    } catch (_: ArrayIndexOutOfBoundsException) {
+    } catch (_: Exception) {
         false
     }
 
