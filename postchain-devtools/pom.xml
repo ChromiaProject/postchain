@@ -19,6 +19,10 @@
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
+            <artifactId>postchain-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
         </dependency>
         <dependency>

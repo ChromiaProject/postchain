@@ -10,7 +10,6 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.ContainerConfigFactory
 import net.postchain.containers.bpm.fs.FileSystem
-import net.postchain.server.config.PostchainServerConfig
 
 /**
  * Container chains configuration
@@ -133,7 +132,7 @@ data class ContainerNodeConfig(
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_NETWORK", KEY_NETWORK),
                         subnodeHost,
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_REST_API_PORT", KEY_SUBNODE_REST_API_PORT, RestApiConfig.DEFAULT_REST_API_PORT),
-                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_ADMIN_RPC_PORT", KEY_SUBNODE_ADMIN_RPC_PORT, PostchainServerConfig.DEFAULT_RPC_SERVER_PORT),
+                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_ADMIN_RPC_PORT", KEY_SUBNODE_ADMIN_RPC_PORT, 50051),
                         subnodeUser,
                         getEnvOrLongProperty("POSTCHAIN_SEND_MASTER_CONNECTED_PEERS_PERIOD", KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD, 60_000L),
                         getEnvOrLongProperty("POSTCHAIN_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD", KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 60_000),
