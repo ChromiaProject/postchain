@@ -49,7 +49,7 @@ abstract class BaseCryptoSystem : CryptoSystem {
             try {
                 val keyInfo = SubjectPublicKeyInfo.getInstance(ASN1InputStream(subjectID).readObject())
                 val signatureAlgorithmId = keyInfo.algorithm.algorithm
-                // TODO: Investigate which parameters we should use, if we need more security than dilithium2 we have to change DB schema
+                // TODO: Investigate which parameters we should use
                 if (signatureAlgorithmId == BCObjectIdentifiers.dilithium2_aes) {
                     ::verifyDilithiumSignature
                 } else throw UserMistake("Unknown signature algorithm identifier $signatureAlgorithmId")

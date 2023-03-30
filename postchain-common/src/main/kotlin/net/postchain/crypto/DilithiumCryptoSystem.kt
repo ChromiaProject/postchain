@@ -14,7 +14,7 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 
 class DilithiumCryptoSystem : BaseCryptoSystem() {
-    private val dilithiumParameters = dilithium2_aes // TODO: Investigate which parameters we should use, if we need dilithium5 we have to change DB schema
+    private val dilithiumParameters = dilithium2_aes // TODO: Investigate which parameters we should use
 
     init {
         if (Security.getProvider("BCPQC") == null) {
