@@ -118,6 +118,21 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " ALTER COLUMN configuration_hash SET NOT NULL"
     }
 
+    override fun cmdAddTableBlockchainReplicasPubKeyConstraint(): String =
+            "ALTER TABLE ${tableBlockchainReplicas()} ADD FOREIGN KEY ($TABLE_REPLICAS_FIELD_PUBKEY)" +
+                    " REFERENCES ${tablePeerinfos()} ($TABLE_PEERINFOS_FIELD_PUBKEY)"
+
+    override fun cmdAlterHexColumnToBytea(tableName: String, columnName: String): String =
+            "ALTER TABLE $tableName ALTER COLUMN $columnName TYPE BYTEA USING decode($columnName, 'hex')"
+
+    override fun cmdDropTableConstraint(tableName: String, constraintName: String): String =
+            "ALTER TABLE $tableName DROP CONSTRAINT $constraintName"
+
+    override fun cmdGetTableBlockchainReplicasPubKeyConstraint(): String =
+            "SELECT tc.constraint_name FROM information_schema.table_constraints AS tc" +
+                    " WHERE tc.table_schema = current_schema() AND tc.table_name = '${tableBlockchainReplicas()}'" +
+                    " AND tc.constraint_type = 'FOREIGN KEY'"
+
     override fun cmdCreateTablePeerInfos(): String {
         return "CREATE TABLE ${tablePeerinfos()} (" +
                 " $TABLE_PEERINFOS_FIELD_HOST text NOT NULL" +
