@@ -9,6 +9,7 @@ import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.ApiInfrastructure
@@ -44,6 +45,9 @@ open class BaseBlockchainInfrastructure(
     init {
         val privKey = PrivKey(postchainContext.appConfig.privKeyByteArray)
         val pubKey = postchainContext.cryptoSystem.derivePubKey(privKey)
+        if (!postchainContext.appConfig.pubKeyByteArray.contentEquals(pubKey.data)) {
+            throw UserMistake("Derived pubkey from private key $pubKey does not match configured pubkey ${postchainContext.appConfig.pubKey}")
+        }
         blockSigMaker = postchainContext.cryptoSystem.buildSigMaker(KeyPair(pubKey, privKey))
         subjectID = pubKey.data
         syncInfraCache[defaultSynchronizationInfrastructure.javaClass.name] = defaultSynchronizationInfrastructure
