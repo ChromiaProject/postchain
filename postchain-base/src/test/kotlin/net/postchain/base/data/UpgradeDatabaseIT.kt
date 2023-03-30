@@ -1,15 +1,20 @@
 package net.postchain.base.data
 
 import net.postchain.StorageBuilder
+import net.postchain.base.PeerInfo
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 import net.postchain.core.EContext
+import net.postchain.core.NodeRid
 import net.postchain.core.Storage
+import net.postchain.crypto.PubKey
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
 import org.junit.jupiter.api.Assertions
@@ -17,6 +22,10 @@ import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.time.Instant
+import java.time.temporal.ChronoUnit
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class UpgradeDatabaseIT {
 
@@ -212,6 +221,85 @@ class UpgradeDatabaseIT {
                         }
                     }
                 }
+    }
+
+    @Test
+    fun testUpgradeFromVersion4to5() {
+        val peer = PeerInfo("localhost", 9870, KeyPairHelper.privKey(0), Instant.now().truncatedTo(ChronoUnit.SECONDS))
+        val replicaBrid = BlockchainRid.buildRepeat(0)
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 4)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.queryRunner.update(ctx.conn, "INSERT INTO peerinfos (host, port, pub_key, timestamp) values (?, ?, ?, ?)",
+                                peer.host, peer.port, peer.pubKey.toHex(), SqlUtils.toTimestamp(peer.lastUpdated))
+                        db.queryRunner.update(ctx.conn, "INSERT INTO blockchain_replicas (blockchain_rid, node) values (?, ?)",
+                                replicaBrid.toHex(), peer.pubKey.toHex())
+                        true
+                    }
+                }
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 5)
+                .use {
+                    withReadConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+
+                        verifyBlockchainReplicasInVersion5(db, ctx, replicaBrid, PubKey(peer.pubKey))
+                        verifyPeerInfoInVersion5(db, ctx, peer)
+                    }
+                }
+    }
+
+    private fun verifyBlockchainReplicasInVersion5(db: SQLDatabaseAccess, ctx: EContext, replicaBrid: BlockchainRid, replicaKey: PubKey) {
+        assertTrue(db.existsBlockchainReplica(ctx, replicaBrid, replicaKey))
+
+        val replicaNodes = db.getBlockchainReplicaCollection(ctx)
+        assertEquals(1, replicaNodes.size)
+        assertEquals(listOf(NodeRid(replicaKey.data)), replicaNodes[replicaBrid])
+
+        val newReplicaBrid = BlockchainRid.buildRepeat(1)
+        db.addBlockchainReplica(ctx, newReplicaBrid, replicaKey)
+        assertTrue(db.existsBlockchainReplica(ctx, newReplicaBrid, replicaKey))
+
+        db.removeBlockchainReplica(ctx, newReplicaBrid, replicaKey)
+        db.removeBlockchainReplica(ctx, replicaBrid, replicaKey)
+        assertTrue(db.getBlockchainReplicaCollection(ctx).isEmpty())
+    }
+
+    private fun verifyPeerInfoInVersion5(db: SQLDatabaseAccess, ctx: EContext, peer: PeerInfo) {
+        val peers = db.findPeerInfo(ctx, null, null, peer.pubKey.toHex())
+        assertArrayEquals(arrayOf(peer), peers)
+
+        // Matching pattern query
+        // (bytes 16 - 18, chosen b/c KeyPairHelper returns keys where only byte 16 is non-zero so it's more interesting)
+        val matchingPattern = peer.pubKey.toHex().substring(32, 36)
+        val peersByPattern = db.findPeerInfo(ctx, null, null, matchingPattern)
+        assertArrayEquals(arrayOf(peer), peersByPattern)
+
+        // Non-matching pattern query
+        val nonMatchingPattern = matchingPattern.replace('0', '1')
+        assertTrue(db.findPeerInfo(ctx, null, null, nonMatchingPattern).isEmpty())
+
+        // Invalid hex pattern
+        assertThrows<UserMistake> {
+            val invalidHex = peer.pubKey.toHex().substring(5, 10)
+            db.findPeerInfo(ctx, null, null, invalidHex)
+        }
+
+        // Add/modify/remove peer
+        db.updatePeerInfo(ctx, "localhost", 9871, PubKey(peer.pubKey), null)
+        val updatedPeers = db.findPeerInfo(ctx, null, null, peer.pubKey.toHex())
+        assertEquals(9871, updatedPeers[0].port)
+
+        val newPeer = PeerInfo("localhost", 9872, KeyPairHelper.pubKey(1), Instant.now().truncatedTo(ChronoUnit.SECONDS))
+        db.addPeerInfo(ctx, newPeer.host, newPeer.port, newPeer.pubKey.toHex(), newPeer.lastUpdated)
+        val peersAfterAdd = db.findPeerInfo(ctx, newPeer.host, newPeer.port, newPeer.pubKey.toHex())
+        assertArrayEquals(arrayOf(newPeer), peersAfterAdd)
+
+        assertTrue(db.removePeerInfo(ctx, PubKey(KeyPairHelper.pubKey(2))).isEmpty())
+        db.removePeerInfo(ctx, PubKey(newPeer.pubKey))
+        db.removePeerInfo(ctx, PubKey(peer.pubKey))
+        assertTrue(db.findPeerInfo(ctx, null, null, peer.pubKey.toHex()).isEmpty())
     }
 
     private fun assertVersion3(storage: Storage) {

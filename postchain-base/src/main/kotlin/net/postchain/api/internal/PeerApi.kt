@@ -18,7 +18,7 @@ object PeerApi {
         val targetKey = db.findPeerInfo(ctx, null, null, pubkey.hex())
         return if (targetKey.isNotEmpty()) {
             if (override) {
-                db.updatePeerInfo(ctx, host, port, pubkey.hex())
+                db.updatePeerInfo(ctx, host, port, pubkey)
             } else {
                 false
             }
@@ -48,7 +48,7 @@ object PeerApi {
     }
 
     fun removePeer(ctx: AppContext, pubkey: PubKey): Array<PeerInfo> =
-            DatabaseAccess.of(ctx).removePeerInfo(ctx, pubkey.hex())
+            DatabaseAccess.of(ctx).removePeerInfo(ctx, pubkey)
 
     fun listPeers(ctx: AppContext): Array<PeerInfo> =
             DatabaseAccess.of(ctx).findPeerInfo(ctx, null, null, null)

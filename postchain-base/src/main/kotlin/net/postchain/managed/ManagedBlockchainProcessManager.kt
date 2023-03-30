@@ -259,12 +259,6 @@ open class ManagedBlockchainProcessManager(
         }
     }
 
-    override fun invokeAfterCommitHooks(chainId: Long, blockHeight: Long) {
-        super.invokeAfterCommitHooks(chainId, blockHeight)
-        (postchainContext.configurationProvider as? ManagedBlockchainConfigurationProvider)
-                ?.afterCommit(chainId, blockHeight)
-    }
-
     /**
      * Only the chains in the [toLaunch] list should run. Any old chains not in this list must be stopped.
      * Note: any chains not in the new config for this node should actually also be deleted, but not impl yet.

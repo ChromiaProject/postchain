@@ -19,6 +19,10 @@
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
+            <artifactId>postchain-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
         </dependency>
         <dependency>
@@ -37,7 +41,7 @@
         <!-- Kotlin -->
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib-jdk8</artifactId>
+            <artifactId>kotlin-stdlib</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
