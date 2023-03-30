@@ -12,7 +12,7 @@ import javax.sql.DataSource
 
 object StorageBuilder {
 
-    private const val DB_VERSION = 4
+    private const val DB_VERSION = 5
 
     fun buildStorage(appConfig: AppConfig, wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION): Storage {
         val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)

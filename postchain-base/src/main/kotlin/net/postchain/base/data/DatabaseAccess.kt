@@ -127,8 +127,8 @@ interface DatabaseAccess {
     fun findPeerInfo(ctx: AppContext, host: String?, port: Int?, pubKeyPattern: String?): Array<PeerInfo>
     fun addPeerInfo(ctx: AppContext, peerInfo: PeerInfo): Boolean
     fun addPeerInfo(ctx: AppContext, host: String, port: Int, pubKey: String, timestamp: Instant? = null): Boolean
-    fun updatePeerInfo(ctx: AppContext, host: String, port: Int, pubKey: String, timestamp: Instant? = null): Boolean
-    fun removePeerInfo(ctx: AppContext, pubKey: String): Array<PeerInfo>
+    fun updatePeerInfo(ctx: AppContext, host: String, port: Int, pubKey: PubKey, timestamp: Instant? = null): Boolean
+    fun removePeerInfo(ctx: AppContext, pubKey: PubKey): Array<PeerInfo>
 
     // Extra nodes to sync from
     fun getBlockchainReplicaCollection(ctx: AppContext): Map<BlockchainRid, List<NodeRid>>
