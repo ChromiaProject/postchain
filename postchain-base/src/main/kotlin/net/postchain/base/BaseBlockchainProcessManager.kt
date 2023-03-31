@@ -5,6 +5,7 @@ package net.postchain.base
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
+import net.postchain.StorageBuilder
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.common.BlockchainRid
@@ -127,14 +128,18 @@ open class BaseBlockchainProcessManager(
                         stopBlockchain(chainId, bTrace, true)
 
                         startInfo("Starting of blockchain", chainId)
-                        val blockchainConfig = makeBlockchainConfiguration(chainId)
+
+                        // We create a new storage instance to open new db connections for each engine
+                        val chainStorage = StorageBuilder.buildStorage(postchainContext.appConfig)
+                        val initialEContext = chainStorage.openWriteConnection(chainId)
+                        val blockchainConfig = makeBlockchainConfiguration(chainId, chainStorage, initialEContext)
 
                         withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()) {
                             val processName = BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
                             startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
                             val x: AfterCommitHandler = buildAfterCommitHandler(chainId, blockchainConfig)
-                            val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x)
+                            val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x, chainStorage, initialEContext)
                             startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
                             createAndRegisterBlockchainProcess(
@@ -171,17 +176,24 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    protected open fun makeBlockchainConfiguration(chainId: Long): BlockchainConfiguration {
-        return withReadWriteConnection(storage, chainId) { eContext ->
-            val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(eContext, chainId)
-            if (configuration != null) {
-                blockchainInfrastructure.makeBlockchainConfiguration(
-                        configuration, eContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory(chainId)
-                ).also { it.initializeModules(postchainContext) }
-            } else {
-                throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
-            }.also { DependenciesValidator.validateBlockchainRids(eContext, it.blockchainDependencies) }
+    protected open fun makeBlockchainConfiguration(chainId: Long, storage: Storage, eContext: EContext): BlockchainConfiguration {
+        val configuration = blockchainConfigProvider.getActiveBlocksConfiguration(eContext, chainId)
+        val bcConfiguration = if (configuration != null) {
+            blockchainInfrastructure.makeBlockchainConfiguration(
+                    configuration, eContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory(chainId)
+            ).also {
+                DependenciesValidator.validateBlockchainRids(eContext, it.blockchainDependencies)
+                it.initializeModules(postchainContext)
+            }
+        } else {
+            throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
         }
+
+        // Initial configuration will be committed immediately
+        if (DatabaseAccess.of(eContext).getLastBlockHeight(eContext) == -1L) {
+            storage.closeWriteConnection(eContext, true)
+        }
+        return bcConfiguration
     }
 
     protected open fun getBlockchainConfigurationFactory(chainId: Long): BlockchainConfigurationFactorySupplier =

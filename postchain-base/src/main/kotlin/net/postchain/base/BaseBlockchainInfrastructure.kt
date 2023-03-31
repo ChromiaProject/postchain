@@ -4,7 +4,6 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.PostchainContext
-import net.postchain.StorageBuilder
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
@@ -20,6 +19,7 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.DynamicClassName
 import net.postchain.core.EContext
+import net.postchain.core.Storage
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.crypto.KeyPair
@@ -88,15 +88,13 @@ open class BaseBlockchainInfrastructure(
     override fun makeBlockchainEngine(
             processName: BlockchainProcessName,
             configuration: BlockchainConfiguration,
-            afterCommitHandler: AfterCommitHandler
+            afterCommitHandler: AfterCommitHandler,
+            storage: Storage,
+            initialEContext: EContext
     ): BaseBlockchainEngine {
-
-        // We create a new storage instance to open new db connections for each engine
-        val storage = StorageBuilder.buildStorage(postchainContext.appConfig)
-
         val transactionQueue = BaseTransactionQueue(configuration.transactionQueueSize)
 
-        return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue)
+        return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue, initialEContext)
                 .apply {
                     setAfterCommitHandler(afterCommitHandler)
                     initialize()

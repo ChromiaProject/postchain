@@ -15,6 +15,7 @@ import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
+import net.postchain.core.EContext
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.Storage
 import net.postchain.core.Transaction
@@ -49,6 +50,7 @@ open class BaseBlockchainEngine(
         override val storage: Storage,
         private val chainID: Long,
         private val transactionQueue: TransactionQueue,
+        initialEContext: EContext,
         private val useParallelDecoding: Boolean = true
 ) : BlockchainEngine {
 
@@ -58,6 +60,7 @@ open class BaseBlockchainEngine(
     private lateinit var blockQueries: BlockQueries
     private var initialized = false
     private var closed = false
+    private var currentEContext = initialEContext
     private var afterCommitHandlerInternal: AfterCommitHandler = { _, _, _ -> false }
     private var afterCommitHandler: AfterCommitHandler = afterCommitHandlerInternal
     private val metrics = BaseBlockchainEngineMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid, transactionQueue)
@@ -102,15 +105,23 @@ open class BaseBlockchainEngine(
         closed = true
         blockchainConfiguration.shutdownModules()
         blockQueries.shutdown()
+        if (!currentEContext.conn.isClosed) {
+            storage.closeWriteConnection(currentEContext, false)
+        }
         storage.close()
     }
 
     private fun makeBlockBuilder(): ManagedBlockBuilder {
         if (!initialized) throw ProgrammerMistake("Engine is not initialized yet")
         if (closed) throw PmEngineIsAlreadyClosed("Engine is already closed")
-        val eContext = storage.openWriteConnection(chainID) // TODO: Close eContext
+        currentEContext = if (currentEContext.conn.isClosed) {
+            storage.openWriteConnection(chainID)
+        } else {
+            currentEContext
+        }
+        val savepoint = currentEContext.conn.setSavepoint("blockBuilder${System.nanoTime()}")
 
-        return BaseManagedBlockBuilder(eContext, storage, blockchainConfiguration.makeBlockBuilder(eContext), { },
+        return BaseManagedBlockBuilder(currentEContext, savepoint, storage, blockchainConfiguration.makeBlockBuilder(currentEContext), { },
                 {
                     afterLog("Begin", it.getBTrace())
                     val blockBuilder = it as AbstractBlockBuilder
