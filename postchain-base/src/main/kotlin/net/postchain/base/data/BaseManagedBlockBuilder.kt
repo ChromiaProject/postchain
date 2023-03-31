@@ -20,6 +20,7 @@ import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.BlockWitnessBuilder
 import net.postchain.core.block.ManagedBlockBuilder
 import java.sql.SQLException
+import java.sql.Savepoint
 import kotlin.system.exitProcess
 
 /**
@@ -29,6 +30,7 @@ import kotlin.system.exitProcess
  *
  * @property eContext Connection context including blockchain and node identifiers
  * @property storage For database access
+ * @property savepoint DB save point to rollback to in case block building fails
  * @property blockBuilder The base block builder
  * @property afterCommit Clean-up function to be called when block has been committed
  * @property closed Boolean for if block is open to further modifications and queries. It is closed if
@@ -37,6 +39,7 @@ import kotlin.system.exitProcess
  */
 class BaseManagedBlockBuilder(
         private val eContext: EContext,
+        private val savepoint: Savepoint,
         val storage: Storage,
         val blockBuilder: BlockBuilder,
         val beforeCommit: (BlockBuilder) -> Unit,
@@ -165,7 +168,7 @@ class BaseManagedBlockBuilder(
         synchronized(storage) {
             if (!closed) {
                 rollbackLog("Got lock")
-                storage.closeWriteConnection(eContext, false)
+                eContext.conn.rollback(savepoint)
                 closed = true
             }
         }

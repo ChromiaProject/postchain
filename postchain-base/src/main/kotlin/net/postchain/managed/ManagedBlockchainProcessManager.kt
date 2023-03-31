@@ -87,8 +87,8 @@ open class ManagedBlockchainProcessManager(
                 ?: logger.warn { "Blockchain config is not managed" }
     }
 
-    override fun makeBlockchainConfiguration(chainId: Long): BlockchainConfiguration {
-        return super.makeBlockchainConfiguration(chainId).also {
+    override fun makeBlockchainConfiguration(chainId: Long, storage: Storage, eContext: EContext): BlockchainConfiguration {
+        return super.makeBlockchainConfiguration(chainId, storage, eContext).also {
             if (chainId == CHAIN0 && it is ManagedDataSourceAware) {
                 initManagedEnvironment(it)
             }

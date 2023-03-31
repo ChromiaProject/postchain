@@ -55,7 +55,9 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
     fun makeBlockchainEngine(
             processName: BlockchainProcessName,
             configuration: BlockchainConfiguration,
-            afterCommitHandler: AfterCommitHandler
+            afterCommitHandler: AfterCommitHandler,
+            storage: Storage,
+            initialEContext: EContext
     ): BlockchainEngine
 
 }
