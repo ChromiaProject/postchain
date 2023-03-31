@@ -55,7 +55,6 @@ class BaseBlockManager(
         synchronized(statusManager) {
             onFailure(throwable)
             isOperationRunning.set(false)
-            logger.debug(throwable) { "Error in runDBOp()" }
         }
     }
 
