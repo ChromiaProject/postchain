@@ -178,7 +178,7 @@ class BaseBlockDatabase(
                     theBlockBuilder.rollback()
                 } catch (ignore: Exception) {
                 }
-                throw UserMistake("Can't build block: ${exception.message}", exception)
+                throw exception
             } else {
                 blockBuilder = theBlockBuilder
                 witnessBuilder = blockBuilder!!.getBlockWitnessBuilder() as MultiSigBlockWitnessBuilder
