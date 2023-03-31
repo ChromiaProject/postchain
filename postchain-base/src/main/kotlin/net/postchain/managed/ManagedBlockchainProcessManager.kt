@@ -145,22 +145,30 @@ open class ManagedBlockchainProcessManager(
             // Preloading blockchain configuration
             preloadChain0Configuration()
 
-            // Checking out the peer list changes
-            val doReload = isPeerListChanged()
-
-            return if (doReload) {
-                logger.info { "Reloading of all blockchains are required due to change in peer list" }
-                wrTrace("chain0 Reloading of blockchains are required", chainId, bTrace)
-                reloadBlockchainsAsync(bTrace)
-                true
-
-            } else {
-                wrTrace("about to restart chain0", chainId, bTrace)
-
-                // Checking out for chain0 configuration changes
-                val reloadChain0 = isConfigurationChanged(CHAIN0)
+            val isPcuEnabled = (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)?.isPcuEnabled()
+                    ?: false
+            if (isPcuEnabled) {
+                val reloadChain0 = isPeerListChanged() || isConfigurationChanged(CHAIN0)
                 startStopBlockchainsAsync(reloadChain0, bTrace)
-                reloadChain0
+                return reloadChain0
+            } else {
+                // Checking out the peer list changes
+                val doReload = isPeerListChanged()
+
+                return if (doReload) {
+                    logger.info { "Reloading of all blockchains are required due to change in peer list" }
+                    wrTrace("chain0 Reloading of blockchains are required", chainId, bTrace)
+                    reloadBlockchainsAsync(bTrace)
+                    true
+
+                } else {
+                    wrTrace("about to restart chain0", chainId, bTrace)
+
+                    // Checking out for chain0 configuration changes
+                    val reloadChain0 = isConfigurationChanged(CHAIN0)
+                    startStopBlockchainsAsync(reloadChain0, bTrace)
+                    reloadChain0
+                }
             }
         }
 
