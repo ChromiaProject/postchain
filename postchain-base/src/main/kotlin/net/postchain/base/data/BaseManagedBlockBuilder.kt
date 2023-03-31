@@ -26,7 +26,9 @@ import kotlin.system.exitProcess
 /**
  * Wrapper around BlockBuilder providing more control over the process of building blocks,
  * with checks to see if current working block has been committed or not, and rolling back
- * database state in case some operation fails
+ * database state in case some operation fails.
+ *
+ * Despite its name, it is not related to managed mode.
  *
  * @property eContext Connection context including blockchain and node identifiers
  * @property storage For database access
