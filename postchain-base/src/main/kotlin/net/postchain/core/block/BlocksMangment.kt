@@ -108,7 +108,9 @@ interface BlockBuilder {
 }
 
 /**
- * A block builder which automatically manages the connection
+ * A block builder which automatically manages the connection.
+ *
+ * Despite its name, it is not related to managed mode.
  */
 interface ManagedBlockBuilder : BlockBuilder {
     fun maybeAppendTransaction(tx: Transaction): Exception?
