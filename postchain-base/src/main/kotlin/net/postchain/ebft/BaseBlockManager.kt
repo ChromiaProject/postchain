@@ -162,7 +162,7 @@ class BaseBlockManager(
                         return
                     }
                     if (logger.isTraceEnabled) {
-                        logger.trace("$processName: Schedule build block. ${statusManager.myStatus.height + 1}")
+                        logger.trace("$processName: Schedule build block. ${statusManager.myStatus.height}")
                     }
 
                     runDBOp({
@@ -176,7 +176,7 @@ class BaseBlockManager(
                             lastBlockTimestamp = blockTimestamp(block)
                         }
                     }, { exception ->
-                        val msg = "$processName: Can't build block at height ${statusManager.myStatus.height + 1}: ${exception.message}"
+                        val msg = "$processName: Can't build block at height ${statusManager.myStatus.height}: ${exception.message}"
                         if (exception is PmEngineIsAlreadyClosed) {
                             logger.debug(msg)
                         } else {
