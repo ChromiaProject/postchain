@@ -151,26 +151,14 @@ open class ContainerManagedBlockchainProcessManager(
                 // Preloading blockchain configuration
                 preloadChain0Configuration()
 
-                // Checking out the peer list changes
-                val peerListVersion = dataSource.getPeerListVersion()
-                val doReload = (this.peerListVersion != peerListVersion)
-                this.peerListVersion = peerListVersion
-
                 rTrace("Sync", chainId, blockTrace)
                 val res = containerJobManager.withLock {
                     // Reload/start/stops blockchains
-                    val res2 = if (doReload) {
-                        rInfo("peer list changed, reloading of blockchains is required", chainId, blockTrace)
-                        reloadAllBlockchains()
-                        true
-                    } else {
-                        rTrace("about to restart chain0", chainId, blockTrace)
-                        // Checking out for chain0 configuration changes
-                        val reloadChain0 = isConfigurationChanged(CHAIN0)
-                        stopStartBlockchains(reloadChain0)
-                        reloadChain0
-                    }
-                    res2
+                    rTrace("about to restart chain0", chainId, blockTrace)
+                    // Checking out for chain0 configuration changes
+                    val reloadChain0 = isConfigurationChanged(CHAIN0)
+                    stopStartBlockchains(reloadChain0)
+                    reloadChain0
                 }
 
                 rTrace("After", chainId, blockTrace)
@@ -188,25 +176,6 @@ open class ContainerManagedBlockchainProcessManager(
             ::chain0AfterCommitHandler
         } else {
             super.buildAfterCommitHandler(chainId, blockchainConfig)
-        }
-    }
-
-    /**
-     * Restart all chains. Begin with chain zero.
-     */
-    private fun reloadAllBlockchains() {
-        startBlockchainAsync(CHAIN0, null)
-
-        getLaunchedBlockchains().filterNot { it == CHAIN0 }.forEach {
-            logger.debug("[${nodeName()}]: ContainerJob -- restart system chain: $it")
-            startBlockchainAsync(it, null)
-        }
-
-        postchainContainers.values.forEach { cont ->
-            cont.getAllChains().forEach {
-                logger.debug("[${nodeName()}]: ContainerJob -- restart subnode chain: ${getChain(it)}")
-                containerJobManager.restartChain(getChain(it))
-            }
         }
     }
 
