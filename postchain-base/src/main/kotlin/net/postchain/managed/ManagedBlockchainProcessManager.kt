@@ -148,7 +148,7 @@ open class ManagedBlockchainProcessManager(
             val isPcuEnabled = (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)?.isPcuEnabled()
                     ?: false
             if (isPcuEnabled) {
-                val reloadChain0 = isPeerListChanged() || isConfigurationChanged(CHAIN0)
+                val reloadChain0 = isConfigurationChanged(CHAIN0)
                 startStopBlockchainsAsync(reloadChain0, bTrace)
                 return reloadChain0
             } else {
