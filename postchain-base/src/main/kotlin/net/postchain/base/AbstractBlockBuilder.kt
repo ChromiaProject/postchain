@@ -81,6 +81,7 @@ abstract class AbstractBlockBuilder(
         blockchainDependencies = buildBlockchainDependencies(partialBlockHeader)
         initialBlockData =
             store.beginBlock(ectx, blockchainRID, blockchainDependencies!!.extractBlockHeightDependencyArray())
+        logger.debug("buildBlock() -- height=${initialBlockData.height} prevBlockRID=${initialBlockData.prevBlockRID.toHex()} timestamp=${initialBlockData.timestamp} blockIID=${initialBlockData.blockIID}")
         bctx = BaseBlockEContext(
             ectx,
             initialBlockData.height,
@@ -181,6 +182,9 @@ abstract class AbstractBlockBuilder(
         commitLog("End")
     }
 
+    override val height: Long?
+        get() = if (::bctx.isInitialized) bctx.height else null
+
     // -----------------
     // Logging boilerplate
     // -----------------
@@ -212,4 +216,3 @@ abstract class AbstractBlockBuilder(
         }
     }
 }
-

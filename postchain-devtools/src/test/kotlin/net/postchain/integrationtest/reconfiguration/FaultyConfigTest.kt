@@ -3,7 +3,11 @@ package net.postchain.integrationtest.reconfiguration
 import assertk.assert
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
+import mu.KLogging
 import net.postchain.base.SpecialTransactionPosition
+import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.data.SQLDatabaseAccess
+import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
@@ -19,10 +23,16 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ScalarHandler
 import org.awaitility.Awaitility
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.util.concurrent.TimeUnit
 
-class FaultyConfigIsNotPersistedTest : IntegrationTestSetup() {
+class FaultyConfigTest : IntegrationTestSetup() {
+
+    @BeforeEach
+    fun setup() {
+        SimulateFaultyConfigSpecialTxExtension.hasFailed = false
+    }
 
     @Test
     fun faultyConfigIsNotPersisted() {
@@ -40,8 +50,13 @@ class FaultyConfigIsNotPersistedTest : IntegrationTestSetup() {
 
         buildBlockNoWait(listOf(node), DEFAULT_CHAIN_IID, 2)
         Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
-            val (specialTxExtension) = node.getModules(DEFAULT_CHAIN_IID).find { it is FaultyGTXModule }!!.getSpecialTxExtensions()
-            assert((specialTxExtension as SimulateFaultyConfigSpecialTxExtension).hasFailed).isTrue()
+            assert(SimulateFaultyConfigSpecialTxExtension.hasFailed).isTrue()
+        }
+
+        // Assert that DB schema change by faulty config is not persisted
+        node.postchainContext.storage.withReadConnection { ctx ->
+            val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+            assert(db.tableExists(ctx.conn, "should_fail")).isFalse()
         }
 
         val correctConfig = readBlockchainConfig(
@@ -52,15 +67,46 @@ class FaultyConfigIsNotPersistedTest : IntegrationTestSetup() {
         node.startBlockchain(DEFAULT_CHAIN_IID)
 
         buildBlock(DEFAULT_CHAIN_IID, 3)
-        val (specialTxExtension) = node.getModules(DEFAULT_CHAIN_IID).find { it is FaultyGTXModule }!!.getSpecialTxExtensions()
-        assert((specialTxExtension as SimulateFaultyConfigSpecialTxExtension).hasFailed).isFalse()
+        assert(SimulateFaultyConfigSpecialTxExtension.hasFailed).isFalse()
+
+        // Assert that DB schema change by correct config is persisted
+        node.postchainContext.storage.withReadConnection { ctx ->
+            val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+            assert(db.tableExists(ctx.conn, "should_fail")).isTrue()
+        }
+    }
+
+    @Test
+    fun faultyConfigIsReverted() {
+        val (node) = createNodes(1, "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_initial_1.xml")
+
+        val faultyConfig = readBlockchainConfig(
+                "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_faulty_1.xml"
+        )
+        node.addConfiguration(DEFAULT_CHAIN_IID, 2, faultyConfig)
+        buildBlock(DEFAULT_CHAIN_IID, 1)
+
+        Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
+            assert(node.getModules(DEFAULT_CHAIN_IID).any { it is FaultyGTXModule })
+        }
+        buildBlockNoWait(listOf(node), DEFAULT_CHAIN_IID, 2)
+        Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
+            assert(SimulateFaultyConfigSpecialTxExtension.hasFailed).isTrue()
+        }
+
+        buildBlock(DEFAULT_CHAIN_IID, 3)
+        // Assert that DB schema change by faulty config is rolled back
+        node.postchainContext.storage.withReadConnection { ctx ->
+            val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+            assert(db.tableExists(ctx.conn, "should_fail")).isFalse()
+        }
     }
 }
 
 open class FaultyGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(), mapOf()) {
     open val shouldFail = true
     private val queryRunner = QueryRunner()
-    private val specialTxExtension = SimulateFaultyConfigSpecialTxExtension()
+    private val specialTxExtension = SimulateFaultyConfigSpecialTxExtension
 
     override fun initializeDB(ctx: EContext) {
         queryRunner.update(ctx.conn, "CREATE TABLE IF NOT EXISTS should_fail (id BIGINT PRIMARY KEY, fail BOOLEAN)")
@@ -77,10 +123,11 @@ class CorrectConfigGTXModule : FaultyGTXModule() {
     override val shouldFail = false
 }
 
-class SimulateFaultyConfigSpecialTxExtension : GTXSpecialTxExtension {
-    var hasFailed = false
+object SimulateFaultyConfigSpecialTxExtension : GTXSpecialTxExtension, KLogging() {
+    @Volatile var hasFailed = false
     private val queryRunner = QueryRunner()
     private val boolRes = ScalarHandler<Boolean>()
+
     override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {}
 
     override fun getRelevantOps() = setOf<String>()
@@ -99,8 +146,9 @@ class SimulateFaultyConfigSpecialTxExtension : GTXSpecialTxExtension {
 
     private fun checkIfWeShouldFail(bctx: BlockEContext) {
         val shouldFail = queryRunner.query(bctx.conn, "SELECT fail FROM should_fail WHERE id = 1", boolRes)
+        logger.info("Should fail: $shouldFail")
+        hasFailed = shouldFail
         if (shouldFail) {
-            hasFailed = true
             throw UserMistake("You wanted me to fail")
         }
     }

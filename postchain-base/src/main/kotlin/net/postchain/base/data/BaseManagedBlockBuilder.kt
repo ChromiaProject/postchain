@@ -165,6 +165,9 @@ class BaseManagedBlockBuilder(
         commitLog("End")
     }
 
+    override val height: Long?
+        get() = blockBuilder.height
+
     override fun rollback() {
         rollbackDebugLog("Start")
         synchronized(storage) {

@@ -7,6 +7,7 @@ import io.micrometer.core.instrument.Timer
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.data.BaseManagedBlockBuilder
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionIncorrect
@@ -15,6 +16,7 @@ import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
+import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.EContext
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.Storage
@@ -51,6 +53,7 @@ open class BaseBlockchainEngine(
         private val chainID: Long,
         private val transactionQueue: TransactionQueue,
         initialEContext: EContext,
+        private val restartNotifier: BlockchainRestartNotifier,
         private val useParallelDecoding: Boolean = true
 ) : BlockchainEngine {
 
@@ -61,6 +64,7 @@ open class BaseBlockchainEngine(
     private var initialized = false
     private var closed = false
     private var currentEContext = initialEContext
+    private var hasBuiltFirstBlockAfterConfigUpdate = false
     private var afterCommitHandlerInternal: AfterCommitHandler = { _, _, _ -> false }
     private var afterCommitHandler: AfterCommitHandler = afterCommitHandlerInternal
     private val metrics = BaseBlockchainEngineMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid, transactionQueue)
@@ -111,7 +115,7 @@ open class BaseBlockchainEngine(
         storage.close()
     }
 
-    private fun makeBlockBuilder(): ManagedBlockBuilder {
+    private fun makeBlockBuilder(): BaseManagedBlockBuilder {
         if (!initialized) throw ProgrammerMistake("Engine is not initialized yet")
         if (closed) throw PmEngineIsAlreadyClosed("Engine is already closed")
         currentEContext = if (currentEContext.conn.isClosed) {
@@ -134,6 +138,7 @@ open class BaseBlockchainEngine(
                         closed = true
                     }
                     afterLog("End", it.getBTrace())
+                    hasBuiltFirstBlockAfterConfigUpdate = true
                 })
     }
 
@@ -210,6 +215,10 @@ open class BaseBlockchainEngine(
 
                 loadLog("End", blockBuilder.getBTrace())
             } catch (e: Exception) {
+                try {
+                    blockBuilder.rollback()
+                } catch (ignore: Exception) {
+                }
                 exception = e
             }
 
@@ -226,74 +235,97 @@ open class BaseBlockchainEngine(
             var exception: Exception? = null
 
             try {
-                val blockSample = Timer.start(Metrics.globalRegistry)
-
-                blockBuilder.begin(null)
-                val abstractBlockBuilder =
-                        ((blockBuilder as BaseManagedBlockBuilder).blockBuilder as AbstractBlockBuilder)
-                val netStart = System.nanoTime()
-
-                var acceptedTxs = 0
-                var rejectedTxs = 0
-
-                while (true) {
-                    if (logger.isTraceEnabled) {
-                        logger.trace("$processName: Checking transaction queue")
-                    }
-                    val tx = transactionQueue.takeTransaction()
-                    if (tx != null) {
-                        logger.trace { "$processName: Appending transaction ${tx.getRID().toHex()}" }
-                        val transactionSample = Timer.start(Metrics.globalRegistry)
-                        if (tx.isSpecial()) {
-                            rejectedTxs++
-                            transactionQueue.rejectTransaction(
-                                    tx,
-                                    ProgrammerMistake("special transactions can't enter queue")
-                            )
-                            continue
-                        }
-                        val txException = blockBuilder.maybeAppendTransaction(tx)
-                        if (txException != null) {
-                            rejectedTxs++
-                            transactionSample.stop(metrics.rejectedTransactions)
-                            transactionQueue.rejectTransaction(tx, txException)
-                            logger.warn("Rejected Tx: ${tx.getRID().toHex()}, reason: ${txException.message}, cause: ${txException.cause}")
-                        } else {
-                            acceptedTxs++
-                            transactionSample.stop(metrics.acceptedTransactions)
-                            // tx is fine, consider stopping
-                            if (strategy.shouldStopBuildingBlock(abstractBlockBuilder)) {
-                                buildDebug("Block size limit is reached")
-                                break
-                            }
-                        }
-                    } else { // tx == null
-                        break
-                    }
-                }
-
-                val netEnd = System.nanoTime()
-                val blockHeader = blockBuilder.finalizeBlock()
-                val grossEnd = System.nanoTime()
-
-                val prettyBlockHeader = prettyBlockHeader(
-                        blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd
-                )
-                logger.info("$processName: Block is finalized: $prettyBlockHeader")
-
-                if (logger.isTraceEnabled) {
-                    blockBuilder.setBTrace(getBlockTrace(blockHeader))
-                    buildLog("End", blockBuilder.getBTrace())
-                }
-
-                blockSample.stop(metrics.blocks)
+                buildBlockInternal(blockBuilder, grossStart)
             } catch (e: Exception) {
+                try {
+                    blockBuilder.rollback()
+                } catch (ignore: Exception) {
+                }
+                if (!hasBuiltFirstBlockAfterConfigUpdate && hasBuiltInitialBlock()) {
+                    revertConfiguration(blockBuilder.height)
+                }
                 exception = e
             }
             buildLog("End")
 
             return blockBuilder to exception
         }
+    }
+
+    private fun buildBlockInternal(blockBuilder: BaseManagedBlockBuilder, grossStart: Long) {
+        val blockSample = Timer.start(Metrics.globalRegistry)
+
+        blockBuilder.begin(null)
+        val netStart = System.nanoTime()
+
+        var acceptedTxs = 0
+        var rejectedTxs = 0
+
+        while (true) {
+            if (logger.isTraceEnabled) {
+                logger.trace("$processName: Checking transaction queue")
+            }
+            val tx = transactionQueue.takeTransaction()
+            if (tx != null) {
+                logger.trace { "$processName: Appending transaction ${tx.getRID().toHex()}" }
+                val transactionSample = Timer.start(Metrics.globalRegistry)
+                if (tx.isSpecial()) {
+                    rejectedTxs++
+                    transactionQueue.rejectTransaction(
+                            tx,
+                            ProgrammerMistake("special transactions can't enter queue")
+                    )
+                    continue
+                }
+                val txException = blockBuilder.maybeAppendTransaction(tx)
+                if (txException != null) {
+                    rejectedTxs++
+                    transactionSample.stop(metrics.rejectedTransactions)
+                    transactionQueue.rejectTransaction(tx, txException)
+                    logger.warn("Rejected Tx: ${tx.getRID().toHex()}, reason: ${txException.message}, cause: ${txException.cause}")
+                } else {
+                    acceptedTxs++
+                    transactionSample.stop(metrics.acceptedTransactions)
+                    // tx is fine, consider stopping
+                    if (strategy.shouldStopBuildingBlock(blockBuilder.blockBuilder)) {
+                        buildDebug("Block size limit is reached")
+                        break
+                    }
+                }
+            } else { // tx == null
+                break
+            }
+        }
+
+        val netEnd = System.nanoTime()
+        val blockHeader = blockBuilder.finalizeBlock()
+        val grossEnd = System.nanoTime()
+
+        val prettyBlockHeader = prettyBlockHeader(
+                blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd
+        )
+        logger.info("$processName: Block is finalized: $prettyBlockHeader")
+
+        if (logger.isTraceEnabled) {
+            blockBuilder.setBTrace(getBlockTrace(blockHeader))
+            buildLog("End", blockBuilder.getBTrace())
+        }
+
+        blockSample.stop(metrics.blocks)
+    }
+
+    private fun hasBuiltInitialBlock() = DatabaseAccess.of(currentEContext).getLastBlockHeight(currentEContext) > -1L
+
+    private fun revertConfiguration(blockHeight: Long?) {
+        logger.info("Reverting faulty configuration at height $blockHeight")
+        currentEContext.conn.rollback() // rollback any DB updates the new and faulty configuration did
+        blockHeight?.let { DatabaseAccess.of(currentEContext).removeConfiguration(currentEContext, it) }
+        storage.closeWriteConnection(currentEContext, true)
+
+        restartNotifier.notifyRestart(chainID)
+        closed = true
+
+        // TODO POS-686 report failed configuration update to D1
     }
 
     // -----------------
