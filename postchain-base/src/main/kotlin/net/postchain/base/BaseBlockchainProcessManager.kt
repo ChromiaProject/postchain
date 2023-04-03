@@ -140,6 +140,8 @@ open class BaseBlockchainProcessManager(
 
                             val x: AfterCommitHandler = buildAfterCommitHandler(chainId, blockchainConfig)
                             val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x, chainStorage, initialEContext)
+                            { chainId -> startBlockchainAsync(chainId, bTrace) }
+
                             startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
 
                             createAndRegisterBlockchainProcess(

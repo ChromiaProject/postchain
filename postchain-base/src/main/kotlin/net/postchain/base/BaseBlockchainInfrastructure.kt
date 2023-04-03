@@ -17,6 +17,7 @@ import net.postchain.core.BlockchainConfigurationFactorySupplier
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
+import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.DynamicClassName
 import net.postchain.core.EContext
 import net.postchain.core.Storage
@@ -90,11 +91,12 @@ open class BaseBlockchainInfrastructure(
             configuration: BlockchainConfiguration,
             afterCommitHandler: AfterCommitHandler,
             storage: Storage,
-            initialEContext: EContext
+            initialEContext: EContext,
+            restartNotifier: BlockchainRestartNotifier
     ): BaseBlockchainEngine {
         val transactionQueue = BaseTransactionQueue(configuration.transactionQueueSize)
 
-        return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue, initialEContext)
+        return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue, initialEContext, restartNotifier)
                 .apply {
                     setAfterCommitHandler(afterCommitHandler)
                     initialize()

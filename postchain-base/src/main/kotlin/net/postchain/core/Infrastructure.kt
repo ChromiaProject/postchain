@@ -37,6 +37,10 @@ interface SynchronizationInfrastructure : Shutdownable {
     fun exitBlockchainProcess(process: BlockchainProcess)
 }
 
+fun interface BlockchainRestartNotifier {
+    fun notifyRestart(chainId: Long)
+}
+
 /**
  * Extends the [SynchronizationInfrastructure] with these BC related concepts:
  * 1. [BlockchainConfiguration]
@@ -57,7 +61,8 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
             configuration: BlockchainConfiguration,
             afterCommitHandler: AfterCommitHandler,
             storage: Storage,
-            initialEContext: EContext
+            initialEContext: EContext,
+            restartNotifier: BlockchainRestartNotifier
     ): BlockchainEngine
 
 }

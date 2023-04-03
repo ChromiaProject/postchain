@@ -102,6 +102,8 @@ interface BlockBuilder {
     fun getBlockWitnessBuilder(): BlockWitnessBuilder?
     fun commit(blockWitness: BlockWitness)
 
+    val height: Long?
+
     // Just debug
     fun getBTrace(): BlockTrace? // Use this function to get quick debug info about the block, note: ONLY for logging!
     fun setBTrace(bTrace: BlockTrace)
