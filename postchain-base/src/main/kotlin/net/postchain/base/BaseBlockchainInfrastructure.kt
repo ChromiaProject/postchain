@@ -96,7 +96,8 @@ open class BaseBlockchainInfrastructure(
     ): BaseBlockchainEngine {
         val transactionQueue = BaseTransactionQueue(configuration.transactionQueueSize)
 
-        return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue, initialEContext, restartNotifier)
+        return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue,
+                initialEContext, restartNotifier, postchainContext.nodeDiagnosticContext)
                 .apply {
                     setAfterCommitHandler(afterCommitHandler)
                     initialize()

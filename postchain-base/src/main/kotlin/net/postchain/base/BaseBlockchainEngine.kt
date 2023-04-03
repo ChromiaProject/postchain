@@ -30,6 +30,7 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.ManagedBlockBuilder
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
@@ -54,6 +55,7 @@ open class BaseBlockchainEngine(
         private val transactionQueue: TransactionQueue,
         initialEContext: EContext,
         private val restartNotifier: BlockchainRestartNotifier,
+        private val nodeDiagnosticContext: NodeDiagnosticContext,
         private val useParallelDecoding: Boolean = true
 ) : BlockchainEngine {
 
@@ -241,9 +243,16 @@ open class BaseBlockchainEngine(
                     blockBuilder.rollback()
                 } catch (ignore: Exception) {
                 }
-                if (!hasBuiltFirstBlockAfterConfigUpdate && hasBuiltInitialBlock()) {
-                    revertConfiguration(blockBuilder.height)
+                try {
+                    if (!hasBuiltFirstBlockAfterConfigUpdate && hasBuiltInitialBlock()) {
+                        revertConfiguration(blockBuilder.height)
+                    }
+                } catch (e: Exception) {
+                    logger.warn(e) { "Unable to revert configuration: $e" }
                 }
+
+                nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(e.message)
+
                 exception = e
             }
             buildLog("End")
