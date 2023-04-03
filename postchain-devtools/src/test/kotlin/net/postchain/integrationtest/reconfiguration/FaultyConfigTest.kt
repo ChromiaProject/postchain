@@ -2,6 +2,8 @@ package net.postchain.integrationtest.reconfiguration
 
 import assertk.assert
 import assertk.assertions.isFalse
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import mu.KLogging
 import net.postchain.base.SpecialTransactionPosition
@@ -35,7 +37,36 @@ class FaultyConfigTest : IntegrationTestSetup() {
     }
 
     @Test
-    fun faultyConfigIsNotPersisted() {
+    fun `config which fails before block building is reverted`() {
+        val (node) = createNodes(1, "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_initial_1.xml")
+
+        val invalidConfig = readBlockchainConfig(
+                "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_invalid_1.xml"
+        )
+        node.addConfiguration(DEFAULT_CHAIN_IID, 2, invalidConfig)
+        withReadConnection(node.postchainContext.storage, DEFAULT_CHAIN_IID) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            assert(db.getConfigurationData(ctx, 2)).isNotNull()
+        }
+
+        buildBlock(DEFAULT_CHAIN_IID, 1)
+        Thread.sleep(1 * 1000)
+        buildBlock(DEFAULT_CHAIN_IID, 3)
+
+        // Assert that DB schema change by faulty config is rolled back
+        node.postchainContext.storage.withReadConnection { ctx ->
+            val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+            assert(db.tableExists(ctx.conn, "should_fail")).isFalse()
+        }
+        // Assert that the invalid configuration was removed from DB
+        withReadConnection(node.postchainContext.storage, DEFAULT_CHAIN_IID) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            assert(db.getConfigurationData(ctx, 2)).isNull()
+        }
+    }
+
+    @Test
+    fun `config which fails during block building is not persisted`() {
         val (node) = createNodes(1, "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_initial_1.xml")
 
         val faultyConfig = readBlockchainConfig(
@@ -77,7 +108,7 @@ class FaultyConfigTest : IntegrationTestSetup() {
     }
 
     @Test
-    fun faultyConfigIsReverted() {
+    fun `config which fails during block building is reverted`() {
         val (node) = createNodes(1, "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_initial_1.xml")
 
         val faultyConfig = readBlockchainConfig(
@@ -99,6 +130,11 @@ class FaultyConfigTest : IntegrationTestSetup() {
         node.postchainContext.storage.withReadConnection { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
             assert(db.tableExists(ctx.conn, "should_fail")).isFalse()
+        }
+        // Assert that the invalid configuration was removed from DB
+        withReadConnection(node.postchainContext.storage, DEFAULT_CHAIN_IID) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            assert(db.getConfigurationData(ctx, 2)).isNull()
         }
     }
 }
@@ -124,7 +160,8 @@ class CorrectConfigGTXModule : FaultyGTXModule() {
 }
 
 object SimulateFaultyConfigSpecialTxExtension : GTXSpecialTxExtension, KLogging() {
-    @Volatile var hasFailed = false
+    @Volatile
+    var hasFailed = false
     private val queryRunner = QueryRunner()
     private val boolRes = ScalarHandler<Boolean>()
 
