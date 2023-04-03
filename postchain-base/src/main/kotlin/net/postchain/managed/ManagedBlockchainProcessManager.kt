@@ -67,14 +67,12 @@ open class ManagedBlockchainProcessManager(
 ) {
 
     protected open lateinit var dataSource: ManagedNodeDataSource
-    protected var peerListVersion: Long = -1
     protected val CHAIN0 = 0L
 
     companion object : KLogging()
 
     protected open fun initManagedEnvironment(blockchainConfig: ManagedDataSourceAware) {
         dataSource = blockchainConfig.dataSource
-        peerListVersion = dataSource.getPeerListVersion()
 
         // Setting up managed data source to the nodeConfig
         (postchainContext.nodeConfigProvider as? ManagedNodeConfigurationProvider)
@@ -145,23 +143,12 @@ open class ManagedBlockchainProcessManager(
             // Preloading blockchain configuration
             preloadChain0Configuration()
 
-            // Checking out the peer list changes
-            val doReload = isPeerListChanged()
+            wrTrace("about to restart chain0", chainId, bTrace)
 
-            return if (doReload) {
-                logger.info { "Reloading of all blockchains are required due to change in peer list" }
-                wrTrace("chain0 Reloading of blockchains are required", chainId, bTrace)
-                reloadBlockchainsAsync(bTrace)
-                true
-
-            } else {
-                wrTrace("about to restart chain0", chainId, bTrace)
-
-                // Checking out for chain0 configuration changes
-                val reloadChain0 = isConfigurationChanged(CHAIN0)
-                startStopBlockchainsAsync(reloadChain0, bTrace)
-                reloadChain0
-            }
+            // Checking out for chain0 configuration changes
+            val reloadChain0 = isConfigurationChanged(CHAIN0)
+            startStopBlockchainsAsync(reloadChain0, bTrace)
+            return reloadChain0
         }
 
         /**
@@ -229,37 +216,6 @@ open class ManagedBlockchainProcessManager(
     }
 
     /**
-     * Restart all chains. Begin with chain zero.
-     */
-    private fun reloadBlockchainsAsync(bTrace: BlockTrace?) {
-        synchronized(synchronizer) {
-            reloadAllDebug("Begin", bTrace)
-            val toLaunch = retrieveBlockchainsToLaunch().map { it.chainId }.toSet()
-            val launched = getLaunchedBlockchains()
-            logChains(toLaunch, launched, true)
-
-            // Starting blockchains: at first chain0, then the rest
-            reloadAllInfo("Launching blockchain", 0)
-            startBlockchainAsync(0L, bTrace)
-
-            // Launching new blockchains except blockchain 0
-            toLaunch.filter { it != 0L }
-                    .forEach {
-                        reloadAllInfo("Launching blockchain", it)
-                        startBlockchainAsync(it, bTrace)
-                    }
-
-            // Stopping launched blockchains
-            launched.filterNot(toLaunch::contains)
-                    .filter { it in launched }
-                    .forEach {
-                        reloadAllInfo("Stopping blockchain", it)
-                        stopBlockchainAsync(it, bTrace)
-                    }
-        }
-    }
-
-    /**
      * Only the chains in the [toLaunch] list should run. Any old chains not in this list must be stopped.
      * Note: any chains not in the new config for this node should actually also be deleted, but not impl yet.
      *
@@ -290,7 +246,6 @@ open class ManagedBlockchainProcessManager(
 
             // Stopping launched blockchains
             launched.filterNot(toLaunch::contains)
-                    .filter { it in launched }
                     .forEach {
                         ssaInfo("Stopping blockchain", it)
                         stopBlockchainAsync(it, bTrace)
@@ -395,12 +350,6 @@ open class ManagedBlockchainProcessManager(
         return blockchainProcesses.keys
     }
 
-    protected fun isPeerListChanged(): Boolean {
-        val prev = peerListVersion
-        peerListVersion = dataSource.getPeerListVersion()
-        return prev != peerListVersion
-    }
-
     // ----------------------------------------------
     // To cut down on boilerplate logging in code
     // ----------------------------------------------
@@ -433,19 +382,6 @@ open class ManagedBlockchainProcessManager(
     protected fun rInfo(str: String, chainId: Long, bTrace: BlockTrace?) {
         if (logger.isInfoEnabled) {
             logger.info("[${nodeName()}]: RestartHandler() -- $str: chainId: $chainId, block causing handler to run: $bTrace")
-        }
-    }
-
-    // reloadBlockchainsAsync()
-    private fun reloadAllDebug(str: String, bTrace: BlockTrace?) {
-        if (logger.isDebugEnabled) {
-            logger.debug("[${nodeName()}]: reloadBlockchainsAsync() -- $str: block causing full reload: $bTrace")
-        }
-    }
-
-    private fun reloadAllInfo(str: String, chainId: Long) {
-        if (logger.isInfoEnabled) {
-            logger.info("${nodeName()}: reloadBlockchainsAsync() -- $str: chainId: $chainId")
         }
     }
 

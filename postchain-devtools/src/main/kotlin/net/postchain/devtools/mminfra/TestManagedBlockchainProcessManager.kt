@@ -43,7 +43,6 @@ open class TestManagedBlockchainProcessManager(
 
     override fun initManagedEnvironment(blockchainConfig: ManagedDataSourceAware) {
         dataSource = blockchainConfig.dataSource
-        peerListVersion = dataSource.getPeerListVersion()
         (postchainContext.nodeConfigProvider as? ManagedNodeConfigurationProvider)?.setPeerInfoDataSource(dataSource)
         (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)?.setManagedDataSource(dataSource)
     }
