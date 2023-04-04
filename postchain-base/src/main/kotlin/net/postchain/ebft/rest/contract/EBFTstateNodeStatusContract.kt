@@ -4,6 +4,7 @@ package net.postchain.ebft.rest.contract
 
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.common.toHex
+import net.postchain.debug.DiagnosticQueue
 import net.postchain.ebft.NodeState
 import net.postchain.ebft.NodeStatus
 
@@ -13,10 +14,11 @@ class EBFTstateNodeStatusContract(
         val serial: Long,
         val round: Long,
         val blockRid: String?,
-        val revolting: Boolean
+        val revolting: Boolean,
+        val error: String?
 )
 
-fun NodeStatus.serialize(): String {
+fun NodeStatus.serialize(errorQueue: DiagnosticQueue<String>): String {
     val gson = JsonFactory.makeJson()
     val contract = EBFTstateNodeStatusContract(
             height = this.height,
@@ -24,7 +26,8 @@ fun NodeStatus.serialize(): String {
             state = this.state,
             round = this.round,
             blockRid = this.blockRID?.toHex(),
-            revolting = this.revolting
+            revolting = this.revolting,
+            error = errorQueue.value.toString()
     )
     return gson.toJson(contract)
 }
