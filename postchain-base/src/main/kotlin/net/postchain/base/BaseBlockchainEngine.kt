@@ -50,25 +50,20 @@ import java.util.concurrent.ExecutionException
 open class BaseBlockchainEngine(
         private val processName: BlockchainProcessName,
         private val blockchainConfiguration: BlockchainConfiguration,
-        override val storage: Storage,
+        final override val storage: Storage,
         private val chainID: Long,
         private val transactionQueue: TransactionQueue,
         initialEContext: EContext,
         private val restartNotifier: BlockchainRestartNotifier,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
+        private val afterCommitHandler: AfterCommitHandler,
         private val useParallelDecoding: Boolean = true
 ) : BlockchainEngine {
 
     companion object : KLogging()
 
-    private lateinit var strategy: BlockBuildingStrategy
-    private lateinit var blockQueries: BlockQueries
-    private var initialized = false
-    private var closed = false
-    private var currentEContext = initialEContext
-    private var hasBuiltFirstBlockAfterConfigUpdate = false
-    private var afterCommitHandlerInternal: AfterCommitHandler = { _, _, _ -> false }
-    private var afterCommitHandler: AfterCommitHandler = afterCommitHandlerInternal
+    private val blockQueries: BlockQueries = blockchainConfiguration.makeBlockQueries(storage)
+    private val strategy: BlockBuildingStrategy = blockchainConfiguration.getBlockBuildingStrategy(blockQueries, transactionQueue)
     private val metrics = BaseBlockchainEngineMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid, transactionQueue)
     private val loggingContext = mapOf(
             NODE_PUBKEY_TAG to processName.pubKey,
@@ -76,20 +71,11 @@ open class BaseBlockchainEngine(
             BLOCKCHAIN_RID_TAG to processName.blockchainRid.toHex()
     )
 
+    private var closed = false
+    private var currentEContext = initialEContext
+    private var hasBuiltFirstBlockAfterConfigUpdate = false
+
     override fun isRunning() = !closed
-
-    override fun initialize() {
-        if (initialized) {
-            throw ProgrammerMistake("Engine is already initialized")
-        }
-        blockQueries = blockchainConfiguration.makeBlockQueries(storage)
-        strategy = blockchainConfiguration.getBlockBuildingStrategy(blockQueries, transactionQueue)
-        initialized = true
-    }
-
-    override fun setAfterCommitHandler(afterCommitHandler: AfterCommitHandler) {
-        this.afterCommitHandler = afterCommitHandler
-    }
 
     override fun getTransactionQueue(): TransactionQueue {
         return transactionQueue
@@ -118,7 +104,6 @@ open class BaseBlockchainEngine(
     }
 
     private fun makeBlockBuilder(): BaseManagedBlockBuilder {
-        if (!initialized) throw ProgrammerMistake("Engine is not initialized yet")
         if (closed) throw PmEngineIsAlreadyClosed("Engine is already closed")
         currentEContext = if (currentEContext.conn.isClosed) {
             storage.openWriteConnection(chainID)
