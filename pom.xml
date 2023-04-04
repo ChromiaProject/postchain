@@ -222,17 +222,17 @@
             <dependency>
                 <groupId>org.http4k</groupId>
                 <artifactId>http4k-core</artifactId>
-                <version>4.36.0.0</version> <!-- Cannot upgrade to 4.37 or later since it requires Kotlin 1.8 -->
+                <version>4.41.1.1</version> <!-- Cannot upgrade to 4.41.2 or later since it requires Kotlin 1.8.20 -->
             </dependency>
             <dependency>
                 <groupId>org.http4k</groupId>
                 <artifactId>http4k-client-apache</artifactId>
-                <version>4.36.0.0</version> <!-- Cannot upgrade to 4.37 or later since it requires Kotlin 1.8 -->
+                <version>4.41.1.1</version> <!-- Cannot upgrade to 4.41.2 or later since it requires Kotlin 1.8.20 -->
             </dependency>
             <dependency>
                 <groupId>org.http4k</groupId>
                 <artifactId>http4k-client-apache-async</artifactId>
-                <version>4.36.0.0</version> <!-- Cannot upgrade to 4.37 or later since it requires Kotlin 1.8 -->
+                <version>4.41.1.1</version> <!-- Cannot upgrade to 4.41.2 or later since it requires Kotlin 1.8.20 -->
             </dependency>
 
             <!-- Json -->
