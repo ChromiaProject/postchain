@@ -20,6 +20,7 @@ class DefaultPostchainContainer(
     companion object : KLogging()
 
     private val processes = mutableMapOf<Long, ContainerBlockchainProcess>()
+    private var initialized = false
 
     // NB: Resources are per directoryContainerName, not nodeContainerName
     @Volatile
@@ -93,6 +94,7 @@ class DefaultPostchainContainer(
     override fun reset() {
         subnodeAdminClient.disconnect()
         state = ContainerState.STARTING
+        initialized = false
     }
 
     override fun stop() {
@@ -104,7 +106,11 @@ class DefaultPostchainContainer(
 
     override fun isSubnodeHealthy() = subnodeAdminClient.isSubnodeHealthy()
 
-    override fun initializePostchainNode(privKey: PrivKey): Boolean = subnodeAdminClient.initializePostchainNode(privKey)
+    override fun initializePostchainNode(privKey: PrivKey): Boolean = if (!initialized) {
+        val success = subnodeAdminClient.initializePostchainNode(privKey)
+        if (success) initialized = true
+        success
+    } else true
 
     override fun updateResourceLimits(): Boolean {
         val oldResourceLimits = resourceLimits
