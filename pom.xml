@@ -6,7 +6,7 @@
 
     <groupId>net.postchain</groupId>
     <artifactId>postchain</artifactId>
-    <version>3.9.0</version>
+    <version>3.9.1</version>
     <modules>
         <module>postchain-common</module>
         <module>postchain-gtv</module>

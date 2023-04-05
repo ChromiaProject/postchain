@@ -6,7 +6,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.9.0</version>
+        <version>3.9.1</version>
     </parent>
     <artifactId>postchain-base</artifactId>
     <packaging>jar</packaging>
