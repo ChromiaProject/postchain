@@ -110,7 +110,11 @@ class GTXTransaction(
                 }
             }
 
-            op.checkCorrectness()
+            try {
+                op.checkCorrectness()
+            } catch (e: UserMistake) {
+                throw TransactionIncorrect(myRID, e.message)
+            }
         }
 
         if (specialOps > 0 && specialOps == totalOps) {
