@@ -19,6 +19,7 @@ open class DefaultMasterBlockchainInfra(
         masterApiInfra,
         postchainContext
 ), MasterBlockchainInfra {
+    override val masterConnectionManager = masterSyncInfra.masterConnectionManager
 
     override fun makeMasterBlockchainProcess(
             processName: BlockchainProcessName,

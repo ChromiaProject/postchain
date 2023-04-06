@@ -20,7 +20,7 @@ interface SubnodeAdminClient : Shutdownable {
     fun initializePostchainNode(privKey: PrivKey): Boolean
     fun isSubnodeHealthy(): Boolean
     fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: ByteArray): Boolean
-    fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid, config: ByteArray): Boolean
+    fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid): Boolean
     fun stopBlockchain(chainId: Long): Boolean
     fun isBlockchainRunning(chainId: Long): Boolean
     fun getBlockchainLastHeight(chainId: Long): Long

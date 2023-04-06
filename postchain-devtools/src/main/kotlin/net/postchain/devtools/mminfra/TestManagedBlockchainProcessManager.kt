@@ -19,7 +19,6 @@ import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedNodeDataSource
-import net.postchain.managed.config.ManagedDataSourceAware
 import java.util.concurrent.BlockingQueue
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.LinkedBlockingQueue
@@ -41,8 +40,8 @@ open class TestManagedBlockchainProcessManager(
 
     private val blockchainStarts = ConcurrentHashMap<Long, BlockingQueue<Long>>()
 
-    override fun initManagedEnvironment(blockchainConfig: ManagedDataSourceAware) {
-        dataSource = blockchainConfig.dataSource
+    override fun initManagedEnvironment(dataSource: ManagedNodeDataSource) {
+        this.dataSource = dataSource
         (postchainContext.nodeConfigProvider as? ManagedNodeConfigurationProvider)?.setPeerInfoDataSource(dataSource)
         (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)?.setManagedDataSource(dataSource)
     }
