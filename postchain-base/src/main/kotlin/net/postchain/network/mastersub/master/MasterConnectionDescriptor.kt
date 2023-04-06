@@ -3,8 +3,8 @@
 package net.postchain.network.mastersub.master
 
 import net.postchain.common.BlockchainRid
-import net.postchain.network.common.ConnectionDescriptor
 
 class MasterConnectionDescriptor(
-        val bcRid: BlockchainRid
-) : ConnectionDescriptor(bcRid)
+        val blockchainRid: BlockchainRid?,
+        val containerIID: Int
+)

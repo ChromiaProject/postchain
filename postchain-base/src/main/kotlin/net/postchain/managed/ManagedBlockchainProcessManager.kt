@@ -71,8 +71,8 @@ open class ManagedBlockchainProcessManager(
 
     companion object : KLogging()
 
-    protected open fun initManagedEnvironment(blockchainConfig: ManagedDataSourceAware) {
-        dataSource = blockchainConfig.dataSource
+    protected open fun initManagedEnvironment(dataSource: ManagedNodeDataSource) {
+        this.dataSource = dataSource
 
         // Setting up managed data source to the nodeConfig
         (postchainContext.nodeConfigProvider as? ManagedNodeConfigurationProvider)
@@ -88,7 +88,7 @@ open class ManagedBlockchainProcessManager(
     override fun makeBlockchainConfiguration(chainId: Long, storage: Storage, eContext: EContext): BlockchainConfiguration {
         return super.makeBlockchainConfiguration(chainId, storage, eContext).also {
             if (chainId == CHAIN0 && it is ManagedDataSourceAware) {
-                initManagedEnvironment(it)
+                initManagedEnvironment(it.dataSource)
             }
         }
     }

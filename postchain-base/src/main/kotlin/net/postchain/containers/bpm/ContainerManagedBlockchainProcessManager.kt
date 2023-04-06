@@ -38,6 +38,7 @@ import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
+import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.metrics.BLOCKCHAIN_RID_TAG
 import net.postchain.metrics.CHAIN_IID_TAG
@@ -120,6 +121,11 @@ open class ContainerManagedBlockchainProcessManager(
                     }
                 }
         )
+    }
+
+    override fun initManagedEnvironment(dataSource: ManagedNodeDataSource) {
+        masterBlockchainInfra.masterConnectionManager.dataSource = dataSource
+        super.initManagedEnvironment(dataSource)
     }
 
     override fun getBlockchainConfigurationFactory(chainId: Long): BlockchainConfigurationFactorySupplier =
@@ -247,7 +253,7 @@ open class ContainerManagedBlockchainProcessManager(
             val containerPortMapping = ConcurrentHashMap<Int, Int>()
             val subnodeAdminClient = SubnodeAdminClient.create(containerNodeConfig, containerPortMapping, nodeDiagnosticContext)
             psContainer = DefaultPostchainContainer(
-                    directoryDataSource, job.containerName, containerPortMapping, STARTING, subnodeAdminClient, nodeDiagnosticContext)
+                    directoryDataSource, job.containerName, containerPortMapping, STARTING, subnodeAdminClient)
             logger.debug { "[${nodeName()}]: $scope -- PostchainContainer created" }
             val dir = initContainerWorkingDir(fs, psContainer)
             if (dir != null) {

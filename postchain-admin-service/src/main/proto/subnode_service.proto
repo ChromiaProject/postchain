@@ -2,12 +2,13 @@ syntax = "proto3";
 
 option java_multiple_files = true;
 option java_package = "net.postchain.server.grpc";
-option java_outer_classname = "InitProto";
+option java_outer_classname = "SubnodeProto";
 
 package postchain.rpc;
 
-service InitService {
+service SubnodeService {
   rpc InitNode (InitNodeRequest) returns (InitNodeReply) {} // Initialize postchain node
+  rpc StartSubnodeBlockchain (StartSubnodeBlockchainRequest) returns (StartSubnodeBlockchainReply) {}
 }
 
 message InitNodeRequest {
@@ -15,5 +16,14 @@ message InitNodeRequest {
 }
 
 message InitNodeReply {
+  string message = 1;
+}
+
+message StartSubnodeBlockchainRequest {
+  int64 chainId = 1;
+  bytes brid = 2;
+}
+
+message StartSubnodeBlockchainReply {
   string message = 1;
 }

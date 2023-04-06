@@ -4,7 +4,6 @@ import mu.KLogging
 import net.postchain.containers.bpm.docker.DockerTools
 import net.postchain.containers.bpm.rpc.SubnodeAdminClient
 import net.postchain.crypto.PrivKey
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.managed.DirectoryDataSource
 
 class DefaultPostchainContainer(
@@ -13,7 +12,6 @@ class DefaultPostchainContainer(
         override var containerPortMapping: MutableMap<Int, Int>,
         override var state: ContainerState,
         private val subnodeAdminClient: SubnodeAdminClient,
-        private val nodeDiagnosticContext: NodeDiagnosticContext,
         override var containerId: String? = null,
 ) : PostchainContainer {
 
@@ -42,32 +40,10 @@ class DefaultPostchainContainer(
     }
 
     override fun startProcess(process: ContainerBlockchainProcess): Boolean {
-        val config0 = dataSource.getConfiguration(process.blockchainRid.data, 0L)
-        val peerInfos = dataSource.getPeerInfos()
-        return if (config0 != null) {
-            peerInfos.forEach { subnodeAdminClient.addPeerInfo(it) }
-            val height = dataSource.getLastBuiltHeight(process.blockchainRid.data)
-            logger.info { "Chain ${process.chainId} last built height: $height" }
-            if (height != -1L) {
-                val currentHeight = height + 1
-                val currentConfig = dataSource.getConfiguration(process.blockchainRid.data, currentHeight)
-                if (currentConfig != null) {
-                    logger.info { "Chain ${process.chainId} config at height $currentHeight will be added to subnode" }
-                    subnodeAdminClient.addConfiguration(process.chainId, currentHeight, true, currentConfig)
-                } else {
-                    logger.info { "There is no a config at height $currentHeight for chain ${process.chainId}" }
-                }
-            }
-            subnodeAdminClient.startBlockchain(process.chainId, process.blockchainRid, config0).also {
-                if (it) processes[process.chainId] = process
-            }
-        } else {
-            val errorQueue = nodeDiagnosticContext.blockchainErrorQueue(process.blockchainRid)
-            val msg = "Can't start process: config at height 0 is absent"
-            errorQueue.add(msg)
-            logger.error { msg }
-            false
+        subnodeAdminClient.startBlockchain(process.chainId, process.blockchainRid).also {
+            if (it) processes[process.chainId] = process
         }
+        return true
     }
 
     override fun removeProcess(chainId: Long): ContainerBlockchainProcess? = processes.remove(chainId)
