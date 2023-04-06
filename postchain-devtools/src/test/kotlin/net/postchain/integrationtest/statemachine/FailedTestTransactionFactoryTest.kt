@@ -1,9 +1,10 @@
 package net.postchain.integrationtest.statemachine
 
+import net.postchain.common.exception.UserMistake
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
-import kotlin.test.assertEquals
 
 class FailedTestTransactionFactoryTest {
 
@@ -13,19 +14,23 @@ class FailedTestTransactionFactoryTest {
 
         val encodedTx0 = encodedTx(0)
         val tx0 = strategy.decodeTransaction(encodedTx0)
-        assertEquals(tx0.isCorrect(), true)
+        tx0.checkCorrectness()
 
         val encodedTx1 = encodedTx(1)
         val tx1 = strategy.decodeTransaction(encodedTx1)
-        assertEquals(tx1.isCorrect(), false)
+        assertThrows<UserMistake> {
+            tx1.checkCorrectness()
+        }
 
         val encodedTx2 = encodedTx(2)
         val tx2 = strategy.decodeTransaction(encodedTx2)
-        assertEquals(tx2.isCorrect(), true)
+        tx2.checkCorrectness()
 
         val encodedTx3 = encodedTx(3)
         val tx3 = strategy.decodeTransaction(encodedTx3)
-        assertEquals(tx3.isCorrect(), false)
+        assertThrows<UserMistake> {
+            tx3.checkCorrectness()
+        }
     }
 
     @Test
@@ -34,19 +39,19 @@ class FailedTestTransactionFactoryTest {
 
         val encodedTx0 = encodedTx(0)
         val tx0 = strategy.decodeTransaction(encodedTx0)
-        assertEquals(tx0.isCorrect(), true)
+        tx0.checkCorrectness()
 
         val encodedTx1 = encodedTx(1)
         val tx1 = strategy.decodeTransaction(encodedTx1)
-        assertEquals(tx1.isCorrect(), true)
+        tx1.checkCorrectness()
 
         val encodedTx2 = encodedTx(2)
         val tx2 = strategy.decodeTransaction(encodedTx2)
-        assertEquals(tx2.isCorrect(), true)
+        tx2.checkCorrectness()
 
         val encodedTx3 = encodedTx(3)
         val tx3 = strategy.decodeTransaction(encodedTx3)
-        assertEquals(tx3.isCorrect(), true)
+        tx3.checkCorrectness()
     }
 
     private fun encodedTx(id: Int): ByteArray {

@@ -3,6 +3,7 @@
 package net.postchain.gtx
 
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
+import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
 import net.postchain.crypto.KeyPair
@@ -14,7 +15,8 @@ import net.postchain.gtv.GtvNull
 import net.postchain.gtx.data.ExtOpData
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import kotlin.test.assertFalse
+import org.junit.jupiter.api.assertDoesNotThrow
+import org.junit.jupiter.api.assertThrows
 
 class GTXTransactionTest {
 
@@ -32,7 +34,11 @@ class GTXTransactionTest {
         assertTrue(tx.getRID().size > 1)
         assertTrue(tx.getRawData().size > 1)
         assertTrue(tx.ops.size == 1)
-        assertFalse(tx.isCorrect()) // Since we are not allowed to just use nop.
+
+        // Since we are not allowed to just use nop.
+        assertThrows<TransactionIncorrect> {
+            tx.checkCorrectness()
+        }
     }
 
     @Test
@@ -45,13 +51,15 @@ class GTXTransactionTest {
                         GtxTimeB(Unit, ExtOpData(GtxTimeB.OP_NAME, 2, arrayOf(gtv(1), gtv(2)), ZERO_RID, arrayOf(), arrayOf())),
                         object : Transactor {
                             override fun isSpecial() = false
-                            override fun isCorrect() = true
+                            override fun checkCorrectness() {}
                             override fun apply(ctx: TxEContext) = true
                         }
                 ),
                 byteArrayOf(), byteArrayOf(), cs
         )
 
-        assertTrue(tx.isCorrect())
+        assertDoesNotThrow {
+            tx.checkCorrectness()
+        }
     }
 }

@@ -2,6 +2,8 @@
 
 package net.postchain.core
 
+import net.postchain.common.exception.TransactionIncorrect
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.types.WrappedByteArray
@@ -17,7 +19,20 @@ interface Transactor {
     // they can only be appended directly by blockchain engine
     fun isSpecial(): Boolean
 
-    fun isCorrect(): Boolean
+    /**
+     * Check if correct.
+     * @return if correct
+     * @throws UserMistake if not correct */
+    fun checkCorrectness() {
+        @Suppress("DEPRECATION")
+        if (!isCorrect()) {
+            throw UserMistake("Transactor is not correct")
+        }
+    }
+
+    @Deprecated(message = "Use checkCorrectness() instead to be able to get error message")
+    fun isCorrect(): Boolean = throw NotImplementedError("isCorrect() is no longer supported, use checkCorrectness() instead")
+
     fun apply(ctx: TxEContext): Boolean
 }
 
@@ -25,6 +40,13 @@ interface Transaction : Transactor {
     fun getRawData(): ByteArray
     fun getRID(): ByteArray  // transaction unique identifier which is used as a reference to it
     fun getHash(): ByteArray // hash of transaction content
+
+    override fun checkCorrectness() {
+        @Suppress("DEPRECATION")
+        if (!isCorrect()) {
+            throw TransactionIncorrect(getRID())
+        }
+    }
 }
 
 interface TransactionFactory {

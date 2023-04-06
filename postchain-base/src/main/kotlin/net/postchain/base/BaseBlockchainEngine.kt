@@ -10,7 +10,6 @@ import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.AfterCommitHandler
@@ -145,8 +144,8 @@ open class BaseBlockchainEngine(
             tx = enqueuedTx
         }
 
-        return if (tx.isCorrect()) tx
-        else throw TransactionIncorrect("Transaction is not correct")
+        tx.checkCorrectness()
+        return tx
     }
 
     private fun sequentialLoadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?> {

@@ -5,10 +5,9 @@ package net.postchain.devtools.testinfra
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.TxEContext
 
-class ErrorTransaction(id: Int, private val applyThrows: Boolean, private val isCorrectThrows: Boolean) : TestTransaction(id) {
-    override fun isCorrect(): Boolean {
-        if (isCorrectThrows) throw UserMistake("Thrown from isCorrect()")
-        return true
+class ErrorTransaction(id: Int, private val applyThrows: Boolean, private val checkCorrectnessThrows: Boolean) : TestTransaction(id) {
+    override fun checkCorrectness() {
+        if (checkCorrectnessThrows) throw UserMistake("Thrown from checkCorrectness()")
     }
 
     override fun isSpecial(): Boolean {

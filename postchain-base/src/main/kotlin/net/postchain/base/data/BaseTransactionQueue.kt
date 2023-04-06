@@ -79,35 +79,28 @@ class BaseTransactionQueue(queueCapacity: Int) : TransactionQueue {
 
         val comparableTx = ComparableTransaction(tx)
         try {
-            if (tx.isCorrect()) {
-                synchronized(this) {
-                    if (queueMap.contains(rid)) {
-                        logger.debug { "Skipping $rid second test" }
-                        return EnqueueTransactionResult.DUPLICATE
-                    }
-                    if (queue.offer(comparableTx)) {
-                        logger.debug { "Enqueued tx $rid" }
-                        queueMap.set(rid, comparableTx)
-                        // If this tx was previously rejected we should clear that status now and retry it
-                        rejects.remove(rid)
-                        return EnqueueTransactionResult.OK
-                    } else {
-                        logger.debug { "Skipping tx $rid, overloaded. Queue contains ${queue.size} elements" }
-                        return EnqueueTransactionResult.FULL
-                    }
+            tx.checkCorrectness()
+            synchronized(this) {
+                if (queueMap.contains(rid)) {
+                    logger.debug { "Skipping $rid second test" }
+                    return EnqueueTransactionResult.DUPLICATE
                 }
-            } else {
-                logger.debug { "Tx $rid didn't pass the check" }
-                rejectTransaction(tx, null)
-                return EnqueueTransactionResult.INVALID
+                if (queue.offer(comparableTx)) {
+                    logger.debug { "Enqueued tx $rid" }
+                    queueMap[rid] = comparableTx
+                    // If this tx was previously rejected we should clear that status now and retry it
+                    rejects.remove(rid)
+                    return EnqueueTransactionResult.OK
+                } else {
+                    logger.debug { "Skipping tx $rid, overloaded. Queue contains ${queue.size} elements" }
+                    return EnqueueTransactionResult.FULL
+                }
             }
-
         } catch (e: UserMistake) {
             logger.debug { "Tx $rid didn't pass the check: ${e.message}" }
             rejectTransaction(tx, e)
+            return EnqueueTransactionResult.INVALID
         }
-
-        return EnqueueTransactionResult.UNKNOWN
     }
 
     @Synchronized
