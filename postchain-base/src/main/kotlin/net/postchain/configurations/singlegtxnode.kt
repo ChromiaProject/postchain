@@ -36,10 +36,10 @@ class GTXTestOp(@Suppress("UNUSED_PARAMETER") u: Unit, opdata: ExtOpData) : GTXO
     /**
      * The only way for the [GTXTestOp] to be considered correct is if first argument is "1" and the second is a string.
      */
-    override fun isCorrect(): Boolean {
-        if (data.args.size != 2) return false
+    override fun checkCorrectness() {
+        if (data.args.size != 2) throw UserMistake("expected 2 arguments")
         data.args[1].asString()
-        return data.args[0].asInteger() == 1L
+        if (data.args[0].asInteger() != 1L) throw UserMistake("expected first argument to be integer 1")
     }
 
     override fun apply(ctx: TxEContext): Boolean {

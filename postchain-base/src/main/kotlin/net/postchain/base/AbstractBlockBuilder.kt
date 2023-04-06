@@ -99,17 +99,13 @@ abstract class AbstractBlockBuilder(
      *
      * @param tx transaction to be added to block
      * @throws ProgrammerMistake if block is finalized
-     * @throws UserMistake transaction is not correct
+     * @throws TransactionIncorrect transaction is not correct
      * @throws UserMistake failed to save transaction to database
      * @throws UserMistake failed to apply transaction and update database state
      */
     override fun appendTransaction(tx: Transaction) {
         if (finalized) throw ProgrammerMistake("Block is already finalized")
-        // tx.isCorrect may also throw UserMistake to provide
-        // a meaningful error message to log.
-        if (!tx.isCorrect()) {
-            throw TransactionIncorrect("Transaction ${tx.getRID().toHex()} is not correct")
-        }
+        tx.checkCorrectness()
         val txctx: TxEContext
         try {
             txctx = store.addTransaction(bctx, tx)

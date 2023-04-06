@@ -30,13 +30,6 @@ class PostchainModelMetrics(chainIID: Long, blockchainRid: BlockchainRid) {
         .tag(RESULT_TAG, EnqueueTransactionResult.DUPLICATE.name)
         .register(Metrics.globalRegistry)
 
-     val unknownTransactions: Timer = Timer.builder(SUBMITTED_METRIC_NAME)
-        .description(SUBMITTED_METRIC_DESCRIPTION)
-        .tag(CHAIN_IID_TAG, chainIID.toString())
-        .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toHex())
-        .tag(RESULT_TAG, EnqueueTransactionResult.UNKNOWN.name)
-        .register(Metrics.globalRegistry)
-
      val okTransactions: Timer = Timer.builder(SUBMITTED_METRIC_NAME)
         .description(SUBMITTED_METRIC_DESCRIPTION)
         .tag(CHAIN_IID_TAG, chainIID.toString())

@@ -28,7 +28,7 @@ open class AbstractDummyModule : GTXModule {
                 return false
             }
 
-            override fun isCorrect(): Boolean = true
+            override fun checkCorrectness() {}
             override fun apply(ctx: TxEContext): Boolean = true
         }
     }

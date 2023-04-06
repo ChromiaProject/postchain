@@ -13,10 +13,11 @@ import net.postchain.base.ConfirmationProof
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.tx.EnqueueTransactionResult
-import net.postchain.common.tx.TransactionStatus.*
+import net.postchain.common.tx.TransactionStatus.CONFIRMED
+import net.postchain.common.tx.TransactionStatus.REJECTED
+import net.postchain.common.tx.TransactionStatus.UNKNOWN
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.core.Storage
@@ -49,9 +50,7 @@ open class PostchainModel(
 
         val decodedTransaction = transactionFactory.decodeTransaction(tx.bytes)
 
-        if (!decodedTransaction.isCorrect()) {
-            throw UserMistake("Transaction ${decodedTransaction.getRID().toHex()} is not correct")
-        }
+        decodedTransaction.checkCorrectness()
 
         if (blockQueries.isTransactionConfirmed(decodedTransaction.getRID()).get()) {
             sample.stop(metrics.duplicateTransactions)
@@ -72,11 +71,6 @@ open class PostchainModel(
             EnqueueTransactionResult.DUPLICATE -> {
                 sample.stop(metrics.duplicateTransactions)
                 throw DuplicateTnxException("Transaction already in queue")
-            }
-
-            EnqueueTransactionResult.UNKNOWN -> {
-                sample.stop(metrics.unknownTransactions)
-                throw UserMistake("Unknown error")
             }
 
             EnqueueTransactionResult.OK -> {
