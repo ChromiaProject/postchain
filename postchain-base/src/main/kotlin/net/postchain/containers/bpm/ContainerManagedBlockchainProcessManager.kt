@@ -171,7 +171,7 @@ open class ContainerManagedBlockchainProcessManager(
                 res
             } catch (e: Exception) {
                 logger.error(e) { "Exception in RestartHandler: $e" }
-                startBlockchainAsync(chainId, blockTrace)
+                startBlockchainAsync(chainId, blockTrace, null)
                 true // let's hope restarting a blockchain fixes the problem
             } finally {
                 releaseChainLock(chainId)
@@ -194,26 +194,26 @@ open class ContainerManagedBlockchainProcessManager(
         // Chain0
         if (reloadChain0) {
             logger.debug("[${nodeName()}]: ContainerJob -- Restart chain0")
-            startBlockchainAsync(CHAIN0, null)
+            startBlockchainAsync(CHAIN0, null, null)
         }
 
         // Stopping launched blockchains
         masterLaunched.filterNot(chainIdsToLaunch::contains).forEach {
-            logger.debug("[${nodeName()}]: ContainerJob -- Stop system chain: $it")
+            logger.debug { "[${nodeName()}]: ContainerJob -- Stop system chain: $it" }
             stopBlockchainAsync(it, null)
         }
         subnodeLaunched.filterNot(chainIdsToLaunch::contains).forEach {
-            logger.debug("[${nodeName()}]: ContainerJob -- Stop subnode chain: ${getChain(it)}")
+            logger.debug { "[${nodeName()}]: ContainerJob -- Stop subnode chain: ${getChain(it)}" }
             containerJobManager.stopChain(getChain(it))
         }
 
         // Launching new blockchains except blockchain 0
         toLaunch.filter { it.chainId != CHAIN0 && it.chainId !in masterLaunched && it.chainId !in subnodeLaunched }.forEach {
             if (it.system) {
-                logger.debug("[${nodeName()}]: ContainerJob -- Start system chain: ${it.chainId}")
-                startBlockchainAsync(it.chainId, null)
+                logger.debug { "[${nodeName()}]: ContainerJob -- Start system chain: ${it.chainId}" }
+                startBlockchainAsync(it.chainId, null, null)
             } else {
-                logger.debug("[${nodeName()}]: ContainerJob -- Start subnode chain: ${getChain(it.chainId)}")
+                logger.debug { "[${nodeName()}]: ContainerJob -- Start subnode chain: ${getChain(it.chainId)}" }
                 containerJobManager.startChain(getChain(it.chainId))
             }
         }

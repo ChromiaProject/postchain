@@ -38,7 +38,7 @@ interface SynchronizationInfrastructure : Shutdownable {
 }
 
 fun interface BlockchainRestartNotifier {
-    fun notifyRestart(chainId: Long)
+    fun notifyRestart(chainId: Long, failedConfigHash: ByteArray)
 }
 
 /**
@@ -62,6 +62,7 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
             afterCommitHandler: AfterCommitHandler,
             storage: Storage,
             initialEContext: EContext,
+            failedConfigHash: ByteArray?,
             restartNotifier: BlockchainRestartNotifier
     ): BlockchainEngine
 
