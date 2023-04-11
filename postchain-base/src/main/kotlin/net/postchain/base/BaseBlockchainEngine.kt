@@ -8,6 +8,7 @@ import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.extension.FailedConfigurationHashBlockBuilderExtension
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
@@ -56,7 +57,8 @@ open class BaseBlockchainEngine(
         private val restartNotifier: BlockchainRestartNotifier,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
         private val afterCommitHandler: AfterCommitHandler,
-        private val useParallelDecoding: Boolean = true
+        private val failedConfigHash: ByteArray?,
+        private val useParallelDecoding: Boolean = true,
 ) : BlockchainEngine {
 
     companion object : KLogging()
@@ -111,7 +113,11 @@ open class BaseBlockchainEngine(
         }
         val savepoint = currentEContext.conn.setSavepoint("blockBuilder${System.nanoTime()}")
 
-        return BaseManagedBlockBuilder(currentEContext, savepoint, storage, blockchainConfiguration.makeBlockBuilder(currentEContext), { },
+        val extraExtensions = if (failedConfigHash != null && !hasBuiltFirstBlockAfterConfigUpdate)
+            listOf(FailedConfigurationHashBlockBuilderExtension(failedConfigHash))
+        else
+            listOf()
+        return BaseManagedBlockBuilder(currentEContext, savepoint, storage, blockchainConfiguration.makeBlockBuilder(currentEContext, extraExtensions), { },
                 {
                     afterLog("Begin", it.getBTrace())
                     val blockBuilder = it as AbstractBlockBuilder
@@ -229,7 +235,7 @@ open class BaseBlockchainEngine(
                 }
                 try {
                     if (!hasBuiltFirstBlockAfterConfigUpdate && hasBuiltInitialBlock()) {
-                        revertConfiguration(blockBuilder.height)
+                        revertConfiguration(blockBuilder.height, blockchainConfiguration.configHash)
                     }
                 } catch (e: Exception) {
                     logger.warn(e) { "Unable to revert configuration: $e" }
@@ -255,9 +261,7 @@ open class BaseBlockchainEngine(
         var rejectedTxs = 0
 
         while (true) {
-            if (logger.isTraceEnabled) {
-                logger.trace("$processName: Checking transaction queue")
-            }
+            logger.trace { "$processName: Checking transaction queue" }
             val tx = transactionQueue.takeTransaction()
             if (tx != null) {
                 logger.trace { "$processName: Appending transaction ${tx.getRID().toHex()}" }
@@ -309,16 +313,14 @@ open class BaseBlockchainEngine(
 
     private fun hasBuiltInitialBlock() = DatabaseAccess.of(currentEContext).getLastBlockHeight(currentEContext) > -1L
 
-    private fun revertConfiguration(blockHeight: Long?) {
-        logger.info("Reverting faulty configuration at height $blockHeight")
+    private fun revertConfiguration(blockHeight: Long?, failedConfigHash: ByteArray) {
+        logger.info("Reverting faulty configuration with hash ${failedConfigHash.toHex()} at height $blockHeight")
         currentEContext.conn.rollback() // rollback any DB updates the new and faulty configuration did
         blockHeight?.let { DatabaseAccess.of(currentEContext).removeConfiguration(currentEContext, it) }
         storage.closeWriteConnection(currentEContext, true)
 
-        restartNotifier.notifyRestart(chainID)
+        restartNotifier.notifyRestart(chainID, failedConfigHash)
         closed = true
-
-        // TODO POS-686 report failed configuration update to D1
     }
 
     // -----------------
@@ -360,32 +362,22 @@ open class BaseBlockchainEngine(
     }
 
     private fun afterLog(str: String, bTrace: BlockTrace?) {
-        if (logger.isTraceEnabled) {
-            logger.trace { "$processName After-commit-hook: $str, coming from block: $bTrace" }
-        }
+        logger.trace { "$processName After-commit-hook: $str, coming from block: $bTrace" }
     }
 
     private fun loadLog(str: String, bTrace: BlockTrace?) {
-        if (logger.isDebugEnabled) {
-            logger.debug { "$processName loadUnfinishedBlockImpl() -- $str, coming from block: $bTrace" }
-        }
+        logger.debug { "$processName loadUnfinishedBlockImpl() -- $str, coming from block: $bTrace" }
     }
 
     private fun buildLog(str: String) {
-        if (logger.isDebugEnabled) {
-            logger.debug { "$processName buildBlock() -- $str" }
-        }
+        logger.debug { "$processName buildBlock() -- $str" }
     }
 
     private fun buildLog(str: String, bTrace: BlockTrace?) {
-        if (logger.isDebugEnabled) {
-            logger.debug { "$processName buildBlock() -- $str, for block: $bTrace" }
-        }
+        logger.debug { "$processName buildBlock() -- $str, for block: $bTrace" }
     }
 
     private fun buildDebug(str: String) {
-        if (logger.isDebugEnabled) {
-            logger.debug { "$processName buildBlock() - $str" }
-        }
+        logger.debug { "$processName buildBlock() - $str" }
     }
 }

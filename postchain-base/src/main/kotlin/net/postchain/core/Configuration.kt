@@ -3,6 +3,7 @@
 package net.postchain.core
 
 import net.postchain.PostchainContext
+import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
@@ -40,7 +41,7 @@ interface BlockchainConfiguration {
     fun decodeWitness(rawWitness: ByteArray): BlockWitness
     fun getBlockHeaderValidator(): BlockWitnessProvider
     fun getTransactionFactory(): TransactionFactory
-    fun makeBlockBuilder(ctx: EContext): BlockBuilder
+    fun makeBlockBuilder(ctx: EContext, extraExtensions: List<BaseBlockBuilderExtension>): BlockBuilder
     fun makeBlockQueries(storage: Storage): BlockQueries
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
     fun initializeModules(postchainContext: PostchainContext)

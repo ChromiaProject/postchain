@@ -4,14 +4,12 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadWriteConnection
-import net.postchain.common.BlockchainRid
 import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManagerExtension
-import net.postchain.core.block.BlockTrace
 import net.postchain.devtools.awaitDebug
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.ebft.worker.MessageProcessingLatch
@@ -79,19 +77,17 @@ open class TestManagedBlockchainProcessManager(
     var lastHeightStarted = ConcurrentHashMap<Long, Long>()
 
     /**
-     * Overriding the original startBlockchain() and adding extra logic for measuring restarts.
+     * Adding extra logic for measuring restarts.
      *
      * (This method will run for for every new height where we have a new BC configuration,
      * b/c the BC will get restarted before the configuration can be used.
      * Every time this method runs the [lastHeightStarted] gets updated with the restart height.)
      */
-    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid {
-        val blockchainRid = super.startBlockchain(chainId, bTrace)
+    override fun afterStartBlockchain(chainId: Long) {
         val process = blockchainProcesses[chainId]!!
         val queries = process.blockchainEngine.getBlockQueries()
         val height = queries.getBestHeight().get()
         lastHeightStarted[chainId] = height
-        return blockchainRid
     }
 
     override fun buildMessageProcessingLatch(blockchainConfig: BlockchainConfiguration) = MessageProcessingLatch {
