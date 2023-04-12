@@ -200,7 +200,7 @@ open class BaseBlockchainProcessManager(
 
         val x: AfterCommitHandler = buildAfterCommitHandler(chainId, blockchainConfig)
         val engine = blockchainInfrastructure.makeBlockchainEngine(processName, blockchainConfig, x, chainStorage,
-                initialEContext, failedConfigHash)
+                initialEContext, if (isPcuEnabled()) failedConfigHash else null)
         { restartChainId, thisFailedConfigHash -> startBlockchainAsync(restartChainId, bTrace, thisFailedConfigHash) }
 
         startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
@@ -223,6 +223,9 @@ open class BaseBlockchainProcessManager(
                 bTrace
         )
     }
+
+    // Feature toggle
+    private fun isPcuEnabled(): Boolean = postchainContext.appConfig.getEnvOrBoolean("POSTCHAIN_PCU", "pcu", false)
 
     private fun hasBuiltInitialBlock(eContext: EContext) = DatabaseAccess.of(eContext).getLastBlockHeight(eContext) > -1L
 
