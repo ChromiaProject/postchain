@@ -5,7 +5,6 @@ import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.ManagedChannel
 import io.grpc.Status.ALREADY_EXISTS
-import io.grpc.Status.FAILED_PRECONDITION
 import io.grpc.Status.UNAVAILABLE
 import io.grpc.Status.fromThrowable
 import io.grpc.health.v1.HealthCheckRequest
@@ -13,15 +12,11 @@ import io.grpc.health.v1.HealthCheckResponse
 import io.grpc.health.v1.HealthGrpc
 import io.grpc.protobuf.services.HealthStatusManager
 import mu.KLogging
-import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.common.toHex
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.crypto.PrivKey
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.server.grpc.AddConfigurationRequest
-import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.FindBlockchainRequest
 import net.postchain.server.grpc.InitNodeRequest
 import net.postchain.server.grpc.PeerServiceGrpc
@@ -135,29 +130,6 @@ class DefaultSubnodeAdminClient(
         }
     }
 
-    override fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: ByteArray): Boolean {
-        return try {
-            val request = AddConfigurationRequest.newBuilder()
-                    .setChainId(chainId)
-                    .setHeight(height)
-                    .setOverride(true)
-                    .setGtv(ByteString.copyFrom(config))
-                    .build()
-
-            val response = service?.addConfiguration(request)
-                    ?: throw ProgrammerMistake("subnode admin client not connected")
-            logger.debug { "addConfiguration(${chainId}) -- ${response.message}" }
-            true
-        } catch (e: Exception) {
-            if (fromThrowable(e).code in setOf(ALREADY_EXISTS.code, FAILED_PRECONDITION.code)) {
-                logger.warn { "addConfiguration(${chainId}) -- ${e.message}" }
-            } else {
-                logger.error { "addConfiguration(${chainId}) -- exception occurred: ${e.message}" }
-            }
-            false
-        }
-    }
-
     override fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid): Boolean {
         return try {
             val request = StartSubnodeBlockchainRequest.newBuilder()
@@ -219,29 +191,6 @@ class DefaultSubnodeAdminClient(
         } catch (e: Exception) {
             logger.error { "getBlockchainLastHeight($chainId) -- exception occurred: ${e.message}" }
             -1L
-        }
-    }
-
-    override fun addPeerInfo(peerInfo: PeerInfo): Boolean {
-        return try {
-            val request = AddPeerRequest.newBuilder()
-                    .setOverride(true)
-                    .setHost(peerInfo.host)
-                    .setPort(peerInfo.port)
-                    .setPubkey(peerInfo.pubKey.toHex())
-                    .build()
-
-            val response = peerService?.addPeer(request)
-                    ?: throw ProgrammerMistake("subnode admin client not connected")
-            logger.debug { response.message }
-            true
-        } catch (e: Exception) {
-            if (fromThrowable(e).code == ALREADY_EXISTS.code) {
-                logger.info { "addPeerInfo($peerInfo) -- ${e.message}" }
-            } else {
-                logger.error { "addPeerInfo($peerInfo) -- exception occurred: ${e.message}" }
-            }
-            false
         }
     }
 
