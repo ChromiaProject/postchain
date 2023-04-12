@@ -45,8 +45,8 @@ I ended up opting for this solution instead:
 
 This has a few drawbacks:
 
-* DoS attacks becomes easy. Correct (isCorrect() == true) transactions that will fail during
-apply(), can be created en-masse to fill up the "mempools". We have no way to control
+* DoS attacks becomes easy. Correct transactions that will fail during apply(),
+can be created en-masse to fill up the "mempools". We have no way to control
 this but to throttle rate of incoming transactions prior to queueing.
 * High bandwidth requirement
 

@@ -12,7 +12,7 @@ import net.postchain.gtx.data.ExtOpData
 class GtxPermissiveNop(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GTXOperation(opData) {
     override fun apply(ctx: TxEContext): Boolean = true
 
-    override fun isCorrect(): Boolean = true
+    override fun checkCorrectness() { }
 }
 
 class PatchOpsGTXModule : SimpleGTXModule<Unit>(Unit, mapOf("nop" to ::GtxPermissiveNop), mapOf()) {

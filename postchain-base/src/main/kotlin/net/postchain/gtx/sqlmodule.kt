@@ -125,10 +125,9 @@ class SQLGTXOperation(val opDesc: SQLOpDesc, opData: ExtOpData) :
         return opDesc.name.startsWith("__")
     }
 
-    override fun isCorrect(): Boolean {
+    override fun checkCorrectness() {
         val myArgs = convertExtOpDataToPrimitives(opDesc, data)
         args = myArgs.toTypedArray()
-        return true
     }
 
     override fun apply(ctx: TxEContext): Boolean {

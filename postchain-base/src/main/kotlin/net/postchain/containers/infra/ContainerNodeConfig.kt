@@ -65,6 +65,7 @@ data class ContainerNodeConfig(
         val zfsPoolInitScript: String?,
         val bindPgdataVolume: Boolean,
         val dockerLogConf: DockerLogConfig?,
+        val containerIID: Int
 ) : Config {
     val subnodePorts = listOf(subnodeRestApiPort, subnodeAdminRpcPort)
 
@@ -143,7 +144,8 @@ data class ContainerNodeConfig(
                         getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_NAME", KEY_ZFS_POOL_NAME, FileSystem.ZFS_POOL_NAME),
                         getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_INIT_SCRIPT", KEY_ZFS_POOL_INIT_SCRIPT),
                         getEnvOrBooleanProperty("POSTCHAIN_BIND_PGDATA_VOLUME", KEY_BIND_PGDATA_VOLUME, true),
-                        logConf
+                        logConf,
+                        System.getenv("POSTCHAIN_CONTAINER_ID")?.toInt() ?: -1
                 )
             }
         }

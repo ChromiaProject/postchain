@@ -35,8 +35,6 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
             engine.getTransactionQueue().enqueue(TestTransaction(i))
         }
 
-        buildBlockAndCommit(node)
-
         Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
             val height = getBestHeight(node)
             val acceptedTxs = getTxRidsAtHeight(node, height)

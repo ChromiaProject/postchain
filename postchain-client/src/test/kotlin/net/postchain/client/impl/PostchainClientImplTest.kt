@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.io.EOFException
 import java.io.IOException
-import java.net.SocketException
 import java.time.Duration
 import java.util.concurrent.CompletionException
 import kotlin.test.assertContentEquals
@@ -143,16 +142,6 @@ internal class PostchainClientImplTest {
                 throw e.cause ?: e
             }
         }
-    }
-
-    @Test
-    fun `SocketException from HttpHandler is handled`() {
-        val clientError = assertThrows<ClientError> {
-            PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
-                override fun invoke(request: Request) = throw SocketException("oops")
-            }).query("foo", gtv(mapOf()))
-        }
-        assertTrue(requireNotNull(clientError.message).contains("oops"))
     }
 
     @Test

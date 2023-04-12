@@ -137,7 +137,7 @@ open class BaseBlockchainConfiguration(
         return listOf()
     }
 
-    override fun makeBlockBuilder(ctx: EContext): BlockBuilder {
+    override fun makeBlockBuilder(ctx: EContext, extraExtensions: List<BaseBlockBuilderExtension>): BlockBuilder {
         addChainIDToDependencies(ctx) // We wait until now with this, b/c now we have an EContext
 
         val bb = BaseBlockBuilder(
@@ -151,7 +151,7 @@ open class BaseBlockchainConfiguration(
                 blockSigMaker,
                 blockWitnessProvider,
                 blockchainDependencies,
-                makeDefaultBBExtensions() + makeBBExtensions(),
+                makeDefaultBBExtensions() + makeBBExtensions() + extraExtensions,
                 effectiveBlockchainRID != blockchainRid,
                 blockStrategyConfig.maxBlockSize,
                 blockStrategyConfig.maxBlockTransactions,

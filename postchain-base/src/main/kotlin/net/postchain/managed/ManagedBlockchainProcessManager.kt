@@ -71,8 +71,8 @@ open class ManagedBlockchainProcessManager(
 
     companion object : KLogging()
 
-    protected open fun initManagedEnvironment(blockchainConfig: ManagedDataSourceAware) {
-        dataSource = blockchainConfig.dataSource
+    protected open fun initManagedEnvironment(dataSource: ManagedNodeDataSource) {
+        this.dataSource = dataSource
 
         // Setting up managed data source to the nodeConfig
         (postchainContext.nodeConfigProvider as? ManagedNodeConfigurationProvider)
@@ -85,11 +85,9 @@ open class ManagedBlockchainProcessManager(
                 ?: logger.warn { "Blockchain config is not managed" }
     }
 
-    override fun makeBlockchainConfiguration(chainId: Long, storage: Storage, eContext: EContext): BlockchainConfiguration {
-        return super.makeBlockchainConfiguration(chainId, storage, eContext).also {
-            if (chainId == CHAIN0 && it is ManagedDataSourceAware) {
-                initManagedEnvironment(it)
-            }
+    override fun afterMakeConfiguration(chainId: Long, blockchainConfig: BlockchainConfiguration) {
+        if (chainId == CHAIN0 && blockchainConfig is ManagedDataSourceAware) {
+            initManagedEnvironment(blockchainConfig.dataSource)
         }
     }
 
@@ -164,7 +162,7 @@ open class ManagedBlockchainProcessManager(
 
             return if (isConfigurationChanged(chainId)) {
                 wrTrace("chainN, restart needed", chainId, bTrace)
-                startBlockchainAsync(chainId, bTrace)
+                startBlockchainAsync(chainId, bTrace, null)
                 true
             } else {
                 wrTrace("chainN, no restart", chainId, bTrace)
@@ -195,7 +193,7 @@ open class ManagedBlockchainProcessManager(
                 restart
             } catch (e: Exception) {
                 logger.error(e) { "Exception in restart handler: $e" }
-                startBlockchainAsync(chainId, bTrace)
+                startBlockchainAsync(chainId, bTrace, null)
                 true // let's hope restarting a blockchain fixes the problem
             } finally {
                 releaseChainLock(chainId)
@@ -233,7 +231,7 @@ open class ManagedBlockchainProcessManager(
             // Launching blockchain 0
             if (reloadChain0) {
                 ssaInfo("Reloading of blockchain 0 is required, launching it", 0L)
-                startBlockchainAsync(0L, bTrace)
+                startBlockchainAsync(0L, bTrace, null)
             }
 
             // Launching new blockchains except blockchain 0
@@ -241,7 +239,7 @@ open class ManagedBlockchainProcessManager(
                     .filter { it !in launched }
                     .forEach {
                         ssaInfo("Launching blockchain", it)
-                        startBlockchainAsync(it, bTrace)
+                        startBlockchainAsync(it, bTrace, null)
                     }
 
             // Stopping launched blockchains
@@ -355,46 +353,32 @@ open class ManagedBlockchainProcessManager(
     // ----------------------------------------------
     // Start Stop Async BC
     private fun ssaTrace(str: String, bTrace: BlockTrace?) {
-        if (logger.isTraceEnabled) {
-            logger.trace("[${nodeName()}]: startStopBlockchainsAsync() -- $str: block causing the start-n-stop async: $bTrace")
-        }
+        logger.trace { "[${nodeName()}]: startStopBlockchainsAsync() -- $str: block causing the start-n-stop async: $bTrace" }
     }
 
     private fun ssaInfo(str: String, chainId: Long) {
-        if (logger.isInfoEnabled) {
-            logger.info("[${nodeName()}]: startStopBlockchainsAsync() - $str: chainId: $chainId")
-        }
+        logger.info { "[${nodeName()}]: startStopBlockchainsAsync() - $str: chainId: $chainId" }
     }
 
     //  wrappedRestartHandler()
     protected fun wrTrace(str: String, chainId: Long, bTrace: BlockTrace?) {
-        if (logger.isTraceEnabled) {
-            logger.trace("[${nodeName()}]: wrappedRestartHandler() -- $str: chainId: $chainId, block causing handler to run: $bTrace")
-        }
+        logger.trace { "[${nodeName()}]: wrappedRestartHandler() -- $str: chainId: $chainId, block causing handler to run: $bTrace" }
     }
 
     protected fun rTrace(str: String, chainId: Long, bTrace: BlockTrace?) {
-        if (logger.isTraceEnabled) {
-            logger.trace("[${nodeName()}]: RestartHandler() -- $str: chainId: $chainId, block causing handler to run: $bTrace")
-        }
+        logger.trace { "[${nodeName()}]: RestartHandler() -- $str: chainId: $chainId, block causing handler to run: $bTrace" }
     }
 
     protected fun rInfo(str: String, chainId: Long, bTrace: BlockTrace?) {
-        if (logger.isInfoEnabled) {
-            logger.info("[${nodeName()}]: RestartHandler() -- $str: chainId: $chainId, block causing handler to run: $bTrace")
-        }
+        logger.info { "[${nodeName()}]: RestartHandler() -- $str: chainId: $chainId, block causing handler to run: $bTrace" }
     }
 
     // retrieveBlockchainsToLaunch()()
     protected fun retrieveTrace(str: String) {
-        if (logger.isTraceEnabled) {
-            logger.trace("retrieveBlockchainsToLaunch() -- $str ")
-        }
+        logger.trace { "retrieveBlockchainsToLaunch() -- $str " }
     }
 
     protected fun retrieveDebug(str: String) {
-        if (logger.isDebugEnabled) {
-            logger.debug("retrieveBlockchainsToLaunch() -- $str ")
-        }
+        logger.debug { "retrieveBlockchainsToLaunch() -- $str " }
     }
 }

@@ -66,7 +66,7 @@ open class GtxBuilder(
             if (signatures.contains(signature)) throw UserMistake("Signature already exists")
             if (signers.find { it.contentEquals(signature.subjectID) } == null) throw UserMistake("Signature belongs to unknown signer")
             if (check && !cryptoSystem.verifyDigest(txRid, signature)) {
-                throw TransactionIncorrect("Signature by ${signature.subjectID.toHex()} is not valid")
+                throw TransactionIncorrect(txRid, "Signature by ${signature.subjectID.toHex()} is not valid")
             }
             signatures.add(signature)
         }
