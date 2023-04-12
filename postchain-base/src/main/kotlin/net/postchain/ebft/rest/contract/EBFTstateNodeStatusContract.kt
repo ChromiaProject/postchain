@@ -18,7 +18,7 @@ class EBFTstateNodeStatusContract(
         val error: String?
 )
 
-fun NodeStatus.serialize(errorQueue: DiagnosticQueue<String>): String {
+fun NodeStatus.serialize(errorQueue: DiagnosticQueue<String>?): String {
     val gson = JsonFactory.makeJson()
     val contract = EBFTstateNodeStatusContract(
             height = this.height,
@@ -27,7 +27,7 @@ fun NodeStatus.serialize(errorQueue: DiagnosticQueue<String>): String {
             round = this.round,
             blockRid = this.blockRID?.toHex(),
             revolting = this.revolting,
-            error = errorQueue.value.toString()
+            error = errorQueue?.value.toString()
     )
     return gson.toJson(contract)
 }

@@ -34,7 +34,7 @@ class PostchainEBFTModel(
         return when (subQuery) {
             "height" -> json.toJson(BlockHeight(nodeStateTracker.blockHeight))
             "my_status" -> nodeStateTracker.myStatus?.serialize(nodeDiagnosticContext.blockchainErrorQueue(blockchainRid)) ?: throw NotFoundError("NotFound")
-            "statuses" -> nodeStateTracker.nodeStatuses?.joinToString(separator = ",", prefix = "[", postfix = "]") { it.serialize(nodeDiagnosticContext.blockchainErrorQueue(blockchainRid)) }
+            "statuses" -> nodeStateTracker.nodeStatuses?.joinToString(separator = ",", prefix = "[", postfix = "]") { it.serialize(null) }
                     ?: throw NotFoundError("NotFound")
 
             else -> throw NotSupported("NotSupported: $subQuery")
