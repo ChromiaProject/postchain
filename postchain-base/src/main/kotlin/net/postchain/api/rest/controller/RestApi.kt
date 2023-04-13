@@ -172,6 +172,7 @@ class RestApi(
                 flush()
             }
         } else {
+            response.type(JSON_CONTENT_TYPE)
             response.body(toJson(error))
         }
     }
