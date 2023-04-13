@@ -46,6 +46,6 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
             }
         }
 
-        CliExecution.runNode(appConfig, chainIDs, debug)
+        CliExecution.runNode(appConfig, chainIDs)
     }
 }
