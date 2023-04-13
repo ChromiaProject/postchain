@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.cli
+package net.postchain.server.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.groups.cooccurring
@@ -9,10 +9,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import io.grpc.BindableService
 import mu.KLogging
-import net.postchain.cli.util.TlsOptions
-import net.postchain.cli.util.debugOption
 import net.postchain.server.NodeProvider
-import net.postchain.server.PostchainNodeProvider
 import net.postchain.server.PostchainServer
 import net.postchain.server.config.PostchainServerConfig
 import net.postchain.server.config.TlsConfig

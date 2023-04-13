@@ -1,4 +1,4 @@
-package net.postchain.cli.util
+package net.postchain.server.cli
 
 import com.github.ajalt.clikt.parameters.groups.OptionGroup
 import com.github.ajalt.clikt.parameters.options.option

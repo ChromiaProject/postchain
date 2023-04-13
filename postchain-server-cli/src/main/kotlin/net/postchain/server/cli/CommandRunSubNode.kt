@@ -1,6 +1,6 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.cli
+package net.postchain.server.cli
 
 import net.postchain.server.LazyPostchainNodeProvider
 import net.postchain.server.grpc.SubnodeServiceGrpcImpl

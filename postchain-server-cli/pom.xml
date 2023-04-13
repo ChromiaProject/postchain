@@ -9,18 +9,22 @@
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <name>Postchain CLI</name>
-    <artifactId>postchain-cli</artifactId>
+    <name>Postchain server CLI</name>
+    <artifactId>postchain-server-cli</artifactId>
     <description>CLI for running a postchain node with postchain-base implementation</description>
 
     <properties>
-        <main.class>net.postchain.AppKt</main.class>
+        <main.class>net.postchain.server.AppKt</main.class>
     </properties>
 
     <dependencies>
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-base</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-server</artifactId>
         </dependency>
 
         <!-- Cli -->
@@ -56,43 +60,15 @@
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>net.postchain</groupId>
-            <artifactId>postchain-devtools</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.willowtreeapps.assertk</groupId>
-            <artifactId>assertk</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <build>
         <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>${main.class}</mainClass>
-                            <addClasspath>true</addClasspath>
-                            <classpathPrefix/>
-                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-                            <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
-                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                        </manifest>
-                    </archive>
-                </configuration>
-            </plugin>
-
-            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>net.postchain.AppKt</mainClass>
+                    <mainClass>net.postchain.server.AppKt</mainClass>
                 </configuration>
             </plugin>
             <plugin>

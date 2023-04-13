@@ -20,6 +20,7 @@
         <module>postchain-admin-service</module>
         <module>postchain-admin-client-cli</module>
         <module>postchain-server</module>
+        <module>postchain-server-cli</module>
     </modules>
     <packaging>pom</packaging>
 
