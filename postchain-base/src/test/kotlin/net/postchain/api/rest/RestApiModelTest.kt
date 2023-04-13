@@ -174,8 +174,7 @@ class RestApiModelTest {
                 state = NodeState.WaitBlock,
                 round = 0,
                 revolting = false,
-                blockRid = null,
-                error = null
+                blockRid = null
         )
 
         whenever(
@@ -201,8 +200,7 @@ class RestApiModelTest {
                                 state = NodeState.WaitBlock,
                                 round = 0,
                                 revolting = false,
-                                blockRid = null,
-                                error = null
+                                blockRid = null
                         ),
                         EBFTstateNodeStatusContract(
                                 height = 233,
@@ -210,8 +208,7 @@ class RestApiModelTest {
                                 state = NodeState.WaitBlock,
                                 round = 0,
                                 revolting = false,
-                                blockRid = null,
-                                error = null
+                                blockRid = null
                         ))
 
         whenever(

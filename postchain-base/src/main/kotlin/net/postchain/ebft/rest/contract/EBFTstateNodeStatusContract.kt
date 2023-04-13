@@ -15,7 +15,7 @@ class EBFTstateNodeStatusContract(
         val round: Long,
         val blockRid: String?,
         val revolting: Boolean,
-        val error: String?
+        val error: String? = null
 )
 
 fun NodeStatus.serialize(errorQueue: DiagnosticQueue<String>? = null): String {
