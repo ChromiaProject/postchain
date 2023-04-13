@@ -58,7 +58,8 @@ open class BaseApiInfrastructure(
                         engine.getBlockQueries() as BaseBlockQueries, // TODO: [et]: Resolve type cast
                         debugInfoQuery,
                         engine.getConfiguration().blockchainRid,
-                        engine.storage
+                        engine.storage,
+                        nodeDiagnosticContext
                 )
             } else {
                 apiModel = PostchainModel(
