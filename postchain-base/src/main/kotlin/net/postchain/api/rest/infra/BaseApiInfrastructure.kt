@@ -49,6 +49,7 @@ open class BaseApiInfrastructure(
             val apiModel: PostchainModel
 
             val debugInfoQuery = if (enableDebugApi) DefaultDebugInfoQuery(nodeDiagnosticContext) else DisabledDebugInfoQuery()
+            val blockchainRid = engine.getConfiguration().blockchainRid
             if (process is ValidatorBlockchainProcess) { // TODO: EBFT-specific code, but pretty harmless
                 apiModel = PostchainEBFTModel(
                         engine.getConfiguration().chainID,
@@ -57,9 +58,9 @@ open class BaseApiInfrastructure(
                         engine.getConfiguration().getTransactionFactory(),
                         engine.getBlockQueries() as BaseBlockQueries, // TODO: [et]: Resolve type cast
                         debugInfoQuery,
-                        engine.getConfiguration().blockchainRid,
+                        blockchainRid,
                         engine.storage,
-                        nodeDiagnosticContext
+                        nodeDiagnosticContext.blockchainErrorQueue(blockchainRid)
                 )
             } else {
                 apiModel = PostchainModel(
@@ -68,7 +69,7 @@ open class BaseApiInfrastructure(
                         engine.getConfiguration().getTransactionFactory(),
                         engine.getBlockQueries() as BaseBlockQueries,
                         debugInfoQuery,
-                        engine.getConfiguration().blockchainRid,
+                        blockchainRid,
                         engine.storage
                 )
             }

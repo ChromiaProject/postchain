@@ -18,7 +18,7 @@ class EBFTstateNodeStatusContract(
         val error: String?
 )
 
-fun NodeStatus.serialize(errorQueue: DiagnosticQueue<String>?): String {
+fun NodeStatus.serialize(errorQueue: DiagnosticQueue<String>? = null): String {
     val gson = JsonFactory.makeJson()
     val contract = EBFTstateNodeStatusContract(
             height = this.height,
