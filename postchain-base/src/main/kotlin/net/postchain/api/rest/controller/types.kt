@@ -40,6 +40,7 @@ interface Model : ChainModel {
     fun debugQuery(subQuery: String?): String
     fun getCurrentBlockHeight(): BlockHeight
     fun getBlockchainConfiguration(height: Long = -1): ByteArray?
+    fun validateBlockchainConfiguration(configuration: Gtv)
 }
 
 data class BlockHeight(val blockHeight: Long)
