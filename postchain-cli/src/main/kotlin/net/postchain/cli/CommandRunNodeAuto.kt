@@ -50,11 +50,11 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
     override fun run() {
         val chainsDir = Paths.get(configDirectory, BLOCKCHAIN_DIR).toFile()
         val nodeConfigFile = Paths.get(configDirectory, NODE_CONFIG_FILE).toFile()
-        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile, debug)
 
         CliExecution.waitDb(50, 1000, appConfig)
         val chainIds = loadChainsConfigs(chainsDir, appConfig)
-        CliExecution.runNode(appConfig, chainIds.sorted(), debug)
+        CliExecution.runNode(appConfig, chainIds.sorted())
         println("Postchain node is running")
     }
 
