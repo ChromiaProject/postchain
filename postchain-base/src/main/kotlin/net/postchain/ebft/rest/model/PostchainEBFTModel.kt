@@ -2,6 +2,7 @@
 
 package net.postchain.ebft.rest.model
 
+import net.postchain.PostchainContext
 import net.postchain.api.rest.controller.BlockHeight
 import net.postchain.api.rest.controller.DebugInfoQuery
 import net.postchain.api.rest.controller.NotFoundError
@@ -13,7 +14,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionQueue
-import net.postchain.debug.DiagnosticQueue
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.rest.contract.serialize
 
@@ -26,8 +26,10 @@ class PostchainEBFTModel(
         debugInfoQuery: DebugInfoQuery,
         blockchainRid: BlockchainRid,
         storage: Storage,
-        private val errorQueue: DiagnosticQueue<String>
-) : PostchainModel(chainIID, txQueue, transactionFactory, blockQueries, debugInfoQuery, blockchainRid, storage) {
+        postchainContext: PostchainContext
+) : PostchainModel(chainIID, txQueue, transactionFactory, blockQueries, debugInfoQuery, blockchainRid, storage, postchainContext) {
+
+    private val errorQueue = postchainContext.nodeDiagnosticContext.blockchainErrorQueue(blockchainRid)
 
     override fun nodeQuery(subQuery: String): String {
         val json = JsonFactory.makeJson()

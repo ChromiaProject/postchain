@@ -53,7 +53,7 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: 3.9.0-SNAPSHOT
+  version: 3.10.0-SNAPSHOT
 paths:
   /tx/{blockchainRid}:
     post:
@@ -892,7 +892,7 @@ paths:
   /config/{blockchainRid}:
     get:
       tags:
-        - blockchain
+        - configuration
       summary: Fetch blockchain configuration
       description: |
         Fetch configuration for a chain. Specifying a height will fetch the active configuration at that height. 
@@ -961,6 +961,71 @@ paths:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
             application/octet-stream: { }
+    post:
+      tags:
+        - configuration
+      summary: Validate blockchain configuration
+      description: |
+        Check if a configuration is valid for a blockchain in its current state. This operation will not apply the 
+        configuration, only verify it. The configuration can be sent either as XML (using `text/xml` content type)
+        or GTV (using `application/octet-stream` content type).
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      requestBody:
+        content:
+          text/xml:
+            example: |
+              <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+              <dict>
+                  <entry key="blockstrategy">
+                      <dict>
+                          <entry key="name">
+                              <string>net.postchain.base.BaseBlockBuildingStrategy</string>
+                          </entry>
+                      </dict>
+                  </entry>
+                  <entry key="configurationfactory">
+                      <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+                  </entry>
+                  <entry key="gtx">
+                      <dict>
+                          <entry key="modules">
+                              <array>
+                                  <string>net.postchain.configurations.GTXTestModule</string>
+                                  <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                              </array>
+                          </entry>
+                      </dict>
+                  </entry>
+              </dict>
+          application/octet-stream: { }
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          description: Invalid configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                invalidConfiguration:
+                  value:
+                    error: "Invalid configuration"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
 
 components:
   parameters:

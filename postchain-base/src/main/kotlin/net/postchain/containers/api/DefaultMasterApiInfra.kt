@@ -1,5 +1,6 @@
 package net.postchain.containers.api
 
+import net.postchain.PostchainContext
 import net.postchain.api.rest.controller.HttpExternalModel
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.api.rest.infra.RestApiConfig
@@ -9,11 +10,13 @@ import net.postchain.debug.NodeDiagnosticContext
 class DefaultMasterApiInfra(
         restApiConfig: RestApiConfig,
         nodeDiagnosticContext: NodeDiagnosticContext,
-        enableDebugApi: Boolean
+        enableDebugApi: Boolean,
+        postchainContext: PostchainContext
 ) : BaseApiInfrastructure(
         restApiConfig,
         nodeDiagnosticContext,
-        enableDebugApi
+        enableDebugApi,
+        postchainContext
 ), MasterApiInfra {
 
     override fun connectContainerProcess(process: ContainerBlockchainProcess) {

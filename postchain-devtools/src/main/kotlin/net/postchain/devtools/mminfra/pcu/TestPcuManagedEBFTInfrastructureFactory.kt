@@ -19,7 +19,7 @@ open class TestPcuManagedEBFTInfrastructureFactory : TestManagedEBFTInfrastructu
 
             val syncInfra = EBFTSynchronizationInfrastructure(this)
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, debug)
+            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, debug, postchainContext)
             return TestManagedBlockchainInfrastructure(this, syncInfra, apiInfra, dataSource)
         }
     }

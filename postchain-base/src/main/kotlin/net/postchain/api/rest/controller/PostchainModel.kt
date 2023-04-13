@@ -5,14 +5,20 @@ package net.postchain.api.rest.controller
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Timer
 import mu.KLogging
+import net.postchain.PostchainContext
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
 import net.postchain.base.BaseBlockQueries
+import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.ConfirmationProof
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.data.DependenciesValidator
 import net.postchain.base.withReadConnection
+import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.Hash
 import net.postchain.common.toHex
 import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus.CONFIRMED
@@ -20,12 +26,16 @@ import net.postchain.common.tx.TransactionStatus.REJECTED
 import net.postchain.common.tx.TransactionStatus.UNKNOWN
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
+import net.postchain.core.DefaultBlockchainConfigurationFactory
+import net.postchain.core.NODE_ID_AUTO
 import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
+import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GtxQuery
 import net.postchain.metrics.PostchainModelMetrics
 
@@ -36,7 +46,8 @@ open class PostchainModel(
         val blockQueries: BaseBlockQueries,
         private val debugInfoQuery: DebugInfoQuery,
         blockchainRid: BlockchainRid,
-        val storage: Storage
+        val storage: Storage,
+        val postchainContext: PostchainContext
 ) : Model {
 
     companion object : KLogging()
@@ -150,6 +161,24 @@ open class PostchainModel(
             db.getConfigurationDataForHeight(ctx, db.getLastBlockHeight(ctx))
         } else {
             db.getConfigurationData(ctx, height)
+        }
+    }
+
+    override fun validateBlockchainConfiguration(configuration: Gtv) {
+        val blockConfData = configuration.toObject<BlockchainConfigurationData>()
+        withWriteConnection(storage, chainIID) { eContext ->
+            val blockchainRid = DatabaseAccess.of(eContext).getBlockchainRid(eContext)!!
+            val partialContext = BaseBlockchainContext(chainIID, blockchainRid, NODE_ID_AUTO, postchainContext.appConfig.pubKeyByteArray)
+            val factory = DefaultBlockchainConfigurationFactory().supply(blockConfData.configurationFactory)
+            val blockSigMaker: SigMaker = object : SigMaker {
+                override fun signMessage(msg: ByteArray) = throw NotImplementedError("SigMaker")
+                override fun signDigest(digest: Hash) = throw NotImplementedError("SigMaker")
+            }
+            val config = factory.makeBlockchainConfiguration(blockConfData, partialContext, blockSigMaker, eContext, postchainContext.cryptoSystem)
+            DependenciesValidator.validateBlockchainRids(eContext, config.blockchainDependencies)
+            config.initializeModules(postchainContext)
+
+            false
         }
     }
 
