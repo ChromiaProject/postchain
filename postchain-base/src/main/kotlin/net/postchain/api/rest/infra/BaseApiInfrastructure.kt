@@ -2,6 +2,7 @@
 
 package net.postchain.api.rest.infra
 
+import net.postchain.PostchainContext
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import net.postchain.api.rest.controller.DisabledDebugInfoQuery
 import net.postchain.api.rest.controller.PostchainModel
@@ -16,7 +17,8 @@ import net.postchain.ebft.worker.ValidatorBlockchainProcess
 open class BaseApiInfrastructure(
         restApiConfig: RestApiConfig,
         val nodeDiagnosticContext: NodeDiagnosticContext,
-        private val enableDebugApi: Boolean
+        private val enableDebugApi: Boolean,
+        private val postchainContext: PostchainContext
 ) : ApiInfrastructure {
 
     val restApi: RestApi? = with(restApiConfig) {
@@ -58,7 +60,8 @@ open class BaseApiInfrastructure(
                         engine.getBlockQueries() as BaseBlockQueries, // TODO: [et]: Resolve type cast
                         debugInfoQuery,
                         engine.getConfiguration().blockchainRid,
-                        engine.storage
+                        engine.storage,
+                        postchainContext
                 )
             } else {
                 apiModel = PostchainModel(
@@ -68,7 +71,8 @@ open class BaseApiInfrastructure(
                         engine.getBlockQueries() as BaseBlockQueries,
                         debugInfoQuery,
                         engine.getConfiguration().blockchainRid,
-                        engine.storage
+                        engine.storage,
+                        postchainContext
                 )
             }
 

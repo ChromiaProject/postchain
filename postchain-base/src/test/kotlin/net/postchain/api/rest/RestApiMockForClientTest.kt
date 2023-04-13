@@ -191,5 +191,8 @@ class RestApiMockForClientManual {
             TODO("Not yet implemented")
         }
 
+        override fun validateBlockchainConfiguration(configuration: Gtv) {
+            TODO("Not yet implemented")
+        }
     }
 }

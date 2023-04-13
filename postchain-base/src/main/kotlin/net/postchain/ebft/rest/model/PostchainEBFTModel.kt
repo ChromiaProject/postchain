@@ -2,6 +2,7 @@
 
 package net.postchain.ebft.rest.model
 
+import net.postchain.PostchainContext
 import net.postchain.api.rest.controller.BlockHeight
 import net.postchain.api.rest.controller.DebugInfoQuery
 import net.postchain.api.rest.controller.NotFoundError
@@ -24,8 +25,9 @@ class PostchainEBFTModel(
         blockQueries: BaseBlockQueries,
         debugInfoQuery: DebugInfoQuery,
         blockchainRid: BlockchainRid,
-        storage: Storage
-) : PostchainModel(chainIID, txQueue, transactionFactory, blockQueries, debugInfoQuery, blockchainRid, storage) {
+        storage: Storage,
+        postchainContext: PostchainContext
+) : PostchainModel(chainIID, txQueue, transactionFactory, blockQueries, debugInfoQuery, blockchainRid, storage, postchainContext) {
 
     override fun nodeQuery(subQuery: String): String {
         val json = JsonFactory.makeJson()

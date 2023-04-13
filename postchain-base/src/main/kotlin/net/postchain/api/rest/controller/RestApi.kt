@@ -36,6 +36,7 @@ import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvType
 import net.postchain.gtv.gtvToJSON
 import net.postchain.gtv.gtvml.GtvMLEncoder
+import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtx.GtxQuery
@@ -383,6 +384,28 @@ class RestApi(
 
             http.get("/config/$PARAM_BLOCKCHAIN_RID", OCTET_CONTENT_TYPE, redirectGet(OCTET_CONTENT_TYPE) { request, _ ->
                 getBlockchainConfiguration(request)
+            })
+
+            http.post("/config/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
+                val configuration = try {
+                    if (request.contentType().startsWith(OCTET_CONTENT_TYPE)) {
+                        GtvDecoder.decodeGtv(request.bodyAsBytes())
+                    } else {
+                        GtvMLParser.parseGtvML(request.body())
+                    }
+                } catch (e: Exception) {
+                    throw UserMistake("Cannot parse configuration: ${e.message ?: e.cause?.message}", e)
+                }
+
+                val model = model(request)
+                try {
+                    model.validateBlockchainConfiguration(configuration)
+                } catch (e: UserMistake) {
+                    throw e
+                } catch (e: Exception) {
+                    throw UserMistake("Invalid configuration: ${e.message}", e)
+                }
+                "{}"
             })
         }
 
