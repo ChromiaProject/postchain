@@ -1,18 +1,21 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.cli
+package net.postchain.server.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import mu.KLogging
 import net.postchain.api.internal.BlockchainApi
+import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
-import net.postchain.cli.CliExecution.addConfiguration
-import net.postchain.cli.CliExecution.findBlockchainRid
-import net.postchain.cli.util.debugOption
+import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
+import net.postchain.core.BadDataMistake
+import net.postchain.core.BadDataType
 import net.postchain.core.EContext
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFileReader
 import java.io.File
 import java.nio.file.Paths
@@ -52,9 +55,9 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
         val nodeConfigFile = Paths.get(configDirectory, NODE_CONFIG_FILE).toFile()
         val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile, debug)
 
-        CliExecution.waitDb(50, 1000, appConfig)
+        waitDb(50, 1000, appConfig)
         val chainIds = loadChainsConfigs(chainsDir, appConfig)
-        CliExecution.runNode(appConfig, chainIds.sorted())
+        runNode(appConfig, chainIds.sorted())
         println("Postchain node is running")
     }
 
@@ -107,7 +110,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
 
                                         if (height == 0L) {
                                             try {
-                                                CliExecution.addBlockchain(appConfig, chainId, gtv)
+                                                addBlockchain(appConfig, chainId, gtv)
                                             } catch (e: CliException) {
                                                 println(e.message)
                                                 return@run
@@ -118,7 +121,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
 
                                         } else {
                                             try {
-                                                addConfiguration(appConfig, gtv, chainId, height.toLong(), AlreadyExistMode.IGNORE, false)
+                                                addConfiguration(appConfig, gtv, chainId, height.toLong())
                                                 logger.info { "Chain (chainId: $chainId) configuration at height $height has been added" }
                                                 println("Configuration has been added successfully")
                                             } catch (e: CliException) {
@@ -133,5 +136,47 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
                     }
         }
         return chainIds
+    }
+
+    private fun findBlockchainRid(appConfig: AppConfig, chainId: Long): BlockchainRid? {
+        return runStorageCommand(appConfig, chainId) { ctx: EContext ->
+            DatabaseAccess.of(ctx).getBlockchainRid(ctx)
+        }
+    }
+
+    private fun addBlockchain(
+            appConfig: AppConfig,
+            chainId: Long,
+            blockchainConfig: Gtv
+    ): BlockchainRid {
+        // If brid is specified in nodeConfigFile, use that instead of calculating it from blockchain configuration.
+        val keyString = "brid.chainid.$chainId"
+        val brid = if (appConfig.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.getString(keyString)) else
+            GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, appConfig.cryptoSystem)
+
+        return runStorageCommand(appConfig, chainId) { ctx ->
+            BlockchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, listOf())
+            brid
+        }
+    }
+
+    private fun addConfiguration(
+            appConfig: AppConfig,
+            blockchainConfig: Gtv,
+            chainId: Long,
+            height: Long
+    ) {
+        runStorageCommand(appConfig, chainId) { ctx: EContext ->
+            try {
+                if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners = false))
+                    println("Blockchain configuration of chainId $chainId at height $height already exists")
+            } catch (e: BadDataMistake) {
+                if (e.type == BadDataType.MISSING_PEERINFO) {
+                    throw CliException(e.message + " Please add node with command peerinfo-add or set flag --allow-unknown-signers.")
+                } else {
+                    throw CliException("Bad configuration format.")
+                }
+            }
+        }
     }
 }

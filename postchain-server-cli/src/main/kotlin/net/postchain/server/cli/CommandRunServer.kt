@@ -1,13 +1,12 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.cli
+package net.postchain.server.cli
 
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.PostchainNode
-import net.postchain.cli.util.nodeConfigOption
 import net.postchain.config.app.AppConfig
 import net.postchain.server.PostchainNodeProvider
 
