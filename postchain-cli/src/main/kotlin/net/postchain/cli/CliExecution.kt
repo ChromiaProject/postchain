@@ -2,7 +2,6 @@
 
 package net.postchain.cli
 
-import mu.KLogging
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.BlockchainRelatedInfo
@@ -18,7 +17,7 @@ import net.postchain.core.EContext
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 
-object CliExecution : KLogging() {
+object CliExecution {
 
     /**
      * @return blockchain RID
