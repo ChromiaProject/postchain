@@ -76,13 +76,7 @@
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
 
-        <!--suppress UnresolvedMavenProperty -->
-        <gitlab.username>${CI_REGISTRY_USER}</gitlab.username>
-        <!--suppress UnresolvedMavenProperty -->
-        <gitlab.password>${CI_REGISTRY_PASSWORD}</gitlab.password>
         <gitlab.registry>registry.gitlab.com/chromaway/postchain</gitlab.registry>
-        <docker.cache>/tmp/docker-cache</docker.cache>
-        <image.platforms>linux/amd64,linux/arm64</image.platforms>
     </properties>
 
     <repositories>
@@ -620,30 +614,9 @@
                     <version>${maven.failsafe.plugin.version}</version>
                 </plugin>
                 <plugin>
-                    <groupId>io.fabric8</groupId>
-                    <artifactId>docker-maven-plugin</artifactId>
-                    <version>0.40.2</version>
-                    <configuration>
-                        <images>
-                            <image>
-                                <!--suppress UnresolvedMavenProperty -->
-                                <name>${image.name}:latest</name>
-                                <build>
-                                    <contextDir>${project.basedir}</contextDir>
-                                    <filter>@</filter>
-                                </build>
-                            </image>
-                        </images>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <id>docker:build</id>
-                            <phase>package</phase>
-                            <goals>
-                                <goal>build</goal>
-                            </goals>
-                        </execution>
-                    </executions>
+                    <groupId>com.google.cloud.tools</groupId>
+                    <artifactId>jib-maven-plugin</artifactId>
+                    <version>3.3.1</version>
                 </plugin>
             </plugins>
         </pluginManagement>
