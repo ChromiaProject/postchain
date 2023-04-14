@@ -86,7 +86,7 @@ container-scanning:
     matrix:
       - IMAGE: [ chromaway/postchain-cli,
                  chromaway/postchain-admin-client ]
-        VERSION: [ 3.8.0, 3.10.0-SNAPSHOT ]
+        VERSION: [ 3.10.0-SNAPSHOT ]
   only:
     variables:
       - $RUN_DEPENDENCY_CHECK == "true"
