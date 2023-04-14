@@ -20,6 +20,7 @@ stages:
   - build
   - nightly-tests
   - deploy
+  - patch
   - dependency-check
   - release
 
@@ -29,9 +30,16 @@ deploy:
   only:
     - dev
     - master
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly -Dlatest.tag=latest source:jar deploy
+
+patch:
+  extends: .setup
+  stage: patch
+  only:
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly source:jar deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly -Dlatest.tag=latest-patch source:jar deploy
 
 build:
   extends: .setup
