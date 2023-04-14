@@ -75,6 +75,14 @@
 
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
+
+        <!--suppress UnresolvedMavenProperty -->
+        <gitlab.username>${CI_REGISTRY_USER}</gitlab.username>
+        <!--suppress UnresolvedMavenProperty -->
+        <gitlab.password>${CI_REGISTRY_PASSWORD}</gitlab.password>
+        <gitlab.registry>registry.gitlab.com/chromaway/postchain</gitlab.registry>
+        <docker.cache>/tmp/docker-cache</docker.cache>
+        <image.platforms>linux/amd64,linux/arm64</image.platforms>
     </properties>
 
     <repositories>
@@ -576,6 +584,11 @@
                     </executions>
                 </plugin>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>3.2.0</version>
+                </plugin>
+                <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
                     <version>3.0.0</version>
@@ -605,6 +618,32 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>${maven.failsafe.plugin.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>io.fabric8</groupId>
+                    <artifactId>docker-maven-plugin</artifactId>
+                    <version>0.40.2</version>
+                    <configuration>
+                        <images>
+                            <image>
+                                <!--suppress UnresolvedMavenProperty -->
+                                <name>${image.name}:latest</name>
+                                <build>
+                                    <contextDir>${project.basedir}</contextDir>
+                                    <filter>@</filter>
+                                </build>
+                            </image>
+                        </images>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>docker:build</id>
+                            <phase>package</phase>
+                            <goals>
+                                <goal>build</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>
@@ -835,6 +874,61 @@
                         </executions>
                     </plugin>
                 </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>gitlab-registry</id>
+            <build>
+                <pluginManagement>
+                    <plugins>
+                        <plugin>
+                            <!-- We are using custom maven executions instead of i.e. fabric8 docker-maven-plugin since v0.38.1 does NOT support building to multiple architectures. When they do, feel free to replace this plugin again -->
+                            <groupId>org.codehaus.mojo</groupId>
+                            <artifactId>exec-maven-plugin</artifactId>
+                            <executions>
+                                <execution>
+                                    <id>docker-login</id>
+                                    <phase>prepare-package</phase>
+                                    <goals>
+                                        <goal>exec</goal>
+                                    </goals>
+                                    <configuration>
+                                        <executable>docker</executable>
+                                        <arguments>
+                                            <argument>login</argument>
+                                            <argument>registry.gitlab.com</argument>
+                                            <argument>-u</argument>
+                                            <argument>${env.CI_REGISTRY_USER}</argument>
+                                            <argument>-p</argument>
+                                            <argument>${env.CI_REGISTRY_PASSWORD}</argument>
+                                        </arguments>
+                                    </configuration>
+                                </execution>
+                                <execution>
+                                    <id>build-image</id>
+                                    <phase>package</phase>
+                                    <goals>
+                                        <goal>exec</goal>
+                                    </goals>
+                                    <configuration>
+                                        <executable>docker</executable>
+                                        <arguments>
+                                            <argument>buildx</argument>
+                                            <argument>build</argument>
+                                            <argument>--platform</argument>
+                                            <argument>${image.platforms}</argument>
+                                            <argument>--tag</argument>
+                                            <argument>${gitlab.registry}/${image.name}:${project.version}
+                                            </argument>
+                                            <argument>${project.basedir}/.</argument>
+                                            <argument>--push</argument>
+                                        </arguments>
+                                    </configuration>
+                                </execution>
+                            </executions>
+                        </plugin>
+                    </plugins>
+                </pluginManagement>
             </build>
         </profile>
     </profiles>

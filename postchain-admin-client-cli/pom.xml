@@ -13,6 +13,11 @@
     <name>Postchain Admin Client CLI</name>
     <description>CLI for communicating with a postchain node running in server mode.</description>
 
+    <properties>
+        <main.class>net.postchain.admin.cli.AppKt</main.class>
+        <image.name>chromaway/postchain-admin-client</image.name>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>net.postchain</groupId>
@@ -65,7 +70,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>net.postchain.rpc.cli.AppKt</mainClass>
+                            <mainClass>${main.class}</mainClass>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix/>
                             <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
@@ -75,6 +80,40 @@
                     </archive>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <includeScope>runtime</includeScope>
+                            <outputDirectory>target/lib</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+            </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>docker-image</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
