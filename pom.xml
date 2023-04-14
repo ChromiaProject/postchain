@@ -143,6 +143,11 @@
             </dependency>
             <dependency>
                 <groupId>net.postchain</groupId>
+                <artifactId>postchain-server-cli</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
                 <artifactId>postchain-admin-service</artifactId>
                 <version>${project.version}</version>
             </dependency>
