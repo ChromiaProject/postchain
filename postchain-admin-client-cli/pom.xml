@@ -109,8 +109,35 @@
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>io.fabric8</groupId>
-                        <artifactId>docker-maven-plugin</artifactId>
+                        <groupId>com.google.cloud.tools</groupId>
+                        <artifactId>jib-maven-plugin</artifactId>
+                        <configuration>
+                            <allowInsecureRegistries>false</allowInsecureRegistries>
+                            <from>
+                                <image>gcr.io/distroless/java17-debian11:latest@sha256:9370a7ed01d00d58f38d51e4b89edce480bfbd7a759d78363036bf406e7239d8</image>
+                            </from>
+                            <to>
+                                <image>${image.name}</image>
+                            </to>
+                            <container>
+                                <appRoot>/opt/chromaway/postchain</appRoot>
+                                <workingDirectory>/opt/chromaway/postchain</workingDirectory>
+                                <mainClass>${main.class}</mainClass>
+                                <environment>
+                                    <LOG4J_CONFIGURATION_FILE>/opt/chromaway/postchain/log/log4j2.yml</LOG4J_CONFIGURATION_FILE>
+                                    <POSTCHAIN_BLOCKCHAIN_CONFIG>/config/0.xml</POSTCHAIN_BLOCKCHAIN_CONFIG>
+                                </environment>
+                                <ports>50051</ports>
+                            </container>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>dockerBuild</goal>
+                                </goals>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>
@@ -120,48 +147,47 @@
             <build>
                 <plugins>
                     <plugin>
-                        <!-- We are using custom maven executions instead of i.e. fabric8 docker-maven-plugin since v0.38.1 does NOT support building to multiple architectures. When they do, feel free to replace this plugin again -->
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>exec-maven-plugin</artifactId>
+                        <groupId>com.google.cloud.tools</groupId>
+                        <artifactId>jib-maven-plugin</artifactId>
+                        <configuration>
+                            <allowInsecureRegistries>false</allowInsecureRegistries>
+                            <from>
+                                <image>gcr.io/distroless/java17-debian11:latest@sha256:9370a7ed01d00d58f38d51e4b89edce480bfbd7a759d78363036bf406e7239d8</image>
+                                <platforms>
+                                    <platform>
+                                        <architecture>amd64</architecture>
+                                        <os>linux</os>
+                                    </platform>
+                                    <platform>
+                                        <architecture>arm64</architecture>
+                                        <os>linux</os>
+                                    </platform>
+                                </platforms>
+                            </from>
+                            <to>
+                                <image>${gitlab.registry}/${image.name}:${project.version}</image>
+                                <auth>
+                                    <username>${env.CI_REGISTRY_USER}</username>
+                                    <password>${env.CI_REGISTRY_PASSWORD}</password>
+                                </auth>
+                            </to>
+                            <container>
+                                <appRoot>/opt/chromaway/postchain</appRoot>
+                                <workingDirectory>/opt/chromaway/postchain</workingDirectory>
+                                <mainClass>${main.class}</mainClass>
+                                <environment>
+                                    <LOG4J_CONFIGURATION_FILE>/opt/chromaway/postchain/log/log4j2.yml</LOG4J_CONFIGURATION_FILE>
+                                    <POSTCHAIN_BLOCKCHAIN_CONFIG>/config/0.xml</POSTCHAIN_BLOCKCHAIN_CONFIG>
+                                </environment>
+                                <ports>50051</ports>
+                            </container>
+                        </configuration>
                         <executions>
                             <execution>
-                                <id>docker-login</id>
-                                <phase>prepare-package</phase>
+                                <phase>deploy</phase>
                                 <goals>
-                                    <goal>exec</goal>
+                                    <goal>build</goal>
                                 </goals>
-                                <configuration>
-                                    <executable>docker</executable>
-                                    <arguments>
-                                        <argument>login</argument>
-                                        <argument>registry.gitlab.com</argument>
-                                        <argument>-u</argument>
-                                        <argument>${env.CI_REGISTRY_USER}</argument>
-                                        <argument>-p</argument>
-                                        <argument>${env.CI_REGISTRY_PASSWORD}</argument>
-                                    </arguments>
-                                </configuration>
-                            </execution>
-                            <execution>
-                                <id>build-image</id>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>exec</goal>
-                                </goals>
-                                <configuration>
-                                    <executable>docker</executable>
-                                    <arguments>
-                                        <argument>buildx</argument>
-                                        <argument>build</argument>
-                                        <argument>--platform</argument>
-                                        <argument>${image.platforms}</argument>
-                                        <argument>--tag</argument>
-                                        <argument>${gitlab.registry}/${image.name}:${project.version}
-                                        </argument>
-                                        <argument>${project.basedir}/.</argument>
-                                        <argument>--push</argument>
-                                    </arguments>
-                                </configuration>
                             </execution>
                         </executions>
                     </plugin>
