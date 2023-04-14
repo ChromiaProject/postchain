@@ -1,6 +1,12 @@
 image: maven:3.8.4-jdk-11
 
 .setup:
+  before_script:
+    - apt-get -q update && apt-get -q install -y docker.io
+    - mkdir -p $HOME/.docker/cli-plugins/
+    - wget --no-verbose -O $HOME/.docker/cli-plugins/docker-buildx $BUILDX_URL
+    - chmod a+x $HOME/.docker/cli-plugins/docker-buildx
+    - docker buildx create --use --name postchain-builder --platform linux/amd64,linux/arm64,linux/arm/v8
   artifacts:
     when: always
     paths:
@@ -31,7 +37,7 @@ deploy:
     - master
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly source:jar deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly source:jar deploy
 
 build:
   extends: .setup
@@ -63,6 +69,24 @@ dependency-check:
   interruptible: true
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles dependency-check verify
+  only:
+    variables:
+      - $RUN_DEPENDENCY_CHECK == "true"
+
+container-scanning:
+  extends: .setup
+  stage: dependency-check
+  interruptible: true
+  script:
+    - echo "Scanning image $IMAGE:$VERSION"
+    - curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+    - grype docker:registry.gitlab.com/chromaway/postchain/$IMAGE:$VERSION --only-fixed -q
+    - grype docker:registry.gitlab.com/chromaway/postchain/$IMAGE:$VERSION --fail-on high -q
+  parallel:
+    matrix:
+      - IMAGE: [ chromaway/postchain-cli,
+                 chromaway/postchain-admin-client ]
+        VERSION: [ 3.8.0, 3.10.0-SNAPSHOT ]
   only:
     variables:
       - $RUN_DEPENDENCY_CHECK == "true"
@@ -101,9 +125,20 @@ variables:
   POSTGRES_PASSWORD: postchain
   POSTCHAIN_DB_URL: jdbc:postgresql://postgres/postchain
   POSTGRES_INITDB_ARGS: "--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
+  DOCKER_HOST: tcp://docker:2375
+  # Instruct Docker not to start over TLS.
+  DOCKER_TLS_CERTDIR: ""
+  # Improve performance with overlayfs.
+  DOCKER_DRIVER: overlay2
+  DOCKER_CLI_EXPERIMENTAL: enabled
+  BUILDX_URL: https://github.com/docker/buildx/releases/download/v0.3.1/buildx-v0.3.1.linux-amd64
 
 services:
   - postgres
+  - name: docker:20-dind
+    alias: docker
+    # explicitly disable tls to avoid docker startup interruption
+    command: [ "--tls=false" , "--experimental" ]
 
 # Cache downloaded dependencies and plugins between builds.
 # To keep cache across branches add 'key: "$CI_JOB_NAME"'
