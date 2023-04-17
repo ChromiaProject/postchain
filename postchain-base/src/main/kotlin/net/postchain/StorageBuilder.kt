@@ -88,6 +88,11 @@ object StorageBuilder {
 
     }
 
+    fun wipeDatabase(appConfig: AppConfig) {
+        val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
+       wipeDatabase(createBasicDataSource(appConfig), appConfig, db)
+    }
+
     private fun wipeDatabase(dataSource: DataSource, appConfig: AppConfig, db: DatabaseAccess) {
         dataSource.connection.use { connection ->
             if (db.isSchemaExists(connection, appConfig.databaseSchema)) {
