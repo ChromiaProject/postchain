@@ -19,23 +19,31 @@ image: maven:3.8.4-jdk-11
 stages:
   - build
   - nightly-tests
-  - deploy
-  - patch
+  - deploy-snapshot
+  - deploy-release
+  - deploy-patch
   - dependency-check
   - release
 
-deploy:
+deploy-snapshot:
   extends: .setup
-  stage: deploy
+  stage: deploy-snapshot
   only:
     - dev
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly -Dlatest.tag=latest-snapshot source:jar deploy
+
+deploy-release:
+  extends: .setup
+  stage: deploy-release
+  only:
     - master
   script:
     - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly -Dlatest.tag=latest source:jar deploy
 
-patch:
+deploy-patch:
   extends: .setup
-  stage: patch
+  stage: deploy-patch
   only:
     - /^support\/.*$/
   script:
