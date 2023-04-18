@@ -15,7 +15,7 @@
 
     <properties>
         <main.class>net.postchain.AppKt</main.class>
-        <image.name>chromaway/postchain-cli</image.name>
+        <image.name>postchain-cli</image.name>
     </properties>
 
     <dependencies>
@@ -94,111 +94,20 @@
                 </configuration>
             </plugin>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-dependency-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>copy-dependencies</id>
-                        <goals>
-                            <goal>copy-dependencies</goal>
-                        </goals>
-                        <configuration>
-                            <includeScope>runtime</includeScope>
-                            <outputDirectory>target/lib</outputDirectory>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <configuration>
+                    <allowInsecureRegistries>false</allowInsecureRegistries>
+                    <from>
+                        <image>gcr.io/distroless/java17-debian11:latest@sha256:9370a7ed01d00d58f38d51e4b89edce480bfbd7a759d78363036bf406e7239d8</image>
+                    </from>
+                    <container>
+                        <appRoot>/opt/chromaway/postchain</appRoot>
+                        <workingDirectory>/opt/chromaway/postchain</workingDirectory>
+                        <mainClass>${main.class}</mainClass>
+                    </container>
+                </configuration>
             </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <profile>
-            <id>docker-image</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>com.google.cloud.tools</groupId>
-                        <artifactId>jib-maven-plugin</artifactId>
-                        <configuration>
-                            <allowInsecureRegistries>false</allowInsecureRegistries>
-                            <from>
-                                <image>gcr.io/distroless/java17-debian11:latest@sha256:9370a7ed01d00d58f38d51e4b89edce480bfbd7a759d78363036bf406e7239d8</image>
-                            </from>
-                            <to>
-                                <image>${image.name}</image>
-                            </to>
-                            <container>
-                                <appRoot>/opt/chromaway/postchain</appRoot>
-                                <workingDirectory>/opt/chromaway/postchain</workingDirectory>
-                                <mainClass>${main.class}</mainClass>
-                            </container>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <phase>package</phase>
-                                <goals>
-                                    <goal>dockerBuild</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>gitlab-registry</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>com.google.cloud.tools</groupId>
-                        <artifactId>jib-maven-plugin</artifactId>
-                        <configuration>
-                            <allowInsecureRegistries>false</allowInsecureRegistries>
-                            <from>
-                                <image>gcr.io/distroless/java17-debian11:latest@sha256:9370a7ed01d00d58f38d51e4b89edce480bfbd7a759d78363036bf406e7239d8</image>
-                                <platforms>
-                                    <platform>
-                                        <architecture>amd64</architecture>
-                                        <os>linux</os>
-                                    </platform>
-                                    <platform>
-                                        <architecture>arm64</architecture>
-                                        <os>linux</os>
-                                    </platform>
-                                </platforms>
-                            </from>
-                            <to>
-                                <image>${gitlab.registry}/${image.name}:${project.version}</image>
-                                <auth>
-                                    <username>${env.CI_REGISTRY_USER}</username>
-                                    <password>${env.CI_REGISTRY_PASSWORD}</password>
-                                </auth>
-                                <tags>
-                                    <tag>${latest.tag}</tag>
-                                </tags>
-                            </to>
-                            <container>
-                                <appRoot>/opt/chromaway/postchain</appRoot>
-                                <workingDirectory>/opt/chromaway/postchain</workingDirectory>
-                                <mainClass>${main.class}</mainClass>
-                            </container>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <phase>deploy</phase>
-                                <goals>
-                                    <goal>build</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 </project>
