@@ -94,8 +94,8 @@ container-scanning:
     - grype docker:registry.gitlab.com/chromaway/postchain/$IMAGE:$VERSION --fail-on high -q
   parallel:
     matrix:
-      - IMAGE: [ chromaway/postchain-cli,
-                 chromaway/postchain-admin-client ]
+      - IMAGE: [ postchain-cli,
+                 postchain-admin-client ]
         VERSION: [ 3.10.0-SNAPSHOT ]
   only:
     variables:
