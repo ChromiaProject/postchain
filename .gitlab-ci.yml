@@ -31,7 +31,7 @@ deploy-snapshot:
   only:
     - dev
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly -Dlatest.tag=latest-snapshot source:jar deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly -Djib.serialize=true -Dlatest.tag=latest-snapshot source:jar deploy
 
 deploy-release:
   extends: .setup
@@ -39,7 +39,7 @@ deploy-release:
   only:
     - master
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly -Dlatest.tag=latest source:jar deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly -Djib.serialize=true -Dlatest.tag=latest source:jar deploy
 
 deploy-patch:
   extends: .setup
@@ -47,7 +47,7 @@ deploy-patch:
   only:
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly -Dlatest.tag=latest-patch source:jar deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly -Djib.serialize=true -Dlatest.tag=latest-patch source:jar deploy
 
 build:
   extends: .setup
