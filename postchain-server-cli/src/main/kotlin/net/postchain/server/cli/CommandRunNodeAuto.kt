@@ -44,6 +44,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
     private val configDirectory by option("-d", "--directory", help = "Configuration directory").default(".")
 
     private val debug by debugOption()
+    private val dumpPid by dumpPidOption()
 
     private val NODE_CONFIG_FILE = "node-config.properties"
     private val BLOCKCHAIN_DIR = "blockchains"
@@ -57,6 +58,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
 
         waitDb(50, 1000, appConfig)
         val chainIds = loadChainsConfigs(chainsDir, appConfig)
+        if (dumpPid) dumpPid()
         runNode(appConfig, chainIds.sorted())
         println("Postchain node is running")
     }

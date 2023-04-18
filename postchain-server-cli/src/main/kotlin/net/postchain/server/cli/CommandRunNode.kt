@@ -28,6 +28,7 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
     private val retryInterval by option("-ri", "--retry-interval", help = "Retry interval for connecting to database (ms)").long().default(1000L)
 
     private val debug by debugOption()
+    private val dumpPid by dumpPidOption()
 
     override fun run() {
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile, debug)
@@ -49,6 +50,8 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
                 }
             }
         }
+
+        if (dumpPid) dumpPid()
 
         runNode(appConfig, chainIDs)
     }
