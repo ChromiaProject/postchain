@@ -443,6 +443,7 @@ paths:
         - query
       summary: Make query
       description: Make a query to a chain. Named arguments to query as additional query parameters.
+        This operation is intended for development, testing and simple web apps, more advanced production use cases should use `POST /query_gtv` instead.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: type
@@ -486,7 +487,9 @@ paths:
       tags:
         - query
       summary: Make query
-      description: Make a query to a chain
+      description: Make a query to a chain.
+        This operation is deprecated, use `GET /query` or `POST /query_gtv` instead.
+      deprecated: true
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       requestBody:
@@ -530,6 +533,8 @@ paths:
         - query
       summary: Make queries
       description: Make multiple queries to a chain
+        This operation is deprecated, use `POST /query_gtv` instead.
+      deprecated: true
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       requestBody:
@@ -634,7 +639,7 @@ paths:
       summary: Make GTV encoded queries
       description: |
         Make GTV encoded queries to a chain.
-        This operation is deprecated, use /query_gtv instead.
+        This operation is deprecated, use `POST /query_gtv` instead.
       deprecated: true
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
