@@ -10,9 +10,6 @@ import net.postchain.server.cli.CommandRunNode
 import net.postchain.server.cli.CommandRunNodeAuto
 import net.postchain.server.cli.CommandRunServer
 import net.postchain.server.cli.CommandRunSubNode
-import java.io.File
-import java.io.IOException
-import java.lang.management.ManagementFactory
 
 class Postchain : CliktCommand(name = "postchain") {
     init {
@@ -24,7 +21,6 @@ class Postchain : CliktCommand(name = "postchain") {
 }
 
 fun main(args: Array<String>) {
-    dumpPid()
     if (args.isNotEmpty() && args[0] !in setOf("--generate-completion", "--version")) {
         println("${args[0]} will be executed with: ${args.toList().subList(1, args.size).joinToString(" ", "", "")}")
     }
@@ -36,14 +32,4 @@ fun main(args: Array<String>) {
                     CommandRunSubNode()
             )
             .main(args)
-}
-
-fun dumpPid() {
-    val processName = ManagementFactory.getRuntimeMXBean().name
-    val pid = processName.split("@")[0]
-    try {
-        File("postchain.pid").writeText(pid)
-    } catch (e: IOException) { // might fail due to permission error in containers
-        println("Postchain PID: $pid")
-    }
 }

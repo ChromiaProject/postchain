@@ -6,6 +6,9 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import org.apache.commons.configuration2.ex.ConfigurationException
 import org.apache.commons.dbcp2.BasicDataSource
+import java.io.File
+import java.io.IOException
+import java.lang.management.ManagementFactory
 import java.sql.Connection
 import java.sql.SQLException
 import java.util.concurrent.TimeoutException
@@ -42,5 +45,15 @@ private fun tryCreateBasicDataSource(appConfig: AppConfig): Connection? {
         null
     } catch (e: ConfigurationException) {
         throw CliException("Failed to read configuration")
+    }
+}
+
+fun dumpPid() {
+    val processName = ManagementFactory.getRuntimeMXBean().name
+    val pid = processName.split("@")[0]
+    try {
+        File("postchain.pid").writeText(pid)
+    } catch (e: IOException) { // might fail due to permission error in containers
+        println("Postchain PID: $pid")
     }
 }

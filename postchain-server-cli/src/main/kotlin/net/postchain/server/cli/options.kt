@@ -20,3 +20,5 @@ fun CliktCommand.blockchainConfigOption() = option(
 fun CliktCommand.chainIdOption() = option("-cid", "--chain-id", help = "Local number id of blockchain", envvar = "POSTCHAIN_CHAIN_ID").long()
 
 fun CliktCommand.debugOption() = option("--debug", help = "Enables debug functionalities", envvar = "POSTCHAIN_DEBUG").flag()
+
+fun CliktCommand.dumpPidOption() = option("--dump-pid", help = "Dump PID to file 'postchain.pid'").flag()

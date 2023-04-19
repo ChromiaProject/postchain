@@ -14,6 +14,8 @@ class CommandRunServer : CommandRunServerBase("run-server", "Start postchain ser
 
     private val nodeConfigFile by nodeConfigOption()
 
+    private val dumpPid by dumpPidOption()
+
     private val activeChains by option("--initial-chain-ids", "-c", envvar = "POSTCHAIN_INITIAL_CHAIN_IDS")
             .help("Chain IDs that will be started directly")
             .long().split(",")
@@ -21,6 +23,7 @@ class CommandRunServer : CommandRunServerBase("run-server", "Start postchain ser
     override fun run() {
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile, debug)
         val nodeProvider = PostchainNodeProvider(PostchainNode(appConfig, false))
+        if (dumpPid) dumpPid()
         runServer(nodeProvider, activeChains)
     }
 }
