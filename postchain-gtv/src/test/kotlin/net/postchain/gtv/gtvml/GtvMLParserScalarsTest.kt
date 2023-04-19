@@ -7,6 +7,7 @@ import assertk.assertions.isEqualTo
 import net.postchain.gtv.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.math.BigInteger
 
 class GtvMLParserScalarsTest {
 
@@ -41,7 +42,7 @@ class GtvMLParserScalarsTest {
     fun parseGtv_bigint_successfully() {
         val xml = "<bigint>42</bigint>"
         val actual = GtvMLParser.parseGtvML(xml)
-        val expected = GtvBigInteger(42L)
+        val expected = GtvBigInteger(BigInteger.valueOf(42L))
 
         assert(actual).isEqualTo(expected)
     }
