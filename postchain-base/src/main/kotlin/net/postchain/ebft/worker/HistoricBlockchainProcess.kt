@@ -363,4 +363,6 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         super.registerDiagnosticData(diagnosticData)
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] =  EagerDiagnosticValue(DpNodeType.NODE_TYPE_HISTORIC_REPLICA.prettyName)
     }
+
+    override fun isSigner() = false // TODO: [pcu]: false?
 }

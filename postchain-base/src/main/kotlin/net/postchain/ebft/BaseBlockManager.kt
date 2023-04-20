@@ -4,14 +4,22 @@ package net.postchain.ebft
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
+import net.postchain.base.extension.getConfigHash
+import net.postchain.base.withReadConnection
 import net.postchain.common.toHex
+import net.postchain.common.wrap
+import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
+import net.postchain.core.BadDataMistake
+import net.postchain.core.BadDataType
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.ebft.worker.WorkerContext
+import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -22,7 +30,8 @@ class BaseBlockManager(
         private val processName: BlockchainProcessName,
         private val blockDB: BlockDatabase,
         private val statusManager: StatusManager,
-        private val blockStrategy: BlockBuildingStrategy
+        private val blockStrategy: BlockBuildingStrategy,
+        private val workerContext: WorkerContext
 ) : BlockManager {
 
     private var isOperationRunning = AtomicBoolean(false)
@@ -113,6 +122,34 @@ class BaseBlockManager(
                             "at height $height: ${exception.message}"
                     if (exception is PmEngineIsAlreadyClosed) {
                         logger.debug(msg)
+                    } else if (exception is BadDataMistake && exception.type == BadDataType.WRONG_CONFIGURATION_USED) {
+                        logger.error { "Wrong config used. Chain will be restarted" }
+
+                        val bcConfigProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
+                        if (bcConfigProvider != null && bcConfigProvider.isPcuEnabled()) {
+                            val bcConfig = workerContext.blockchainConfiguration
+                            val incomingBlockConfigHash = block.header.getConfigHash()?.wrap()
+
+                            withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+                                val isMyConfigPending = bcConfigProvider.isConfigPending(
+                                        ctx, bcConfig.blockchainRid, statusManager.myStatus.height, bcConfig.configHash
+                                )
+
+                                val lastBlockHeight = statusManager.myStatus.height - 1
+                                val lastBlockConfigHash = blockDB.getBlockAtHeight(lastBlockHeight, false).get()
+                                        ?.header?.getConfigHash()?.wrap()
+
+                                // early adopter
+                                if (isMyConfigPending && incomingBlockConfigHash == lastBlockConfigHash) {
+                                    workerContext.restartNotifier.notifyRestart(null, false)
+                                }
+
+                                // late adopter
+                                if (bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, true)) {
+                                    workerContext.restartNotifier.notifyRestart(null, true)
+                                }
+                            }
+                        }
                     } else {
                         logger.error(msg)
                     }

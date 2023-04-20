@@ -2,6 +2,7 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
+import net.postchain.base.extension.getConfigHash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
@@ -143,7 +144,11 @@ class SlowSynchronizer(
                         val processedBlocks = handleBlockRange(peerId, message.blocks, message.startAtHeight)
                         sleepData.updateData(processedBlocks)
                     }
-                    is Status -> {} // Do nothing, we don't measure drained
+
+                    is Status -> {
+                        if (checkIfWeNeedToApplyPendingConfig(peerId, message)) return
+                    }
+
                     else -> logger.debug { "Unhandled type $message from peer $peerId" }
                 }
             } catch (e: Exception) {
@@ -183,7 +188,7 @@ class SlowSynchronizer(
         for (block in blocks) {
             val blockData = block.data
             val headerWitnessPair = handleBlockHeader(peerId, blockData.header, block.witness, expectedHeight)
-                ?: return (expectedHeight - startingAtHeight).toInt() // Header failed for some reason. Just give up
+                    ?: return (expectedHeight - startingAtHeight).toInt() // Header failed for some reason. Just give up
             handleBlock(
                     peerId,
                     headerWitnessPair.first,
@@ -234,17 +239,22 @@ class SlowSynchronizer(
         }
 
         val w = blockchainConfiguration.decodeWitness(witness)
-        val validator = blockchainConfiguration.getBlockHeaderValidator()
-        val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(h)
-
-        return try {
-            validator.validateWitness(w, witnessBuilder)
-            logger.trace { "handleBlockHeader() -- Header for height $requestedHeight received" }
-            Pair(h, w)
-        } catch (e: Exception) {
-            peerStatuses.maybeBlacklist(peerId, "Slow Sync: Invalid header received (${e.message}). Height: $requestedHeight")
-            null
+        // If config is mismatching we can't validate witness properly
+        // We could potentially verify against signer list in new config, but we can't be sure that we have it yet
+        // Anyway, worst case scenario we will simply attempt to load the block and fail
+        if (h.getConfigHash() == null || h.getConfigHash().contentEquals(blockchainConfiguration.configHash)) {
+            val validator = blockchainConfiguration.getBlockHeaderValidator()
+            val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(h)
+            try {
+                validator.validateWitness(w, witnessBuilder)
+            } catch (e: Exception) {
+                peerStatuses.maybeBlacklist(peerId, "Slow Sync: Invalid header received (${e.message}). Height: $requestedHeight")
+                return null
+            }
         }
+
+        logger.trace { "handleBlockHeader() -- Header for height $requestedHeight received" }
+        return h to w
     }
 
     private fun handleBlock(
@@ -301,6 +311,10 @@ class SlowSynchronizer(
                                     logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}, cause: ${exception.cause}, from bTrace: ${bTrace?.toString()}" }
                                 } else {
                                     logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}, cause: ${exception.cause}" }
+                                }
+                            } else if (exception is BadDataMistake && exception.type == BadDataType.WRONG_CONFIGURATION_USED) {
+                                if (!checkIfNewConfigurationCanBeLoaded(block)) {
+                                    peerStatuses.maybeBlacklist(peerId, "Received a block with mismatching config but we could not apply any new config")
                                 }
                             } else {
                                 if (logger.isTraceEnabled) {

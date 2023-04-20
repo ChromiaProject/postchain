@@ -21,7 +21,7 @@ class MockBlockchainConfigurationProvider :
 
     companion object : KLogging()
 
-    override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long): ByteArray? {
+    override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val dba = DatabaseAccess.of(eContext)
@@ -29,7 +29,7 @@ class MockBlockchainConfigurationProvider :
         return mockDataSource.getConfiguration(ChainUtil.ridOf(chainId).data, activeHeight)
     }
 
-    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long): Boolean {
+    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, isSigner: Boolean): Boolean {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val dba = DatabaseAccess.of(eContext)
@@ -61,10 +61,6 @@ class MockBlockchainConfigurationProvider :
 
         logger.debug("getHistoricConfiguration() - Fetching configuration from chain0 (for chain: $chainId and height: $historicBlockHeight)")
         return mockDataSource.getConfiguration(ChainUtil.ridOf(chainId).data, historicBlockHeight)
-    }
-
-    override fun findNextConfigurationHeight(eContext: EContext, height: Long): Long? {
-        TODO("Not implemented yet")
     }
 }
 

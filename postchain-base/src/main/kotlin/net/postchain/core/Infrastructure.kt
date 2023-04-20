@@ -21,7 +21,9 @@ interface SynchronizationInfrastructure : Shutdownable {
     fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            messageProcessingLatch: MessageProcessingLatch
+            messageProcessingLatch: MessageProcessingLatch,
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
+            restartNotifier: BlockchainRestartNotifier
     ): BlockchainProcess
 
     /**
@@ -38,7 +40,7 @@ interface SynchronizationInfrastructure : Shutdownable {
 }
 
 fun interface BlockchainRestartNotifier {
-    fun notifyRestart(chainId: Long, failedConfigHash: ByteArray)
+    fun notifyRestart(failedConfigHash: ByteArray?, loadNextPendingConfig: Boolean)
 }
 
 /**

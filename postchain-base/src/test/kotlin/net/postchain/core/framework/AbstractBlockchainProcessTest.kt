@@ -34,9 +34,10 @@ internal class AbstractBlockchainProcessTest {
 
 }
 
-class DummyBlockchainProcess(private val testAction: () -> Unit): AbstractBlockchainProcess("TestProcess", mock(BlockchainEngine::class.java)) {
+class DummyBlockchainProcess(private val testAction: () -> Unit) : AbstractBlockchainProcess("TestProcess", mock(BlockchainEngine::class.java)) {
 
-    override fun cleanup() { }
+    override fun cleanup() {}
+    override fun isSigner(): Boolean = true
 
     override fun action() {
         testAction()

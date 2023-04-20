@@ -14,6 +14,7 @@ import java.util.*
 class BaseStatusManager(
         private val nodeCount: Int,
         private val myIndex: Int,
+        configHash: ByteArray,
         myNextHeight: Long
 ) : StatusManager {
 
@@ -29,6 +30,7 @@ class BaseStatusManager(
     init {
         myStatus = nodeStatuses[myIndex]
         myStatus.height = myNextHeight
+        myStatus.configHash = configHash
         // make sure that after restart status updates are still considered fresh
         // this works fine as long as we have fewer than 1000 updates per second,
         // otherwise we are screwed
@@ -142,10 +144,10 @@ class BaseStatusManager(
             return false
         }
 
-        logger.debug{ "Advancing block height from ${myStatus.height} to $nextHeight ..." }
+        logger.debug { "Advancing block height from ${myStatus.height} to $nextHeight ..." }
         (myStatus.height until nextHeight).forEach { _ -> advanceHeight() }
 
-        logger.debug{ "Current state: ${myStatus.height}" }
+        logger.debug { "Current state: ${myStatus.height}" }
         return true
     }
 
@@ -427,7 +429,7 @@ class BaseStatusManager(
             if (count >= this.quorum) {
                 // check if we have (2f+1) commit signatures including ours, in that case we signal commit intent.
                 intent = CommitBlockIntent
-                logger.debug{ "setting CommitBlockIntent for idx: $myIndex " }
+                logger.debug { "setting CommitBlockIntent for idx: $myIndex " }
                 return true
             } else {
                 // otherwise we set intent to FetchCommitSignatureIntent with current blockRID and list of nodes which

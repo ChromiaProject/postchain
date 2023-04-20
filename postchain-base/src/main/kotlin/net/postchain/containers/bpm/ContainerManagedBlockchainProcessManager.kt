@@ -40,10 +40,10 @@ import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
-import net.postchain.metrics.BLOCKCHAIN_RID_TAG
-import net.postchain.metrics.CHAIN_IID_TAG
-import net.postchain.metrics.CONTAINER_NAME_TAG
-import net.postchain.metrics.NODE_PUBKEY_TAG
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.logging.CONTAINER_NAME_TAG
+import net.postchain.logging.NODE_PUBKEY_TAG
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 import org.mandas.docker.client.DockerClient
 import org.mandas.docker.client.messages.Container

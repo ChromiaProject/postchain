@@ -4,6 +4,8 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
+import net.postchain.base.extension.getConfigHash
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
@@ -447,23 +449,19 @@ class FastSynchronizer(
         }
 
         val w = blockchainConfiguration.decodeWitness(witness)
-        val validator = blockchainConfiguration.getBlockHeaderValidator()
-        val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(h)
-        try {
-            validator.validateWitness(w, witnessBuilder)
-        } catch (e: Exception) {
-            // There may be two reasons for verification failures.
-            // 1. The peer is a scumbag, sending us invalid headers
-            // 2. The header is from a configuration that we haven't activated yet.
-            // In both cases we can blacklist the peer:
-            //
-            // 1. blacklisting scumbags is good
-            // 2. The blockchain will restart before requestedHeight is added, so the
-            // sync process will restart fresh with new configuration. Worst case is if
-            // we download parallelism blocks before restarting.
-            val dbg = debugJobString(j, requestedHeight, peerId)
-            peerStatuses.maybeBlacklist(peerId, "Synch: Invalid header received (${e.message}). $dbg")
-            return false
+        // If config is mismatching we can't validate witness properly
+        // We could potentially verify against signer list in new config, but we can't be sure that we have it yet
+        // Anyway, worst case scenario we will simply attempt to load the block and fail
+        if (h.getConfigHash() == null || h.getConfigHash().contentEquals(blockchainConfiguration.configHash)) {
+            val validator = blockchainConfiguration.getBlockHeaderValidator()
+            val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(h)
+            try {
+                validator.validateWitness(w, witnessBuilder)
+            } catch (e: Exception) {
+                val dbg = debugJobString(j, requestedHeight, peerId)
+                peerStatuses.maybeBlacklist(peerId, "Synch: Invalid header received (${e.message}). $dbg")
+                return false
+            }
         }
 
         j.header = h
@@ -571,12 +569,17 @@ class FastSynchronizer(
 
         // We are free to commit this Job, go on and add it to DB
         // (this is usually slow and is therefore handled via a future).
+        val block = job.block ?: throw ProgrammerMistake("Attempting to commit an unfinished job")
         addBlockCompletionFuture = blockDatabase
-                .addBlock(job.block!!, addBlockCompletionFuture, bTrace)
+                .addBlock(block, addBlockCompletionFuture, bTrace)
                 .whenCompleteUnwrapped { _: Any?, exception ->
                     if (exception != null) {
                         if (exception is PmEngineIsAlreadyClosed || exception is BDBAbortException) {
                             logger.warn { "Exception committing block $job: ${exception.message}" }
+                        } else if (exception is BadDataMistake && exception.type == BadDataType.WRONG_CONFIGURATION_USED) {
+                            if (!checkIfNewConfigurationCanBeLoaded(block)) {
+                                peerStatuses.maybeBlacklist(job.peerId, "Received a block with mismatching config but we could not apply any new config")
+                            }
                         } else {
                             logger.warn(exception) { "Exception committing block $job" }
                         }
@@ -610,7 +613,11 @@ class FastSynchronizer(
                     is BlockHeaderMessage -> handleBlockHeader(peerId, message.header, message.witness, message.requestedHeight)
                     is UnfinishedBlock -> handleUnfinishedBlock(peerId, message.header, message.transactions)
                     is CompleteBlock -> handleCompleteBlock(peerId, message.data, message.height, message.witness)
-                    is Status -> peerStatuses.statusReceived(peerId, message.height - 1)
+                    is Status -> {
+                        if (checkIfWeNeedToApplyPendingConfig(peerId, message)) return
+                        peerStatuses.statusReceived(peerId, message.height - 1)
+                    }
+
                     is Transaction -> logger.info("Got unexpected transaction from peer $peerId, ignoring")
                     else -> logger.warn { "Unhandled message type: ${message.topic} from peer $peerId" } // WARN b/c this might be buggy?
                 }
