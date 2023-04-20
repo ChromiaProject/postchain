@@ -135,11 +135,12 @@ class RestApiQueryEndpointTest {
     fun test_direct_query() {
         val queryMap = mapOf(
                 "type" to gtv("test_query"),
-                "a" to gtv("b")
+                "a" to gtv("b"),
+                "c" to gtv(3)
         )
 
         val queryString = queryMap.map { "${it.key}=${it.value.toString().trim('"')}" }.joinToString("&")
-        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), RestApi.NON_STRICT_QUERY_ARGUMENT to gtv(true))))
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), RestApi.NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
         val answerString = "Hello, world!"
         val answer = gtv(gtv("text/plain"), gtv(answerString))
