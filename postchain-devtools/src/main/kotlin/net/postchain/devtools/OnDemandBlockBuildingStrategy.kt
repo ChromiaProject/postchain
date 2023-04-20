@@ -34,7 +34,7 @@ class OnDemandBlockBuildingStrategy(
     var upToHeight: Long = -1
 
     @Volatile
-    var committedHeight = blockQueries.getBestHeight().get().toInt()
+    var committedHeight = blockQueries.getLastBlockHeight().get().toInt()
     val blocks = LinkedBlockingQueue<BlockData>()
 
     override fun shouldBuildBlock(): Boolean {
@@ -73,7 +73,7 @@ class OnDemandBlockBuildingStrategy(
             }
             logger.debug { "awaitCommitted() - took a block height: $height, committedHeight: $committedHeight" }
         }
-        val dbHeight = blockQueries.getBestHeight().get().toInt()
+        val dbHeight = blockQueries.getLastBlockHeight().get().toInt()
         if (logger.isTraceEnabled) {
             logger.trace("awaitCommitted() - end: height: $height, committedHeight: $committedHeight, from db: $dbHeight")
         }

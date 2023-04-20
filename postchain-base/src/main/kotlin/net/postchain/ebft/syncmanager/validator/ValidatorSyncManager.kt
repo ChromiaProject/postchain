@@ -85,7 +85,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params, isProcessRunning)
 
         // Init useFastSyncAlgorithm
-        val lastHeight = blockQueries.getBestHeight().get()
+        val lastHeight = blockQueries.getLastBlockHeight().get()
         useFastSyncAlgorithm = when {
             lastHeight < params.mustSyncUntilHeight -> true
             else -> startInFastSync
@@ -168,8 +168,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                         } catch (e: Exception) {
                                             logger.error("Failed to add block to database. Resetting state...", e)
                                             // reset state to last known from database
-                                            val currentBlockHeight = blockQueries.getBestHeight().get()
-                                            statusManager.fastForwardHeight(currentBlockHeight)
+                                            statusManager.fastForwardHeight(blockQueries.getLastBlockHeight().get())
                                             blockManager.currentBlock = null
                                         }
                                     }
@@ -427,7 +426,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             // turn off fast sync, reset current block to null, and query for the last known state from db to prevent
             // possible race conditions
             useFastSyncAlgorithm = false
-            val currentBlockHeight = blockQueries.getBestHeight().get()
+            val currentBlockHeight = blockQueries.getLastBlockHeight().get()
             statusManager.fastForwardHeight(currentBlockHeight)
             blockManager.currentBlock = null
             logFastSyncStatus(currentBlockHeight)

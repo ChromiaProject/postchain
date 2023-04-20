@@ -56,7 +56,7 @@ class SlowSynchronizer(
      */
     fun syncUntil() {
         try {
-            blockHeight = blockQueries.getBestHeight().get()
+            blockHeight = blockQueries.getLastBlockHeight().get()
             syncDebug("Start", blockHeight)
             stateMachine.lastCommittedBlockHeight = blockHeight
 
@@ -230,11 +230,11 @@ class SlowSynchronizer(
         }
 
         val h = blockchainConfiguration.decodeBlockHeader(header)
-        val peerBestHeight = getHeight(h)
+        val peerLastHeight = getHeight(h)
 
-        if (peerBestHeight != requestedHeight) {
+        if (peerLastHeight != requestedHeight) {
             // Could be a bug
-            peerStatuses.maybeBlacklist(peerId, "Slow Sync: Header height=$peerBestHeight, we espected height: $requestedHeight.")
+            peerStatuses.maybeBlacklist(peerId, "Slow Sync: Header height=$peerLastHeight, we espected height: $requestedHeight.")
             return null
         }
 

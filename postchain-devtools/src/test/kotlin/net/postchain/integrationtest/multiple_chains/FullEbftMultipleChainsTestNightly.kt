@@ -100,8 +100,8 @@ open class FullEbftMultipleChainsTestNightly : ConfigFileBasedIntegrationTest() 
 
                 val queries = node.blockQueries(chain)
 
-                // Asserting best height equals to 1
-                assertEquals(expectedHeight, queries.getBestHeight().get())
+                // Asserting last height equals to 1
+                assertEquals(expectedHeight, queries.getLastBlockHeight().get())
 
                 for (height in 0..expectedHeight) {
                     logger.info { "Verifying height $height" }

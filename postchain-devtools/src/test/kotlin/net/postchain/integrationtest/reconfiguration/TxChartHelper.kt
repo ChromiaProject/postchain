@@ -27,7 +27,7 @@ object TxChartHelper {
         chart.add("blocks", blocks)
 
         val height = minOf(
-                node.query(chainId) { it.getBestHeight() } ?: -1L,
+                node.query(chainId) { it.getLastBlockHeight() } ?: -1L,
                 maxHeight)
 
         (0..height).forEach { h ->
@@ -64,7 +64,7 @@ object TxChartHelper {
     fun collectAllTxs(node: PostchainTestNode, chainId: Long): List<Transaction> {
         val txs = mutableListOf<Transaction>()
 
-        val height = node.query(chainId) { it.getBestHeight() } ?: -1L
+        val height = node.query(chainId) { it.getLastBlockHeight() } ?: -1L
         (0..height).forEach { h ->
             val blockRid = node.query(chainId) { it.getBlockRid(h) }
             val txsRids = node.query(chainId) { it.getBlockTransactionRids(blockRid!!) }

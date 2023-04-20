@@ -110,7 +110,7 @@ open class PostchainModel(
     }
 
     override fun getCurrentBlockHeight(): BlockHeight {
-        return BlockHeight(blockQueries.getBestHeight().get() + 1)
+        return BlockHeight(blockQueries.getLastBlockHeight().get() + 1)
     }
 
     override fun getBlockchainConfiguration(height: Long): ByteArray? = withReadConnection(storage, chainIID) { ctx ->

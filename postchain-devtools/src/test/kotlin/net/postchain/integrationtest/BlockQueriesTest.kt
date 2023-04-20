@@ -15,7 +15,7 @@ class BlockQueriesTest : IntegrationTestSetup() {
 
         nodes[0].stopBlockchain(1L)
 
-        val query = blockQueries.getBestHeight()
+        val query = blockQueries.getLastBlockHeight()
         query.whenComplete { _, exception ->
             assert(exception != null)
             assert(exception).isInstanceOf(PmEngineIsAlreadyClosed::class.java)

@@ -43,7 +43,7 @@ class ReadOnlyBlockchainProcess(
             ::isProcessRunning
     )
 
-    var blockHeight: Long = blockQueries.getBestHeight().get()
+    var blockHeight: Long = blockQueries.getLastBlockHeight().get()
         private set
 
     /**

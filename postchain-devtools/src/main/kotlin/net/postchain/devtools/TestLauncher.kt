@@ -165,7 +165,7 @@ class TestLauncher : IntegrationTestSetup() {
         }
 
 
-        if (getBestHeight(node).toInt() != testType.block.size) {
+        if (getLastHeight(node).toInt() != testType.block.size) {
             failures.add(TransactionFailure(-1, -1,
                     Exception("Unexpected error: not all blocks were built")))
         }

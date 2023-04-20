@@ -31,11 +31,11 @@ open class FullEbftTestNightlyCore : ConfigFileBasedIntegrationTest() {
         }
 
         val queries = nodes[0].getBlockchainInstance().blockchainEngine.getBlockQueries()
-        val referenceHeight = queries.getBestHeight().get()
+        val referenceHeight = queries.getLastBlockHeight().get()
         logger.info { "$blocksCount, refHe: $referenceHeight" }
         nodes.forEach { node ->
             val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
-            assertEquals(referenceHeight, queries.getBestHeight().get())
+            assertEquals(referenceHeight, queries.getLastBlockHeight().get())
 
             for (height in 0..referenceHeight) {
                 logger.info { "Verifying height $height" }
