@@ -36,6 +36,7 @@ interface PostchainContextAware {
 
 interface OperationWrapper {
     fun getWrappingOperations(): Set<String>
+    fun injectTransactorLookup(transactorLookup: TransactorLookup)
 }
 
 interface GTXModuleFactory {
@@ -83,7 +84,11 @@ abstract class SimpleGTXModule<ConfT>(
     }
 }
 
-class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean) : GTXModule, PostchainContextAware {
+fun interface TransactorLookup {
+    fun lookupTransactor(opData: ExtOpData): Transactor
+}
+
+class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean) : GTXModule, PostchainContextAware, TransactorLookup {
 
     lateinit var wrappingOpMap: Map<String, GTXModule>
     lateinit var opmap: Map<String, GTXModule>
@@ -112,7 +117,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         }
     }
 
-    fun makeNonWrappingTransactor(opData: ExtOpData): Transactor {
+    override fun lookupTransactor(opData: ExtOpData): Transactor {
         if (opData.opName in ops) {
             return opmap[opData.opName]!!.makeTransactor(opData)
         } else {
@@ -160,6 +165,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
                 _qmap[q] = m
             }
             _stxs.addAll(m.getSpecialTxExtensions())
+            if (m is OperationWrapper) m.injectTransactorLookup(this)
         }
         wrappingOpMap = _wrappingOpMap.toMap()
         opmap = _opmap.toMap()
