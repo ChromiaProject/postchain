@@ -67,10 +67,8 @@ open class BaseApiInfrastructure(
                 apiModel = PostchainModel(
                         engine.getConfiguration().chainID,
                         engine.getTransactionQueue(),
-                        engine.getConfiguration().getTransactionFactory(),
                         engine.getBlockQueries() as BaseBlockQueries,
                         debugInfoQuery,
-                        engine.getConfiguration().blockchainRid,
                         engine.storage,
                         postchainContext
                 )

@@ -2,8 +2,6 @@
 
 package net.postchain.api.rest.controller
 
-import io.micrometer.core.instrument.Metrics
-import io.micrometer.core.instrument.Timer
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.model.ApiStatus
@@ -17,10 +15,8 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
-import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.toHex
-import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus.CONFIRMED
 import net.postchain.common.tx.TransactionStatus.REJECTED
 import net.postchain.common.tx.TransactionStatus.UNKNOWN
@@ -29,7 +25,6 @@ import net.postchain.concurrent.util.get
 import net.postchain.core.DefaultBlockchainConfigurationFactory
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.core.Storage
-import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
@@ -37,58 +32,21 @@ import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GtxQuery
-import net.postchain.metrics.PostchainModelMetrics
 
 open class PostchainModel(
         final override val chainIID: Long,
         val txQueue: TransactionQueue,
-        private val transactionFactory: TransactionFactory,
         val blockQueries: BaseBlockQueries,
         private val debugInfoQuery: DebugInfoQuery,
-        blockchainRid: BlockchainRid,
         val storage: Storage,
         val postchainContext: PostchainContext
 ) : Model {
 
     companion object : KLogging()
 
-    private val metrics = PostchainModelMetrics(chainIID, blockchainRid)
-
     override var live = true
 
-    override fun postTransaction(tx: ApiTx) {
-        val sample = Timer.start(Metrics.globalRegistry)
-
-        val decodedTransaction = transactionFactory.decodeTransaction(tx.bytes)
-
-        decodedTransaction.checkCorrectness()
-
-        if (blockQueries.isTransactionConfirmed(decodedTransaction.getRID()).get()) {
-            sample.stop(metrics.duplicateTransactions)
-            throw DuplicateTnxException("Transaction already in database")
-        }
-
-        when (txQueue.enqueue(decodedTransaction)) {
-            EnqueueTransactionResult.FULL -> {
-                sample.stop(metrics.fullTransactions)
-                throw UnavailableException("Transaction queue is full")
-            }
-
-            EnqueueTransactionResult.INVALID -> {
-                sample.stop(metrics.invalidTransactions)
-                throw InvalidTnxException("Transaction is invalid")
-            }
-
-            EnqueueTransactionResult.DUPLICATE -> {
-                sample.stop(metrics.duplicateTransactions)
-                throw DuplicateTnxException("Transaction already in queue")
-            }
-
-            EnqueueTransactionResult.OK -> {
-                sample.stop(metrics.okTransactions)
-            }
-        }
-    }
+    override fun postTransaction(tx: ApiTx): Unit = throw NotSupported("NotSupported: Posting a transaction on a non-signer node is not supported.")
 
     override fun getTransaction(txRID: TxRID): ApiTx? {
         return blockQueries.getTransaction(txRID.bytes).get()

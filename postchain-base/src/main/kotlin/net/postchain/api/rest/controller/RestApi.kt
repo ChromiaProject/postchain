@@ -130,6 +130,11 @@ class RestApi(
             setErrorResponseBody(response, error)
         }
 
+        http.exception(NotSupported::class.java) { error, _, response ->
+            response.status(403) // Forbidden
+            setErrorResponseBody(response, error)
+        }
+
         http.exception(UnavailableException::class.java) { error, request, response ->
             response.status(503) // Service unavailable
             transformErrorResponseFromDiagnostics(request, response, error)
