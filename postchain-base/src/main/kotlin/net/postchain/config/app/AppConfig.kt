@@ -118,6 +118,9 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     val port: Int
         get() = config.getEnvOrIntProperty("POSTCHAIN_PORT", "messaging.port", DEFAULT_PORT)
 
+    // PCU feature toggle
+    fun isPcuEnabled(): Boolean = getEnvOrBoolean("POSTCHAIN_PCU", "pcu", false)
+
     /**
      * Wrappers for [Configuration] getters and other functionalities
      */

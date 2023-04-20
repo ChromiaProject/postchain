@@ -209,7 +209,7 @@ open class BaseBlockchainProcessManager(
                 afterCommitHandler,
                 chainStorage,
                 initialEContext,
-                if (isPcuEnabled()) failedConfigHash else null,
+                if (appConfig.isPcuEnabled()) failedConfigHash else null,
                 restartNotifier
         )
 
@@ -234,9 +234,6 @@ open class BaseBlockchainProcessManager(
                 bTrace
         )
     }
-
-    // Feature toggle
-    private fun isPcuEnabled(): Boolean = postchainContext.appConfig.getEnvOrBoolean("POSTCHAIN_PCU", "pcu", false)
 
     private fun hasBuiltInitialBlock(eContext: EContext) = DatabaseAccess.of(eContext).getLastBlockHeight(eContext) > -1L
 
