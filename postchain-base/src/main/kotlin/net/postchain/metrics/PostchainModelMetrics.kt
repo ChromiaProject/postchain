@@ -4,6 +4,9 @@ import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Timer
 import net.postchain.common.BlockchainRid
 import net.postchain.common.tx.EnqueueTransactionResult
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.logging.RESULT_TAG
 
 private const val SUBMITTED_METRIC_NAME = "submitted.transactions"
 private const val SUBMITTED_METRIC_DESCRIPTION = "Transactions submitted/enqueued"

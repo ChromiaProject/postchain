@@ -72,4 +72,6 @@ class ReadOnlyBlockchainProcess(
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_REPLICA.prettyName)
     }
 
+    override fun isSigner() = false
+
 }

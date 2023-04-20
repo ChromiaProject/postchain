@@ -43,7 +43,9 @@ class ValidatorBlockchainProcess(
         statusManager = BaseStatusManager(
                 blockchainConfiguration.signers.size,
                 blockchainConfiguration.blockchainContext.nodeID,
-                bestHeight + 1)
+                blockchainConfiguration.configHash,
+                bestHeight + 1
+        )
 
         blockDatabase = BaseBlockDatabase(
                 blockchainEngine, blockchainEngine.getBlockQueries(), blockchainConfiguration.blockchainContext.nodeID)
@@ -52,7 +54,9 @@ class ValidatorBlockchainProcess(
                 workerContext.processName,
                 blockDatabase,
                 statusManager,
-                blockchainEngine.getBlockBuildingStrategy())
+                blockchainEngine.getBlockBuildingStrategy(),
+                workerContext
+        )
 
         // Give the SyncManager the BaseTransactionQueue (part of workerContext) and not the network-aware one,
         // because we don't want tx forwarding/broadcasting when received through p2p network
@@ -91,4 +95,6 @@ class ValidatorBlockchainProcess(
         super.registerDiagnosticData(diagnosticData)
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_VALIDATOR.prettyName)
     }
+
+    override fun isSigner(): Boolean = !syncManager.isInFastSync()
 }

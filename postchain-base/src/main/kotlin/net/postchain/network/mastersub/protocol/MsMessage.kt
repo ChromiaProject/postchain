@@ -3,6 +3,8 @@ package net.postchain.network.mastersub.protocol
 import net.postchain.common.BlockchainRid
 import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockQueries
+import net.postchain.ebft.message.NullableGtv.gtvToNullableByteArray
+import net.postchain.ebft.message.NullableGtv.nullableByteArrayToGtv
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
@@ -10,7 +12,15 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.managed.DirectoryDataSource
-import net.postchain.network.mastersub.protocol.MsMessageType.*
+import net.postchain.network.mastersub.protocol.MsMessageType.BlockAtHeightRequest
+import net.postchain.network.mastersub.protocol.MsMessageType.BlockAtHeightResponse
+import net.postchain.network.mastersub.protocol.MsMessageType.CommittedBlock
+import net.postchain.network.mastersub.protocol.MsMessageType.ConnectedPeers
+import net.postchain.network.mastersub.protocol.MsMessageType.DataMessage
+import net.postchain.network.mastersub.protocol.MsMessageType.HandshakeMessage
+import net.postchain.network.mastersub.protocol.MsMessageType.QueryFailure
+import net.postchain.network.mastersub.protocol.MsMessageType.QueryRequest
+import net.postchain.network.mastersub.protocol.MsMessageType.QueryResponse
 
 // TODO: [POS-164]: Fix kdoc
 
@@ -28,9 +38,6 @@ interface MsMessage {
 
     fun getPayload(): Gtv
 }
-
-private fun gtvToNullableByteArray(gtv: Gtv): ByteArray? = if (gtv.isNull()) null else gtv.asByteArray()
-private fun nullableByteArrayToGtv(value: ByteArray?): Gtv = if (value == null) GtvNull else gtv(value)
 
 /**
  * MeMessage Types Enum class

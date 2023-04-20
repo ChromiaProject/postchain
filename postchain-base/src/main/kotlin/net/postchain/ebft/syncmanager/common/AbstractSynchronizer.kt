@@ -1,11 +1,25 @@
 package net.postchain.ebft.syncmanager.common
 
+import mu.withLoggingContext
 import net.postchain.base.BaseBlockHeader
+import net.postchain.base.data.BaseBlockWitnessProvider
+import net.postchain.base.extension.getConfigHash
+import net.postchain.base.withReadConnection
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
+import net.postchain.core.NodeRid
+import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockHeader
+import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PrivKey
+import net.postchain.crypto.PubKey
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.ebft.message.Status
 import net.postchain.ebft.worker.WorkerContext
+import net.postchain.getBFTRequiredSignatureCount
+import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import java.util.concurrent.CompletableFuture
 
 abstract class AbstractSynchronizer(
@@ -20,6 +34,8 @@ abstract class AbstractSynchronizer(
 
     var blockHeight: Long = blockQueries.getBestHeight().get()
 
+    private var pendingConfigPromotingUsAsSigner: ByteArray? = null
+    private val relevantSignersThatHaveAppliedConfig = mutableSetOf<PubKey>()
 
     protected fun getHeight(header: BlockHeader): Long {
         // A bit ugly hack. Figure out something better. We shouldn't rely on specific
@@ -42,4 +58,135 @@ abstract class AbstractSynchronizer(
             workerContext.appConfig.pubKey,
             blockchainConfiguration.blockchainRid
     )
+
+    /**
+     * We do this check to avoid getting stuck when chain is waiting for a pending config where we are promoted to signer to be applied
+     * In other cases config updates will be handled when adding blocks
+     */
+    protected fun checkIfWeNeedToApplyPendingConfig(peer: NodeRid, status: Status): Boolean {
+        val incomingConfigHash = status.configHash
+        val incomingHeight = status.height
+
+        if (blockchainConfiguration.chainID == 0L) return false
+        if (incomingConfigHash == null) return false
+        val configProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
+        if (configProvider == null || !configProvider.isPcuEnabled()) return false
+
+        // TODO: [pcu]: Remove some redundant logging when PCU is done
+        withLoggingContext(CHAIN_IID_TAG to blockchainConfiguration.chainID.toString()) {
+            if (blockQueries.getBestHeight().get() + 1 != incomingHeight) return false
+            val currentConfigHash = blockchainConfiguration.configHash
+
+            logger.debug { "blockHeight = $blockHeight, blockQueries.getBestHeight() = ${blockQueries.getBestHeight().get()}, currentConfigHash = ${currentConfigHash.wrap()}" }
+            logger.debug { "incomingHeight = $incomingHeight, incomingConfigHash = ${incomingConfigHash.wrap()}" }
+
+            if (!currentConfigHash.contentEquals(incomingConfigHash)) {
+                logger.debug { "currentConfigHash != incomingConfigHash" }
+                // TODO: [pcu]: Perhaps add a new adapter/provider
+                val isIncomingConfigPending = withReadConnection(workerContext.engine.storage, blockchainConfiguration.chainID) { ctx ->
+                    configProvider.isConfigPending(
+                            ctx,
+                            blockchainConfiguration.blockchainRid,
+                            incomingHeight,
+                            incomingConfigHash
+                    )
+                }
+
+                if (!isIncomingConfigPending) return false
+
+                val pendingSigners = configProvider.getPendingConfigSigners(blockchainConfiguration.blockchainRid, incomingHeight, incomingConfigHash)
+                val myPubKey = PubKey(workerContext.appConfig.pubKeyByteArray)
+                val peerPubKey = PubKey(peer)
+                return if (pendingSigners.contains(myPubKey)) {
+                    val promotedNodesAmount = pendingSigners.subtract(blockchainConfiguration.signers.map { PubKey(it) }.toSet()).size
+                    val pendingBftRequiredSignatureCount = getBFTRequiredSignatureCount(pendingSigners.size)
+
+                    if (pendingSigners.size - promotedNodesAmount >= pendingBftRequiredSignatureCount) {
+                        logger.debug { "Incoming config is pending with us as signer but we don't have to apply it since we are not blocking production of blocks" }
+                        return false
+                    }
+
+                    if (!incomingConfigHash.contentEquals(pendingConfigPromotingUsAsSigner)) {
+                        pendingConfigPromotingUsAsSigner = incomingConfigHash
+                        relevantSignersThatHaveAppliedConfig.clear()
+                    }
+
+                    if (pendingSigners.contains(peerPubKey) && blockchainConfiguration.signers.any { it.contentEquals(peerPubKey.data) }) {
+                        relevantSignersThatHaveAppliedConfig.add(peerPubKey)
+                    }
+
+                    logger.debug { "Promoted nodes amount: $promotedNodesAmount, signers that have applied config: $relevantSignersThatHaveAppliedConfig" }
+                    // We don't care if other promoted nodes have applied the config or not, they can't build blocks with older config anyway
+                    if (relevantSignersThatHaveAppliedConfig.size + promotedNodesAmount >= pendingBftRequiredSignatureCount) {
+                        logger.debug { "Incoming config is pending with us as signer, will restart" }
+                        workerContext.restartNotifier.notifyRestart(null, true)
+                        true
+                    } else {
+                        logger.debug { "Incoming config is pending with us as signer, waiting for more nodes to apply it" }
+                        false
+                    }
+                } else {
+                    false
+                }
+            } else {
+                logger.debug { "currentConfigHash == incomingConfigHash" }
+                return false
+            }
+        }
+    }
+
+    protected fun checkIfNewConfigurationCanBeLoaded(block: BlockDataWithWitness): Boolean {
+        val bcConfigProvider = workerContext.blockchainConfigurationProvider
+        val bcConfig = workerContext.blockchainConfiguration
+        val hasNewConfig = withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+            bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, false)
+        }
+
+        // TODO: [pcu]: Remove some redundant logging when PCU is done
+        withLoggingContext(CHAIN_IID_TAG to blockchainConfiguration.chainID.toString()) {
+
+            if (hasNewConfig) {
+                logger.warn { "Wrong config used. Chain will be restarted" }
+                workerContext.restartNotifier.notifyRestart(null, false)
+                return true
+            }
+
+            val headerConfigHash = block.header.getConfigHash()
+            if (bcConfigProvider is ManagedBlockchainConfigurationProvider && headerConfigHash != null && bcConfigProvider.isPcuEnabled()) {
+                val isIncomingConfigPending = withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+                    bcConfigProvider.isConfigPending(
+                            ctx,
+                            blockchainConfiguration.blockchainRid,
+                            getHeight(block.header),
+                            headerConfigHash
+                    )
+                }
+                if (isIncomingConfigPending) {
+                    logger.debug { "Matching pending configuration detected, will validate block signature before reloading" }
+                    val pendingSigners = bcConfigProvider.getPendingConfigSigners(bcConfig.blockchainRid, getHeight(block.header), headerConfigHash)
+
+                    val cryptoSystem = workerContext.appConfig.cryptoSystem
+                    val myKeyPair = KeyPair(PubKey(workerContext.appConfig.pubKeyByteArray), PrivKey(workerContext.appConfig.privKeyByteArray))
+                    val validator = BaseBlockWitnessProvider(
+                            cryptoSystem,
+                            cryptoSystem.buildSigMaker(myKeyPair),
+                            pendingSigners.map { it.data }.toTypedArray()
+                    )
+                    val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(block.header)
+
+                    try {
+                        validator.validateWitness(block.witness, witnessBuilder)
+                        logger.debug { "Witness check passed. Reloading chain with pending configuration." }
+                        workerContext.restartNotifier.notifyRestart(null, true)
+                        return true
+                    } catch (e: Exception) {
+                        logger.error(e) { "Block signature for block with new pending config is not valid" }
+                    }
+                }
+            }
+
+            logger.debug { "No new configuration could be applied" }
+            return false
+        }
+    }
 }

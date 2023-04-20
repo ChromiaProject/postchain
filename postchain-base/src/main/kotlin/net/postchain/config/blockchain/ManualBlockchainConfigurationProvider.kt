@@ -10,7 +10,7 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
 
     companion object : KLogging()
 
-    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long): Boolean {
+    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, isSigner: Boolean): Boolean {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val dba = DatabaseAccess.of(eContext)
@@ -34,7 +34,7 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
         return activeHeight == configHeight
     }
 
-    override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long): ByteArray? {
+    override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val dba = DatabaseAccess.of(eContext)
@@ -59,9 +59,5 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         return DatabaseAccess.of(eContext).getConfigurationData(eContext, historicBlockHeight)
-    }
-
-    override fun findNextConfigurationHeight(eContext: EContext, height: Long): Long? {
-        return DatabaseAccess.of(eContext).findNextConfigurationHeight(eContext, height)
     }
 }

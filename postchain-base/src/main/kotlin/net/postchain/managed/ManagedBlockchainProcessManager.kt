@@ -162,7 +162,7 @@ open class ManagedBlockchainProcessManager(
 
             return if (isConfigurationChanged(chainId)) {
                 wrTrace("chainN, restart needed", chainId, bTrace)
-                startBlockchainAsync(chainId, bTrace, null)
+                startBlockchainAsync(chainId, bTrace, null, blockchainProcesses[chainId]?.isSigner() ?: false)
                 true
             } else {
                 wrTrace("chainN, no restart", chainId, bTrace)
@@ -193,7 +193,7 @@ open class ManagedBlockchainProcessManager(
                 restart
             } catch (e: Exception) {
                 logger.error(e) { "Exception in restart handler: $e" }
-                startBlockchainAsync(chainId, bTrace, null)
+                startBlockchainAsync(chainId, bTrace, null, blockchainProcesses[chainId]?.isSigner() ?: false)
                 true // let's hope restarting a blockchain fixes the problem
             } finally {
                 releaseChainLock(chainId)

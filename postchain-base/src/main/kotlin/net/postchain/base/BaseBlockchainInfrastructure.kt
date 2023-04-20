@@ -10,6 +10,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainConfiguration
@@ -105,11 +106,13 @@ open class BaseBlockchainInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            messageProcessingLatch: MessageProcessingLatch
+            messageProcessingLatch: MessageProcessingLatch,
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
+            restartNotifier: BlockchainRestartNotifier
     ): BlockchainProcess {
         val configuration = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
-        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, messageProcessingLatch)
+        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, messageProcessingLatch, blockchainConfigurationProvider, restartNotifier)
         try {
             connectProcess(configuration, process)
         } catch (e: Exception) {

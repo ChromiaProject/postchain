@@ -9,7 +9,7 @@ class TestPcuManagedBlockchainConfigurationProvider : ManagedBlockchainConfigura
 
     override fun isPcuEnabled() = true
 
-    override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long): ByteArray? {
+    override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
         val dba = DatabaseAccess.of(eContext)
         val activeHeight = this.getActiveBlocksHeight(eContext, dba)
@@ -19,11 +19,11 @@ class TestPcuManagedBlockchainConfigurationProvider : ManagedBlockchainConfigura
         return if (chainId == 0L || activeHeight == 0L) {
             dataSource.getConfiguration(ChainUtil.ridOf(chainId).data, activeHeight)
         } else {
-            super.getActiveBlocksConfiguration(eContext, chainId)
+            super.getActiveBlocksConfiguration(eContext, chainId, loadNextPendingConfig)
         }
     }
 
-    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long): Boolean {
+    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, isSigner: Boolean): Boolean {
         requireChainIdToBeSameAsInContext(eContext, chainId)
         return if (chainId == 0L) {
             val dba = DatabaseAccess.of(eContext)
@@ -34,7 +34,7 @@ class TestPcuManagedBlockchainConfigurationProvider : ManagedBlockchainConfigura
             logger.debug("needsConfigurationChange() - active height: $activeHeight, next conf at: $nextConfigHeight")
             nextConfigHeight != null && activeHeight == nextConfigHeight
         } else {
-            super.activeBlockNeedsConfigurationChange(eContext, chainId)
+            super.activeBlockNeedsConfigurationChange(eContext, chainId, isSigner)
         }
     }
 

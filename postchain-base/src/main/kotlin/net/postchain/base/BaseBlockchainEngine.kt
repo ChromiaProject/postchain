@@ -33,10 +33,10 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
-import net.postchain.metrics.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.logging.NODE_PUBKEY_TAG
 import net.postchain.metrics.BaseBlockchainEngineMetrics
-import net.postchain.metrics.CHAIN_IID_TAG
-import net.postchain.metrics.NODE_PUBKEY_TAG
 import java.lang.Long.max
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
@@ -260,55 +260,57 @@ open class BaseBlockchainEngine(
         var acceptedTxs = 0
         var rejectedTxs = 0
 
-        while (true) {
-            logger.trace { "$processName: Checking transaction queue" }
-            val tx = transactionQueue.takeTransaction()
-            if (tx != null) {
-                logger.trace { "$processName: Appending transaction ${tx.getRID().toHex()}" }
-                val transactionSample = Timer.start(Metrics.globalRegistry)
-                if (tx.isSpecial()) {
-                    rejectedTxs++
-                    transactionQueue.rejectTransaction(
-                            tx,
-                            ProgrammerMistake("special transactions can't enter queue")
-                    )
-                    continue
-                }
-                val txException = blockBuilder.maybeAppendTransaction(tx)
-                if (txException != null) {
-                    rejectedTxs++
-                    transactionSample.stop(metrics.rejectedTransactions)
-                    transactionQueue.rejectTransaction(tx, txException)
-                    logger.warn("Rejected Tx: ${tx.getRID().toHex()}, reason: ${txException.message}, cause: ${txException.cause}")
-                } else {
-                    acceptedTxs++
-                    transactionSample.stop(metrics.acceptedTransactions)
-                    // tx is fine, consider stopping
-                    if (strategy.shouldStopBuildingBlock(blockBuilder.blockBuilder)) {
-                        buildDebug("Block size limit is reached")
-                        break
+        withLoggingContext(loggingContext) {
+            while (true) {
+                logger.trace { "Checking transaction queue" }
+                val tx = transactionQueue.takeTransaction()
+                if (tx != null) {
+                    logger.trace { "Appending transaction ${tx.getRID().toHex()}" }
+                    val transactionSample = Timer.start(Metrics.globalRegistry)
+                    if (tx.isSpecial()) {
+                        rejectedTxs++
+                        transactionQueue.rejectTransaction(
+                                tx,
+                                ProgrammerMistake("special transactions can't enter queue")
+                        )
+                        continue
                     }
+                    val txException = blockBuilder.maybeAppendTransaction(tx)
+                    if (txException != null) {
+                        rejectedTxs++
+                        transactionSample.stop(metrics.rejectedTransactions)
+                        transactionQueue.rejectTransaction(tx, txException)
+                        logger.warn("Rejected Tx: ${tx.getRID().toHex()}, reason: ${txException.message}, cause: ${txException.cause}")
+                    } else {
+                        acceptedTxs++
+                        transactionSample.stop(metrics.acceptedTransactions)
+                        // tx is fine, consider stopping
+                        if (strategy.shouldStopBuildingBlock(blockBuilder.blockBuilder)) {
+                            logger.debug { "buildBlock() - Block size limit is reached" }
+                            break
+                        }
+                    }
+                } else { // tx == null
+                    break
                 }
-            } else { // tx == null
-                break
             }
+
+            val netEnd = System.nanoTime()
+            val blockHeader = blockBuilder.finalizeBlock()
+            val grossEnd = System.nanoTime()
+
+            val prettyBlockHeader = prettyBlockHeader(
+                    blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd
+            )
+            logger.info("$processName: Block is finalized: $prettyBlockHeader")
+
+            if (logger.isTraceEnabled) {
+                blockBuilder.setBTrace(getBlockTrace(blockHeader))
+                buildLog("End", blockBuilder.getBTrace())
+            }
+
+            blockSample.stop(metrics.blocks)
         }
-
-        val netEnd = System.nanoTime()
-        val blockHeader = blockBuilder.finalizeBlock()
-        val grossEnd = System.nanoTime()
-
-        val prettyBlockHeader = prettyBlockHeader(
-                blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd
-        )
-        logger.info("$processName: Block is finalized: $prettyBlockHeader")
-
-        if (logger.isTraceEnabled) {
-            blockBuilder.setBTrace(getBlockTrace(blockHeader))
-            buildLog("End", blockBuilder.getBTrace())
-        }
-
-        blockSample.stop(metrics.blocks)
     }
 
     private fun hasBuiltInitialBlock() = DatabaseAccess.of(currentEContext).getLastBlockHeight(currentEContext) > -1L
@@ -319,7 +321,7 @@ open class BaseBlockchainEngine(
         blockHeight?.let { DatabaseAccess.of(currentEContext).removeConfiguration(currentEContext, it) }
         storage.closeWriteConnection(currentEContext, true)
 
-        restartNotifier.notifyRestart(chainID, failedConfigHash)
+        restartNotifier.notifyRestart(failedConfigHash, false)
         closed = true
     }
 
@@ -375,9 +377,5 @@ open class BaseBlockchainEngine(
 
     private fun buildLog(str: String, bTrace: BlockTrace?) {
         logger.debug { "$processName buildBlock() -- $str, for block: $bTrace" }
-    }
-
-    private fun buildDebug(str: String) {
-        logger.debug { "$processName buildBlock() - $str" }
     }
 }
