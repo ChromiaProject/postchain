@@ -12,7 +12,7 @@ enum class DiagnosticProperty(val prettyName: String) {
     BLOCKCHAIN("blockchain"),
     BLOCKCHAIN_RID("brid"),
     BLOCKCHAIN_NODE_TYPE("node-type"),
-    BLOCKCHAIN_CURRENT_HEIGHT("height"),
+    BLOCKCHAIN_LAST_HEIGHT("height"),
     BLOCKCHAIN_NODE_PEERS("peers"),
 
     // Containers

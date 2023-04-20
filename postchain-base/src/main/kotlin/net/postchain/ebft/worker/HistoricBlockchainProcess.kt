@@ -65,8 +65,8 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     override fun action() {
         val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)
 
-        val bestHeightSoFar = blockchainEngine.getBlockQueries().getBestHeight().get()
-        initDebug("Historic sync bc ${myBRID}, height: $bestHeightSoFar")
+        val lastHeightSoFar = blockchainEngine.getBlockQueries().getLastBlockHeight().get()
+        initDebug("Historic sync bc ${myBRID}, height: $lastHeightSoFar")
 
         // try local sync first
         for (brid in chainsToSyncFrom) {
@@ -170,7 +170,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         try {
             lastHeight = fromBstore.getLastBlockHeight(fromCtx)
             if (lastHeight == -1L) return // no block = nothing to do
-            val ourHeight = blockchainEngine.getBlockQueries().getBestHeight().get()
+            val ourHeight = blockchainEngine.getBlockQueries().getLastBlockHeight().get()
             if (lastHeight > ourHeight) {
                 if (ourHeight > -1L) {
                     // Just a verification of Block RID being the same

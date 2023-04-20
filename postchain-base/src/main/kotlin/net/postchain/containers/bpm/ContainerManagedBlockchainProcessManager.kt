@@ -462,7 +462,7 @@ open class ContainerManagedBlockchainProcessManager(
         )
 
         nodeDiagnosticContext.blockchainData(chain.brid).putAll(mapOf(
-                DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue { psContainer.getBlockchainLastHeight(process.chainId) },
+                DiagnosticProperty.BLOCKCHAIN_LAST_HEIGHT withLazyValue { psContainer.getBlockchainLastHeight(process.chainId) },
                 DiagnosticProperty.CONTAINER_NAME withValue psContainer.containerName.toString(),
                 DiagnosticProperty.CONTAINER_ID withValue (psContainer.shortContainerId() ?: ""),
         ))

@@ -77,7 +77,7 @@ class JsonNodeDiagnosticContextTest {
 
         val map = DiagnosticData(
                 DiagnosticProperty.BLOCKCHAIN_RID withValue "AB12",
-                DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT withLazyValue { 1 }
+                DiagnosticProperty.BLOCKCHAIN_LAST_HEIGHT withLazyValue { 1 }
         )
 
         val blockchains = LazyDiagnosticValueCollection { mutableSetOf(map) }

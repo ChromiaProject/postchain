@@ -62,7 +62,7 @@ interface BlockStore {
  */
 interface BlockQueries : Shutdownable {
     fun getBlockSignature(blockRID: ByteArray): CompletionStage<Signature>
-    fun getBestHeight(): CompletionStage<Long>
+    fun getLastBlockHeight(): CompletionStage<Long>
     fun getLastBlockTimestamp(): CompletionStage<Long>
     fun getBlockRid(height: Long): CompletionStage<ByteArray?>
     fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): CompletionStage<BlockDataWithWitness?>

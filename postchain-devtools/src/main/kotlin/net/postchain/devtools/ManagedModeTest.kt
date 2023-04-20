@@ -126,7 +126,7 @@ open class ManagedModeTest : AbstractSyncTest() {
         buildBlockNoWait(chainNodes, chainId, height)
         sleep(1000)
         chainNodes.forEach {
-            if (it.blockQueries(chainId).getBestHeight().get() >= height) throw RuntimeException("assertCantBuildBlock: Can build block")
+            if (it.blockQueries(chainId).getLastBlockHeight().get() >= height) throw RuntimeException("assertCantBuildBlock: Can build block")
         }
     }
 

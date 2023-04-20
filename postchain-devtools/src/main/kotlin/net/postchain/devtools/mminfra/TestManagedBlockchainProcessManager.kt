@@ -86,7 +86,7 @@ open class TestManagedBlockchainProcessManager(
     override fun afterStartBlockchain(chainId: Long) {
         val process = blockchainProcesses[chainId]!!
         val queries = process.blockchainEngine.getBlockQueries()
-        val height = queries.getBestHeight().get()
+        val height = queries.getLastBlockHeight().get()
         lastHeightStarted[chainId] = height
     }
 

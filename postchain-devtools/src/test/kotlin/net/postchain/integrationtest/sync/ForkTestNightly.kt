@@ -77,7 +77,7 @@ class ForkTestNightly : ManagedModeTest() {
         val c2 = startNewBlockchain(setOf(1), setOf(0), c1)
         sleep(1000)
         getChainNodes(c2).forEach {
-            assertEquals(-1, it.blockQueries(c2).getBestHeight().get())
+            assertEquals(-1, it.blockQueries(c2).getLastBlockHeight().get())
         }
     }
 
@@ -386,7 +386,7 @@ class ForkTestNightly : ManagedModeTest() {
         val c2 = startNewBlockchain(setOf(1), setOf(2), c1)
         sleep(1000)
         getChainNodes(c2).forEach {
-            assertEquals(-1, it.blockQueries(c2).getBestHeight().get())
+            assertEquals(-1, it.blockQueries(c2).getLastBlockHeight().get())
         }
     }
 

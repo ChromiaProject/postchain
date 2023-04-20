@@ -38,13 +38,12 @@ class ValidatorBlockchainProcess(
     val statusManager: StatusManager
 
     init {
-        val bestHeight = blockchainEngine.getBlockQueries().getBestHeight().get()
         val blockchainConfiguration = workerContext.blockchainConfiguration
         statusManager = BaseStatusManager(
                 blockchainConfiguration.signers.size,
                 blockchainConfiguration.blockchainContext.nodeID,
                 blockchainConfiguration.configHash,
-                bestHeight + 1
+                blockchainEngine.getBlockQueries().getLastBlockHeight().get() + 1
         )
 
         blockDatabase = BaseBlockDatabase(

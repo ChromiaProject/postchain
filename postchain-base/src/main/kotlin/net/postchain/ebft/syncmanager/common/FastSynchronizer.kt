@@ -81,7 +81,7 @@ class FastSynchronizer(
 
     fun syncUntil(exitCondition: () -> Boolean) {
         try {
-            blockHeight = blockQueries.getBestHeight().get()
+            blockHeight = blockQueries.getLastBlockHeight().get()
             syncDebug("Start", blockHeight)
             while (isProcessRunning() && !exitCondition()) {
                 refillJobs()
@@ -235,10 +235,10 @@ class FastSynchronizer(
             // If the job failed because the block is already in the database
             // then it means that fastsync started before all addBlock jobs
             // from normal sync were done. If this has happened, we
-            // will increase the blockheight and consider this job done (but
+            // will increase the blockHeight and consider this job done (but
             // not by us).
-            val bestHeight = blockQueries.getBestHeight().get()
-            if (bestHeight >= j.height) {
+            val lastHeight = blockQueries.getLastBlockHeight().get()
+            if (lastHeight >= j.height) {
                 doneTrace("Add block failed for job $j because block already in db.")
                 blockHeight++ // as if this block was successful.
                 removeJob(j)
@@ -436,14 +436,14 @@ class FastSynchronizer(
         }
 
         val h = blockchainConfiguration.decodeBlockHeader(header)
-        val peerBestHeight = getHeight(h)
+        val peerLastHeight = getHeight(h)
 
-        if (peerBestHeight != j.height) {
-            headerDebug("Header height=$peerBestHeight, we asked for ${j.height}. Peer for $j must be drained")
+        if (peerLastHeight != j.height) {
+            headerDebug("Header height=$peerLastHeight, we asked for ${j.height}. Peer for $j must be drained")
             // The peer didn't have the block we wanted
             // Remember its height and try another peer
             val now = System.currentTimeMillis()
-            peerStatuses.drained(peerId, peerBestHeight, now)
+            peerStatuses.drained(peerId, peerLastHeight, now)
             restartJob(j)
             return false
         }
@@ -467,7 +467,7 @@ class FastSynchronizer(
         j.header = h
         j.witness = w
         logger.trace { "handleBlockHeader() -- ${"Header for $j received"}" }
-        peerStatuses.headerReceived(peerId, peerBestHeight)
+        peerStatuses.headerReceived(peerId, peerLastHeight)
         return true
     }
 

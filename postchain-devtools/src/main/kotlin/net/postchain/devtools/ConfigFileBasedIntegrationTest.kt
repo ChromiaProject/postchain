@@ -103,9 +103,9 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
 
     protected fun verifyBlockchainTransactions(node: PostchainTestNode) {
         val expectAtLeastHeight = expectedSuccessRids.keys.reduce { acc, l -> maxOf(l, acc) }
-        val bestHeight = getBestHeight(node)
-        assertTrue(bestHeight >= expectAtLeastHeight)
-        for (height in 0..bestHeight) {
+        val lastHeight = getLastHeight(node)
+        assertTrue(lastHeight >= expectAtLeastHeight)
+        for (height in 0..lastHeight) {
             val txRidsAtHeight = getTxRidsAtHeight(node, height)
 
             val expectedRidsAtHeight = expectedSuccessRids[height]

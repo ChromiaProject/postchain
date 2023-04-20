@@ -79,7 +79,7 @@ class GTXIntegrationTest : IntegrationTestSetup() {
         fun makeSureBlockIsBuiltCorrectly() {
             currentBlockHeight += 1
             buildBlockAndCommit(node.getBlockchainInstance().blockchainEngine)
-            assertEquals(currentBlockHeight, getBestHeight(node))
+            assertEquals(currentBlockHeight, getLastHeight(node))
             val ridsAtHeight = getTxRidsAtHeight(node, currentBlockHeight)
             for (vtx in validTxs) {
                 val vtxRID = vtx.getRID()

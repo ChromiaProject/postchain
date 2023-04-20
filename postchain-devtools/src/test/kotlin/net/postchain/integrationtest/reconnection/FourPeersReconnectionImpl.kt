@@ -19,10 +19,10 @@ open class FourPeersReconnectionImpl : ReconnectionTest() {
     fun assertHeightForAllNodes(height: Long) {
         Awaitility.await().atMost(Duration.TEN_SECONDS.multiply(3))
                 .untilAsserted {
-                   assertEquals(height, queries(nodes[0]) { it.getBestHeight() })
-                   assertEquals(height, queries(nodes[1]) { it.getBestHeight() })
-                   assertEquals(height, queries(nodes[2]) { it.getBestHeight() })
-                   assertEquals(height, queries(nodes[3]) { it.getBestHeight() })
+                   assertEquals(height, queries(nodes[0]) { it.getLastBlockHeight() })
+                   assertEquals(height, queries(nodes[1]) { it.getLastBlockHeight() })
+                   assertEquals(height, queries(nodes[2]) { it.getLastBlockHeight() })
+                   assertEquals(height, queries(nodes[3]) { it.getLastBlockHeight() })
                 }
     }
 

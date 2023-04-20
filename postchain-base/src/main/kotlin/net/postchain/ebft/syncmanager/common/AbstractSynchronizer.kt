@@ -32,7 +32,7 @@ abstract class AbstractSynchronizer(
     // this is used to track pending asynchronous BlockDatabase.addBlock tasks to make sure failure to commit propagates properly
     protected var addBlockCompletionFuture: CompletableFuture<Unit>? = null
 
-    var blockHeight: Long = blockQueries.getBestHeight().get()
+    var blockHeight: Long = blockQueries.getLastBlockHeight().get()
 
     private var pendingConfigPromotingUsAsSigner: ByteArray? = null
     private val relevantSignersThatHaveAppliedConfig = mutableSetOf<PubKey>()
@@ -74,10 +74,10 @@ abstract class AbstractSynchronizer(
 
         // TODO: [pcu]: Remove some redundant logging when PCU is done
         withLoggingContext(CHAIN_IID_TAG to blockchainConfiguration.chainID.toString()) {
-            if (blockQueries.getBestHeight().get() + 1 != incomingHeight) return false
+            if (blockQueries.getLastBlockHeight().get() + 1 != incomingHeight) return false
             val currentConfigHash = blockchainConfiguration.configHash
 
-            logger.debug { "blockHeight = $blockHeight, blockQueries.getBestHeight() = ${blockQueries.getBestHeight().get()}, currentConfigHash = ${currentConfigHash.wrap()}" }
+            logger.debug { "blockHeight = $blockHeight, blockQueries.getLastBlockHeight() = ${blockQueries.getLastBlockHeight().get()}, currentConfigHash = ${currentConfigHash.wrap()}" }
             logger.debug { "incomingHeight = $incomingHeight, incomingConfigHash = ${incomingConfigHash.wrap()}" }
 
             if (!currentConfigHash.contentEquals(incomingConfigHash)) {

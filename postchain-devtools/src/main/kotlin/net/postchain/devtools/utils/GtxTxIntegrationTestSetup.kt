@@ -209,9 +209,8 @@ open class GtxTxIntegrationTestSetup : IntegrationTestSetup() {
 
         val queries = node.blockQueries(chain)
 
-        // Asserting best height equals to expected
-        val best = queries.getBestHeight().get()
-        assertEquals(expectedHeight, best)
+        // Asserting last height equals to expected
+        assertEquals(expectedHeight, queries.getLastBlockHeight().get())
 
         for (height in 0..expectedHeight) {
             logger.info { "Verifying height $height" }

@@ -278,7 +278,7 @@ open class BaseBlockchainProcessManager(
         blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, messageProcessingLatch, blockchainConfigProvider, restartNotifier)
                 .also {
                     val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainConfig.blockchainRid).also { data ->
-                        data[DiagnosticProperty.BLOCKCHAIN_CURRENT_HEIGHT] = LazyDiagnosticValue { engine.getBlockQueries().getBestHeight().get() }
+                        data[DiagnosticProperty.BLOCKCHAIN_LAST_HEIGHT] = LazyDiagnosticValue { engine.getBlockQueries().getLastBlockHeight().get() }
                         data[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS] = LazyDiagnosticValue { connectionManager.getNodesTopology(chainId) }
                     }
                     it.registerDiagnosticData(diagnosticData)
