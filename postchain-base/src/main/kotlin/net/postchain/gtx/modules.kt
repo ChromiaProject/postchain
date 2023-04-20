@@ -34,6 +34,10 @@ interface PostchainContextAware {
     fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext)
 }
 
+interface OperationWrapper {
+    fun getWrappingOperations(): Set<String>
+}
+
 interface GTXModuleFactory {
     fun makeModule(config: Gtv, blockchainRID: BlockchainRid): GTXModule
 }
@@ -81,6 +85,7 @@ abstract class SimpleGTXModule<ConfT>(
 
 class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean) : GTXModule, PostchainContextAware {
 
+    lateinit var wrappingOpMap: Map<String, GTXModule>
     lateinit var opmap: Map<String, GTXModule>
     lateinit var qmap: Map<String, GTXModule>
     lateinit var ops: Set<String>
@@ -100,7 +105,15 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
     override fun getSpecialTxExtensions() = _specialTxExtensions
 
     override fun makeTransactor(opData: ExtOpData): Transactor {
-        if (opData.opName in opmap) {
+        if (opData.opName in ops) {
+            return (wrappingOpMap[opData.opName] ?: opmap[opData.opName])!!.makeTransactor(opData)
+        } else {
+            throw UserMistake("Unknown operation: ${opData.opName}")
+        }
+    }
+
+    fun makeNonWrappingTransactor(opData: ExtOpData): Transactor {
+        if (opData.opName in ops) {
             return opmap[opData.opName]!!.makeTransactor(opData)
         } else {
             throw UserMistake("Unknown operation: ${opData.opName}")
@@ -128,13 +141,19 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
             logger.debug("Initialize DB for module: $module") // TODO: Should probably write the module name here
             module.initializeDB(ctx)
         }
+        val _wrappingOpMap = mutableMapOf<String, GTXModule>()
         val _opmap = mutableMapOf<String, GTXModule>()
         val _qmap = mutableMapOf<String, GTXModule>()
         val _stxs = mutableListOf<GTXSpecialTxExtension>()
         for (m in modules) {
             for (op in m.getOperations()) {
-                if (!allowOverrides && op in _opmap) throw UserMistake("Duplicated operation")
-                _opmap[op] = m
+                if (m is OperationWrapper && op in m.getWrappingOperations()) {
+                    if (!allowOverrides && op in _wrappingOpMap) throw UserMistake("Duplicated wrapping operation")
+                    _wrappingOpMap[op] = m
+                } else {
+                    if (!allowOverrides && op in _opmap) throw UserMistake("Duplicated operation")
+                    _opmap[op] = m
+                }
             }
             for (q in m.getQueries()) {
                 if (!allowOverrides && q in _qmap) throw UserMistake("Duplicated query")
@@ -142,9 +161,10 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
             }
             _stxs.addAll(m.getSpecialTxExtensions())
         }
+        wrappingOpMap = _wrappingOpMap.toMap()
         opmap = _opmap.toMap()
         qmap = _qmap.toMap()
-        ops = opmap.keys
+        ops = wrappingOpMap.keys + opmap.keys
         _queries = qmap.keys
         _specialTxExtensions = _stxs.toList()
     }
