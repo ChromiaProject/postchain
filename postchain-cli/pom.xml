@@ -99,7 +99,7 @@
                 <configuration>
                     <allowInsecureRegistries>false</allowInsecureRegistries>
                     <from>
-                        <image>gcr.io/distroless/java17-debian11:latest@sha256:9370a7ed01d00d58f38d51e4b89edce480bfbd7a759d78363036bf406e7239d8</image>
+                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17:1.0.0</image> <!--No hash here until https://github.com/GoogleContainerTools/jib/pull/3974 -->
                     </from>
                     <container>
                         <appRoot>/opt/chromaway/postchain</appRoot>
