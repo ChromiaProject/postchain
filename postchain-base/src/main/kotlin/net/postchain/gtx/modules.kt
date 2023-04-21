@@ -34,9 +34,13 @@ interface PostchainContextAware {
     fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext)
 }
 
+fun interface TransactorMaker {
+    fun makeTransactor(opData: ExtOpData): Transactor
+}
+
 interface OperationWrapper {
     fun getWrappingOperations(): Set<String>
-    fun injectTransactorLookup(transactorLookup: TransactorLookup)
+    fun injectDelegateTransactorMaker(transactorMaker: TransactorMaker)
 }
 
 interface GTXModuleFactory {
@@ -45,12 +49,12 @@ interface GTXModuleFactory {
 
 /**
  * This template/dummy class provides simple implementations for everything except "initializeDB()"
- * (It's up to sub-classes to override whatever they need)
+ * (It's up to subclasses to override whatever they need)
  */
 abstract class SimpleGTXModule<ConfT>(
-    val conf: ConfT,
-    val opmap: Map<String, (ConfT, ExtOpData) -> Transactor>,
-    val querymap: Map<String, (ConfT, EContext, Gtv) -> Gtv>
+        val conf: ConfT,
+        val opmap: Map<String, (ConfT, ExtOpData) -> Transactor>,
+        val querymap: Map<String, (ConfT, EContext, Gtv) -> Gtv>
 ) : GTXModule {
 
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {
@@ -84,11 +88,7 @@ abstract class SimpleGTXModule<ConfT>(
     }
 }
 
-fun interface TransactorLookup {
-    fun lookupTransactor(opData: ExtOpData): Transactor
-}
-
-class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean) : GTXModule, PostchainContextAware, TransactorLookup {
+class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean) : GTXModule, PostchainContextAware {
 
     lateinit var wrappingOpMap: Map<String, GTXModule>
     lateinit var opmap: Map<String, GTXModule>
@@ -117,14 +117,6 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         }
     }
 
-    override fun lookupTransactor(opData: ExtOpData): Transactor {
-        if (opData.opName in ops) {
-            return opmap[opData.opName]!!.makeTransactor(opData)
-        } else {
-            throw UserMistake("Unknown operation: ${opData.opName}")
-        }
-    }
-
     override fun getOperations(): Set<String> {
         return ops
     }
@@ -143,7 +135,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
 
     override fun initializeDB(ctx: EContext) {
         for (module in modules) {
-            logger.debug("Initialize DB for module: $module") // TODO: Should probably write the module name here
+            logger.debug { "Initialize DB for module: $module" } // TODO: Should probably write the module name here
             module.initializeDB(ctx)
         }
         val _wrappingOpMap = mutableMapOf<String, GTXModule>()
@@ -165,7 +157,13 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
                 _qmap[q] = m
             }
             _stxs.addAll(m.getSpecialTxExtensions())
-            if (m is OperationWrapper) m.injectTransactorLookup(this)
+            if (m is OperationWrapper) m.injectDelegateTransactorMaker(TransactorMaker { opData ->
+                if (opData.opName in ops) {
+                    opmap[opData.opName]!!.makeTransactor(opData)
+                } else {
+                    throw UserMistake("Unknown operation: ${opData.opName}")
+                }
+            })
         }
         wrappingOpMap = _wrappingOpMap.toMap()
         opmap = _opmap.toMap()
