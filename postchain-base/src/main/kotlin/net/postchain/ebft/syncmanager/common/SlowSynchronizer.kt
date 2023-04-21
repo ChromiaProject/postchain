@@ -37,13 +37,13 @@ import net.postchain.ebft.worker.WorkerContext
  * The replica shouldn't be more than a second behind the cluster, so the "nap" should be less than a second.
  */
 class SlowSynchronizer(
-        wrkrCntxt: WorkerContext,
+        workerContext: WorkerContext,
         val blockDatabase: BlockDatabase,
         params: SyncParameters,
         val isProcessRunning: () -> Boolean
-) : AbstractSynchronizer(wrkrCntxt) {
+) : AbstractSynchronizer(workerContext) {
 
-    private val stateMachine = SlowSyncStateMachine.buildWithChain(blockchainConfiguration.chainID.toInt())
+    private val stateMachine = SlowSyncStateMachine.buildWithChain(blockchainConfiguration.chainID.toInt(), params)
 
     val peerStatuses = SlowSyncPeerStatuses(params) // Don't want to put this in [AbstractSynchronizer] b/c too much generics.
 
@@ -59,8 +59,8 @@ class SlowSynchronizer(
             blockHeight = blockQueries.getLastBlockHeight().get()
             syncDebug("Start", blockHeight)
             stateMachine.lastCommittedBlockHeight = blockHeight
-
-            val sleepData = SlowSyncSleepData()
+            val params = SyncParameters.fromAppConfig(workerContext.appConfig)
+            val sleepData = SlowSyncSleepData(params)
             while (isProcessRunning()) {
                 synchronized(stateMachine) {
                     if (stateMachine.state == SlowSyncStates.WAIT_FOR_COMMIT) {
