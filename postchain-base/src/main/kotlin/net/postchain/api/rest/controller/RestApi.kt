@@ -29,7 +29,6 @@ import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
-import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -40,6 +39,7 @@ import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtx.GtxQuery
+import spark.QueryParamsMap
 import spark.Request
 import spark.Response
 import spark.Service
@@ -471,32 +471,15 @@ class RestApi(
 
     private fun handleGetQuery(request: Request): String {
         val model = model(request)
-        val queryMap = request.queryMap()
-        val type = queryMap.value("type") ?: throw UserMistake("Missing query type")
-        val args = mutableMapOf<String, Gtv>()
-        args[NON_STRICT_QUERY_ARGUMENT] = gtv(true)
-        queryMap.toMap().filterKeys { it != "type" }.forEach {
-            val paramValue = queryMap.value(it.key)
-            if (paramValue == "true" || paramValue == "false") {
-                args[it.key] = gtv(paramValue.toBoolean())
-            } else if (paramValue.toLongOrNull() != null) {
-                args[it.key] = gtv(paramValue.toLong())
-            } else {
-                args[it.key] = gtv(paramValue)
-            }
-        }
-
-        val queryResult = model.query(GtxQuery(type, gtv(args)))
+        val query = extractGetQuery(request.queryMap())
+        val queryResult = model.query(query)
         return gtvToJSON(queryResult, gtvGson)
     }
 
     private fun handleDirectQuery(request: Request, response: Response): Any {
-        val queryMap = request.queryMap()
-        val args = GtvDictionary.build(queryMap.toMap().mapValues {
-            gtv(queryMap.value(it.key))
-        }.filterKeys { key -> key != "type" } + (NON_STRICT_QUERY_ARGUMENT to gtv(true)))
-        val array = model(request).query(GtxQuery(queryMap.value("type"), args)).asArray()
-
+        val model = model(request)
+        val query = extractGetQuery(request.queryMap())
+        val array = model.query(query).asArray()
         if (array.size < 2) {
             throw UserMistake("Response should have two parts: content-type and content")
         }
@@ -508,6 +491,21 @@ class RestApi(
             GtvType.BYTEARRAY -> content.asByteArray()
             else -> throw UserMistake("Unexpected content")
         }
+    }
+
+    private fun extractGetQuery(queryMap: QueryParamsMap): GtxQuery {
+        val type = queryMap.value("type") ?: throw UserMistake("Missing query type")
+        val args = queryMap.toMap().filterKeys { it != "type" }.mapValues {
+            val paramValue = queryMap.value(it.key)
+            if (paramValue == "true" || paramValue == "false") {
+                gtv(paramValue.toBoolean())
+            } else if (paramValue.toLongOrNull() != null) {
+                gtv(paramValue.toLong())
+            } else {
+                gtv(paramValue)
+            }
+        } + (NON_STRICT_QUERY_ARGUMENT to gtv(true))
+        return GtxQuery(type, gtv(args))
     }
 
     private fun handleQueries(request: Request): String {
