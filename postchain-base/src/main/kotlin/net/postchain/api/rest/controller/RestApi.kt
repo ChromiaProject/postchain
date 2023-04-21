@@ -64,6 +64,8 @@ class RestApi(
         const val JSON_CONTENT_TYPE = "application/json"
         const val OCTET_CONTENT_TYPE = "application/octet-stream"
         const val XML_CONTENT_TYPE = "text/xml"
+
+        const val NON_STRICT_QUERY_ARGUMENT = "~non-strict"
     }
 
     private val http = Service.ignite()!!
@@ -193,7 +195,8 @@ class RestApi(
             if (!req.contentType().isNullOrBlank() && !req.contentType().contains(OCTET_CONTENT_TYPE) && !req.body().isNullOrBlank()) {
                 logger.debug { "[${req.ip()}] ${req.requestMethod()} ${req.pathInfo()} with body: ${req.body()}" }
             } else {
-                logger.debug { "[${req.ip()}] ${req.requestMethod()} ${req.pathInfo()}" }
+                val queryString = req.queryString()
+                logger.debug { "[${req.ip()}] ${req.requestMethod()} ${req.pathInfo()}${if (queryString.isNullOrBlank()) "" else "?$queryString"}" }
             }
 
             res.header(ACCESS_CONTROL_ALLOW_ORIGIN, "*")
@@ -461,7 +464,7 @@ class RestApi(
         val gtxQuery = gtvGson.fromJson(request.body(), Gtv::class.java)
         val queryDict = gtxQuery.asDict()
         val type = queryDict["type"] ?: throw UserMistake("Missing query type")
-        val args = gtv(queryDict.filterKeys { key -> key != "type" })
+        val args = gtv(queryDict.filterKeys { key -> key != "type" } + (NON_STRICT_QUERY_ARGUMENT to gtv(true)))
         val queryResult = model.query(GtxQuery(type.asString(), args))
         return gtvToJSON(queryResult, gtvGson)
     }
@@ -471,7 +474,7 @@ class RestApi(
         val queryMap = request.queryMap()
         val type = queryMap.value("type") ?: throw UserMistake("Missing query type")
         val args = mutableMapOf<String, Gtv>()
-
+        args[NON_STRICT_QUERY_ARGUMENT] = gtv(true)
         queryMap.toMap().filterKeys { it != "type" }.forEach {
             val paramValue = queryMap.value(it.key)
             if (paramValue == "true" || paramValue == "false") {
@@ -491,7 +494,7 @@ class RestApi(
         val queryMap = request.queryMap()
         val args = GtvDictionary.build(queryMap.toMap().mapValues {
             gtv(queryMap.value(it.key))
-        })
+        }.filterKeys { key -> key != "type" } + (NON_STRICT_QUERY_ARGUMENT to gtv(true)))
         val array = model(request).query(GtxQuery(queryMap.value("type"), args)).asArray()
 
         if (array.size < 2) {
@@ -516,7 +519,7 @@ class RestApi(
             val gtxQuery = gtvGson.fromJson(it, Gtv::class.java)
             val queryDict = gtxQuery.asDict()
             val type = queryDict["type"] ?: throw UserMistake("Missing query type")
-            val args = gtv(queryDict.filterKeys { key -> key != "type" })
+            val args = gtv(queryDict.filterKeys { key -> key != "type" } + (NON_STRICT_QUERY_ARGUMENT to gtv(true)))
             val queryResult = model.query(GtxQuery(type.asString(), args))
             response.add(gtvToJSON(queryResult, gtvGson))
         }
