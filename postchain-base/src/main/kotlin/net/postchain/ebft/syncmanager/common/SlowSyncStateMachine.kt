@@ -20,19 +20,19 @@ import net.postchain.devtools.NameHelper
  * WAIT_FOR_COMMIT -> WAIT_FOR_ACTION
  */
 class SlowSyncStateMachine(
-    val chainIid: Int,
-    var state: SlowSyncStates = SlowSyncStates.WAIT_FOR_ACTION,
-    var waitForNodeId: NodeRid? = null, // The node we expect to send us an answer
-    var waitForHeight: Long? = null, // The height we are waiting for
-    var waitTime: Long? = null, // When did we last ask for a BlockRange
-    var lastUncommittedBlockHeight: Long = -1L, // Remember: before we have any block the height is -1.
-    var lastCommittedBlockHeight: Long = -1L // Only update this after the actual commit
+        val chainIid: Int,
+        val params: SyncParameters,
+        var state: SlowSyncStates = SlowSyncStates.WAIT_FOR_ACTION,
+        var waitForNodeId: NodeRid? = null, // The node we expect to send us an answer
+        var waitForHeight: Long? = null, // The height we are waiting for
+        var waitTime: Long? = null, // When did we last ask for a BlockRange
+        var lastUncommittedBlockHeight: Long = -1L, // Remember: before we have any block the height is -1.
+        var lastCommittedBlockHeight: Long = -1L // Only update this after the actual commit
 ) {
 
-    companion object: KLogging() {
-
-        fun buildWithChain(chainIid: Int): SlowSyncStateMachine {
-            val slowSyncStateMachine = SlowSyncStateMachine(chainIid)
+    companion object : KLogging() {
+        fun buildWithChain(chainIid: Int, params: SyncParameters): SlowSyncStateMachine {
+            val slowSyncStateMachine = SlowSyncStateMachine(chainIid, params)
             return slowSyncStateMachine
         }
     }
@@ -65,8 +65,9 @@ class SlowSyncStateMachine(
                 logger.debug { "maybeGetBlockRange() - ChainIid: $chainIid, not waiting for anything, so get height $startingAtHeight and above." }
                 sendRequest(nowMs, this, null) // We don't mind asking the old peer
             }
+
             SlowSyncStates.WAIT_FOR_REPLY -> {
-                if (nowMs > (waitTime!! + SlowSyncSleepConst.MAX_PEER_WAIT_TIME_MS)) {
+                if (nowMs > (waitTime!! + params.slowSyncMaxPeerWaitTime)) {
                     // We waited too long, let's ask someone else
                     logger.debug {
                         "maybeGetBlockRange() - ChainIid: $chainIid waited too long, for anything, try again with height: $waitForHeight " +
@@ -79,6 +80,7 @@ class SlowSyncStateMachine(
                     // Still waiting for last request, go back to sleep
                 }
             }
+
             SlowSyncStates.WAIT_FOR_COMMIT -> {
                 logger.debug { "maybeGetBlockRange() - ChainIid: $chainIid do nothing, waiting for height: $lastUncommittedBlockHeight to commit." }
             }
@@ -151,9 +153,7 @@ class SlowSyncStateMachine(
         state = SlowSyncStates.WAIT_FOR_ACTION
         lastUncommittedBlockHeight = lastCommittedBlockHeight
     }
-
 }
-
 
 enum class SlowSyncStates {
     WAIT_FOR_ACTION,

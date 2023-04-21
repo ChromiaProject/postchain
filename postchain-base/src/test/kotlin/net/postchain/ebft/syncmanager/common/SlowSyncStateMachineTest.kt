@@ -19,8 +19,7 @@ class SlowSyncStateMachineTest {
 
     @Test
     fun happy() {
-
-        val sssm = SlowSyncStateMachine(1)
+        val sssm = SlowSyncStateMachine(1, SyncParameters())
         assertEquals(SlowSyncStates.WAIT_FOR_ACTION, sssm.state)
         assertEquals(-1L, sssm.lastCommittedBlockHeight)
 
@@ -57,8 +56,7 @@ class SlowSyncStateMachineTest {
 
     @Test
     fun failing_commit() {
-
-        val sssm = SlowSyncStateMachine(1)
+        val sssm = SlowSyncStateMachine(1, SyncParameters())
         assertEquals(SlowSyncStates.WAIT_FOR_ACTION, sssm.state)
         assertEquals(-1L, sssm.lastCommittedBlockHeight)
 
