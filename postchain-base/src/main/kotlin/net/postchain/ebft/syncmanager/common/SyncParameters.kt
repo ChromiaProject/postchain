@@ -50,7 +50,6 @@ data class SyncParameters(
          * Tests with multiple nodes: 1000
          */
         var exitDelay: Long = 60000,
-        var pollPeersInterval: Long = 10000,
         var jobTimeout: Long = 10000,
         var loopInterval: Long = 100,
         var mustSyncUntilHeight: Long = -1,
@@ -77,7 +76,6 @@ data class SyncParameters(
                     resurrectUnresponsiveTime = config.getEnvOrLong("POSTCHAIN_FASTSYNC_RESURRECT_UNRESPONSIVE_TIME", "fastsync.resurrect_unresponsive_time", 20000),
                     parallelism = config.getEnvOrInt("POSTCHAIN_FASTSYNC_PARALLELISM", "fastsync.parallelism", 10),
                     exitDelay = config.getEnvOrLong("POSTCHAIN_FASTSYNC_EXIT_DELAY", "fastsync.exit_delay", 60000),
-                    pollPeersInterval = config.getEnvOrLong("POSTCHAIN_FASTSYNC_POLLPEERSINTERVAL", "fastsync.poll_peers_interval", 10000),
                     jobTimeout = config.getEnvOrLong("POSTCHAIN_FASTSYNC_JOB_TIMEOUT", "fastsync.job_timeout", 10000),
                     loopInterval = config.getEnvOrLong("POSTCHAIN_FASTSYNC_LOOP_INTERVAL", "fastsync.loop_interval", 100),
                     mustSyncUntilHeight = config.getEnvOrLong("POSTCHAIN_FASTSYNC_MUST_SYNC_UNTIL_HEIGHT", "fastsync.must_sync_until_height", -1),
