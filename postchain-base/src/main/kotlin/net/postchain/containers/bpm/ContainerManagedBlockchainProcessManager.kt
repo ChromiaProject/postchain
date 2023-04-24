@@ -171,7 +171,7 @@ open class ContainerManagedBlockchainProcessManager(
                 res
             } catch (e: Exception) {
                 logger.error(e) { "Exception in RestartHandler: $e" }
-                startBlockchainAsync(chainId, blockTrace, null)
+                startBlockchainAsync(chainId, blockTrace)
                 true // let's hope restarting a blockchain fixes the problem
             } finally {
                 releaseChainLock(chainId)
@@ -194,7 +194,7 @@ open class ContainerManagedBlockchainProcessManager(
         // Chain0
         if (reloadChain0) {
             logger.debug("[${nodeName()}]: ContainerJob -- Restart chain0")
-            startBlockchainAsync(CHAIN0, null, null)
+            startBlockchainAsync(CHAIN0, null)
         }
 
         // Stopping launched blockchains
@@ -211,7 +211,7 @@ open class ContainerManagedBlockchainProcessManager(
         toLaunch.filter { it.chainId != CHAIN0 && it.chainId !in masterLaunched && it.chainId !in subnodeLaunched }.forEach {
             if (it.system) {
                 logger.debug { "[${nodeName()}]: ContainerJob -- Start system chain: ${it.chainId}" }
-                startBlockchainAsync(it.chainId, null, null)
+                startBlockchainAsync(it.chainId, null)
             } else {
                 logger.debug { "[${nodeName()}]: ContainerJob -- Start subnode chain: ${getChain(it.chainId)}" }
                 containerJobManager.startChain(getChain(it.chainId))

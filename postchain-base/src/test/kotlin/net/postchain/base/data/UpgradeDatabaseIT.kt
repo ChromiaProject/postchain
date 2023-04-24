@@ -2,6 +2,7 @@ package net.postchain.base.data
 
 import net.postchain.StorageBuilder
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
@@ -246,6 +247,33 @@ class UpgradeDatabaseIT {
 
                         verifyBlockchainReplicasInVersion5(db, ctx, replicaBrid, PubKey(peer.pubKey))
                         verifyPeerInfoInVersion5(db, ctx, peer)
+                    }
+                }
+    }
+
+    @Test
+    fun testUpgradeFromVersion5to6() {
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 5)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)",
+                                ctx.chainID, BlockchainRid.ZERO_RID.data)
+                        true
+                    }
+                }
+
+        val testConfig = FaultyConfiguration(BlockchainRid.ZERO_RID.wData, 0)
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 6)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.addFaultyConfiguration(ctx, testConfig)
+                        true
+                    }
+                    withReadConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        assertEquals(testConfig, db.getFaultyConfiguration(ctx))
                     }
                 }
     }

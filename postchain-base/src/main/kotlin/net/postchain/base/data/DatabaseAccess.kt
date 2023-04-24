@@ -3,6 +3,7 @@
 package net.postchain.base.data
 
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
@@ -108,6 +109,10 @@ interface DatabaseAccess {
 
     fun getConfigurationData(ctx: EContext, hash: ByteArray): ByteArray?
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
+
+    fun getFaultyConfiguration(ctx: EContext): FaultyConfiguration?
+    fun addFaultyConfiguration(ctx: EContext, faultyConfiguration: FaultyConfiguration)
+    fun updateFaultyConfigurationReportHeight(ctx: EContext, height: Long)
 
     // Event and State
     fun insertEvent(ctx: TxEContext, prefix: String, height: Long, position: Long, hash: Hash, data: ByteArray)

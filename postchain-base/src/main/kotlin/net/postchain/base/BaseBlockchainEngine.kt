@@ -6,13 +6,14 @@ import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Timer
 import mu.KLogging
 import mu.withLoggingContext
+import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.extension.FailedConfigurationHashBlockBuilderExtension
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
+import net.postchain.common.wrap
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
@@ -57,7 +58,6 @@ open class BaseBlockchainEngine(
         private val restartNotifier: BlockchainRestartNotifier,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
         private val afterCommitHandler: AfterCommitHandler,
-        private val failedConfigHash: ByteArray?,
         private val useParallelDecoding: Boolean = true,
 ) : BlockchainEngine {
 
@@ -113,11 +113,7 @@ open class BaseBlockchainEngine(
         }
         val savepoint = currentEContext.conn.setSavepoint("blockBuilder${System.nanoTime()}")
 
-        val extraExtensions = if (failedConfigHash != null && !hasBuiltFirstBlockAfterConfigUpdate)
-            listOf(FailedConfigurationHashBlockBuilderExtension(failedConfigHash))
-        else
-            listOf()
-        return BaseManagedBlockBuilder(currentEContext, savepoint, storage, blockchainConfiguration.makeBlockBuilder(currentEContext, extraExtensions), { },
+        return BaseManagedBlockBuilder(currentEContext, savepoint, storage, blockchainConfiguration.makeBlockBuilder(currentEContext), { },
                 {
                     afterLog("Begin", it.getBTrace())
                     val blockBuilder = it as AbstractBlockBuilder
@@ -318,10 +314,15 @@ open class BaseBlockchainEngine(
     private fun revertConfiguration(blockHeight: Long?, failedConfigHash: ByteArray) {
         logger.info("Reverting faulty configuration with hash ${failedConfigHash.toHex()} at height $blockHeight")
         currentEContext.conn.rollback() // rollback any DB updates the new and faulty configuration did
-        blockHeight?.let { DatabaseAccess.of(currentEContext).removeConfiguration(currentEContext, it) }
+        blockHeight?.let {
+            DatabaseAccess.of(currentEContext).apply {
+                addFaultyConfiguration(currentEContext, FaultyConfiguration(failedConfigHash.wrap(), blockHeight))
+                removeConfiguration(currentEContext, it)
+            }
+        }
         storage.closeWriteConnection(currentEContext, true)
 
-        restartNotifier.notifyRestart(failedConfigHash, false)
+        restartNotifier.notifyRestart(false)
         closed = true
     }
 

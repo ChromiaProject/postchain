@@ -574,15 +574,7 @@ class FastSynchronizer(
                 .addBlock(block, addBlockCompletionFuture, bTrace)
                 .whenCompleteUnwrapped { _: Any?, exception ->
                     if (exception != null) {
-                        if (exception is PmEngineIsAlreadyClosed || exception is BDBAbortException) {
-                            logger.warn { "Exception committing block $job: ${exception.message}" }
-                        } else if (exception is BadDataMistake && exception.type == BadDataType.WRONG_CONFIGURATION_USED) {
-                            if (!checkIfNewConfigurationCanBeLoaded(block)) {
-                                peerStatuses.maybeBlacklist(job.peerId, "Received a block with mismatching config but we could not apply any new config")
-                            }
-                        } else {
-                            logger.warn(exception) { "Exception committing block $job" }
-                        }
+                        handleAddBlockException(exception, block, bTrace, peerStatuses, job.peerId)
                         job.addBlockException = exception
                     }
                     finishedJobs.add(job)
