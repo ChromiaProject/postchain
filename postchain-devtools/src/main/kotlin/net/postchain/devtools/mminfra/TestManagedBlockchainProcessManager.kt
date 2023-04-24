@@ -75,6 +75,7 @@ open class TestManagedBlockchainProcessManager(
     // Marks the BC height directly after the last BC restart.
     // (The ACTUAL BC height will often proceed beyond this height, but we don't track that here)
     var lastHeightStarted = ConcurrentHashMap<Long, Long>()
+    var lastConfigStarted = ConcurrentHashMap<Long, ByteArray>()
 
     /**
      * Adding extra logic for measuring restarts.
@@ -88,6 +89,7 @@ open class TestManagedBlockchainProcessManager(
         val queries = process.blockchainEngine.getBlockQueries()
         val height = queries.getLastBlockHeight().get()
         lastHeightStarted[chainId] = height
+        lastConfigStarted[chainId] = process.blockchainEngine.getConfiguration().configHash
     }
 
     override fun buildMessageProcessingLatch(blockchainConfig: BlockchainConfiguration) = MessageProcessingLatch {
@@ -103,9 +105,10 @@ open class TestManagedBlockchainProcessManager(
      *           new BC configuration kicking in, because that's when the BC will be restarted.
      *           Example: if a new BC config starts at height 10, then we should put [atLeastHeight] to 9.
      */
-    fun awaitStarted(nodeIndex: Int, chainId: Long, atLeastHeight: Long) {
+    fun awaitStarted(nodeIndex: Int, chainId: Long, atLeastHeight: Long, expectedConfigHash: ByteArray? = null) {
         awaitDebug("++++++ AWAIT node idx: " + nodeIndex + ", chain: " + chainId + ", height: " + atLeastHeight)
-        while ((lastHeightStarted[chainId] ?: -2L) < atLeastHeight) {
+        while ((lastHeightStarted[chainId] ?: -2L) < atLeastHeight
+                || (expectedConfigHash != null && !expectedConfigHash.contentEquals(lastConfigStarted[chainId]))) {
             Thread.sleep(10)
         }
         awaitDebug("++++++ WAIT OVER! node idx: " + nodeIndex + ", chain: " + chainId + ", height: " + atLeastHeight)

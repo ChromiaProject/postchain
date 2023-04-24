@@ -14,7 +14,7 @@ import net.postchain.crypto.PubKey
 
 open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
 
-    protected lateinit var dataSource: ManagedNodeDataSource
+    lateinit var dataSource: ManagedNodeDataSource
 
     // Used to access Chain0 configs which are preloaded and validated in ManagedBlockchainProcessManager.preloadChain0Configuration().
     private val localProvider = ManualBlockchainConfigurationProvider()
@@ -95,7 +95,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
 
     // --------- Private --------
 
-    private fun checkNeedConfChangeViaDataSource(eContext: EContext, isSigner: Boolean): Boolean {
+    protected fun checkNeedConfChangeViaDataSource(eContext: EContext, isSigner: Boolean): Boolean {
         val dba = DatabaseAccess.of(eContext)
         val blockchainRid = getBlockchainRid(eContext, dba)
         val lastSavedBlockHeight = dba.getLastBlockHeight(eContext)
@@ -106,12 +106,17 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
             val appliedConfigFound = activeHeight == dataSource.findNextConfigurationHeight(blockchainRid.data, lastSavedBlockHeight)
             if (appliedConfigFound) {
                 true
-            } else {
-                val pendingConfigFound = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight).any {
+            } else if (isSigner) {
+                val failedConfigHash = dataSource.getFaultyBlockchainConfiguration(blockchainRid, activeHeight)?.wrap()
+                        ?: dba.getFaultyConfiguration(eContext)?.configHash
+                val pendingConfig = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight).find {
                     dba.getConfigurationData(eContext, it.configHash.data) == null
                 }
-                logger.debug { "$logPrefix: new pending configuration detected for activeHeight: $activeHeight - $pendingConfigFound, isSigner: $isSigner" }
-                if (isSigner) pendingConfigFound else false
+                (pendingConfig != null && pendingConfig.configHash != failedConfigHash).also {
+                    logger.debug { "$logPrefix: new pending configuration detected for activeHeight: $activeHeight - $it" }
+                }
+            } else {
+                false
             }
         } else {
             val nextConfigHeight = dataSource.findNextConfigurationHeight(blockchainRid.data, lastSavedBlockHeight)
@@ -166,7 +171,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
      * Note: Applied means that the config has been used to build at least one block. I.e. it's applied in the context of the blockchain rather than the node.
      * Next pending config is the earliest pending config that has not yet been applied.
      */
-    private fun getConfigurationFromDataSource(eContext: EContext, loadNextPendingConfig: Boolean): ByteArray? {
+    protected fun getConfigurationFromDataSource(eContext: EContext, loadNextPendingConfig: Boolean): ByteArray? {
         val dba = DatabaseAccess.of(eContext)
         val blockchainRid = getBlockchainRid(eContext, dba)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
@@ -217,7 +222,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         }
     }
 
-    private fun getBlockchainRid(eContext: EContext, dba: DatabaseAccess): BlockchainRid {
+    protected open fun getBlockchainRid(eContext: EContext, dba: DatabaseAccess): BlockchainRid {
         val blockchainRid = dba.getBlockchainRid(eContext)
         checkNotNull(blockchainRid) { "Unknown chainId: ${eContext.chainID}" }
         return blockchainRid

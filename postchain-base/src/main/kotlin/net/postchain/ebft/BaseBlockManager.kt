@@ -4,8 +4,11 @@ package net.postchain.ebft
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.extension.getConfigHash
+import net.postchain.base.extension.getFailedConfigHash
 import net.postchain.base.withReadConnection
+import net.postchain.base.withWriteConnection
 import net.postchain.common.toHex
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
@@ -122,9 +125,7 @@ class BaseBlockManager(
                             "at height $height: ${exception.message}"
                     if (exception is PmEngineIsAlreadyClosed) {
                         logger.debug(msg)
-                    } else if (exception is BadDataMistake && exception.type == BadDataType.WRONG_CONFIGURATION_USED) {
-                        logger.error { "Wrong config used. Chain will be restarted" }
-
+                    } else if (exception is BadDataMistake && exception.type == BadDataType.CONFIGURATION_MISMATCH) {
                         val bcConfigProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
                         if (bcConfigProvider != null && bcConfigProvider.isPcuEnabled()) {
                             val bcConfig = workerContext.blockchainConfiguration
@@ -139,14 +140,46 @@ class BaseBlockManager(
                                 val lastBlockConfigHash = blockDB.getBlockAtHeight(lastBlockHeight, false).get()
                                         ?.header?.getConfigHash()?.wrap()
 
-                                // early adopter
                                 if (isMyConfigPending && incomingBlockConfigHash == lastBlockConfigHash) {
-                                    workerContext.restartNotifier.notifyRestart(null, false)
+                                    // early adopter
+                                    logger.info("Wrong config used. Chain will be restarted")
+                                    workerContext.restartNotifier.notifyRestart(false)
+                                } else if (bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, true)) {
+                                    // late adopter
+                                    logger.info("Wrong config used. Chain will be restarted")
+                                    workerContext.restartNotifier.notifyRestart(true)
                                 }
+                            }
+                        }
+                    } else if (exception is BadDataMistake && exception.type == BadDataType.FAILED_CONFIGURATION_MISMATCH) {
+                        val bcConfigProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
+                        if (bcConfigProvider != null && bcConfigProvider.isPcuEnabled()) {
+                            val bcConfig = workerContext.blockchainConfiguration
+                            val incomingBlockFailedConfigHash = block.header.getFailedConfigHash()?.wrap()
+                            if (incomingBlockFailedConfigHash == null) {
+                                // We seem to be an early adopter of failed config, push reporting to the future
+                                withWriteConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+                                    DatabaseAccess.of(ctx).apply {
+                                        // Check if we can push failure reporting to next block
+                                        val storedFaultyConfig = getFaultyConfiguration(ctx)
+                                        if (storedFaultyConfig != null && storedFaultyConfig.reportAtHeight == height) {
+                                            logger.info("Push reporting of failing config to the next block")
+                                            updateFaultyConfigurationReportHeight(ctx, height + 1)
+                                        }
+                                    }
+                                    true
+                                }
+                            } else if (incomingBlockFailedConfigHash != bcConfig.configHash.wrap()) {
+                                withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+                                    val isIncomingFaultyConfigPending = bcConfigProvider.isConfigPending(
+                                            ctx, bcConfig.blockchainRid, statusManager.myStatus.height, bcConfig.configHash
+                                    )
 
-                                // late adopter
-                                if (bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, true)) {
-                                    workerContext.restartNotifier.notifyRestart(null, true)
+                                    if (isIncomingFaultyConfigPending) {
+                                        // Let's also attempt to load the potentially faulty pending config
+                                        logger.info("Try to load potentially failing pending config")
+                                        workerContext.restartNotifier.notifyRestart(true)
+                                    }
                                 }
                             }
                         }

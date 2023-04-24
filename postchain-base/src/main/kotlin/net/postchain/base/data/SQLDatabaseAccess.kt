@@ -3,6 +3,7 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
@@ -12,6 +13,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.common.wrap
 import net.postchain.core.AppContext
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
@@ -44,6 +46,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected fun tableMustSyncUntil(): String = "must_sync_until"
     internal fun tableConfigurations(ctx: EContext): String = tableName(ctx, "configurations")
     protected fun tableConfigurations(chainId: Long): String = tableName(chainId, "configurations")
+    protected fun tableFaultyConfiguration(chainId: Long): String = tableName(chainId, "sys.faulty_configuration")
+    private fun tableFaultyConfiguration(ctx: EContext): String = tableFaultyConfiguration(ctx.chainID)
     protected fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
     private fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
@@ -73,6 +77,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     protected abstract fun cmdUpdateTableConfigurationsV4First(chainId: Long): String
     protected abstract fun cmdUpdateTableConfigurationsV4Second(chainId: Long): String
+
+    protected abstract fun cmdCreateTableFaultyConfiguration(chainId: Long): String
 
     protected abstract fun cmdAddTableBlockchainReplicasPubKeyConstraint(): String
     protected abstract fun cmdAlterHexColumnToBytea(tableName: String, columnName: String): String
@@ -481,7 +487,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int) {
-        if (expectedDbVersion !in 1..5) {
+        if (expectedDbVersion !in 1..6) {
             throw UserMistake("Unsupported DB version $expectedDbVersion")
         }
 
@@ -519,6 +525,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 version5(connection)
             }
 
+            if (version < 6 && expectedDbVersion >= 6) {
+                logger.info("Upgrading to version 6")
+                version6(connection)
+            }
+
             if (expectedDbVersion > version) {
                 queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
                 logger.info("Database version has been updated to version: $expectedDbVersion")
@@ -551,6 +562,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
             if (expectedDbVersion >= 5) {
                 version5(connection)
+            }
+
+            if (expectedDbVersion >= 6) {
+                version6(connection)
             }
         }
     }
@@ -595,6 +610,12 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(connection, cmdAddTableBlockchainReplicasPubKeyConstraint())
     }
 
+    private fun version6(connection: Connection) {
+        queryRunner.query(connection, "SELECT chain_iid FROM ${tableBlockchains()}", mapListHandler)
+                .map { it["chain_iid"] as Long }
+                .forEach { chainId -> queryRunner.update(connection, cmdCreateTableFaultyConfiguration(chainId)) }
+    }
+
     protected fun calcConfigurationHash(configurationData: ByteArray) = GtvToBlockchainRidFactory.calculateBlockchainRid(
             GtvDecoder.decodeGtv(configurationData), ::sha256Digest).data
 
@@ -614,6 +635,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdCreateTableBlocks(ctx))
         queryRunner.update(ctx.conn, cmdCreateTableTransactions(ctx))
         queryRunner.update(ctx.conn, cmdCreateTableConfigurations(ctx))
+        queryRunner.update(ctx.conn, cmdCreateTableFaultyConfiguration(ctx.chainID))
 
         val txIndex = "CREATE INDEX IF NOT EXISTS ${tableName(ctx, "transactions_block_iid_idx")} " +
                 "ON ${tableTransactions(ctx)}(block_iid)"
@@ -944,6 +966,31 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return raw.associate {
             BlockchainRid(it["blockchain_rid"] as ByteArray) to it["chain_iid"] as Long
         }
+    }
+
+    override fun getFaultyConfiguration(ctx: EContext): FaultyConfiguration? {
+        val sql = "SELECT * FROM ${tableFaultyConfiguration(ctx)}"
+        val raw = queryRunner.query(ctx.conn, sql, MapListHandler())
+
+        return raw.firstOrNull()?.let {
+            FaultyConfiguration(
+                    (it["configuration_hash"] as ByteArray).wrap(),
+                    it["report_height"] as Long
+            )
+        }
+    }
+
+    override fun addFaultyConfiguration(ctx: EContext, faultyConfiguration: FaultyConfiguration) {
+        // First clear any previous faulty config reference
+        queryRunner.update(ctx.conn, "DELETE FROM ${tableFaultyConfiguration(ctx)}")
+
+        queryRunner.update(ctx.conn, "INSERT INTO ${tableFaultyConfiguration(ctx)} (configuration_hash, report_height) VALUES (?, ?)",
+                faultyConfiguration.configHash.data, faultyConfiguration.reportAtHeight
+        )
+    }
+
+    override fun updateFaultyConfigurationReportHeight(ctx: EContext, height: Long) {
+        queryRunner.update(ctx.conn, "UPDATE ${tableFaultyConfiguration(ctx)} SET report_height = ?", height)
     }
 
     fun tableExists(connection: Connection, tableName: String): Boolean {

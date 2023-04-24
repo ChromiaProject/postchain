@@ -59,7 +59,13 @@ open class ManagedModeTest : AbstractSyncTest() {
         return mockDataSources.filterKeys { nodeIdsInChain.contains(it) }
     }
 
-    fun addBlockchainConfiguration(chainId: Long, signerKeys: Map<Int, ByteArray>, historicChain: Long?, height: Long, overrides: Map<String, Gtv> = emptyMap()) {
+    fun markPendingConfigurationAsFaulty(chainId: Long, height: Long) {
+        mockDataSources.values.forEach {
+            it.markPendingConfigurationAsFaulty(chainId, height)
+        }
+    }
+
+    fun addBlockchainConfiguration(chainId: Long, signerKeys: Map<Int, ByteArray>, historicChain: Long?, height: Long, overrides: Map<String, Gtv> = emptyMap(), pending: Boolean = false) {
         val brid = ChainUtil.ridOf(chainId)
 
         val signerGtvs = signerKeys.values.map { GtvByteArray(it) }
@@ -94,7 +100,11 @@ open class ManagedModeTest : AbstractSyncTest() {
             val context = BaseBlockchainContext(chainId, brid, NODE_ID_AUTO, pubkey)
             val confData = data.getDict().toObject<BlockchainConfigurationData>()
             val bcConf = TestBlockchainConfiguration(confData, context, sigMaker, dataSource)
-            dataSource.addConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
+            if (pending) {
+                dataSource.addPendingConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
+            } else {
+                dataSource.addConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
+            }
         }
     }
 
@@ -106,9 +116,9 @@ open class ManagedModeTest : AbstractSyncTest() {
 
     protected open fun createManagedNodeDataSource() = MockManagedNodeDataSource()
 
-    protected open fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long) {
+    protected open fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long, expectedConfigHash: ByteArray? = null) {
         val pm = nodes[index].processManager as TestManagedBlockchainProcessManager
-        pm.awaitStarted(index, chainId, atLeastHeight)
+        pm.awaitStarted(index, chainId, atLeastHeight, expectedConfigHash)
     }
 
     fun restartNodeClean(index: Int, chainId: Long, atLeastHeight: Long) {
@@ -152,10 +162,10 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
 
-    protected open fun awaitChainRestarted(chainId: Long, atLeastHeight: Long) {
+    protected open fun awaitChainRestarted(chainId: Long, atLeastHeight: Long, expectedConfigHash: ByteArray? = null) {
         val nodeSetups = getChainNodeSetups(chainId)
         awaitLog("========= AWAIT ALL ${nodeSetups.size} NODES RESTART chain:  ${chainId}, at least height:  $atLeastHeight")
-        nodeSetups.forEach { awaitChainRunning(it.sequenceNumber.nodeNumber, chainId, atLeastHeight) }
+        nodeSetups.forEach { awaitChainRunning(it.sequenceNumber.nodeNumber, chainId, atLeastHeight, expectedConfigHash) }
         awaitLog("========= DONE WAITING ALL ${nodeSetups.size} NODES RESTART chain:  ${chainId}, at least height:  $atLeastHeight")
     }
 

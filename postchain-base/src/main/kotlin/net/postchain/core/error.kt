@@ -25,6 +25,7 @@ enum class BadDataType(val type: Int) {
     BAD_MESSAGE(6), // A network message couldn't be parsed
     MISSING_PEERINFO(7), // The node does not exist in the peerinfo table.
     PREV_BLOCK_MISMATCH(8),
-    WRONG_CONFIGURATION_USED(9),
+    CONFIGURATION_MISMATCH(9),
+    FAILED_CONFIGURATION_MISMATCH(10),
     OTHER(100) // Please don't use, consider adding a new type instead
 }

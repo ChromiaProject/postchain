@@ -2,6 +2,7 @@
 
 package net.postchain.base.data
 
+import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.Transaction
@@ -105,6 +106,13 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 ", configuration_data BYTEA NOT NULL" +
                 ", configuration_hash BYTEA NOT NULL" +
                 ", UNIQUE (configuration_hash)" +
+                ")"
+    }
+
+    override fun cmdCreateTableFaultyConfiguration(chainId: Long): String {
+        return "CREATE TABLE IF NOT EXISTS ${tableFaultyConfiguration(chainId)} (" +
+                "configuration_hash BYTEA NOT NULL" +
+                ", report_height BIGINT NOT NULL" +
                 ")"
     }
 

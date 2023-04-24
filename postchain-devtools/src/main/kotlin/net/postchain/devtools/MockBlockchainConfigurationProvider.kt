@@ -2,9 +2,9 @@ package net.postchain.devtools
 
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.config.blockchain.AbstractBlockchainConfigurationProvider
 import net.postchain.core.EContext
 import net.postchain.devtools.utils.ChainUtil
+import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.managed.ManagedNodeDataSource
 
 /**
@@ -14,31 +14,23 @@ import net.postchain.managed.ManagedNodeDataSource
  *
  * (broken out to here from Kalle's code, thought it could be re-used)
  */
-class MockBlockchainConfigurationProvider :
-        AbstractBlockchainConfigurationProvider() {   // Using the abstract class means we are using "real" ICMF for test, see no reason not to.
-
-    lateinit var mockDataSource: ManagedNodeDataSource
+class MockBlockchainConfigurationProvider(private val pcuEnabled: Boolean) :
+        ManagedBlockchainConfigurationProvider() {   // Using the abstract class means we are using "real" ICMF for test, see no reason not to.
 
     companion object : KLogging()
+
+    override fun isPcuEnabled() = pcuEnabled
 
     override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
-        val dba = DatabaseAccess.of(eContext)
-        val activeHeight = this.getActiveBlocksHeight(eContext, dba)
-        return mockDataSource.getConfiguration(ChainUtil.ridOf(chainId).data, activeHeight)
+        return getConfigurationFromDataSource(eContext, loadNextPendingConfig)
     }
 
     override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, isSigner: Boolean): Boolean {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
-        val dba = DatabaseAccess.of(eContext)
-        val activeHeight = getActiveBlocksHeight(eContext, dba)
-        val lastSavedHeight = activeHeight - 1
-        val blockchainRid = ChainUtil.ridOf(chainId)
-        val nextConfigHeight = mockDataSource.findNextConfigurationHeight(blockchainRid.data, lastSavedHeight) // Don't use active height here
-        logger.debug("needsConfigurationChange() - active height: $activeHeight, next conf at: $nextConfigHeight")
-        return nextConfigHeight != null && activeHeight == nextConfigHeight
+        return checkNeedConfChangeViaDataSource(eContext, isSigner)
     }
 
     /**
@@ -48,10 +40,12 @@ class MockBlockchainConfigurationProvider :
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val blockchainRid = ChainUtil.ridOf(chainId)
-        val nextConfigHeight = mockDataSource.findNextConfigurationHeight(blockchainRid.data, historicBlockHeight)
+        val nextConfigHeight = dataSource.findNextConfigurationHeight(blockchainRid.data, historicBlockHeight)
         logger.debug("getHistoricConfigurationHeight() - checking historic height: $historicBlockHeight, next conf at: $nextConfigHeight")
         return nextConfigHeight
     }
+
+    override fun getBlockchainRid(eContext: EContext, dba: DatabaseAccess) = ChainUtil.ridOf(eContext.chainID)
 
     /**
      * Same principle for "historic" as for "current"
@@ -60,7 +54,7 @@ class MockBlockchainConfigurationProvider :
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         logger.debug("getHistoricConfiguration() - Fetching configuration from chain0 (for chain: $chainId and height: $historicBlockHeight)")
-        return mockDataSource.getConfiguration(ChainUtil.ridOf(chainId).data, historicBlockHeight)
+        return dataSource.getConfiguration(ChainUtil.ridOf(chainId).data, historicBlockHeight)
     }
 }
 

@@ -4,17 +4,23 @@ import mu.withLoggingContext
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.data.BaseBlockWitnessProvider
 import net.postchain.base.extension.getConfigHash
+import net.postchain.base.extension.getFailedConfigHash
 import net.postchain.base.withReadConnection
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
+import net.postchain.core.BadDataMistake
+import net.postchain.core.BadDataType
 import net.postchain.core.NodeRid
+import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockTrace
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
@@ -119,7 +125,7 @@ abstract class AbstractSynchronizer(
                     // We don't care if other promoted nodes have applied the config or not, they can't build blocks with older config anyway
                     if (relevantSignersThatHaveAppliedConfig.size + promotedNodesAmount >= pendingBftRequiredSignatureCount) {
                         logger.debug { "Incoming config is pending with us as signer, will restart" }
-                        workerContext.restartNotifier.notifyRestart(null, true)
+                        workerContext.restartNotifier.notifyRestart(true)
                         true
                     } else {
                         logger.debug { "Incoming config is pending with us as signer, waiting for more nodes to apply it" }
@@ -135,7 +141,30 @@ abstract class AbstractSynchronizer(
         }
     }
 
-    protected fun checkIfNewConfigurationCanBeLoaded(block: BlockDataWithWitness): Boolean {
+    protected fun handleAddBlockException(exception: Throwable, block: BlockDataWithWitness, bTrace: BlockTrace?, peerStatuses: AbstractPeerStatuses<*>, peerId: NodeRid) {
+        val height = getHeight(block.header)
+        if (exception is PmEngineIsAlreadyClosed || exception is BDBAbortException) {
+            logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" }}" }
+        } else if (exception is BadDataMistake && exception.type == BadDataType.CONFIGURATION_MISMATCH) {
+            if (!checkIfNewConfigurationCanBeLoaded(block)) {
+                peerStatuses.maybeBlacklist(peerId, "Received a block with mismatching config but we could not apply any new config")
+            }
+        } else if (exception is BadDataMistake && exception.type == BadDataType.FAILED_CONFIGURATION_MISMATCH) {
+            // We only expect the case of us not having applied the failed config yet here
+            val incomingFailedConfigHash = block.header.getFailedConfigHash()
+            if (incomingFailedConfigHash != null) {
+                if (!checkIfConfigIsPendingAndCanBeLoaded(block, incomingFailedConfigHash)) {
+                    peerStatuses.maybeBlacklist(peerId, "Received a block with failing config that we could not apply")
+                }
+            } else {
+                peerStatuses.maybeBlacklist(peerId, "Received a block without expected failed config hash")
+            }
+        } else {
+            logger.warn(exception) { "Exception committing block height $height from peer: $peerId${bTrace?.let { ", from bTrace: $it" }}" }
+        }
+    }
+
+    private fun checkIfNewConfigurationCanBeLoaded(block: BlockDataWithWitness): Boolean {
         val bcConfigProvider = workerContext.blockchainConfigurationProvider
         val bcConfig = workerContext.blockchainConfiguration
         val hasNewConfig = withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
@@ -147,46 +176,55 @@ abstract class AbstractSynchronizer(
 
             if (hasNewConfig) {
                 logger.warn { "Wrong config used. Chain will be restarted" }
-                workerContext.restartNotifier.notifyRestart(null, false)
+                workerContext.restartNotifier.notifyRestart(false)
                 return true
             }
 
             val headerConfigHash = block.header.getConfigHash()
-            if (bcConfigProvider is ManagedBlockchainConfigurationProvider && headerConfigHash != null && bcConfigProvider.isPcuEnabled()) {
-                val isIncomingConfigPending = withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
-                    bcConfigProvider.isConfigPending(
-                            ctx,
-                            blockchainConfiguration.blockchainRid,
-                            getHeight(block.header),
-                            headerConfigHash
-                    )
-                }
-                if (isIncomingConfigPending) {
-                    logger.debug { "Matching pending configuration detected, will validate block signature before reloading" }
-                    val pendingSigners = bcConfigProvider.getPendingConfigSigners(bcConfig.blockchainRid, getHeight(block.header), headerConfigHash)
+            return if (checkIfConfigIsPendingAndCanBeLoaded(block, headerConfigHash)) {
+                true
+            } else {
+                logger.debug { "No new configuration could be applied" }
+                false
+            }
+        }
+    }
 
-                    val cryptoSystem = workerContext.appConfig.cryptoSystem
-                    val myKeyPair = KeyPair(PubKey(workerContext.appConfig.pubKeyByteArray), PrivKey(workerContext.appConfig.privKeyByteArray))
-                    val validator = BaseBlockWitnessProvider(
-                            cryptoSystem,
-                            cryptoSystem.buildSigMaker(myKeyPair),
-                            pendingSigners.map { it.data }.toTypedArray()
-                    )
-                    val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(block.header)
+    private fun checkIfConfigIsPendingAndCanBeLoaded(block: BlockDataWithWitness, configHash: ByteArray?): Boolean {
+        val bcConfigProvider = workerContext.blockchainConfigurationProvider
+        val bcConfig = workerContext.blockchainConfiguration
+        if (bcConfigProvider is ManagedBlockchainConfigurationProvider && configHash != null && bcConfigProvider.isPcuEnabled()) {
+            val isIncomingConfigPending = withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+                bcConfigProvider.isConfigPending(
+                        ctx,
+                        blockchainConfiguration.blockchainRid,
+                        getHeight(block.header),
+                        configHash
+                )
+            }
+            if (isIncomingConfigPending) {
+                logger.debug { "Matching pending configuration detected, will validate block signature before reloading" }
+                val pendingSigners = bcConfigProvider.getPendingConfigSigners(bcConfig.blockchainRid, getHeight(block.header), configHash)
 
-                    try {
-                        validator.validateWitness(block.witness, witnessBuilder)
-                        logger.debug { "Witness check passed. Reloading chain with pending configuration." }
-                        workerContext.restartNotifier.notifyRestart(null, true)
-                        return true
-                    } catch (e: Exception) {
-                        logger.error(e) { "Block signature for block with new pending config is not valid" }
-                    }
+                val cryptoSystem = workerContext.appConfig.cryptoSystem
+                val myKeyPair = KeyPair(PubKey(workerContext.appConfig.pubKeyByteArray), PrivKey(workerContext.appConfig.privKeyByteArray))
+                val validator = BaseBlockWitnessProvider(
+                        cryptoSystem,
+                        cryptoSystem.buildSigMaker(myKeyPair),
+                        pendingSigners.map { it.data }.toTypedArray()
+                )
+                val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(block.header)
+
+                try {
+                    validator.validateWitness(block.witness, witnessBuilder)
+                    logger.debug { "Witness check passed. Reloading chain with pending configuration." }
+                    workerContext.restartNotifier.notifyRestart(true)
+                    return true
+                } catch (e: Exception) {
+                    logger.error(e) { "Block signature for block with new pending config is not valid" }
                 }
             }
-
-            logger.debug { "No new configuration could be applied" }
-            return false
         }
+        return false
     }
 }

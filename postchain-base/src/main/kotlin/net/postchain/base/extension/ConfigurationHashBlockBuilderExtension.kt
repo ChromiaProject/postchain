@@ -22,3 +22,7 @@ class ConfigurationHashBlockBuilderExtension(private val configHash: ByteArray) 
 fun BlockHeader.getConfigHash(): ByteArray? {
     return (this as? BaseBlockHeader)?.extraData?.get(CONFIG_HASH_EXTRA_HEADER)?.asByteArray()
 }
+
+fun BlockHeader.getFailedConfigHash(): ByteArray? {
+    return (this as? BaseBlockHeader)?.extraData?.get(FAILED_CONFIG_HASH_EXTRA_HEADER)?.asByteArray()
+}

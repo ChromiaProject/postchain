@@ -9,11 +9,9 @@ import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.core.NodeRid
-import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
-import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.message.BlockHeader
 import net.postchain.ebft.message.BlockRange
@@ -306,23 +304,7 @@ class SlowSynchronizer(
                                 logger.warn(t) { "Failed to update after successful commit" }
                             }
                         } else {
-                            if (exception is PmEngineIsAlreadyClosed || exception is BDBAbortException) {
-                                if (logger.isTraceEnabled) {
-                                    logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}, cause: ${exception.cause}, from bTrace: ${bTrace?.toString()}" }
-                                } else {
-                                    logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}, cause: ${exception.cause}" }
-                                }
-                            } else if (exception is BadDataMistake && exception.type == BadDataType.WRONG_CONFIGURATION_USED) {
-                                if (!checkIfNewConfigurationCanBeLoaded(block)) {
-                                    peerStatuses.maybeBlacklist(peerId, "Received a block with mismatching config but we could not apply any new config")
-                                }
-                            } else {
-                                if (logger.isTraceEnabled) {
-                                    logger.warn(exception) { "Exception committing block height $height from peer: $peerId from bTrace: ${bTrace?.toString()}" }
-                                } else {
-                                    logger.warn(exception) { "Exception committing block height $height from peer: $peerId" }
-                                }
-                            }
+                            handleAddBlockException(exception, block, bTrace, peerStatuses, peerId)
                             stateMachine.updateAfterFailedCommit(height)
                         }
                     }

@@ -6,6 +6,7 @@ import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
+import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
@@ -13,6 +14,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
+import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
@@ -81,19 +83,19 @@ open class BaseBlockchainProcessManager(
      * @param chainId is the chain to start.
      * @param loadNextPendingConfig only relevant for PCU. See [net.postchain.managed.ManagedBlockchainConfigurationProvider.getConfigurationFromDataSource]
      */
-    protected fun startBlockchainAsync(chainId: Long, bTrace: BlockTrace?, failedConfigHash: ByteArray?, loadNextPendingConfig: Boolean = false) {
+    protected fun startBlockchainAsync(chainId: Long, bTrace: BlockTrace?, loadNextPendingConfig: Boolean = false) {
         if (!scheduledForStart.add(chainId)) {
             logger.info { "Chain $chainId is already scheduled for start" }
             return
         }
-        startBlockchainAsyncInternal(chainId, bTrace, failedConfigHash, loadNextPendingConfig)
+        startBlockchainAsyncInternal(chainId, bTrace, loadNextPendingConfig)
     }
 
-    private fun startBlockchainAsyncInternal(chainId: Long, bTrace: BlockTrace?, failedConfigHash: ByteArray?, loadNextPendingConfig: Boolean) {
+    private fun startBlockchainAsyncInternal(chainId: Long, bTrace: BlockTrace?, loadNextPendingConfig: Boolean) {
         startAsyncInfo("Enqueue async starting of blockchain", chainId)
         executor.execute {
             try {
-                startBlockchainInternal(chainId, bTrace, failedConfigHash, loadNextPendingConfig)
+                startBlockchainInternal(chainId, bTrace, loadNextPendingConfig)
             } catch (e: Exception) {
                 logger.error(e) { e.message }
             }
@@ -125,9 +127,9 @@ open class BaseBlockchainProcessManager(
      * @throws UserMistake if failed
      */
     override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid =
-            startBlockchainInternal(chainId, bTrace, null, false)
+            startBlockchainInternal(chainId, bTrace, false)
 
-    private fun startBlockchainInternal(chainId: Long, bTrace: BlockTrace?, failedConfigHash: ByteArray?, loadNextPendingConfig: Boolean): BlockchainRid {
+    private fun startBlockchainInternal(chainId: Long, bTrace: BlockTrace?, loadNextPendingConfig: Boolean): BlockchainRid {
         chainStartAndStopSynchronizers.getOrPut(chainId) { ReentrantLock() }.withLock {
             val blockchainRid = synchronized(synchronizer) {
                 withLoggingContext(
@@ -161,7 +163,7 @@ open class BaseBlockchainProcessManager(
                             }
                             afterMakeConfiguration(chainId, blockchainConfig)
                             withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()) {
-                                startBlockchainImpl(blockchainConfig, chainId, bTrace, chainStorage, initialEContext, failedConfigHash)
+                                startBlockchainImpl(blockchainConfig, chainId, bTrace, chainStorage, initialEContext)
                             }
                             blockchainConfig.blockchainRid
                         } catch (e: Exception) {
@@ -195,13 +197,13 @@ open class BaseBlockchainProcessManager(
     protected open fun afterStartBlockchain(chainId: Long) {}
 
     private fun startBlockchainImpl(blockchainConfig: BlockchainConfiguration, chainId: Long, bTrace: BlockTrace?,
-                                    chainStorage: Storage, initialEContext: EContext, failedConfigHash: ByteArray?) {
+                                    chainStorage: Storage, initialEContext: EContext) {
         val processName = BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
         startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
         val afterCommitHandler = buildAfterCommitHandler(chainId, blockchainConfig)
-        val restartNotifier = BlockchainRestartNotifier { thisFailedConfigHash, loadNextPendingConfig ->
-            startBlockchainAsync(chainId, bTrace, thisFailedConfigHash, loadNextPendingConfig)
+        val restartNotifier = BlockchainRestartNotifier { loadNextPendingConfig ->
+            startBlockchainAsync(chainId, bTrace, loadNextPendingConfig)
         }
         val engine = blockchainInfrastructure.makeBlockchainEngine(
                 processName,
@@ -209,7 +211,6 @@ open class BaseBlockchainProcessManager(
                 afterCommitHandler,
                 chainStorage,
                 initialEContext,
-                if (appConfig.isPcuEnabled()) failedConfigHash else null,
                 restartNotifier
         )
 
@@ -240,17 +241,16 @@ open class BaseBlockchainProcessManager(
     private fun revertConfiguration(chainId: Long, bTrace: BlockTrace?, chainStorage: Storage, eContext: EContext, blockHeight: Long,
                                     failedConfig: ByteArray) {
         logger.info("Reverting faulty configuration at height $blockHeight")
+        val failedConfigHash = GtvToBlockchainRidFactory.calculateBlockchainRid(GtvFactory.decodeGtv(failedConfig), ::sha256Digest).data
+
         eContext.conn.rollback() // rollback any DB updates the new and faulty configuration did
-        DatabaseAccess.of(eContext).removeConfiguration(eContext, blockHeight)
+        DatabaseAccess.of(eContext).apply {
+            addFaultyConfiguration(eContext, FaultyConfiguration(failedConfigHash.wrap(), blockHeight))
+            removeConfiguration(eContext, blockHeight)
+        }
         chainStorage.closeWriteConnection(eContext, true)
 
-        val failedConfigHash = try {
-            GtvToBlockchainRidFactory.calculateBlockchainRid(GtvFactory.decodeGtv(failedConfig), ::sha256Digest).data
-        } catch (e: Exception) {
-            logger.debug { "Failed to decode failed configuration: $e" }
-            null
-        }
-        startBlockchainAsyncInternal(chainId, bTrace, failedConfigHash, false)
+        startBlockchainAsyncInternal(chainId, bTrace, false)
     }
 
     private fun addToErrorQueue(chainId: Long, e: Exception) {
@@ -378,7 +378,7 @@ open class BaseBlockchainProcessManager(
                     val doRestart = isConfigurationChanged(chainId)
                     if (doRestart) {
                         testDebug("BaseBlockchainProcessManager, need restart of: $chainId", bTrace)
-                        startBlockchainAsync(chainId, bTrace, null)
+                        startBlockchainAsync(chainId, bTrace)
                     }
                     doRestart
                 }

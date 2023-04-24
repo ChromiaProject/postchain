@@ -162,7 +162,7 @@ open class ManagedBlockchainProcessManager(
 
             return if (isConfigurationChanged(chainId)) {
                 wrTrace("chainN, restart needed", chainId, bTrace)
-                startBlockchainAsync(chainId, bTrace, null, blockchainProcesses[chainId]?.isSigner() ?: false)
+                startBlockchainAsync(chainId, bTrace, blockchainProcesses[chainId]?.isSigner() ?: false)
                 true
             } else {
                 wrTrace("chainN, no restart", chainId, bTrace)
@@ -193,7 +193,7 @@ open class ManagedBlockchainProcessManager(
                 restart
             } catch (e: Exception) {
                 logger.error(e) { "Exception in restart handler: $e" }
-                startBlockchainAsync(chainId, bTrace, null, blockchainProcesses[chainId]?.isSigner() ?: false)
+                startBlockchainAsync(chainId, bTrace, blockchainProcesses[chainId]?.isSigner() ?: false)
                 true // let's hope restarting a blockchain fixes the problem
             } finally {
                 releaseChainLock(chainId)
@@ -231,7 +231,7 @@ open class ManagedBlockchainProcessManager(
             // Launching blockchain 0
             if (reloadChain0) {
                 ssaInfo("Reloading of blockchain 0 is required, launching it", 0L)
-                startBlockchainAsync(0L, bTrace, null)
+                startBlockchainAsync(0L, bTrace)
             }
 
             // Launching new blockchains except blockchain 0
@@ -239,7 +239,7 @@ open class ManagedBlockchainProcessManager(
                     .filter { it !in launched }
                     .forEach {
                         ssaInfo("Launching blockchain", it)
-                        startBlockchainAsync(it, bTrace, null)
+                        startBlockchainAsync(it, bTrace)
                     }
 
             // Stopping launched blockchains
