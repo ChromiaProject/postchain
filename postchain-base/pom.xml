@@ -109,6 +109,19 @@
             <groupId>com.sparkjava</groupId>
             <artifactId>spark-core</artifactId>
         </dependency>
+        <!-- Added due to dependency-check failing. When spark-core includes updated versions of these remove them -->
+        <!-- //////////////////////////// -->
+        <dependency>
+            <groupId>org.eclipse.jetty.websocket</groupId>
+            <artifactId>websocket-server</artifactId>
+            <version>9.4.51.v20230217</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-server</artifactId>
+            <version>9.4.51.v20230217</version>
+        </dependency>
+        <!-- //////////////////////////// -->
 
         <dependency>
             <groupId>com.konghq</groupId>
