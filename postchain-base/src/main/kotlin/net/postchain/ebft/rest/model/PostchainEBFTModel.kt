@@ -43,6 +43,7 @@ class PostchainEBFTModel(
     override fun postTransaction(tx: ApiTx) {
         val sample = Timer.start(Metrics.globalRegistry)
 
+        transactionFactory.validateTransaction(tx.bytes)
         val decodedTransaction = transactionFactory.decodeTransaction(tx.bytes)
 
         decodedTransaction.checkCorrectness()
