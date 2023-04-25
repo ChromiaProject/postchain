@@ -53,12 +53,10 @@ data class SyncParameters(
         var jobTimeout: Long = 10000,
         var loopInterval: Long = 100,
         var mustSyncUntilHeight: Long = -1,
-        var maxErrorsBeforeBlacklisting: Int = 10,
         val disconnectTimeout: Long = 10000,
-        /**
-         * 10 minutes in milliseconds
-         */
-        var blacklistingTimeoutMs: Long = 10 * 60 * 1000,
+        var maxErrorsBeforeBlacklisting: Int = 10,
+        var blacklistingTimeoutMs: Long = TimeUnit.MINUTES.toMillis(10),
+        var blacklistingErrorTimeoutMs: Long = TimeUnit.HOURS.toMillis(1),
 
         val slowSyncEnabled: Boolean = true,
         var slowSyncMaxSleepTime: Long = TimeUnit.MINUTES.toMillis(10),
@@ -81,6 +79,8 @@ data class SyncParameters(
                     mustSyncUntilHeight = config.getEnvOrLong("POSTCHAIN_FASTSYNC_MUST_SYNC_UNTIL_HEIGHT", "fastsync.must_sync_until_height", -1),
                     maxErrorsBeforeBlacklisting = config.getEnvOrInt("POSTCHAIN_FASTSYNC_MAX_ERRORS_BEFORE_BLACKLISTING", "fastsync.max_errors_before_blacklisting", 10),
                     disconnectTimeout = config.getEnvOrLong("POSTCHAIN_FASTSYNC_DISCONNECT_TIMEOUT", "fastsync.disconnect_timeout", 10000),
+                    blacklistingTimeoutMs = config.getEnvOrLong("POSTCHAIN_FASTSYNC_BLACKLISTING_TIMEOUT", "fastsync.blacklisting_timeout", TimeUnit.MINUTES.toMillis(10)),
+                    blacklistingErrorTimeoutMs = config.getEnvOrLong("POSTCHAIN_FASTSYNC_BLACKLISTING_ERROR_TIMEOUT", "fastsync.blacklisting_error_timeout", TimeUnit.HOURS.toMillis(1)),
                     slowSyncEnabled = config.getEnvOrBoolean("POSTCHAIN_SLOWSYNC_ENABLED", "slowsync.enabled", true),
                     slowSyncMaxSleepTime = config.getEnvOrLong("POSTCHAIN_SLOWSYNC_MAX_SLEEP_TIME", "slowsync.max_sleep_time", TimeUnit.MINUTES.toMillis(10)),
                     slowSyncMinSleepTime = config.getEnvOrLong("POSTCHAIN_SLOWSYNC_MIN_SLEEP_TIME", "slowsync.min_sleep_time", 20),
