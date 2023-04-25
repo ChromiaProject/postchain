@@ -51,6 +51,7 @@ interface Transaction : Transactor {
 
 interface TransactionFactory {
     fun decodeTransaction(data: ByteArray): Transaction
+    fun validateTransaction(data: ByteArray)
 }
 
 interface TransactionQueue {

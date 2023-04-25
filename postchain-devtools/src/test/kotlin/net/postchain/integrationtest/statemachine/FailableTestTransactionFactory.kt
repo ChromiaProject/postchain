@@ -21,6 +21,8 @@ open class FailableTestTransactionFactory(private val failable: Boolean) : Trans
                 id = id,
                 correct = !failable || (id % 2 == 0))
     }
+
+    override fun validateTransaction(data: ByteArray) {}
 }
 
 /**
