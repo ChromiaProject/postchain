@@ -80,7 +80,7 @@ class CommandAddConfiguration : CliktCommand(
             } catch (e: CliException) {
                 println(e.message)
             } catch (e: Exception) {
-                println("Can't add configuration: ${e.message}")
+                println("Can't add configuration: $e")
             }
         }
     }
