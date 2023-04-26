@@ -64,6 +64,7 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
             afterCommitHandler: AfterCommitHandler,
             storage: Storage,
             initialEContext: EContext,
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier
     ): BlockchainEngine
 

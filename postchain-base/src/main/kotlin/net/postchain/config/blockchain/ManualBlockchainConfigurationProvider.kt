@@ -10,7 +10,7 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
 
     companion object : KLogging()
 
-    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, isSigner: Boolean): Boolean {
+    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, checkPendingConfigs: Boolean): Boolean {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val dba = DatabaseAccess.of(eContext)

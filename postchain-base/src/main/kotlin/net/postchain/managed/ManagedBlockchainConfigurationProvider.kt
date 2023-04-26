@@ -44,14 +44,14 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         }
     }
 
-    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, isSigner: Boolean): Boolean {
+    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, checkPendingConfigs: Boolean): Boolean {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         return if (chainId == 0L) {
-            localProvider.activeBlockNeedsConfigurationChange(eContext, chainId, isSigner)
+            localProvider.activeBlockNeedsConfigurationChange(eContext, chainId, checkPendingConfigs)
         } else {
             if (::dataSource.isInitialized) {
-                checkNeedConfChangeViaDataSource(eContext, isSigner)
+                checkNeedConfChangeViaDataSource(eContext, checkPendingConfigs)
             } else {
                 throw IllegalStateException("Using managed blockchain configuration provider before it's properly initialized")
             }
@@ -95,7 +95,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
 
     // --------- Private --------
 
-    protected fun checkNeedConfChangeViaDataSource(eContext: EContext, isSigner: Boolean): Boolean {
+    protected fun checkNeedConfChangeViaDataSource(eContext: EContext, checkPendingConfigs: Boolean): Boolean {
         val dba = DatabaseAccess.of(eContext)
         val blockchainRid = getBlockchainRid(eContext, dba)
         val lastSavedBlockHeight = dba.getLastBlockHeight(eContext)
@@ -106,7 +106,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
             val appliedConfigFound = activeHeight == dataSource.findNextConfigurationHeight(blockchainRid.data, lastSavedBlockHeight)
             if (appliedConfigFound) {
                 true
-            } else if (isSigner) {
+            } else if (checkPendingConfigs) {
                 val failedConfigHash = dataSource.getFaultyBlockchainConfiguration(blockchainRid, activeHeight)?.wrap()
                         ?: dba.getFaultyConfiguration(eContext)?.configHash
                 val pendingConfig = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight).find {

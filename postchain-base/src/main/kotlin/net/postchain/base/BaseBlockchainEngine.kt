@@ -14,6 +14,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
@@ -55,6 +56,7 @@ open class BaseBlockchainEngine(
         private val chainID: Long,
         private val transactionQueue: TransactionQueue,
         initialEContext: EContext,
+        private val blockchainConfigurationProvider: BlockchainConfigurationProvider,
         private val restartNotifier: BlockchainRestartNotifier,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
         private val afterCommitHandler: AfterCommitHandler,
@@ -232,6 +234,9 @@ open class BaseBlockchainEngine(
                 try {
                     if (!hasBuiltFirstBlockAfterConfigUpdate && hasBuiltInitialBlock()) {
                         revertConfiguration(blockBuilder.height, blockchainConfiguration.configHash)
+                    } else {
+                        // See if we have a configuration update that potentially can fix our block building issues
+                        checkForNewConfiguration()
                     }
                 } catch (e: Exception) {
                     logger.warn(e) { "Unable to revert configuration: $e" }
@@ -244,6 +249,16 @@ open class BaseBlockchainEngine(
             buildLog("End")
 
             return blockBuilder to exception
+        }
+    }
+
+    private fun checkForNewConfiguration() {
+        withReadConnection(storage, chainID) { ctx ->
+            if (blockchainConfigurationProvider.activeBlockNeedsConfigurationChange(ctx, chainID, false)) {
+                logger.debug("Found new configuration at current height. Will restart and apply it.")
+                restartNotifier.notifyRestart(false)
+                closed = true
+            }
         }
     }
 

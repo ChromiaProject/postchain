@@ -211,6 +211,7 @@ open class BaseBlockchainProcessManager(
                 afterCommitHandler,
                 chainStorage,
                 initialEContext,
+                blockchainConfigProvider,
                 restartNotifier
         )
 

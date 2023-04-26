@@ -27,10 +27,10 @@ class MockBlockchainConfigurationProvider(private val pcuEnabled: Boolean) :
         return getConfigurationFromDataSource(eContext, loadNextPendingConfig)
     }
 
-    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, isSigner: Boolean): Boolean {
+    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, checkPendingConfigs: Boolean): Boolean {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
-        return checkNeedConfChangeViaDataSource(eContext, isSigner)
+        return checkNeedConfChangeViaDataSource(eContext, checkPendingConfigs)
     }
 
     /**

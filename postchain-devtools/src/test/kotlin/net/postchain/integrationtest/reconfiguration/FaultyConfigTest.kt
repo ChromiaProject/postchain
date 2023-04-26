@@ -137,6 +137,47 @@ class FaultyConfigTest : IntegrationTestSetup() {
             assert(db.getConfigurationData(ctx, 2)).isNull()
         }
     }
+
+    @Test
+    fun `we can recover from eventually failing config`() {
+        val (node) = createNodes(1, "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_initial_1.xml")
+
+        val faultyConfig = readBlockchainConfig(
+                "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_eventually_faulty_1.xml"
+        )
+        nodes.forEach { it.addConfiguration(DEFAULT_CHAIN_IID, 2, faultyConfig) }
+        buildBlock(DEFAULT_CHAIN_IID, 1)
+
+        Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
+            assert(node.getModules(DEFAULT_CHAIN_IID).any { it is EventuallyFaultyGTXModule })
+        }
+
+        // We should be able to build 2 more blocks before failure
+        buildBlock(DEFAULT_CHAIN_IID, 3)
+
+        buildBlockNoWait(nodes.toList(), DEFAULT_CHAIN_IID, 4)
+
+        Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
+            assert(node.getModules(DEFAULT_CHAIN_IID)
+                    .filterIsInstance(EventuallyFaultyGTXModule::class.java)
+                    .first()
+                    .faultyExtension.hasFailed
+            )
+        }
+
+        val correctConfig = readBlockchainConfig(
+                "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_correct_1.xml"
+        )
+        nodes.forEach { it.addConfiguration(DEFAULT_CHAIN_IID, 4, correctConfig) }
+
+        // Assert that node detects config and restarts with it
+        Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
+            assert(node.getModules(DEFAULT_CHAIN_IID).any { it is CorrectConfigGTXModule })
+        }
+
+        // Try to build again
+        buildBlock(DEFAULT_CHAIN_IID, 4)
+    }
 }
 
 open class FaultyGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(), mapOf()) {
@@ -189,4 +230,38 @@ object SimulateFaultyConfigSpecialTxExtension : GTXSpecialTxExtension, KLogging(
             throw UserMistake("You wanted me to fail")
         }
     }
+}
+
+class EventuallyFaultyGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(), mapOf()) {
+    val faultyExtension = EventuallyFaultySpecialTxExtension()
+
+    override fun initializeDB(ctx: EContext) {}
+
+    override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> {
+        return listOf(faultyExtension)
+    }
+}
+
+class EventuallyFaultySpecialTxExtension : GTXSpecialTxExtension {
+    @Volatile
+    var hasFailed = false
+    private var initialHeight = -1L
+
+    override fun createSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): List<OpData> {
+        if (initialHeight == -1L) {
+            initialHeight = bctx.height
+        } else if (bctx.height - initialHeight > 1) {
+            hasFailed = true
+            throw Exception("Going to be trouble now")
+        }
+        return listOf()
+    }
+
+    override fun getRelevantOps(): Set<String> = setOf()
+
+    override fun init(module: GTXModule, chainID: Long, blockchainRID: BlockchainRid, cs: CryptoSystem) {}
+
+    override fun needsSpecialTransaction(position: SpecialTransactionPosition) = position == SpecialTransactionPosition.End
+
+    override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>) = true
 }
