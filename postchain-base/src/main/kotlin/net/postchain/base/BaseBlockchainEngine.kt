@@ -232,11 +232,13 @@ open class BaseBlockchainEngine(
                 } catch (ignore: Exception) {
                 }
                 try {
-                    if (!hasBuiltFirstBlockAfterConfigUpdate && hasBuiltInitialBlock()) {
-                        revertConfiguration(blockBuilder.height, blockchainConfiguration.configHash)
-                    } else {
-                        // See if we have a configuration update that potentially can fix our block building issues
-                        checkForNewConfiguration()
+                    if (hasBuiltInitialBlock()) {
+                        if (!hasBuiltFirstBlockAfterConfigUpdate) {
+                            revertConfiguration(blockBuilder.height, blockchainConfiguration.configHash)
+                        } else {
+                            // See if we have a configuration update that potentially can fix our block building issues
+                            checkForNewConfiguration()
+                        }
                     }
                 } catch (e: Exception) {
                     logger.warn(e) { "Unable to revert configuration: $e" }
