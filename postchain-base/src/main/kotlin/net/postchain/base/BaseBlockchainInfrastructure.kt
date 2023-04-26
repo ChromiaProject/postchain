@@ -93,12 +93,13 @@ open class BaseBlockchainInfrastructure(
             afterCommitHandler: AfterCommitHandler,
             storage: Storage,
             initialEContext: EContext,
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier
     ): BaseBlockchainEngine {
         val transactionQueue = BaseTransactionQueue(configuration.transactionQueueSize)
 
         return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue,
-                initialEContext, restartNotifier, postchainContext.nodeDiagnosticContext, afterCommitHandler)
+                initialEContext, blockchainConfigurationProvider, restartNotifier, postchainContext.nodeDiagnosticContext, afterCommitHandler)
     }
 
     override fun makeBlockchainProcess(
