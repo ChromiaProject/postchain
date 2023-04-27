@@ -41,6 +41,10 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
 
         val storage = StorageBuilder.buildStorage(appConfig, wipeDb)
 
+        storage.withReadConnection { ctx ->
+            DatabaseAccess.of(ctx).checkCollation(ctx.conn, suppressError = appConfig.databaseSuppressCollationCheck)
+        }
+
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
         logPrefix = peerName(appConfig.pubKey)
 
