@@ -39,6 +39,7 @@ import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtx.GtxQuery
+import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
 import spark.QueryParamsMap
 import spark.Request
 import spark.Response
@@ -64,8 +65,6 @@ class RestApi(
         const val JSON_CONTENT_TYPE = "application/json"
         const val OCTET_CONTENT_TYPE = "application/octet-stream"
         const val XML_CONTENT_TYPE = "text/xml"
-
-        const val NON_STRICT_QUERY_ARGUMENT = "~non-strict"
     }
 
     private val http = Service.ignite()!!

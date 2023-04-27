@@ -15,6 +15,8 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 
+const val NON_STRICT_QUERY_ARGUMENT = "~non-strict"
+
 /**
  * The GTX Module is the basis of a "Dapp".
  */
