@@ -7,7 +7,6 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.Transaction
 import java.sql.Connection
-import java.sql.Statement
 
 class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
 
@@ -23,22 +22,6 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                     } else {
                         throw UserMistake(errorMessage)
                     }
-                }
-            }
-            checkDbSetting(statement, "LC_COLLATE", "C.UTF-8", "Database collation check failed, please initialize Postgres with LC_COLLATE = 'C.UTF-8'", suppressError)
-            checkDbSetting(statement, "LC_CTYPE", "C.UTF-8", "Database collation check failed, please initialize Postgres with LC_CTYPE = 'C.UTF-8'", suppressError)
-            checkDbSetting(statement, "SERVER_ENCODING", "UTF8", "Database collation check failed, please initialize Postgres with ENCODING 'UTF-8'", suppressError)
-        }
-    }
-
-    private fun checkDbSetting(statement: Statement, name: String, value: String, errorMessage: String, suppressError: Boolean) {
-        statement.executeQuery("SHOW $name").use { resultSet ->
-            resultSet.next()
-            if (resultSet.getString(1) != value) {
-                if (suppressError) {
-                    logger.warn(errorMessage)
-                } else {
-                    throw UserMistake(errorMessage)
                 }
             }
         }
