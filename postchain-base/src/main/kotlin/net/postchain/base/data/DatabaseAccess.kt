@@ -49,6 +49,8 @@ interface DatabaseAccess {
 
     fun tableName(ctx: EContext, table: String): String
 
+    fun checkCollation(connection: Connection, suppressError: Boolean)
+
     fun isSavepointSupported(): Boolean
     fun isSchemaExists(connection: Connection, schema: String): Boolean
     fun createSchema(connection: Connection, schema: String)

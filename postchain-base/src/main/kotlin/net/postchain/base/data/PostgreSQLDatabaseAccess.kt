@@ -2,13 +2,47 @@
 
 package net.postchain.base.data
 
-import net.postchain.base.configuration.FaultyConfiguration
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.Transaction
 import java.sql.Connection
+import java.sql.Statement
 
 class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
+
+    override fun checkCollation(connection: Connection, suppressError: Boolean) {
+        connection.createStatement().use { statement ->
+            statement.executeQuery("SELECT 'A'<'a', 'Ї'<'ї', upper('ї') = 'Ї', lower('Ї') = 'ї'").use { resultSet ->
+                resultSet.next()
+                if (!resultSet.getBoolean(1) || !resultSet.getBoolean(2) || !resultSet.getBoolean(3) || !resultSet.getBoolean(4)) {
+                    val errorMessage =
+                            "Database collation check failed, please initialize Postgres with LC_COLLATE = 'C.UTF-8' LC_CTYPE = 'C.UTF-8' ENCODING 'UTF-8'"
+                    if (suppressError) {
+                        logger.warn(errorMessage)
+                    } else {
+                        throw UserMistake(errorMessage)
+                    }
+                }
+            }
+            checkDbSetting(statement, "LC_COLLATE", "C.UTF-8", "Database collation check failed, please initialize Postgres with LC_COLLATE = 'C.UTF-8'", suppressError)
+            checkDbSetting(statement, "LC_CTYPE", "C.UTF-8", "Database collation check failed, please initialize Postgres with LC_CTYPE = 'C.UTF-8'", suppressError)
+            checkDbSetting(statement, "SERVER_ENCODING", "UTF8", "Database collation check failed, please initialize Postgres with ENCODING 'UTF-8'", suppressError)
+        }
+    }
+
+    private fun checkDbSetting(statement: Statement, name: String, value: String, errorMessage: String, suppressError: Boolean) {
+        statement.executeQuery("SHOW $name").use { resultSet ->
+            resultSet.next()
+            if (resultSet.getString(1) != value) {
+                if (suppressError) {
+                    logger.warn(errorMessage)
+                } else {
+                    throw UserMistake(errorMessage)
+                }
+            }
+        }
+    }
 
     override fun isSavepointSupported(): Boolean = true
 
@@ -54,13 +88,13 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " UNIQUE (hash))"
     }
 
-     override fun cmdCreateTableState(ctx: EContext, prefix: String): String {
-         return "CREATE TABLE IF NOT EXISTS ${tableStateLeafs(ctx, prefix)}" +
-                 " (state_iid BIGSERIAL PRIMARY KEY," +
-                 " block_height BIGINT NOT NULL, " +
-                 " state_n BIGINT NOT NULL, " +
-                 " data BYTEA NOT NULL)"
-     }
+    override fun cmdCreateTableState(ctx: EContext, prefix: String): String {
+        return "CREATE TABLE IF NOT EXISTS ${tableStateLeafs(ctx, prefix)}" +
+                " (state_iid BIGSERIAL PRIMARY KEY," +
+                " block_height BIGINT NOT NULL, " +
+                " state_n BIGINT NOT NULL, " +
+                " data BYTEA NOT NULL)"
+    }
 
     override fun cmdCreateIndexTableState(ctx: EContext, prefix: String, index: Int): String {
         return "CREATE INDEX IF NOT EXISTS ${indexTableStateLeafs(ctx, prefix, index)}" +

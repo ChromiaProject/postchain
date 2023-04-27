@@ -17,6 +17,14 @@ class DatabaseIT {
     private val appConfig: AppConfig = testDbConfig("database_it")
 
     @Test
+    fun collation() {
+        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
+        storage.withReadConnection { ctx ->
+            DatabaseAccess.of(ctx).checkCollation(ctx.conn, suppressError = false)
+        }
+    }
+
+    @Test
     fun containers() {
         val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
 
