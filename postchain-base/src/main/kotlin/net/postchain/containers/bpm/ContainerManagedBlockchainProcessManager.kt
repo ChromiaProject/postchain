@@ -307,7 +307,7 @@ open class ContainerManagedBlockchainProcessManager(
                 if (psContainer.state == RUNNING) psContainer.reset()
                 logger.info { dcLog("restarted", psContainer) }
 
-                job.postpone(1_000)
+                job.postponeWithBackoff()
                 return result(false)
             }
             if (psContainer.state != RUNNING) {
@@ -326,7 +326,7 @@ open class ContainerManagedBlockchainProcessManager(
                 job.postpone(5_000)
                 return result(false)
             }
-
+            job.failedStartCount = 0
             logger.info { "[${nodeName()}]: $scope -- Subnode is healthy, container: ${job.containerName}" }
         } else {
             logger.debug { "[${nodeName()}]: $scope -- DockerContainer is not running, 'is subnode connected' check will be skipped, container: ${job.containerName}" }

@@ -3,7 +3,11 @@ package net.postchain.containers.bpm.job
 import net.postchain.common.toHex
 import net.postchain.containers.bpm.Chain
 import net.postchain.containers.bpm.ContainerName
+import kotlin.math.min
+import kotlin.math.pow
 import kotlin.random.Random
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 /**
  * Basic class for all jobs
@@ -24,12 +28,15 @@ class HealthcheckJob : Job(NAME) {
  * Describes actions over chains that should be done for the container [containerName].
  * Actions are: stop chain, start chain.
  */
-class ContainerJob(val containerName: ContainerName) : Job(containerName.name) {
+open class ContainerJob(val containerName: ContainerName) : Job(containerName.name) {
 
     val chainsToStop = mutableSetOf<Chain>()
     val chainsToStart = mutableSetOf<Chain>()
     var done: Boolean = false
-    private var nextExecutionTime = 0L
+    var nextExecutionTime = 0L
+        private set
+    var failedStartCount = 0
+    private val maxBackoffTime = 5.toDuration(DurationUnit.MINUTES)
 
     fun stopChain(chain: Chain) {
         if (chainsToStart.contains(chain)) {
@@ -82,12 +89,20 @@ class ContainerJob(val containerName: ContainerName) : Job(containerName.name) {
     }
 
     fun postpone(delay: Long) {
-        nextExecutionTime = System.currentTimeMillis() + delay
+        nextExecutionTime = currentTimeMillis() + delay
+    }
+
+    fun postponeWithBackoff() {
+        val backoffTimeMs = min(2.0.pow(failedStartCount).toLong() * 1000, maxBackoffTime.inWholeMilliseconds)
+        if (backoffTimeMs < maxBackoffTime.inWholeMilliseconds) failedStartCount++
+        nextExecutionTime = currentTimeMillis() + backoffTimeMs
     }
 
     fun shouldRun(): Boolean {
-        return !done && nextExecutionTime <= System.currentTimeMillis()
+        return !done && nextExecutionTime <= currentTimeMillis()
     }
+
+    open fun currentTimeMillis() = System.currentTimeMillis()
 
     override fun toString(): String {
         return "Job(container: $containerName, " +
