@@ -13,6 +13,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvToJSON
 import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtx.GtxQuery
+import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
 import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -60,7 +61,7 @@ class RestApiQueryEndpointTest {
         )
 
         val queryString = gtvToJSON(gtv(queryMap), gson)
-        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), RestApi.NON_STRICT_QUERY_ARGUMENT to gtv(true))))
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
         val answerString = """{"d":0}"""
         val answer = gtv(mapOf("d" to gtv(false)))
@@ -87,7 +88,7 @@ class RestApiQueryEndpointTest {
         )
 
         val queryString = """{"queries":[${gtvToJSON(gtv(queryMap), gson)}]}"""
-        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), RestApi.NON_STRICT_QUERY_ARGUMENT to gtv(true))))
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
         val answerString = """["{\"d\":0}"]"""
         val answer = gtv(mapOf("d" to gtv(false)))
@@ -114,7 +115,7 @@ class RestApiQueryEndpointTest {
         )
 
         val queryString = queryMap.map { "${it.key}=${it.value.toString().trim('"')}" }.joinToString("&")
-        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), RestApi.NON_STRICT_QUERY_ARGUMENT to gtv(true))))
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
         val answerString = """{"d":0}"""
         val answer = gtv(mapOf("d" to gtv(false)))
@@ -140,7 +141,7 @@ class RestApiQueryEndpointTest {
         )
 
         val queryString = queryMap.map { "${it.key}=${it.value.toString().trim('"')}" }.joinToString("&")
-        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), RestApi.NON_STRICT_QUERY_ARGUMENT to gtv(true))))
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
         val answerString = "Hello, world!"
         val answer = gtv(gtv("text/plain"), gtv(answerString))
@@ -171,7 +172,7 @@ class RestApiQueryEndpointTest {
         )
 
         val queryString = gtvToJSON(gtv(queryMap), gson)
-        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), RestApi.NON_STRICT_QUERY_ARGUMENT to gtv(true))))
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
         val answerString = """{"error":"Bad bad stuff."}"""
 
@@ -205,7 +206,7 @@ class RestApiQueryEndpointTest {
         )
 
         val queryString = gtvToJSON(gtv(queryMap), gson)
-        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), RestApi.NON_STRICT_QUERY_ARGUMENT to gtv(true))))
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
         val answerMessage = "expected error"
         val answerBody = """{"error":"expected error"}"""
@@ -235,7 +236,7 @@ class RestApiQueryEndpointTest {
         )
 
         val queryString = gtvToJSON(gtv(queryMap), gson)
-        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), RestApi.NON_STRICT_QUERY_ARGUMENT to gtv(true))))
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
         val answerMessage = "expected error"
         val answerBody = """{"error":"expected error"}"""
