@@ -52,7 +52,7 @@ class ContainerJobTest {
         assertEquals(9, job.failedStartCount)
         assertEquals(300000 + currentTime, job.nextExecutionTime)
 
-        job.failedStartCount = 0
+        job.resetFailedStartCount()
         job.postponeWithBackoff()
         assertEquals(1, job.failedStartCount)
         assertEquals(1000 + currentTime, job.nextExecutionTime)
