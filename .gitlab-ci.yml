@@ -142,10 +142,7 @@ variables:
   # when running from the command line.
   # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
   MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true -s .gitlab-settings.xml"
-  CHR_DB_URL: jdbc:postgresql://docker/postchain
   POSTCHAIN_DB_URL: jdbc:postgresql://docker/postchain
-  POSTGRES_USER: postchain
-  POSTGRES_PASSWORD: postchain
   DOCKER_HOST: tcp://docker:2375
 
 services:
