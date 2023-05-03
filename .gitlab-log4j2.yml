@@ -52,6 +52,14 @@ Configuration:
 
     Logger:
 
+      - name: org.testcontainers
+        level: info
+        additivity: false
+        AppenderRef:
+        - ref: ConsoleAppender
+          level: warn
+        - ref: FileAppender
+
       - name: net.postchain
         level: debug
         additivity: false
@@ -65,11 +73,11 @@ Configuration:
         additivity: false
         AppenderRef:
           - ref: SimpleConsoleAppender
-          - ref : SimpleFileAppender
+          - ref: SimpleFileAppender
 
       - name: net.postchain.devtools.ConfigFileBasedIntegrationTest
         level: debug
         additivity: false
         AppenderRef:
           - ref: SimpleConsoleAppender
-          - ref : SimpleFileAppender
+          - ref: SimpleFileAppender
