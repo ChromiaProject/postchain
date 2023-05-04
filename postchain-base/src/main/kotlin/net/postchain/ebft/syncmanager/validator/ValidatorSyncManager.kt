@@ -150,7 +150,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                         val signature = Signature(message.sig.subjectID, message.sig.data)
                                         val smBlockRID = this.statusManager.myStatus.blockRID
                                         if (smBlockRID == null) {
-                                            logger.info("Received signature not needed")
+                                            logger.debug("Received signature not needed")
                                         } else if (!smBlockRID.contentEquals(message.blockRID)) {
                                             logger.info("Receive signature for a different block")
                                         } else if (this.blockDatabase.verifyBlockSignature(signature)) {
