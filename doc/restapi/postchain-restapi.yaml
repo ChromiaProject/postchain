@@ -60,7 +60,10 @@ paths:
       tags:
         - transaction
       summary: Submit transaction
-      description: Submit a transaction to a chain
+      description: |
+        Submit a transaction to a chain.
+        The request body can either contain hex encoded GTX transaction in JSON wrapper, 
+        or binary GTV (by specifying `Content-Type: application/octet-stream).
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       requestBody:
@@ -68,6 +71,7 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/tx"
+          application/octet-stream: { }
       responses:
         200:
           description: Transaction queued
@@ -129,7 +133,10 @@ paths:
       tags:
         - transaction
       summary: Fetch transaction
-      description: Fetch a transaction from a chain
+      description: |
+        Fetch a transaction from a chain.
+        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        otherwise defaults to JSON.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
@@ -140,6 +147,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/tx"
+            application/octet-stream: { }
         404:
           description: Not found
           content:
@@ -153,6 +161,7 @@ paths:
                 txNotFound:
                   value:
                     error: "Can't find tx with hash <hex-string>"
+            application/octet-stream: { }
   /transactions/{blockchainRid}/{txRid}:
     get:
       tags:

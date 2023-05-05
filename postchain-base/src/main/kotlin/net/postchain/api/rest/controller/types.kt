@@ -3,7 +3,6 @@
 package net.postchain.api.rest.controller
 
 import net.postchain.api.rest.model.ApiStatus
-import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
 import net.postchain.base.ConfirmationProof
 import net.postchain.core.TransactionInfoExt
@@ -25,8 +24,8 @@ interface ExternalModel : ChainModel {
 }
 
 interface Model : ChainModel {
-    fun postTransaction(tx: ApiTx)
-    fun getTransaction(txRID: TxRID): ApiTx?
+    fun postTransaction(tx: ByteArray)
+    fun getTransaction(txRID: TxRID): ByteArray?
     fun getTransactionInfo(txRID: TxRID): TransactionInfoExt?
     fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt>
     fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail?

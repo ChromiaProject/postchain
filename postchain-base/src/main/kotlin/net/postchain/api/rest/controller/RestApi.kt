@@ -224,20 +224,10 @@ class RestApi(
             }
 
             http.post("/tx/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
-                val tx = toTransaction(request)
-                val maxLength = try {
-                    if (tx.bytes.size > 200) 200 else tx.bytes.size
-                } catch (e: Exception) {
-                    throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
-                }
-
-                logger.debug {
-                    """
-                        Processed tx bytes: ${tx.bytes.sliceArray(0 until maxLength).toHex()}
-                    """.trimIndent()
-                }
-                if (!tx.tx.matches(Regex("[0-9a-fA-F]{2,}"))) {
-                    throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
+                val tx = if (request.contentType().startsWith(OCTET_CONTENT_TYPE)) {
+                    request.bodyAsBytes()
+                } else {
+                    parseJsonTx(request)
                 }
                 model(request).postTransaction(tx)
                 "{}"
@@ -247,7 +237,13 @@ class RestApi(
                 val result = runTxActionOnModel(request) { model, txRID ->
                     model.getTransaction(txRID)
                 }
-                gson.toJson(result)
+                gson.toJson(ApiTx(result.toHex()))
+            })
+
+            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", OCTET_CONTENT_TYPE, redirectGet(OCTET_CONTENT_TYPE) { request, _ ->
+                runTxActionOnModel(request) { model, txRID ->
+                    model.getTransaction(txRID)
+                }
             })
 
             http.get("/transactions/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", JSON_CONTENT_TYPE, redirectGet { request, _ ->
@@ -428,12 +424,29 @@ class RestApi(
         return model.getBlockchainConfiguration(height) ?: throw UserMistake("Failed to find configuration")
     }
 
-    private fun toTransaction(request: Request): ApiTx {
-        try {
-            return gson.fromJson(request.body(), ApiTx::class.java)
+    private fun parseJsonTx(request: Request): ByteArray {
+        val apiTx = try {
+            gson.fromJson(request.body(), ApiTx::class.java)
         } catch (e: Exception) {
             throw UserMistake("Could not parse json", e)
         }
+
+        val maxLength = try {
+            if (apiTx.bytes.size > 200) 200 else apiTx.bytes.size
+        } catch (e: Exception) {
+            throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
+        }
+
+        logger.debug {
+            """
+                Processed tx bytes: ${apiTx.bytes.sliceArray(0 until maxLength).toHex()}
+            """.trimIndent()
+        }
+        if (!apiTx.tx.matches(Regex("[0-9a-fA-F]{2,}"))) {
+            throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
+        }
+
+        return apiTx.bytes
     }
 
     private fun toTxRID(hashHex: String): TxRID {
@@ -599,7 +612,7 @@ class RestApi(
         System.runFinalization()
     }
 
-    private fun runTxActionOnModel(request: Request, txAction: (Model, TxRID) -> Any?): Any {
+    private fun <T> runTxActionOnModel(request: Request, txAction: (Model, TxRID) -> T?): T {
         val model = model(request)
         val txHashHex = checkTxHashHex(request)
         return txAction(model, toTxRID(txHashHex))
