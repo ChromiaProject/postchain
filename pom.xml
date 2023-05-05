@@ -65,7 +65,7 @@
         <spark-core.version>2.9.4</spark-core.version>
         <json.version>20170516</json.version>
         <jaxb.version>4.0.1</jaxb.version>
-        <jackson.version>2.14.0</jackson.version>
+        <jackson.version>2.15.0</jackson.version>
         <gson.version>2.10</gson.version>
         <gitflow.maven.plugin.version>1.19.0</gitflow.maven.plugin.version>
         <commons-dbutils.version>1.7</commons-dbutils.version>
