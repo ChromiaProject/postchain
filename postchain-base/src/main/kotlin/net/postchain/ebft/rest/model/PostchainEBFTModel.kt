@@ -14,7 +14,6 @@ import net.postchain.api.rest.controller.NotSupported
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.UnavailableException
 import net.postchain.api.rest.json.JsonFactory
-import net.postchain.api.rest.model.ApiTx
 import net.postchain.base.BaseBlockQueries
 import net.postchain.common.BlockchainRid
 import net.postchain.common.tx.EnqueueTransactionResult
@@ -40,11 +39,11 @@ class PostchainEBFTModel(
 
     private val metrics = PostchainModelMetrics(chainIID, blockchainRid)
 
-    override fun postTransaction(tx: ApiTx) {
+    override fun postTransaction(tx: ByteArray) {
         val sample = Timer.start(Metrics.globalRegistry)
 
-        transactionFactory.validateTransaction(tx.bytes)
-        val decodedTransaction = transactionFactory.decodeTransaction(tx.bytes)
+        transactionFactory.validateTransaction(tx)
+        val decodedTransaction = transactionFactory.decodeTransaction(tx)
 
         decodedTransaction.checkCorrectness()
 

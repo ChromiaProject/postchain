@@ -5,7 +5,6 @@ package net.postchain.api.rest.controller
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.model.ApiStatus
-import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
 import net.postchain.base.BaseBlockQueries
 import net.postchain.base.BaseBlockchainContext
@@ -16,7 +15,6 @@ import net.postchain.base.data.DependenciesValidator
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.data.Hash
-import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus.CONFIRMED
 import net.postchain.common.tx.TransactionStatus.REJECTED
 import net.postchain.common.tx.TransactionStatus.UNKNOWN
@@ -46,13 +44,10 @@ open class PostchainModel(
 
     override var live = true
 
-    override fun postTransaction(tx: ApiTx): Unit = throw NotSupported("NotSupported: Posting a transaction on a non-signer node is not supported.")
+    override fun postTransaction(tx: ByteArray): Unit = throw NotSupported("NotSupported: Posting a transaction on a non-signer node is not supported.")
 
-    override fun getTransaction(txRID: TxRID): ApiTx? {
-        return blockQueries.getTransaction(txRID.bytes).get()
-                .takeIf { it != null }
-                ?.let { ApiTx(it.getRawData().toHex()) }
-    }
+    override fun getTransaction(txRID: TxRID): ByteArray? = blockQueries.getTransaction(txRID.bytes).get()
+            .takeIf { it != null }?.getRawData()
 
     override fun getTransactionInfo(txRID: TxRID): TransactionInfoExt? {
         return blockQueries.getTransactionInfo(txRID.bytes).get()

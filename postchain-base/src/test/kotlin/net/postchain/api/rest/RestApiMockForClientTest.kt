@@ -7,15 +7,14 @@ import net.postchain.api.rest.controller.BlockHeight
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.ApiStatus
-import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
 import net.postchain.base.ConfirmationProof
 import net.postchain.base.cryptoSystem
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
-import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.common.wrap
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
@@ -100,19 +99,19 @@ class RestApiMockForClientManual {
                         1574849940)
         )
 
-        override fun postTransaction(tx: ApiTx) {
-            when (tx.tx) {
-                "helloOK".toByteArray().toHex() -> return
-                "hello400".toByteArray().toHex() -> throw UserMistake("expected error")
-                "hello500".toByteArray().toHex() -> throw ProgrammerMistake("expected error")
+        override fun postTransaction(tx: ByteArray) {
+            when (tx.wrap()) {
+                "helloOK".toByteArray().wrap() -> return
+                "hello400".toByteArray().wrap() -> throw UserMistake("expected error")
+                "hello500".toByteArray().wrap() -> throw ProgrammerMistake("expected error")
                 else -> throw ProgrammerMistake("unexpected error")
             }
         }
 
-        override fun getTransaction(txRID: TxRID): ApiTx? {
+        override fun getTransaction(txRID: TxRID): ByteArray? {
             return when (txRID) {
                 TxRID(statusUnknown.hexStringToByteArray()) -> null
-                TxRID(statusConfirmed.hexStringToByteArray()) -> ApiTx("1234")
+                TxRID(statusConfirmed.hexStringToByteArray()) -> "1234".hexStringToByteArray()
                 else -> throw ProgrammerMistake("unexpected error")
             }
         }

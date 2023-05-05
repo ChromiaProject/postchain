@@ -8,7 +8,6 @@ import net.postchain.api.rest.controller.BlockHeight
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.json.JsonFactory
-import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
 import net.postchain.base.cryptoSystem
 import net.postchain.common.hexStringToByteArray
@@ -95,7 +94,7 @@ class RestApiModelTest {
     fun testGetTx_case_insensitive_ok() {
         whenever(
                 model.getTransaction(TxRID(txRID.hexStringToByteArray()))
-        ).thenReturn(ApiTx("1234"))
+        ).thenReturn("1234".hexStringToByteArray())
 
         restApi.attachModel(blockchainRID1.uppercase(), model)
 
@@ -109,7 +108,7 @@ class RestApiModelTest {
     fun testGetTx_attach_then_detach_ok() {
         whenever(
                 model.getTransaction(TxRID(txRID.hexStringToByteArray()))
-        ).thenReturn(ApiTx("1234"))
+        ).thenReturn("1234".hexStringToByteArray())
 
         restApi.attachModel(blockchainRID1, model)
         given().basePath(basePath).port(restApi.actualPort())
