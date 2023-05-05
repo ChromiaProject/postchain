@@ -110,7 +110,8 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
                 val failedConfigHash = dataSource.getFaultyBlockchainConfiguration(blockchainRid, activeHeight)?.wrap()
                         ?: dba.getFaultyConfiguration(eContext)?.configHash
                 val pendingConfig = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight).find {
-                    dba.getConfigurationData(eContext, it.configHash.data) == null
+                    dba.getConfigurationDataFromHeight(eContext, lastSavedBlockHeight, it.configHash.data) == null
+
                 }
                 (pendingConfig != null && pendingConfig.configHash != failedConfigHash).also {
                     logger.debug { "$logPrefix: new pending configuration detected for activeHeight: $activeHeight - $it" }
@@ -138,12 +139,14 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
     }
 
     fun isConfigPending(eContext: EContext, blockchainRid: BlockchainRid, activeHeight: Long, configHash: ByteArray): Boolean {
+        val db = DatabaseAccess.of(eContext)
         val logPrefix = "isConfigPending(${eContext.chainID}, ${blockchainRid.toShortHex()}, $activeHeight, ${configHash.wrap()})"
         val configs = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight)
         return if (configs.isNotEmpty()) {
             logger.debug { "$logPrefix: ${configs.size} pending config(s) detected at height: $activeHeight" }
+            val lastSavedBlockHeight = db.getLastBlockHeight(eContext)
             val configToApply = configs.firstOrNull {
-                DatabaseAccess.of(eContext).getConfigurationData(eContext, it.configHash.data) == null
+                db.getConfigurationDataFromHeight(eContext, lastSavedBlockHeight, it.configHash.data) == null
             }
             if (configToApply != null) {
                 logger.debug { "$logPrefix: config ${configToApply.configHash} will be loaded. Signers: ${configToApply.signers}" }
@@ -193,11 +196,11 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
                         logger.debug { "$logPrefix: ${pendingConfigs.size} pending config(s) detected at height: $activeHeight" }
                         val configToApply = if (loadNextPendingConfig) {
                             pendingConfigs.firstOrNull {
-                                dba.getConfigurationData(eContext, it.configHash.data) == null
+                                dba.getConfigurationDataFromHeight(eContext, lastSavedBlockHeight, it.configHash.data) == null
                             }
                         } else {
                             pendingConfigs.lastOrNull {
-                                dba.getConfigurationData(eContext, it.configHash.data) != null
+                                dba.getConfigurationDataFromHeight(eContext, lastSavedBlockHeight, it.configHash.data) != null
                             }
                         }
 

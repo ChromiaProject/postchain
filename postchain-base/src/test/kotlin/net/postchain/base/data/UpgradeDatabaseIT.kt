@@ -216,9 +216,9 @@ class UpgradeDatabaseIT {
                         assertArrayEquals(encodeGtv(configData1), db.getConfigurationData(ctx, 0L))
                         assertArrayEquals(encodeGtv(configData1), db.getConfigurationData(ctx, 10L))
                         assertNull(db.getConfigurationData(ctx, 7L))
-                        assertNull(db.getConfigurationData(ctx, configurationHash(configData2)))
+                        assertNull(db.getConfigurationDataFromHeight(ctx, 0L, configurationHash(configData2)))
                         assertThrows<ProgrammerMistake> {
-                            db.getConfigurationData(ctx, configurationHash(configData1))
+                            db.getConfigurationDataFromHeight(ctx, 0L, configurationHash(configData1))
                         }
                     }
                 }

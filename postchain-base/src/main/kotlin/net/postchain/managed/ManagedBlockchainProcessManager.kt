@@ -8,6 +8,7 @@ import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
+import net.postchain.common.wrap
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfig
 import net.postchain.config.node.ManagedNodeConfigurationProvider
@@ -206,7 +207,7 @@ open class ManagedBlockchainProcessManager(
     private fun saveConfigurationInDatabaseIfNotAlreadyExists(chainId: Long, blockchainConfig: BlockchainConfiguration, blockHeight: Long) {
         withWriteConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
-            if (db.getConfigurationData(ctx, blockchainConfig.configHash) == null) {
+            if (db.findConfigurationHashForBlock(ctx, blockHeight)?.wrap() != blockchainConfig.configHash.wrap()) {
                 db.addConfigurationData(ctx, blockHeight, encodeGtv(blockchainConfig.rawConfig))
             }
             true

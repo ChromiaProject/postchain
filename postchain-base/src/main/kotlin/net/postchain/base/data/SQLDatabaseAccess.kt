@@ -228,6 +228,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 val blockRid = res.first()["block_rid"] as ByteArray
                 Pair(height, blockRid)
             }
+
             else -> {
                 throw ProgrammerMistake("Incorrect query getBlockHeightInfo got many lines (${res.size})")
             }
@@ -733,6 +734,16 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, nullableLongRes, height)
     }
 
+    override fun findConfigurationHashForBlock(ctx: EContext, height: Long): ByteArray? {
+        val sql = """
+            SELECT configuration_hash 
+            FROM ${tableConfigurations(ctx)} 
+            WHERE height <= ? 
+            ORDER BY height DESC LIMIT 1
+        """.trimIndent()
+        return queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height)
+    }
+
     override fun findNextConfigurationHeight(ctx: EContext, height: Long): Long? {
         val sql = """
             SELECT height 
@@ -772,9 +783,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height)
     }
 
-    override fun getConfigurationData(ctx: EContext, hash: ByteArray): ByteArray? {
-        val sql = "SELECT configuration_data FROM ${tableConfigurations(ctx)} WHERE configuration_hash = ?"
-        val res = queryRunner.query(ctx.conn, sql, mapListHandler, hash)
+    override fun getConfigurationDataFromHeight(ctx: EContext, height: Long, hash: ByteArray): ByteArray? {
+        val sql = "SELECT configuration_data FROM ${tableConfigurations(ctx)} WHERE height >= ? AND configuration_hash = ?"
+        val res = queryRunner.query(ctx.conn, sql, mapListHandler, height, hash)
         return when (res.size) {
             0 -> null
             1 -> res[0]["configuration_data"] as ByteArray

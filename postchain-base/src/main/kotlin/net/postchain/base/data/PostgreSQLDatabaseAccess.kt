@@ -122,7 +122,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 "height BIGINT PRIMARY KEY" +
                 ", configuration_data BYTEA NOT NULL" +
                 ", configuration_hash BYTEA NOT NULL" +
-                ", UNIQUE (configuration_hash)" +
+                ", UNIQUE (height, configuration_hash)" +
                 ")"
     }
 

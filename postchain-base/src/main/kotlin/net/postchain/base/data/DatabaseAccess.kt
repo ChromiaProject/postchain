@@ -99,17 +99,18 @@ interface DatabaseAccess {
 
     // Blockchain configurations
     fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long?
+    fun findConfigurationHashForBlock(ctx: EContext, height: Long): ByteArray?
     fun findNextConfigurationHeight(ctx: EContext, height: Long): Long?
     fun listConfigurations(ctx: EContext): List<Long>
     fun removeConfiguration(ctx: EContext, height: Long): Int
 
-    /** Get configuration data at exactly given height */
-    fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
-
     /** Get configuration data at <= given height */
     fun getConfigurationDataForHeight(ctx: EContext, height: Long): ByteArray?
 
-    fun getConfigurationData(ctx: EContext, hash: ByteArray): ByteArray?
+    /** Get configuration data at exactly given height */
+    fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
+
+    fun getConfigurationDataFromHeight(ctx: EContext, height: Long, hash: ByteArray): ByteArray?
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
 
     fun getFaultyConfiguration(ctx: EContext): FaultyConfiguration?
