@@ -10,11 +10,13 @@ import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.EagerDiagnosticValue
+import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.StatusManager
+import net.postchain.ebft.rest.contract.toStateNodeStatus
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
 import java.lang.Thread.sleep
 
@@ -92,7 +94,22 @@ class ValidatorBlockchainProcess(
 
     override fun registerDiagnosticData(diagnosticData: DiagnosticData) {
         super.registerDiagnosticData(diagnosticData)
+        val myNodeIndex = statusManager.getMyIndex()
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_VALIDATOR.prettyName)
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS] = LazyDiagnosticValue {
+            val errorQueue = workerContext.nodeDiagnosticContext.blockchainErrorQueue(workerContext.blockchainConfiguration.blockchainRid)
+            val nodeRid = syncManager.validatorAtIndex(myNodeIndex)
+            nodeStateTracker.myStatus?.toStateNodeStatus(nodeRid.toHex(), errorQueue)
+        }
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES] = LazyDiagnosticValue {
+            nodeStateTracker.nodeStatuses
+                    ?.withIndex()
+                    ?.filter { it.index != myNodeIndex }
+                    ?.map {
+                        val nodeRid = syncManager.validatorAtIndex(it.index)
+                        it.value.toStateNodeStatus(nodeRid.toHex())
+                    }?.toList()
+        }
     }
 
     override fun isSigner(): Boolean = !syncManager.isInFastSync()

@@ -357,8 +357,12 @@ class RestApi(
                 handleGtvQuery(request)
             })
 
-            http.get("/node/$PARAM_BLOCKCHAIN_RID/$SUBQUERY", JSON_CONTENT_TYPE, redirectGet { request, _ ->
-                handleNodeStatusQueries(request)
+            http.get("/node/$PARAM_BLOCKCHAIN_RID/my_status", JSON_CONTENT_TYPE, redirectGet { request, _ ->
+                handleNodeStatusQuery(request)
+            })
+
+            http.get("/node/$PARAM_BLOCKCHAIN_RID/statuses", JSON_CONTENT_TYPE, redirectGet { request, _ ->
+                handleNodePeersStatusQuery(request)
             })
 
             http.get("/_debug", JSON_CONTENT_TYPE) { request, _ ->
@@ -563,9 +567,11 @@ class RestApi(
         return GtvEncoder.encodeGtv(model(request).query(gtvQuery))
     }
 
-    private fun handleNodeStatusQueries(request: Request): String {
-        return model(request).nodeQuery(request.params(SUBQUERY))
-    }
+    private fun handleNodeStatusQuery(request: Request): String =
+            gson.toJson(model(request).nodeStatusQuery())
+
+    private fun handleNodePeersStatusQuery(request: Request): String =
+            gson.toJson(model(request).nodePeersStatusQuery())
 
     private fun handleDebugQuery(request: Request): String {
         return models.values

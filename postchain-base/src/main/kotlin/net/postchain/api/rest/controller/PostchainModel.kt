@@ -14,6 +14,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
+import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.tx.TransactionStatus.CONFIRMED
 import net.postchain.common.tx.TransactionStatus.REJECTED
@@ -27,6 +28,9 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
 import net.postchain.crypto.SigMaker
+import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GtxQuery
@@ -36,8 +40,10 @@ open class PostchainModel(
         val txQueue: TransactionQueue,
         val blockQueries: BaseBlockQueries,
         private val debugInfoQuery: DebugInfoQuery,
+        val blockchainRid: BlockchainRid,
         val storage: Storage,
-        val postchainContext: PostchainContext
+        val postchainContext: PostchainContext,
+        private val diagnosticData: DiagnosticData
 ) : Model {
 
     companion object : KLogging()
@@ -98,7 +104,16 @@ open class PostchainModel(
         return blockQueries.query(query.name, query.args).get()
     }
 
-    override fun nodeQuery(subQuery: String): String = throw NotSupported("NotSupported: $subQuery")
+    override fun nodeStatusQuery(): StateNodeStatus {
+        return diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS]?.value as? StateNodeStatus
+                ?: throw NotFoundError("NotFound")
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    override fun nodePeersStatusQuery(): List<StateNodeStatus> {
+        return diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES]?.value as? List<StateNodeStatus>
+                ?: throw NotFoundError("NotFound")
+    }
 
     override fun debugQuery(subQuery: String?): String {
         return debugInfoQuery.queryDebugInfo(subQuery)

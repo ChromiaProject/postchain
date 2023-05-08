@@ -65,7 +65,6 @@ class FastSynchronizer(
 
     companion object : KLogging()
 
-
     inner class Job(val height: Long, var peerId: NodeRid) {
         var header: BlockHeader? = null
         var witness: BlockWitness? = null

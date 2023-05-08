@@ -100,7 +100,8 @@ open class EBFTSynchronizationInfrastructure(
                     currentNodeConfig,
                     messageProcessingLatch,
                     restartNotifier,
-                    blockchainConfigurationProvider
+                    blockchainConfigurationProvider,
+                    postchainContext.nodeDiagnosticContext
             )
 
             /*
@@ -140,7 +141,8 @@ open class EBFTSynchronizationInfrastructure(
                             currentNodeConfig,
                             messageProcessingLatch,
                             restartNotifier,
-                            blockchainConfigurationProvider
+                            blockchainConfigurationProvider,
+                            postchainContext.nodeDiagnosticContext
                     )
 
                 }

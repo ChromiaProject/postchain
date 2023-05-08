@@ -18,7 +18,7 @@ import net.postchain.ebft.DoNothingIntent
 import net.postchain.ebft.FetchBlockAtHeightIntent
 import net.postchain.ebft.FetchCommitSignatureIntent
 import net.postchain.ebft.FetchUnfinishedBlockIntent
-import net.postchain.ebft.NodeState
+import net.postchain.ebft.NodeBlockState
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.NodeStatus
 import net.postchain.ebft.StatusManager
@@ -94,7 +94,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
     private val signersIds = workerContext.blockchainConfiguration.signers.map { NodeRid(it) }
     private fun indexOfValidator(peerId: NodeRid): Int = signersIds.indexOf(peerId)
-    private fun validatorAtIndex(index: Int): NodeRid = signersIds[index]
+    fun validatorAtIndex(index: Int): NodeRid = signersIds[index]
 
     /**
      * Handle incoming messages
@@ -138,7 +138,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                                     configHash = message.configHash
                                                     revolting = message.revolting
                                                     round = message.round
-                                                    state = NodeState.values()[message.state]
+                                                    state = NodeBlockState.values()[message.state]
                                                 }.also {
                                                     statusManager.onStatusUpdate(nodeIndex, it)
                                                 }

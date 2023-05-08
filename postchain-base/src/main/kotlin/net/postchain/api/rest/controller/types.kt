@@ -7,6 +7,7 @@ import net.postchain.api.rest.model.TxRID
 import net.postchain.base.ConfirmationProof
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.block.BlockDetail
+import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GtxQuery
 import spark.Request
@@ -35,7 +36,8 @@ interface Model : ChainModel {
     fun getConfirmationProof(txRID: TxRID): ConfirmationProof?
     fun getStatus(txRID: TxRID): ApiStatus
     fun query(query: GtxQuery): Gtv
-    fun nodeQuery(subQuery: String): String
+    fun nodeStatusQuery(): StateNodeStatus
+    fun nodePeersStatusQuery(): List<StateNodeStatus>
     fun debugQuery(subQuery: String?): String
     fun getCurrentBlockHeight(): BlockHeight
     fun getBlockchainConfiguration(height: Long = -1): ByteArray?

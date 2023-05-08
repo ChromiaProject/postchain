@@ -2,9 +2,7 @@
 
 package net.postchain.api.rest
 
-import com.google.gson.JsonParser
 import io.restassured.RestAssured.given
-import net.postchain.api.rest.controller.BlockHeight
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.json.JsonFactory
@@ -16,8 +14,9 @@ import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
-import net.postchain.ebft.NodeState
-import net.postchain.ebft.rest.contract.EBFTstateNodeStatusContract
+import net.postchain.debug.DpNodeType
+import net.postchain.ebft.NodeBlockState
+import net.postchain.ebft.rest.contract.StateNodeStatus
 import org.hamcrest.CoreMatchers.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -135,50 +134,21 @@ class RestApiModelTest {
     }
 
     @Test
-    fun testGetNodeBlockHeight_null_received() {
-        whenever(
-                model.nodeQuery("height")
-        ).thenReturn(null)
-
-        restApi.attachModel(blockchainRID1, model)
-
-        given().basePath(basePath).port(restApi.actualPort())
-                .get("/node/$blockchainRID1/height")
-                .then()
-                .statusCode(404)
-                .assertThat().body(equalTo(JsonParser.parseString("""{"error":"Not found"}""").toString()))
-    }
-
-
-    @Test
-    fun testGetNodeBlockHeight() {
-        whenever(
-                model.nodeQuery("height")
-        ).thenReturn(gson.toJson(BlockHeight(42)))
-
-        restApi.attachModel(blockchainRID1, model)
-
-        given().basePath(basePath).port(restApi.actualPort())
-                .get("/node/$blockchainRID1/height")
-                .then()
-                .statusCode(200)
-                .assertThat().body(equalTo("""{"blockHeight":42}"""))
-    }
-
-    @Test
     fun testGetMyNodeStatus() {
-        val response = EBFTstateNodeStatusContract(
+        val response = StateNodeStatus(
+                pubKey = "",
+                type = DpNodeType.NODE_TYPE_VALIDATOR.name,
                 height = 233,
                 serial = 41744989480,
-                state = NodeState.WaitBlock,
+                state = NodeBlockState.WaitBlock.name,
                 round = 0,
                 revolting = false,
                 blockRid = null
         )
 
         whenever(
-                model.nodeQuery("my_status")
-        ).thenReturn(gson.toJson(response))
+                model.nodeStatusQuery()
+        ).thenReturn(response)
 
         restApi.attachModel(blockchainRID1, model)
 
@@ -192,29 +162,32 @@ class RestApiModelTest {
     @Test
     fun testGetNodeStatuses() {
         val response =
-                arrayOf(
-                        EBFTstateNodeStatusContract(
+                listOf(
+                        StateNodeStatus(
+                                pubKey = "",
+                                type = DpNodeType.NODE_TYPE_VALIDATOR.name,
                                 height = 233,
                                 serial = 41744989480,
-                                state = NodeState.WaitBlock,
+                                state = NodeBlockState.WaitBlock.name,
                                 round = 0,
                                 revolting = false,
                                 blockRid = null
                         ),
-                        EBFTstateNodeStatusContract(
+                        StateNodeStatus(
+                                pubKey = "",
+                                type = DpNodeType.NODE_TYPE_VALIDATOR.name,
                                 height = 233,
                                 serial = 41744999981,
-                                state = NodeState.WaitBlock,
+                                state = NodeBlockState.WaitBlock.name,
                                 round = 0,
                                 revolting = false,
                                 blockRid = null
                         ))
 
         whenever(
-                model.nodeQuery("statuses")
+                model.nodePeersStatusQuery()
         ).thenReturn(
-                response.map { gson.toJson(it) }.toTypedArray()
-                        .joinToString(separator = ",", prefix = "[", postfix = "]")
+                response
         )
 
         restApi.attachModel(blockchainRID1, model)
