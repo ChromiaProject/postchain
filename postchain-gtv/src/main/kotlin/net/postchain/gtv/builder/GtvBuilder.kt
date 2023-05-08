@@ -6,6 +6,9 @@ import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvType
 
+// Copied from Rell
+// https://gitlab.com/chromaway/rell/-/blob/b276eb7e3c7b315b1e634d6394787f8a305f351e/src/main/kotlin/net/postchain/rell/tools/runcfg/runcfg_gtv.kt#L281
+// and slightly modified.
 class GtvBuilder(private var value: Gtv = gtv(mapOf())) {
 
     fun update(gtv: Gtv, vararg path: String) {
