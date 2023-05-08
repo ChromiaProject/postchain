@@ -24,11 +24,12 @@ open class KnownState(val params: SyncParameters) {
 
     companion object : KLogging()
 
-    protected enum class State {
+    enum class State {
         BLACKLISTED, UNRESPONSIVE, SYNCABLE, DRAINED
     }
 
-    protected var state = State.SYNCABLE
+    var state = State.SYNCABLE
+        protected set
 
     /**
      * [maybeLegacy] and [confirmedModern] are transitional and should be

@@ -18,6 +18,8 @@ import net.postchain.common.wrap
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
+import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -144,7 +146,9 @@ class RestApiMockForClientManual {
             }
         }
 
-        override fun nodeQuery(subQuery: String): String = TODO()
+        override fun nodeStatusQuery(): StateNodeStatus = TODO()
+
+        override fun nodePeersStatusQuery(): List<StateNodeStatus> = TODO()
 
         override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail? {
             return (blocks.filter { it.rid.contentEquals(blockRID) }).getOrNull(0)
