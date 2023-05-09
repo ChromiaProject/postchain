@@ -225,14 +225,14 @@ class RestApi(
                 "OK"
             }
 
-            http.post("/tx/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
-                val tx = if (request.contentType().startsWith(OCTET_CONTENT_TYPE)) {
-                    request.bodyAsBytes()
-                } else {
-                    parseJsonTx(request)
-                }
-                model(request).postTransaction(tx)
+            http.post("/tx/$PARAM_BLOCKCHAIN_RID", JSON_CONTENT_TYPE, redirectPost(JSON_CONTENT_TYPE) { request, _ ->
+                postTransaction(request)
                 "{}"
+            })
+
+            http.post("/tx/$PARAM_BLOCKCHAIN_RID", OCTET_CONTENT_TYPE, redirectPost(OCTET_CONTENT_TYPE) { request, _ ->
+                postTransaction(request)
+                GtvEncoder.encodeGtv(gtv(mapOf()))
             })
 
             http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", JSON_CONTENT_TYPE, redirectGet { request, _ ->
@@ -424,6 +424,15 @@ class RestApi(
         }
 
         http.awaitInitialization()
+    }
+
+    private fun postTransaction(request: Request) {
+        val tx = if (request.contentType().startsWith(OCTET_CONTENT_TYPE)) {
+            request.bodyAsBytes()
+        } else {
+            parseJsonTx(request)
+        }
+        model(request).postTransaction(tx)
     }
 
     private fun getBlockchainConfiguration(request: Request): ByteArray {

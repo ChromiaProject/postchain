@@ -7,6 +7,9 @@ import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.common.toHex
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory.gtv
+import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -14,6 +17,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import kotlin.test.assertContentEquals
 
 class RestApiPostTxEndpointTest {
 
@@ -43,12 +47,15 @@ class RestApiPostTxEndpointTest {
 
         restApi.attachModel(blockchainRID, model)
 
-        given().basePath(basePath).port(restApi.actualPort())
+        val body = given().basePath(basePath).port(restApi.actualPort())
                 .contentType(ContentType.BINARY)
+                .accept(ContentType.BINARY)
                 .body(tx)
                 .post("/tx/$blockchainRID")
                 .then()
                 .statusCode(200)
+                .contentType(ContentType.BINARY)
+        assertContentEquals(GtvEncoder.encodeGtv(gtv(mapOf())), body.extract().body().asByteArray())
 
         verify(model, times(1)).postTransaction(tx)
     }
@@ -64,6 +71,8 @@ class RestApiPostTxEndpointTest {
                 .post("/tx/$blockchainRID")
                 .then()
                 .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body(equalTo("{}"))
 
         verify(model, times(1)).postTransaction(tx)
     }
@@ -77,6 +86,24 @@ class RestApiPostTxEndpointTest {
                 .post("/tx/$blockchainRID")
                 .then()
                 .statusCode(400)
+                .contentType(ContentType.JSON)
+                .body("error", equalTo("Invalid tx format. Expected {\"tx\": <hex-string>}"))
+    }
+
+    @Test
+    fun test_postTx_when_empty_message_then_400_received_binary() {
+        restApi.attachModel(blockchainRID, model)
+
+        val body = given().basePath(basePath).port(restApi.actualPort())
+                .accept(ContentType.BINARY)
+                .body("")
+                .post("/tx/$blockchainRID")
+                .then()
+                .statusCode(400)
+                .contentType(ContentType.BINARY)
+        assertContentEquals(
+                GtvEncoder.encodeGtv(gtv("Invalid tx format. Expected {\"tx\": <hex-string>}")),
+                body.extract().body().asByteArray())
     }
 
     @Test
