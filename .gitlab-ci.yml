@@ -7,13 +7,12 @@ image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.0.
     - docker run
       --detach
       --name postgres
-      --env POSTGRES_INITDB_ARGS="--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
       --env POSTGRES_PASSWORD=postchain
       --env POSTGRES_USER=postchain
       --env PGDATA=/pgtmpfs
       --tmpfs=/pgtmpfs:size=1000m
       --publish 5432:5432
-      postgres:14.7
+      postgres:14.7-alpine3.17
   artifacts:
     when: always
     paths:
