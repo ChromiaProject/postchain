@@ -312,13 +312,23 @@ internal class PostchainClientImplTest {
     }
 
     @Test
-    fun `Transaction data can be parsed`() {
+    fun `JSON transaction data can be parsed`() {
         val txString = "A58209213082091DA582091530820911A12204208F77E7DC903AE184A1569E60F8097CAFFB105F741D"
         val transaction: ByteArray? = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request) =
-                    Response(Status.OK).body("""{"tx":"$txString"}""")
+                    Response(Status.OK).header("Content-Type", "application/json").body("""{"tx":"$txString"}""")
         }).getTransaction(TxRid("42"))
         assertEquals(txString, transaction!!.toHex())
+    }
+
+    @Test
+    fun `Binary transaction data can be handled`() {
+        val tx = "A58209213082091DA582091530820911A12204208F77E7DC903AE184A1569E60F8097CAFFB105F741D".hexStringToByteArray()
+        val transaction: ByteArray? = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+            override fun invoke(request: Request) =
+                    Response(Status.OK).header("Content-Type", "application/octet-stream").body(tx.inputStream())
+        }).getTransaction(TxRid("42"))
+        assertContentEquals(tx, transaction!!)
     }
 
     @Test

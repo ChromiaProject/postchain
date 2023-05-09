@@ -67,7 +67,7 @@ class PostchainClientImpl(
                 .header("Content-Type", ContentType.OCTET_STREAM.value)
                 .header("Accept", ContentType.OCTET_STREAM.value)
                 .body(gtxQuery.encode().inputStream())
-    }, ::decodeGtv, ::buildExceptionFromGTV, true)
+    }, ::decodeGtv, { response, endpoint -> buildExceptionFromGtv("Can not make a query", response, endpoint) }, true)
 
     @Throws(IOException::class)
     override fun currentBlockHeight(): Long = requestStrategy.request({ endpoint ->
@@ -88,22 +88,7 @@ class PostchainClientImpl(
     }, { response ->
         val gtv = decodeGtv(response)
         if (gtv.isNull()) null else GtvObjectMapper.fromGtv(gtv, BlockDetail::class)
-    }, ::buildExceptionFromGTV, true)
-
-    private fun decodeGtv(response: Response) =
-            GtvDecoder.decodeGtv(BoundedInputStream(response.body.stream, config.maxResponseSize.toLong()))
-
-    private fun buildExceptionFromGTV(response: Response, endpoint: Endpoint): Nothing {
-        val responseStream = BoundedInputStream(response.body.stream, config.maxResponseSize.toLong())
-        val errorMessage = try {
-            GtvDecoder.decodeGtv(responseStream).asString()
-        } catch (e: IOException) {
-            // Error body can't be parsed as GTV, this could be a client generated error
-            // Dump it as a string and hope it is either empty or readable text
-            String(responseStream.readAllBytes())
-        }
-        throw ClientError("Can not make a query", response.status, errorMessage, endpoint)
-    }
+    }, { response, endpoint -> buildExceptionFromGtv("Can not fetch block at height", response, endpoint) }, true)
 
     @Throws(IOException::class)
     override fun postTransaction(tx: Gtx): TransactionResult {
@@ -151,6 +136,7 @@ class PostchainClientImpl(
         return lastKnownTxResult
     }
 
+    @Throws(IOException::class)
     override fun checkTxStatus(txRid: TxRid): TransactionResult = requestStrategy.request({ endpoint ->
         Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/status")
                 .header("Accept", ContentType.APPLICATION_JSON.value)
@@ -167,6 +153,7 @@ class PostchainClientImpl(
         throw ClientError("Can not check transaction status", response.status, msg, endpoint)
     }, true)
 
+    @Throws(IOException::class)
     override fun confirmationProof(txRid: TxRid): ByteArray? = requestStrategy.request({ endpoint ->
         Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}/confirmationProof")
                 .header("Accept", ContentType.APPLICATION_JSON.value)
@@ -178,17 +165,33 @@ class PostchainClientImpl(
         throw ClientError("Can not fetch confirmation proof", response.status, msg, endpoint)
     }, true)
 
+    @Throws(IOException::class)
     override fun getTransaction(txRid: TxRid): ByteArray? = requestStrategy.request({ endpoint ->
         Request(Method.GET, "${endpoint.url}/tx/$blockchainRIDOrID/${txRid.rid}")
-                .header("Accept", ContentType.APPLICATION_JSON.value)
+                .header("Accept", ContentType.OCTET_STREAM.value)
     }, { response ->
-        val txResponse = parseJson(response, Transaction::class.java)
-        txResponse?.tx?.hexStringToByteArray()
-    }, { response, endpoint ->
-        val msg = parseJson(response, ErrorResponse::class.java)?.error ?: "Unknown error"
-        throw ClientError("Can not fetch transaction", response.status, msg, endpoint)
-    }, true)
+        if (response.header("Content-Type") == ContentType.OCTET_STREAM.value) {
+            BoundedInputStream(response.body.stream, config.maxResponseSize.toLong()).use { it.readAllBytes() }
+        } else {
+            val txResponse = parseJson(response, Transaction::class.java)
+            txResponse?.tx?.hexStringToByteArray()
+        }
+    }, { response, endpoint -> buildExceptionFromGtv("Can not fetch transaction", response, endpoint) }, true)
 
+    private fun decodeGtv(response: Response) =
+            GtvDecoder.decodeGtv(BoundedInputStream(response.body.stream, config.maxResponseSize.toLong()))
+
+    private fun buildExceptionFromGtv(context: String, response: Response, endpoint: Endpoint): Nothing {
+        val responseStream = BoundedInputStream(response.body.stream, config.maxResponseSize.toLong())
+        val errorMessage = try {
+            GtvDecoder.decodeGtv(responseStream).asString()
+        } catch (e: IOException) {
+            // Error body can't be parsed as GTV, this could be a client generated error
+            // Dump it as a string and hope it is either empty or readable text
+            String(responseStream.readAllBytes())
+        }
+        throw ClientError(context, response.status, errorMessage, endpoint)
+    }
 
     private fun <T> parseJson(response: Response, cls: Class<T>): T? = try {
         val body = BoundedInputStream(response.body.stream, config.maxResponseSize.toLong()).bufferedReader()
@@ -199,6 +202,7 @@ class PostchainClientImpl(
         else throw IOException("Json parsing failed", e)
     }
 
+    @Throws(IOException::class)
     override fun close() {
         requestStrategy.close()
     }
