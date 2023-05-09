@@ -1046,6 +1046,22 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /version:
+    get:
+      tags:
+        - node
+      summary: Get API version
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/version"
+              examples:
+                version:
+                  value:
+                    version: 1
 
 components:
   parameters:
@@ -1334,3 +1350,13 @@ components:
       description: Block height
     nullValue:
       type: "null"
+    version:
+      type: object
+      required:
+        - version
+      properties:
+        version:
+          type: integer
+          minimum: 1
+          format: int32
+          description: API version
