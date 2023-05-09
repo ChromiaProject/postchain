@@ -91,4 +91,6 @@ class ValidatorBlockchainProcess(
         super.registerDiagnosticData(diagnosticData)
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_VALIDATOR.prettyName)
     }
+
+    override fun isSigner(): Boolean = !syncManager.isInFastSync()
 }

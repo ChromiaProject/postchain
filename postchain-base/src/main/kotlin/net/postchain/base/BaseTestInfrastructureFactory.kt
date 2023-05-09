@@ -37,6 +37,8 @@ class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : B
         shutdownDebug("End")
     }
 
+    override fun isSigner(): Boolean = true
+
     private fun shutdownDebug(str: String) {
         if (logger.isDebugEnabled) {
             logger.debug("$name: shutdown() - $str.")
