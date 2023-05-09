@@ -46,6 +46,7 @@ interface Model : ChainModel {
 
 data class BlockHeight(val blockHeight: Long)
 data class ErrorBody(val error: String = "")
+data class Version(val version: Int)
 
 class NotSupported(message: String) : Exception(message)
 class NotFoundError(message: String) : Exception(message)
@@ -53,4 +54,3 @@ class BadFormatError(message: String) : Exception(message)
 class UnavailableException(message: String) : Exception(message)
 class InvalidTnxException(message: String) : Exception(message)
 class DuplicateTnxException(message: String) : Exception(message)
-

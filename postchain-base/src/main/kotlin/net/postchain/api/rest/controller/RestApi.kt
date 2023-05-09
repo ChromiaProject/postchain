@@ -62,6 +62,8 @@ class RestApi(
     private val MAX_NUMBER_OF_TXS_PER_REQUEST = 600
 
     companion object : KLogging() {
+        const val REST_API_VERSION = 1
+
         const val JSON_CONTENT_TYPE = "application/json"
         const val OCTET_CONTENT_TYPE = "application/octet-stream"
         const val XML_CONTENT_TYPE = "text/xml"
@@ -415,6 +417,10 @@ class RestApi(
                 }
                 "{}"
             })
+
+            http.get("/version", JSON_CONTENT_TYPE) { _, _ ->
+                gson.toJson(Version(REST_API_VERSION))
+            }
         }
 
         http.awaitInitialization()
