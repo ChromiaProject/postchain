@@ -25,7 +25,6 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
         mapOf(
                 "nm_api_version" to ::queryApiVersion,
                 "nm_get_peer_infos" to ::queryGetPeerInfos,
-                "nm_get_peer_list_version" to ::queryGetPeerListVersion,
                 "nm_compute_blockchain_list" to ::queryComputeBlockchainList,
                 "nm_get_blockchain_configuration" to ::queryGetConfiguration,
                 "nm_find_next_configuration_height" to ::queryFindNextConfigurationHeight,
@@ -81,21 +80,6 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
                     .map(::peerInfoToGtv)
                     .toTypedArray()
             )
-        }
-
-        fun queryGetPeerListVersion(node: Nodes, eContext: EContext, args: Gtv): Gtv {
-            logger.log { "Query: nm_get_peer_list_version" }
-
-            if (argCurrentHeight(args) in stage0) logger.log { "in range 0" }
-            if (argCurrentHeight(args) in stage1) logger.log { "in range 1" }
-
-            val version = when (argCurrentHeight(args)) {
-                in stage0 -> 1
-                in stage1 -> 2
-                else -> 2
-            }
-
-            return GtvInteger(version.toLong())
         }
 
         fun queryComputeBlockchainList(node: Nodes, eContext: EContext, args: Gtv): Gtv {
