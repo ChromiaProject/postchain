@@ -10,7 +10,6 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
 
     val nmApiVersion: Int
 
-    fun getPeerListVersion(): Long
     fun computeBlockchainList(): List<ByteArray>
     fun computeBlockchainInfoList(): List<BlockchainInfo>
     fun getLastBuiltHeight(blockchainRidRaw: ByteArray): Long

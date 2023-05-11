@@ -32,10 +32,6 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     override val nmApiVersion: Int
         get() = TODO("Not yet implemented")
 
-    override fun getPeerListVersion(): Long {
-        return 1L
-    }
-
     override fun computeBlockchainList(): List<ByteArray> {
         return myNode.chainsToRead.union(myNode.chainsToSign).map { ChainUtil.ridOf(it.toLong()).data }
     }

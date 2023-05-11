@@ -35,11 +35,6 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         return res.asArray().map { PeerInfo.fromGtv(it) }.toTypedArray()
     }
 
-    override fun getPeerListVersion(): Long {
-        val res = query("nm_get_peer_list_version", buildArgs())
-        return res.asInteger()
-    }
-
     override fun computeBlockchainList(): List<ByteArray> {
         val res = query(
                 "nm_compute_blockchain_list",
@@ -119,7 +114,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
     }
 
     override fun getFaultyBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): ByteArray? {
-        if (nmApiVersion < 6) return null
+        if (nmApiVersion < 5) return null
 
         val res = query(
                 "nm_get_faulty_blockchain_configuration",
