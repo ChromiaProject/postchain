@@ -48,10 +48,10 @@ interface PostchainClient : PostchainBlockClient, PostchainQuery, Closeable {
     /**
      * Get confirmation proof for transaction.
      */
-    fun confirmationProof(txRid: TxRid): ByteArray?
+    fun confirmationProof(txRid: TxRid): ByteArray
 
     /**
      * Get raw transaction data
      */
-    fun getTransaction(txRid: TxRid): ByteArray?
+    fun getTransaction(txRid: TxRid): ByteArray
 }

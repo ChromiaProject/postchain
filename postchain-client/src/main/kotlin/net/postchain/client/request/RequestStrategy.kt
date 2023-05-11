@@ -6,7 +6,7 @@ import java.io.Closeable
 
 interface RequestStrategy : Closeable {
     fun <R> request(createRequest: (Endpoint) -> Request,
-                    success: (Response) -> R,
+                    success: (Response, Endpoint) -> R,
                     failure: (Response, Endpoint) -> R,
                     queryMultiple: Boolean): R
 }
