@@ -173,7 +173,9 @@ class BaseManagedBlockBuilder(
         synchronized(storage) {
             if (!closed) {
                 rollbackLog("Got lock")
-                eContext.conn.rollback(savepoint)
+                if (!eContext.conn.isClosed) {
+                    eContext.conn.rollback(savepoint)
+                }
                 closed = true
             }
         }
