@@ -165,7 +165,9 @@ class BaseManagedBlockBuilder(
         synchronized(storage) {
             if (!closed) {
                 rollbackLog("Got lock")
-                storage.closeWriteConnection(eContext, false)
+                if (!eContext.conn.isClosed) {
+                    storage.closeWriteConnection(eContext, false)
+                }
                 closed = true
             }
         }
