@@ -17,9 +17,9 @@ import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.message.*
 import net.postchain.ebft.worker.WorkerContext
-import java.lang.Thread.sleep
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 import net.postchain.ebft.message.BlockData as MessageBlockData
 import net.postchain.ebft.message.BlockHeader as BlockHeaderMessage
 
@@ -77,15 +77,17 @@ class FastSynchronizer(
     }
 
     fun syncUntil(exitCondition: () -> Boolean) {
+        var polledFinishedJob: Job? = null
         try {
             blockHeight = blockQueries.getBestHeight().get()
             syncDebug("Start", blockHeight)
             while (isProcessRunning() && !exitCondition()) {
                 refillJobs()
                 processMessages(exitCondition)
-                processDoneJobs()
+                processDoneJobs(polledFinishedJob)
                 processStaleJobs()
-                sleep(params.loopInterval)
+                // Would be nicer to be able to just peek here but there is no API for that
+                polledFinishedJob = finishedJobs.poll(params.loopInterval, TimeUnit.MILLISECONDS)
             }
         } catch (e: BadDataMistake) {
             logger.error(e) { "Fatal error, shutting down blockchain for safety reasons. Needs manual investigation." }
@@ -94,6 +96,7 @@ class FastSynchronizer(
             logger.debug(e) { "syncUntil() -- ${"Exception"}" }
         } finally {
             syncDebug("Await commits", blockHeight)
+            processDoneJobs(polledFinishedJob)
             awaitCommits()
             jobs.clear()
             finishedJobs.clear()
@@ -168,8 +171,8 @@ class FastSynchronizer(
         }
     }
 
-    private fun processDoneJobs() {
-        var j = finishedJobs.poll()
+    private fun processDoneJobs(polledJob: Job?) {
+        var j = polledJob ?: finishedJobs.poll()
         while (j != null) {
             processDoneJob(j)
             j = finishedJobs.poll()
