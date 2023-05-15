@@ -106,19 +106,19 @@ class RestApi(
 
     private fun buildErrorHandler(http: Service) {
         http.exception(NotFoundError::class.java) { error, request, response ->
-            logger.warn("NotFound: ${error.message}")
+            logger.debug("NotFound: ${error.message}")
             response.status(404)
             transformErrorResponseFromDiagnostics(request, response, error)
         }
 
         http.exception(BadFormatError::class.java) { error, _, response ->
-            logger.warn("BadFormat: ${error.message}")
+            logger.debug("BadFormat: ${error.message}")
             response.status(400)
             setErrorResponseBody(response, error)
         }
 
         http.exception(UserMistake::class.java) { error, _, response ->
-            logger.warn("UserMistake: ${error.message}")
+            logger.debug("UserMistake: ${error.message}")
             response.status(400)
             setErrorResponseBody(response, error)
         }
@@ -149,7 +149,7 @@ class RestApi(
         }
 
         http.exception(Exception::class.java) { error, request, response ->
-            logger.error("Exception: $error", error)
+            logger.debug("Exception: $error", error)
             response.status(500)
             transformErrorResponseFromDiagnostics(request, response, error)
         }
