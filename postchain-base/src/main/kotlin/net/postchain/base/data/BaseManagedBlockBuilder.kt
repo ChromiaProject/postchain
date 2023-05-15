@@ -117,7 +117,7 @@ class BaseManagedBlockBuilder(
                             // Don't log stacktrace
                             is TransactionIncorrect -> logger.debug { "Tx Incorrect ${tx.getRID().toHex()}." }
                             is TransactionFailed -> logger.debug { "Tx failed ${tx.getRID().toHex()}." }
-                            is UserMistake -> {}
+                            is UserMistake -> logger.debug(it) { "Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}." }
                             // Should be unusual, so let's log everything
                             else -> logger.error("Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}.", it)
                         }
