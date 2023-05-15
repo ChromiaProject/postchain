@@ -11,6 +11,7 @@ import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
@@ -293,7 +294,12 @@ open class BaseBlockchainEngine(
                         rejectedTxs++
                         transactionSample.stop(metrics.rejectedTransactions)
                         transactionQueue.rejectTransaction(tx, txException)
-                        logger.warn("Rejected Tx: ${tx.getRID().toHex()}, reason: ${txException.message}, cause: ${txException.cause}")
+                        val rejectedMsg = "Rejected Tx: ${tx.getRID().toHex()}, reason: ${txException.message}, cause: ${txException.cause}"
+                        if (txException is UserMistake) {
+                            logger.info(rejectedMsg)
+                        } else {
+                            logger.warn(rejectedMsg)
+                        }
                     } else {
                         acceptedTxs++
                         transactionSample.stop(metrics.acceptedTransactions)
