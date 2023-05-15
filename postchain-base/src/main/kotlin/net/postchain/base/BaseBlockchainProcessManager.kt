@@ -167,6 +167,7 @@ open class BaseBlockchainProcessManager(
                             }
                             blockchainConfig.blockchainRid
                         } catch (e: Exception) {
+                            postchainContext.connectionManager.disconnectChain({ "StartBlockchainFail" } , chainId)
                             try {
                                 if (hasBuiltInitialBlock(initialEContext)) {
                                     revertConfiguration(chainId, bTrace, chainStorage, initialEContext, blockHeight, rawConfigurationData)
