@@ -116,7 +116,7 @@ open class BaseBlockchainEngine(
         }
         val savepoint = currentEContext.conn.setSavepoint("blockBuilder${System.nanoTime()}")
 
-        return BaseManagedBlockBuilder(currentEContext, savepoint, storage,  blockchainConfiguration.makeBlockBuilder(currentEContext), nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid),{ },
+        return BaseManagedBlockBuilder(currentEContext, savepoint, storage,  blockchainConfiguration.makeBlockBuilder(currentEContext), { },
                 {
                     afterLog("Begin", it.getBTrace())
                     val blockBuilder = it as AbstractBlockBuilder
