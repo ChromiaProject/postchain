@@ -8,6 +8,7 @@ import net.postchain.base.data.SqlUtils.isFatal
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionFailed
 import net.postchain.common.exception.TransactionIncorrect
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.EContext
 import net.postchain.core.Storage
@@ -111,6 +112,7 @@ class BaseManagedBlockBuilder(
                         is TransactionFailed -> logger.debug {
                             "Tx failed ${tx.getRID().toHex()}."
                         } // Don't log stacktrace
+                        is UserMistake -> logger.debug(it) { "Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}." }
                         else -> logger.error(
                                 "Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}.", it
                         ) // Should be unusual, so let's log everything
