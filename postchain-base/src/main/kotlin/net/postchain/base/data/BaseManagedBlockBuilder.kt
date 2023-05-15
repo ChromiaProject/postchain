@@ -9,6 +9,7 @@ import net.postchain.base.data.SqlUtils.isFatal
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionFailed
 import net.postchain.common.exception.TransactionIncorrect
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.EContext
 import net.postchain.core.Storage
@@ -20,6 +21,7 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.BlockWitnessBuilder
 import net.postchain.core.block.ManagedBlockBuilder
+import net.postchain.debug.DiagnosticQueue
 import net.postchain.logging.CHAIN_IID_TAG
 import java.sql.SQLException
 import java.sql.Savepoint
@@ -46,6 +48,7 @@ class BaseManagedBlockBuilder(
         private val savepoint: Savepoint,
         val storage: Storage,
         val blockBuilder: BlockBuilder,
+        private val errorQueue: DiagnosticQueue<String>,
         val beforeCommit: (BlockBuilder) -> Unit,
         val afterCommit: (BlockBuilder) -> Unit
 ) : ManagedBlockBuilder {
@@ -116,6 +119,7 @@ class BaseManagedBlockBuilder(
                             // Don't log stacktrace
                             is TransactionIncorrect -> logger.debug { "Tx Incorrect ${tx.getRID().toHex()}." }
                             is TransactionFailed -> logger.debug { "Tx failed ${tx.getRID().toHex()}." }
+                            is UserMistake -> errorQueue.add(it.message)
                             // Should be unusual, so let's log everything
                             else -> logger.error("Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}.", it)
                         }
