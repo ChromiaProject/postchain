@@ -209,6 +209,7 @@ open class BaseBlockchainEngine(
                     blockBuilder.rollback()
                 } catch (ignore: Exception) {
                 }
+                nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(e.message)
                 exception = e
             }
 
