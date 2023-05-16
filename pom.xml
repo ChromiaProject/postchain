@@ -6,7 +6,7 @@
 
     <groupId>net.postchain</groupId>
     <artifactId>postchain</artifactId>
-    <version>3.9.4</version>
+    <version>3.9.5</version>
     <modules>
         <module>postchain-common</module>
         <module>postchain-gtv</module>
@@ -27,7 +27,7 @@
     <properties>
         <doclint>none</doclint>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.build.outputTimestamp>1684161861</project.build.outputTimestamp>
+        <project.build.outputTimestamp>1684249934</project.build.outputTimestamp>
 
         <!-- Kotlin -->
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
