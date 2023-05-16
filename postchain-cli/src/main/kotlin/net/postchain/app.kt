@@ -11,7 +11,9 @@ import net.postchain.cli.CommandAddConfiguration
 import net.postchain.cli.CommandBlockchainReplicaAdd
 import net.postchain.cli.CommandBlockchainReplicaRemove
 import net.postchain.cli.CommandCheckBlockchain
+import net.postchain.cli.CommandExportBlockchain
 import net.postchain.cli.CommandGenerateContainerZfsInitScript
+import net.postchain.cli.CommandImportBlockchain
 import net.postchain.cli.CommandListConfigurations
 import net.postchain.cli.CommandMustSyncUntil
 import net.postchain.cli.CommandPeerInfoAdd
@@ -53,6 +55,8 @@ fun main(args: Array<String>) {
                     CommandPeerInfoList(),
                     CommandPeerInfoRemove(),
                     CommandWipeDb(),
+                    CommandExportBlockchain(),
+                    CommandImportBlockchain()
             )
             .main(args)
 }

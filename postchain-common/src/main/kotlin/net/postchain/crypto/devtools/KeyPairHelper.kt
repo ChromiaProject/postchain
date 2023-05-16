@@ -3,6 +3,9 @@
 package net.postchain.crypto.devtools
 
 import net.postchain.common.toHex
+import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PrivKey
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.secp256k1_derivePubKey
 
 /**
@@ -44,6 +47,10 @@ object KeyPairHelper {
 
     fun pubKeyHex(index: Int): String {
         return getCachedPubKey(index).second
+    }
+
+    fun keyPair(index: Int): KeyPair {
+        return KeyPair(PubKey(pubKey(index)), PrivKey(privKey(index)))
     }
 
     // TODO: [olle] Is there any way to do the same smart calculation? No fun if we return "null" here
