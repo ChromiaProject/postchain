@@ -51,8 +51,10 @@ data class PostchainClientConfig @JvmOverloads constructor(
             require(pubkeys.size == privkeys.size) { "Equally many pubkeys as privkeys must be provided, but ${pubkeys.size} and ${privkeys.size} was found" }
             val signers = if (privkeys.isEmpty() || privkeys.first() == "") listOf() else pubkeys.zip(privkeys).map { KeyPair.of(it.first, it.second) }
             return PostchainClientConfig(
-                    blockchainRid = config.getEnvOrStringProperty("POSTCHAIN_CLIENT_BLOCKCHAIN_RID", "brid", "").let { BlockchainRid.buildFromHex(it) },
-                    endpointPool = EndpointPool.default(config.getEnvOrStringProperty("POSTCHAIN_CLIENT_API_URL", "api.url", "").split(",")),
+                    blockchainRid = BlockchainRid.buildFromHex(
+                            requireNotNull(config.getEnvOrStringProperty("POSTCHAIN_CLIENT_BLOCKCHAIN_RID", "brid")) { "Missing 'brid' (blockchain-rid)" }),
+                    endpointPool = EndpointPool.default(
+                            requireNotNull(config.getEnvOrStringProperty("POSTCHAIN_CLIENT_API_URL", "api.url")) { "Missing 'api.url'" }.split(",")),
                     signers = signers,
                     statusPollCount = config.getEnvOrIntProperty("POSTCHAIN_CLIENT_STATUS_POLL_COUNT", "status.poll-count", STATUS_POLL_COUNT),
                     statusPollInterval = config.getEnvOrLongProperty("POSTCHAIN_CLIENT_STATUS_POLL_INTERVAL", "status.poll-interval", STATUS_POLL_INTERVAL.toMillis()).let { Duration.ofMillis(it) },

@@ -52,11 +52,11 @@ fun PostchainTestNode.blockSignatures(chainId: Long, height: Long): Array<Signat
 }
 
 fun PostchainTestNode.currentHeight(chainId: Long): Long {
-    return query(chainId) { it.getBestHeight() } ?: -1L
+    return query(chainId) { it.getLastBlockHeight() } ?: -1L
 }
 
 fun PostchainTestNode.awaitedHeight(chainId: Long): Long {
-    return query(chainId) { it.getBestHeight() }
+    return query(chainId) { it.getLastBlockHeight() }
             ?.plus(1) ?: -1L
 }
 

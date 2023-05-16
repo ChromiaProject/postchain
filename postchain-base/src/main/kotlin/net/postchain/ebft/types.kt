@@ -16,7 +16,7 @@ interface ErrContext {
     fun log(msg: String)
 }
 
-enum class NodeState {
+enum class NodeBlockState {
     WaitBlock, // PBFT: before PRE-PREPARE
     HaveBlock, // PBFT: after PRE-PREPARE, PREPARE message is sent
     Prepared   // PBFT: _prepared_ state, COMMIT message is sent
@@ -28,9 +28,10 @@ enum class NodeState {
  */
 class NodeStatus(var height: Long, var serial: Long) {
 
-    var state: NodeState = NodeState.WaitBlock
+    var state: NodeBlockState = NodeBlockState.WaitBlock
     var round: Long = 0  // PBFT: view-number
     var blockRID: ByteArray? = null
+    var configHash: ByteArray? = null
 
     var revolting: Boolean = false // PBFT: VIEW-CHANGE (?)
 

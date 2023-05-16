@@ -3,6 +3,7 @@
 package net.postchain.base.data
 
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
@@ -47,6 +48,8 @@ interface DatabaseAccess {
             val data: ByteArray)
 
     fun tableName(ctx: EContext, table: String): String
+
+    fun checkCollation(connection: Connection, suppressError: Boolean)
 
     fun isSavepointSupported(): Boolean
     fun isSchemaExists(connection: Connection, schema: String): Boolean
@@ -100,8 +103,18 @@ interface DatabaseAccess {
     fun listConfigurations(ctx: EContext): List<Long>
     fun removeConfiguration(ctx: EContext, height: Long): Int
 
+    /** Get configuration data at exactly given height */
     fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
+
+    /** Get configuration data at <= given height */
+    fun getConfigurationDataForHeight(ctx: EContext, height: Long): ByteArray?
+
+    fun getConfigurationData(ctx: EContext, hash: ByteArray): ByteArray?
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
+
+    fun getFaultyConfiguration(ctx: EContext): FaultyConfiguration?
+    fun addFaultyConfiguration(ctx: EContext, faultyConfiguration: FaultyConfiguration)
+    fun updateFaultyConfigurationReportHeight(ctx: EContext, height: Long)
 
     // Event and State
     fun insertEvent(ctx: TxEContext, prefix: String, height: Long, position: Long, hash: Hash, data: ByteArray)
@@ -121,8 +134,8 @@ interface DatabaseAccess {
     fun findPeerInfo(ctx: AppContext, host: String?, port: Int?, pubKeyPattern: String?): Array<PeerInfo>
     fun addPeerInfo(ctx: AppContext, peerInfo: PeerInfo): Boolean
     fun addPeerInfo(ctx: AppContext, host: String, port: Int, pubKey: String, timestamp: Instant? = null): Boolean
-    fun updatePeerInfo(ctx: AppContext, host: String, port: Int, pubKey: String, timestamp: Instant? = null): Boolean
-    fun removePeerInfo(ctx: AppContext, pubKey: String): Array<PeerInfo>
+    fun updatePeerInfo(ctx: AppContext, host: String, port: Int, pubKey: PubKey, timestamp: Instant? = null): Boolean
+    fun removePeerInfo(ctx: AppContext, pubKey: PubKey): Array<PeerInfo>
 
     // Extra nodes to sync from
     fun getBlockchainReplicaCollection(ctx: AppContext): Map<BlockchainRid, List<NodeRid>>

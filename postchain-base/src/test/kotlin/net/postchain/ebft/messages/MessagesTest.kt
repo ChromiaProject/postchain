@@ -4,6 +4,7 @@ package net.postchain.ebft.messages
 
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.common.wrap
 import net.postchain.ebft.message.BlockData
 import net.postchain.ebft.message.BlockRange
 import net.postchain.ebft.message.BlockSignature
@@ -22,8 +23,8 @@ class MessagesTest {
 
     // Some dummy data
     val headerHex = "12121212"
-    val tx1Hex ="23232323"
-    val tx2Hex ="45454545"
+    val tx1Hex = "23232323"
+    val tx2Hex = "45454545"
     val witnessHex = "787878787878"
 
     @Test
@@ -47,9 +48,9 @@ class MessagesTest {
 
     @Test
     fun testBlockSignature() {
-        val blockRID = ByteArray(32){it.toByte()}
-        val subjectID = ByteArray(33) {it.toByte()}
-        val data = ByteArray(40){(it+1).toByte()}
+        val blockRID = ByteArray(32) { it.toByte() }
+        val subjectID = ByteArray(33) { it.toByte() }
+        val data = ByteArray(40) { (it + 1).toByte() }
         val sig = Signature(subjectID, data)
         val mess = BlockSignature(blockRID, sig)
         val encoded = mess.encoded
@@ -62,14 +63,15 @@ class MessagesTest {
 
     @Test
     fun testStatus() {
-        val blockRID = ByteArray(32){it.toByte()}
+        val blockRID = ByteArray(32) { it.toByte() }
         val height = 123321L
         val revolting = true
         val round = 1L
         val serial = 123456L
         val state = 123
+        val configHash = byteArrayOf(1, 2, 3, 4)
 
-        val status = Status(blockRID, height, revolting, round, serial, state)
+        val status = Status(blockRID, height, revolting, round, serial, state, configHash)
         val encoded = status.encoded
         val expected = EbftMessage.decodeAs<Status>(encoded)
 
@@ -79,6 +81,7 @@ class MessagesTest {
         assertEquals(status.round, expected.round)
         assertEquals(status.serial, expected.serial)
         assertEquals(status.state, expected.state)
+        assertEquals(status.configHash?.wrap(), expected.configHash?.wrap())
     }
 
     @Test
@@ -129,8 +132,8 @@ class MessagesTest {
         val header = headerHex.hexStringToByteArray()
 
         val transactions = listOf(
-            tx1Hex.hexStringToByteArray(),
-            tx2Hex.hexStringToByteArray()
+                tx1Hex.hexStringToByteArray(),
+                tx2Hex.hexStringToByteArray()
         )
         val data = BlockData(header, transactions)
         val witness = witnessHex.hexStringToByteArray()

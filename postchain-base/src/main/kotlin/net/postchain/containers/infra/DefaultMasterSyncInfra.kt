@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 open class DefaultMasterSyncInfra(
         postchainContext: PostchainContext,
-        protected val masterConnectionManager: MasterConnectionManager,
+        override val masterConnectionManager: MasterConnectionManager,
         private val containerNodeConfig: ContainerNodeConfig,
 ) : EBFTSynchronizationInfrastructure(postchainContext), MasterSyncInfra {
     private val afterSubnodeCommitListeners = Collections.newSetFromMap(ConcurrentHashMap<AfterSubnodeCommitListener, Boolean>())
@@ -46,10 +46,8 @@ open class DefaultMasterSyncInfra(
                 peersCommConfigFactory,
                 connectionManager,
                 masterConnectionManager,
-                dataSource,
                 processName,
-                afterSubnodeCommitListeners,
-                postchainContext.blockQueriesProvider
+                afterSubnodeCommitListeners
         ).apply { init() }
 
         return DefaultContainerBlockchainProcess(

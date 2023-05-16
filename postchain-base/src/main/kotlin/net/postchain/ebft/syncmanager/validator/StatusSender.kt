@@ -9,9 +9,9 @@ import net.postchain.network.CommunicationManager
 import java.util.*
 
 class StatusSender(
-    private val maxStatusInterval: Int,
-    private val statusManager: StatusManager,
-    private val communicationManager: CommunicationManager<EbftMessage>
+        private val maxStatusInterval: Int,
+        private val statusManager: StatusManager,
+        private val communicationManager: CommunicationManager<EbftMessage>
 ) {
     var lastSerial: Long = -1
     var lastSentTime: Long = Date(0L).time
@@ -25,9 +25,15 @@ class StatusSender(
         if (isNewState || timeoutExpired) {
             this.lastSentTime = Date().time
             this.lastSerial = myStatus.serial
-            val statusMessage = Status(myStatus.blockRID, myStatus.height,
-                myStatus.revolting, myStatus.round, myStatus.serial,
-                myStatus.state.ordinal)
+            val statusMessage = Status(
+                    myStatus.blockRID,
+                    myStatus.height,
+                    myStatus.revolting,
+                    myStatus.round,
+                    myStatus.serial,
+                    myStatus.state.ordinal,
+                    myStatus.configHash
+            )
             communicationManager.broadcastPacket(statusMessage)
         }
     }

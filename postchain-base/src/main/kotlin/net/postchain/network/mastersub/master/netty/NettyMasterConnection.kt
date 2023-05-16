@@ -48,7 +48,7 @@ class NettyMasterConnection :
         val messageBytes = Transport.unwrapMessage(msg as ByteBuf)
         when (val message = MsCodec.decode(messageBytes)) {
             is MsHandshakeMessage -> {
-                connectionDescriptor = MasterConnectionDescriptor(BlockchainRid(message.blockchainRid))
+                connectionDescriptor = MasterConnectionDescriptor(message.blockchainRid?.let { BlockchainRid(it) }, message.containerIID)
                 onConnectedHandler?.invoke(connectionDescriptor!!, this)
                 messageHandler?.onMessage(message)
             }

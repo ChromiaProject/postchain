@@ -2,7 +2,7 @@ package net.postchain.devtools.utils.configuration
 
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.BlockchainRid
-import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 
 /**
@@ -31,7 +31,7 @@ object TestBlockchainRidCache {
             ?: throw IllegalStateException("Is ${rid.toShortHex()} a dependency bc RID? This chain must be added to the cache before it can be found. (${this}")
 
     fun calcAndAdd(chainId: Int, bcGtv: Gtv): BlockchainRid {
-        val newRid = GtvToBlockchainRidFactory.calculateBlockchainRid(bcGtv, Secp256K1CryptoSystem())
+        val newRid = GtvToBlockchainRidFactory.calculateBlockchainRid(bcGtv, ::sha256Digest)
         add(chainId, newRid)
         return newRid
     }

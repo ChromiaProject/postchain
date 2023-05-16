@@ -62,7 +62,7 @@ interface BlockStore {
  */
 interface BlockQueries : Shutdownable {
     fun getBlockSignature(blockRID: ByteArray): CompletionStage<Signature>
-    fun getBestHeight(): CompletionStage<Long>
+    fun getLastBlockHeight(): CompletionStage<Long>
     fun getLastBlockTimestamp(): CompletionStage<Long>
     fun getBlockRid(height: Long): CompletionStage<ByteArray?>
     fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): CompletionStage<BlockDataWithWitness?>
@@ -102,13 +102,17 @@ interface BlockBuilder {
     fun getBlockWitnessBuilder(): BlockWitnessBuilder?
     fun commit(blockWitness: BlockWitness)
 
+    val height: Long?
+
     // Just debug
     fun getBTrace(): BlockTrace? // Use this function to get quick debug info about the block, note: ONLY for logging!
     fun setBTrace(bTrace: BlockTrace)
 }
 
 /**
- * A block builder which automatically manages the connection
+ * A block builder which automatically manages the connection.
+ *
+ * Despite its name, it is not related to managed mode.
  */
 interface ManagedBlockBuilder : BlockBuilder {
     fun maybeAppendTransaction(tx: Transaction): Exception?

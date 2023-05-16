@@ -6,6 +6,7 @@ import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFileReader
+import org.hamcrest.CoreMatchers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -111,6 +112,30 @@ class RestApiConfigAtHeightEndpointTest {
                 .contentType(ContentType.BINARY)
 
         assertContentEquals(bccByteArray, body.extract().response().body.asByteArray())
+    }
+
+    @Test
+    fun `Configuration at height endpoint can return 400 on invalid height`() {
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/config/$blockchainRID")
+                .then()
+                .statusCode(400)
+                .contentType(ContentType.JSON)
+                .body("error", CoreMatchers.startsWith("Failed to find configuration"))
+    }
+
+    @Test
+    fun `Configuration at height endpoint can return 404 on unknown blockchain RID`() {
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/config/78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a4")
+                .then()
+                .statusCode(404)
+                .contentType(ContentType.JSON)
+                .body("error", CoreMatchers.startsWith("Can't find blockchain with blockchainRID"))
     }
 
 }

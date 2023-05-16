@@ -1,10 +1,8 @@
 package net.postchain.ebft.syncmanager.common
 
 import net.postchain.ebft.syncmanager.common.SlowSyncSleepConst.DAMPING_FACTOR
-import net.postchain.ebft.syncmanager.common.SlowSyncSleepConst.MAX_SLEEP_MS
-import net.postchain.ebft.syncmanager.common.SlowSyncSleepConst.MIN_SLEEP_MS
-import net.postchain.ebft.syncmanager.common.SlowSyncSleepConst.START_SLEEP_MS
 import net.postchain.ebft.syncmanager.common.SlowSyncSleepConst.REPLIES_BEFORE_CALIBRATION
+import net.postchain.ebft.syncmanager.common.SlowSyncSleepConst.START_SLEEP_MS
 import net.postchain.ebft.syncmanager.common.SlowSyncSleepConst.TOO_MANY_BLOCKS_LIMIT
 import net.postchain.ebft.syncmanager.common.SlowSyncSleepConst.TOO_MANY_FAILURES_LIMIT
 
@@ -14,19 +12,18 @@ import net.postchain.ebft.syncmanager.common.SlowSyncSleepConst.TOO_MANY_FAILURE
  * Obviously this will only work if the load on the blockchain is even, so that blocks are produced regularly
  */
 class SlowSyncSleepData(
-    var numberOfNoBlockReplies: Int = 0, // Number of empty replies since last calibration
-    var numberOfHaveBlockReplies: Int = 0 , // Number of non-empty replies since last calibration
-    var blocksProcessedSinceLastCalibration: Int = 0, // Number of block we've managed to save to DB.
-    var currentSleepMs: Long = START_SLEEP_MS
+        val params: SyncParameters,
+        var numberOfNoBlockReplies: Int = 0, // Number of empty replies since last calibration
+        var numberOfHaveBlockReplies: Int = 0, // Number of non-empty replies since last calibration
+        var blocksProcessedSinceLastCalibration: Int = 0, // Number of block we've managed to save to DB.
+        var currentSleepMs: Long = START_SLEEP_MS
 ) {
-
 
     private fun totalReplies() = numberOfHaveBlockReplies + numberOfNoBlockReplies
 
     private val smallNum = 0.000001
 
     fun updateData(blocksProcessed: Int) {
-
         if (totalReplies() > REPLIES_BEFORE_CALIBRATION) {
             // Time to calibrate sleep
             currentSleepMs = calculateSleep()
@@ -62,13 +59,12 @@ class SlowSyncSleepData(
             1.0 // Good enough, Do nothing
         }
 
-
         val sleep = (currentSleepMs * multiplier).toLong()
 
-        return if (sleep > MAX_SLEEP_MS) {
-            MAX_SLEEP_MS
-        } else if (sleep < MIN_SLEEP_MS) {
-            MIN_SLEEP_MS
+        return if (sleep > params.slowSyncMaxSleepTime) {
+            params.slowSyncMaxSleepTime
+        } else if (sleep < params.slowSyncMinSleepTime) {
+            params.slowSyncMinSleepTime
         } else {
             sleep
         }

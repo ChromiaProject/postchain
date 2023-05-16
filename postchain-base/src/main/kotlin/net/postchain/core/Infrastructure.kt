@@ -21,7 +21,9 @@ interface SynchronizationInfrastructure : Shutdownable {
     fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            messageProcessingLatch: MessageProcessingLatch
+            messageProcessingLatch: MessageProcessingLatch,
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
+            restartNotifier: BlockchainRestartNotifier
     ): BlockchainProcess
 
     /**
@@ -35,6 +37,10 @@ interface SynchronizationInfrastructure : Shutdownable {
      * Note: responsible for keeping track of the two BC process sync modes (normal sync and fastsync)
      */
     fun exitBlockchainProcess(process: BlockchainProcess)
+}
+
+fun interface BlockchainRestartNotifier {
+    fun notifyRestart(loadNextPendingConfig: Boolean)
 }
 
 /**
@@ -55,7 +61,11 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
     fun makeBlockchainEngine(
             processName: BlockchainProcessName,
             configuration: BlockchainConfiguration,
-            afterCommitHandler: AfterCommitHandler
+            afterCommitHandler: AfterCommitHandler,
+            storage: Storage,
+            initialEContext: EContext,
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
+            restartNotifier: BlockchainRestartNotifier
     ): BlockchainEngine
 
 }

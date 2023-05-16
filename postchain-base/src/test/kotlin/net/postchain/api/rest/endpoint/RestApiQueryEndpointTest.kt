@@ -13,6 +13,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvToJSON
 import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtx.GtxQuery
+import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
 import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -52,7 +53,7 @@ class RestApiQueryEndpointTest {
     }
 
     @Test
-    fun test_query() {
+    fun test_post_query() {
         val queryMap = mapOf(
                 "type" to gtv("test_query"),
                 "a" to gtv("b"),
@@ -60,7 +61,7 @@ class RestApiQueryEndpointTest {
         )
 
         val queryString = gtvToJSON(gtv(queryMap), gson)
-        val query = GtxQuery("test_query", gtv(queryMap.filterKeys { it != "type" }))
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
         val answerString = """{"d":0}"""
         val answer = gtv(mapOf("d" to gtv(false)))
@@ -74,6 +75,34 @@ class RestApiQueryEndpointTest {
                 .post("/query/$blockchainRID")
                 .then()
                 .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body(equalTo(answerString))
+    }
+
+    @Test
+    fun test_batch_query() {
+        val queryMap = mapOf(
+                "type" to gtv("test_query"),
+                "a" to gtv("b"),
+                "c" to gtv(3)
+        )
+
+        val queryString = """{"queries":[${gtvToJSON(gtv(queryMap), gson)}]}"""
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
+
+        val answerString = """["{\"d\":0}"]"""
+        val answer = gtv(mapOf("d" to gtv(false)))
+
+        whenever(model.query(query)).thenReturn(answer)
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .body(queryString)
+                .post("/batch_query/$blockchainRID")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
                 .body(equalTo(answerString))
     }
 
@@ -86,7 +115,7 @@ class RestApiQueryEndpointTest {
         )
 
         val queryString = queryMap.map { "${it.key}=${it.value.toString().trim('"')}" }.joinToString("&")
-        val query = GtxQuery("test_query", gtv(queryMap.filterKeys { it != "type" }))
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
         val answerString = """{"d":0}"""
         val answer = gtv(mapOf("d" to gtv(false)))
@@ -96,10 +125,36 @@ class RestApiQueryEndpointTest {
         restApi.attachModel(blockchainRID, model)
 
         RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .body(queryString)
                 .get("/query/$blockchainRID?$queryString")
                 .then()
                 .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body(equalTo(answerString))
+    }
+
+    @Test
+    fun test_direct_query() {
+        val queryMap = mapOf(
+                "type" to gtv("test_query"),
+                "a" to gtv("b"),
+                "c" to gtv(3)
+        )
+
+        val queryString = queryMap.map { "${it.key}=${it.value.toString().trim('"')}" }.joinToString("&")
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
+
+        val answerString = "Hello, world!"
+        val answer = gtv(gtv("text/plain"), gtv(answerString))
+
+        whenever(model.query(query)).thenReturn(answer)
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/dquery/$blockchainRID?$queryString")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.TEXT)
                 .body(equalTo(answerString))
     }
 
@@ -117,7 +172,7 @@ class RestApiQueryEndpointTest {
         )
 
         val queryString = gtvToJSON(gtv(queryMap), gson)
-        val query = GtxQuery("test_query", gtv(queryMap.filterKeys { it != "type" }))
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
         val answerString = """{"error":"Bad bad stuff."}"""
 
@@ -132,6 +187,7 @@ class RestApiQueryEndpointTest {
                 .post("/query/$blockchainRID")
                 .then()
                 .statusCode(500)
+                .contentType(ContentType.JSON)
                 .body(equalTo(answerString))
         } catch (e: Exception) {
             fail("Should not bang during query, since the exception is converted to 500 message: $e")
@@ -150,7 +206,7 @@ class RestApiQueryEndpointTest {
         )
 
         val queryString = gtvToJSON(gtv(queryMap), gson)
-        val query = GtxQuery("test_query", gtv(queryMap.filterKeys { it != "type" }))
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
         val answerMessage = "expected error"
         val answerBody = """{"error":"expected error"}"""
@@ -164,6 +220,7 @@ class RestApiQueryEndpointTest {
                 .post("/query/$blockchainRID")
                 .then()
                 .statusCode(500)
+                .contentType(ContentType.JSON)
                 .body(equalTo(answerBody))
     }
 
@@ -179,7 +236,7 @@ class RestApiQueryEndpointTest {
         )
 
         val queryString = gtvToJSON(gtv(queryMap), gson)
-        val query = GtxQuery("test_query", gtv(queryMap.filterKeys { it != "type" }))
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
         val answerMessage = "expected error"
         val answerBody = """{"error":"expected error"}"""
@@ -194,6 +251,7 @@ class RestApiQueryEndpointTest {
             .post("/query/$blockchainRID")
             .then()
             .statusCode(400)
+            .contentType(ContentType.JSON)
             .body(equalTo(answerBody))
     }
 
@@ -209,6 +267,7 @@ class RestApiQueryEndpointTest {
                 .post("/query/${blockchainRID}0000")
                 .then()
                 .statusCode(400)
+                .contentType(ContentType.JSON)
                 .body(equalTo(answerBody))
     }
 
@@ -224,6 +283,7 @@ class RestApiQueryEndpointTest {
                 .post("/query/${blockchainRID.substring(1)}")
                 .then()
                 .statusCode(400)
+                .contentType(ContentType.JSON)
                 .body(equalTo(answerBody))
     }
 
@@ -239,6 +299,7 @@ class RestApiQueryEndpointTest {
                 .post("/query/${blockchainRID.replaceFirst("a", "g")}")
                 .then()
                 .statusCode(400)
+                .contentType(ContentType.JSON)
                 .body(equalTo(answerBody))
     }
 

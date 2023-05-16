@@ -28,7 +28,7 @@ class BaseBlockBuildingStrategyTest {
         // Mocks
         private val blockQueries: BlockQueries = mock {
             val completionStage: CompletionStage<Long> = CompletableFuture.completedStage(-1)
-            on { getBestHeight() } doReturn completionStage
+            on { getLastBlockHeight() } doReturn completionStage
         }
 
         private fun committedBlockData(): BlockData {

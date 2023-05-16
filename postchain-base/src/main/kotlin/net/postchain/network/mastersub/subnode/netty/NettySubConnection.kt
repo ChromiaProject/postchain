@@ -93,7 +93,7 @@ class NettySubConnection(
 
     private fun buildHandshakePacket(): ByteBuf {
         val message = MsHandshakeMessage(
-                connectionDescriptor.blockchainRid.data, connectionDescriptor.peers)
+                connectionDescriptor.blockchainRid?.data, connectionDescriptor.peers, connectionDescriptor.containerIID)
         val bytes = MsCodec.encode(message)
         return Transport.wrapMessage(bytes)
     }

@@ -26,7 +26,7 @@ class GtvEncoderTest {
         val b = GtvEncoder.encodeGtv(expected)
         val result = GtvDecoder.decodeGtv(b)
         assertEquals(expected, result)
-        assertEquals(expected.asBigInteger().toString(10), result.asBigInteger().toString(10))
+        assertEquals(expected.asInteger().toString(10), result.asInteger().toString(10))
     }
 
     @Test

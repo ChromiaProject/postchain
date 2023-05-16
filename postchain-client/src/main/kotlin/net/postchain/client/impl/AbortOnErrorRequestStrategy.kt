@@ -12,7 +12,7 @@ class AbortOnErrorRequestStrategy(
         private val config: PostchainClientConfig,
         httpClient: HttpHandler) : SynchronousRequestStrategy(httpClient) {
     override fun <R> request(createRequest: (Endpoint) -> Request,
-                             success: (Response) -> R,
+                             success: (Response, Endpoint) -> R,
                              failure: (Response, Endpoint) -> R,
                              queryMultiple: Boolean): R {
         var response: Response? = null
@@ -24,7 +24,7 @@ class AbortOnErrorRequestStrategy(
             endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
                 response = makeRequest(request)
                 when {
-                    isSuccess(response.status) -> return success(response)
+                    isSuccess(response.status) -> return success(response, endpoint)
 
                     isClientFailure(response.status) -> return failure(response, endpoint)
 

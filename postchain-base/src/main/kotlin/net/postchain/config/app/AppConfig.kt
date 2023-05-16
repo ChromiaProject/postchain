@@ -92,6 +92,9 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     val databaseReadConcurrency: Int
         get() = config.getEnvOrIntProperty("POSTCHAIN_DB_READ_CONCURRENCY", "database.readConcurrency", 10)
 
+    val databaseSuppressCollationCheck: Boolean
+        get() = config.getEnvOrBooleanProperty("POSTCHAIN_DB_SUPPRESS_COLLATION_CHECK", "database.suppressCollationCheck", false)
+
     val infrastructure: String
         // "base/ebft" is the default
         get() = config.getEnvOrStringProperty("POSTCHAIN_INFRASTRUCTURE", "infrastructure", Infrastructure.Ebft.get())
@@ -117,6 +120,9 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
 
     val port: Int
         get() = config.getEnvOrIntProperty("POSTCHAIN_PORT", "messaging.port", DEFAULT_PORT)
+
+    // PCU feature toggle
+    fun isPcuEnabled(): Boolean = getEnvOrBoolean("POSTCHAIN_PCU", "pcu", false)
 
     /**
      * Wrappers for [Configuration] getters and other functionalities

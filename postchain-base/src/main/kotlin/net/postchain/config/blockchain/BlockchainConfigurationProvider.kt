@@ -2,6 +2,7 @@
 
 package net.postchain.config.blockchain
 
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
 
 /**
@@ -16,13 +17,13 @@ interface BlockchainConfigurationProvider {
     /**
      * @return the configuration we must use for the "active" block (=the block we are currently building)
      */
-    fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long): ByteArray?
+    fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray?
 
     /**
      * @return true if the given chain will need a new configuration for the "active" block
      * (=the block we are currently building)
      */
-    fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long): Boolean
+    fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, checkPendingConfigs: Boolean): Boolean
 
     /**
      * Use this when you want to know what configuration height was used for a "historic block"
@@ -44,5 +45,9 @@ interface BlockchainConfigurationProvider {
      */
     fun getHistoricConfiguration(eContext: EContext, chainId: Long, historicBlockHeight: Long): ByteArray?
 
-    fun findNextConfigurationHeight(eContext: EContext, height: Long): Long?
+    /**
+     * @return the active height of the given chain, where "active height" is defined as the future height of block we
+     * are currently building.
+     */
+    fun getActiveBlocksHeight(eContext: EContext, dba: DatabaseAccess): Long
 }

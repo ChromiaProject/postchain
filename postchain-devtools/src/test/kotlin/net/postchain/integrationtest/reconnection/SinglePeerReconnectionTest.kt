@@ -31,7 +31,7 @@ class SinglePeerReconnectionTest : ReconnectionTest() {
                 }
 
         // Asserting height is -1 for all peers
-        assertEquals(-1, queries(nodes[0]) { it.getBestHeight() })
+        assertEquals(-1, queries(nodes[0]) { it.getLastBlockHeight() })
 
 
         buildBlock(0, tx0, tx1)

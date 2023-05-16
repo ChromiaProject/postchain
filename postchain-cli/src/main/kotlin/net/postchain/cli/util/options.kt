@@ -32,8 +32,6 @@ fun CliktCommand.blockchainRidOption() =
 
 fun CliktCommand.chainIdOption() = option("-cid", "--chain-id", help = "Local number id of blockchain", envvar = "POSTCHAIN_CHAIN_ID").long()
 
-fun CliktCommand.debugOption() = option("--debug", help = "Enables debug functionalities", envvar = "POSTCHAIN_DEBUG").flag()
-
 fun CliktCommand.forceOption() = option("-f", "--force").flag()
         .convert { if (it) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR }
 

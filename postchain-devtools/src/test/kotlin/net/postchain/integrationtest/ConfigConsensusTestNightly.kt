@@ -58,7 +58,7 @@ class ConfigConsensusTestNightly : ConfigFileBasedIntegrationTest() {
         buildBlocksWithChainRestart(5, listOf(nodes[0], nodes[1], nodes[2]))
 
         // Node without new config should be stuck at height 1
-        assert(nodes[3].blockQueries().getBestHeight().get()).isEqualTo(1L)
+        assert(nodes[3].blockQueries().getLastBlockHeight().get()).isEqualTo(1L)
 
         // Patch node 3 with correct config and restart
         nodes[3].addConfiguration(PostchainTestNode.DEFAULT_CHAIN_IID, 2, blockchainConfig2)
@@ -68,7 +68,7 @@ class ConfigConsensusTestNightly : ConfigFileBasedIntegrationTest() {
         // Assert node 3 can reach height 5 now
         Awaitility.await().atMost(Duration.TEN_SECONDS)
                 .untilAsserted {
-                    assert(nodes[3].blockQueries().getBestHeight().get()).isEqualTo(5L)
+                    assert(nodes[3].blockQueries().getLastBlockHeight().get()).isEqualTo(5L)
                 }
     }
 }

@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong
 import kotlin.time.Duration.Companion.seconds
 
 @Suppress("UNCHECKED_CAST")
-class MasterSubQueryManager(private val messageSender: (Long, MsMessage) -> Boolean) : MsMessageHandler {
+class MasterSubQueryManager(private val messageSender: (BlockchainRid?, MsMessage) -> Boolean) : MsMessageHandler {
 
     companion object : KLogging() {
         val timeout = 10.seconds
@@ -29,7 +29,7 @@ class MasterSubQueryManager(private val messageSender: (Long, MsMessage) -> Bool
     private val requestCounter = AtomicLong(0L)
     private val outstandingRequests = ConcurrentHashMap<Long, CompletableFuture<Any?>>()
 
-    fun query(chainId: Long, blockchainRid: BlockchainRid, targetBlockchainRid: BlockchainRid?, name: String, args: Gtv): CompletionStage<Gtv> {
+    fun query(targetBlockchainRid: BlockchainRid?, name: String, args: Gtv): CompletionStage<Gtv> {
         val requestId = requestCounter.incrementAndGet()
         val future = CompletableFuture<Any?>()
                 .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
@@ -37,9 +37,8 @@ class MasterSubQueryManager(private val messageSender: (Long, MsMessage) -> Bool
         outstandingRequests[requestId] = future
 
         if (!messageSender(
-                        chainId,
+                        targetBlockchainRid,
                         MsQueryRequest(
-                                blockchainRid.data,
                                 requestId,
                                 targetBlockchainRid,
                                 name,
@@ -51,7 +50,7 @@ class MasterSubQueryManager(private val messageSender: (Long, MsMessage) -> Bool
         return future as CompletionStage<Gtv>
     }
 
-    fun blockAtHeight(chainId: Long, blockchainRid: BlockchainRid, targetBlockchainRid: BlockchainRid, height: Long): CompletionStage<BlockDetail?> {
+    fun blockAtHeight(targetBlockchainRid: BlockchainRid, height: Long): CompletionStage<BlockDetail?> {
         val requestId = requestCounter.incrementAndGet()
         val future = CompletableFuture<Any?>()
                 .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
@@ -59,9 +58,8 @@ class MasterSubQueryManager(private val messageSender: (Long, MsMessage) -> Bool
         outstandingRequests[requestId] = future
 
         if (!messageSender(
-                        chainId,
+                        targetBlockchainRid,
                         MsBlockAtHeightRequest(
-                                blockchainRid.data,
                                 requestId,
                                 targetBlockchainRid,
                                 height

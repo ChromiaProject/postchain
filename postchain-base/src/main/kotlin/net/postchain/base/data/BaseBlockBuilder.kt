@@ -6,6 +6,8 @@ import mu.KLogging
 import net.postchain.base.*
 import net.postchain.base.SpecialTransactionPosition.Begin
 import net.postchain.base.SpecialTransactionPosition.End
+import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
+import net.postchain.base.extension.FAILED_CONFIG_HASH_EXTRA_HEADER
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
@@ -251,7 +253,18 @@ open class BaseBlockBuilder(
                 _blockData = BlockData(blockHeader, rawTransactions)
                 finalized = true
             }
+
             PREV_BLOCK_MISMATCH -> throw BadDataMistake(BadDataType.PREV_BLOCK_MISMATCH, validationResult.message)
+            INVALID_EXTRA_DATA -> {
+                if (blockHeader is BaseBlockHeader && blockHeader.extraData[CONFIG_HASH_EXTRA_HEADER] != extraData[CONFIG_HASH_EXTRA_HEADER]) {
+                    throw BadDataMistake(BadDataType.CONFIGURATION_MISMATCH, validationResult.message)
+                } else if (blockHeader is BaseBlockHeader && blockHeader.extraData[FAILED_CONFIG_HASH_EXTRA_HEADER] != extraData[FAILED_CONFIG_HASH_EXTRA_HEADER]) {
+                    throw BadDataMistake(BadDataType.FAILED_CONFIGURATION_MISMATCH, validationResult.message)
+                } else {
+                    throw BadDataMistake(BadDataType.BAD_BLOCK, validationResult.message)
+                }
+            }
+
             else -> throw BadDataMistake(BadDataType.BAD_BLOCK, validationResult.message)
         }
     }

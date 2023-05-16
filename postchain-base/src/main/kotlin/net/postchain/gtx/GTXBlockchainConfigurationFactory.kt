@@ -27,7 +27,7 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
             makeGtxModule(blockchainRid, configurationData)
         }
 
-        private fun makeGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData): GTXModule {
+        internal fun makeGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData): GTXModule {
             val gtxConfig = data.gtx?.toObject() ?: GtxConfigurationData.default
             val list = gtxConfig.modules.distinct()
             if (list.isEmpty()) {

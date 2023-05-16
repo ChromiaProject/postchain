@@ -15,7 +15,7 @@ class TryNextOnErrorRequestStrategy(
     companion object : KLogging()
 
     override fun <R> request(createRequest: (Endpoint) -> Request,
-                             success: (Response) -> R,
+                             success: (Response, Endpoint) -> R,
                              failure: (Response, Endpoint) -> R,
                              queryMultiple: Boolean): R {
         var response: Response? = null
@@ -27,7 +27,7 @@ class TryNextOnErrorRequestStrategy(
             endpoint@ for (i in 1..config.failOverConfig.attemptsPerEndpoint) {
                 response = makeRequest(request)
                 when {
-                    isSuccess(response.status) -> return success(response)
+                    isSuccess(response.status) -> return success(response, endpoint)
 
                     isClientFailure(response.status) -> {
                         logger.debug { "Got ${response.status} response from ${endpoint.url}, trying next" }

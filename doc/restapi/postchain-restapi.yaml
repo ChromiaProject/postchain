@@ -53,14 +53,17 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: 3.9.0-SNAPSHOT
+  version: 3.10.0-SNAPSHOT
 paths:
   /tx/{blockchainRid}:
     post:
       tags:
         - transaction
       summary: Submit transaction
-      description: Submit a transaction to a chain
+      description: |
+        Submit a transaction to a chain.
+        The request body can either contain hex encoded GTX transaction in JSON wrapper, 
+        or binary GTV (by specifying `Content-Type: application/octet-stream).
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       requestBody:
@@ -68,6 +71,7 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/tx"
+          application/octet-stream: { }
       responses:
         200:
           description: Transaction queued
@@ -75,6 +79,7 @@ paths:
             application/json:
               schema:
                 type: object
+            application/octet-stream: { }
         400:
           description: Bad request
           content:
@@ -94,6 +99,7 @@ paths:
                 invalidTx:
                   value:
                     error: "Transaction is invalid"
+            application/octet-stream: { }
         404:
           description: Not found
           content:
@@ -104,6 +110,7 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
         409:
           description: Transaction already in queue
           content:
@@ -114,6 +121,7 @@ paths:
                 transactionAlreadyInQueue:
                   value:
                     error: "Transaction already in queue"
+            application/octet-stream: { }
         503:
           description: Transaction queue is full
           content:
@@ -124,12 +132,16 @@ paths:
                 queueFull:
                   value:
                     error: "Transaction queue is full"
+            application/octet-stream: { }
   /tx/{blockchainRid}/{txRid}:
     get:
       tags:
         - transaction
       summary: Fetch transaction
-      description: Fetch a transaction from a chain
+      description: |
+        Fetch a transaction from a chain.
+        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        otherwise defaults to JSON.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
@@ -140,6 +152,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/tx"
+            application/octet-stream: { }
         404:
           description: Not found
           content:
@@ -153,6 +166,7 @@ paths:
                 txNotFound:
                   value:
                     error: "Can't find tx with hash <hex-string>"
+            application/octet-stream: { }
   /transactions/{blockchainRid}/{txRid}:
     get:
       tags:
@@ -387,7 +401,7 @@ paths:
                   - $ref: "#/components/schemas/nullValue"
             application/octet-stream: { }
         404:
-          description: Chain not found
+          description: Not found
           content:
             application/json:
               schema:
@@ -427,7 +441,7 @@ paths:
                   - $ref: "#/components/schemas/nullValue"
             application/octet-stream: { }
         404:
-          description: Chain not found
+          description: Not found
           content:
             application/json:
               schema:
@@ -443,6 +457,7 @@ paths:
         - query
       summary: Make query
       description: Make a query to a chain. Named arguments to query as additional query parameters.
+        This operation is intended for development, testing and simple web apps, more advanced production use cases should use `POST /query_gtv` instead.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: type
@@ -486,7 +501,9 @@ paths:
       tags:
         - query
       summary: Make query
-      description: Make a query to a chain
+      description: Make a query to a chain.
+        This operation is deprecated, use `GET /query` or `POST /query_gtv` instead.
+      deprecated: true
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       requestBody:
@@ -530,6 +547,8 @@ paths:
         - query
       summary: Make queries
       description: Make multiple queries to a chain
+        This operation is deprecated, use `POST /query_gtv` instead.
+      deprecated: true
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       requestBody:
@@ -634,7 +653,7 @@ paths:
       summary: Make GTV encoded queries
       description: |
         Make GTV encoded queries to a chain.
-        This operation is deprecated, use /query_gtv instead.
+        This operation is deprecated, use `POST /query_gtv` instead.
       deprecated: true
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
@@ -892,7 +911,7 @@ paths:
   /config/{blockchainRid}:
     get:
       tags:
-        - blockchain
+        - configuration
       summary: Fetch blockchain configuration
       description: |
         Fetch configuration for a chain. Specifying a height will fetch the active configuration at that height. 
@@ -914,7 +933,6 @@ paths:
           description: Found
           content:
             text/xml:
-              description: Blockchain configuration in XML format
               example: |
                 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
                 <dict>
@@ -950,17 +968,105 @@ paths:
             application/octet-stream: { }
         400:
           description: Invalid height
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                configurationNotFound:
+                  value:
+                    error: "Failed to find configuration"
         404:
           description: Not found
           content:
-            text/xml:
+            application/json:
               schema:
                 $ref: "#/components/schemas/error"
               examples:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
-            application/octet-stream: { }
+    post:
+      tags:
+        - configuration
+      summary: Validate blockchain configuration
+      description: |
+        Check if a configuration is valid for a blockchain in its current state. This operation will not apply the 
+        configuration, only verify it. The configuration can be sent either as XML (using `text/xml` content type)
+        or GTV (using `application/octet-stream` content type).
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      requestBody:
+        content:
+          text/xml:
+            example: |
+              <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+              <dict>
+                  <entry key="blockstrategy">
+                      <dict>
+                          <entry key="name">
+                              <string>net.postchain.base.BaseBlockBuildingStrategy</string>
+                          </entry>
+                      </dict>
+                  </entry>
+                  <entry key="configurationfactory">
+                      <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+                  </entry>
+                  <entry key="gtx">
+                      <dict>
+                          <entry key="modules">
+                              <array>
+                                  <string>net.postchain.configurations.GTXTestModule</string>
+                                  <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                              </array>
+                          </entry>
+                      </dict>
+                  </entry>
+              </dict>
+          application/octet-stream: { }
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          description: Invalid configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                invalidConfiguration:
+                  value:
+                    error: "Invalid configuration"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /version:
+    get:
+      tags:
+        - node
+      summary: Get API version
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/version"
+              examples:
+                version:
+                  value:
+                    version: 1
 
 components:
   parameters:
@@ -1249,3 +1355,13 @@ components:
       description: Block height
     nullValue:
       type: "null"
+    version:
+      type: object
+      required:
+        - version
+      properties:
+        version:
+          type: integer
+          minimum: 1
+          format: int32
+          description: API version

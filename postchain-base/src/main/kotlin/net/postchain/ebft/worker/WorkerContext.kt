@@ -2,10 +2,13 @@ package net.postchain.ebft.worker
 
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.config.app.AppConfig
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
+import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.network.CommunicationManager
 
@@ -21,7 +24,10 @@ class WorkerContext(val processName: BlockchainProcessName,
                     val peerCommConfiguration: PeerCommConfiguration,
                     val appConfig: AppConfig,
                     val nodeConfig: NodeConfig,
-                    val messageProcessingLatch: MessageProcessingLatch
+                    val messageProcessingLatch: MessageProcessingLatch,
+                    val restartNotifier: BlockchainRestartNotifier,
+                    val blockchainConfigurationProvider: BlockchainConfigurationProvider,
+                    val nodeDiagnosticContext: NodeDiagnosticContext
 ) {
     fun shutdown() {
         engine.shutdown()

@@ -2,9 +2,6 @@
 
 package net.postchain.cli
 
-import mu.KLogging
-import net.postchain.PostchainNode
-import net.postchain.StorageBuilder
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.BlockchainRelatedInfo
@@ -13,20 +10,14 @@ import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
-import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.AppContext
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.core.EContext
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
-import org.apache.commons.configuration2.ex.ConfigurationException
-import org.apache.commons.dbcp2.BasicDataSource
-import java.sql.Connection
-import java.sql.SQLException
-import java.util.concurrent.TimeoutException
 
-object CliExecution : KLogging() {
+object CliExecution {
 
     /**
      * @return blockchain RID
@@ -147,14 +138,6 @@ object CliExecution : KLogging() {
         }
     }
 
-    fun runNode(appConfig: AppConfig, chainIds: List<Long>, debug: Boolean) {
-        with(PostchainNode(appConfig, wipeDb = false)) {
-            chainIds.forEach {
-                tryStartBlockchain(it)
-            }
-        }
-    }
-
     fun findBlockchainRid(appConfig: AppConfig, chainId: Long): BlockchainRid? {
         return runStorageCommand(appConfig, chainId) { ctx: EContext ->
             DatabaseAccess.of(ctx).getBlockchainRid(ctx)
@@ -176,33 +159,6 @@ object CliExecution : KLogging() {
     fun listConfigurations(appConfig: AppConfig, chainId: Long): List<Long> {
         return runStorageCommand(appConfig, chainId) { ctx: EContext ->
             BlockchainApi.listConfigurations(ctx)
-        }
-    }
-
-    fun waitDb(retryTimes: Int, retryInterval: Long, appConfig: AppConfig) {
-        tryCreateBasicDataSource(appConfig)?.let { return } ?: if (retryTimes > 0) {
-            Thread.sleep(retryInterval)
-            waitDb(retryTimes - 1, retryInterval, appConfig)
-        } else throw TimeoutException("Unable to connect to database")
-    }
-
-    private fun tryCreateBasicDataSource(appConfig: AppConfig): Connection? {
-        return try {
-            val storage = StorageBuilder.buildStorage(appConfig)
-            NodeConfigurationProviderFactory.createProvider(appConfig) { storage }.getConfiguration()
-
-            BasicDataSource().apply {
-                addConnectionProperty("currentSchema", appConfig.databaseSchema)
-                driverClassName = appConfig.databaseDriverclass
-                url = appConfig.databaseUrl //?loggerLevel=OFF"
-                username = appConfig.databaseUsername
-                password = appConfig.databasePassword
-                defaultAutoCommit = false
-            }.connection
-        } catch (e: SQLException) {
-            null
-        } catch (e: ConfigurationException) {
-            throw CliException("Failed to read configuration")
         }
     }
 }

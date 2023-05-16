@@ -5,16 +5,17 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.9.0</version>
+        <version>3.10.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <name>Postchain CLI</name>
     <artifactId>postchain-cli</artifactId>
+    <name>Postchain CLI</name>
     <description>CLI for running a postchain node with postchain-base implementation</description>
 
     <properties>
         <main.class>net.postchain.AppKt</main.class>
+        <image.name>postchain-cli</image.name>
     </properties>
 
     <dependencies>
@@ -31,23 +32,8 @@
 
         <!-- logging -->
         <dependency>
-            <groupId>io.github.microutils</groupId>
-            <artifactId>kotlin-logging-jvm</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <!-- For Log4j2/YAML configuration -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
-            <artifactId>jackson-dataformat-yaml</artifactId>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
             <scope>runtime</scope>
         </dependency>
 
@@ -73,30 +59,6 @@
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>${main.class}</mainClass>
-                            <addClasspath>true</addClasspath>
-                            <classpathPrefix/>
-                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-                            <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
-                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                        </manifest>
-                    </archive>
-                </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <configuration>
-                    <mainClass>net.postchain.AppKt</mainClass>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>3.0.0-M7</version>
                 <executions>
@@ -112,6 +74,38 @@
                     <includes>
                         <include>**/*IT</include>
                     </includes>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>${main.class}</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix/>
+                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                            <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
+                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <configuration>
+                    <allowInsecureRegistries>false</allowInsecureRegistries>
+                    <from>
+                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17:1.0.0</image> <!--No hash here until https://github.com/GoogleContainerTools/jib/pull/3974 -->
+                    </from>
+                    <container>
+                        <appRoot>/opt/chromaway/postchain</appRoot>
+                        <workingDirectory>/opt/chromaway/postchain</workingDirectory>
+                        <mainClass>${main.class}</mainClass>
+                    </container>
                 </configuration>
             </plugin>
         </plugins>

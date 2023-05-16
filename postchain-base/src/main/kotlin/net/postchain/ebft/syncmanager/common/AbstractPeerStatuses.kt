@@ -17,6 +17,9 @@ abstract class AbstractPeerStatuses<StateType : KnownState> {
 
     protected val statuses = HashMap<NodeRid, StateType>()
 
+    val peersStates: List<Pair<String, KnownState>>
+        get() = statuses.toList().map { it.first.toHex() to it.second }
+
     abstract fun stateOf(peerId: NodeRid): StateType
 
     private fun resurrectPeers(now: Long) {
@@ -74,9 +77,11 @@ abstract class AbstractPeerStatuses<StateType : KnownState> {
     fun isMaybeLegacy(peerId: NodeRid): Boolean {
         return stateOf(peerId).isMaybeLegacy()
     }
+
     fun isConfirmedModern(peerId: NodeRid): Boolean {
         return stateOf(peerId).isConfirmedModern()
     }
+
     fun confirmModern(peerId: NodeRid) {
         stateOf(peerId).confirmedModern()
     }
@@ -91,8 +96,6 @@ abstract class AbstractPeerStatuses<StateType : KnownState> {
     fun maybeBlacklist(peerId: NodeRid, desc: String) {
         stateOf(peerId).blacklist(desc, System.currentTimeMillis())
     }
-
-
 
     /**
      * Adds the peer if it doesn't exist. Do nothing if it exists.

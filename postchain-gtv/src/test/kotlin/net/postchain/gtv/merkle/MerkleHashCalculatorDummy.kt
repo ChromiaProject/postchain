@@ -3,7 +3,7 @@
 package net.postchain.gtv.merkle
 
 import net.postchain.common.data.Hash
-import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.Digester
 import net.postchain.gtv.*
 import java.nio.charset.Charset
 
@@ -43,7 +43,7 @@ fun dummySerializatorFun(iGtv: Gtv): ByteArray {
  * It only adds 1 to all bytes in the byte array.
  */
 @Suppress("UNUSED_PARAMETER")
-fun dummyAddOneHashFun(bArr: ByteArray, cryptoSystem: CryptoSystem?): Hash {
+fun dummyAddOneHashFun(bArr: ByteArray, digester: Digester?): Hash {
     val retArr = ByteArray(bArr.size)
     var pos = 0
     for (b: Byte in bArr.asIterable()) {

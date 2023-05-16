@@ -2,12 +2,12 @@
 
 package net.postchain.api.rest.infra
 
+import net.postchain.PostchainContext
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import net.postchain.api.rest.controller.DisabledDebugInfoQuery
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.base.BaseBlockQueries
-import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.debug.NodeDiagnosticContext
@@ -17,8 +17,8 @@ import net.postchain.ebft.worker.ValidatorBlockchainProcess
 open class BaseApiInfrastructure(
         restApiConfig: RestApiConfig,
         val nodeDiagnosticContext: NodeDiagnosticContext,
-        val configurationProvider: BlockchainConfigurationProvider,
-        private val enableDebugApi: Boolean
+        private val enableDebugApi: Boolean,
+        private val postchainContext: PostchainContext
 ) : ApiInfrastructure {
 
     val restApi: RestApi? = with(restApiConfig) {
@@ -51,28 +51,30 @@ open class BaseApiInfrastructure(
             val apiModel: PostchainModel
 
             val debugInfoQuery = if (enableDebugApi) DefaultDebugInfoQuery(nodeDiagnosticContext) else DisabledDebugInfoQuery()
+            val blockchainRid = engine.getConfiguration().blockchainRid
+            val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainRid)
             if (process is ValidatorBlockchainProcess) { // TODO: EBFT-specific code, but pretty harmless
                 apiModel = PostchainEBFTModel(
                         engine.getConfiguration().chainID,
-                        process.nodeStateTracker,
                         process.networkAwareTxQueue,
                         engine.getConfiguration().getTransactionFactory(),
                         engine.getBlockQueries() as BaseBlockQueries, // TODO: [et]: Resolve type cast
                         debugInfoQuery,
-                        engine.getConfiguration().blockchainRid,
-                        configurationProvider,
-                        engine.storage
+                        blockchainRid,
+                        engine.storage,
+                        postchainContext,
+                        diagnosticData
                 )
             } else {
                 apiModel = PostchainModel(
                         engine.getConfiguration().chainID,
                         engine.getTransactionQueue(),
-                        engine.getConfiguration().getTransactionFactory(),
                         engine.getBlockQueries() as BaseBlockQueries,
                         debugInfoQuery,
-                        engine.getConfiguration().blockchainRid,
-                        configurationProvider,
-                        engine.storage
+                        blockchainRid,
+                        engine.storage,
+                        postchainContext,
+                        diagnosticData
                 )
             }
 

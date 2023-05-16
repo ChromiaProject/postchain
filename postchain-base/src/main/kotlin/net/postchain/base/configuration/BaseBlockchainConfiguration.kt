@@ -19,9 +19,7 @@ import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.BaseBlockWitnessProvider
 import net.postchain.base.data.BaseTransactionFactory
 import net.postchain.base.extension.ConfigurationHashBlockBuilderExtension
-import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
@@ -78,7 +76,13 @@ open class BaseBlockchainConfiguration(
     final override val signers get() = configData.signers
     final override val transactionQueueSize: Int
         get() = configData.txQueueSize.toInt()
-    private val configHash = GtvToBlockchainRidFactory.calculateBlockchainRid(rawConfig, cryptoSystem).data
+
+    private val blockBuildingStrategyConstructor = constructorOf<BlockBuildingStrategy>(
+            configData.blockStrategyName,
+            BaseBlockBuildingStrategyConfigurationData::class.java,
+            BlockQueries::class.java,
+            TransactionQueue::class.java
+    )
 
     private fun resolveNodeID(nodeID: Int, subjectID: ByteArray): Int {
         return if (nodeID == NODE_ID_AUTO) {
@@ -133,7 +137,7 @@ open class BaseBlockchainConfiguration(
         return listOf()
     }
 
-    override fun makeBlockBuilder(ctx: EContext): BlockBuilder {
+    override fun makeBlockBuilder(ctx: EContext, extraExtensions: List<BaseBlockBuilderExtension>): BlockBuilder {
         addChainIDToDependencies(ctx) // We wait until now with this, b/c now we have an EContext
 
         val bb = BaseBlockBuilder(
@@ -147,7 +151,7 @@ open class BaseBlockchainConfiguration(
                 blockSigMaker,
                 blockWitnessProvider,
                 blockchainDependencies,
-                makeDefaultBBExtensions() + makeBBExtensions(),
+                makeDefaultBBExtensions() + makeBBExtensions() + extraExtensions,
                 effectiveBlockchainRID != blockchainRid,
                 blockStrategyConfig.maxBlockSize,
                 blockStrategyConfig.maxBlockTransactions,
@@ -182,23 +186,13 @@ open class BaseBlockchainConfiguration(
                 this, storage, blockStore, chainID, blockchainContext.nodeRID!!)
     }
 
-    override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy {
-        val strategyClassName = configData.blockStrategyName
-        return try {
-            constructorOf<BlockBuildingStrategy>(
-                    strategyClassName,
-                    BaseBlockBuildingStrategyConfigurationData::class.java,
-                    BlockQueries::class.java,
-                    TransactionQueue::class.java
-            ).newInstance(blockStrategyConfig, blockQueries, txQueue)
-        } catch (e: UserMistake) {
-            throw UserMistake("The block building strategy in the configuration is invalid, " +
-                    "Class name given: $strategyClassName.")
-        } catch (e: java.lang.reflect.InvocationTargetException) {
-            throw ProgrammerMistake("The constructor of the block building strategy given was " +
-                    "unable to finish. Class name given: $strategyClassName, Msg: ${e.message}")
-        }
-    }
+    override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy =
+            try {
+                blockBuildingStrategyConstructor.newInstance(blockStrategyConfig, blockQueries, txQueue)
+            } catch (e: java.lang.reflect.InvocationTargetException) {
+                throw ProgrammerMistake("The constructor of the block building strategy given was " +
+                        "unable to finish. Class name given: ${configData.blockStrategyName}, Msg: ${e.message}")
+            }
 
     override fun initializeModules(postchainContext: PostchainContext) {}
 

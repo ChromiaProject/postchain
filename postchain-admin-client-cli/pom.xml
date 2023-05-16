@@ -5,13 +5,18 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.9.0</version>
+        <version>3.10.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>postchain-admin-client-cli</artifactId>
     <name>Postchain Admin Client CLI</name>
     <description>CLI for communicating with a postchain node running in server mode.</description>
+
+    <properties>
+        <main.class>net.postchain.admin.cli.AppKt</main.class>
+        <image.name>postchain-admin-client</image.name>
+    </properties>
 
     <dependencies>
         <dependency>
@@ -23,24 +28,6 @@
         <dependency>
             <groupId>com.github.ajalt.clikt</groupId>
             <artifactId>clikt-jvm</artifactId>
-        </dependency>
-
-        <!-- logging -->
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <!-- For Log4j2/YAML configuration -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
-            <artifactId>jackson-dataformat-yaml</artifactId>
-            <scope>runtime</scope>
         </dependency>
 
         <dependency>
@@ -65,7 +52,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>net.postchain.rpc.cli.AppKt</mainClass>
+                            <mainClass>${main.class}</mainClass>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix/>
                             <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
@@ -73,6 +60,25 @@
                             <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                         </manifest>
                     </archive>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.google.cloud.tools</groupId>
+                <artifactId>jib-maven-plugin</artifactId>
+                <configuration>
+                    <allowInsecureRegistries>false</allowInsecureRegistries>
+                    <from>
+                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17:1.0.0</image> <!--No hash here until https://github.com/GoogleContainerTools/jib/pull/3974 -->
+                    </from>
+                    <container>
+                        <appRoot>/opt/chromaway/postchain</appRoot>
+                        <workingDirectory>/opt/chromaway/postchain</workingDirectory>
+                        <mainClass>${main.class}</mainClass>
+                        <environment>
+                            <POSTCHAIN_BLOCKCHAIN_CONFIG>/config/0.xml</POSTCHAIN_BLOCKCHAIN_CONFIG>
+                        </environment>
+                        <ports>50051</ports>
+                    </container>
                 </configuration>
             </plugin>
         </plugins>

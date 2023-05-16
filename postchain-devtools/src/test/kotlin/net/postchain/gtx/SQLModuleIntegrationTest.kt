@@ -67,7 +67,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         assertNotNull(hit0["val"])
         assertEquals("v2", hit0["val"]!!.asString())
         assertNotNull(hit0["owner"])
-        assertTrue(pubKey(0).contentEquals(hit0["owner"]!!.asByteArray(true)))
+        assertTrue(pubKey(0).contentEquals(hit0["owner"]!!.asByteArray()))
 
         // ------------------------------------------
         // Look for type "test_get_count"

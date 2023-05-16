@@ -1,7 +1,9 @@
 package net.postchain.network.mastersub.master
 
+import net.postchain.common.BlockchainRid
 import net.postchain.core.Shutdownable
 import net.postchain.debug.BlockchainProcessName
+import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.network.mastersub.MasterSubQueryManager
 import net.postchain.network.mastersub.protocol.MsMessage
 
@@ -9,6 +11,7 @@ import net.postchain.network.mastersub.protocol.MsMessage
  * [MasterConnectionManager] enables us work with a sub node.
  */
 interface MasterConnectionManager : Shutdownable {
+    var dataSource: ManagedNodeDataSource
     val masterSubQueryManager: MasterSubQueryManager
 
     /**
@@ -25,7 +28,7 @@ interface MasterConnectionManager : Shutdownable {
      *
      * @param message a message to send
      */
-    fun sendPacketToSub(message: MsMessage): Boolean
+    fun sendPacketToSub(blockchainRid: BlockchainRid, message: MsMessage): Boolean
 
     /**
      * Disconnects subnode chain. Usually is called by [MasterCommunicationManager].

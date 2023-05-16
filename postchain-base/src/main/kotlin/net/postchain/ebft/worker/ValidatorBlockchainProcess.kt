@@ -10,11 +10,13 @@ import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.EagerDiagnosticValue
+import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.StatusManager
+import net.postchain.ebft.rest.contract.toStateNodeStatus
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
 import java.lang.Thread.sleep
 
@@ -38,12 +40,13 @@ class ValidatorBlockchainProcess(
     val statusManager: StatusManager
 
     init {
-        val bestHeight = blockchainEngine.getBlockQueries().getBestHeight().get()
         val blockchainConfiguration = workerContext.blockchainConfiguration
         statusManager = BaseStatusManager(
                 blockchainConfiguration.signers.size,
                 blockchainConfiguration.blockchainContext.nodeID,
-                bestHeight + 1)
+                blockchainConfiguration.configHash,
+                blockchainEngine.getBlockQueries().getLastBlockHeight().get() + 1
+        )
 
         blockDatabase = BaseBlockDatabase(
                 blockchainEngine, blockchainEngine.getBlockQueries(), blockchainConfiguration.blockchainContext.nodeID)
@@ -52,7 +55,9 @@ class ValidatorBlockchainProcess(
                 workerContext.processName,
                 blockDatabase,
                 statusManager,
-                blockchainEngine.getBlockBuildingStrategy())
+                blockchainEngine.getBlockBuildingStrategy(),
+                workerContext
+        )
 
         // Give the SyncManager the BaseTransactionQueue (part of workerContext) and not the network-aware one,
         // because we don't want tx forwarding/broadcasting when received through p2p network
@@ -89,6 +94,23 @@ class ValidatorBlockchainProcess(
 
     override fun registerDiagnosticData(diagnosticData: DiagnosticData) {
         super.registerDiagnosticData(diagnosticData)
+        val myNodeIndex = statusManager.getMyIndex()
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_VALIDATOR.prettyName)
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS] = LazyDiagnosticValue {
+            val errorQueue = workerContext.nodeDiagnosticContext.blockchainErrorQueue(workerContext.blockchainConfiguration.blockchainRid)
+            val nodeRid = syncManager.validatorAtIndex(myNodeIndex)
+            nodeStateTracker.myStatus?.toStateNodeStatus(nodeRid.toHex(), errorQueue)
+        }
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES] = LazyDiagnosticValue {
+            nodeStateTracker.nodeStatuses
+                    ?.withIndex()
+                    ?.filter { it.index != myNodeIndex }
+                    ?.map {
+                        val nodeRid = syncManager.validatorAtIndex(it.index)
+                        it.value.toStateNodeStatus(nodeRid.toHex())
+                    }?.toList()
+        }
     }
+
+    override fun isSigner(): Boolean = !syncManager.isInFastSync()
 }

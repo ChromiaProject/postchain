@@ -20,8 +20,8 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.devtools.NameHelper.peerName
-import net.postchain.metrics.CHAIN_IID_TAG
-import net.postchain.metrics.NODE_PUBKEY_TAG
+import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.logging.NODE_PUBKEY_TAG
 import net.postchain.metrics.initMetrics
 
 /**
@@ -40,6 +40,10 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
         initMetrics(appConfig)
 
         val storage = StorageBuilder.buildStorage(appConfig, wipeDb)
+
+        storage.withReadConnection { ctx ->
+            DatabaseAccess.of(ctx).checkCollation(ctx.conn, suppressError = appConfig.databaseSuppressCollationCheck)
+        }
 
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
         logPrefix = peerName(appConfig.pubKey)
