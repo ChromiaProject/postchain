@@ -29,6 +29,7 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     companion object {
 
         const val DEFAULT_PORT: Int = 9870
+        const val DEFAULT_APPLIED_CONFIG_SEND_INTERVAL_MS: Long = 1_000
 
         @Deprecated(message = "Use fromPropertiesFile(File, Boolean) instead",
                 replaceWith = ReplaceWith("fromPropertiesFile(File(configFile), debug))", imports = arrayOf("java.io.File")))
@@ -123,6 +124,8 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
 
     // PCU feature toggle
     fun isPcuEnabled(): Boolean = getEnvOrBoolean("POSTCHAIN_PCU", "pcu", false)
+
+    fun appliedConfigSendInterval(): Long = getEnvOrLong("POSTCHAIN_CONFIG_SEND_INTERVAL_MS", "applied-config-send-interval-ms", DEFAULT_APPLIED_CONFIG_SEND_INTERVAL_MS)
 
     /**
      * Wrappers for [Configuration] getters and other functionalities

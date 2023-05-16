@@ -30,7 +30,6 @@ class BaseStatusManager(
     init {
         myStatus = nodeStatuses[myIndex]
         myStatus.height = myNextHeight
-        myStatus.configHash = configHash
         // make sure that after restart status updates are still considered fresh
         // this works fine as long as we have fewer than 1000 updates per second,
         // otherwise we are screwed

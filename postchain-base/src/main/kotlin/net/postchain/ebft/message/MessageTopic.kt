@@ -17,7 +17,8 @@ enum class MessageTopic(val value: Int) {
     GETBLOCKHEADERANDBLOCK(11),
     BLOCKHEADER(12),
     GETBLOCKRANGE(13),
-    BLOCKRANGE(14);
+    BLOCKRANGE(14),
+    APPLIEDCONFIG(15);
 
     fun toGtv() = gtv(value.toLong())
 }

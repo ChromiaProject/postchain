@@ -112,8 +112,7 @@ class Status(
         val revolting: Boolean,
         val round: Long,
         val serial: Long,
-        val state: Int,
-        val configHash: ByteArray?
+        val state: Int
 ) : EbftMessage(MessageTopic.STATUS) {
 
     companion object {
@@ -123,8 +122,7 @@ class Status(
                 gtv[3].asBoolean(),
                 gtv[4].asInteger(),
                 gtv[5].asInteger(),
-                gtv[6].asInteger().toInt(),
-                gtvToNullableByteArray(gtv.asArray().getOrNull(7))
+                gtv[6].asInteger().toInt()
         )
     }
 
@@ -135,8 +133,7 @@ class Status(
             gtv(revolting),
             gtv(round),
             gtv(serial),
-            gtv(state.toLong()),
-            nullableByteArrayToGtv(configHash)
+            gtv(state.toLong())
     )
 }
 
@@ -216,6 +213,20 @@ class BlockRange(val startAtHeight: Long, val isFull: Boolean, val blocks: List<
             gtvBlockList.add(gtvBlock)
         }
         return gtv(topic.toGtv(), gtv(startAtHeight), gtv(isFull), gtv(gtvBlockList))
+    }
+
+}
+
+/**
+ * Message to inform other nodes about which config our node is currently using.
+ *
+ * @property configHash is the hash of the config currently used
+ * @property height is the current height
+ */
+class AppliedConfig(val configHash: ByteArray, val height: Long) : EbftMessage(MessageTopic.APPLIEDCONFIG) {
+
+    override fun toGtv(): Gtv {
+        return gtv(topic.toGtv(), gtv(configHash), gtv(height))
     }
 
 }

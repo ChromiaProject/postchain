@@ -21,7 +21,7 @@ import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.BDBAbortException
-import net.postchain.ebft.message.Status
+import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.logging.CHAIN_IID_TAG
@@ -69,12 +69,11 @@ abstract class AbstractSynchronizer(
      * We do this check to avoid getting stuck when chain is waiting for a pending config where we are promoted to signer to be applied
      * In other cases config updates will be handled when adding blocks
      */
-    protected fun checkIfWeNeedToApplyPendingConfig(peer: NodeRid, status: Status): Boolean {
-        val incomingConfigHash = status.configHash
-        val incomingHeight = status.height
+    protected fun checkIfWeNeedToApplyPendingConfig(peer: NodeRid, appliedConfig: AppliedConfig): Boolean {
+        val incomingConfigHash = appliedConfig.configHash
+        val incomingHeight = appliedConfig.height
 
         if (blockchainConfiguration.chainID == 0L) return false
-        if (incomingConfigHash == null) return false
         val configProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
         if (configProvider == null || !configProvider.isPcuEnabled()) return false
 
@@ -144,7 +143,7 @@ abstract class AbstractSynchronizer(
     protected fun handleAddBlockException(exception: Throwable, block: BlockDataWithWitness, bTrace: BlockTrace?, peerStatuses: AbstractPeerStatuses<*>, peerId: NodeRid) {
         val height = getHeight(block.header)
         if (exception is PmEngineIsAlreadyClosed || exception is BDBAbortException) {
-            logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" }}" }
+            logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
         } else if (exception is BadDataMistake && exception.type == BadDataType.CONFIGURATION_MISMATCH) {
             if (!checkIfNewConfigurationCanBeLoaded(block)) {
                 peerStatuses.maybeBlacklist(peerId, "Received a block with mismatching config but we could not apply any new config")
@@ -160,7 +159,7 @@ abstract class AbstractSynchronizer(
                 peerStatuses.maybeBlacklist(peerId, "Received a block without expected failed config hash")
             }
         } else {
-            logger.warn(exception) { "Exception committing block height $height from peer: $peerId${bTrace?.let { ", from bTrace: $it" }}" }
+            logger.warn(exception) { "Exception committing block height $height from peer: $peerId${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
         }
     }
 

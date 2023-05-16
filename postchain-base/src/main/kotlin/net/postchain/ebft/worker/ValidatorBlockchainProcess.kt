@@ -17,8 +17,10 @@ import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.StatusManager
 import net.postchain.ebft.rest.contract.toStateNodeStatus
+import net.postchain.ebft.syncmanager.validator.AppliedConfigSender
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
 import java.lang.Thread.sleep
+import java.time.Duration
 
 /**
  * A blockchain instance worker
@@ -38,6 +40,12 @@ class ValidatorBlockchainProcess(
     val networkAwareTxQueue: NetworkAwareTxQueue
     val nodeStateTracker = NodeStateTracker()
     val statusManager: StatusManager
+    private val appliedConfigSender = AppliedConfigSender(
+            workerContext.blockchainConfiguration.configHash,
+            workerContext.engine.getBlockQueries(),
+            workerContext.communicationManager,
+            Duration.ofMillis(workerContext.appConfig.appliedConfigSendInterval())
+    )
 
     init {
         val blockchainConfiguration = workerContext.blockchainConfiguration
@@ -88,6 +96,7 @@ class ValidatorBlockchainProcess(
     }
 
     override fun cleanup() {
+        appliedConfigSender.shutdown()
         blockDatabase.stop()
         workerContext.shutdown()
     }

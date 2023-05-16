@@ -4,7 +4,6 @@ package net.postchain.ebft.messages
 
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.common.wrap
 import net.postchain.ebft.message.BlockData
 import net.postchain.ebft.message.BlockRange
 import net.postchain.ebft.message.BlockSignature
@@ -69,9 +68,8 @@ class MessagesTest {
         val round = 1L
         val serial = 123456L
         val state = 123
-        val configHash = byteArrayOf(1, 2, 3, 4)
 
-        val status = Status(blockRID, height, revolting, round, serial, state, configHash)
+        val status = Status(blockRID, height, revolting, round, serial, state)
         val encoded = status.encoded
         val expected = EbftMessage.decodeAs<Status>(encoded)
 
@@ -81,7 +79,6 @@ class MessagesTest {
         assertEquals(status.round, expected.round)
         assertEquals(status.serial, expected.serial)
         assertEquals(status.state, expected.state)
-        assertEquals(status.configHash?.wrap(), expected.configHash?.wrap())
     }
 
     @Test

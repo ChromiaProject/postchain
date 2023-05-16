@@ -22,6 +22,7 @@ import net.postchain.ebft.NodeBlockState
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.NodeStatus
 import net.postchain.ebft.StatusManager
+import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.BlockData
 import net.postchain.ebft.message.BlockHeader
 import net.postchain.ebft.message.BlockRange
@@ -135,7 +136,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                         NodeStatus(message.height, message.serial)
                                                 .apply {
                                                     blockRID = message.blockRID
-                                                    configHash = message.configHash
                                                     revolting = message.revolting
                                                     round = message.round
                                                     state = NodeBlockState.values()[message.state]
@@ -194,6 +194,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                         // TODO: This might happen because we've already exited FastSync but other nodes
                                         //  are still responding to our old requests. For this case this is harmless.
                                     }
+
+                                    is AppliedConfig -> {}
 
                                     else -> throw ProgrammerMistake("Unhandled type ${message::class}")
                                 }
