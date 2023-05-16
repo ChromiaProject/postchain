@@ -149,7 +149,7 @@ class RestApi(
         }
 
         http.exception(Exception::class.java) { error, request, response ->
-            logger.debug(error) { "Exception: $error" }
+            logger.warn(error) { "Unexpected exception: $error" }
             response.status(500)
             transformErrorResponseFromDiagnostics(request, response, error)
         }
