@@ -147,7 +147,7 @@ object CliExecution : KLogging() {
         }
     }
 
-    fun runNode(appConfig: AppConfig, chainIds: List<Long>, debug: Boolean) {
+    fun runNode(appConfig: AppConfig, chainIds: List<Long>) {
         with(PostchainNode(appConfig, wipeDb = false)) {
             chainIds.forEach {
                 tryStartBlockchain(it)
