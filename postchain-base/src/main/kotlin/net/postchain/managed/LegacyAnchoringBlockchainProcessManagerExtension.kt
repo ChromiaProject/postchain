@@ -38,7 +38,7 @@ class LegacyAnchoringBlockchainProcessManagerExtension(private val postchainCont
 
     override fun afterCommit(process: BlockchainProcess, height: Long) {
         val chainId = process.blockchainEngine.getConfiguration().chainID
-        if (chainId != 0L) {
+        if (chainId != 0L && process.isSigner()) {
             val chain0Engine = chain0BlockchainEngine
             if (chain0Engine != null) {
                 try {
