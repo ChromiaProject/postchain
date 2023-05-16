@@ -3,6 +3,8 @@
 package net.postchain.base.data
 
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.common.wrap
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.Transaction
@@ -267,5 +269,45 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
     override fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray) {
         val hash = calcConfigurationHash(data)
         queryRunner.insert(ctx.conn, cmdInsertConfiguration(ctx), longRes, height, data, hash, data, hash)
+    }
+
+    override fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray>> {
+        val sql = """
+            SELECT height, configuration_data  
+            FROM ${tableConfigurations(ctx)} 
+            ORDER BY height
+        """.trimIndent()
+        return queryRunner.query(ctx.conn, sql, mapListHandler).map { configuration ->
+            (configuration["height"] as Long) to (configuration["configuration_data"] as ByteArray).wrap()
+        }
+    }
+
+    override fun getAllBlocksWithTransactions(ctx: EContext, upToHeight: Long, blockHandler: (DatabaseAccess.BlockWithTransactions) -> Unit) {
+        val sql = """
+            SELECT b.block_header_data, b.block_witness, 
+              ARRAY(SELECT t.tx_data FROM ${tableTransactions(ctx)} as t WHERE t.block_iid = b.block_iid ORDER BY t.tx_iid ASC) as transactions 
+            FROM ${tableBlocks(ctx)} as b
+            WHERE b.block_height <= ? 
+            ORDER BY b.block_height ASC
+                """.trimIndent()
+        ctx.conn.prepareStatement(sql).use { statement ->
+            statement.setLong(1, upToHeight)
+            statement.executeQuery().use { resultSet ->
+                while (resultSet.next()) {
+                    val blockHeader = resultSet.getBytes("block_header_data")
+                    val witness = resultSet.getBytes("block_witness")
+                    val array = resultSet.getArray("transactions")
+                    val transactions = buildList<ByteArray> {
+                        array.resultSet.use {
+                            while (it.next()) {
+                                add(it.getBytes(2))
+                            }
+                        }
+                    }
+
+                    blockHandler(DatabaseAccess.BlockWithTransactions(blockHeader, witness, transactions))
+                }
+            }
+        }
     }
 }

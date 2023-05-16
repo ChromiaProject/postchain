@@ -18,10 +18,13 @@ import org.apache.commons.dbutils.handlers.ScalarHandler
 
 // TODO: [POS-128]: Refactor this
 
+const val GTX_TEST_OP_NAME = "gtx_test"
+const val GTX_TEST_QUERY_NAME = "gtx_test_get_value"
+
 private val r = QueryRunner()
 private val nullableStringReader = ScalarHandler<String?>()
 
-private fun table_gtx_test_value(ctx: EContext): String {
+internal fun table_gtx_test_value(ctx: EContext): String {
     val db = DatabaseAccess.of(ctx)
     return db.tableName(ctx, "gtx_test_value")
 }
@@ -63,8 +66,8 @@ class GTXTestOp(@Suppress("UNUSED_PARAMETER") u: Unit, opdata: ExtOpData) : GTXO
  * A simple module that has its own table where it can store and read things. Useful for testing all the way down to DB.
  */
 class GTXTestModule : SimpleGTXModule<Unit>(Unit,
-        mapOf("gtx_test" to ::GTXTestOp),
-        mapOf("gtx_test_get_value" to { _, ctxt, args ->
+        mapOf(GTX_TEST_OP_NAME to ::GTXTestOp),
+        mapOf(GTX_TEST_QUERY_NAME to { _, ctxt, args ->
             val txRID = (args as GtvDictionary).get("txRID")
                     ?: throw UserMistake("No txRID property supplied")
 

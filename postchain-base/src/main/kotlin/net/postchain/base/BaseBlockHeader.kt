@@ -108,8 +108,4 @@ class BaseBlockHeader(override val rawData: ByteArray, private val merkleHashCal
     }
      */
 
-
 }
-
-
-

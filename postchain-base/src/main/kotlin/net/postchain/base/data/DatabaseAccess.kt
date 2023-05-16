@@ -8,6 +8,7 @@ import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.AppContext
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
@@ -46,6 +47,11 @@ interface DatabaseAccess {
             val blockHeight: Long,
             val stateN: Long,
             val data: ByteArray)
+
+    class BlockWithTransactions(
+            val blockHeader: ByteArray,
+            val witness: ByteArray,
+            val transactions: List<ByteArray>)
 
     fun tableName(ctx: EContext, table: String): String
 
@@ -97,11 +103,18 @@ interface DatabaseAccess {
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
     fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt>
 
+    /**
+     * @param upToHeight   only export blocks up to and including this height,
+     *                     set to `Long.MAX_VALUE` to export everything
+     */
+    fun getAllBlocksWithTransactions(ctx: EContext, upToHeight: Long = Long.MAX_VALUE, blockHandler: (BlockWithTransactions) -> Unit)
+
     // Blockchain configurations
     fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long?
     fun findNextConfigurationHeight(ctx: EContext, height: Long): Long?
     fun listConfigurations(ctx: EContext): List<Long>
     fun removeConfiguration(ctx: EContext, height: Long): Int
+    fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray>>
 
     /** Get configuration data at exactly given height */
     fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
