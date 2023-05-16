@@ -29,6 +29,7 @@ abstract class EbftMessage(val topic: MessageTopic) {
                 MessageTopic.BLOCKHEADER.value -> BlockHeader(data[1].asByteArray(), data[2].asByteArray(), data[3].asInteger())
                 MessageTopic.GETBLOCKRANGE.value -> GetBlockRange(data[1].asInteger())
                 MessageTopic.BLOCKRANGE.value -> BlockRange.buildFromGtv(data)
+                MessageTopic.APPLIEDCONFIG.value -> AppliedConfig(data[1].asByteArray(), data[2].asInteger())
                 else -> throw BadDataMistake(BadDataType.BAD_MESSAGE, "Message topic $topic is not handled")
             }
         }

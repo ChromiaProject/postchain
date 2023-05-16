@@ -13,13 +13,13 @@ import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
 import net.postchain.ebft.BlockDatabase
+import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.BlockHeader
 import net.postchain.ebft.message.BlockRange
 import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
-import net.postchain.ebft.message.Status
 import net.postchain.ebft.worker.WorkerContext
 
 /**
@@ -143,7 +143,7 @@ class SlowSynchronizer(
                         sleepData.updateData(processedBlocks)
                     }
 
-                    is Status -> {
+                    is AppliedConfig -> {
                         if (checkIfWeNeedToApplyPendingConfig(peerId, message)) return
                     }
 

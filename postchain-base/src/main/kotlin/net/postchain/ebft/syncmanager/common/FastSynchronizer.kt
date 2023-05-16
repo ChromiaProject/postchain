@@ -607,10 +607,8 @@ class FastSynchronizer(
                     is BlockHeaderMessage -> handleBlockHeader(peerId, message.header, message.witness, message.requestedHeight)
                     is UnfinishedBlock -> handleUnfinishedBlock(peerId, message.header, message.transactions)
                     is CompleteBlock -> handleCompleteBlock(peerId, message.data, message.height, message.witness)
-                    is Status -> {
-                        if (checkIfWeNeedToApplyPendingConfig(peerId, message)) return
-                        peerStatuses.statusReceived(peerId, message.height - 1)
-                    }
+                    is Status -> peerStatuses.statusReceived(peerId, message.height - 1)
+                    is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message)) return
 
                     is Transaction -> logger.info("Got unexpected transaction from peer $peerId, ignoring")
                     else -> logger.warn { "Unhandled message type: ${message.topic} from peer $peerId" } // WARN b/c this might be buggy?

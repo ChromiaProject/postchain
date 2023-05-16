@@ -31,7 +31,6 @@ class NodeStatus(var height: Long, var serial: Long) {
     var state: NodeBlockState = NodeBlockState.WaitBlock
     var round: Long = 0  // PBFT: view-number
     var blockRID: ByteArray? = null
-    var configHash: ByteArray? = null
 
     var revolting: Boolean = false // PBFT: VIEW-CHANGE (?)
 

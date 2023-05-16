@@ -31,8 +31,7 @@ class StatusSender(
                     myStatus.revolting,
                     myStatus.round,
                     myStatus.serial,
-                    myStatus.state.ordinal,
-                    myStatus.configHash
+                    myStatus.state.ordinal
             )
             communicationManager.broadcastPacket(statusMessage)
         }
