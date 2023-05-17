@@ -1,5 +1,4 @@
 package net.postchain.client.exception
 
-import net.postchain.common.exception.UserMistake
-
-class NodesDisagree(message: String) : UserMistake(message)
+class NodesDisagree(message: String)
+    : ClientError(context = "Nodes disagree", status = null, errorMessage = message, endpoint = null)
