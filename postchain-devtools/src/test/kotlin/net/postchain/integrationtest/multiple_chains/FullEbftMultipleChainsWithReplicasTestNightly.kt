@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import kotlin.test.assertNotNull
 
 class FullEbftMultipleChainsWithReplicasTestNightly : ConfigFileBasedIntegrationTest() {
 
@@ -129,7 +128,7 @@ class FullEbftMultipleChainsWithReplicasTestNightly : ConfigFileBasedIntegration
 
                     // Asserting uniqueness of block at height
                     val blockRid = queries.getBlockRid(height).get()
-                    assertNotNull(blockRid)
+                    requireNotNull(blockRid)
 
                     // Asserting txs count
                     val txs = queries.getBlockTransactionRids(blockRid).get()

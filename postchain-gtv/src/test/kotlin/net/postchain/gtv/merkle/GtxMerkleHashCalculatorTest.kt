@@ -5,7 +5,7 @@ package net.postchain.gtv.merkle
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvInteger
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class GtvMerkleHashCalculatorTest {
 

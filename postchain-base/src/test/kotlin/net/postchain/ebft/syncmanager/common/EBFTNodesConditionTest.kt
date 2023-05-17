@@ -2,7 +2,7 @@ package net.postchain.ebft.syncmanager.common
 
 import net.postchain.ebft.NodeStatus
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class EBFTNodesConditionTest {
 

@@ -2,6 +2,8 @@
 
 package net.postchain.api.rest.endpoint
 
+import assertk.assertThat
+import assertk.isContentEqualTo
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
@@ -22,7 +24,6 @@ import org.junit.jupiter.api.fail
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import kotlin.test.assertContentEquals
 
 /**
  * ProgrammerMistake -> 500
@@ -319,7 +320,7 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
 
-        assertContentEquals(GtvEncoder.encodeGtv(answer), body.extract().response().body.asByteArray())
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(answer))
     }
 
     @Test
@@ -338,7 +339,7 @@ class RestApiQueryEndpointTest {
                 .statusCode(400)
                 .contentType(ContentType.BINARY)
 
-        assertContentEquals(GtvEncoder.encodeGtv(gtv(errorMessage)), body.extract().response().body.asByteArray())
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(gtv(errorMessage)))
     }
 
     @Test

@@ -32,7 +32,7 @@ import org.mockito.kotlin.spy
 import org.mockito.kotlin.verify
 import java.time.Instant
 import java.util.*
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class PostchainClientTest : IntegrationTestSetup() {
 

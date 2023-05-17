@@ -8,7 +8,6 @@ import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.testinfra.TestTransaction
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
-import kotlin.test.assertNotNull
 
 open class FullEbftTestNightlyCore : ConfigFileBasedIntegrationTest() {
 
@@ -40,7 +39,7 @@ open class FullEbftTestNightlyCore : ConfigFileBasedIntegrationTest() {
             for (height in 0..referenceHeight) {
                 logger.info { "Verifying height $height" }
                 val rid = blockQueries.getBlockRid(height).get()
-                assertNotNull(rid)
+                requireNotNull(rid)
 
                 val txs = blockQueries.getBlockTransactionRids(rid).get()
                 assertEquals(txPerBlock, txs.size)

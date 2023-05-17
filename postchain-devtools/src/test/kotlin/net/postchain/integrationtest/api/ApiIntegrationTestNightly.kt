@@ -2,6 +2,8 @@
 
 package net.postchain.integrationtest.api
 
+import assertk.assertThat
+import assertk.isContentEqualTo
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -43,8 +45,7 @@ import org.junit.jupiter.api.Test
 import org.skyscreamer.jsonassert.JSONAssert
 import org.skyscreamer.jsonassert.JSONCompareMode
 import java.nio.file.Paths
-import kotlin.test.assertContentEquals
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertTrue
 
 class ApiIntegrationTestNightly : IntegrationTestSetup() {
 
@@ -330,7 +331,7 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
                 .then()
                 .statusCode(200)
                 .extract().asByteArray()
-        assertContentEquals(config, byteArray)
+        assertThat(byteArray).isContentEqualTo(config)
     }
 
     @Test
@@ -386,7 +387,7 @@ class ApiIntegrationTestNightly : IntegrationTestSetup() {
             for (txInBlock in txPerBlockCount - 1 downTo 0) {
                 val txObject: JsonObject = jsonArray[itemInArray] as JsonObject
                 assertEquals(txObject["blockHeight"].asInt, blockHeight)
-                assertContentEquals(txObject["txRID"].asString.hexStringToByteArray(), transactions[txInBlock].getRID())
+                assertThat(transactions[txInBlock].getRID()).isContentEqualTo(txObject["txRID"].asString.hexStringToByteArray())
                 itemInArray++
             }
         }

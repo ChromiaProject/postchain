@@ -13,9 +13,9 @@ import net.postchain.gtv.merkle.path.GtvPathSet
 import net.postchain.gtv.merkle.proof.toGtvVirtual
 import net.postchain.gtv.merkleHash
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 
 
 class DictProofToVirtualTest {

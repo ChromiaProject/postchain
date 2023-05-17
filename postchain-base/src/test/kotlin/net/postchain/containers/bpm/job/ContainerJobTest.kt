@@ -4,7 +4,7 @@ import net.postchain.containers.bpm.ContainerName
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class ContainerJobTest {
 

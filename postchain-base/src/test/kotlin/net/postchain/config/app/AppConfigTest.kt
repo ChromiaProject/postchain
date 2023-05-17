@@ -8,8 +8,8 @@ import net.postchain.config.app.AssertsHelper.assertIsDefaultOrEqualsToEnvVar
 import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
 import org.junit.jupiter.api.Test
 import java.io.File
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 
 class AppConfigTest {
 

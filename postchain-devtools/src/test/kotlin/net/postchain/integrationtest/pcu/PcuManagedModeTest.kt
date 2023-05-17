@@ -13,8 +13,8 @@ import net.postchain.gtv.GtvFactory.gtv
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 
 class PcuManagedModeTest : ManagedModeTest() {
 

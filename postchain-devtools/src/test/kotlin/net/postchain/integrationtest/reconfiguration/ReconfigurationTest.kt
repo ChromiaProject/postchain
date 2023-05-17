@@ -10,7 +10,6 @@ import net.postchain.devtools.testinfra.TestTransactionFactory
 import net.postchain.devtools.awaitedHeight
 import net.postchain.devtools.buildBlocksUpTo
 import net.postchain.devtools.query
-import kotlin.test.assertNotNull
 
 open class ReconfigurationTest : ConfigFileBasedIntegrationTest() {
 
@@ -18,15 +17,15 @@ open class ReconfigurationTest : ConfigFileBasedIntegrationTest() {
 
     protected fun blockTxsIds(node: PostchainTestNode, height: Long): Set<Int> {
         val blockRids = node.query(DEFAULT_CHAIN_IID) { it.getBlockRid(height) }
-        assertNotNull(blockRids)
+        requireNotNull(blockRids)
 
         val txsRids = node.query(DEFAULT_CHAIN_IID) { it.getBlockTransactionRids(blockRids) }
-        assertNotNull(txsRids)
+        requireNotNull(txsRids)
 
         val txFactory = TestTransactionFactory()
         return txsRids.asSequence().map { txRid ->
             val tx = node.query(DEFAULT_CHAIN_IID) { it.getTransaction(txRid) }
-            assertNotNull(tx)
+            requireNotNull(tx)
 
             (txFactory.decodeTransaction(tx.getRawData()) as TestTransaction).id
         }.toSet()

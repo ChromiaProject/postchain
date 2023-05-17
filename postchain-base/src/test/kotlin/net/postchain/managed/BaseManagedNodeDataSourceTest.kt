@@ -1,5 +1,7 @@
 package net.postchain.managed
 
+import assertk.assertThat
+import assertk.isContentEqualTo
 import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid
@@ -26,8 +28,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.spy
 import java.time.Instant
-import kotlin.test.assertContentEquals
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class BaseManagedNodeDataSourceTest {
 
@@ -38,7 +39,7 @@ class BaseManagedNodeDataSourceTest {
             on { query(eq("nm_get_peer_infos"), any()) } doReturn gtvResult
         }
         val sut = BaseManagedNodeDataSource(queryRunner, mock())
-        assertContentEquals(expected, sut.getPeerInfos())
+        assertThat(sut.getPeerInfos()).isContentEqualTo(expected)
     }
 
     @ParameterizedTest

@@ -2,6 +2,8 @@
 
 package net.postchain.api.rest.endpoint
 
+import assertk.assertThat
+import assertk.isContentEqualTo
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
@@ -17,7 +19,6 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
-import kotlin.test.assertContentEquals
 
 class RestApiPostTxEndpointTest {
 
@@ -55,7 +56,7 @@ class RestApiPostTxEndpointTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
-        assertContentEquals(GtvEncoder.encodeGtv(gtv(mapOf())), body.extract().body().asByteArray())
+        assertThat(body.extract().body().asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(gtv(mapOf())))
 
         verify(model, times(1)).postTransaction(tx)
     }
@@ -101,9 +102,8 @@ class RestApiPostTxEndpointTest {
                 .then()
                 .statusCode(400)
                 .contentType(ContentType.BINARY)
-        assertContentEquals(
-                GtvEncoder.encodeGtv(gtv("Invalid tx format. Expected {\"tx\": <hex-string>}")),
-                body.extract().body().asByteArray())
+        assertThat(body.extract().body().asByteArray()).isContentEqualTo(
+                GtvEncoder.encodeGtv(gtv("Invalid tx format. Expected {\"tx\": <hex-string>}")))
     }
 
     @Test

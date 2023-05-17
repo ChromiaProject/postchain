@@ -8,7 +8,7 @@ import net.postchain.gtv.merkle.path.GtvPath
 import net.postchain.gtv.merkle.path.GtvPathFactory
 import net.postchain.gtv.merkle.path.GtvPathSet
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 /**
  * We will generate proofs from mixes of Dict and Arrays

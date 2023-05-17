@@ -13,7 +13,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.spy
 import kotlin.reflect.KClass
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class BlockchainConfigurationFactoryTest {
 

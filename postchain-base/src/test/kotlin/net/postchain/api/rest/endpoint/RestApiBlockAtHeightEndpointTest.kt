@@ -1,5 +1,7 @@
 package net.postchain.api.rest.endpoint
 
+import assertk.assertThat
+import assertk.isContentEqualTo
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
@@ -16,7 +18,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import kotlin.test.assertContentEquals
 
 class RestApiBlockAtHeightEndpointTest {
 
@@ -91,7 +92,7 @@ class RestApiBlockAtHeightEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
 
-        assertContentEquals(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(block)), body.extract().response().body.asByteArray())
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(block)))
     }
 
     @Test

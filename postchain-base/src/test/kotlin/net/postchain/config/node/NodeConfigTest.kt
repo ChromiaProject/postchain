@@ -12,7 +12,7 @@ import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
 import net.postchain.core.NodeRid
 import org.junit.jupiter.api.Test
 import java.io.File
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class NodeConfigTest {
 

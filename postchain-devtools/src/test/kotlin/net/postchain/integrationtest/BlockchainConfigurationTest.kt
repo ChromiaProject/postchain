@@ -19,7 +19,7 @@ import org.apache.commons.lang3.RandomStringUtils
 import org.awaitility.Awaitility
 import org.junit.jupiter.api.Test
 import java.util.concurrent.TimeUnit
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class BlockchainConfigurationTest : IntegrationTestSetup() {
 

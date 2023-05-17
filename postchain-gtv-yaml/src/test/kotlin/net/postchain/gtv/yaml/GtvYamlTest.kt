@@ -2,6 +2,7 @@ package net.postchain.gtv.yaml
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.isContentEqualTo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.common.types.WrappedByteArray
@@ -12,8 +13,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.math.BigInteger
-import kotlin.test.assertContentEquals
-import kotlin.test.assertEquals
 
 internal class GtvYamlTest {
 
@@ -48,9 +47,8 @@ internal class GtvYamlTest {
         )
 
         val actual = GtvYaml().load<Binary>("b: x\"AB\"\nwb: x\"AC\"")
-        assertContentEquals("AB".hexStringToByteArray(), actual.b)
-        assertEquals("AC".hexStringToWrappedByteArray(), actual.wb)
-
+        assertThat(actual.b).isContentEqualTo("AB".hexStringToByteArray())
+        assertThat(actual.wb).isEqualTo("AC".hexStringToWrappedByteArray())
     }
 
     @Test
@@ -104,7 +102,7 @@ internal class GtvYamlTest {
         assertThat(actual.i).isEqualTo(1)
         assertThat(actual.l).isEqualTo(2L)
         assertThat(actual.bo).isEqualTo(true)
-        assertContentEquals("12".hexStringToByteArray(), actual.ba)
+        assertThat(actual.ba!!).isContentEqualTo("12".hexStringToByteArray())
         assertThat(actual.wba).isEqualTo("13".hexStringToWrappedByteArray())
         assertThat(actual.s).isEqualTo("foo")
         assertThat(actual.gtv).isEqualTo(gtv(12))

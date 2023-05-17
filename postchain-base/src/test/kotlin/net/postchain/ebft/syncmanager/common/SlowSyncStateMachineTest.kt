@@ -3,7 +3,7 @@ package net.postchain.ebft.syncmanager.common
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.NodeRid
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 @Suppress("UNUSED_PARAMETER")
 class SlowSyncStateMachineTest {
