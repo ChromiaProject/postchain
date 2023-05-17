@@ -56,7 +56,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 storage,
                 infrastructureFactory.makeConnectionManager(appConfig),
                 blockQueriesProvider,
-                JsonNodeDiagnosticContext(version, appConfig.pubKey, appConfig.infrastructure),
+                JsonNodeDiagnosticContext(version, appConfig.pubKey, infrastructureFactory),
                 blockchainConfigProvider,
                 appConfig.debug
         )
