@@ -9,7 +9,7 @@ import net.postchain.gtv.builder.GtvBuilder.GtvDictNode
 import net.postchain.gtv.make_gtv_gson
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class GtvBuilderTest {
     val gson = make_gtv_gson()

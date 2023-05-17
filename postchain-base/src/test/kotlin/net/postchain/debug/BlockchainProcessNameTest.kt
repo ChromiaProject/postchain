@@ -2,7 +2,7 @@ package net.postchain.debug
 
 import net.postchain.common.BlockchainRid
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class BlockchainProcessNameTest {
 

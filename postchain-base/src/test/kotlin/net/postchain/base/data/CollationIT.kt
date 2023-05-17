@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables
-import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.assertThrows
 
 class CollationIT {
     @Test
@@ -33,7 +33,7 @@ class CollationIT {
             start()
         }.use { postgres ->
             EnvironmentVariables("POSTCHAIN_DB_URL", postgres.jdbcUrl).execute {
-                val exception = assertFailsWith<UserMistake> {
+                val exception = assertThrows<UserMistake> {
                     PostchainNode(appConfig(postgres))
                 }
                 assertTrue(exception.message?.contains("Database collation check failed") ?: false)

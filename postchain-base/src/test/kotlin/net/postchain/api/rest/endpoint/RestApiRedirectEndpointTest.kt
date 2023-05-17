@@ -1,5 +1,8 @@
 package net.postchain.api.rest.endpoint
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.isContentEqualTo
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.ExternalModel
@@ -16,8 +19,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import kotlin.test.assertContentEquals
-import kotlin.test.assertEquals
 
 class RestApiRedirectEndpointTest {
     private val basePath = ""
@@ -74,7 +75,8 @@ class RestApiRedirectEndpointTest {
                 .statusCode(200)
                 .contentType(RestApi.OCTET_CONTENT_TYPE)
 
-        assertContentEquals(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(MockPostchainRestApi.block)), body.extract().response().body.asByteArray())
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(
+                GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(MockPostchainRestApi.block)))
     }
 
     @Test
@@ -92,7 +94,8 @@ class RestApiRedirectEndpointTest {
                 .statusCode(200)
                 .contentType(RestApi.OCTET_CONTENT_TYPE)
 
-        assertContentEquals(GtvEncoder.encodeGtv(MockPostchainRestApi.gtvQueryResponse), body.extract().response().body.asByteArray())
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(
+                GtvEncoder.encodeGtv(MockPostchainRestApi.gtvQueryResponse))
     }
 
     @Test
@@ -108,7 +111,7 @@ class RestApiRedirectEndpointTest {
                 .statusCode(200)
                 .contentType(RestApi.JSON_CONTENT_TYPE)
 
-        assertEquals(make_gtv_gson().toJson(MockPostchainRestApi.gtvQueryResponse), body.extract().body().asString())
+        assertThat(body.extract().body().asString()).isEqualTo(make_gtv_gson().toJson(MockPostchainRestApi.gtvQueryResponse))
     }
 
     @Test

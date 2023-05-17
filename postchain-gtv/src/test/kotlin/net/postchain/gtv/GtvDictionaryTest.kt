@@ -4,7 +4,7 @@ package net.postchain.gtv
 
 import net.postchain.gtv.GtvFactory.gtv
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class GtvDictionaryTest {
 

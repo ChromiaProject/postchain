@@ -16,7 +16,7 @@ import org.mockito.kotlin.mock
 import java.math.BigInteger
 import java.security.MessageDigest
 import java.util.*
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class MerkleTest {
 

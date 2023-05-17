@@ -15,8 +15,8 @@ import net.postchain.ebft.message.Signature
 import net.postchain.ebft.message.Status
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 
 class MessagesTest {
 

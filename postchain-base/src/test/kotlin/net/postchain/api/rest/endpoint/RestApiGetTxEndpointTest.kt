@@ -2,6 +2,8 @@
 
 package net.postchain.api.rest.endpoint
 
+import assertk.assertThat
+import assertk.isContentEqualTo
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
@@ -15,7 +17,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import kotlin.test.assertContentEquals
 
 class RestApiGetTxEndpointTest {
 
@@ -69,7 +70,7 @@ class RestApiGetTxEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
 
-        assertContentEquals(tx, body.extract().response().body.asByteArray())
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(tx)
     }
 
     @Test

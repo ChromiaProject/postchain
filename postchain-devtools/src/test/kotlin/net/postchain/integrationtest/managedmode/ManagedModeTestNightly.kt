@@ -20,8 +20,8 @@ import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 
 class ManagedModeTestNightly : ConfigFileBasedIntegrationTest() {
 

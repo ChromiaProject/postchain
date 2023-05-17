@@ -5,7 +5,7 @@ import net.postchain.common.toHex
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class BlockchainPreSetupTest {
 

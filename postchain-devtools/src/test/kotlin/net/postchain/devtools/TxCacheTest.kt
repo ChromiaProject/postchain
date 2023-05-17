@@ -8,7 +8,7 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
 import net.postchain.gtx.GTXTransactionFactory
 import org.junit.jupiter.api.Test
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertTrue
 
 class TxCacheTest {
     val cryptoSystem = Secp256K1CryptoSystem()

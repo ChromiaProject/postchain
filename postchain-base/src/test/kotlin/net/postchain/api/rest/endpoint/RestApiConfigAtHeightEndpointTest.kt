@@ -1,5 +1,8 @@
 package net.postchain.api.rest.endpoint
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.isContentEqualTo
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
@@ -15,8 +18,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.io.File
 import java.nio.file.Paths
-import kotlin.test.assertContentEquals
-import kotlin.test.assertEquals
 
 class RestApiConfigAtHeightEndpointTest {
 
@@ -59,7 +60,7 @@ class RestApiConfigAtHeightEndpointTest {
                 .statusCode(200)
                 .contentType("text/xml")
 
-        assertEquals(bccFile.readText(), body.extract().response().body.asString())
+        assertThat(body.extract().response().body.asString()).isEqualTo(bccFile.readText())
     }
 
     @Test
@@ -77,7 +78,7 @@ class RestApiConfigAtHeightEndpointTest {
                 .statusCode(200)
                 .contentType("text/xml")
 
-        assertEquals(bccFile.readText(), body.extract().response().body.asString())
+        assertThat(body.extract().response().body.asString()).isEqualTo(bccFile.readText())
     }
 
     @Test
@@ -93,7 +94,7 @@ class RestApiConfigAtHeightEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
 
-        assertContentEquals(bccByteArray, body.extract().response().body.asByteArray())
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(bccByteArray)
     }
 
     @Test
@@ -111,7 +112,7 @@ class RestApiConfigAtHeightEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
 
-        assertContentEquals(bccByteArray, body.extract().response().body.asByteArray())
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(bccByteArray)
     }
 
     @Test

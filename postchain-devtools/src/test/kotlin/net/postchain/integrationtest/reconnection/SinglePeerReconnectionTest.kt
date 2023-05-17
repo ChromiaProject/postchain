@@ -7,7 +7,7 @@ import net.postchain.devtools.assertChainStarted
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class SinglePeerReconnectionTest : ReconnectionTest() {
 

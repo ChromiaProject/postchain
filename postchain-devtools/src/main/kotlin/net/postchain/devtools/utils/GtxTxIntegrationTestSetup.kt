@@ -13,8 +13,7 @@ import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import java.util.concurrent.TimeoutException
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Assertions.assertEquals
 
 /**
  * Extends [IntegrationTestSetup] with extra functions relevant for real GTX transactions on multi chain tests
@@ -217,7 +216,7 @@ open class GtxTxIntegrationTestSetup : IntegrationTestSetup() {
 
             // Asserting uniqueness of block at height
             val blockRid = queries.getBlockRid(height).get()
-            assertNotNull(blockRid)
+            requireNotNull(blockRid)
 
             // Asserting txs count
             val txs = queries.getBlockTransactionRids(blockRid).get()

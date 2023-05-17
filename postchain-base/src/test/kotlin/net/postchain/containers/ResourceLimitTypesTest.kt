@@ -3,7 +3,7 @@ package net.postchain.containers
 import net.postchain.containers.bpm.resources.*
 import net.postchain.containers.bpm.resources.ResourceLimitType.*
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class ResourceLimitTypesTest {
 

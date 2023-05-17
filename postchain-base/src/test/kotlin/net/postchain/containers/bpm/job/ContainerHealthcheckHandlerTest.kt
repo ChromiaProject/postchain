@@ -4,7 +4,6 @@ import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.ContainerName
 import net.postchain.containers.bpm.PostchainContainer
-import org.junit.jupiter.api.Test
 import org.mandas.docker.client.DockerClient
 import org.mandas.docker.client.messages.Container
 import org.mockito.Mockito.anyInt
@@ -14,8 +13,9 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
-import kotlin.test.BeforeTest
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
 
 class ContainerHealthcheckHandlerTest {
 
@@ -43,7 +43,7 @@ class ContainerHealthcheckHandlerTest {
     }
     private lateinit var sut: ContainerHealthcheckHandler
 
-    @BeforeTest
+    @BeforeEach
     fun beforeTest() {
         chainsRemoved = 0
         psContainers.clear()
