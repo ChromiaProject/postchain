@@ -15,8 +15,9 @@ class JsonNodeDiagnosticContext(
             DiagnosticProperty.VERSION withValue version,
             DiagnosticProperty.PUB_KEY withValue pubKey,
             DiagnosticProperty.INFRASTRUCTURE_NAME withValue infrastructure::class.java.name,
-            DiagnosticProperty.INFRASTRUCTURE_VERSION withValue { infrastructure::class.java.`package`.implementationVersion ?: "(unknown)" },
-            )
+            DiagnosticProperty.INFRASTRUCTURE_VERSION withValue (infrastructure::class.java.`package`.implementationVersion
+                    ?: "(unknown)"),
+    )
 
     constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values), mutableMapOf())
 
