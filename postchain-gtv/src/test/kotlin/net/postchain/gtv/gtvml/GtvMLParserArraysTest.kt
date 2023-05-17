@@ -2,7 +2,7 @@
 
 package net.postchain.gtv.gtvml
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.gtv.*
 import org.junit.jupiter.api.Test
@@ -16,7 +16,7 @@ class GtvMLParserArraysTest {
         val actual = GtvMLParser.parseGtvML(xml)
         val expected = GtvArray(arrayOf())
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -28,7 +28,7 @@ class GtvMLParserArraysTest {
                 GtvInteger(42)
         ))
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -43,7 +43,7 @@ class GtvMLParserArraysTest {
                 GtvInteger(42)
         ))
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -94,7 +94,7 @@ class GtvMLParserArraysTest {
                 ))
         ))
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -212,6 +212,6 @@ class GtvMLParserArraysTest {
                 ))
         ))
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 }

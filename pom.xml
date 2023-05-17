@@ -51,7 +51,7 @@
         <junitparams.version>1.1.1</junitparams.version>
         <mockito-kotlin.version>4.0.0</mockito-kotlin.version>
         <mockito.version>4.9.0</mockito.version>
-        <assertk.version>0.10</assertk.version>
+        <assertk.version>0.26</assertk.version>
         <awaitility.version>3.1.6</awaitility.version>
 
         <!-- Logging -->
@@ -231,7 +231,7 @@
             </dependency>
             <dependency>
                 <groupId>com.willowtreeapps.assertk</groupId>
-                <artifactId>assertk</artifactId>
+                <artifactId>assertk-jvm</artifactId>
                 <version>${assertk.version}</version>
             </dependency>
             <dependency>

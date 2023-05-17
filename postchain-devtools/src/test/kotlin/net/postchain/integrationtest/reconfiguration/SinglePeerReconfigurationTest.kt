@@ -2,6 +2,7 @@
 
 package net.postchain.integrationtest.reconfiguration
 
+import assertk.assertThat
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotEmpty
 import net.postchain.devtools.PostchainTestNode
@@ -44,14 +45,14 @@ class SinglePeerReconfigurationTest : ReconfigurationTest() {
                 }
 
         // Asserting blockchainConfig1 with DummyModule1 is loaded
-        assertk.assert(nodes[0].getModules(chainId)[0]).isInstanceOf(DummyModule1::class)
+        assertThat(nodes[0].getModules(chainId)[0]).isInstanceOf(DummyModule1::class)
 
         // Asserting blockchainConfig2 with DummyModule2 is loaded
         await().atMost(Duration.ONE_MINUTE)
                 .untilAsserted {
                     val modules = nodes[0].getModules(chainId)
-                    assertk.assert(modules).isNotEmpty()
-                    assertk.assert(modules.first()).isInstanceOf(DummyModule2::class)
+                    assertThat(modules).isNotEmpty()
+                    assertThat(modules.first()).isInstanceOf(DummyModule2::class)
                 }
 
     }

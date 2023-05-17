@@ -2,6 +2,7 @@
 
 package net.postchain.config.node
 
+import assertk.assertThat
 import assertk.assertions.containsExactly
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
@@ -37,7 +38,7 @@ class ManualNodeConfigurationProviderTest {
 
         // Assert
         val peerInfos = provider.getPeerInfoCollection(mock())
-        assertk.assert(peerInfos).containsExactly(*actual)
+        assertThat(peerInfos).containsExactly(*actual)
 
         verify(mockStorage.db).addPeerInfo(any(), eq("localhost"), eq(9870), eq("CCCC"), eq(null))
     }

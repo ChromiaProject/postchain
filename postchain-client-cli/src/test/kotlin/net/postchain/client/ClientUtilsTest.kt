@@ -1,6 +1,6 @@
 package net.postchain.client
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
@@ -17,7 +17,7 @@ internal class ClientUtilsTest {
     @ParameterizedTest
     @MethodSource("validData")
     fun validEncodingTest(input: String, expected: Gtv) {
-        assert(GtvParser.parse(input)).isEqualTo(expected)
+        assertThat(GtvParser.parse(input)).isEqualTo(expected)
     }
 
     @ParameterizedTest

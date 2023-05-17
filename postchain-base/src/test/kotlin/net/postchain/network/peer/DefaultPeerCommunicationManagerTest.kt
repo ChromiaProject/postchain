@@ -2,7 +2,7 @@
 
 package net.postchain.network.peer
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
 import org.mockito.kotlin.*
@@ -58,11 +58,11 @@ class DefaultPeerCommunicationManagerTest {
         argumentCaptor<XChainPeersConfiguration>().apply {
             verify(connectionManager).connectChain(capture(), eq(true), any())
 
-            assert(firstValue.chainId).isEqualTo(CHAIN_ID)
-            assert(firstValue.commConfiguration).isSameAs(peerCommunicationConfig)
+            assertThat(firstValue.chainId).isEqualTo(CHAIN_ID)
+            assertThat(firstValue.commConfiguration).isSameAs(peerCommunicationConfig)
 //            val f: XPacketHandler = { _, _ -> ; } // TODO: Assert function types
-//            assert(firstValue.packetHandler).isInstanceOf(f.javaClass)
-//            assert(firstValue.identPacketConverter).isSameAs(packetConverter)
+//            assertThat(firstValue.packetHandler).isInstanceOf(f.javaClass)
+//            assertThat(firstValue.identPacketConverter).isSameAs(packetConverter)
         }
 
         communicationManager.shutdown()
@@ -89,11 +89,11 @@ class DefaultPeerCommunicationManagerTest {
         argumentCaptor<XChainPeersConfiguration>().apply {
             verify(connectionManager).connectChain(capture(), eq(true), any())
 
-            assert(firstValue.chainId).isEqualTo(CHAIN_ID)
-            assert(firstValue.commConfiguration).isSameAs(peerCommunicationConfig)
+            assertThat(firstValue.chainId).isEqualTo(CHAIN_ID)
+            assertThat(firstValue.commConfiguration).isSameAs(peerCommunicationConfig)
 //            val f: XPacketHandler = { _, _ -> ; } // TODO: Assert function types
-//            assert(firstValue.packetHandler).isInstanceOf(f.javaClass)
-//            assert(firstValue.identPacketConverter).isSameAs(packetConverter)
+//            assertThat(firstValue.packetHandler).isInstanceOf(f.javaClass)
+//            assertThat(firstValue.identPacketConverter).isSameAs(packetConverter)
         }
 
         communicationManager.shutdown()

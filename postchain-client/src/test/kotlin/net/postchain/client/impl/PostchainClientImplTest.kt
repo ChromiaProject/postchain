@@ -1,5 +1,6 @@
 package net.postchain.client.impl
 
+import assertk.assertThat
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import net.postchain.client.config.FailOverConfig
@@ -362,7 +363,7 @@ internal class PostchainClientImplTest {
     private fun assertQueryUrlEndsWith(config: PostchainClientConfig, suffix: String) {
         PostchainClientImpl(config, httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
-                assert(request.uri.path.endsWith(suffix))
+                assertThat(request.uri.path.endsWith(suffix))
                 return Response(Status.OK).header(Header.ContentType, ContentType.OCTET_STREAM.value).body(encodeGtv(gtv("foobar")).inputStream())
             }
         }).query("foo", gtv(mapOf()))

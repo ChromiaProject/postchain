@@ -1,6 +1,6 @@
 package net.postchain.debug
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import org.junit.jupiter.api.Test
@@ -10,7 +10,7 @@ class JsonNodeDiagnosticContextTest {
     @Test
     fun testEmptyContext() {
         val sut = JsonNodeDiagnosticContext()
-        assert(sut.isNotEmpty())
+        assertThat(sut.isNotEmpty())
     }
 
     @Test
@@ -21,9 +21,9 @@ class JsonNodeDiagnosticContextTest {
         sut[DiagnosticProperty.CONTAINER_NAME] = LazyDiagnosticValue { "my-container" }
 
         // Asserts
-        assert(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
-        assert(sut[DiagnosticProperty.PUB_KEY]?.value).isEqualTo("237823673673")
-        assert(sut[DiagnosticProperty.CONTAINER_NAME]?.value).isEqualTo("my-container")
+        assertThat(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
+        assertThat(sut[DiagnosticProperty.PUB_KEY]?.value).isEqualTo("237823673673")
+        assertThat(sut[DiagnosticProperty.CONTAINER_NAME]?.value).isEqualTo("my-container")
     }
 
     @Test
@@ -34,15 +34,15 @@ class JsonNodeDiagnosticContextTest {
         sut[DiagnosticProperty.CONTAINER_NAME] = LazyDiagnosticValue { "my-container" }
 
         // Asserts
-        assert(sut.size).isEqualTo(4)
+        assertThat(sut.size).isEqualTo(4)
 
         // Remove
         sut.remove(DiagnosticProperty.PUB_KEY)
 
         // Asserts
-        assert(sut.size).isEqualTo(3)
-        assert(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
-        assert(sut[DiagnosticProperty.CONTAINER_NAME]?.value).isEqualTo("my-container")
+        assertThat(sut.size).isEqualTo(3)
+        assertThat(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
+        assertThat(sut[DiagnosticProperty.CONTAINER_NAME]?.value).isEqualTo("my-container")
     }
 
     @Test
@@ -52,9 +52,9 @@ class JsonNodeDiagnosticContextTest {
         sut[DiagnosticProperty.CONTAINER_NAME] = LazyDiagnosticValue { "my-container" }
 
         // Asserts
-        assert(sut[DiagnosticProperty.PUB_KEY]).isNull()
-        assert(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
-        assert(sut[DiagnosticProperty.CONTAINER_NAME]?.value).isEqualTo("my-container")
+        assertThat(sut[DiagnosticProperty.PUB_KEY]).isNull()
+        assertThat(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
+        assertThat(sut[DiagnosticProperty.CONTAINER_NAME]?.value).isEqualTo("my-container")
     }
 
     @Test
@@ -64,8 +64,8 @@ class JsonNodeDiagnosticContextTest {
         sut[DiagnosticProperty.CONTAINER_NAME] = LazyDiagnosticValue { throw Exception("fail") }
 
         // Asserts
-        assert(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
-        assert(sut[DiagnosticProperty.CONTAINER_NAME]?.value).isEqualTo("Unable to fetch value, fail")
+        assertThat(sut[DiagnosticProperty.VERSION]?.value).isEqualTo("4.4.4")
+        assertThat(sut[DiagnosticProperty.CONTAINER_NAME]?.value).isEqualTo("Unable to fetch value, fail")
     }
 
     @Test
@@ -84,7 +84,7 @@ class JsonNodeDiagnosticContextTest {
 
         sut[DiagnosticProperty.BLOCKCHAIN] = blockchains
 
-        assert(sut.format()).isEqualTo("""
+        assertThat(sut.format()).isEqualTo("""
             {
               "version": "4.4.4",
               "container-name": "my-container",

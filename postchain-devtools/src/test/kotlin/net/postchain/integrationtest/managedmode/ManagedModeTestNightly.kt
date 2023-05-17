@@ -2,8 +2,9 @@
 
 package net.postchain.integrationtest.managedmode
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.contains
+import assertk.assertions.hasSize
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotEmpty
 import net.postchain.base.BaseBlockchainProcessManager
@@ -14,7 +15,6 @@ import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.assertChainNotStarted
 import net.postchain.devtools.assertChainStarted
 import net.postchain.devtools.getModules
-import net.postchain.hasSize
 import org.apache.logging.log4j.Level
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
@@ -41,23 +41,23 @@ class ManagedModeTestNightly : ConfigFileBasedIntegrationTest() {
         nodes[0].assertChainStarted(0L)
 
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            assert(nodes[0].getModules(0L)).isNotEmpty()
-            assert(nodes[0].getModules(0L).first()).isInstanceOf(ManagedTestModuleReconfiguring0::class)
+            assertThat(nodes[0].getModules(0L)).isNotEmpty()
+            assertThat(nodes[0].getModules(0L).first()).isInstanceOf(ManagedTestModuleReconfiguring0::class)
         }
 
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            assert(nodes[0].getModules(0L)).isNotEmpty()
-            assert(nodes[0].getModules(0L).first()).isInstanceOf(ManagedTestModuleReconfiguring1::class)
+            assertThat(nodes[0].getModules(0L)).isNotEmpty()
+            assertThat(nodes[0].getModules(0L).first()).isInstanceOf(ManagedTestModuleReconfiguring1::class)
         }
 
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            assert(nodes[0].getModules(0L)).isNotEmpty()
-            assert(nodes[0].getModules(0L).first()).isInstanceOf(ManagedTestModuleReconfiguring2::class)
+            assertThat(nodes[0].getModules(0L)).isNotEmpty()
+            assertThat(nodes[0].getModules(0L).first()).isInstanceOf(ManagedTestModuleReconfiguring2::class)
         }
 
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            assert(nodes[0].getModules(0L)).isNotEmpty()
-            assert(nodes[0].getModules(0L).first()).isInstanceOf(ManagedTestModuleReconfiguring3::class)
+            assertThat(nodes[0].getModules(0L)).isNotEmpty()
+            assertThat(nodes[0].getModules(0L).first()).isInstanceOf(ManagedTestModuleReconfiguring3::class)
         }
     }
 
@@ -99,8 +99,8 @@ class ManagedModeTestNightly : ConfigFileBasedIntegrationTest() {
             nodes[0].assertChainStarted(101L)
 
             // Asserting stage of blockchain:0 is stage3 (15 < height < 20)
-            assert(nodes[0].getModules(0L)).isNotEmpty()
-            assert(nodes[0].getModules(0L).first()).isInstanceOf(
+            assertThat(nodes[0].getModules(0L)).isNotEmpty()
+            assertThat(nodes[0].getModules(0L).first()).isInstanceOf(
                     ManagedTestModuleSinglePeerLaunchesAndStopsChains3::class)
         }
 
@@ -109,7 +109,7 @@ class ManagedModeTestNightly : ConfigFileBasedIntegrationTest() {
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
             assertEquals(9L, getLastBlockHeight(node.appConfig, 101L))
             val logs = appender.events.filter { it.level == Level.ERROR }.map { it.message.toString() }
-            assert(logs).contains("net.postchain.gtx.UnknownGTXModule")
+            assertThat(logs).contains("net.postchain.gtx.UnknownGTXModule")
         }
 
         // Asserting that chain 101 recovers and can build blocks
@@ -144,16 +144,16 @@ class ManagedModeTestNightly : ConfigFileBasedIntegrationTest() {
 
         // Asserting chain 0 is started for node0
         nodes[0].assertChainStarted(0L)
-        assert(nodes[0].networkTopology(0L)).hasSize(0)
+        assertThat(nodes[0].networkTopology(0L)).hasSize(0)
 
         // Asserting chain 0 is started for node1
         nodes[1].assertChainStarted(0L)
-        assert(nodes[1].networkTopology(0L)).hasSize(0)
+        assertThat(nodes[1].networkTopology(0L)).hasSize(0)
 
         // Waiting for height 5 when a new peer will be added to PeerInfos
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            assert(nodes[0].networkTopology(0L)).hasSize(1)
-            assert(nodes[1].networkTopology(0L)).hasSize(1)
+            assertThat(nodes[0].networkTopology(0L)).hasSize(1)
+            assertThat(nodes[1].networkTopology(0L)).hasSize(1)
         }
     }
 

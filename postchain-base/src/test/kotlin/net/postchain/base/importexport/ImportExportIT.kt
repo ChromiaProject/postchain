@@ -1,5 +1,6 @@
 package net.postchain.base.importexport
 
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import net.postchain.StorageBuilder
@@ -76,19 +77,19 @@ class ImportExportIT {
         }
 
         FileInputStream(configurationsFile.toFile()).use {
-            assertk.assert(GtvDecoder.decodeGtv(it).asByteArray()).isContentEqualTo(blockchainRid.data)
+            assertThat(GtvDecoder.decodeGtv(it).asByteArray()).isContentEqualTo(blockchainRid.data)
             assertExportedConfiguration(0, configData0, GtvDecoder.decodeGtv(it))
             assertExportedConfiguration(2, configData2, GtvDecoder.decodeGtv(it))
-            assertk.assert(GtvDecoder.decodeGtv(it).isNull())
-            assertk.assert(it.read()).isEqualTo(-1) // EOF
+            assertThat(GtvDecoder.decodeGtv(it).isNull())
+            assertThat(it.read()).isEqualTo(-1) // EOF
         }
 
         FileInputStream(blocksFile.toFile()).use {
             assertExportedBlock(blocks[0], GtvDecoder.decodeGtv(it))
             assertExportedBlock(blocks[1], GtvDecoder.decodeGtv(it))
             assertExportedBlock(blocks[2], GtvDecoder.decodeGtv(it))
-            assertk.assert(GtvDecoder.decodeGtv(it).isNull())
-            assertk.assert(it.read()).isEqualTo(-1) // EOF
+            assertThat(GtvDecoder.decodeGtv(it).isNull())
+            assertThat(it.read()).isEqualTo(-1) // EOF
         }
     }
 
@@ -105,17 +106,17 @@ class ImportExportIT {
         }
 
         FileInputStream(configurationsFile.toFile()).use {
-            assertk.assert(GtvDecoder.decodeGtv(it).asByteArray()).isContentEqualTo(blockchainRid.data)
+            assertThat(GtvDecoder.decodeGtv(it).asByteArray()).isContentEqualTo(blockchainRid.data)
             assertExportedConfiguration(0, configData0, GtvDecoder.decodeGtv(it))
-            assertk.assert(GtvDecoder.decodeGtv(it).isNull())
-            assertk.assert(it.read()).isEqualTo(-1) // EOF
+            assertThat(GtvDecoder.decodeGtv(it).isNull())
+            assertThat(it.read()).isEqualTo(-1) // EOF
         }
 
         FileInputStream(blocksFile.toFile()).use {
             assertExportedBlock(blocks[0], GtvDecoder.decodeGtv(it))
             assertExportedBlock(blocks[1], GtvDecoder.decodeGtv(it))
-            assertk.assert(GtvDecoder.decodeGtv(it).isNull())
-            assertk.assert(it.read()).isEqualTo(-1) // EOF
+            assertThat(GtvDecoder.decodeGtv(it).isNull())
+            assertThat(it.read()).isEqualTo(-1) // EOF
         }
     }
 
@@ -184,8 +185,8 @@ class ImportExportIT {
     }
 
     private fun assertExportedConfiguration(height: Long, configData: Gtv, gtv: Gtv) {
-        assertk.assert(gtv.asArray()[0].asInteger()).isEqualTo(height)
-        assertk.assert(gtv.asArray()[1].asByteArray()).isContentEqualTo(encodeGtv(configData))
+        assertThat(gtv.asArray()[0].asInteger()).isEqualTo(height)
+        assertThat(gtv.asArray()[1].asByteArray()).isContentEqualTo(encodeGtv(configData))
     }
 
     private fun assertExportedBlock(expectedBlock: Pair<BaseBlockHeader, List<Transaction>>, block: Gtv) {
@@ -193,15 +194,15 @@ class ImportExportIT {
         val blockWithTransactions = ImporterExporter.blockWithTransactionsFromGtv(block)
         val blockHeader = BaseBlockHeader(blockWithTransactions.blockHeader, hashCalculator)
         val blockWitness = BaseBlockWitness.fromBytes(blockWithTransactions.witness)
-        assertk.assert(blockHeader.blockRID).isContentEqualTo(expectedBlockHeader.blockRID)
-        assertk.assert(blockHeader.blockHeaderRec).isEqualTo(expectedBlockHeader.blockHeaderRec)
+        assertThat(blockHeader.blockRID).isContentEqualTo(expectedBlockHeader.blockRID)
+        assertThat(blockHeader.blockHeaderRec).isEqualTo(expectedBlockHeader.blockHeaderRec)
         val blockWitnessProvider = BaseBlockWitnessProvider(cryptoSystem, cryptoSystem.buildSigMaker(KeyPairHelper.keyPair(0)),
                 (0..3).map { KeyPairHelper.pubKey(it) }.toTypedArray())
         blockWitnessProvider.validateWitness(blockWitness, blockWitnessProvider.createWitnessBuilderWithoutOwnSignature(blockHeader))
 
-        assertk.assert(blockWithTransactions.transactions.size).isEqualTo(expectedTransactions.size)
+        assertThat(blockWithTransactions.transactions.size).isEqualTo(expectedTransactions.size)
         for ((expectedTx, tx) in expectedTransactions.zip(blockWithTransactions.transactions)) {
-            assertk.assert(tx).isContentEqualTo(expectedTx.getRawData())
+            assertThat(tx).isContentEqualTo(expectedTx.getRawData())
         }
     }
 
@@ -228,23 +229,23 @@ class ImportExportIT {
                     blocksFile,
                     logNBlocks = 1)
 
-            assertk.assert(importedBlockchainRid).isEqualTo(blockchainRid)
+            assertThat(importedBlockchainRid).isEqualTo(blockchainRid)
 
             withReadConnection(storage, chainId) { ctx ->
                 val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
-                assertk.assert(db.getBlockchainRid(ctx)).isEqualTo(blockchainRid)
+                assertThat(db.getBlockchainRid(ctx)).isEqualTo(blockchainRid)
 
                 val configurations = db.getAllConfigurations(ctx)
-                assertk.assert(configurations).isEqualTo(expectedConfigurations.map { it.first to encodeGtv(it.second).wrap() })
+                assertThat(configurations).isEqualTo(expectedConfigurations.map { it.first to encodeGtv(it.second).wrap() })
 
                 val blocks = db.getBlocks(ctx, Long.MAX_VALUE, 1000).sortedBy { it.blockHeight }
-                assertk.assert(blocks.size).isEqualTo(expectedBlocks.size)
+                assertThat(blocks.size).isEqualTo(expectedBlocks.size)
                 for ((block, expectedBlock) in blocks.zip(expectedBlocks)) {
                     val (expectedBlockHeader, expectedTransactions) = expectedBlock
                     assertImportedBlock(block, expectedBlockHeader)
 
                     val transactions: List<TxDetail> = db.getBlockTransactions(ctx, block.blockRid, hashesOnly = false)
-                    assertk.assert(transactions.map { it.data!!.wrap() }).isEqualTo(expectedTransactions.map { it.getRawData().wrap() })
+                    assertThat(transactions.map { it.data!!.wrap() }).isEqualTo(expectedTransactions.map { it.getRawData().wrap() })
                 }
 
                 val expectedOperations = expectedBlocks
@@ -258,17 +259,17 @@ class ImportExportIT {
                         "SELECT value FROM ${table_gtx_test_value(ctx)} ORDER BY tx_iid",
                         ColumnListHandler<String>())
 
-                assertk.assert(operations).isEqualTo(expectedOperations)
+                assertThat(operations).isEqualTo(expectedOperations)
             }
         }
     }
 
     private fun assertImportedBlock(blockInfoExt: DatabaseAccess.BlockInfoExt, expectedBlockHeader: BlockHeader) {
         val blockHeader = BaseBlockHeader(blockInfoExt.blockHeader, hashCalculator)
-        assertk.assert(blockHeader.blockRID).isContentEqualTo(expectedBlockHeader.blockRID)
-        assertk.assert(blockInfoExt.blockRid).isContentEqualTo(expectedBlockHeader.blockRID)
-        assertk.assert(blockInfoExt.blockHeight).isEqualTo(blockHeader.blockHeaderRec.getHeight())
-        assertk.assert(blockInfoExt.timestamp).isEqualTo(blockHeader.blockHeaderRec.getTimestamp())
+        assertThat(blockHeader.blockRID).isContentEqualTo(expectedBlockHeader.blockRID)
+        assertThat(blockInfoExt.blockRid).isContentEqualTo(expectedBlockHeader.blockRID)
+        assertThat(blockInfoExt.blockHeight).isEqualTo(blockHeader.blockHeaderRec.getHeight())
+        assertThat(blockInfoExt.timestamp).isEqualTo(blockHeader.blockHeaderRec.getTimestamp())
 
         val blockWitness = BaseBlockWitness.fromBytes(blockInfoExt.witness)
         val blockWitnessProvider = BaseBlockWitnessProvider(cryptoSystem, cryptoSystem.buildSigMaker(KeyPairHelper.keyPair(0)),

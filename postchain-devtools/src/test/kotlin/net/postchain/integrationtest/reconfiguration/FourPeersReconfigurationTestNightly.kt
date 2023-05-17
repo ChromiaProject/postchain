@@ -2,6 +2,7 @@
 
 package net.postchain.integrationtest.reconfiguration
 
+import assertk.assertThat
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotEmpty
 import assertk.assertions.isTrue
@@ -69,8 +70,8 @@ class FourPeersReconfigurationTestNightly : ReconfigurationTest() {
 
         // Asserting blockchainConfig1 with DummyModule1 is loaded y all nodes
         nodes.forEach { node ->
-            assertk.assert(node.getModules()).isNotEmpty()
-            assertk.assert(node.getModules().first()).isInstanceOf(DummyModule1::class)
+            assertThat(node.getModules()).isNotEmpty()
+            assertThat(node.getModules().first()).isInstanceOf(DummyModule1::class)
         }
 
         buildBlocksWithChainRestart(8)
@@ -78,8 +79,8 @@ class FourPeersReconfigurationTestNightly : ReconfigurationTest() {
         await().atMost(Duration.TEN_SECONDS.multiply(3))
                 .untilAsserted {
                     nodes.forEach { node ->
-                        assertk.assert(node.getModules()).isNotEmpty()
-                        assertk.assert(node.getModules().first()).isInstanceOf(DummyModule2::class)
+                        assertThat(node.getModules()).isNotEmpty()
+                        assertThat(node.getModules().first()).isInstanceOf(DummyModule2::class)
                     }
                 }
 
@@ -88,8 +89,8 @@ class FourPeersReconfigurationTestNightly : ReconfigurationTest() {
         await().atMost(Duration.TEN_SECONDS.multiply(3))
                 .untilAsserted {
                     nodes.forEach { node ->
-                        assertk.assert(node.getModules()).isNotEmpty()
-                        assertk.assert(node.getModules().first()).isInstanceOf(DummyModule3::class)
+                        assertThat(node.getModules()).isNotEmpty()
+                        assertThat(node.getModules().first()).isInstanceOf(DummyModule3::class)
                     }
                 }
     }
@@ -143,8 +144,8 @@ class FourPeersReconfigurationTestNightly : ReconfigurationTest() {
         await().atMost(Duration.TEN_SECONDS)
                 .untilAsserted {
                     nodes.forEach { node ->
-                        assertk.assert(node.getModules()).isNotEmpty()
-                        assertk.assert(node.getModules().first()).isInstanceOf(DummyModule2::class)
+                        assertThat(node.getModules()).isNotEmpty()
+                        assertThat(node.getModules().first()).isInstanceOf(DummyModule2::class)
                     }
                 }
 
@@ -158,8 +159,8 @@ class FourPeersReconfigurationTestNightly : ReconfigurationTest() {
         await().atMost(Duration.TEN_SECONDS)
                 .untilAsserted {
                     nodes.forEach { node ->
-                        assertk.assert(node.getModules()).isNotEmpty()
-                        assertk.assert(node.getModules().first()).isInstanceOf(DummyModule3::class)
+                        assertThat(node.getModules()).isNotEmpty()
+                        assertThat(node.getModules().first()).isInstanceOf(DummyModule3::class)
                     }
                 }
 
@@ -171,22 +172,22 @@ class FourPeersReconfigurationTestNightly : ReconfigurationTest() {
 
         // Asserting blocks and txs of chart
 //        val jsonChar0 = gson.fromJson(chart0, JsonElement::class.java).asJsonObject
-//        assertk.assert((jsonChar0.at("/blocks") as ArrayNode).size()).isEqualTo(5)
+//        assertThat((jsonChar0.at("/blocks") as ArrayNode).size()).isEqualTo(5)
 
-//        assertk.assert((jsonChar0.at("/blocks/0/tx") as ArrayNode).size()).isEqualTo(2)
-//        assertk.assert(jsonChar0.at("/blocks/0/tx/0/id").asInt()).isEqualTo(0)
-//        assertk.assert(jsonChar0.at("/blocks/0/tx/1/id").asInt()).isEqualTo(1)
+//        assertThat((jsonChar0.at("/blocks/0/tx") as ArrayNode).size()).isEqualTo(2)
+//        assertThat(jsonChar0.at("/blocks/0/tx/0/id").asInt()).isEqualTo(0)
+//        assertThat(jsonChar0.at("/blocks/0/tx/1/id").asInt()).isEqualTo(1)
 //
-//        assertk.assert((jsonChar0.at("/blocks/1/tx") as ArrayNode).size()).isEqualTo(0)
+//        assertThat((jsonChar0.at("/blocks/1/tx") as ArrayNode).size()).isEqualTo(0)
 //
-//        assertk.assert((jsonChar0.at("/blocks/2/tx") as ArrayNode).size()).isEqualTo(3)
-//        assertk.assert(jsonChar0.at("/blocks/2/tx/0/id").asInt()).isEqualTo(2)
-//        assertk.assert(jsonChar0.at("/blocks/2/tx/1/id").asInt()).isEqualTo(3)
-//        assertk.assert(jsonChar0.at("/blocks/2/tx/2/id").asInt()).isEqualTo(4)
+//        assertThat((jsonChar0.at("/blocks/2/tx") as ArrayNode).size()).isEqualTo(3)
+//        assertThat(jsonChar0.at("/blocks/2/tx/0/id").asInt()).isEqualTo(2)
+//        assertThat(jsonChar0.at("/blocks/2/tx/1/id").asInt()).isEqualTo(3)
+//        assertThat(jsonChar0.at("/blocks/2/tx/2/id").asInt()).isEqualTo(4)
 //
-//        assertk.assert((jsonChar0.at("/blocks/3/tx") as ArrayNode).size()).isEqualTo(0)
+//        assertThat((jsonChar0.at("/blocks/3/tx") as ArrayNode).size()).isEqualTo(0)
 //
-//        assertk.assert((jsonChar0.at("/blocks/4/tx") as ArrayNode).size()).isEqualTo(0)
+//        assertThat((jsonChar0.at("/blocks/4/tx") as ArrayNode).size()).isEqualTo(0)
     }
 
     // TODO: Olle fix for POS-76
@@ -258,7 +259,7 @@ class FourPeersReconfigurationTestNightly : ReconfigurationTest() {
                         node.query(DEFAULT_CHAIN_IID) { it.getLastBlockHeight() } ?: -1L
                     }.minOrNull() ?: -1L
 
-                    assertk.assert(commonHeight > 0L).isTrue()
+                    assertThat(commonHeight > 0L).isTrue()
 
                     val chart0 = buildTxChart(nodes[0], DEFAULT_CHAIN_IID, commonHeight)
                     val chart1 = buildTxChart(nodes[1], DEFAULT_CHAIN_IID, commonHeight)
@@ -281,8 +282,8 @@ class FourPeersReconfigurationTestNightly : ReconfigurationTest() {
                             .map { (it as TestTransaction).id }
                             .toSet()
 
-                    assertk.assert(txs).hasSize(100)
-                    assertk.assert(txs).containsAll(*(0 until 100).toList().toTypedArray())
+                    assertThat(txs).hasSize(100)
+                    assertThat(txs).containsAll(*(0 until 100).toList().toTypedArray())
                 }
                 */
     }

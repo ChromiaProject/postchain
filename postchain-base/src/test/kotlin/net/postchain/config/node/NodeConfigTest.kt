@@ -2,6 +2,7 @@
 
 package net.postchain.config.node
 
+import assertk.assertThat
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import net.postchain.common.BlockchainRid
@@ -20,7 +21,7 @@ class NodeConfigTest {
         val appConfig = loadAppConfig("/net/postchain/config/empty-node-config.properties")
         val nodeConfig = NodeConfig(appConfig)
 
-        assertk.assert(appConfig.infrastructure).isEqualTo("ebft")
+        assertThat(appConfig.infrastructure).isEqualTo("ebft")
 
         assertEquals("org.postgresql.Driver", appConfig.databaseDriverclass)
         assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUrl, "POSTCHAIN_DB_URL")
@@ -31,7 +32,7 @@ class NodeConfigTest {
         assertIsEmptyOrEqualsToEnvVar(appConfig.privKey, "POSTCHAIN_PRIVKEY")
         assertIsEmptyOrEqualsToEnvVar(appConfig.pubKey, "POSTCHAIN_PUBKEY")
 
-        assertk.assert(nodeConfig.peerInfoMap.entries).isEmpty()
+        assertThat(nodeConfig.peerInfoMap.entries).isEmpty()
     }
 
     @Test

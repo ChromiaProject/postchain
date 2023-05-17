@@ -2,7 +2,7 @@
 
 package net.postchain.network.peer
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEmpty
 import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.PeerInfo
@@ -42,7 +42,7 @@ class DefaultPeerCommunicationManager1PeerIT {
                     await().atMost(Duration.FIVE_SECONDS)
                             .untilAsserted {
                                 val actual = context.connectionManager.getConnectedNodes(context.chainId)
-                                assert(actual).isEmpty()
+                                assertThat(actual).isEmpty()
                             }
                 }
     }

@@ -1,6 +1,6 @@
 package net.postchain.containers.bcconfig
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import assertk.isContentEqualTo
@@ -34,7 +34,7 @@ class BlockchainConfigVerifierTest {
         val expected = config.merkleHash(merkleHashCalculator)
         val actual = sut.calculateHash(configRaw)
 
-        assert(actual).isContentEqualTo(expected)
+        assertThat(actual).isContentEqualTo(expected)
     }
 
     @Test
@@ -51,7 +51,7 @@ class BlockchainConfigVerifierTest {
         val hash = sut.calculateHash(configRaw)
 
         val verified = sut.verify(configRaw, hash)
-        assert(verified).isTrue()
+        assertThat(verified).isTrue()
     }
 
     @Test
@@ -62,6 +62,6 @@ class BlockchainConfigVerifierTest {
         val corruptedConfigRaw = configRaw.dropLast(1).toByteArray()
 
         val verified = sut.verify(corruptedConfigRaw, hash)
-        assert(verified).isFalse()
+        assertThat(verified).isFalse()
     }
 }

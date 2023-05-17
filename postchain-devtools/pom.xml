@@ -111,7 +111,7 @@
         </dependency>
         <dependency>
             <groupId>com.willowtreeapps.assertk</groupId>
-            <artifactId>assertk</artifactId>
+            <artifactId>assertk-jvm</artifactId>
             <scope>compile</scope> <!-- TODO: Should be test scope -->
         </dependency>
         <dependency>

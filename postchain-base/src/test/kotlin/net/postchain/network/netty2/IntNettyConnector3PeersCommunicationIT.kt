@@ -2,7 +2,7 @@
 
 package net.postchain.network.netty2
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isIn
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
@@ -84,20 +84,20 @@ class IntNettyConnector3PeersCommunicationIT {
                     // 1
                     val expected1 = arrayOf(peerInfo2, peerInfo3).map(PeerInfo::peerId).toTypedArray()
                     verify(context1.events, times(2)).onNodeConnected(connection1.capture())
-                    assert(connection1.firstValue.descriptor().nodeId).isIn(*expected1)
-                    assert(connection1.secondValue.descriptor().nodeId).isIn(*expected1)
+                    assertThat(connection1.firstValue.descriptor().nodeId).isIn(*expected1)
+                    assertThat(connection1.secondValue.descriptor().nodeId).isIn(*expected1)
 
                     // 2
                     val expected2 = arrayOf(peerInfo1, peerInfo3).map(PeerInfo::peerId).toTypedArray()
                     verify(context2.events, times(2)).onNodeConnected(connection2.capture())
-                    assert(connection2.firstValue.descriptor().nodeId).isIn(*expected2)
-                    assert(connection2.secondValue.descriptor().nodeId).isIn(*expected2)
+                    assertThat(connection2.firstValue.descriptor().nodeId).isIn(*expected2)
+                    assertThat(connection2.secondValue.descriptor().nodeId).isIn(*expected2)
 
                     // 3
                     val expected3 = arrayOf(peerInfo1, peerInfo2).map(PeerInfo::peerId).toTypedArray()
                     verify(context3.events, times(2)).onNodeConnected(connection3.capture())
-                    assert(connection3.firstValue.descriptor().nodeId).isIn(*expected3)
-                    assert(connection3.secondValue.descriptor().nodeId).isIn(*expected3)
+                    assertThat(connection3.firstValue.descriptor().nodeId).isIn(*expected3)
+                    assertThat(connection3.secondValue.descriptor().nodeId).isIn(*expected3)
                 }
 
         // Sending packets
@@ -121,22 +121,22 @@ class IntNettyConnector3PeersCommunicationIT {
                     val packets1 = argumentCaptor<ByteArray>()
                     val expected1 = arrayOf(packet2, packet3).map(ByteArray::wrap).toTypedArray()
                     verify(context1.packets, times(2)).handle(packets1.capture(), any())
-                    assert(packets1.firstValue.wrap()).isIn(*expected1)
-                    assert(packets1.secondValue.wrap()).isIn(*expected1)
+                    assertThat(packets1.firstValue.wrap()).isIn(*expected1)
+                    assertThat(packets1.secondValue.wrap()).isIn(*expected1)
 
                     // Peer2
                     val packets2 = argumentCaptor<ByteArray>()
                     val expected2 = arrayOf(packet1, packet3).map(ByteArray::wrap).toTypedArray()
                     verify(context2.packets, times(2)).handle(packets2.capture(), any())
-                    assert(packets2.firstValue.wrap()).isIn(*expected2)
-                    assert(packets2.secondValue.wrap()).isIn(*expected2)
+                    assertThat(packets2.firstValue.wrap()).isIn(*expected2)
+                    assertThat(packets2.secondValue.wrap()).isIn(*expected2)
 
                     // Peer3
                     val packets3 = argumentCaptor<ByteArray>()
                     val expected3 = arrayOf(packet1, packet2).map(ByteArray::wrap).toTypedArray()
                     verify(context3.packets, times(2)).handle(packets3.capture(), any())
-                    assert(packets3.firstValue.wrap()).isIn(*expected3)
-                    assert(packets3.secondValue.wrap()).isIn(*expected3)
+                    assertThat(packets3.firstValue.wrap()).isIn(*expected3)
+                    assertThat(packets3.secondValue.wrap()).isIn(*expected3)
                 }
     }
 

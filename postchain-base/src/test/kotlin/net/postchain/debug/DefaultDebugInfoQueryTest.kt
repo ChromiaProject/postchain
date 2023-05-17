@@ -5,7 +5,7 @@ import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import net.postchain.api.rest.controller.DisabledDebugInfoQuery
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
-import assertk.assert
+import assertk.assertThat
 
 
 class DefaultDebugInfoQueryTest {
@@ -20,7 +20,7 @@ class DefaultDebugInfoQueryTest {
 
         // Asserts
         assertEquals(1, actual.size())
-        assert(actual.has("blockchain"))
+        assertThat(actual.has("blockchain"))
     }
 
     @Test
@@ -54,7 +54,7 @@ class DefaultDebugInfoQueryTest {
 
         // Asserts
         assertEquals(1, actual.size())
-        assert(actual.has("Error"))
+        assertThat(actual.has("Error"))
     }
 
     @Test
@@ -67,7 +67,7 @@ class DefaultDebugInfoQueryTest {
 
         // Asserts
         assertEquals(1, actual.size())
-        assert(actual.has("error"))
+        assertThat(actual.has("error"))
     }
 
 }
