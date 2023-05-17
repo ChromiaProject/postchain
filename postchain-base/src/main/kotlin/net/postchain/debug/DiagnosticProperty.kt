@@ -6,8 +6,10 @@ enum class DiagnosticProperty(val prettyName: String) {
 
     VERSION("version"),
 
+    INFRASTRUCTURE_NAME("infrastructure"),
+    INFRASTRUCTURE_VERSION("infrastructure-version"),
+
     PUB_KEY("pub-key"),
-    BLOCKCHAIN_INFRASTRUCTURE("blockchain-infra"),
 
     BLOCKCHAIN("blockchain"),
     BLOCKCHAIN_RID("brid"),
