@@ -2,6 +2,7 @@
 
 package net.postchain.config.node
 
+import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.isEmpty
 import net.postchain.base.PeerInfo
@@ -47,7 +48,7 @@ class ManagedNodeConfigurationProviderTest {
         val peerInfoCollection = provider.getPeerInfoCollection(mock())
 
         // Assert
-        assertk.assert(peerInfoCollection).containsExactly(*expected)
+        assertThat(peerInfoCollection).containsExactly(*expected)
     }
 
     @Test
@@ -96,19 +97,19 @@ class ManagedNodeConfigurationProviderTest {
         // Assert
         // 1. managedPeerInfoDataSource field is set
         provider.setPeerInfoDataSource(mockManagedPeerInfos)
-        assertk.assert(
+        assertThat(
                 provider.getPeerInfoCollection(mock())
         ).containsExactly(peerInfo0)
 
         // 2. managedPeerInfoDataSource field is null
         provider.setPeerInfoDataSource(null)
-        assertk.assert(
+        assertThat(
                 provider.getPeerInfoCollection(mock())
         ).isEmpty()
 
         // 3. managedPeerInfoDataSource field is set again
         provider.setPeerInfoDataSource(mockManagedPeerInfosAnother)
-        assertk.assert(
+        assertThat(
                 provider.getPeerInfoCollection(mock())
         ).containsExactly(peerInfo1, peerInfo2)
     }

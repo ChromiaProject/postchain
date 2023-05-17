@@ -1,6 +1,6 @@
 package net.postchain.common.reflection
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
@@ -19,7 +19,7 @@ internal class ClassloaderTest {
         val e = assertThrows<UserMistake> {
             constructorOf<TestClass>("nameNotMatchingClass")
         }
-        assert(e.message!!).contains("nameNotMatchingClass not found")
+        assertThat(e.message!!).contains("nameNotMatchingClass not found")
     }
 
     @Test
@@ -27,12 +27,12 @@ internal class ClassloaderTest {
         val e = assertThrows<ProgrammerMistake> {
             constructorOf<TestClass>("net.postchain.common.reflection.TestClass", String::class.java)
         }
-        assert(e.message!!).isEqualTo("Constructor with arguments [java.lang.String] was not found in class net.postchain.common.reflection.TestClass")
+        assertThat(e.message!!).isEqualTo("Constructor with arguments [java.lang.String] was not found in class net.postchain.common.reflection.TestClass")
     }
 
     @Test
     fun `New instance can be created for classes with default constructor`() {
-        assert(newInstanceOf<TestClassNoArg>(TestClassNoArg::class.qualifiedName!!)).isInstanceOf(TestClassNoArg::class)
+        assertThat(newInstanceOf<TestClassNoArg>(TestClassNoArg::class.qualifiedName!!)).isInstanceOf(TestClassNoArg::class)
         assertThrows<ProgrammerMistake> {
             newInstanceOf<TestClass>(TestClass::class.qualifiedName!!)
         }

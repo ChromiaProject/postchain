@@ -1,6 +1,6 @@
 package net.postchain.integrationtest
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import net.postchain.common.toHex
@@ -21,8 +21,8 @@ class LongRunningTransactionTestNightly : IntegrationTestSetup() {
         buildBlock(1L, 0, delayedTx)
         nodes.forEach {
             val txsInBlock = getTxRidsAtHeight(it, 0)
-            assert(txsInBlock.size).isEqualTo(1)
-            assert(txsInBlock[0]).isContentEqualTo(delayedTx.getRID())
+            assertThat(txsInBlock.size).isEqualTo(1)
+            assertThat(txsInBlock[0]).isContentEqualTo(delayedTx.getRID())
         }
     }
 
@@ -38,14 +38,14 @@ class LongRunningTransactionTestNightly : IntegrationTestSetup() {
         nodes.forEach { node ->
             // Sorting the txs so we can do our assertions safely
             val txsInBlock = getTxRidsAtHeight(node, 0).apply { sortBy { it.toHex() } }
-            assert(txsInBlock.size).isEqualTo(2)
-            assert(txsInBlock[0]).isContentEqualTo(firstTx.getRID())
-            assert(txsInBlock[1]).isContentEqualTo(lastTx.getRID())
+            assertThat(txsInBlock.size).isEqualTo(2)
+            assertThat(txsInBlock[0]).isContentEqualTo(firstTx.getRID())
+            assertThat(txsInBlock[1]).isContentEqualTo(lastTx.getRID())
 
             val transactionQueue = node.transactionQueue(1L)
-            assert(transactionQueue.getTransactionStatus(delayedTx.getRID()))
+            assertThat(transactionQueue.getTransactionStatus(delayedTx.getRID()))
                     .isEqualTo(TransactionStatus.REJECTED)
-            assert(transactionQueue.getRejectionReason(delayedTx.getRID().wrap())?.message)
+            assertThat(transactionQueue.getRejectionReason(delayedTx.getRID().wrap())?.message)
                     .isEqualTo("Transaction failed to execute within given time constraint: 10000 ms")
         }
     }

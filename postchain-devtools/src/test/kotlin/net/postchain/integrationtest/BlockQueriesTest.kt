@@ -1,6 +1,6 @@
 package net.postchain.integrationtest
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isInstanceOf
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.devtools.IntegrationTestSetup
@@ -17,8 +17,8 @@ class BlockQueriesTest : IntegrationTestSetup() {
 
         val query = blockQueries.getLastBlockHeight()
         query.whenComplete { _, exception ->
-            assert(exception != null)
-            assert(exception).isInstanceOf(PmEngineIsAlreadyClosed::class.java)
+            assertThat(exception != null)
+            assertThat(exception).isInstanceOf(PmEngineIsAlreadyClosed::class.java)
         }
     }
 }

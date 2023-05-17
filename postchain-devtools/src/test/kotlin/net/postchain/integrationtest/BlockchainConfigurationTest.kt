@@ -2,6 +2,7 @@
 
 package net.postchain.integrationtest
 
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import net.postchain.common.BlockchainRid
@@ -60,8 +61,8 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
         // node1 will instead build first block with the OK tx
         nodes.forEach {
             val txsInBlock = getTxRidsAtHeight(it, 0)
-            assertk.assert(txsInBlock.size).isEqualTo(1)
-            assertk.assert(txsInBlock[0]).isContentEqualTo(okTx.getRID())
+            assertThat(txsInBlock.size).isEqualTo(1)
+            assertThat(txsInBlock[0]).isContentEqualTo(okTx.getRID())
         }
     }
 

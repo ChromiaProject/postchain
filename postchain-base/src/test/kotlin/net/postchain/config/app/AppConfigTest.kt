@@ -2,7 +2,7 @@
 
 package net.postchain.config.app
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.config.app.AssertsHelper.assertIsDefaultOrEqualsToEnvVar
 import net.postchain.config.app.AssertsHelper.assertIsEmptyOrEqualsToEnvVar
@@ -17,7 +17,7 @@ class AppConfigTest {
     fun testEmptyNodeConfig() {
         val appConfig = loadFromResource("empty-node-config.properties")
 
-        assert(appConfig.nodeConfigProvider).isEqualTo("properties")
+        assertThat(appConfig.nodeConfigProvider).isEqualTo("properties")
         assertEquals("org.postgresql.Driver", appConfig.databaseDriverclass)
 
         assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUrl, "POSTCHAIN_DB_URL")
@@ -30,7 +30,7 @@ class AppConfigTest {
     fun testNoNodeConfig() {
         val appConfig = AppConfig.fromEnvironment(false)
 
-        assert(appConfig.nodeConfigProvider).isEqualTo("properties")
+        assertThat(appConfig.nodeConfigProvider).isEqualTo("properties")
         assertEquals("org.postgresql.Driver", appConfig.databaseDriverclass)
 
         assertIsEmptyOrEqualsToEnvVar(appConfig.databaseUrl, "POSTCHAIN_DB_URL")

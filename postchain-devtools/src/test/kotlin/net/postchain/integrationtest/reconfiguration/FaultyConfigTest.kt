@@ -1,6 +1,6 @@
 package net.postchain.integrationtest.reconfiguration
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
@@ -46,7 +46,7 @@ class FaultyConfigTest : IntegrationTestSetup() {
         node.addConfiguration(DEFAULT_CHAIN_IID, 2, invalidConfig)
         withReadConnection(node.postchainContext.storage, DEFAULT_CHAIN_IID) { ctx ->
             val db = DatabaseAccess.of(ctx)
-            assert(db.getConfigurationData(ctx, 2)).isNotNull()
+            assertThat(db.getConfigurationData(ctx, 2)).isNotNull()
         }
 
         buildBlock(DEFAULT_CHAIN_IID, 1)
@@ -56,12 +56,12 @@ class FaultyConfigTest : IntegrationTestSetup() {
         // Assert that DB schema change by faulty config is rolled back
         node.postchainContext.storage.withReadConnection { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
-            assert(db.tableExists(ctx.conn, "should_fail")).isFalse()
+            assertThat(db.tableExists(ctx.conn, "should_fail")).isFalse()
         }
         // Assert that the invalid configuration was removed from DB
         withReadConnection(node.postchainContext.storage, DEFAULT_CHAIN_IID) { ctx ->
             val db = DatabaseAccess.of(ctx)
-            assert(db.getConfigurationData(ctx, 2)).isNull()
+            assertThat(db.getConfigurationData(ctx, 2)).isNull()
         }
     }
 
@@ -76,18 +76,18 @@ class FaultyConfigTest : IntegrationTestSetup() {
         buildBlock(DEFAULT_CHAIN_IID, 1)
 
         Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
-            assert(node.getModules(DEFAULT_CHAIN_IID).any { it is FaultyGTXModule })
+            assertThat(node.getModules(DEFAULT_CHAIN_IID).any { it is FaultyGTXModule })
         }
 
         buildBlockNoWait(listOf(node), DEFAULT_CHAIN_IID, 2)
         Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
-            assert(SimulateFaultyConfigSpecialTxExtension.hasFailed).isTrue()
+            assertThat(SimulateFaultyConfigSpecialTxExtension.hasFailed).isTrue()
         }
 
         // Assert that DB schema change by faulty config is not persisted
         node.postchainContext.storage.withReadConnection { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
-            assert(db.tableExists(ctx.conn, "should_fail")).isFalse()
+            assertThat(db.tableExists(ctx.conn, "should_fail")).isFalse()
         }
 
         val correctConfig = readBlockchainConfig(
@@ -98,12 +98,12 @@ class FaultyConfigTest : IntegrationTestSetup() {
         node.startBlockchain(DEFAULT_CHAIN_IID)
 
         buildBlock(DEFAULT_CHAIN_IID, 3)
-        assert(SimulateFaultyConfigSpecialTxExtension.hasFailed).isFalse()
+        assertThat(SimulateFaultyConfigSpecialTxExtension.hasFailed).isFalse()
 
         // Assert that DB schema change by correct config is persisted
         node.postchainContext.storage.withReadConnection { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
-            assert(db.tableExists(ctx.conn, "should_fail")).isTrue()
+            assertThat(db.tableExists(ctx.conn, "should_fail")).isTrue()
         }
     }
 
@@ -118,23 +118,23 @@ class FaultyConfigTest : IntegrationTestSetup() {
         buildBlock(DEFAULT_CHAIN_IID, 1)
 
         Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
-            assert(node.getModules(DEFAULT_CHAIN_IID).any { it is FaultyGTXModule })
+            assertThat(node.getModules(DEFAULT_CHAIN_IID).any { it is FaultyGTXModule })
         }
         buildBlockNoWait(listOf(node), DEFAULT_CHAIN_IID, 2)
         Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
-            assert(SimulateFaultyConfigSpecialTxExtension.hasFailed).isTrue()
+            assertThat(SimulateFaultyConfigSpecialTxExtension.hasFailed).isTrue()
         }
 
         buildBlock(DEFAULT_CHAIN_IID, 3)
         // Assert that DB schema change by faulty config is rolled back
         node.postchainContext.storage.withReadConnection { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
-            assert(db.tableExists(ctx.conn, "should_fail")).isFalse()
+            assertThat(db.tableExists(ctx.conn, "should_fail")).isFalse()
         }
         // Assert that the invalid configuration was removed from DB
         withReadConnection(node.postchainContext.storage, DEFAULT_CHAIN_IID) { ctx ->
             val db = DatabaseAccess.of(ctx)
-            assert(db.getConfigurationData(ctx, 2)).isNull()
+            assertThat(db.getConfigurationData(ctx, 2)).isNull()
         }
     }
 
@@ -149,7 +149,7 @@ class FaultyConfigTest : IntegrationTestSetup() {
         buildBlock(DEFAULT_CHAIN_IID, 1)
 
         Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
-            assert(node.getModules(DEFAULT_CHAIN_IID).any { it is EventuallyFaultyGTXModule })
+            assertThat(node.getModules(DEFAULT_CHAIN_IID).any { it is EventuallyFaultyGTXModule })
         }
 
         // We should be able to build 2 more blocks before failure
@@ -158,7 +158,7 @@ class FaultyConfigTest : IntegrationTestSetup() {
         buildBlockNoWait(nodes.toList(), DEFAULT_CHAIN_IID, 4)
 
         Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
-            assert(node.getModules(DEFAULT_CHAIN_IID)
+            assertThat(node.getModules(DEFAULT_CHAIN_IID)
                     .filterIsInstance(EventuallyFaultyGTXModule::class.java)
                     .first()
                     .faultyExtension.hasFailed
@@ -172,7 +172,7 @@ class FaultyConfigTest : IntegrationTestSetup() {
 
         // Assert that node detects config and restarts with it
         Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
-            assert(node.getModules(DEFAULT_CHAIN_IID).any { it is CorrectConfigGTXModule })
+            assertThat(node.getModules(DEFAULT_CHAIN_IID).any { it is CorrectConfigGTXModule })
         }
 
         // Try to build again

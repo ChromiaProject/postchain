@@ -2,7 +2,7 @@
 
 package net.postchain.gtv.gtvml
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.gtv.*
 import org.junit.jupiter.api.Test
@@ -15,7 +15,7 @@ class GtvMLEncodeScalarsTest {
         val actual = GtvMLEncoder.encodeXMLGtv(gtv)
         val expected = expected("<null xsi:nil=\"true\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"/>")
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -24,7 +24,7 @@ class GtvMLEncodeScalarsTest {
         val actual = GtvMLEncoder.encodeXMLGtv(gtv)
         val expected = expected("<string>hello</string>")
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -33,7 +33,7 @@ class GtvMLEncodeScalarsTest {
         val actual = GtvMLEncoder.encodeXMLGtv(gtv)
         val expected = expected("<int>42</int>")
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     /**
@@ -52,7 +52,7 @@ class GtvMLEncodeScalarsTest {
         val actual = GtvMLEncoder.encodeXMLGtv(gtv)
         val expected = expected("<bytea>AQIDCgsM</bytea>") // 0102030A0B0C
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -68,7 +68,7 @@ class GtvMLEncodeScalarsTest {
             </array>
         """.trimIndent())
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -77,6 +77,6 @@ class GtvMLEncodeScalarsTest {
         val actual = GtvMLEncoder.encodeXMLGtv(gtv)
         val expected = expected("<bytea></bytea>")
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 }

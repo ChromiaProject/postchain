@@ -2,7 +2,7 @@
 
 package net.postchain.common
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import org.junit.jupiter.api.Test
 
@@ -13,7 +13,7 @@ class UtilsToHexTest {
         val actual = byteArrayOf().toHex()
         val expected = ""
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -21,7 +21,7 @@ class UtilsToHexTest {
         val actual = byteArrayOf(0x01, 0x02, 0x0A, 0xF).toHex()
         val expected = "01020a0F"
 
-        assert(actual).isEqualTo(expected, ignoreCase = true)
+        assertThat(actual).isEqualTo(expected, ignoreCase = true)
     }
 
     @Test
@@ -29,6 +29,6 @@ class UtilsToHexTest {
         val actual = byteArrayOf(0xFF.toByte(), 0xFE.toByte()).toHex()
         val expected = "FFFE"
 
-        assert(actual).isEqualTo(expected, ignoreCase = true)
+        assertThat(actual).isEqualTo(expected, ignoreCase = true)
     }
 }

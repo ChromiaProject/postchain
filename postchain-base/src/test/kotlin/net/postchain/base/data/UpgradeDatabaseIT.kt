@@ -1,5 +1,6 @@
 package net.postchain.base.data
 
+import assertk.assertThat
 import net.postchain.StorageBuilder
 import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.FaultyConfiguration
@@ -54,9 +55,9 @@ class UpgradeDatabaseIT {
     }
 
     private fun assertVersion1(db: SQLDatabaseAccess, ctx: AppContext) {
-        assert(db.tableExists(ctx.conn, "meta"))
-        assert(db.tableExists(ctx.conn, "peerinfos"))
-        assert(db.tableExists(ctx.conn, "blockchains"))
+        assertThat(db.tableExists(ctx.conn, "meta"))
+        assertThat(db.tableExists(ctx.conn, "peerinfos"))
+        assertThat(db.tableExists(ctx.conn, "blockchains"))
     }
 
     @Test
@@ -94,8 +95,8 @@ class UpgradeDatabaseIT {
     private fun assertVersion2(db: SQLDatabaseAccess, ctx: AppContext) {
         assertVersion1(db, ctx)
 
-        assert(db.tableExists(ctx.conn, "blockchain_replicas"))
-        assert(db.tableExists(ctx.conn, "must_sync_until"))
+        assertThat(db.tableExists(ctx.conn, "blockchain_replicas"))
+        assertThat(db.tableExists(ctx.conn, "must_sync_until"))
     }
 
     @Test
@@ -347,7 +348,7 @@ class UpgradeDatabaseIT {
     private fun assertVersion3(db: SQLDatabaseAccess, ctx: AppContext) {
         assertVersion2(db, ctx)
 
-        assert(db.tableExists(ctx.conn, "containers"))
+        assertThat(db.tableExists(ctx.conn, "containers"))
     }
 
     private fun assertVersion4(db: SQLDatabaseAccess, ctx: EContext) {

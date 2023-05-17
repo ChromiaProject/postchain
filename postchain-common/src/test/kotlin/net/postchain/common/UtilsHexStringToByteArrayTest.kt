@@ -2,7 +2,7 @@
 
 package net.postchain.common
 
-import assertk.assert
+import assertk.assertThat
 import assertk.isContentEqualTo
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -14,7 +14,7 @@ class UtilsHexStringToByteArrayTest {
         val actual = "".hexStringToByteArray()
         val expected = ByteArray(0)
 
-        assert(actual).isContentEqualTo(expected)
+        assertThat(actual).isContentEqualTo(expected)
     }
 
     @Test
@@ -27,7 +27,7 @@ class UtilsHexStringToByteArrayTest {
         val actual = "0123456708090A0B0C0D0E0F".hexStringToByteArray()
         val expected = byteArrayOf(0x01, 0x23, 0x45, 0x67, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F)
 
-        assert(actual).isContentEqualTo(expected)
+        assertThat(actual).isContentEqualTo(expected)
     }
 
     @Test
@@ -35,7 +35,7 @@ class UtilsHexStringToByteArrayTest {
         val actual = "FF88".hexStringToByteArray()
         val expected = byteArrayOf(0xFF.toByte(), 0x88.toByte())
 
-        assert(actual).isContentEqualTo(expected)
+        assertThat(actual).isContentEqualTo(expected)
     }
 
     @Test
@@ -43,7 +43,7 @@ class UtilsHexStringToByteArrayTest {
         val actual = "0a0B0C0d0E0F".hexStringToByteArray()
         val expected = byteArrayOf(0x0A, 0x0b, 0x0C, 0x0D, 0x0e, 0x0F)
 
-        assert(actual).isContentEqualTo(expected)
+        assertThat(actual).isContentEqualTo(expected)
     }
 
     @Test

@@ -2,7 +2,7 @@
 
 package net.postchain.core
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotEqualTo
 import assertk.isContentEqualTo
@@ -16,7 +16,7 @@ class BlockchainRidTest {
     fun testConstructorZeroRid() {
         val actual = BlockchainRid.ZERO_RID
 
-        assert(actual.data).isContentEqualTo(ByteArray(32) { 0 })
+        assertThat(actual.data).isContentEqualTo(ByteArray(32) { 0 })
     }
 
     @Test
@@ -24,7 +24,7 @@ class BlockchainRidTest {
         val ridString = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
         val actual = BlockchainRid.buildFromHex(ridString)
 
-        assert(actual.data).isContentEqualTo(ridString.hexStringToByteArray())
+        assertThat(actual.data).isContentEqualTo(ridString.hexStringToByteArray())
     }
 
     @Test
@@ -32,7 +32,7 @@ class BlockchainRidTest {
         val expected = ByteArray(32) { 7 }
         val actual = BlockchainRid.buildRepeat(7)
 
-        assert(actual.data).isContentEqualTo(expected)
+        assertThat(actual.data).isContentEqualTo(expected)
     }
 
     @Test
@@ -41,7 +41,7 @@ class BlockchainRidTest {
         val ridByteArray = expected.hexStringToByteArray()
         val actual = BlockchainRid(ridByteArray)
 
-        assert(actual.toHex())
+        assertThat(actual.toHex())
                 .isEqualTo(expected, true)
     }
 
@@ -51,7 +51,7 @@ class BlockchainRidTest {
         val ridByteArray = expected.hexStringToByteArray()
         val actual = BlockchainRid(ridByteArray)
 
-        assert(actual.toShortHex())
+        assertThat(actual.toShortHex())
                 .isEqualTo("78:7a3", true)
     }
 
@@ -61,7 +61,7 @@ class BlockchainRidTest {
         val ridByteArray = ridString.hexStringToByteArray()
         val blockchainRid = BlockchainRid(ridByteArray)
 
-        assert(blockchainRid.toString())
+        assertThat(blockchainRid.toString())
                 .isEqualTo(ridString, true)
     }
 
@@ -73,7 +73,7 @@ class BlockchainRidTest {
         val ridA = BlockchainRid(lower.hexStringToByteArray())
         val ridB = BlockchainRid(upper.hexStringToByteArray())
 
-        assert(ridA).isEqualTo(ridB)
+        assertThat(ridA).isEqualTo(ridB)
     }
 
     @Test
@@ -84,6 +84,6 @@ class BlockchainRidTest {
         val ridA = BlockchainRid(rid.hexStringToByteArray())
         val ridB = BlockchainRid(other.hexStringToByteArray())
 
-        assert(ridA).isNotEqualTo(ridB)
+        assertThat(ridA).isNotEqualTo(ridB)
     }
 }
