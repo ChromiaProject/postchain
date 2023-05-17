@@ -5,7 +5,6 @@ package net.postchain.gtx.data
 import net.postchain.common.BlockchainRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GtxBody
-import net.postchain.gtx.GtxOp
 import java.util.*
 
 data class OpData(val opName: String, val args: Array<out Gtv>) {
@@ -38,8 +37,8 @@ class ExtOpData(val opName: String,
 
     companion object {
 
-        fun build(op: GtxOp, opIndex: Int, body: GtxBody): ExtOpData {
-            return ExtOpData(op.opName, opIndex, op.args, body.blockchainRid, body.signers.toTypedArray(), body.operations.map { it.toOpData() }.toTypedArray())
+        fun build(op: OpData, opIndex: Int, body: GtxBody, operations: Array<OpData>): ExtOpData {
+            return ExtOpData(op.opName, opIndex, op.args, body.blockchainRid, body.signers.toTypedArray(), operations)
         }
     }
 }
