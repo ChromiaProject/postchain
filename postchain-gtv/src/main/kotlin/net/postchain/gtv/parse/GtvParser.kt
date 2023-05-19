@@ -2,7 +2,6 @@ package net.postchain.gtv.parse
 
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
@@ -23,72 +22,44 @@ object GtvParser {
     private fun encodeByteArray(arg: String): Gtv {
         val bytearray = arg.trim(Typography.quote)
         return try {
-            GtvFactory.gtv(bytearray.hexStringToByteArray())
+            gtv(bytearray.hexStringToByteArray())
         } catch (e: IllegalArgumentException) {
-            GtvFactory.gtv(bytearray.toByteArray())
+            gtv(bytearray.toByteArray())
         }
     }
 
 
-    private fun encodeDict(arg: String): Gtv {
+    private fun encodeDict(str: String): Gtv {
         return gtv(buildMap {
-            if (!arg.contains("=")) throw IllegalArgumentException("does not contain key-value pairs")
-            var currentIndex = 0
-            var bracketCount = 0
-            for (i in arg.indices) {
-                when (arg[i]) {
-                    '{' -> bracketCount++
-                    '}' -> bracketCount--
-                    '=' -> {
-                        if (bracketCount == 0) {
-                            val key = arg.substring(currentIndex, i).trim()
-                            val rest = arg.substring(i + 1)
-                            val valueEndIndex = findValueEnd(rest)
-                            val valueStr = rest.substring(0, valueEndIndex)
-                            val value = parse(valueStr.trim())
-                            put(key, value)
-                            currentIndex = i + 1 + valueStr.length + 1 // next key-value pair starts directly after the comma
-                        }
-                    }
-                }
+            splitArray(str).forEach {
+                if (!it.contains("=")) throw IllegalArgumentException("$it must be encoded as a key-value pair")
+                val (key, value) = it.split("=", limit = 2)
+                put(key.trim(), parse(value))
             }
         })
     }
 
-    private fun findValueEnd(str: String): Int {
-        var bracketCount = 0
-        for (i in str.indices) {
-            when (str[i]) {
-                '[', '{' -> bracketCount++
-                ']', '}' -> bracketCount--
-                ',' -> {
-                    if (bracketCount == 0) return i
-                }
-            }
-        }
-        return str.length
-    }
+    private fun encodeArray(str: String) = gtv(splitArray(str).map { parse(it) })
 
-    private fun encodeArray(arg: String): Gtv {
-        val elements = mutableListOf<Gtv>()
-        var startIndex = 0
-        var bracketCount = 0
+    private fun splitArray(str: String): List<String> {
+        return buildList {
+            var startIndex = 0
+            var bracketCount = 0
 
-        for (i in arg.indices) {
-            when (arg[i]) {
-                '[' -> bracketCount++
-                ']' -> bracketCount--
-                ',' -> {
-                    if (bracketCount == 0) {
-                        elements.add(parse(arg.substring(startIndex, i)))
-                        startIndex = i + 1
+            for (i in str.indices) {
+                when (str[i]) {
+                    '[', '{' -> bracketCount++
+                    ']', '}' -> bracketCount--
+                    ',' -> {
+                        if (bracketCount == 0) {
+                            add(str.substring(startIndex, i))
+                            startIndex = i + 1
+                        }
                     }
                 }
             }
+            if (startIndex < str.length) add(str.substring(startIndex))
         }
-
-        elements.add(parse(arg.substring(startIndex)))
-        return GtvFactory.gtv(elements)
     }
 
 }
