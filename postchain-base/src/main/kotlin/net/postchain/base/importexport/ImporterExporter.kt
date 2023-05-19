@@ -37,6 +37,7 @@ import java.io.BufferedOutputStream
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.file.Path
+import kotlin.streams.toList
 
 object ImporterExporter : KLogging() {
     /**
@@ -183,7 +184,7 @@ object ImporterExporter : KLogging() {
         return ImportResult(fromHeight = firstBlock, toHeight = lastBlock, numBlocks = numBlocks, blockchainRid = blockchainRid)
     }
 
-    private fun importBlock(rawConfigurationData: ByteArray, chainId: Long, blockchainRid: BlockchainRid, nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem, ctx: EContext, blockHeader: BaseBlockHeader, transactions: List<ByteArray>, blockWitness: BaseBlockWitness) {
+    private fun importBlock(rawConfigurationData: ByteArray, chainId: Long, blockchainRid: BlockchainRid, nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem, ctx: EContext, blockHeader: BaseBlockHeader, rawTransactions: List<ByteArray>, blockWitness: BaseBlockWitness) {
         val blockConfData = BlockchainConfigurationData.fromRaw(rawConfigurationData)
         val factory = newInstanceOf<BlockchainConfigurationFactory>(blockConfData.configurationFactory)
         val partialContext = BaseBlockchainContext(chainId, blockchainRid, NODE_ID_READ_ONLY, nodeKeyPair.pubKey.data)
@@ -192,8 +193,11 @@ object ImporterExporter : KLogging() {
         val blockBuilder = blockchainConfiguration.makeBlockBuilder(ctx)
 
         blockBuilder.begin(blockHeader)
-        for (transaction in transactions) { // TODO POS-705 parallelize
-            blockBuilder.appendTransaction(decodeTransaction(blockchainConfiguration, transaction))
+        val transactions = rawTransactions.stream().parallel().map { rawTransaction ->
+            decodeTransaction(blockchainConfiguration, rawTransaction)
+        }.toList()
+        for (transaction in transactions) {
+            blockBuilder.appendTransaction(transaction)
         }
         blockBuilder.finalizeAndValidate(blockHeader)
         blockBuilder.commit(blockWitness)
