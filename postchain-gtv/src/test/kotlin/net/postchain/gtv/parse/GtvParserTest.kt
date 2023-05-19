@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import java.math.BigInteger
 
 internal class GtvParserTest {
 
@@ -31,6 +32,7 @@ internal class GtvParserTest {
         fun testObjects() = arrayOf(
                 arrayOf(GtvNull),
                 arrayOf(gtv(1)),
+                arrayOf(gtv(BigInteger.ONE)),
                 arrayOf(gtv(true)),
                 arrayOf(gtv("Baloo")),
                 arrayOf(gtv("AB".hexStringToByteArray())),

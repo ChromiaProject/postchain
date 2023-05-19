@@ -27,6 +27,6 @@ data class GtvBigInteger(val integer: BigInteger) : GtvPrimitive() {
     }
 
     override fun toString(): String {
-        return integer.toString()
+        return integer.toString() + "L"
     }
 }

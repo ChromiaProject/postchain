@@ -2,6 +2,7 @@ package net.postchain.gtv.parse
 
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvBigInteger
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
@@ -15,6 +16,7 @@ object GtvParser {
             s.startsWith("x\"") && s.endsWith(Typography.quote) -> parseByteArray(s.substring(1))
             s.startsWith("[") && s.endsWith("]") -> parseArray(s.removeSurrounding("[", "]"))
             s.startsWith("{") && s.endsWith("}") -> parseDict(s.removeSurrounding("{", "}"))
+            s.endsWith("L") -> s.substring(0, s.length-1).toBigIntegerOrNull()?.let { GtvBigInteger(it) } ?: GtvString(s)
             else -> s.toLongOrNull()?.let(::GtvInteger) ?: GtvString(s.trim(Typography.quote))
         }
     }
