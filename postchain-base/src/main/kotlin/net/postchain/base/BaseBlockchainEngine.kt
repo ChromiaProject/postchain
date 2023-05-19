@@ -41,8 +41,7 @@ import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.logging.NODE_PUBKEY_TAG
 import net.postchain.metrics.BaseBlockchainEngineMetrics
 import java.lang.Long.max
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ExecutionException
+import kotlin.streams.toList
 
 /**
  * An [BlockchainEngine] will only produce [BlockBuilder]s for a single chain.
@@ -116,7 +115,7 @@ open class BaseBlockchainEngine(
         }
         val savepoint = currentEContext.conn.setSavepoint("blockBuilder${System.nanoTime()}")
 
-        return BaseManagedBlockBuilder(currentEContext, savepoint, storage,  blockchainConfiguration.makeBlockBuilder(currentEContext), { },
+        return BaseManagedBlockBuilder(currentEContext, savepoint, storage, blockchainConfiguration.makeBlockBuilder(currentEContext), { },
                 {
                     afterLog("Begin", it.getBTrace())
                     val blockBuilder = it as AbstractBlockBuilder
@@ -161,17 +160,7 @@ open class BaseBlockchainEngine(
 
     private fun parallelLoadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?> {
         return loadUnfinishedBlockImpl(block) { txs ->
-            val txsLazy = txs.map { tx ->
-                CompletableFuture.supplyAsync { smartDecodeTransaction(tx) }
-            }
-
-            txsLazy.map {
-                try {
-                    it.get()
-                } catch (e: ExecutionException) {
-                    throw e.cause ?: e
-                }
-            }
+            txs.parallelStream().map { smartDecodeTransaction(it) }.toList()
         }
     }
 
