@@ -16,7 +16,10 @@ object GtvParser {
             s.startsWith("x\"") && s.endsWith(Typography.quote) -> parseByteArray(s.substring(1))
             s.startsWith("[") && s.endsWith("]") -> parseArray(s.removeSurrounding("[", "]"))
             s.startsWith("{") && s.endsWith("}") -> parseDict(s.removeSurrounding("{", "}"))
-            s.endsWith("L") -> s.substring(0, s.length-1).toBigIntegerOrNull()?.let { GtvBigInteger(it) } ?: GtvString(s)
+            s.endsWith("L") -> {
+                s.substring(0, s.length - 1).toBigIntegerOrNull()?.let { GtvBigInteger(it) } ?: GtvString(s)
+            }
+
             else -> s.toLongOrNull()?.let(::GtvInteger) ?: GtvString(s.trim(Typography.quote))
         }
     }
@@ -30,38 +33,30 @@ object GtvParser {
         }
     }
 
-
-    private fun parseDict(str: String): Gtv {
-        return gtv(buildMap {
-            splitArray(str).forEach {
-                if (!it.contains("=")) throw IllegalArgumentException("$it must be encoded as a key-value pair")
-                val (key, value) = it.split("=", limit = 2)
-                put(key.trim(), parse(value))
-            }
-        })
-    }
+    private fun parseDict(str: String) = gtv(splitArray(str).associate {
+        if (!it.contains("=")) throw IllegalArgumentException("$it must be a key-value pair separated by \"=\"")
+        val (key, value) = it.split("=", limit = 2)
+        key.trim() to parse(value)
+    })
 
     private fun parseArray(str: String) = gtv(splitArray(str).map { parse(it) })
 
-    private fun splitArray(str: String): List<String> {
-        return buildList {
-            var startIndex = 0
-            var bracketCount = 0
+    private fun splitArray(str: String) = buildList {
+        var startIndex = 0
+        var bracketCount = 0
 
-            for (i in str.indices) {
-                when (str[i]) {
-                    '[', '{' -> bracketCount++
-                    ']', '}' -> bracketCount--
-                    ',' -> {
-                        if (bracketCount == 0) {
-                            add(str.substring(startIndex, i))
-                            startIndex = i + 1
-                        }
+        for (i in str.indices) {
+            when (str[i]) {
+                '[', '{' -> bracketCount++
+                ']', '}' -> bracketCount--
+                ',' -> {
+                    if (bracketCount == 0) {
+                        add(str.substring(startIndex, i))
+                        startIndex = i + 1
                     }
                 }
             }
-            if (startIndex < str.length) add(str.substring(startIndex))
         }
+        if (startIndex < str.length) add(str.substring(startIndex))
     }
-
 }
