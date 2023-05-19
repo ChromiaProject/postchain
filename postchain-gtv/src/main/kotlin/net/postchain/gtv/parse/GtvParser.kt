@@ -12,14 +12,14 @@ object GtvParser {
         val s = str.trim()
         return when {
             s == "null" -> GtvNull
-            s.startsWith("x\"") && s.endsWith(Typography.quote) -> encodeByteArray(s.substring(1))
-            s.startsWith("[") && s.endsWith("]") -> encodeArray(s.removeSurrounding("[", "]"))
-            s.startsWith("{") && s.endsWith("}") -> encodeDict(s.removeSurrounding("{", "}"))
+            s.startsWith("x\"") && s.endsWith(Typography.quote) -> parseByteArray(s.substring(1))
+            s.startsWith("[") && s.endsWith("]") -> parseArray(s.removeSurrounding("[", "]"))
+            s.startsWith("{") && s.endsWith("}") -> parseDict(s.removeSurrounding("{", "}"))
             else -> s.toLongOrNull()?.let(::GtvInteger) ?: GtvString(s.trim(Typography.quote))
         }
     }
 
-    private fun encodeByteArray(arg: String): Gtv {
+    private fun parseByteArray(arg: String): Gtv {
         val bytearray = arg.trim(Typography.quote)
         return try {
             gtv(bytearray.hexStringToByteArray())
@@ -29,7 +29,7 @@ object GtvParser {
     }
 
 
-    private fun encodeDict(str: String): Gtv {
+    private fun parseDict(str: String): Gtv {
         return gtv(buildMap {
             splitArray(str).forEach {
                 if (!it.contains("=")) throw IllegalArgumentException("$it must be encoded as a key-value pair")
@@ -39,7 +39,7 @@ object GtvParser {
         })
     }
 
-    private fun encodeArray(str: String) = gtv(splitArray(str).map { parse(it) })
+    private fun parseArray(str: String) = gtv(splitArray(str).map { parse(it) })
 
     private fun splitArray(str: String): List<String> {
         return buildList {
