@@ -109,6 +109,10 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " blockchain_rid BYTEA NOT NULL)"
     }
 
+    override fun cmdUpdateTableBlockchainsV7(): String {
+        return "ALTER TABLE ${tableBlockchains()} ADD CONSTRAINT ${tableBlockchains()}_blockchain_rid_key UNIQUE (blockchain_rid)"
+    }
+
     override fun cmdCreateTableTransactions(ctx: EContext): String {
         return "CREATE TABLE IF NOT EXISTS ${tableTransactions(ctx)} (" +
                 "    tx_iid BIGSERIAL PRIMARY KEY, " +

@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.FaultyConfiguration
+import net.postchain.base.data.SqlUtils.isUniqueViolation
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
@@ -32,6 +33,7 @@ import org.apache.commons.dbutils.handlers.ColumnListHandler
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.apache.commons.dbutils.handlers.ScalarHandler
 import java.sql.Connection
+import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
 
@@ -66,6 +68,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableMeta(): String
     protected abstract fun cmdCreateTableContainers(): String
     protected abstract fun cmdCreateTableBlockchains(): String
+    protected abstract fun cmdUpdateTableBlockchainsV7(): String
     protected abstract fun cmdCreateTablePeerInfos(): String
     protected abstract fun cmdCreateTableBlockchainReplicas(): String
     protected abstract fun cmdCreateTableMustSyncUntil(): String
@@ -487,7 +490,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int) {
-        if (expectedDbVersion !in 1..6) {
+        if (expectedDbVersion !in 1..7) {
             throw UserMistake("Unsupported DB version $expectedDbVersion")
         }
 
@@ -530,6 +533,19 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 version6(connection)
             }
 
+            if (version < 7 && expectedDbVersion >= 7) {
+                logger.info("Upgrading to version 7")
+                try {
+                    version7(connection)
+                } catch (e: SQLException) {
+                    if (e.isUniqueViolation()) {
+                        throw UserMistake("Blockchains with duplicate RIDs found, please remove before upgrading database")
+                    } else {
+                        throw e
+                    }
+                }
+            }
+
             if (expectedDbVersion > version) {
                 queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
                 logger.info("Database version has been updated to version: $expectedDbVersion")
@@ -566,6 +582,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
             if (expectedDbVersion >= 6) {
                 version6(connection)
+            }
+
+            if (expectedDbVersion >= 7) {
+                version7(connection)
             }
         }
     }
@@ -616,6 +636,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 .forEach { chainId -> queryRunner.update(connection, cmdCreateTableFaultyConfiguration(chainId)) }
     }
 
+    private fun version7(connection: Connection) {
+        queryRunner.update(connection, cmdUpdateTableBlockchainsV7())
+    }
+
     protected fun calcConfigurationHash(configurationData: ByteArray) = GtvToBlockchainRidFactory.calculateBlockchainRid(
             GtvDecoder.decodeGtv(configurationData), ::sha256Digest).data
 
@@ -648,7 +672,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         if (!initialized) {
             // Inserting chainId -> blockchainRid
             val sql = "INSERT INTO ${tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)"
-            queryRunner.update(ctx.conn, sql, ctx.chainID, blockchainRid.data)
+            try {
+                queryRunner.update(ctx.conn, sql, ctx.chainID, blockchainRid.data)
+            } catch (e: SQLException) {
+                if (e.isUniqueViolation())
+                    throw ProgrammerMistake("Blockchain with RID ${blockchainRid.toHex()} already exists")
+                else
+                    throw e
+            }
         }
     }
 

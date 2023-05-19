@@ -331,6 +331,59 @@ class UpgradeDatabaseIT {
         assertTrue(db.findPeerInfo(ctx, null, null, peer.pubKey.toHex()).isEmpty())
     }
 
+    @Test
+    fun testUpgradeFromVersion6to7normal() {
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 6)
+                .use {
+                    it.withWriteConnection { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)",
+                                1, ByteArray(32) { 1 })
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)",
+                                2, ByteArray(32) { 2 })
+                        true
+                    }
+                }
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 7)
+                .use {
+                    withReadConnection(it, 1) { ctx ->
+                        val db = DatabaseAccess.of(ctx)
+                        assertArrayEquals(ByteArray(32) { 1 }, db.getBlockchainRid(ctx)!!.data)
+                        true
+                    }
+                    withReadConnection(it, 2) { ctx ->
+                        val db = DatabaseAccess.of(ctx)
+                        assertArrayEquals(ByteArray(32) { 2 }, db.getBlockchainRid(ctx)!!.data)
+                        true
+                    }
+                    withReadConnection(it, 3) { ctx ->
+                        val db = DatabaseAccess.of(ctx)
+                        assertNull(db.getBlockchainRid(ctx))
+                        true
+                    }
+                }
+    }
+
+    @Test
+    fun testUpgradeFromVersion6to7withDuplicates() {
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 6)
+                .use {
+                    it.withWriteConnection { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)",
+                                1, ByteArray(32) { 0 })
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)",
+                                2, ByteArray(32) { 0 })
+                        true
+                    }
+                }
+
+        assertThrows<UserMistake> {
+            StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 7)
+        }
+    }
+
     private fun assertVersion3(storage: Storage) {
         storage.withReadConnection { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
@@ -338,17 +391,17 @@ class UpgradeDatabaseIT {
         }
     }
 
+    private fun assertVersion3(db: SQLDatabaseAccess, ctx: AppContext) {
+        assertVersion2(db, ctx)
+
+        assertThat(db.tableExists(ctx.conn, "containers"))
+    }
+
     private fun assertVersion4(storage: Storage) {
         withReadConnection(storage, 0) { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
             assertVersion4(db, ctx)
         }
-    }
-
-    private fun assertVersion3(db: SQLDatabaseAccess, ctx: AppContext) {
-        assertVersion2(db, ctx)
-
-        assertThat(db.tableExists(ctx.conn, "containers"))
     }
 
     private fun assertVersion4(db: SQLDatabaseAccess, ctx: EContext) {
