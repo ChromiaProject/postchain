@@ -3,6 +3,7 @@ package net.postchain.gtv.parse
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvString
@@ -30,28 +31,28 @@ object GtvParser {
 
 
     private fun encodeDict(arg: String): Gtv {
-        val pairs = mutableListOf<Pair<String, Gtv>>()
-
-        var currentIndex = 0
-        var bracketCount = 0
-        for (i in arg.indices) {
-            when (arg[i]) {
-                '{' -> bracketCount++
-                '}' -> bracketCount--
-                '=' -> {
-                    if (bracketCount == 0) {
-                        val key = arg.substring(currentIndex, i).trim()
-                        val valueStrRest = arg.substring(i + 1)
-                        val valueEnd = findValueEnd(valueStrRest)
-                        val valueStr = valueStrRest.substring(0, valueEnd)
-                        val value = parse(valueStr.trim())
-                        pairs.add(key to value)
-                        currentIndex = i + 2 + valueStr.length
+        return gtv(buildMap {
+            if (!arg.contains("=")) throw IllegalArgumentException("does not contain key-value pairs")
+            var currentIndex = 0
+            var bracketCount = 0
+            for (i in arg.indices) {
+                when (arg[i]) {
+                    '{' -> bracketCount++
+                    '}' -> bracketCount--
+                    '=' -> {
+                        if (bracketCount == 0) {
+                            val key = arg.substring(currentIndex, i).trim()
+                            val rest = arg.substring(i + 1)
+                            val valueEndIndex = findValueEnd(rest)
+                            val valueStr = rest.substring(0, valueEndIndex)
+                            val value = parse(valueStr.trim())
+                            put(key, value)
+                            currentIndex = i + 1 + valueStr.length + 1 // next key-value pair starts directly after the comma
+                        }
                     }
                 }
             }
-        }
-        return GtvFactory.gtv(pairs.toMap())
+        })
     }
 
     private fun findValueEnd(str: String): Int {
