@@ -11,12 +11,13 @@ class JsonNodeDiagnosticContext(
 ) : NodeDiagnosticContext,
         MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
 
-    constructor(version: String, pubKey: String, infrastructure: InfrastructureFactory) : this(
+    constructor(version: String, pubKey: String, infrastructure: InfrastructureFactory, rellVersion: String?) : this(
             DiagnosticProperty.VERSION withValue version,
             DiagnosticProperty.PUB_KEY withValue pubKey,
             DiagnosticProperty.INFRASTRUCTURE_NAME withValue infrastructure::class.java.name,
             DiagnosticProperty.INFRASTRUCTURE_VERSION withValue (infrastructure::class.java.`package`.implementationVersion
                     ?: "(unknown)"),
+            DiagnosticProperty.RELL_VERSION withValue (rellVersion ?: "Not found")
     )
 
     constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values), mutableMapOf())

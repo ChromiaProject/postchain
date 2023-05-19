@@ -48,6 +48,12 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
         logPrefix = peerName(appConfig.pubKey)
 
+        val rellVersion = try {
+            Class.forName("net.postchain.rell.module.RellPostchainModule").`package`.implementationVersion ?: "(unknown)"
+        } catch (e: ClassNotFoundException) {
+            null
+        }
+
         val blockQueriesProvider = BlockQueriesProviderImpl()
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         postchainContext = PostchainContext(
@@ -56,7 +62,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 storage,
                 infrastructureFactory.makeConnectionManager(appConfig),
                 blockQueriesProvider,
-                JsonNodeDiagnosticContext(version, appConfig.pubKey, infrastructureFactory),
+                JsonNodeDiagnosticContext(version, appConfig.pubKey, infrastructureFactory, rellVersion),
                 blockchainConfigProvider,
                 appConfig.debug
         )
