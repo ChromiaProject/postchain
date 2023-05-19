@@ -193,7 +193,7 @@ object ImporterExporter : KLogging() {
         val blockBuilder = blockchainConfiguration.makeBlockBuilder(ctx)
 
         blockBuilder.begin(blockHeader)
-        val transactions = rawTransactions.stream().parallel().map { rawTransaction ->
+        val transactions = rawTransactions.parallelStream().map { rawTransaction ->
             decodeTransaction(blockchainConfiguration, rawTransaction)
         }.toList()
         for (transaction in transactions) {
