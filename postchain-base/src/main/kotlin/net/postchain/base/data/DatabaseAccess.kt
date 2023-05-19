@@ -49,6 +49,7 @@ interface DatabaseAccess {
             val data: ByteArray)
 
     class BlockWithTransactions(
+            val blockHeight: Long,
             val blockHeader: ByteArray,
             val witness: ByteArray,
             val transactions: List<ByteArray>)
@@ -104,10 +105,13 @@ interface DatabaseAccess {
     fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt>
 
     /**
-     * @param upToHeight   only export blocks up to and including this height,
-     *                     set to `Long.MAX_VALUE` to export everything
+     * @param fromHeight   only fetch blocks from and including this height,
+     *                     set to `0L` to start from first block
+     * @param upToHeight   only fetch blocks up to and including this height,
+     *                     set to `Long.MAX_VALUE` to continue to last block
      */
-    fun getAllBlocksWithTransactions(ctx: EContext, upToHeight: Long = Long.MAX_VALUE, blockHandler: (BlockWithTransactions) -> Unit)
+    fun getAllBlocksWithTransactions(ctx: EContext, fromHeight: Long = 0L, upToHeight: Long = Long.MAX_VALUE,
+                                     blockHandler: (BlockWithTransactions) -> Unit)
 
     // Blockchain configurations
     fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long?

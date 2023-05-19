@@ -286,18 +286,21 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
         }
     }
 
-    override fun getAllBlocksWithTransactions(ctx: EContext, upToHeight: Long, blockHandler: (DatabaseAccess.BlockWithTransactions) -> Unit) {
+    override fun getAllBlocksWithTransactions(ctx: EContext, fromHeight: Long, upToHeight: Long,
+                                              blockHandler: (DatabaseAccess.BlockWithTransactions) -> Unit) {
         val sql = """
-            SELECT b.block_header_data, b.block_witness, 
+            SELECT b.block_height, b.block_header_data, b.block_witness, 
               ARRAY(SELECT t.tx_data FROM ${tableTransactions(ctx)} as t WHERE t.block_iid = b.block_iid ORDER BY t.tx_iid ASC) as transactions 
             FROM ${tableBlocks(ctx)} as b
-            WHERE b.block_height <= ? 
+            WHERE b.block_height BETWEEN ? AND ? 
             ORDER BY b.block_height ASC
                 """.trimIndent()
         ctx.conn.prepareStatement(sql).use { statement ->
-            statement.setLong(1, upToHeight)
+            statement.setLong(1, fromHeight)
+            statement.setLong(2, upToHeight)
             statement.executeQuery().use { resultSet ->
                 while (resultSet.next()) {
+                    val blockHeight = resultSet.getLong("block_height")
                     val blockHeader = resultSet.getBytes("block_header_data")
                     val witness = resultSet.getBytes("block_witness")
                     val array = resultSet.getArray("transactions")
@@ -309,7 +312,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                         }
                     }
 
-                    blockHandler(DatabaseAccess.BlockWithTransactions(blockHeader, witness, transactions))
+                    blockHandler(DatabaseAccess.BlockWithTransactions(blockHeight, blockHeader, witness, transactions))
                 }
             }
         }

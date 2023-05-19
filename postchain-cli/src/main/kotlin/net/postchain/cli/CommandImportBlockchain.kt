@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.path
@@ -25,6 +26,9 @@ class CommandImportBlockchain : CliktCommand(name = "import-blockchain", help = 
     private val blocksFile by option("--blocks-file", help = "File to import blocks and transactions from")
             .path(mustExist = true, canBeDir = false, canBeFile = true).required()
 
+    private val incremental by option("--incremental", help = "Import new configurations and blocks to existing blockchain")
+            .flag()
+
     private val chainId by chainIdOption().required()
 
     override fun run() {
@@ -36,7 +40,8 @@ class CommandImportBlockchain : CliktCommand(name = "import-blockchain", help = 
                     storage,
                     chainId,
                     configurationsFile,
-                    blocksFile)
+                    blocksFile,
+                    incremental)
         }
     }
 }
