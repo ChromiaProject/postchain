@@ -28,10 +28,44 @@ object GtvParser {
         }
     }
 
+
     private fun encodeDict(arg: String): Gtv {
-        val pairs = arg.split(",").map { it.split("=", limit = 2) } // TODO: splitting on , makes it impossible to use this delimiter in string value.
-        if (pairs.any { it.size < 2 }) throw IllegalArgumentException("Wrong format. Expected dict $arg to contain key=value pairs")
-        return GtvFactory.gtv(pairs.associateBy({ it[0].trim() }, { parse(it[1].trim()) }))
+        val pairs = mutableListOf<Pair<String, Gtv>>()
+
+        var currentIndex = 0
+        var bracketCount = 0
+        for (i in arg.indices) {
+            when (arg[i]) {
+                '{' -> bracketCount++
+                '}' -> bracketCount--
+                '=' -> {
+                    if (bracketCount == 0) {
+                        val key = arg.substring(currentIndex, i).trim()
+                        val valueStrRest = arg.substring(i + 1)
+                        val valueEnd = findValueEnd(valueStrRest)
+                        val valueStr = valueStrRest.substring(0, valueEnd)
+                        val value = parse(valueStr.trim())
+                        pairs.add(key to value)
+                        currentIndex = i + 2 + valueStr.length
+                    }
+                }
+            }
+        }
+        return GtvFactory.gtv(pairs.toMap())
+    }
+
+    private fun findValueEnd(str: String): Int {
+        var bracketCount = 0
+        for (i in str.indices) {
+            when (str[i]) {
+                '[', '{' -> bracketCount++
+                ']', '}' -> bracketCount--
+                ',' -> {
+                    if (bracketCount == 0) return i
+                }
+            }
+        }
+        return str.length
     }
 
     private fun encodeArray(arg: String): Gtv {

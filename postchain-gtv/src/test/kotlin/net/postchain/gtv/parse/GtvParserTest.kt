@@ -26,9 +26,13 @@ internal class GtvParserTest {
                 arrayOf(gtv("Baloo")),
                 arrayOf(gtv("AB".hexStringToByteArray())),
                 arrayOf(gtv(gtv(3))),
+                arrayOf(gtv("a" to gtv("hej"))),
                 arrayOf(gtv("a" to gtv(3), "b" to gtv("mega"))),
                 arrayOf(gtv(gtv(1), gtv(gtv(2), gtv(3)))),
-                arrayOf(gtv(GtvNull, gtv(gtv("AB".hexStringToByteArray()), gtv("foo")), gtv(gtv(1), gtv(2))))
+                arrayOf(gtv(GtvNull, gtv(gtv("AB".hexStringToByteArray()), gtv("foo")), gtv(gtv(1), gtv(2)))),
+                arrayOf(gtv("a" to gtv(gtv(1), gtv(2)))),
+                arrayOf(gtv("b" to gtv(1), "a" to gtv("b" to gtv(gtv(1), gtv("c" to gtv(1)))))),
+                arrayOf(gtv(gtv(1), gtv("a" to gtv("AB".hexStringToByteArray()))))
         )
     }
 }
