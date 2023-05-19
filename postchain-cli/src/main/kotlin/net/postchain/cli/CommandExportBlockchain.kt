@@ -24,8 +24,12 @@ class CommandExportBlockchain : CliktCommand(name = "export-blockchain", help = 
     private val blocksFile by option("--blocks-file", help = "File to export blocks and transactions to")
             .path(mustExist = false, canBeDir = false).required()
 
+    private val fromHeight by option("--from-height",
+            help = "Only export configurations and blocks from and including this height (will start from first block by default)")
+            .long().default(0L)
+
     private val upToHeight by option("--up-to-height",
-            help = "Only export configurations and blocks up to and including this height (will export everything by default)")
+            help = "Only export configurations and blocks up to and including this height (will continue to last block by default)")
             .long().default(Long.MAX_VALUE)
 
     private val chainId by chainIdOption().required()
@@ -33,7 +37,8 @@ class CommandExportBlockchain : CliktCommand(name = "export-blockchain", help = 
     override fun run() {
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         StorageBuilder.buildStorage(appConfig).use { storage ->
-            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, upToHeight = upToHeight)
+            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
+                    fromHeight = fromHeight, upToHeight = upToHeight)
         }
     }
 }
