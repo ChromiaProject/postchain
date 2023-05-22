@@ -79,12 +79,13 @@ class PostchainService(private val nodeProvider: NodeProvider) {
                 BlockchainApi.removeBlockchainReplica(ctx, brid, pubkey)
             }
 
-    fun exportBlockchain(chainId: Long, configurationFile: Path, blocksFile: Path, fromHeight: Long, upToHeight: Long): ExportResult =
+    fun exportBlockchain(chainId: Long, configurationFile: Path, blocksFile: Path, overwrite: Boolean, fromHeight: Long, upToHeight: Long): ExportResult =
             ImporterExporter.exportBlockchain(
                     postchainNode.postchainContext.storage,
                     chainId,
                     configurationsFile = configurationFile,
                     blocksFile = blocksFile,
+                    overwrite = overwrite,
                     fromHeight = fromHeight,
                     upToHeight = upToHeight)
 

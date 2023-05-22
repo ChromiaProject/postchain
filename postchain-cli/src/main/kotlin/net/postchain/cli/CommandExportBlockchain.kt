@@ -4,6 +4,7 @@ package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
+import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
@@ -24,6 +25,9 @@ class CommandExportBlockchain : CliktCommand(name = "export-blockchain", help = 
     private val blocksFile by option("--blocks-file", help = "File to export blocks and transactions to")
             .path(mustExist = false, canBeDir = false).required()
 
+    private val overwrite by option("--overwrite", help = "Overwrite existing files")
+            .flag()
+
     private val fromHeight by option("--from-height",
             help = "Only export configurations and blocks from and including this height (will start from first block by default)")
             .long().default(0L)
@@ -37,7 +41,7 @@ class CommandExportBlockchain : CliktCommand(name = "export-blockchain", help = 
     override fun run() {
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         StorageBuilder.buildStorage(appConfig).use { storage ->
-            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
+            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite,
                     fromHeight = fromHeight, upToHeight = upToHeight)
         }
     }

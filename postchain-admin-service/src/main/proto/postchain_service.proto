@@ -97,8 +97,9 @@ message ExportBlockchainRequest {
   int64 chainId = 1;
   string configurationsFile = 2;
   string blocksFile = 3;
-  int64 fromHeight = 4;
-  int64 upToHeight = 5;
+  bool overwrite = 4;
+  int64 fromHeight = 5;
+  int64 upToHeight = 6;
 }
 
 message ExportBlockchainReply {
