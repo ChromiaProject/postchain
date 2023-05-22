@@ -11,7 +11,6 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.gtv.Gtv
 import net.postchain.managed.BaseManagedNodeDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
@@ -46,12 +45,11 @@ class SubNodeBlockchainProcessManager(
             blockchainConfig: BlockchainConfiguration,
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            messageProcessingLatch: MessageProcessingLatch,
             restartNotifier: BlockchainRestartNotifier
     ) {
         val subConnectionManager = connectionManager as SubConnectionManager
         subConnectionManager.preAddMsMessageHandler(chainId, SubQueryHandler(chainId, postchainContext.blockQueriesProvider, subConnectionManager))
-        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, messageProcessingLatch, restartNotifier)
+        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, restartNotifier)
     }
 
     override fun buildAfterCommitHandler(chainId: Long, blockchainConfig: BlockchainConfiguration): AfterCommitHandler {

@@ -13,7 +13,6 @@ import net.postchain.config.node.ManagedNodeConfig
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
-import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
@@ -108,18 +107,6 @@ open class ManagedBlockchainProcessManager(
                     )
                 }
             }
-
-    override fun buildMessageProcessingLatch(blockchainConfig: BlockchainConfiguration) = MessageProcessingLatch {
-        if (blockchainConfig.chainID == CHAIN0) {
-            true // Chain0 runs in a (regular) managed mode
-        } else {
-            (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)?.run {
-                withReadConnection(storage, blockchainConfig.chainID) { ctx ->
-                    isManagedDatasourceReady(ctx)
-                }
-            } ?: false
-        }
-    }
 
     /**
      * @return a [AfterCommitHandler] which is a lambda (This lambda will be called by the Engine after each block

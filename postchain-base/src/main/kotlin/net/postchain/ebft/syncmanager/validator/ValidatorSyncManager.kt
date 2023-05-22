@@ -106,12 +106,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 CHAIN_IID_TAG to blockchainConfiguration.chainID.toString()
         ) {
             for (packet in communicationManager.getPackets()) {
-                // We do this check for each network message because
-                // communicationManager.getPackets() might give a big portion of messages.
-                if (!workerContext.messageProcessingLatch.awaitPermission { !isProcessRunning() }) {
-                    return
-                }
-
                 val (xPeerId, message) = packet
                 val nodeIndex = indexOfValidator(xPeerId)
                 val isReadOnlyNode = nodeIndex == -1 // This must be a read-only node since not in the validator list

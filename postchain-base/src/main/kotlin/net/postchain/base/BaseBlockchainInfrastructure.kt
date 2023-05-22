@@ -28,7 +28,6 @@ import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
 import net.postchain.crypto.SigMaker
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.worker.MessageProcessingLatch
 
 open class BaseBlockchainInfrastructure(
         val defaultSynchronizationInfrastructure: SynchronizationInfrastructure,
@@ -105,13 +104,12 @@ open class BaseBlockchainInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            messageProcessingLatch: MessageProcessingLatch,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier
     ): BlockchainProcess {
         val configuration = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
-        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, messageProcessingLatch, blockchainConfigurationProvider, restartNotifier)
+        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, blockchainConfigurationProvider, restartNotifier)
         try {
             connectProcess(configuration, process)
         } catch (e: Exception) {
