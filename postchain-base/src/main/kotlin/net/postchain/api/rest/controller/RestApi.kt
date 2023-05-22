@@ -40,6 +40,9 @@ import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
+import org.slf4j.MDC
 import spark.QueryParamsMap
 import spark.Request
 import spark.Response
@@ -109,49 +112,67 @@ class RestApi(
             logger.debug { "NotFound: ${error.message}" }
             response.status(404)
             transformErrorResponseFromDiagnostics(request, response, error)
+
+            clearMDC()
         }
 
         http.exception(BadFormatError::class.java) { error, _, response ->
             logger.debug { "BadFormat: ${error.message}" }
             response.status(400)
             setErrorResponseBody(response, error)
+
+            clearMDC()
         }
 
         http.exception(UserMistake::class.java) { error, _, response ->
             logger.debug { "UserMistake: ${error.message}" }
             response.status(400)
             setErrorResponseBody(response, error)
+
+            clearMDC()
         }
 
         http.exception(InvalidTnxException::class.java) { error, _, response ->
             response.status(400)
             setErrorResponseBody(response, error)
+
+            clearMDC()
         }
 
         http.exception(DuplicateTnxException::class.java) { error, _, response ->
             response.status(409) // Conflict
             setErrorResponseBody(response, error)
+
+            clearMDC()
         }
 
         http.exception(NotSupported::class.java) { error, _, response ->
             response.status(403) // Forbidden
             setErrorResponseBody(response, error)
+
+            clearMDC()
         }
 
         http.exception(UnavailableException::class.java) { error, request, response ->
             response.status(503) // Service unavailable
             transformErrorResponseFromDiagnostics(request, response, error)
+
+            clearMDC()
         }
 
         http.exception(PmEngineIsAlreadyClosed::class.java) { error, _, response ->
             response.status(503) // Service unavailable
             setErrorResponseBody(response, error)
+
+            clearMDC()
         }
 
         http.exception(Exception::class.java) { error, request, response ->
             logger.warn(error) { "Unexpected exception: $error" }
             response.status(500)
             transformErrorResponseFromDiagnostics(request, response, error)
+
+            clearMDC()
         }
 
         http.notFound { _, _ -> toJson(UserMistake("Not found")) }
@@ -211,6 +232,8 @@ class RestApi(
             if (!res.body().isNullOrBlank()) {
                 logger.debug { "Response body: ${res.body()}" }
             }
+
+            clearMDC()
         }
 
         http.path(basePath) {
@@ -424,6 +447,11 @@ class RestApi(
         }
 
         http.awaitInitialization()
+    }
+
+    private fun clearMDC() {
+        MDC.remove(BLOCKCHAIN_RID_TAG)
+        MDC.remove(CHAIN_IID_TAG)
     }
 
     private fun postTransaction(request: Request) {
@@ -644,7 +672,8 @@ class RestApi(
         val blockchainRID = checkBlockchainRID(request)
         val model = models[blockchainRID.uppercase()]
                 ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRID")
-
+        MDC.put(BLOCKCHAIN_RID_TAG, blockchainRID)
+        MDC.put(CHAIN_IID_TAG, model.chainIID.toString())
         if (!model.live) throw UnavailableException("Blockchain is unavailable")
         return model
     }
