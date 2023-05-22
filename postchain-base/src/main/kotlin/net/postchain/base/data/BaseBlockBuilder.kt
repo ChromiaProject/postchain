@@ -23,14 +23,13 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import java.lang.Long.max
-import java.util.*
 
 /**
  * BaseBlockBuilder is used to aid in building blocks, including construction and validation of block header and witness
  *
  * @property blockchainRID
  * @property cryptoSystem Crypto utilities
- * @property eContext Connection context including blockchain and node identifiers
+ * @param    eContext Connection context including blockchain and node identifiers
  * @property store For database access
  * @property txFactory Used for serializing transaction data
  * @property specialTxHandler is the main entry point for special transaction handling.
@@ -177,7 +176,8 @@ open class BaseBlockBuilder(
                             BlockchainDependency(bcInfo, HeightDependency(blockRid, dbHeight))
                         } else {
                             // Ok to bang out if we are behind in blocks. Discussed this with Alex (2019-03-29)
-                            throw BadDataMistake(BadDataType.MISSING_DEPENDENCY, "We are not ready to accept the block since block dependency (RID: ${blockRid.toHex()}) is missing.")
+                            throw BadDataMistake(BadDataType.MISSING_DEPENDENCY,
+                                    "We are not ready to accept the block since block dependency (blockRID: ${blockRid.toHex()} from blockchainRID: ${bcInfo.blockchainRid.toHex()}) is missing.")
                         }
                     } else {
                         BlockchainDependency(bcInfo, null) // No blocks required -> allowed
