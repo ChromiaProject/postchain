@@ -4,13 +4,19 @@ import net.postchain.PostchainNode
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.base.importexport.ExportResult
+import net.postchain.base.importexport.ImportResult
+import net.postchain.base.importexport.ImporterExporter
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BadDataMistake
+import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.server.NodeProvider
+import java.nio.file.Path
 
 class PostchainService(private val nodeProvider: NodeProvider) {
 
@@ -72,4 +78,23 @@ class PostchainService(private val nodeProvider: NodeProvider) {
             postchainNode.postchainContext.storage.withWriteConnection { ctx ->
                 BlockchainApi.removeBlockchainReplica(ctx, brid, pubkey)
             }
+
+    fun exportBlockchain(chainId: Long, configurationFile: Path, blocksFile: Path, fromHeight: Long, upToHeight: Long): ExportResult =
+            ImporterExporter.exportBlockchain(
+                    postchainNode.postchainContext.storage,
+                    chainId,
+                    configurationsFile = configurationFile,
+                    blocksFile = blocksFile,
+                    fromHeight = fromHeight,
+                    upToHeight = upToHeight)
+
+    fun importBlockchain(chainId: Long, configurationFile: Path, blocksFile: Path, incremental: Boolean): ImportResult =
+            ImporterExporter.importBlockchain(
+                    KeyPair(PubKey(postchainNode.appConfig.pubKeyByteArray), PrivKey(postchainNode.appConfig.privKeyByteArray)),
+                    postchainNode.postchainContext.cryptoSystem,
+                    postchainNode.postchainContext.storage,
+                    chainId,
+                    configurationsFile = configurationFile,
+                    blocksFile = blocksFile,
+                    incremental)
 }

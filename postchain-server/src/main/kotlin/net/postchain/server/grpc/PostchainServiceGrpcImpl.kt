@@ -1,5 +1,6 @@
 package net.postchain.server.grpc
 
+import com.google.protobuf.ByteString
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import net.postchain.common.BlockchainRid
@@ -10,6 +11,7 @@ import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.server.service.PostchainService
+import java.nio.file.Path
 
 class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         PostchainServiceGrpc.PostchainServiceImplBase() {
@@ -178,5 +180,49 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
                 RemoveBlockchainReplicaReply.newBuilder().setMessage(message).build()
         )
         responseObserver.onCompleted()
+    }
+
+    override fun exportBlockchain(request: ExportBlockchainRequest, responseObserver: StreamObserver<ExportBlockchainReply>) {
+        try {
+            val exportResult = postchainService.exportBlockchain(
+                    request.chainId,
+                    Path.of(request.configurationsFile),
+                    Path.of(request.blocksFile),
+                    request.fromHeight,
+                    request.upToHeight,
+            )
+            responseObserver.onNext(ExportBlockchainReply.newBuilder()
+                    .setFromHeight(exportResult.fromHeight)
+                    .setUpHeight(exportResult.toHeight)
+                    .setNumBlocks(exportResult.numBlocks)
+                    .build())
+            responseObserver.onCompleted()
+        } catch (e: UserMistake) {
+            responseObserver.onError(
+                    Status.INTERNAL.withDescription(e.message).asRuntimeException()
+            )
+        }
+    }
+
+    override fun importBlockchain(request: ImportBlockchainRequest, responseObserver: StreamObserver<ImportBlockchainReply>) {
+        try {
+            val importResult = postchainService.importBlockchain(
+                    request.chainId,
+                    Path.of(request.configurationsFile),
+                    Path.of(request.blocksFile),
+                    request.incremental
+            )
+            responseObserver.onNext(ImportBlockchainReply.newBuilder()
+                    .setFromHeight(importResult.fromHeight)
+                    .setToHeight(importResult.toHeight)
+                    .setNumBlocks(importResult.numBlocks)
+                    .setBlockchainRid(ByteString.copyFrom(importResult.blockchainRid.data))
+                    .build())
+            responseObserver.onCompleted()
+        } catch (e: UserMistake) {
+            responseObserver.onError(
+                    Status.INTERNAL.withDescription(e.message).asRuntimeException()
+            )
+        }
     }
 }
