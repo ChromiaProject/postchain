@@ -44,13 +44,15 @@ object GtvParser {
     private fun splitArray(str: String) = buildList {
         var startIndex = 0
         var bracketCount = 0
+        var isQuote = false
 
         for (i in str.indices) {
             when (str[i]) {
+                Typography.quote -> isQuote = !isQuote
                 '[', '{' -> bracketCount++
                 ']', '}' -> bracketCount--
                 ',' -> {
-                    if (bracketCount == 0) {
+                    if (bracketCount == 0 && !isQuote) {
                         add(str.substring(startIndex, i))
                         startIndex = i + 1
                     }
