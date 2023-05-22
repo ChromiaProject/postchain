@@ -96,6 +96,10 @@ open class BaseBlockchainEngine(
         return blockchainConfiguration
     }
 
+    override fun hasBuiltFirstBlockAfterConfigUpdate(): Boolean {
+        return hasBuiltFirstBlockAfterConfigUpdate
+    }
+
     override fun shutdown() {
         closed = true
         blockchainConfiguration.shutdownModules()
