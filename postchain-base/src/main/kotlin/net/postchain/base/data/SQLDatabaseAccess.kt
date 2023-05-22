@@ -676,7 +676,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 queryRunner.update(ctx.conn, sql, ctx.chainID, blockchainRid.data)
             } catch (e: SQLException) {
                 if (e.isUniqueViolation())
-                    throw ProgrammerMistake("Blockchain with RID ${blockchainRid.toHex()} already exists")
+                    throw UserMistake("Blockchain with RID ${blockchainRid.toHex()} already exists")
                 else
                     throw e
             }

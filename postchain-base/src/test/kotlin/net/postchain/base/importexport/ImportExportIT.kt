@@ -1,7 +1,10 @@
 package net.postchain.base.importexport
 
+import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
+import assertk.assertions.messageContains
 import assertk.isContentEqualTo
 import net.postchain.StorageBuilder
 import net.postchain.base.BaseBlockEContext
@@ -51,6 +54,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import java.io.FileInputStream
+import java.nio.file.Files
 import java.nio.file.Path
 
 class ImportExportIT {
@@ -72,7 +76,8 @@ class ImportExportIT {
         val blocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val blocks = buildBlockchain(storage, listOf(0L to configData0, 2L to configData2),
                     listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
-            val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, logNBlocks = 1)
+            val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
+                    overwrite = false, logNBlocks = 1)
             assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 0, toHeight = 2, numBlocks = 3))
             blocks
         }
@@ -102,7 +107,8 @@ class ImportExportIT {
         val blocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val blocks = buildBlockchain(storage, listOf(0L to configData0, 2L to configData2),
                     listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
-            val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, fromHeight = 1, logNBlocks = 1)
+            val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
+                    overwrite = false, fromHeight = 1, logNBlocks = 1)
             assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 1, toHeight = 2, numBlocks = 2))
             blocks
         }
@@ -130,7 +136,8 @@ class ImportExportIT {
         val blocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val blocks = buildBlockchain(storage, listOf(0L to configData0, 2L to configData2),
                     listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
-            val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, upToHeight = 1, logNBlocks = 1)
+            val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
+                    overwrite = false, upToHeight = 1, logNBlocks = 1)
             assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 0, toHeight = 1, numBlocks = 2))
             blocks
         }
@@ -147,6 +154,40 @@ class ImportExportIT {
             assertExportedBlock(blocks[1], GtvDecoder.decodeGtv(it))
             assertThat(GtvDecoder.decodeGtv(it).isNull())
             assertThat(it.read()).isEqualTo(-1) // EOF
+        }
+    }
+
+    @Test
+    fun exportNoOverwrite(@TempDir tempDir: Path) {
+        val configurationsFile = tempDir.resolve("configurations.gtv")
+        val blocksFile = tempDir.resolve("blocks.gtv")
+
+        Files.createFile(configurationsFile)
+        Files.createFile(blocksFile)
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildBlockchain(storage, listOf(0L to configData0, 2L to configData2),
+                    listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
+            assertFailure {
+                ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
+                        overwrite = false, logNBlocks = 1)
+            }.isInstanceOf(UserMistake::class).messageContains("overwrite")
+        }
+    }
+
+    @Test
+    fun exportOverwrite(@TempDir tempDir: Path) {
+        val configurationsFile = tempDir.resolve("configurations.gtv")
+        val blocksFile = tempDir.resolve("blocks.gtv")
+
+        Files.createFile(configurationsFile)
+        Files.createFile(blocksFile)
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildBlockchain(storage, listOf(0L to configData0, 2L to configData2),
+                    listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
+            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
+                    overwrite = true, logNBlocks = 1)
         }
     }
 
@@ -243,7 +284,7 @@ class ImportExportIT {
         val expectedBlocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val expectedBlocks = buildBlockchain(storage, expectedConfigurations,
                     listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
-            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, logNBlocks = 1)
+            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite = false, logNBlocks = 1)
             expectedBlocks
         }
 
@@ -302,8 +343,8 @@ class ImportExportIT {
         val expectedBlocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val expectedBlocks = buildBlockchain(storage, expectedConfigurations,
                     listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
-            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile1, blocksFile1, upToHeight = 1, logNBlocks = 1)
-            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile2, blocksFile2, fromHeight = 2, logNBlocks = 1)
+            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile1, blocksFile1, overwrite = false, upToHeight = 1, logNBlocks = 1)
+            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile2, blocksFile2, overwrite = false, fromHeight = 2, logNBlocks = 1)
             expectedBlocks
         }
 
@@ -387,7 +428,7 @@ class ImportExportIT {
                             .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
                                     .addOperation(GTX_TEST_OP_NAME, gtv("bogus"))
                                     .finish().buildGtx()))))
-            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, logNBlocks = 1)
+            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite = false, logNBlocks = 1)
             expectedBlocks
         }
 
@@ -416,7 +457,7 @@ class ImportExportIT {
                             .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
                                     .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("rejectMe"))
                                     .finish().buildGtx()))))
-            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, logNBlocks = 1)
+            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite = false, logNBlocks = 1)
             expectedBlocks
         }
 
@@ -446,7 +487,7 @@ class ImportExportIT {
                                     .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("valid"))
                                     .finish().buildGtx()))),
                     (0..1).map { KeyPairHelper.keyPair(it) })
-            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, logNBlocks = 1)
+            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite = false, logNBlocks = 1)
             expectedBlocks
         }
 

@@ -188,6 +188,7 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
                     request.chainId,
                     Path.of(request.configurationsFile),
                     Path.of(request.blocksFile),
+                    request.overwrite,
                     request.fromHeight,
                     request.upToHeight,
             )

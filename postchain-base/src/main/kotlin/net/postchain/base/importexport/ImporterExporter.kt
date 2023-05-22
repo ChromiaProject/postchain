@@ -36,24 +36,37 @@ import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.streams.toList
 
 object ImporterExporter : KLogging() {
     /**
-     * @param fromHeight   only export configurations and blocks from and including this height,
-     *                     set to `0L` to start from first block
-     * @param upToHeight   only export configurations and blocks up to and including this height,
-     *                     set to `Long.MAX_VALUE` to continue to last block
-     * @param logNBlocks   log every N block
+     * @param storage             storage
+     * @param chainId             chain to export
+     * @param configurationsFile  file to export blockchain configurations to
+     * @param blocksFile          file to export blocks and transactions to
+     * @param overwrite           overwrite existing files
+     * @param fromHeight          only export configurations and blocks from and including this height,
+     *                            set to `0L` to start from first block
+     * @param upToHeight          only export configurations and blocks up to and including this height,
+     *                            set to `Long.MAX_VALUE` to continue to last block
+     * @param logNBlocks          log every N block
      */
-    fun exportBlockchain(storage: Storage, chainId: Long, configurationsFile: Path, blocksFile: Path,
+    fun exportBlockchain(storage: Storage, chainId: Long, configurationsFile: Path, blocksFile: Path, overwrite: Boolean,
                          fromHeight: Long = 0L, upToHeight: Long = Long.MAX_VALUE, logNBlocks: Int = 100): ExportResult =
             withReadConnection(storage, chainId) { ctx ->
                 val db = DatabaseAccess.of(ctx)
 
                 val blockchainRid = db.getBlockchainRid(ctx)
                         ?: throw UserMistake("Blockchain $chainId not found")
+
+                if (!overwrite) {
+                    if (Files.exists(configurationsFile))
+                        throw UserMistake("${configurationsFile.toAbsolutePath()} already exists and overwrite was not specified")
+                    if (Files.exists(blocksFile))
+                        throw UserMistake("${blocksFile.toAbsolutePath()} already exists and overwrite was not specified")
+                }
 
                 withLoggingContext(
                         CHAIN_IID_TAG to chainId.toString(),
@@ -99,7 +112,14 @@ object ImporterExporter : KLogging() {
             }
 
     /**
-     * @param logNBlocks   log every N block
+     * @param nodeKeyPair         KeyPair of the node
+     * @param cryptoSystem        CryptoSystem of the node
+     * @param storage             storage
+     * @param chainId             chain to export
+     * @param configurationsFile  file to import blockchain configurations from
+     * @param blocksFile          file to import blocks and transactions from
+     * @param incremental         import new configurations and blocks to existing blockchain
+     * @param logNBlocks          log every N block
      */
     fun importBlockchain(nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem, storage: Storage, chainId: Long,
                          configurationsFile: Path, blocksFile: Path, incremental: Boolean = false, logNBlocks: Int = 100): ImportResult {

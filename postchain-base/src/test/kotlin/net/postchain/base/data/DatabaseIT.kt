@@ -4,7 +4,7 @@ import net.postchain.StorageBuilder
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
@@ -41,7 +41,7 @@ class DatabaseIT {
             true
         }
 
-        assertThrows<ProgrammerMistake> {
+        assertThrows<UserMistake> {
             withWriteConnection(storage, 3) { ctx ->
                 val db = DatabaseAccess.of(ctx)
                 db.initializeBlockchain(ctx, BlockchainRid(ByteArray(32) { 1 }))
