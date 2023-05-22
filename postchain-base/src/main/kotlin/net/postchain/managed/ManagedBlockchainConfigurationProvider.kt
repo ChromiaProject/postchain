@@ -58,8 +58,6 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         }
     }
 
-    open fun isManagedDatasourceReady(eContext: EContext): Boolean = true
-
     /**
      * Same principle for "historic" as for "current"
      */

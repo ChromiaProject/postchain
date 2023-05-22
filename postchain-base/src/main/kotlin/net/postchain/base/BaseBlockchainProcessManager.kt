@@ -24,7 +24,6 @@ import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.devtools.NameHelper.peerName
-import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.gtv.GtvFactory
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
@@ -222,7 +221,6 @@ open class BaseBlockchainProcessManager(
                 blockchainConfig,
                 processName,
                 engine,
-                buildMessageProcessingLatch(blockchainConfig),
                 restartNotifier
         )
         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
@@ -270,10 +268,9 @@ open class BaseBlockchainProcessManager(
             blockchainConfig: BlockchainConfiguration,
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            messageProcessingLatch: MessageProcessingLatch,
             restartNotifier: BlockchainRestartNotifier
     ) {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, messageProcessingLatch, blockchainConfigProvider, restartNotifier)
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, blockchainConfigProvider, restartNotifier)
                 .also {
                     val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainConfig.blockchainRid).also { data ->
                         data[DiagnosticProperty.BLOCKCHAIN_LAST_HEIGHT] = LazyDiagnosticValue { engine.getBlockQueries().getLastBlockHeight().get() }
@@ -285,8 +282,6 @@ open class BaseBlockchainProcessManager(
                     bridToChainId[blockchainConfig.blockchainRid] = chainId
                 }
     }
-
-    protected open fun buildMessageProcessingLatch(blockchainConfig: BlockchainConfiguration) = MessageProcessingLatch { true }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
         return synchronized(synchronizer) {

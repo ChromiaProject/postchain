@@ -23,7 +23,6 @@ import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.worker.HistoricBlockchainProcess
-import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
@@ -53,7 +52,6 @@ open class EBFTSynchronizationInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            messageProcessingLatch: MessageProcessingLatch,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
     ): BlockchainProcess {
@@ -98,7 +96,6 @@ open class EBFTSynchronizationInfrastructure(
                     peerCommConfiguration,
                     postchainContext.appConfig,
                     currentNodeConfig,
-                    messageProcessingLatch,
                     restartNotifier,
                     blockchainConfigurationProvider,
                     postchainContext.nodeDiagnosticContext
@@ -139,7 +136,6 @@ open class EBFTSynchronizationInfrastructure(
                             historicPeerCommConfiguration,
                             postchainContext.appConfig,
                             currentNodeConfig,
-                            messageProcessingLatch,
                             restartNotifier,
                             blockchainConfigurationProvider,
                             postchainContext.nodeDiagnosticContext

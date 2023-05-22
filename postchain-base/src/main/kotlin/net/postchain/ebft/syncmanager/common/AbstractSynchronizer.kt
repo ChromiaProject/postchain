@@ -77,7 +77,6 @@ abstract class AbstractSynchronizer(
         val configProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
         if (configProvider == null || !configProvider.isPcuEnabled()) return false
 
-        // TODO: [pcu]: Remove some redundant logging when PCU is done
         withLoggingContext(CHAIN_IID_TAG to blockchainConfiguration.chainID.toString()) {
             if (blockQueries.getLastBlockHeight().get() + 1 != incomingHeight) return false
             val currentConfigHash = blockchainConfiguration.configHash
@@ -86,8 +85,6 @@ abstract class AbstractSynchronizer(
             logger.debug { "incomingHeight = $incomingHeight, incomingConfigHash = ${incomingConfigHash.wrap()}" }
 
             if (!currentConfigHash.contentEquals(incomingConfigHash)) {
-                logger.debug { "currentConfigHash != incomingConfigHash" }
-                // TODO: [pcu]: Perhaps add a new adapter/provider
                 val isIncomingConfigPending = withReadConnection(workerContext.engine.storage, blockchainConfiguration.chainID) { ctx ->
                     configProvider.isConfigPending(
                             ctx,
@@ -134,7 +131,6 @@ abstract class AbstractSynchronizer(
                     false
                 }
             } else {
-                logger.debug { "currentConfigHash == incomingConfigHash" }
                 return false
             }
         }
@@ -170,7 +166,6 @@ abstract class AbstractSynchronizer(
             bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, false)
         }
 
-        // TODO: [pcu]: Remove some redundant logging when PCU is done
         withLoggingContext(CHAIN_IID_TAG to blockchainConfiguration.chainID.toString()) {
 
             if (hasNewConfig) {
@@ -180,12 +175,7 @@ abstract class AbstractSynchronizer(
             }
 
             val headerConfigHash = block.header.getConfigHash()
-            return if (checkIfConfigIsPendingAndCanBeLoaded(block, headerConfigHash)) {
-                true
-            } else {
-                logger.debug { "No new configuration could be applied" }
-                false
-            }
+            return checkIfConfigIsPendingAndCanBeLoaded(block, headerConfigHash)
         }
     }
 

@@ -24,7 +24,6 @@ class WorkerContext(val processName: BlockchainProcessName,
                     val peerCommConfiguration: PeerCommConfiguration,
                     val appConfig: AppConfig,
                     val nodeConfig: NodeConfig,
-                    val messageProcessingLatch: MessageProcessingLatch,
                     val restartNotifier: BlockchainRestartNotifier,
                     val blockchainConfigurationProvider: BlockchainConfigurationProvider,
                     val nodeDiagnosticContext: NodeDiagnosticContext
