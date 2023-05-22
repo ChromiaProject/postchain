@@ -36,6 +36,7 @@ interface BlockchainEngine : Shutdownable {
     fun getBlockBuildingStrategy(): BlockBuildingStrategy
     fun getBlockQueries(): BlockQueries
     fun getConfiguration(): BlockchainConfiguration
+    fun hasBuiltFirstBlockAfterConfigUpdate(): Boolean
 }
 
 /**

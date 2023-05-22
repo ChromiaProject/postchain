@@ -5,6 +5,7 @@ package net.postchain.ebft.syncmanager.validator
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.configuration.BaseBlockchainConfiguration
+import net.postchain.base.withReadConnection
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
@@ -44,6 +45,7 @@ import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.worker.WorkerContext
+import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.gtv.mapper.toObject
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.logging.NODE_PUBKEY_TAG
@@ -63,7 +65,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val revoltTracker = RevoltTracker(statusManager, getRevoltConfiguration())
-    private val statusSender = StatusSender(1000, statusManager, workerContext.communicationManager)
+    private val statusSender = StatusSender(MAX_STATUS_INTERVAL, statusManager, workerContext.communicationManager)
     private val defaultTimeout = 1000
     private var currentTimeout: Int
     private var processingIntent: BlockIntent
@@ -73,7 +75,10 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private var useFastSyncAlgorithm: Boolean
     private val fastSynchronizer: FastSynchronizer
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        const val MAX_STATUS_INTERVAL = 1_000
+        const val STATUS_TIMEOUT = 2_000
+    }
 
     init {
         this.currentTimeout = defaultTimeout
@@ -460,10 +465,35 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 nodeStateTracker.nodeStatuses = statusManager.nodeStatuses
                 nodeStateTracker.blockHeight = statusManager.myStatus.height
 
+                if (workerContext.engine.hasBuiltFirstBlockAfterConfigUpdate()) {
+                    checkIfConfigReloadIsNeeded()
+                }
+
                 if (Date().time - lastStatusLogged >= StatusLogInterval) {
                     logStatus()
                     lastStatusLogged = Date().time
                 }
+            }
+        }
+    }
+
+    private fun checkIfConfigReloadIsNeeded() {
+        val now = System.currentTimeMillis()
+        val liveSigners = statusManager.nodeStatuses.indices.count {
+            it == statusManager.getMyIndex() || now - statusManager.getLatestStatusTimestamp(it) < STATUS_TIMEOUT
+        }
+
+        // If the amount of live signers is less than BFT majority it may indicate that there is a new config with removed signers
+        if (liveSigners < getBFTRequiredSignatureCount(statusManager.nodeStatuses.size)) {
+            val bcConfigProvider = workerContext.blockchainConfigurationProvider
+            val bcConfig = workerContext.blockchainConfiguration
+            val hasNewConfig = withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+                bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, true)
+            }
+
+            if (hasNewConfig) {
+                logger.debug("New config found. Reloading.")
+                workerContext.restartNotifier.notifyRestart(true)
             }
         }
     }
