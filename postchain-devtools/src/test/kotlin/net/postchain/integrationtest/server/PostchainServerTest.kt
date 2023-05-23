@@ -1,6 +1,6 @@
 package net.postchain.integrationtest.server
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
@@ -107,7 +107,7 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
                         .setChainId(1L)
                         .build()
         )
-        assert(findBlockchainReply.brid).isEqualTo(actualBrid.toHex())
+        assertThat(findBlockchainReply.brid).isEqualTo(actualBrid.toHex())
 
         // Stop
         postchainServiceStub.stopBlockchain(
@@ -115,7 +115,7 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
                         .setChainId(1L)
                         .build()
         )
-        assert(node.retrieveBlockchain(1L)).isNull()
+        assertThat(node.retrieveBlockchain(1L)).isNull()
 
         // Start again
         postchainServiceStub.startBlockchain(
@@ -123,12 +123,12 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
                         .setChainId(1L)
                         .build()
         )
-        assert(node.retrieveBlockchain(1L)).isNotNull()
+        assertThat(node.retrieveBlockchain(1L)).isNotNull()
     }
 
     @Test
     fun `Add configuration`() {
-        assert(node.getModules(1L)[0]).isInstanceOf(DummyModule1::class)
+        assertThat(node.getModules(1L)[0]).isInstanceOf(DummyModule1::class)
 
         val configXml = javaClass.getResource("/net/postchain/devtools/server/blockchain_config_2.xml")!!.readText()
         postchainServiceStub.addConfiguration(
@@ -144,8 +144,8 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
 
         // Await restart
         Awaitility.await().atMost(Duration.TEN_SECONDS).untilAsserted {
-            assert(node.getModules()).isNotEmpty()
-            assert(node.getModules(1L)[0]).isInstanceOf(DummyModule2::class)
+            assertThat(node.getModules()).isNotEmpty()
+            assertThat(node.getModules(1L)[0]).isInstanceOf(DummyModule2::class)
         }
     }
 
@@ -155,7 +155,7 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
         val brid = node.getBlockchainInstance(1L).blockchainEngine.getConfiguration().blockchainRid
 
         val listPeersReply = peerServiceStub.listPeers(ListPeersRequest.newBuilder().build())
-        assert(listPeersReply.message.contains(replicaKey)).isFalse()
+        assertThat(listPeersReply.message.contains(replicaKey)).isFalse()
 
         // Add
         peerServiceStub.addPeer(
@@ -167,7 +167,7 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
         )
 
         val listPeersReplyAfterAdd = peerServiceStub.listPeers(ListPeersRequest.newBuilder().build())
-        assert(listPeersReplyAfterAdd.message).contains(replicaKey)
+        assertThat(listPeersReplyAfterAdd.message).contains(replicaKey)
 
         postchainServiceStub.addBlockchainReplica(
                 AddBlockchainReplicaRequest.newBuilder()
@@ -178,7 +178,7 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
         val replicaExistsAfterAdd = withReadConnection(node.getBlockchainInstance(1L).blockchainEngine.storage, 1L) {
             DatabaseAccess.of(it).existsBlockchainReplica(it, brid, PubKey(replicaKey))
         }
-        assert(replicaExistsAfterAdd).isTrue()
+        assertThat(replicaExistsAfterAdd).isTrue()
 
         // Remove
         postchainServiceStub.removeBlockchainReplica(
@@ -190,7 +190,7 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
         val replicaExistsAfterRemove = withReadConnection(node.getBlockchainInstance(1L).blockchainEngine.storage, 1L) {
             DatabaseAccess.of(it).existsBlockchainReplica(it, brid, PubKey(replicaKey))
         }
-        assert(replicaExistsAfterRemove).isFalse()
+        assertThat(replicaExistsAfterRemove).isFalse()
 
         peerServiceStub.removePeer(
                 RemovePeerRequest.newBuilder()
@@ -199,6 +199,6 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
         )
 
         val listPeersReplyAfterRemove = peerServiceStub.listPeers(ListPeersRequest.newBuilder().build())
-        assert(listPeersReplyAfterRemove.message.contains(replicaKey)).isFalse()
+        assertThat(listPeersReplyAfterRemove.message.contains(replicaKey)).isFalse()
     }
 }

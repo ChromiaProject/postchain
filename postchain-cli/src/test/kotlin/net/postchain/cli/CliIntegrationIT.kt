@@ -1,6 +1,7 @@
 package net.postchain.cli
 
-import assertk.assert
+import assertk.assertThat
+import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import net.postchain.StorageBuilder
 import net.postchain.base.data.DatabaseAccess
@@ -14,9 +15,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.io.File
 import java.nio.file.Paths
-import kotlin.test.assertContains
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 
 /* schema name: test0 */
 class CliIntegrationIT {
@@ -55,7 +55,7 @@ class CliIntegrationIT {
                 arrayOf("-nc", nodeConfigPath.absolutePath, "-brid", expectedBlockchainRID, "--height", height2.toString())
         )
         withReadConnection(storage, chainId) {
-            assert(DatabaseAccess.of(it).getMustSyncUntil(it)[chainId]).isEqualTo(height2)
+            assertThat(DatabaseAccess.of(it).getMustSyncUntil(it)[chainId]).isEqualTo(height2)
         }
     }
 
@@ -119,7 +119,7 @@ class CliIntegrationIT {
         val configData = CliExecution.getConfiguration(appConfig, chainId, heightSecondConfig)
         assertNotNull(configData)
         val configurations = CliExecution.listConfigurations(appConfig, chainId)
-        assertContains(configurations, heightSecondConfig)
+        assertThat(configurations).contains(heightSecondConfig)
     }
 
     @Test
@@ -154,6 +154,6 @@ class CliIntegrationIT {
         val configData = CliExecution.getConfiguration(appConfig, chainId, heightSecondConfig)
         assertNotNull(configData)
         val configurations = CliExecution.listConfigurations(appConfig, chainId)
-        assertContains(configurations, heightSecondConfig)
+        assertThat(configurations).contains(heightSecondConfig)
     }
 }

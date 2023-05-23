@@ -4,12 +4,13 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.PostchainContext
-import net.postchain.StorageBuilder
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainConfiguration
@@ -17,15 +18,16 @@ import net.postchain.core.BlockchainConfigurationFactorySupplier
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
+import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.DynamicClassName
 import net.postchain.core.EContext
+import net.postchain.core.Storage
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PrivKey
 import net.postchain.crypto.SigMaker
-import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.worker.MessageProcessingLatch
 
 open class BaseBlockchainInfrastructure(
         val defaultSynchronizationInfrastructure: SynchronizationInfrastructure,
@@ -42,10 +44,13 @@ open class BaseBlockchainInfrastructure(
     companion object : KLogging()
 
     init {
-        val privKey = postchainContext.appConfig.privKeyByteArray
-        val pubKey = secp256k1_derivePubKey(privKey)
+        val privKey = PrivKey(postchainContext.appConfig.privKeyByteArray)
+        val pubKey = postchainContext.cryptoSystem.derivePubKey(privKey)
+        if (!postchainContext.appConfig.pubKeyByteArray.contentEquals(pubKey.data)) {
+            throw UserMistake("Derived pubkey from private key $pubKey does not match configured pubkey ${postchainContext.appConfig.pubKey}")
+        }
         blockSigMaker = postchainContext.cryptoSystem.buildSigMaker(KeyPair(pubKey, privKey))
-        subjectID = pubKey
+        subjectID = pubKey.data
         syncInfraCache[defaultSynchronizationInfrastructure.javaClass.name] = defaultSynchronizationInfrastructure
     }
 
@@ -84,29 +89,27 @@ open class BaseBlockchainInfrastructure(
     override fun makeBlockchainEngine(
             processName: BlockchainProcessName,
             configuration: BlockchainConfiguration,
-            afterCommitHandler: AfterCommitHandler
+            afterCommitHandler: AfterCommitHandler,
+            storage: Storage,
+            initialEContext: EContext,
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
+            restartNotifier: BlockchainRestartNotifier
     ): BaseBlockchainEngine {
-
-        // We create a new storage instance to open new db connections for each engine
-        val storage = StorageBuilder.buildStorage(postchainContext.appConfig)
-
         val transactionQueue = BaseTransactionQueue(configuration.transactionQueueSize)
 
-        return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue)
-                .apply {
-                    setAfterCommitHandler(afterCommitHandler)
-                    initialize()
-                }
+        return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue,
+                initialEContext, blockchainConfigurationProvider, restartNotifier, postchainContext.nodeDiagnosticContext, afterCommitHandler)
     }
 
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            messageProcessingLatch: MessageProcessingLatch
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
+            restartNotifier: BlockchainRestartNotifier
     ): BlockchainProcess {
         val configuration = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
-        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, messageProcessingLatch)
+        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, blockchainConfigurationProvider, restartNotifier)
         try {
             connectProcess(configuration, process)
         } catch (e: Exception) {

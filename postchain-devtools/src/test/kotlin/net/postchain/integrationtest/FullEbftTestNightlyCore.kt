@@ -8,7 +8,6 @@ import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.testinfra.TestTransaction
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
-import kotlin.test.assertNotNull
 
 open class FullEbftTestNightlyCore : ConfigFileBasedIntegrationTest() {
 
@@ -31,16 +30,16 @@ open class FullEbftTestNightlyCore : ConfigFileBasedIntegrationTest() {
         }
 
         val queries = nodes[0].getBlockchainInstance().blockchainEngine.getBlockQueries()
-        val referenceHeight = queries.getBestHeight().get()
+        val referenceHeight = queries.getLastBlockHeight().get()
         logger.info { "$blocksCount, refHe: $referenceHeight" }
         nodes.forEach { node ->
             val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
-            assertEquals(referenceHeight, queries.getBestHeight().get())
+            assertEquals(referenceHeight, queries.getLastBlockHeight().get())
 
             for (height in 0..referenceHeight) {
                 logger.info { "Verifying height $height" }
                 val rid = blockQueries.getBlockRid(height).get()
-                assertNotNull(rid)
+                requireNotNull(rid)
 
                 val txs = blockQueries.getBlockTransactionRids(rid).get()
                 assertEquals(txPerBlock, txs.size)

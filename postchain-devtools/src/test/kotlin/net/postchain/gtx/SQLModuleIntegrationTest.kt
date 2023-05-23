@@ -14,8 +14,8 @@ import net.postchain.gtv.GtvNull
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.assertThrows
 
 class SQLModuleIntegrationTest : IntegrationTestSetup() {
 
@@ -47,7 +47,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         verifyBlockchainTransactions(node)
 
         val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
-        assertFailsWith<UserMistake> {
+        assertThrows<UserMistake> {
             blockQueries.query("non-existing", gtv(mapOf())).get()
         }
 
@@ -67,7 +67,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         assertNotNull(hit0["val"])
         assertEquals("v2", hit0["val"]!!.asString())
         assertNotNull(hit0["owner"])
-        assertTrue(pubKey(0).contentEquals(hit0["owner"]!!.asByteArray(true)))
+        assertTrue(pubKey(0).contentEquals(hit0["owner"]!!.asByteArray()))
 
         // ------------------------------------------
         // Look for type "test_get_count"

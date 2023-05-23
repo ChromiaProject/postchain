@@ -5,6 +5,7 @@ package net.postchain.gtx
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.toHex
 import net.postchain.core.Transaction
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
@@ -50,22 +51,23 @@ class GTXTransaction(
         }
     }
 
-    override fun isCorrect(): Boolean {
-        if (isChecked) return true
+    override fun checkCorrectness() {
+        if (isChecked) return
 
-        if (signatures.size != signers.size) return false
+        if (signatures.size != signers.size) {
+            throw TransactionIncorrect(myRID, "${signatures.size} signatures != ${signers.size} signers")
+        }
 
         for ((idx, signer) in signers.withIndex()) {
             val signature = signatures[idx]
             if (!cs.verifyDigest(myRID, Signature(signer, signature))) {
-                return false
+                throw TransactionIncorrect(myRID, "Signature by ${signer.toHex()} is not valid")
             }
         }
 
-        if (!areOperationsValid()) return false
+        checkOperations()
 
         isChecked = true
-        return true
     }
 
     /**
@@ -75,7 +77,7 @@ class GTXTransaction(
      * We still have one attack vector where the Dapp developer creates custom operation where no signer check is
      * included, b/c this opens up to anonymous attacks.
      */
-    private fun areOperationsValid(): Boolean {
+    private fun checkOperations() {
         var hasCustomOperation = false
         var totalOps = 0
         var specialOps = 0
@@ -92,15 +94,15 @@ class GTXTransaction(
 
             when (op) {
                 is GtxSpecNop -> {
-                    if (foundSpecNop) return false
+                    if (foundSpecNop) throw TransactionIncorrect(myRID, "contains more than one '__nop'")
                     foundSpecNop = true
                 }
                 is GtxNop -> {
-                    if (foundNop) return false
+                    if (foundNop) throw TransactionIncorrect(myRID, "contains more than one 'nop'")
                     foundNop = true
                 }
                 is GtxTimeB -> {
-                    if (foundTimeB) return false
+                    if (foundTimeB) throw TransactionIncorrect(myRID, "contains more than one 'timeb'")
                     foundTimeB = true
                 }
                 else -> {
@@ -108,16 +110,20 @@ class GTXTransaction(
                 }
             }
 
-            if (!op.isCorrect()) return false
+            try {
+                op.checkCorrectness()
+            } catch (e: UserMistake) {
+                throw TransactionIncorrect(myRID, e.message)
+            }
         }
 
         if (specialOps > 0 && specialOps == totalOps) {
             // The TX contains only special ops
-            return true // Pure special TX, and this should be valid
+            return // Pure special TX, and this should be valid
         }
 
         // "This transaction must have at least one operation (nop and timeb not counted) or be classed as spam."
-        return hasCustomOperation
+        if (!hasCustomOperation) throw TransactionIncorrect(myRID, "contains no normal operation")
     }
 
     @Synchronized
@@ -136,7 +142,7 @@ class GTXTransaction(
     }
 
     override fun apply(ctx: TxEContext): Boolean {
-        if (!isCorrect()) throw TransactionIncorrect("Transaction is not correct")
+        checkCorrectness()
         for (op in ops) {
             if (!op.apply(ctx))
                 throw UserMistake("Operation failed")

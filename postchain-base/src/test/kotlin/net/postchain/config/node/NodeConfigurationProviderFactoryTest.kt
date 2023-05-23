@@ -2,7 +2,7 @@
 
 package net.postchain.config.node
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isInstanceOf
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
@@ -23,7 +23,7 @@ class NodeConfigurationProviderFactoryTest {
             on { nodeConfigProvider } doReturn config
         }
         val mockStorage = MockStorage.mockAppContext()
-        assert(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage.storage }).isInstanceOf(expected)
+        assertThat(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage.storage }).isInstanceOf(expected)
     }
 
     companion object {

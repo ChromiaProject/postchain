@@ -29,6 +29,7 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     companion object {
 
         const val DEFAULT_PORT: Int = 9870
+        const val DEFAULT_APPLIED_CONFIG_SEND_INTERVAL_MS: Long = 1_000
 
         @Deprecated(message = "Use fromPropertiesFile(File, Boolean) instead",
                 replaceWith = ReplaceWith("fromPropertiesFile(File(configFile), debug))", imports = arrayOf("java.io.File")))
@@ -92,6 +93,9 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     val databaseReadConcurrency: Int
         get() = config.getEnvOrIntProperty("POSTCHAIN_DB_READ_CONCURRENCY", "database.readConcurrency", 10)
 
+    val databaseSuppressCollationCheck: Boolean
+        get() = config.getEnvOrBooleanProperty("POSTCHAIN_DB_SUPPRESS_COLLATION_CHECK", "database.suppressCollationCheck", false)
+
     val infrastructure: String
         // "base/ebft" is the default
         get() = config.getEnvOrStringProperty("POSTCHAIN_INFRASTRUCTURE", "infrastructure", Infrastructure.Ebft.get())
@@ -117,6 +121,11 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
 
     val port: Int
         get() = config.getEnvOrIntProperty("POSTCHAIN_PORT", "messaging.port", DEFAULT_PORT)
+
+    // PCU feature toggle
+    fun isPcuEnabled(): Boolean = getEnvOrBoolean("POSTCHAIN_PCU", "pcu", true)
+
+    fun appliedConfigSendInterval(): Long = getEnvOrLong("POSTCHAIN_CONFIG_SEND_INTERVAL_MS", "applied-config-send-interval-ms", DEFAULT_APPLIED_CONFIG_SEND_INTERVAL_MS)
 
     /**
      * Wrappers for [Configuration] getters and other functionalities

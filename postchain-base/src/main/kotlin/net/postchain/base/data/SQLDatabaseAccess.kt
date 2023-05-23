@@ -3,6 +3,9 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.FaultyConfiguration
+import net.postchain.base.data.SqlUtils.isUniqueViolation
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.HASH_LENGTH
@@ -11,6 +14,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.common.wrap
 import net.postchain.core.AppContext
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
@@ -22,11 +26,14 @@ import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockWitness
 import net.postchain.crypto.PubKey
+import net.postchain.crypto.sha256Digest
+import net.postchain.gtv.GtvDecoder
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ColumnListHandler
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.apache.commons.dbutils.handlers.ScalarHandler
 import java.sql.Connection
+import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
 
@@ -35,11 +42,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     protected fun tableMeta(): String = "meta"
     protected fun tableContainers(): String = "containers"
-    protected fun tableBlockchains(): String = "blockchains"
+    internal fun tableBlockchains(): String = "blockchains"
     protected fun tablePeerinfos(): String = "peerinfos"
     protected fun tableBlockchainReplicas(): String = "blockchain_replicas"
     protected fun tableMustSyncUntil(): String = "must_sync_until"
-    protected fun tableConfigurations(ctx: EContext): String = tableName(ctx, "configurations")
+    internal fun tableConfigurations(ctx: EContext): String = tableName(ctx, "configurations")
+    protected fun tableConfigurations(chainId: Long): String = tableName(chainId, "configurations")
+    protected fun tableFaultyConfiguration(chainId: Long): String = tableName(chainId, "sys.faulty_configuration")
+    private fun tableFaultyConfiguration(ctx: EContext): String = tableFaultyConfiguration(ctx.chainID)
     protected fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
     private fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
@@ -58,6 +68,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableMeta(): String
     protected abstract fun cmdCreateTableContainers(): String
     protected abstract fun cmdCreateTableBlockchains(): String
+    protected abstract fun cmdUpdateTableBlockchainsV7(): String
     protected abstract fun cmdCreateTablePeerInfos(): String
     protected abstract fun cmdCreateTableBlockchainReplicas(): String
     protected abstract fun cmdCreateTableMustSyncUntil(): String
@@ -66,6 +77,16 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
     protected abstract fun cmdCreateTablePage(ctx: EContext, name: String): String
+
+    protected abstract fun cmdUpdateTableConfigurationsV4First(chainId: Long): String
+    protected abstract fun cmdUpdateTableConfigurationsV4Second(chainId: Long): String
+
+    protected abstract fun cmdCreateTableFaultyConfiguration(chainId: Long): String
+
+    protected abstract fun cmdAddTableBlockchainReplicasPubKeyConstraint(): String
+    protected abstract fun cmdAlterHexColumnToBytea(tableName: String, columnName: String): String
+    protected abstract fun cmdDropTableConstraint(tableName: String, constraintName: String): String
+    protected abstract fun cmdGetTableBlockchainReplicasPubKeyConstraint(): String
 
     // Tables not part of the batch creation run
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
@@ -88,8 +109,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     private val nullableByteArrayRes = ScalarHandler<ByteArray?>()
     private val nullableIntRes = ScalarHandler<Int?>()
     private val nullableLongRes = ScalarHandler<Long?>()
-    private val byteArrayRes = ScalarHandler<ByteArray>()
-    private val mapListHandler = MapListHandler()
+    internal val byteArrayRes = ScalarHandler<ByteArray>()
+    internal val mapListHandler = MapListHandler()
 
     companion object : KLogging() {
         const val TABLE_PEERINFOS_FIELD_HOST = "host"
@@ -469,7 +490,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int) {
-        if (expectedDbVersion !in 1..3) {
+        if (expectedDbVersion !in 1..7) {
             throw UserMistake("Unsupported DB version $expectedDbVersion")
         }
 
@@ -497,6 +518,34 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 version3(connection)
             }
 
+            if (version < 4 && expectedDbVersion >= 4) {
+                logger.info("Upgrading to version 4")
+                version4(connection)
+            }
+
+            if (version < 5 && expectedDbVersion >= 5) {
+                logger.info("Upgrading to version 5")
+                version5(connection)
+            }
+
+            if (version < 6 && expectedDbVersion >= 6) {
+                logger.info("Upgrading to version 6")
+                version6(connection)
+            }
+
+            if (version < 7 && expectedDbVersion >= 7) {
+                logger.info("Upgrading to version 7")
+                try {
+                    version7(connection)
+                } catch (e: SQLException) {
+                    if (e.isUniqueViolation()) {
+                        throw UserMistake("Blockchains with duplicate RIDs found, please remove before upgrading database")
+                    } else {
+                        throw e
+                    }
+                }
+            }
+
             if (expectedDbVersion > version) {
                 queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
                 logger.info("Database version has been updated to version: $expectedDbVersion")
@@ -522,6 +571,22 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             if (expectedDbVersion >= 3) {
                 version3(connection)
             }
+
+            if (expectedDbVersion >= 4) {
+                version4(connection)
+            }
+
+            if (expectedDbVersion >= 5) {
+                version5(connection)
+            }
+
+            if (expectedDbVersion >= 6) {
+                version6(connection)
+            }
+
+            if (expectedDbVersion >= 7) {
+                version7(connection)
+            }
         }
     }
 
@@ -539,6 +604,45 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(connection, cmdCreateTableContainers())
     }
 
+    private fun version4(connection: Connection) {
+        queryRunner.query(connection, "SELECT chain_iid FROM ${tableBlockchains()}", mapListHandler)
+                .map { it["chain_iid"] as Long }
+                .forEach { chainId ->
+                    queryRunner.update(connection, cmdUpdateTableConfigurationsV4First(chainId))
+                    queryRunner.query(connection, "SELECT height, configuration_data FROM ${tableConfigurations(chainId)}", mapListHandler)
+                            .forEach {
+                                val height = it["height"] as Long
+                                val configurationData = it["configuration_data"] as ByteArray
+                                queryRunner.update(connection,
+                                        "UPDATE ${tableConfigurations(chainId)} SET configuration_hash=? WHERE height=?",
+                                        calcConfigurationHash(configurationData), height)
+                            }
+                    queryRunner.update(connection, cmdUpdateTableConfigurationsV4Second(chainId))
+                }
+    }
+
+    private fun version5(connection: Connection) {
+        val pubkeyConstraintName = queryRunner.query(connection, cmdGetTableBlockchainReplicasPubKeyConstraint(), ScalarHandler<String>())
+        queryRunner.update(connection, cmdDropTableConstraint(tableBlockchainReplicas(), pubkeyConstraintName))
+        queryRunner.update(connection, cmdAlterHexColumnToBytea(tablePeerinfos(), TABLE_PEERINFOS_FIELD_PUBKEY))
+        queryRunner.update(connection, cmdAlterHexColumnToBytea(tableBlockchainReplicas(), TABLE_REPLICAS_FIELD_PUBKEY))
+        queryRunner.update(connection, cmdAlterHexColumnToBytea(tableBlockchainReplicas(), TABLE_REPLICAS_FIELD_BRID))
+        queryRunner.update(connection, cmdAddTableBlockchainReplicasPubKeyConstraint())
+    }
+
+    private fun version6(connection: Connection) {
+        queryRunner.query(connection, "SELECT chain_iid FROM ${tableBlockchains()}", mapListHandler)
+                .map { it["chain_iid"] as Long }
+                .forEach { chainId -> queryRunner.update(connection, cmdCreateTableFaultyConfiguration(chainId)) }
+    }
+
+    private fun version7(connection: Connection) {
+        queryRunner.update(connection, cmdUpdateTableBlockchainsV7())
+    }
+
+    protected fun calcConfigurationHash(configurationData: ByteArray) = GtvToBlockchainRidFactory.calculateBlockchainRid(
+            GtvDecoder.decodeGtv(configurationData), ::sha256Digest).data
+
     override fun createContainer(ctx: AppContext, name: String): Int {
         val sql = "INSERT INTO ${tableContainers()} (name) values (?) RETURNING container_iid"
         return queryRunner.insert(ctx.conn, sql, intRes, name)
@@ -555,6 +659,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdCreateTableBlocks(ctx))
         queryRunner.update(ctx.conn, cmdCreateTableTransactions(ctx))
         queryRunner.update(ctx.conn, cmdCreateTableConfigurations(ctx))
+        queryRunner.update(ctx.conn, cmdCreateTableFaultyConfiguration(ctx.chainID))
 
         val txIndex = "CREATE INDEX IF NOT EXISTS ${tableName(ctx, "transactions_block_iid_idx")} " +
                 "ON ${tableTransactions(ctx)}(block_iid)"
@@ -567,7 +672,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         if (!initialized) {
             // Inserting chainId -> blockchainRid
             val sql = "INSERT INTO ${tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)"
-            queryRunner.update(ctx.conn, sql, ctx.chainID, blockchainRid.data)
+            try {
+                queryRunner.update(ctx.conn, sql, ctx.chainID, blockchainRid.data)
+            } catch (e: SQLException) {
+                if (e.isUniqueViolation())
+                    throw UserMistake("Blockchain with RID ${blockchainRid.toHex()} already exists")
+                else
+                    throw e
+            }
         }
     }
 
@@ -686,8 +798,19 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height)
     }
 
-    override fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray) {
-        queryRunner.update(ctx.conn, cmdInsertConfiguration(ctx), height, data)
+    override fun getConfigurationDataForHeight(ctx: EContext, height: Long): ByteArray? {
+        val sql = "SELECT configuration_data FROM ${tableConfigurations(ctx)} WHERE height <= ? ORDER BY height DESC LIMIT 1"
+        return queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height)
+    }
+
+    override fun getConfigurationData(ctx: EContext, hash: ByteArray): ByteArray? {
+        val sql = "SELECT configuration_data FROM ${tableConfigurations(ctx)} WHERE configuration_hash = ?"
+        val res = queryRunner.query(ctx.conn, sql, mapListHandler, hash)
+        return when (res.size) {
+            0 -> null
+            1 -> res[0]["configuration_data"] as ByteArray
+            else -> throw ProgrammerMistake("Found multiple configurations with hash ${hash.toHex()}")
+        }
     }
 
     override fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo> {
@@ -706,7 +829,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
 
         if (pubKeyPattern != null) {
-            conditions.add("$TABLE_PEERINFOS_FIELD_PUBKEY ILIKE '%$pubKeyPattern%'")
+            if (pubKeyPattern.length % 2 != 0) throw UserMistake("Pubkey pattern is of odd length and not a valid hex string")
+
+            conditions.add("position('\\x$pubKeyPattern'::bytea in $TABLE_PEERINFOS_FIELD_PUBKEY) > 0")
         }
 
         // Building a query
@@ -724,12 +849,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 ctx.conn, query, MapListHandler())
 
         return rawPeerInfos.map {
-            PeerInfo(
-                    it[TABLE_PEERINFOS_FIELD_HOST] as String,
-                    it[TABLE_PEERINFOS_FIELD_PORT] as Int,
-                    (it[TABLE_PEERINFOS_FIELD_PUBKEY] as String).hexStringToByteArray(),
-                    (it[TABLE_PEERINFOS_FIELD_TIMESTAMP] as? Timestamp)?.toInstant() ?: Instant.EPOCH
-            )
+            mapPeerInfo(it)
         }.toTypedArray()
     }
 
@@ -744,54 +864,48 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             ($TABLE_PEERINFOS_FIELD_HOST, $TABLE_PEERINFOS_FIELD_PORT, $TABLE_PEERINFOS_FIELD_PUBKEY, $TABLE_PEERINFOS_FIELD_TIMESTAMP) 
             VALUES (?, ?, ?, ?) RETURNING $TABLE_PEERINFOS_FIELD_PUBKEY
         """.trimIndent()
-        return pubKey == queryRunner.insert(ctx.conn, sql, ScalarHandler<String>(), host, port, pubKey, time)
+        return pubKey == queryRunner.insert(ctx.conn, sql, ScalarHandler<ByteArray>(), host, port, pubKey.hexStringToByteArray(), time).toHex()
     }
 
-    override fun updatePeerInfo(ctx: AppContext, host: String, port: Int, pubKey: String, timestamp: Instant?): Boolean {
+    override fun updatePeerInfo(ctx: AppContext, host: String, port: Int, pubKey: PubKey, timestamp: Instant?): Boolean {
         val time = SqlUtils.toTimestamp(timestamp)
         val sql = """
             UPDATE ${tablePeerinfos()} 
             SET $TABLE_PEERINFOS_FIELD_HOST = ?, $TABLE_PEERINFOS_FIELD_PORT = ?, $TABLE_PEERINFOS_FIELD_TIMESTAMP = ? 
             WHERE $TABLE_PEERINFOS_FIELD_PUBKEY = ?
         """.trimIndent()
-        val updated = queryRunner.update(ctx.conn, sql, host, port, time, pubKey)
+        val updated = queryRunner.update(ctx.conn, sql, host, port, time, pubKey.data)
         return (updated >= 1)
     }
 
-    override fun removePeerInfo(ctx: AppContext, pubKey: String): Array<PeerInfo> {
-        val result = mutableListOf<PeerInfo>()
+    override fun removePeerInfo(ctx: AppContext, pubKey: PubKey): Array<PeerInfo> {
+        val sql = """
+            DELETE FROM ${tablePeerinfos()} 
+            WHERE $TABLE_PEERINFOS_FIELD_PUBKEY = ?
+            RETURNING *
+        """.trimIndent()
 
-        val peerInfos = findPeerInfo(ctx, null, null, pubKey)
-        peerInfos.forEach { peeInfo ->
-            val sql = """
-                DELETE FROM ${tablePeerinfos()} 
-                WHERE $TABLE_PEERINFOS_FIELD_PUBKEY = '${peeInfo.pubKey.toHex()}'
-            """.trimIndent()
-            val deleted = queryRunner.update(ctx.conn, sql)
-
-            if (deleted == 1) {
-                result.add(peeInfo)
-            }
-        }
-
-        return result.toTypedArray()
+        val res: List<MutableMap<String, Any>> = queryRunner.query(ctx.conn, sql, MapListHandler(), pubKey.data)
+        return res.map { mapPeerInfo(it) }.toTypedArray()
     }
+
+    private fun mapPeerInfo(dbResult: MutableMap<String, Any>) = PeerInfo(
+            dbResult[TABLE_PEERINFOS_FIELD_HOST] as String,
+            dbResult[TABLE_PEERINFOS_FIELD_PORT] as Int,
+            dbResult[TABLE_PEERINFOS_FIELD_PUBKEY] as ByteArray,
+            (dbResult[TABLE_PEERINFOS_FIELD_TIMESTAMP] as? Timestamp)?.toInstant() ?: Instant.EPOCH
+    )
 
     override fun addBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubKey: PubKey): Boolean {
         if (existsBlockchainReplica(ctx, brid, pubKey)) {
             return false
         }
-        /*
-        Due to reference integrity between tables peerInfos and BlockchainReplicas AND the fact that the pubkey string in peerInfos
-        can hold both lower and upper characters (historically), we use the exact (case-sensitive) value from the peerInfos table when
-        adding the node as blockchain replica.
-         */
         val sql = """
             INSERT INTO ${tableBlockchainReplicas()} 
             ($TABLE_REPLICAS_FIELD_BRID, $TABLE_REPLICAS_FIELD_PUBKEY) 
-            VALUES (?, (SELECT $TABLE_PEERINFOS_FIELD_PUBKEY FROM ${tablePeerinfos()} WHERE lower($TABLE_PEERINFOS_FIELD_PUBKEY) = lower(?)))
+            VALUES (?, ?)
         """.trimIndent()
-        queryRunner.insert(ctx.conn, sql, ScalarHandler<String>(), brid.toHex(), pubKey.hex())
+        queryRunner.insert(ctx.conn, sql, ScalarHandler<String>(), brid.data, pubKey.data)
         return true
     }
 
@@ -806,26 +920,26 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         Each MutableMap represents a row in the table.
         MutableList is thus a list of rows in the table.
          */
-        return raw.groupBy(keySelector = { BlockchainRid((it[TABLE_REPLICAS_FIELD_BRID] as String).hexStringToByteArray()) },
-                valueTransform = { NodeRid((it[TABLE_REPLICAS_FIELD_PUBKEY] as String).hexStringToByteArray()) })
+        return raw.groupBy(keySelector = { BlockchainRid(it[TABLE_REPLICAS_FIELD_BRID] as ByteArray) },
+                valueTransform = { NodeRid(it[TABLE_REPLICAS_FIELD_PUBKEY] as ByteArray) })
     }
 
     override fun getBlockchainsToReplicate(ctx: AppContext, pubkey: String): Set<BlockchainRid> {
         val query = "SELECT $TABLE_REPLICAS_FIELD_BRID FROM ${tableBlockchainReplicas()} WHERE $TABLE_REPLICAS_FIELD_PUBKEY = ?"
 
-        val result = queryRunner.query(ctx.conn, query, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubkey)
-        return result.map { BlockchainRid.buildFromHex(it) }.toSet()
+        val result = queryRunner.query(ctx.conn, query, ColumnListHandler<ByteArray>(TABLE_REPLICAS_FIELD_BRID), pubkey.hexStringToByteArray())
+        return result.map { BlockchainRid(it) }.toSet()
     }
 
     override fun existsBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubkey: PubKey): Boolean {
         val query = """
             SELECT count($TABLE_REPLICAS_FIELD_PUBKEY) 
             FROM ${tableBlockchainReplicas()}
-            WHERE $TABLE_REPLICAS_FIELD_BRID = '${brid.toHex()}' AND
-            lower($TABLE_REPLICAS_FIELD_PUBKEY) = lower('${pubkey.hex()}') 
+            WHERE $TABLE_REPLICAS_FIELD_BRID = ? AND
+            $TABLE_REPLICAS_FIELD_PUBKEY = ?
             """.trimIndent()
 
-        return queryRunner.query(ctx.conn, query, ScalarHandler<Long>()) > 0
+        return queryRunner.query(ctx.conn, query, ScalarHandler<Long>(), brid.data, pubkey.data) > 0
     }
 
     override fun removeBlockchainReplica(ctx: AppContext, brid: BlockchainRid?, pubKey: PubKey): Set<BlockchainRid> {
@@ -836,16 +950,16 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 $delete
                 RETURNING *
             """.trimIndent()
-            queryRunner.query(ctx.conn, sql, ColumnListHandler<String>(TABLE_REPLICAS_FIELD_BRID), pubKey.hex())
+            queryRunner.query(ctx.conn, sql, ColumnListHandler<ByteArray>(TABLE_REPLICAS_FIELD_BRID), pubKey.data)
         } else {
             val sql = """
                 $delete
                 AND $TABLE_REPLICAS_FIELD_BRID = ?
                 RETURNING *
             """.trimIndent()
-            queryRunner.query(ctx.conn, sql, ColumnListHandler(TABLE_REPLICAS_FIELD_BRID), pubKey.hex(), brid.toHex())
+            queryRunner.query(ctx.conn, sql, ColumnListHandler(TABLE_REPLICAS_FIELD_BRID), pubKey.data, brid.data)
         }
-        return res.map { BlockchainRid.buildFromHex(it) }.toSet()
+        return res.map { BlockchainRid(it) }.toSet()
     }
 
     override fun setMustSyncUntil(ctx: AppContext, blockchainRID: BlockchainRid, height: Long): Boolean {
@@ -883,6 +997,31 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return raw.associate {
             BlockchainRid(it["blockchain_rid"] as ByteArray) to it["chain_iid"] as Long
         }
+    }
+
+    override fun getFaultyConfiguration(ctx: EContext): FaultyConfiguration? {
+        val sql = "SELECT * FROM ${tableFaultyConfiguration(ctx)}"
+        val raw = queryRunner.query(ctx.conn, sql, MapListHandler())
+
+        return raw.firstOrNull()?.let {
+            FaultyConfiguration(
+                    (it["configuration_hash"] as ByteArray).wrap(),
+                    it["report_height"] as Long
+            )
+        }
+    }
+
+    override fun addFaultyConfiguration(ctx: EContext, faultyConfiguration: FaultyConfiguration) {
+        // First clear any previous faulty config reference
+        queryRunner.update(ctx.conn, "DELETE FROM ${tableFaultyConfiguration(ctx)}")
+
+        queryRunner.update(ctx.conn, "INSERT INTO ${tableFaultyConfiguration(ctx)} (configuration_hash, report_height) VALUES (?, ?)",
+                faultyConfiguration.configHash.data, faultyConfiguration.reportAtHeight
+        )
+    }
+
+    override fun updateFaultyConfigurationReportHeight(ctx: EContext, height: Long) {
+        queryRunner.update(ctx.conn, "UPDATE ${tableFaultyConfiguration(ctx)} SET report_height = ?", height)
     }
 
     fun tableExists(connection: Connection, tableName: String): Boolean {

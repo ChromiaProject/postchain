@@ -5,7 +5,6 @@ import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.ManagedChannel
 import io.grpc.Status.ALREADY_EXISTS
-import io.grpc.Status.FAILED_PRECONDITION
 import io.grpc.Status.UNAVAILABLE
 import io.grpc.Status.fromThrowable
 import io.grpc.health.v1.HealthCheckRequest
@@ -13,22 +12,18 @@ import io.grpc.health.v1.HealthCheckResponse
 import io.grpc.health.v1.HealthGrpc
 import io.grpc.protobuf.services.HealthStatusManager
 import mu.KLogging
-import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.common.toHex
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.crypto.PrivKey
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.server.grpc.AddConfigurationRequest
-import net.postchain.server.grpc.AddPeerRequest
 import net.postchain.server.grpc.FindBlockchainRequest
 import net.postchain.server.grpc.InitNodeRequest
-import net.postchain.server.grpc.InitServiceGrpc
-import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
+import net.postchain.server.grpc.StartSubnodeBlockchainRequest
 import net.postchain.server.grpc.StopBlockchainRequest
+import net.postchain.server.grpc.SubnodeServiceGrpc
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
@@ -60,7 +55,7 @@ class DefaultSubnodeAdminClient(
     private var healthcheckService: HealthGrpc.HealthBlockingStub? = null
 
     @Volatile
-    private var initService: InitServiceGrpc.InitServiceBlockingStub? = null
+    private var subnodeService: SubnodeServiceGrpc.SubnodeServiceBlockingStub? = null
 
     private val executor: ExecutorService = Executors.newSingleThreadExecutor {
         Thread(it, "${clientCount.incrementAndGet()}-DefaultSubnodeAdminClient")
@@ -79,7 +74,7 @@ class DefaultSubnodeAdminClient(
                     service = PostchainServiceGrpc.newBlockingStub(channel)
                     peerService = PeerServiceGrpc.newBlockingStub(channel)
                     healthcheckService = HealthGrpc.newBlockingStub(channel)
-                    initService = InitServiceGrpc.newBlockingStub(channel)
+                    subnodeService = SubnodeServiceGrpc.newBlockingStub(channel)
                     logger.info { "connect() -- Subnode container connection established on $target" }
                     return@submit
                 } catch (e: Exception) {
@@ -106,17 +101,18 @@ class DefaultSubnodeAdminClient(
     override fun initializePostchainNode(privKey: PrivKey): Boolean {
         return try {
             val request = InitNodeRequest.newBuilder().setPrivkey(ByteString.copyFrom(privKey.data)).build()
-            val response = initService?.initNode(request)
+            val response = subnodeService?.initNode(request)
                     ?: throw ProgrammerMistake("subnode admin client not connected")
             logger.debug { response.message }
             true
         } catch (e: Exception) {
             if (fromThrowable(e).code == ALREADY_EXISTS.code) {
                 logger.info { "initializePostchainNode -- ${e.message}" }
+                true
             } else {
                 logger.error { "initializePostchainNode -- exception occurred: ${e.message}" }
+                false
             }
-            false
         }
     }
 
@@ -134,50 +130,17 @@ class DefaultSubnodeAdminClient(
         }
     }
 
-    override fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: ByteArray): Boolean {
+    override fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid): Boolean {
         return try {
-            val request = AddConfigurationRequest.newBuilder()
+            val request = StartSubnodeBlockchainRequest.newBuilder()
                     .setChainId(chainId)
-                    .setHeight(height)
-                    .setOverride(true)
-                    .setGtv(ByteString.copyFrom(config))
+                    .setBrid(ByteString.copyFrom(blockchainRid.data))
                     .build()
 
-            val response = service?.addConfiguration(request)
+            val response = subnodeService?.startSubnodeBlockchain(request)
                     ?: throw ProgrammerMistake("subnode admin client not connected")
-            logger.debug { "addConfiguration(${chainId}) -- ${response.message}" }
+            logger.debug { "startBlockchain(${chainId}) -- blockchain started ${response.message}" }
             true
-        } catch (e: Exception) {
-            if (fromThrowable(e).code in setOf(ALREADY_EXISTS.code, FAILED_PRECONDITION.code)) {
-                logger.warn { "addConfiguration(${chainId}) -- ${e.message}" }
-            } else {
-                logger.error { "addConfiguration(${chainId}) -- exception occurred: ${e.message}" }
-            }
-            false
-        }
-    }
-
-    override fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid, config: ByteArray): Boolean {
-        return try {
-            val request = InitializeBlockchainRequest.newBuilder()
-                    .setChainId(chainId)
-                    .setOverride(true)
-                    .setGtv(ByteString.copyFrom(config))
-                    // Original brid is passed to subnode since dataSource.getConfiguration()
-                    // returns original config with patched signers and its brid differs from the original one
-                    .setBrid(blockchainRid.toHex())
-                    .build()
-
-            val response = service?.initializeBlockchain(request)
-                    ?: throw ProgrammerMistake("subnode admin client not connected")
-            if (response.brid != null) {
-                logger.debug { "startBlockchain(${chainId}) -- blockchain started ${response.brid}" }
-                true
-            } else {
-                nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add("Can't start blockchain: ${response.message}")
-                logger.error { "startBlockchain(${chainId}:${blockchainRid.toShortHex()}) -- can't start blockchain: ${response.message}" }
-                false
-            }
         } catch (e: Exception) {
             nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add("Can't start blockchain: ${e.message}")
             logger.error { "startBlockchain(${chainId}:${blockchainRid.toShortHex()}) -- can't start blockchain: ${e.message}" }
@@ -228,29 +191,6 @@ class DefaultSubnodeAdminClient(
         } catch (e: Exception) {
             logger.error { "getBlockchainLastHeight($chainId) -- exception occurred: ${e.message}" }
             -1L
-        }
-    }
-
-    override fun addPeerInfo(peerInfo: PeerInfo): Boolean {
-        return try {
-            val request = AddPeerRequest.newBuilder()
-                    .setOverride(true)
-                    .setHost(peerInfo.host)
-                    .setPort(peerInfo.port)
-                    .setPubkey(peerInfo.pubKey.toHex())
-                    .build()
-
-            val response = peerService?.addPeer(request)
-                    ?: throw ProgrammerMistake("subnode admin client not connected")
-            logger.debug { response.message }
-            true
-        } catch (e: Exception) {
-            if (fromThrowable(e).code == ALREADY_EXISTS.code) {
-                logger.info { "addPeerInfo($peerInfo) -- ${e.message}" }
-            } else {
-                logger.error { "addPeerInfo($peerInfo) -- exception occurred: ${e.message}" }
-            }
-            false
         }
     }
 

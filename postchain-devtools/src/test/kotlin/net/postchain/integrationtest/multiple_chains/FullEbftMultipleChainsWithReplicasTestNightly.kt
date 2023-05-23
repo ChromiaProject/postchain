@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
-import kotlin.test.assertNotNull
 
 class FullEbftMultipleChainsWithReplicasTestNightly : ConfigFileBasedIntegrationTest() {
 
@@ -121,15 +120,15 @@ class FullEbftMultipleChainsWithReplicasTestNightly : ConfigFileBasedIntegration
 
                 val queries = node.blockQueries(chain)
 
-                // Asserting best height equals to 1
-                assertEquals(expectedHeight, queries.getBestHeight().get())
+                // Asserting last height equals to 1
+                assertEquals(expectedHeight, queries.getLastBlockHeight().get())
 
                 for (height in 0..expectedHeight) {
                     logger.info { "Verifying height $height" }
 
                     // Asserting uniqueness of block at height
                     val blockRid = queries.getBlockRid(height).get()
-                    assertNotNull(blockRid)
+                    requireNotNull(blockRid)
 
                     // Asserting txs count
                     val txs = queries.getBlockTransactionRids(blockRid).get()

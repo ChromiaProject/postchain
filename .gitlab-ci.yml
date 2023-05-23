@@ -1,6 +1,18 @@
-image: maven:3.8.4-jdk-11
+image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.0.0
 
 .setup:
+  tags:
+    - saas-linux-large-amd64
+  before_script:
+    - docker run
+      --detach
+      --name postgres
+      --env POSTGRES_PASSWORD=postchain
+      --env POSTGRES_USER=postchain
+      --env PGDATA=/pgtmpfs
+      --tmpfs=/pgtmpfs:size=1000m
+      --publish 5432:5432
+      postgres:14.7-alpine3.17
   artifacts:
     when: always
     paths:
@@ -19,19 +31,35 @@ image: maven:3.8.4-jdk-11
 stages:
   - build
   - nightly-tests
-  - deploy
+  - deploy-snapshot
+  - deploy-release
+  - deploy-patch
   - dependency-check
   - release
 
-deploy:
+deploy-snapshot:
   extends: .setup
-  stage: deploy
+  stage: deploy-snapshot
   only:
     - dev
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly -Djib.serialize=true -Dlatest.tag=latest-snapshot source:jar deploy
+
+deploy-release:
+  extends: .setup
+  stage: deploy-release
+  only:
     - master
+  script:
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly -Djib.serialize=true -Dlatest.tag=latest source:jar deploy
+
+deploy-patch:
+  extends: .setup
+  stage: deploy-patch
+  only:
     - /^support\/.*$/
   script:
-    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,nightly source:jar deploy
+    - mvn $MAVEN_CLI_OPTS --activate-profiles ci,gitlab-registry,nightly -Djib.serialize=true -Dlatest.tag=latest-patch source:jar deploy
 
 build:
   extends: .setup
@@ -67,6 +95,24 @@ dependency-check:
     variables:
       - $RUN_DEPENDENCY_CHECK == "true"
 
+container-scanning:
+  extends: .setup
+  stage: dependency-check
+  interruptible: true
+  script:
+    - echo "Scanning image $IMAGE:$VERSION"
+    - curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
+    - grype registry:registry.gitlab.com/chromaway/postchain/$IMAGE:$VERSION --only-fixed -q
+    - grype registry:registry.gitlab.com/chromaway/postchain/$IMAGE:$VERSION --fail-on high -q
+  parallel:
+    matrix:
+      - IMAGE: [ postchain-cli,
+                 postchain-admin-client ]
+        VERSION: [ 3.10.0-SNAPSHOT ]
+  only:
+    variables:
+      - $RUN_DEPENDENCY_CHECK == "true"
+
 release:
   stage: release
   variables:
@@ -95,15 +141,14 @@ variables:
   # when running from the command line.
   # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
   MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true -s .gitlab-settings.xml"
-  # Configure postgres service (https://hub.docker.com/_/postgres/)
-  POSTGRES_DB: postchain
-  POSTGRES_USER: postchain
-  POSTGRES_PASSWORD: postchain
-  POSTCHAIN_DB_URL: jdbc:postgresql://postgres/postchain
-  POSTGRES_INITDB_ARGS: "--lc-collate=C.UTF-8 --lc-ctype=C.UTF-8 --encoding=UTF-8"
+  POSTCHAIN_DB_URL: jdbc:postgresql://docker/postchain
+  DOCKER_HOST: tcp://docker:2375
 
 services:
-  - postgres
+  - name: docker:23.0.4-dind
+    alias: docker
+    # explicitly disable tls to avoid docker startup interruption
+    command: [ "--tls=false" , "--experimental" ]
 
 # Cache downloaded dependencies and plugins between builds.
 # To keep cache across branches add 'key: "$CI_JOB_NAME"'

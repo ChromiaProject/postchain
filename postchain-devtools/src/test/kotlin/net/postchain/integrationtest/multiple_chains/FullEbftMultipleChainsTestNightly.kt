@@ -15,7 +15,6 @@ import org.awaitility.Duration.ONE_MINUTE
 import org.awaitility.Duration.TEN_SECONDS
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
-import kotlin.test.assertNotNull
 
 open class FullEbftMultipleChainsTestNightly : ConfigFileBasedIntegrationTest() {
 
@@ -100,15 +99,15 @@ open class FullEbftMultipleChainsTestNightly : ConfigFileBasedIntegrationTest() 
 
                 val queries = node.blockQueries(chain)
 
-                // Asserting best height equals to 1
-                assertEquals(expectedHeight, queries.getBestHeight().get())
+                // Asserting last height equals to 1
+                assertEquals(expectedHeight, queries.getLastBlockHeight().get())
 
                 for (height in 0..expectedHeight) {
                     logger.info { "Verifying height $height" }
 
                     // Asserting uniqueness of block at height
                     val blockRids = queries.getBlockRid(height).get()
-                    assertNotNull(blockRids)
+                    requireNotNull(blockRids)
 
                     // Asserting txs count
                     val txs = queries.getBlockTransactionRids(blockRids).get()

@@ -3,11 +3,11 @@
 package net.postchain.api.rest.controller
 
 import net.postchain.api.rest.model.ApiStatus
-import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
 import net.postchain.base.ConfirmationProof
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.block.BlockDetail
+import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GtxQuery
 import spark.Request
@@ -25,8 +25,8 @@ interface ExternalModel : ChainModel {
 }
 
 interface Model : ChainModel {
-    fun postTransaction(tx: ApiTx)
-    fun getTransaction(txRID: TxRID): ApiTx?
+    fun postTransaction(tx: ByteArray)
+    fun getTransaction(txRID: TxRID): ByteArray?
     fun getTransactionInfo(txRID: TxRID): TransactionInfoExt?
     fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt>
     fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail?
@@ -36,14 +36,17 @@ interface Model : ChainModel {
     fun getConfirmationProof(txRID: TxRID): ConfirmationProof?
     fun getStatus(txRID: TxRID): ApiStatus
     fun query(query: GtxQuery): Gtv
-    fun nodeQuery(subQuery: String): String
+    fun nodeStatusQuery(): StateNodeStatus
+    fun nodePeersStatusQuery(): List<StateNodeStatus>
     fun debugQuery(subQuery: String?): String
     fun getCurrentBlockHeight(): BlockHeight
     fun getBlockchainConfiguration(height: Long = -1): ByteArray?
+    fun validateBlockchainConfiguration(configuration: Gtv)
 }
 
 data class BlockHeight(val blockHeight: Long)
 data class ErrorBody(val error: String = "")
+data class Version(val version: Int)
 
 class NotSupported(message: String) : Exception(message)
 class NotFoundError(message: String) : Exception(message)
@@ -51,4 +54,3 @@ class BadFormatError(message: String) : Exception(message)
 class UnavailableException(message: String) : Exception(message)
 class InvalidTnxException(message: String) : Exception(message)
 class DuplicateTnxException(message: String) : Exception(message)
-

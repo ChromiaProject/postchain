@@ -12,6 +12,7 @@ fun isClientFailure(status: Status) =
         status == Status.BAD_REQUEST
                 || status == Status.NOT_FOUND
                 || status == Status.CONFLICT
+                || status == Status.REQUEST_ENTITY_TOO_LARGE
 
 fun isServerFailure(status: Status) =
         (status == Status.UNKNOWN_HOST && status.description == Status.UNKNOWN_HOST.description) // workaround for https://github.com/http4k/http4k/issues/845

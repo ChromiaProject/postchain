@@ -8,7 +8,7 @@ import net.postchain.gtv.merkle.MixArrayDictToGtvBinaryTreeHelper.expecedMerkleR
 import net.postchain.gtv.merkle.TreeHelper
 import net.postchain.gtv.merkleHashSummary
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class MixArrayDictToMerkleRootTest {
 

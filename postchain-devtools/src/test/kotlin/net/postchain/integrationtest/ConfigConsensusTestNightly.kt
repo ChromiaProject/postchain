@@ -1,6 +1,6 @@
 package net.postchain.integrationtest
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
@@ -28,7 +28,7 @@ class ConfigConsensusTestNightly : ConfigFileBasedIntegrationTest() {
         nodes.forEach {
             val initialBlock = it.blockQueries().getBlockAtHeight(0L).get()!!
             val decodedBlock = BlockHeaderData.fromBinary(initialBlock.header.rawData)
-            assert(decodedBlock.getExtra()[CONFIG_HASH_EXTRA_HEADER]!!.asByteArray().contentEquals(initialHash)).isTrue()
+            assertThat(decodedBlock.getExtra()[CONFIG_HASH_EXTRA_HEADER]!!.asByteArray().contentEquals(initialHash)).isTrue()
         }
 
         // Add new config
@@ -40,7 +40,7 @@ class ConfigConsensusTestNightly : ConfigFileBasedIntegrationTest() {
         nodes.forEach {
             val newConfigBlock = it.blockQueries().getBlockAtHeight(2L).get()!!
             val decodedBlock = BlockHeaderData.fromBinary(newConfigBlock.header.rawData)
-            assert(decodedBlock.getExtra()[CONFIG_HASH_EXTRA_HEADER]!!.asByteArray().contentEquals(fullHash)).isTrue()
+            assertThat(decodedBlock.getExtra()[CONFIG_HASH_EXTRA_HEADER]!!.asByteArray().contentEquals(fullHash)).isTrue()
         }
     }
 
@@ -58,7 +58,7 @@ class ConfigConsensusTestNightly : ConfigFileBasedIntegrationTest() {
         buildBlocksWithChainRestart(5, listOf(nodes[0], nodes[1], nodes[2]))
 
         // Node without new config should be stuck at height 1
-        assert(nodes[3].blockQueries().getBestHeight().get()).isEqualTo(1L)
+        assertThat(nodes[3].blockQueries().getLastBlockHeight().get()).isEqualTo(1L)
 
         // Patch node 3 with correct config and restart
         nodes[3].addConfiguration(PostchainTestNode.DEFAULT_CHAIN_IID, 2, blockchainConfig2)
@@ -68,7 +68,7 @@ class ConfigConsensusTestNightly : ConfigFileBasedIntegrationTest() {
         // Assert node 3 can reach height 5 now
         Awaitility.await().atMost(Duration.TEN_SECONDS)
                 .untilAsserted {
-                    assert(nodes[3].blockQueries().getBestHeight().get()).isEqualTo(5L)
+                    assertThat(nodes[3].blockQueries().getLastBlockHeight().get()).isEqualTo(5L)
                 }
     }
 }

@@ -2,11 +2,12 @@
 
 package net.postchain.integrationtest.reconnection
 
-import net.postchain.hasSize
+import assertk.assertThat
+import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
 import net.postchain.devtools.assertChainNotStarted
 import net.postchain.devtools.assertChainStarted
 import net.postchain.devtools.assertNodeConnectedWith
-import net.postchain.isEmpty
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Test
@@ -46,8 +47,8 @@ class TwoPeersReconnectionTest : ReconnectionTest() {
 
 
         // Asserting network topology is pair of connected peers
-        assertk.assert(nodes[0].networkTopology()).hasSize(1)
-        assertk.assert(nodes[1].networkTopology()).hasSize(1)
+        assertThat(nodes[0].networkTopology()).hasSize(1)
+        assertThat(nodes[1].networkTopology()).hasSize(1)
         //println("---- Both asserted ------")
 
         // Shutting down peer 1
@@ -63,7 +64,7 @@ class TwoPeersReconnectionTest : ReconnectionTest() {
                     nodes[1].assertChainNotStarted()
 
                     // network topology is pair of disconnected peers
-                    assertk.assert(nodes[0].networkTopology()).isEmpty()
+                    assertThat(nodes[0].networkTopology()).isEmpty()
                 }
 
         // Removing peer 1
@@ -79,8 +80,8 @@ class TwoPeersReconnectionTest : ReconnectionTest() {
                     nodes[1].assertChainStarted()
 
                     // network topology is pair of connected peers
-                    assertk.assert(nodes[0].networkTopology()).hasSize(1)
-                    assertk.assert(nodes[1].networkTopology()).hasSize(1)
+                    assertThat(nodes[0].networkTopology()).hasSize(1)
+                    assertThat(nodes[1].networkTopology()).hasSize(1)
                 }
     }
 }

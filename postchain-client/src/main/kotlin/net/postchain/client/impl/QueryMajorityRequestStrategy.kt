@@ -31,7 +31,7 @@ class QueryMajorityRequestStrategy(
     private val timeout = config.connectTimeout.toMillis() + config.responseTimeout.toMillis()
 
     override fun <R> request(createRequest: (Endpoint) -> Request,
-                             success: (Response) -> R,
+                             success: (Response, Endpoint) -> R,
                              failure: (Response, Endpoint) -> R,
                              queryMultiple: Boolean): R =
             if (queryMultiple) {
@@ -41,7 +41,7 @@ class QueryMajorityRequestStrategy(
             }
 
     private fun <R> requestMultiple(createRequest: (Endpoint) -> Request,
-                                    success: (Response) -> R,
+                                    success: (Response, Endpoint) -> R,
                                     failure: (Response, Endpoint) -> R): R {
         val outcomes = ArrayBlockingQueue<Outcome>(config.endpointPool.size)
 
@@ -50,7 +50,7 @@ class QueryMajorityRequestStrategy(
             asyncHttpClient(request) { response ->
                 outcomes.add(if (isSuccess(response.status)) {
                     try {
-                        Success(success(response) ?: nullValue)
+                        Success(success(response, endpoint) ?: nullValue)
                     } catch (e: Exception) {
                         Error(e)
                     }

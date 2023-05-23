@@ -6,14 +6,18 @@ enum class DiagnosticProperty(val prettyName: String) {
 
     VERSION("version"),
 
+    INFRASTRUCTURE_NAME("infrastructure"),
+    INFRASTRUCTURE_VERSION("infrastructure-version"),
+
     PUB_KEY("pub-key"),
-    BLOCKCHAIN_INFRASTRUCTURE("blockchain-infra"),
 
     BLOCKCHAIN("blockchain"),
     BLOCKCHAIN_RID("brid"),
     BLOCKCHAIN_NODE_TYPE("node-type"),
-    BLOCKCHAIN_CURRENT_HEIGHT("height"),
+    BLOCKCHAIN_LAST_HEIGHT("height"),
     BLOCKCHAIN_NODE_PEERS("peers"),
+    BLOCKCHAIN_NODE_STATUS("node-status"),
+    BLOCKCHAIN_NODE_PEERS_STATUSES("node-peers-statuses"),
 
     // Containers
     CONTAINER_NAME("container-name"),

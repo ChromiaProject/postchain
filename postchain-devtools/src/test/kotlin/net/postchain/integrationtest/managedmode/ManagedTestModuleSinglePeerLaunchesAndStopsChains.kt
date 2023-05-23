@@ -25,7 +25,6 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
         mapOf(),
         mapOf(
                 "nm_get_peer_infos" to ::queryGetPeerInfos,
-                "nm_get_peer_list_version" to ::queryGetPeerListVersion,
                 "nm_compute_blockchain_info_list" to ::queryComputeBlockchainInfoList,
                 "nm_get_blockchain_configuration" to ::queryGetConfiguration,
                 "nm_find_next_configuration_height" to ::queryFindNextConfigurationHeight,
@@ -58,11 +57,6 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
             return GtvArray(arrayOf(
                     peerInfoToGtv(peerInfo0))
             )
-        }
-
-        fun queryGetPeerListVersion(unit: Unit, eContext: EContext, args: Gtv): Gtv {
-            logger.log { "Query: nm_get_peer_list_version" }
-            return GtvInteger(1L)
         }
 
         fun queryNMApiVersion(unit: Unit, eContext: EContext, args: Gtv): Gtv {

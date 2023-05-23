@@ -3,7 +3,7 @@
 package net.postchain.gtv.merkle
 
 import net.postchain.common.data.Hash
-import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.Digester
 
 
 /**
@@ -12,7 +12,7 @@ import net.postchain.crypto.CryptoSystem
  *
  * Note: We make this class abstract so we can use a dummy version during test (this makes tests easier to understand).
  */
-abstract class MerkleHashCalculator<T>(cryptoSystem: CryptoSystem?): BinaryNodeHashCalculator(cryptoSystem) {
+abstract class MerkleHashCalculator<T>(digester: Digester?) : BinaryNodeHashCalculator(digester) {
 
     /**
      * Leaf hashes are prefixed to tell them apart from internal nodes.
@@ -34,10 +34,10 @@ abstract class MerkleHashCalculator<T>(cryptoSystem: CryptoSystem?): BinaryNodeH
     protected fun calculateHashOfValueInternal(
             valueToHash: T,
             serializeFun: (T) -> ByteArray,
-            hashFun: (ByteArray, CryptoSystem?) -> Hash
+            hashFun: (ByteArray, Digester?) -> Hash
     ): Hash {
         val byteArr: ByteArray = byteArrayOf(MerkleBasics.HASH_PREFIX_LEAF) + serializeFun(valueToHash)
-        return hashFun(byteArr, cryptoSystem)
+        return hashFun(byteArr, digester)
     }
 
     /**

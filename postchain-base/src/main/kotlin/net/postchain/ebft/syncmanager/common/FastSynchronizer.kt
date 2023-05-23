@@ -4,6 +4,8 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
+import net.postchain.base.extension.getConfigHash
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
@@ -16,10 +18,11 @@ import net.postchain.devtools.NameHelper
 import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.message.*
+import net.postchain.ebft.message.Transaction
 import net.postchain.ebft.worker.WorkerContext
-import java.lang.Thread.sleep
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 import net.postchain.ebft.message.BlockData as MessageBlockData
 import net.postchain.ebft.message.BlockHeader as BlockHeaderMessage
 
@@ -62,7 +65,6 @@ class FastSynchronizer(
 
     companion object : KLogging()
 
-
     inner class Job(val height: Long, var peerId: NodeRid) {
         var header: BlockHeader? = null
         var witness: BlockWitness? = null
@@ -77,15 +79,17 @@ class FastSynchronizer(
     }
 
     fun syncUntil(exitCondition: () -> Boolean) {
+        var polledFinishedJob: Job? = null
         try {
-            blockHeight = blockQueries.getBestHeight().get()
+            blockHeight = blockQueries.getLastBlockHeight().get()
             syncDebug("Start", blockHeight)
             while (isProcessRunning() && !exitCondition()) {
                 refillJobs()
-                processMessages(exitCondition)
-                processDoneJobs()
+                processMessages()
+                processDoneJobs(polledFinishedJob)
                 processStaleJobs()
-                sleep(params.loopInterval)
+                // Would be nicer to be able to just peek here but there is no API for that
+                polledFinishedJob = finishedJobs.poll(params.loopInterval, TimeUnit.MILLISECONDS)
             }
         } catch (e: BadDataMistake) {
             logger.error(e) { "Fatal error, shutting down blockchain for safety reasons. Needs manual investigation." }
@@ -94,6 +98,7 @@ class FastSynchronizer(
             logger.debug(e) { "syncUntil() -- ${"Exception"}" }
         } finally {
             syncDebug("Await commits", blockHeight)
+            processDoneJobs(polledFinishedJob)
             awaitCommits()
             jobs.clear()
             finishedJobs.clear()
@@ -168,8 +173,8 @@ class FastSynchronizer(
         }
     }
 
-    private fun processDoneJobs() {
-        var j = finishedJobs.poll()
+    private fun processDoneJobs(polledJob: Job?) {
+        var j = polledJob ?: finishedJobs.poll()
         while (j != null) {
             processDoneJob(j)
             j = finishedJobs.poll()
@@ -232,10 +237,10 @@ class FastSynchronizer(
             // If the job failed because the block is already in the database
             // then it means that fastsync started before all addBlock jobs
             // from normal sync were done. If this has happened, we
-            // will increase the blockheight and consider this job done (but
+            // will increase the blockHeight and consider this job done (but
             // not by us).
-            val bestHeight = blockQueries.getBestHeight().get()
-            if (bestHeight >= j.height) {
+            val lastHeight = blockQueries.getLastBlockHeight().get()
+            if (lastHeight >= j.height) {
                 doneTrace("Add block failed for job $j because block already in db.")
                 blockHeight++ // as if this block was successful.
                 removeJob(j)
@@ -433,42 +438,38 @@ class FastSynchronizer(
         }
 
         val h = blockchainConfiguration.decodeBlockHeader(header)
-        val peerBestHeight = getHeight(h)
+        val peerLastHeight = getHeight(h)
 
-        if (peerBestHeight != j.height) {
-            headerDebug("Header height=$peerBestHeight, we asked for ${j.height}. Peer for $j must be drained")
+        if (peerLastHeight != j.height) {
+            headerDebug("Header height=$peerLastHeight, we asked for ${j.height}. Peer for $j must be drained")
             // The peer didn't have the block we wanted
             // Remember its height and try another peer
             val now = System.currentTimeMillis()
-            peerStatuses.drained(peerId, peerBestHeight, now)
+            peerStatuses.drained(peerId, peerLastHeight, now)
             restartJob(j)
             return false
         }
 
         val w = blockchainConfiguration.decodeWitness(witness)
-        val validator = blockchainConfiguration.getBlockHeaderValidator()
-        val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(h)
-        try {
-            validator.validateWitness(w, witnessBuilder)
-        } catch (e: Exception) {
-            // There may be two reasons for verification failures.
-            // 1. The peer is a scumbag, sending us invalid headers
-            // 2. The header is from a configuration that we haven't activated yet.
-            // In both cases we can blacklist the peer:
-            //
-            // 1. blacklisting scumbags is good
-            // 2. The blockchain will restart before requestedHeight is added, so the
-            // sync process will restart fresh with new configuration. Worst case is if
-            // we download parallelism blocks before restarting.
-            val dbg = debugJobString(j, requestedHeight, peerId)
-            peerStatuses.maybeBlacklist(peerId, "Synch: Invalid header received (${e.message}). $dbg")
-            return false
+        // If config is mismatching we can't validate witness properly
+        // We could potentially verify against signer list in new config, but we can't be sure that we have it yet
+        // Anyway, worst case scenario we will simply attempt to load the block and fail
+        if (h.getConfigHash() == null || h.getConfigHash().contentEquals(blockchainConfiguration.configHash)) {
+            val validator = blockchainConfiguration.getBlockHeaderValidator()
+            val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(h)
+            try {
+                validator.validateWitness(w, witnessBuilder)
+            } catch (e: Exception) {
+                val dbg = debugJobString(j, requestedHeight, peerId)
+                peerStatuses.maybeBlacklist(peerId, "Synch: Invalid header received (${e.message}). $dbg")
+                return false
+            }
         }
 
         j.header = h
         j.witness = w
         logger.trace { "handleBlockHeader() -- ${"Header for $j received"}" }
-        peerStatuses.headerReceived(peerId, peerBestHeight)
+        peerStatuses.headerReceived(peerId, peerLastHeight)
         return true
     }
 
@@ -570,29 +571,20 @@ class FastSynchronizer(
 
         // We are free to commit this Job, go on and add it to DB
         // (this is usually slow and is therefore handled via a future).
+        val block = job.block ?: throw ProgrammerMistake("Attempting to commit an unfinished job")
         addBlockCompletionFuture = blockDatabase
-                .addBlock(job.block!!, addBlockCompletionFuture, bTrace)
+                .addBlock(block, addBlockCompletionFuture, bTrace)
                 .whenCompleteUnwrapped { _: Any?, exception ->
                     if (exception != null) {
-                        if (exception is PmEngineIsAlreadyClosed || exception is BDBAbortException) {
-                            logger.warn { "Exception committing block $job: ${exception.message}" }
-                        } else {
-                            logger.warn(exception) { "Exception committing block $job" }
-                        }
+                        handleAddBlockException(exception, block, bTrace, peerStatuses, job.peerId)
                         job.addBlockException = exception
                     }
                     finishedJobs.add(job)
                 }
     }
 
-    private fun processMessages(exitCondition: () -> Boolean) {
+    private fun processMessages() {
         for (packet in communicationManager.getPackets()) {
-            // We do this check for each network message because
-            // communicationManager.getPackets() might give a big portion of messages.
-            if (!workerContext.messageProcessingLatch.awaitPermission { !isProcessRunning() || exitCondition() }) {
-                return
-            }
-
             val peerId = packet.first
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue
@@ -610,6 +602,9 @@ class FastSynchronizer(
                     is UnfinishedBlock -> handleUnfinishedBlock(peerId, message.header, message.transactions)
                     is CompleteBlock -> handleCompleteBlock(peerId, message.data, message.height, message.witness)
                     is Status -> peerStatuses.statusReceived(peerId, message.height - 1)
+                    is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message)) return
+
+                    is Transaction -> logger.info("Got unexpected transaction from peer $peerId, ignoring")
                     else -> logger.warn { "Unhandled message type: ${message.topic} from peer $peerId" } // WARN b/c this might be buggy?
                 }
             } catch (e: Exception) {

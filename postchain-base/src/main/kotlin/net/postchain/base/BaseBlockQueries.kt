@@ -106,7 +106,7 @@ open class BaseBlockQueries(
         }
     }
 
-    override fun getBestHeight(): CompletionStage<Long> {
+    override fun getLastBlockHeight(): CompletionStage<Long> {
         return runOp {
             blockStore.getLastBlockHeight(it)
         }

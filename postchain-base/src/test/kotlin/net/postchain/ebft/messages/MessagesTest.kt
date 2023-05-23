@@ -15,15 +15,15 @@ import net.postchain.ebft.message.Signature
 import net.postchain.ebft.message.Status
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 
 class MessagesTest {
 
     // Some dummy data
     val headerHex = "12121212"
-    val tx1Hex ="23232323"
-    val tx2Hex ="45454545"
+    val tx1Hex = "23232323"
+    val tx2Hex = "45454545"
     val witnessHex = "787878787878"
 
     @Test
@@ -47,9 +47,9 @@ class MessagesTest {
 
     @Test
     fun testBlockSignature() {
-        val blockRID = ByteArray(32){it.toByte()}
-        val subjectID = ByteArray(33) {it.toByte()}
-        val data = ByteArray(40){(it+1).toByte()}
+        val blockRID = ByteArray(32) { it.toByte() }
+        val subjectID = ByteArray(33) { it.toByte() }
+        val data = ByteArray(40) { (it + 1).toByte() }
         val sig = Signature(subjectID, data)
         val mess = BlockSignature(blockRID, sig)
         val encoded = mess.encoded
@@ -62,7 +62,7 @@ class MessagesTest {
 
     @Test
     fun testStatus() {
-        val blockRID = ByteArray(32){it.toByte()}
+        val blockRID = ByteArray(32) { it.toByte() }
         val height = 123321L
         val revolting = true
         val round = 1L
@@ -129,8 +129,8 @@ class MessagesTest {
         val header = headerHex.hexStringToByteArray()
 
         val transactions = listOf(
-            tx1Hex.hexStringToByteArray(),
-            tx2Hex.hexStringToByteArray()
+                tx1Hex.hexStringToByteArray(),
+                tx2Hex.hexStringToByteArray()
         )
         val data = BlockData(header, transactions)
         val witness = witnessHex.hexStringToByteArray()

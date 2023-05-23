@@ -1,6 +1,6 @@
 package net.postchain.integrationtest
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.PostchainContext
 import net.postchain.common.BlockchainRid
@@ -29,7 +29,7 @@ class CrossBlockchainQueryTest : IntegrationTestSetup() {
 
         nodes[0].addBlockchainAndStart(2L, blockchainConfig2)
 
-        assert(CrossBlockchainTestSynchronizationInfrastructureExtension.queryResult).isEqualTo(gtv(1L))
+        assertThat(CrossBlockchainTestSynchronizationInfrastructureExtension.queryResult).isEqualTo(gtv(1L))
     }
 }
 

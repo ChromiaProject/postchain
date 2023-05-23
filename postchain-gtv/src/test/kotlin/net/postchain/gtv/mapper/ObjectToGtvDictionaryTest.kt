@@ -1,6 +1,6 @@
 package net.postchain.gtv.mapper
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
@@ -14,18 +14,18 @@ class ObjectToGtvDictionaryTest {
 
     @Test
     fun basicMap() {
-        assert(GtvObjectMapper.toGtvDictionary(mapOf("foo" to 1L))).isEqualTo(gtv(mapOf("foo" to gtv(1))))
+        assertThat(GtvObjectMapper.toGtvDictionary(mapOf("foo" to 1L))).isEqualTo(gtv(mapOf("foo" to gtv(1))))
     }
 
     @Test
     fun toGtv() {
-        assert(GtvObjectMapper.toGtvDictionary(WithCustom("FOO", Custom("BAR")))).isEqualTo(gtv(mapOf("foo" to gtv("FOO"), "bar" to gtv("<<<BAR>>>"))))
+        assertThat(GtvObjectMapper.toGtvDictionary(WithCustom("FOO", Custom("BAR")))).isEqualTo(gtv(mapOf("foo" to gtv("FOO"), "bar" to gtv("<<<BAR>>>"))))
     }
 
     @ParameterizedTest(name = "Mapping from {1} to {2}")
     @MethodSource("acceptedTypes")
     fun mappingTest(input: Any, expected: GtvDictionary) {
-        assert(GtvObjectMapper.toGtvDictionary(input)).isEqualTo(expected)
+        assertThat(GtvObjectMapper.toGtvDictionary(input)).isEqualTo(expected)
     }
 
     @ParameterizedTest(name = "Illegal type {1}")

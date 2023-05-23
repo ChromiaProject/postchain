@@ -6,6 +6,8 @@ import mu.KLogging
 import net.postchain.base.*
 import net.postchain.base.SpecialTransactionPosition.Begin
 import net.postchain.base.SpecialTransactionPosition.End
+import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
+import net.postchain.base.extension.FAILED_CONFIG_HASH_EXTRA_HEADER
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
@@ -21,14 +23,13 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import java.lang.Long.max
-import java.util.*
 
 /**
  * BaseBlockBuilder is used to aid in building blocks, including construction and validation of block header and witness
  *
  * @property blockchainRID
  * @property cryptoSystem Crypto utilities
- * @property eContext Connection context including blockchain and node identifiers
+ * @param    eContext Connection context including blockchain and node identifiers
  * @property store For database access
  * @property txFactory Used for serializing transaction data
  * @property specialTxHandler is the main entry point for special transaction handling.
@@ -175,7 +176,8 @@ open class BaseBlockBuilder(
                             BlockchainDependency(bcInfo, HeightDependency(blockRid, dbHeight))
                         } else {
                             // Ok to bang out if we are behind in blocks. Discussed this with Alex (2019-03-29)
-                            throw BadDataMistake(BadDataType.MISSING_DEPENDENCY, "We are not ready to accept the block since block dependency (RID: ${blockRid.toHex()}) is missing.")
+                            throw BadDataMistake(BadDataType.MISSING_DEPENDENCY,
+                                    "We are not ready to accept the block since block dependency (blockRID: ${blockRid.toHex()} from blockchainRID: ${bcInfo.blockchainRid.toHex()}) is missing.")
                         }
                     } else {
                         BlockchainDependency(bcInfo, null) // No blocks required -> allowed
@@ -251,7 +253,18 @@ open class BaseBlockBuilder(
                 _blockData = BlockData(blockHeader, rawTransactions)
                 finalized = true
             }
+
             PREV_BLOCK_MISMATCH -> throw BadDataMistake(BadDataType.PREV_BLOCK_MISMATCH, validationResult.message)
+            INVALID_EXTRA_DATA -> {
+                if (blockHeader is BaseBlockHeader && blockHeader.extraData[CONFIG_HASH_EXTRA_HEADER] != extraData[CONFIG_HASH_EXTRA_HEADER]) {
+                    throw BadDataMistake(BadDataType.CONFIGURATION_MISMATCH, validationResult.message)
+                } else if (blockHeader is BaseBlockHeader && blockHeader.extraData[FAILED_CONFIG_HASH_EXTRA_HEADER] != extraData[FAILED_CONFIG_HASH_EXTRA_HEADER]) {
+                    throw BadDataMistake(BadDataType.FAILED_CONFIGURATION_MISMATCH, validationResult.message)
+                } else {
+                    throw BadDataMistake(BadDataType.BAD_BLOCK, validationResult.message)
+                }
+            }
+
             else -> throw BadDataMistake(BadDataType.BAD_BLOCK, validationResult.message)
         }
     }

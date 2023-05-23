@@ -2,6 +2,7 @@
 
 package net.postchain.integrationtest
 
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import net.postchain.common.BlockchainRid
@@ -18,7 +19,7 @@ import org.apache.commons.lang3.RandomStringUtils
 import org.awaitility.Awaitility
 import org.junit.jupiter.api.Test
 import java.util.concurrent.TimeUnit
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class BlockchainConfigurationTest : IntegrationTestSetup() {
 
@@ -35,10 +36,8 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
             engine.getTransactionQueue().enqueue(TestTransaction(i))
         }
 
-        buildBlockAndCommit(node)
-
         Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
-            val height = getBestHeight(node)
+            val height = getLastHeight(node)
             val acceptedTxs = getTxRidsAtHeight(node, height)
             assertEquals(3, acceptedTxs.size)
         }
@@ -62,8 +61,8 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
         // node1 will instead build first block with the OK tx
         nodes.forEach {
             val txsInBlock = getTxRidsAtHeight(it, 0)
-            assertk.assert(txsInBlock.size).isEqualTo(1)
-            assertk.assert(txsInBlock[0]).isContentEqualTo(okTx.getRID())
+            assertThat(txsInBlock.size).isEqualTo(1)
+            assertThat(txsInBlock[0]).isContentEqualTo(okTx.getRID())
         }
     }
 

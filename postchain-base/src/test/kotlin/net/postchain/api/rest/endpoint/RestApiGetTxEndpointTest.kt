@@ -2,10 +2,12 @@
 
 package net.postchain.api.rest.endpoint
 
+import assertk.assertThat
+import assertk.isContentEqualTo
 import io.restassured.RestAssured.given
+import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
-import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.TxRID
 import net.postchain.common.hexStringToByteArray
 import org.hamcrest.CoreMatchers.equalTo
@@ -40,9 +42,9 @@ class RestApiGetTxEndpointTest {
     }
 
     @Test
-    fun test_getTx_Ok() {
+    fun test_getTx_Ok_Json() {
         whenever(model.getTransaction(TxRID(txHashHex.hexStringToByteArray())))
-                .thenReturn(ApiTx("1234"))
+                .thenReturn("1234".hexStringToByteArray())
 
         restApi.attachModel(blockchainRID, model)
 
@@ -54,9 +56,27 @@ class RestApiGetTxEndpointTest {
     }
 
     @Test
+    fun test_getTx_Ok_Binary() {
+        val tx = "1234".hexStringToByteArray()
+        whenever(model.getTransaction(TxRID(txHashHex.hexStringToByteArray())))
+                .thenReturn(tx)
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = given().basePath(basePath).port(restApi.actualPort())
+                .header("Accept", ContentType.BINARY)
+                .get("/tx/$blockchainRID/$txHashHex")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(tx)
+    }
+
+    @Test
     fun test_getTx_when_slash_appended_Ok() {
         whenever(model.getTransaction(TxRID(txHashHex.hexStringToByteArray())))
-                .thenReturn(ApiTx("1234"))
+                .thenReturn("1234".hexStringToByteArray())
 
         restApi.attachModel(blockchainRID, model)
 
@@ -77,6 +97,21 @@ class RestApiGetTxEndpointTest {
                 .get("/tx/$blockchainRID/$txHashHex")
                 .then()
                 .statusCode(404)
+                .contentType(ContentType.JSON)
+    }
+
+    @Test
+    fun `Errors are in GTV format when querying for GTV`() {
+        whenever(model.getTransaction(TxRID(txHashHex.hexStringToByteArray())))
+                .thenReturn(null)
+        restApi.attachModel(blockchainRID, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .header("Accept", ContentType.BINARY)
+                .get("/tx/$blockchainRID/$txHashHex")
+                .then()
+                .statusCode(404)
+                .contentType(ContentType.BINARY)
     }
 
     @Test

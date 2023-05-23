@@ -21,9 +21,7 @@ data class GtvString(val string: String) : GtvPrimitive() {
 
     override fun asByteArray(convert: Boolean): ByteArray {
         try {
-            if (convert) {
-                return string.hexStringToByteArray()
-            } else return super.asByteArray(convert)
+            return if (convert) string.hexStringToByteArray() else super.asByteArray(false)
         } catch (e: Exception) {
             throw UserMistake("Can't create ByteArray from string '$string'")
         }

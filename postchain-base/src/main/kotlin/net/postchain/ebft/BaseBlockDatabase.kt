@@ -4,7 +4,6 @@ package net.postchain.ebft
 
 import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.block.BlockBuilder
@@ -129,10 +128,6 @@ class BaseBlockDatabase(
             val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block)
             if (exception != null) {
                 addBlockLog("Got error when loading: ${exception.message}")
-                try {
-                    theBlockBuilder.rollback()
-                } catch (ignore: Exception) {
-                }
                 throw exception
             } else {
                 updateBTrace(existingBTrace, theBlockBuilder.getBTrace())
@@ -147,10 +142,6 @@ class BaseBlockDatabase(
             maybeRollback()
             val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block)
             if (exception != null) {
-                try {
-                    theBlockBuilder.rollback()
-                } catch (ignore: Exception) {
-                }
                 throw exception
             } else {
                 blockBuilder = theBlockBuilder
@@ -174,11 +165,7 @@ class BaseBlockDatabase(
             maybeRollback()
             val (theBlockBuilder, exception) = engine.buildBlock()
             if (exception != null) {
-                try {
-                    theBlockBuilder.rollback()
-                } catch (ignore: Exception) {
-                }
-                throw UserMistake("Can't build block: ${exception.message}", exception)
+                throw exception
             } else {
                 blockBuilder = theBlockBuilder
                 witnessBuilder = blockBuilder!!.getBlockWitnessBuilder() as MultiSigBlockWitnessBuilder

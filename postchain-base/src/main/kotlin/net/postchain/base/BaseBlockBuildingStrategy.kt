@@ -31,7 +31,7 @@ class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyConfigu
     private val maxBackoffTime = configData.maxBackoffTime
 
     init {
-        val height = blockQueries.getBestHeight().get()
+        val height = blockQueries.getLastBlockHeight().get()
         lastBlockTime = if (height == -1L) {
             0
         } else {

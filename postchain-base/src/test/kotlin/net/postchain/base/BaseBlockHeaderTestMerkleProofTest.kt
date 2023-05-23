@@ -5,7 +5,7 @@ import net.postchain.common.types.WrappedByteArray
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class BaseBlockHeaderTestMerkleProofTest {
     val blockchainRID = BlockchainRid.ZERO_RID

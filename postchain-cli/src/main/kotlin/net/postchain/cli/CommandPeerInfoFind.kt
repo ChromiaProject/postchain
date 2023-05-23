@@ -21,7 +21,7 @@ class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find pe
 
     private val port by portOption()
 
-    private val pubKey by option("-pk", "--pubkey", help = "Public key (or substring)")
+    private val pubKey by option("-pk", "--pubkey", help = "Public key (or hex substring)")
 
     override fun run() {
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)

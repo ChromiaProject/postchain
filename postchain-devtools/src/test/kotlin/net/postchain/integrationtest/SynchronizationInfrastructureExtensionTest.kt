@@ -1,6 +1,6 @@
 package net.postchain.integrationtest
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
@@ -23,11 +23,11 @@ class SynchronizationInfrastructureExtensionTest : IntegrationTestSetup() {
 
         buildBlock(1L, 0)
 
-        assert(connected[1L]!!).isTrue()
+        assertThat(connected[1L]!!).isTrue()
 
         nodes[0].stopBlockchain(1L)
 
-        assert(connected[1L]!!).isFalse()
+        assertThat(connected[1L]!!).isFalse()
     }
 
     @Test
@@ -49,7 +49,7 @@ class SynchronizationInfrastructureExtensionTest : IntegrationTestSetup() {
         nodes[0].stopBlockchain(1L)
 
         // Assert that faulty extension does not prevent REST API model from being removed
-        assert(nodes[0].getRestApiModel(bcRid)).isNull()
+        assertThat(nodes[0].getRestApiModel(bcRid)).isNull()
     }
 }
 

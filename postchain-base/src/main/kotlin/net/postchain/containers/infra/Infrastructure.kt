@@ -10,8 +10,10 @@ import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
+import net.postchain.network.mastersub.master.MasterConnectionManager
 
 interface MasterSyncInfra : SynchronizationInfrastructure {
+    val masterConnectionManager: MasterConnectionManager
 
     fun makeMasterBlockchainProcess(
             processName: BlockchainProcessName,

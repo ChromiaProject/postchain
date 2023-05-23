@@ -21,9 +21,13 @@ import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.EagerDiagnosticValue
+import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
+import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
+import net.postchain.ebft.syncmanager.common.KnownState
+import net.postchain.ebft.syncmanager.common.SyncMethod
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import java.lang.Thread.sleep
 import java.util.concurrent.CompletableFuture
@@ -58,6 +62,10 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
             ::isProcessRunning
     )
 
+    private var syncMethod = SyncMethod.NOT_SYNCING
+    private var isSyncingHistoric = false
+    private val myPubKey = workerContext.appConfig.pubKey
+
     // Logging only
     var blockTrace: BlockTrace? = null // For logging only
     val myBRID = blockchainEngine.getConfiguration().blockchainRid
@@ -65,25 +73,28 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     override fun action() {
         val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)
 
-        val bestHeightSoFar = blockchainEngine.getBlockQueries().getBestHeight().get()
-        initDebug("Historic sync bc ${myBRID}, height: $bestHeightSoFar")
+        val lastHeightSoFar = blockchainEngine.getBlockQueries().getLastBlockHeight().get()
+        initDebug("Historic sync bc ${myBRID}, height: $lastHeightSoFar")
 
         // try local sync first
         for (brid in chainsToSyncFrom) {
             if (!isProcessRunning()) break
             if (brid == myBRID) continue
+            syncMethod = SyncMethod.LOCAL_DB
             copyBlocksLocally(brid, blockDatabase)
         }
 
         // try syncing via network
         for (brid in chainsToSyncFrom) {
             if (!isProcessRunning()) break
+            syncMethod = SyncMethod.FAST_SYNC
             copyBlocksNetwork(brid, myBRID, blockDatabase, fastSynchronizer.params)
             if (!isProcessRunning()) break // Check before sleep
             initTrace("Network synch go sleep")
             sleep(1000)
             initTrace("Network synch waking up")
         }
+        syncMethod = SyncMethod.NOT_SYNCING
         if (!isProcessRunning()) return // Check before sleep
         initTrace("Network synch full go sleep")
         sleep(1000)
@@ -116,7 +127,9 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                 try {
                     val historicWorkerContext = historicBlockchainContext.contextCreator(brid)
                     historicSynchronizer = FastSynchronizer(historicWorkerContext, blockDatabase, params, ::isProcessRunning)
+                    isSyncingHistoric = true
                     historicSynchronizer!!.syncUntilResponsiveNodesDrained()
+                    isSyncingHistoric = false
                     netDebug("Done network sync")
                     historicWorkerContext.communicationManager.shutdown()
                 } catch (e: Exception) {
@@ -170,7 +183,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         try {
             lastHeight = fromBstore.getLastBlockHeight(fromCtx)
             if (lastHeight == -1L) return // no block = nothing to do
-            val ourHeight = blockchainEngine.getBlockQueries().getBestHeight().get()
+            val ourHeight = blockchainEngine.getBlockQueries().getLastBlockHeight().get()
             if (lastHeight > ourHeight) {
                 if (ourHeight > -1L) {
                     // Just a verification of Block RID being the same
@@ -361,6 +374,27 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
 
     override fun registerDiagnosticData(diagnosticData: DiagnosticData) {
         super.registerDiagnosticData(diagnosticData)
-        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] =  EagerDiagnosticValue(DpNodeType.NODE_TYPE_HISTORIC_REPLICA.prettyName)
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_HISTORIC_REPLICA.prettyName)
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS] = LazyDiagnosticValue {
+            StateNodeStatus(
+                    myPubKey,
+                    DpNodeType.NODE_TYPE_HISTORIC_REPLICA.name,
+                    syncMethod.name,
+                    blockchainEngine.getBlockQueries().getLastBlockHeight().get())
+        }
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES] = LazyDiagnosticValue {
+            val peerStates: List<Pair<String, KnownState>> = when (syncMethod) {
+                SyncMethod.FAST_SYNC ->
+                    if (isSyncingHistoric)
+                        historicSynchronizer?.peerStatuses?.peersStates ?: emptyList()
+                    else
+                        fastSynchronizer.peerStatuses.peersStates
+
+                else -> emptyList()
+            }
+            peerStates.map { (pubKey, knownState) -> StateNodeStatus(pubKey, "PEER", knownState.state.name) }
+        }
     }
+
+    override fun isSigner() = false // TODO: [pcu]: false?
 }

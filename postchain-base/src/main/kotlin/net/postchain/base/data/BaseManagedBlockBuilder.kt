@@ -3,11 +3,13 @@
 package net.postchain.base.data
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.base.data.SqlUtils.isClosed
 import net.postchain.base.data.SqlUtils.isFatal
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionFailed
 import net.postchain.common.exception.TransactionIncorrect
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.EContext
 import net.postchain.core.Storage
@@ -19,16 +21,21 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.BlockWitnessBuilder
 import net.postchain.core.block.ManagedBlockBuilder
+import net.postchain.logging.CHAIN_IID_TAG
 import java.sql.SQLException
+import java.sql.Savepoint
 import kotlin.system.exitProcess
 
 /**
  * Wrapper around BlockBuilder providing more control over the process of building blocks,
  * with checks to see if current working block has been committed or not, and rolling back
- * database state in case some operation fails
+ * database state in case some operation fails.
+ *
+ * Despite its name, it is not related to managed mode.
  *
  * @property eContext Connection context including blockchain and node identifiers
  * @property storage For database access
+ * @property savepoint DB save point to rollback to in case block building fails
  * @property blockBuilder The base block builder
  * @property afterCommit Clean-up function to be called when block has been committed
  * @property closed Boolean for if block is open to further modifications and queries. It is closed if
@@ -37,6 +44,7 @@ import kotlin.system.exitProcess
  */
 class BaseManagedBlockBuilder(
         private val eContext: EContext,
+        private val savepoint: Savepoint,
         val storage: Storage,
         val blockBuilder: BlockBuilder,
         val beforeCommit: (BlockBuilder) -> Unit,
@@ -97,30 +105,29 @@ class BaseManagedBlockBuilder(
      * @return exception if error occurs
      */
     override fun maybeAppendTransaction(tx: Transaction): Exception? {
-        val action = {
-            blockBuilder.appendTransaction(tx)
-        }
+        withLoggingContext(CHAIN_IID_TAG to eContext.chainID.toString()) {
+            val action = {
+                blockBuilder.appendTransaction(tx)
+            }
 
-        return if (storage.isSavepointSupported()) {
-            storage.withSavepoint(eContext, action).also {
-                if (it != null) {
-                    when (it) {
-                        is TransactionIncorrect -> logger.debug {
-                            "Tx Incorrect ${tx.getRID().toHex()}."
-                        }   // Don't log stacktrace
-                        is TransactionFailed -> logger.debug {
-                            "Tx failed ${tx.getRID().toHex()}."
-                        } // Don't log stacktrace
-                        else -> logger.error(
-                                "Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}.", it
-                        ) // Should be unusual, so let's log everything
+            return if (storage.isSavepointSupported()) {
+                storage.withSavepoint(eContext, action).also {
+                    if (it != null) {
+                        when (it) {
+                            // Don't log stacktrace
+                            is TransactionIncorrect -> logger.debug { "Tx Incorrect ${tx.getRID().toHex()}." }
+                            is TransactionFailed -> logger.debug { "Tx failed ${tx.getRID().toHex()}." }
+                            is UserMistake -> logger.debug(it) { "Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}." }
+                            // Should be unusual, so let's log everything
+                            else -> logger.error("Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}.", it)
+                        }
                     }
                 }
+            } else {
+                logger.warn("Savepoint not supported! Unclear if Postchain will work under these conditions")
+                action()
+                null
             }
-        } else {
-            logger.warn("Savepoint not supported! Unclear if Postchain will work under these conditions")
-            action()
-            null
         }
     }
 
@@ -160,12 +167,17 @@ class BaseManagedBlockBuilder(
         commitLog("End")
     }
 
+    override val height: Long?
+        get() = blockBuilder.height
+
     override fun rollback() {
         rollbackDebugLog("Start")
         synchronized(storage) {
             if (!closed) {
                 rollbackLog("Got lock")
-                storage.closeWriteConnection(eContext, false)
+                if (!eContext.conn.isClosed) {
+                    eContext.conn.rollback(savepoint)
+                }
                 closed = true
             }
         }

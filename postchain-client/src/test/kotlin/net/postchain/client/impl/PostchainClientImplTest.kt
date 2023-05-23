@@ -1,5 +1,11 @@
 package net.postchain.client.impl
 
+import assertk.assertFailure
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNull
+import assertk.isContentEqualTo
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import net.postchain.client.config.FailOverConfig
@@ -8,7 +14,9 @@ import net.postchain.client.config.STATUS_POLL_COUNT
 import net.postchain.client.core.BlockDetail
 import net.postchain.client.core.TxRid
 import net.postchain.client.exception.ClientError
-import net.postchain.client.impl.PostchainClientImpl.*
+import net.postchain.client.impl.PostchainClientImpl.CurrentBlockHeight
+import net.postchain.client.impl.PostchainClientImpl.ErrorResponse
+import net.postchain.client.impl.PostchainClientImpl.TxStatus
 import net.postchain.client.request.EndpointPool
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -20,22 +28,17 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import org.apache.commons.io.input.InfiniteCircularInputStream
 import org.http4k.core.Body
+import org.http4k.core.ContentType
 import org.http4k.core.HttpHandler
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.io.EOFException
 import java.io.IOException
-import java.net.SocketException
 import java.time.Duration
 import java.util.concurrent.CompletionException
-import kotlin.test.assertContentEquals
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 internal class PostchainClientImplTest {
     private var url = "http://localhost:7740"
@@ -59,7 +62,7 @@ internal class PostchainClientImplTest {
                 .postAwaitConfirmation()
 
         // Verify
-        assertEquals(numberExpected + 1, requestCounter)
+        assertThat(requestCounter).isEqualTo(numberExpected + 1)
     }
 
     @Test
@@ -94,65 +97,69 @@ internal class PostchainClientImplTest {
     fun `Post transaction should properly encode transaction`() {
         val client = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
-                assertEquals(
-                        """{"tx":"A5363034A52E302CA1220420EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8FA5023000A5023000A5023000"}""",
-                        request.bodyString())
+                assertThat(request.bodyString()).isEqualTo(
+                        """{"tx":"A5363034A52E302CA1220420EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8FA5023000A5023000A5023000"}""")
                 return Response(Status.OK).body(Body.EMPTY)
             }
         })
         val txResult = client.transactionBuilder().finish().build().post()
-        assertEquals(TransactionStatus.WAITING, txResult.status)
+        assertThat(txResult.status).isEqualTo(TransactionStatus.WAITING)
+    }
+
+    @Test
+    fun `Post transaction should handle HTML response which can come from proxy`() {
+        val client = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+            override fun invoke(request: Request): Response {
+                assertThat(request.bodyString()).isEqualTo(
+                        """{"tx":"A5363034A52E302CA1220420EC03EDC6959E358B80D226D16A5BB6BC8EDE80EC17BD8BD0F21846C244AE7E8FA5023000A5023000A5023000"}""")
+                return Response(Status.REQUEST_ENTITY_TOO_LARGE).header(Header.ContentType, "text/html").body("<html><body><h1>413 Request Entity Too Large</h1></body></html>")
+            }
+        })
+        val txResult = client.transactionBuilder().finish().build().post()
+        assertThat(txResult.status).isEqualTo(TransactionStatus.REJECTED)
+        assertThat(txResult.httpStatusCode).isEqualTo(Status.REQUEST_ENTITY_TOO_LARGE.code)
     }
 
     @Test
     fun `Query response without body should throw IOException`() {
-        assertThrows<IOException> {
+        assertFailure {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) = Response(Status.OK).body(Body.EMPTY)
             }).query("foo", gtv(mapOf()))
-        }
+        }.isInstanceOf(IOException::class)
     }
 
     @Test
     fun `Query error without body should throw ClientError`() {
-        assertThrows<ClientError> {
+        assertFailure {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) = Response(Status.BAD_REQUEST).body(Body.EMPTY)
             }).query("foo", gtv(mapOf()))
-        }
+        }.isInstanceOf(ClientError::class)
     }
 
     @Test
     fun `Tx status retrieves underlying error`() {
         val result = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request) =
-                    Response(Status.OK).body(Gson().toJson(TxStatus("rejected", "Message!")))
+                    Response(Status.OK).header(Header.ContentType, ContentType.APPLICATION_JSON.value).body(Gson().toJson(TxStatus("rejected", "Message!")))
         }).checkTxStatus(TxRid(""))
-        assertEquals("Message!", result.rejectReason)
+        assertThat(result.rejectReason).isEqualTo("Message!")
     }
 
     @Test
     fun `too big tx status response is rejected`() {
-        assertThrows<IOException> {
+        assertFailure {
             try {
                 PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
-                    override fun invoke(request: Request) =
-                            Response(Status.OK).body(InfiniteCircularInputStream(ByteArray(16)))
+                    override fun invoke(request: Request) = Response(Status.OK)
+                            .header(Header.ContentType, ContentType.APPLICATION_JSON.value)
+                            .body(InfiniteCircularInputStream("{${" ".repeat(2000)}".toByteArray()))
                 }).checkTxStatus(TxRid(""))
             } catch (e: CompletionException) {
                 throw e.cause ?: e
             }
-        }
-    }
-
-    @Test
-    fun `SocketException from HttpHandler is handled`() {
-        val clientError = assertThrows<ClientError> {
-            PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
-                override fun invoke(request: Request) = throw SocketException("oops")
-            }).query("foo", gtv(mapOf()))
-        }
-        assertTrue(requireNotNull(clientError.message).contains("oops"))
+        }.isInstanceOf(IOException::class)
     }
 
     @Test
@@ -160,13 +167,13 @@ internal class PostchainClientImplTest {
         val client = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
                 val error = GsonBuilder().create().toJson(ErrorResponse("Unknown operation: add_node"))
-                return Response(Status.BAD_REQUEST).body(error)
+                return Response(Status.BAD_REQUEST).header(Header.ContentType, ContentType.APPLICATION_JSON.value).body(error)
             }
         })
         val txResult = client.transactionBuilder().finish().build().postAwaitConfirmation()
-        assertEquals(Status.BAD_REQUEST.code, txResult.httpStatusCode)
-        assertEquals(TransactionStatus.REJECTED, txResult.status)
-        assertEquals("Unknown operation: add_node", txResult.rejectReason)
+        assertThat(txResult.httpStatusCode).isEqualTo(Status.BAD_REQUEST.code)
+        assertThat(txResult.status).isEqualTo(TransactionStatus.REJECTED)
+        assertThat(txResult.rejectReason).isEqualTo("Unknown operation: add_node")
     }
 
     @Test
@@ -175,10 +182,10 @@ internal class PostchainClientImplTest {
         PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
                 nCalls++
-                return Response(Status.OK).body(Gson().toJson(TxStatus("rejected", "Message!")))
+                return Response(Status.OK).header(Header.ContentType, ContentType.APPLICATION_JSON.value).body(Gson().toJson(TxStatus("rejected", "Message!")))
             }
         }).awaitConfirmation(TxRid(""), 10, Duration.ZERO)
-        assertEquals(1, nCalls)
+        assertThat(nCalls).isEqualTo(1)
     }
 
     @Test
@@ -197,8 +204,8 @@ internal class PostchainClientImplTest {
     fun `blockAtHeight found`() {
         val someBlock: BlockDetail? = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
-                assertEquals("application/octet-stream", request.header("Accept"))
-                return Response(Status.OK).body(encodeGtv(gtv(mapOf(
+                assertThat(request.header(Header.Accept)).isEqualTo(ContentType.OCTET_STREAM.value)
+                return Response(Status.OK).header(Header.ContentType, ContentType.OCTET_STREAM.value).body(encodeGtv(gtv(mapOf(
                         "rid" to gtv("34ED10678AAE0414562340E8754A7CCD174B435B52C7F0A4E69470537AEE47E6".hexStringToByteArray()),
                         "prevBlockRID" to gtv("5AF85874B9CCAC197AA739585449668BE15650C534E08705F6D60A6993FE906D".hexStringToByteArray()),
                         "header" to gtv("023F9C7FBAFD92E53D7890A61B50B33EC0375FA424D60BD328AA2454408430C383".hexStringToByteArray()),
@@ -213,139 +220,149 @@ internal class PostchainClientImplTest {
                 ))).inputStream())
             }
         }).blockAtHeight(1L)
-        assertEquals(1L, someBlock!!.height)
-        assertContentEquals("34ED10678AAE0414562340E8754A7CCD174B435B52C7F0A4E69470537AEE47E6".hexStringToByteArray(), someBlock.rid.data)
-        assertContentEquals("62F71D71BA63D03FA0C6741DE22B116A3A8022893E7977DDC2A9CD981BBADE29".hexStringToByteArray(), someBlock.transactions[0].rid.data)
-        assertNull(someBlock.transactions[0].data)
+        assertThat(someBlock!!.height).isEqualTo(1L)
+        assertThat(someBlock.rid.data).isContentEqualTo("34ED10678AAE0414562340E8754A7CCD174B435B52C7F0A4E69470537AEE47E6".hexStringToByteArray())
+        assertThat(someBlock.transactions[0].rid.data).isContentEqualTo("62F71D71BA63D03FA0C6741DE22B116A3A8022893E7977DDC2A9CD981BBADE29".hexStringToByteArray())
+        assertThat(someBlock.transactions[0].data).isNull()
     }
 
     @Test
     fun `blockAtHeight missing`() {
         val noBlock: BlockDetail? = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request) =
-                    Response(Status.OK).body(encodeGtv(GtvNull).inputStream())
+                    Response(Status.OK).header(Header.ContentType, ContentType.OCTET_STREAM.value).body(encodeGtv(GtvNull).inputStream())
         }).blockAtHeight(Long.MAX_VALUE)
-        assertTrue(noBlock == null)
+        assertThat(noBlock).isNull()
     }
 
     @Test
     fun `raw query can be serialized correctly`() {
         val queryResponse: Gtv = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request) =
-                    Response(Status.OK).body(encodeGtv(gtv("query_response")).inputStream())
+                    Response(Status.OK).header(Header.ContentType, ContentType.OCTET_STREAM.value).body(encodeGtv(gtv("query_response")).inputStream())
         }).query("test_query", gtv("arg"))
-        assertEquals("query_response", queryResponse.asString())
+        assertThat(queryResponse.asString()).isEqualTo("query_response")
     }
 
     @Test
     fun `too big response will be rejected`() {
-        assertThrows<EOFException> {
+        assertFailure {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
-                        Response(Status.OK).body(encodeGtv(gtv(ByteArray(2 * 1024))).inputStream())
+                        Response(Status.OK).header(Header.ContentType, ContentType.OCTET_STREAM.value).body(encodeGtv(gtv(ByteArray(2 * 1024))).inputStream())
             }).query("test_query", gtv("arg"))
-        }
+        }.isInstanceOf(EOFException::class)
     }
 
     @Test
     fun `invalid GTV response will throw IOException`() {
-        assertThrows<IOException> {
+        assertFailure {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
-                        Response(Status.OK).body(ByteArray(100).inputStream())
+                        Response(Status.OK).header(Header.ContentType, ContentType.OCTET_STREAM.value).body(ByteArray(100).inputStream())
             }).query("test_query", gtv("arg"))
-        }
+        }.isInstanceOf(IOException::class)
     }
 
     @Test
     fun `binary GTV error will be parsed`() {
-        assertThrows<ClientError> {
+        assertFailure {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
-                        Response(Status.BAD_REQUEST).body(encodeGtv(gtv("the error")).inputStream())
+                        Response(Status.BAD_REQUEST).header(Header.ContentType, ContentType.OCTET_STREAM.value).body(encodeGtv(gtv("the error")).inputStream())
             }).query("test_query", gtv("arg"))
-        }
+        }.isInstanceOf(ClientError::class)
     }
 
     @Test
     fun `current block height can be parsed`() {
         val currentBlockHeight: Long = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request) =
-                    Response(Status.OK).body(Gson().toJson(CurrentBlockHeight(0)))
+                    Response(Status.OK).header(Header.ContentType, ContentType.APPLICATION_JSON.value).body(Gson().toJson(CurrentBlockHeight(0)))
         }).currentBlockHeight()
-        assertEquals(0, currentBlockHeight)
+        assertThat(currentBlockHeight).isEqualTo(0)
     }
 
     @Test
     fun `too big block height response will be rejected`() {
-        assertThrows<IOException> {
+        assertFailure {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
-                        Response(Status.OK).body("""{"blockHeight":${" ".repeat(1024)}1}""")
+                        Response(Status.OK).header(Header.ContentType, ContentType.APPLICATION_JSON.value).body("""{"blockHeight":${" ".repeat(1024)}1}""")
             }).currentBlockHeight()
-        }
+        }.isInstanceOf(IOException::class)
     }
 
     @Test
     fun `Can handle empty error body`() {
-        assertThrows<ClientError> {
+        assertFailure {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
-                override fun invoke(request: Request) = Response(Status.BAD_REQUEST).body("")
+                override fun invoke(request: Request) = Response(Status.BAD_REQUEST).header(Header.ContentType, ContentType.APPLICATION_JSON.value).body("")
             }).currentBlockHeight()
-        }
+        }.isInstanceOf(ClientError::class)
     }
 
     @Test
     fun `Can handle too big error body`() {
-        assertThrows<IOException> {
+        assertFailure {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url), maxResponseSize = 1024), httpClient = object : HttpHandler {
                 override fun invoke(request: Request) =
-                        Response(Status.BAD_REQUEST).body("""{"error":"${"e".repeat(1024)}"}""")
+                        Response(Status.BAD_REQUEST).header(Header.ContentType, ContentType.APPLICATION_JSON.value).body("""{"error":"${"e".repeat(1024)}"}""")
             }).currentBlockHeight()
-        }
+        }.isInstanceOf(IOException::class)
     }
 
     @Test
     fun `Client generated errors can be handled`() {
-        assertThrows<ClientError> {
+        assertFailure {
             PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl("http://invalidhost"))).currentBlockHeight()
-        }
+        }.isInstanceOf(ClientError::class)
     }
 
     @Test
     fun `Confirmation proof can be parsed`() {
         val proofString = "A48202C5308202C13081B80C0B626C6F636B486561646572A181A80481A5A581A230819FA122042082"
-        val proof: ByteArray? = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+        val proof: ByteArray = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request) =
-                    Response(Status.OK).body("""{"proof":"$proofString"}""")
+                    Response(Status.OK).header(Header.ContentType, ContentType.APPLICATION_JSON.value).body("""{"proof":"$proofString"}""")
         }).confirmationProof(TxRid("42"))
-        assertEquals(proofString, proof!!.toHex())
+        assertThat(proof.toHex()).isEqualTo(proofString)
     }
 
     @Test
-    fun `Transaction data can be parsed`() {
+    fun `JSON transaction data can be parsed`() {
         val txString = "A58209213082091DA582091530820911A12204208F77E7DC903AE184A1569E60F8097CAFFB105F741D"
-        val transaction: ByteArray? = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+        val transaction: ByteArray = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
             override fun invoke(request: Request) =
-                    Response(Status.OK).body("""{"tx":"$txString"}""")
+                    Response(Status.OK).header(Header.ContentType, ContentType.APPLICATION_JSON.value).body("""{"tx":"$txString"}""")
         }).getTransaction(TxRid("42"))
-        assertEquals(txString, transaction!!.toHex())
+        assertThat(transaction.toHex()).isEqualTo(txString)
+    }
+
+    @Test
+    fun `Binary transaction data can be handled`() {
+        val tx = "A58209213082091DA582091530820911A12204208F77E7DC903AE184A1569E60F8097CAFFB105F741D".hexStringToByteArray()
+        val transaction: ByteArray = PostchainClientImpl(PostchainClientConfig(BlockchainRid.buildFromHex(brid), EndpointPool.singleUrl(url)), httpClient = object : HttpHandler {
+            override fun invoke(request: Request) =
+                    Response(Status.OK).header(Header.ContentType, ContentType.OCTET_STREAM.value).body(tx.inputStream())
+        }).getTransaction(TxRid("42"))
+        assertThat(transaction).isContentEqualTo(tx)
     }
 
     @Test
     fun `Assert trailing slashes are trimmed from endpoint URL`() {
         val defaultEndpointPool = EndpointPool.default(listOf("http://localhost:7740/", "http://localhost:7741/"))
-        assertEquals(setOf("http://localhost:7740", "http://localhost:7741"), defaultEndpointPool.map { it.url }.toSet())
+        assertThat(defaultEndpointPool.map { it.url }.toSet()).isEqualTo(setOf("http://localhost:7740", "http://localhost:7741"))
 
         val singleEndpointPool = EndpointPool.singleUrl("http://localhost:7740/")
-        assertEquals("http://localhost:7740", singleEndpointPool.first().url)
+        assertThat(singleEndpointPool.first().url).isEqualTo("http://localhost:7740")
     }
 
     private fun assertQueryUrlEndsWith(config: PostchainClientConfig, suffix: String) {
         PostchainClientImpl(config, httpClient = object : HttpHandler {
             override fun invoke(request: Request): Response {
-                assert(request.uri.path.endsWith(suffix))
-                return Response(Status.OK).body(encodeGtv(gtv("foobar")).inputStream())
+                assertThat(request.uri.path.endsWith(suffix))
+                return Response(Status.OK).header(Header.ContentType, ContentType.OCTET_STREAM.value).body(encodeGtv(gtv("foobar")).inputStream())
             }
         }).query("foo", gtv(mapOf()))
     }

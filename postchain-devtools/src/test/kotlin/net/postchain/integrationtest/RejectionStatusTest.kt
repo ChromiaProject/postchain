@@ -1,6 +1,6 @@
 package net.postchain.integrationtest
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import net.postchain.common.tx.TransactionStatus
@@ -20,20 +20,20 @@ class RejectionStatusTest : IntegrationTestSetup() {
         buildBlock(1L, 0, errorTx)
 
         val status = nodes[0].transactionQueue(1L).getTransactionStatus(txHash)
-        assert(status).isEqualTo(TransactionStatus.REJECTED)
+        assertThat(status).isEqualTo(TransactionStatus.REJECTED)
 
         val correctTx = TestTransaction(0)
         // Sanity check that we have the same tx hash for the correct tx
-        assert(correctTx.getHash().contentEquals(txHash)).isTrue()
+        assertThat(correctTx.getHash().contentEquals(txHash)).isTrue()
 
         nodes[0].enqueueTxs(1L, correctTx)
         val resubmittedStatus = nodes[0].transactionQueue(1L).getTransactionStatus(txHash)
-        assert(resubmittedStatus).isEqualTo(TransactionStatus.WAITING)
+        assertThat(resubmittedStatus).isEqualTo(TransactionStatus.WAITING)
 
         buildBlock(1L, 1)
         val afterBuildStatus = nodes[0].transactionQueue(1L).getTransactionStatus(txHash)
         // Queue now has no info about this tx (have to check DB to see if it was successful)
-        assert(afterBuildStatus).isEqualTo(TransactionStatus.UNKNOWN)
+        assertThat(afterBuildStatus).isEqualTo(TransactionStatus.UNKNOWN)
     }
 
 }

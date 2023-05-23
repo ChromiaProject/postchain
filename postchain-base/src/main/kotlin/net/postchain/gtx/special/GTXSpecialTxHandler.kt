@@ -81,7 +81,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
      * @return true if all special operations of all extensions valid
      */
     override fun validateSpecialTransaction(position: SpecialTransactionPosition, tx: Transaction, bctx: BlockEContext): Boolean {
-        val operations = (tx as GTXTransaction).gtxData.gtxBody.operations.map { it.toOpData() }
+        val operations = (tx as GTXTransaction).gtxData.gtxBody.operations.map { it.asOpData() }
 
         // empty ops
         if (operations.isEmpty()) {

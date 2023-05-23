@@ -1,6 +1,7 @@
 package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
+import java.util.*
 
 /**
  * Keeps notes on a single peer. Some rules:
@@ -23,11 +24,12 @@ open class KnownState(val params: SyncParameters) {
 
     companion object : KLogging()
 
-    protected enum class State {
+    enum class State {
         BLACKLISTED, UNRESPONSIVE, SYNCABLE, DRAINED
     }
 
-    protected var state = State.SYNCABLE
+    var state = State.SYNCABLE
+        protected set
 
     /**
      * [maybeLegacy] and [confirmedModern] are transitional and should be
@@ -39,7 +41,9 @@ open class KnownState(val params: SyncParameters) {
     private var confirmedModern = false
     private var unresponsiveTime: Long = 0
 
-    private var errorCount = 0
+    // Queue containing times in ms, when errors has occurred.
+    private val errors = ArrayDeque<Long>()
+
     private var timeOfLastError: Long = 0
 
     private var disconnectedSince: Long = 0
@@ -53,7 +57,7 @@ open class KnownState(val params: SyncParameters) {
             }
             this.state = State.SYNCABLE
             this.timeOfLastError = 0
-            this.errorCount = 0
+            this.errors.clear()
         }
 
         return state == State.BLACKLISTED
@@ -70,7 +74,6 @@ open class KnownState(val params: SyncParameters) {
 
         return state == State.UNRESPONSIVE
     }
-
 
 
     fun isMaybeLegacy() = !confirmedModern && maybeLegacy
@@ -101,6 +104,7 @@ open class KnownState(val params: SyncParameters) {
             this.maybeLegacy = isLegacy
         }
     }
+
     fun confirmedModern() {
         if (logger.isDebugEnabled) {
             if (!this.confirmedModern) {
@@ -112,19 +116,27 @@ open class KnownState(val params: SyncParameters) {
     }
 
     fun blacklist(desc: String, now: Long) {
-        if (this.state != State.BLACKLISTED) {
-            errorCount++
-            if (errorCount >= params.maxErrorsBeforeBlacklisting) {
-                logger.warn("Blacklisting peer: $desc")
-                this.state = State.BLACKLISTED
-                this.timeOfLastError = now
-            } else {
-                if (logger.isTraceEnabled) {
-                    logger.trace("Not blacklisting peer: $desc")
-                }
-                this.timeOfLastError = now
-            }
+        addError(now)
+        if (shouldBlacklist()) {
+            logger.warn { "Blacklisting peer: $desc" }
+            this.state = State.BLACKLISTED
+        } else if (shouldUnBlacklist()) {
+            logger.info { "Un-blacklisting peer: $desc" }
+            this.state = State.SYNCABLE
+        } else {
+            logger.trace { "Not blacklisting peer: $desc" }
         }
+        this.timeOfLastError = now
+    }
+
+    private fun shouldUnBlacklist() = this.state == State.BLACKLISTED && errors.size < params.maxErrorsBeforeBlacklisting
+
+    private fun shouldBlacklist() = this.state != State.BLACKLISTED && errors.size >= params.maxErrorsBeforeBlacklisting
+
+    private fun addError(now: Long) {
+        errors.removeIf { now > it + params.blacklistingErrorTimeoutMs }
+        if (errors.size == params.maxErrorsBeforeBlacklisting) errors.pop()
+        errors.push(now)
     }
 
     fun disconnected(now: Long) {

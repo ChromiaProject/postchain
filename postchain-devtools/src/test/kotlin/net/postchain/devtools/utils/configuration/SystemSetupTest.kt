@@ -5,8 +5,8 @@ import net.postchain.devtools.utils.configuration.pre.SystemPreSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 
 class SystemSetupTest {
 

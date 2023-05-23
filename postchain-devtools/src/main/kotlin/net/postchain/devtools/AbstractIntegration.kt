@@ -86,7 +86,7 @@ abstract class AbstractIntegration {
         return blockQueries.getBlockTransactionRids(blockRid!!).get().toTypedArray()
     }
 
-    protected fun getBestHeight(node: PostchainTestNode): Long {
-        return node.getBlockchainInstance().blockchainEngine.getBlockQueries().getBestHeight().get()
+    protected fun getLastHeight(node: PostchainTestNode): Long {
+        return node.getBlockchainInstance().blockchainEngine.getBlockQueries().getLastBlockHeight().get()
     }
 }

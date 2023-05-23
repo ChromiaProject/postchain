@@ -12,7 +12,7 @@ import javax.sql.DataSource
 
 object StorageBuilder {
 
-    private const val DB_VERSION = 3
+    private const val DB_VERSION = 7
 
     fun buildStorage(appConfig: AppConfig, wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION): Storage {
         val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
@@ -86,6 +86,11 @@ object StorageBuilder {
             }
         }
 
+    }
+
+    fun wipeDatabase(appConfig: AppConfig) {
+        val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
+        wipeDatabase(createBasicDataSource(appConfig), appConfig, db)
     }
 
     private fun wipeDatabase(dataSource: DataSource, appConfig: AppConfig, db: DatabaseAccess) {

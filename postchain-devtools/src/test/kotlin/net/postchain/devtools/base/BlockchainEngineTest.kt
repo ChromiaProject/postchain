@@ -36,7 +36,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
 
         txQueue.enqueue(TestTransaction(0))
         buildBlockAndCommit(node)
-        assertEquals(0, getBestHeight(node))
+        assertEquals(0, getLastHeight(node))
         val riDsAtHeight0 = getTxRidsAtHeight(node, 0)
         assertEquals(1, riDsAtHeight0.size)
         assertArrayEquals(TestTransaction(id = 0).getRID(), riDsAtHeight0[0])
@@ -44,7 +44,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
         txQueue.enqueue(TestTransaction(1))
         txQueue.enqueue(TestTransaction(2))
         buildBlockAndCommit(node)
-        assertEquals(1, getBestHeight(node))
+        assertEquals(1, getLastHeight(node))
         assertTrue(riDsAtHeight0.contentDeepEquals(getTxRidsAtHeight(node, 0)))
         val riDsAtHeight1 = getTxRidsAtHeight(node, 1)
         assertTrue(riDsAtHeight1.contentDeepEquals(Array(2, { TestTransaction(it + 1).getRID() })))
@@ -60,7 +60,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
         txQueue.enqueue(TestTransaction(10))
 
         buildBlockAndCommit(node)
-        assertEquals(2, getBestHeight(node))
+        assertEquals(2, getLastHeight(node))
         assertTrue(riDsAtHeight1.contentDeepEquals(getTxRidsAtHeight(node, 1)))
         val txRIDsAtHeight2 = getTxRidsAtHeight(node, 2)
         assertEquals(1, txRIDsAtHeight2.size)
@@ -74,7 +74,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
         val blockData = createBlockWithTxAndCommit(node0, 0)
 
         loadUnfinishedAndCommit(node1, blockData)
-        assertEquals(0, getBestHeight(node1))
+        assertEquals(0, getLastHeight(node1))
         val riDsAtHeight0 = getTxRidsAtHeight(node1, 0)
         assertEquals(0, riDsAtHeight0.size)
     }
@@ -86,7 +86,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
         val blockData = createBlockWithTxAndCommit(node0, 2)
         loadUnfinishedAndCommit(node1, blockData)
 
-        assertEquals(0, getBestHeight(node1))
+        assertEquals(0, getLastHeight(node1))
         val riDsAtHeight0 = getTxRidsAtHeight(node1, 0)
         assertTrue(riDsAtHeight0.contentDeepEquals(Array(2) { TestTransaction(it).getRID() }))
     }
@@ -99,7 +99,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
             val blockData = createBlockWithTxAndCommit(node0, 2, i * 2)
             loadUnfinishedAndCommit(node1, blockData)
 
-            assertEquals(i.toLong(), getBestHeight(node1))
+            assertEquals(i.toLong(), getLastHeight(node1))
             val riDsAtHeighti = getTxRidsAtHeight(node1, i.toLong())
             assertTrue(riDsAtHeighti.contentDeepEquals(Array(2) { TestTransaction(i * 2 + it).getRID() }))
         }
@@ -121,13 +121,13 @@ class BlockchainEngineTest : IntegrationTestSetup() {
             // Expected
         }
         // Block must not have been created.
-        assertEquals(-1, getBestHeight(node1))
+        assertEquals(-1, getLastHeight(node1))
 
         bc.transactionFactory.specialTxs.clear()
         // And we can create a new valid block afterwards.
         loadUnfinishedAndCommit(node1, blockData)
 
-        assertEquals(0, getBestHeight(node1))
+        assertEquals(0, getLastHeight(node1))
         val riDsAtHeight0 = getTxRidsAtHeight(node1, 0)
         assertTrue(riDsAtHeight0.contentDeepEquals(Array(2) { TestTransaction(it).getRID() }))
     }
@@ -145,7 +145,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
             // Expected
         }
         // Block must not have been created.
-        assertEquals(-1, getBestHeight(node1))
+        assertEquals(-1, getLastHeight(node1))
     }
 
     // an oversized block it doesn't work to produce.

@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.9.0</version>
+        <version>3.10.0</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>postchain-devtools</artifactId>
@@ -16,6 +16,10 @@
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-base</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-server</artifactId>
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
@@ -37,15 +41,11 @@
         <!-- Kotlin -->
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib-jdk8</artifactId>
+            <artifactId>kotlin-stdlib</artifactId>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-reflect</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-test-junit5</artifactId>
         </dependency>
 
         <!-- CLI -->
@@ -107,7 +107,7 @@
         </dependency>
         <dependency>
             <groupId>com.willowtreeapps.assertk</groupId>
-            <artifactId>assertk</artifactId>
+            <artifactId>assertk-jvm</artifactId>
             <scope>compile</scope> <!-- TODO: Should be test scope -->
         </dependency>
         <dependency>

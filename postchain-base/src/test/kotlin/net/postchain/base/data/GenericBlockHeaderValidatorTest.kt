@@ -5,7 +5,7 @@ import net.postchain.core.BlockRid
 import net.postchain.common.BlockchainRid
 import net.postchain.core.ValidationResult
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 /**
  * Just trying to provoke some of the simpler validation errors in here

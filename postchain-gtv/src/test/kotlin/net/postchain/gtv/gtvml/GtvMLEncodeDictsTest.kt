@@ -2,7 +2,7 @@
 
 package net.postchain.gtv.gtvml
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isIn
 import net.postchain.gtv.*
@@ -18,7 +18,7 @@ class GtvMLEncodeDictsTest {
                 expected("<dict></dict>"),
                 expected("<dict/>"))
 
-        assert(actual).isIn(*expected)
+        assertThat(actual).isIn(*expected)
     }
 
     @Test
@@ -39,7 +39,7 @@ class GtvMLEncodeDictsTest {
             </dict>
         """.trimIndent())
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -133,6 +133,6 @@ class GtvMLEncodeDictsTest {
                 </entry>
             </dict>""".trimIndent())
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 }

@@ -21,7 +21,7 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import java.sql.Connection
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class BaseBlockBuilderValidationTest {
     // Mocks

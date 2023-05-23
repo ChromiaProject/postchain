@@ -2,7 +2,7 @@
 
 package net.postchain.network.peer
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEmpty
 import assertk.isContentEqualTo
 import net.postchain.base.NetworkNodes
@@ -33,8 +33,8 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 
 class DefaultPeerConnectionManagerTest {
 
@@ -265,7 +265,7 @@ class DefaultPeerConnectionManagerTest {
 
     @Test
     fun getConnectedPeers_returns_emptyList_if_chain_is_not_connected() {
-        assert(emptyManager().getConnectedNodes(1)).isEmpty()
+        assertThat(emptyManager().getConnectedNodes(1)).isEmpty()
     }
 
     @Test
@@ -295,7 +295,7 @@ class DefaultPeerConnectionManagerTest {
             assertFalse { isPeerConnected(1L, peerInfo2.peerId()) }
             assertFalse { isPeerConnected(1L, unknownPeerInfo.peerId()) }
             // - getConnectedPeers
-            assert(getConnectedNodes(1L).toTypedArray()).isEmpty()
+            assertThat(getConnectedNodes(1L).toTypedArray()).isEmpty()
 
             // Emulates call of onPeerConnected() by XConnector
             onNodeConnected(mockConnection(peerConnectionDescriptor1))
@@ -307,7 +307,7 @@ class DefaultPeerConnectionManagerTest {
             assertTrue { isPeerConnected(1L, peerInfo2.peerId()) }
             assertFalse { isPeerConnected(1L, unknownPeerInfo.peerId()) }
             // - getConnectedPeers
-            assert(getConnectedNodes(1L).toTypedArray()).isContentEqualTo(
+            assertThat(getConnectedNodes(1L).toTypedArray()).isContentEqualTo(
                     arrayOf(peerInfo1.peerId(), peerInfo2.peerId())
             )
 
@@ -320,7 +320,7 @@ class DefaultPeerConnectionManagerTest {
             assertTrue { isPeerConnected(1L, peerInfo2.peerId()) }
             assertFalse { isPeerConnected(1L, unknownPeerInfo.peerId()) }
             // - getConnectedPeers
-            assert(getConnectedNodes(1L).toTypedArray()).isContentEqualTo(
+            assertThat(getConnectedNodes(1L).toTypedArray()).isContentEqualTo(
                     arrayOf(peerInfo2.peerId())
             )
 
@@ -377,7 +377,7 @@ class DefaultPeerConnectionManagerTest {
         verify(connection1, times(0)).sendPacket(any())
         argumentCaptor<LazyPacket>().apply {
             verify(connection2, times(1)).sendPacket(capture())
-            assert(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
+            assertThat(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
 
         connectionManager.shutdown()
@@ -431,11 +431,11 @@ class DefaultPeerConnectionManagerTest {
         // Then / verify and assert
         argumentCaptor<LazyPacket>().apply {
             verify(connection1, times(1)).sendPacket(capture())
-            assert(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
+            assertThat(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
         argumentCaptor<LazyPacket>().apply {
             verify(connection2, times(1)).sendPacket(capture())
-            assert(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
+            assertThat(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
 
         connectionManager.shutdown()

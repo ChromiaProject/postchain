@@ -18,13 +18,8 @@ import io.micrometer.prometheus.PrometheusMeterRegistry
 import io.prometheus.client.exporter.HTTPServer
 import net.postchain.PostchainNode
 import net.postchain.config.app.AppConfig
+import net.postchain.logging.NODE_PUBKEY_TAG
 import java.net.InetSocketAddress
-
-const val NODE_PUBKEY_TAG = "node.pubkey"
-const val CONTAINER_NAME_TAG = "containerName"
-const val CHAIN_IID_TAG = "chainIID"
-const val BLOCKCHAIN_RID_TAG = "blockchainRID"
-const val RESULT_TAG = "result"
 
 fun initMetrics(appConfig: AppConfig) {
     val registry = Metrics.globalRegistry

@@ -5,25 +5,34 @@ package net.postchain.ebft
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
-import net.postchain.base.*
+import net.postchain.base.HistoricBlockchainContext
+import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.configuration.BaseBlockchainConfiguration
+import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfig
-import net.postchain.core.*
+import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainEngine
+import net.postchain.core.BlockchainProcess
+import net.postchain.core.BlockchainRestartNotifier
+import net.postchain.core.NODE_ID_READ_ONLY
+import net.postchain.core.NodeRid
+import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.worker.HistoricBlockchainProcess
-import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
-import net.postchain.metrics.BLOCKCHAIN_RID_TAG
-import net.postchain.metrics.CHAIN_IID_TAG
-import net.postchain.metrics.NODE_PUBKEY_TAG
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.logging.NODE_PUBKEY_TAG
 import net.postchain.network.CommunicationManager
-import net.postchain.network.common.*
-import net.postchain.network.peer.*
+import net.postchain.network.peer.DefaultPeerCommunicationManager
+import net.postchain.network.peer.DefaultPeersCommConfigFactory
+import net.postchain.network.peer.PeersCommConfigFactory
 
 @Suppress("JoinDeclarationAndAssignment")
 open class EBFTSynchronizationInfrastructure(
@@ -43,7 +52,8 @@ open class EBFTSynchronizationInfrastructure(
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            messageProcessingLatch: MessageProcessingLatch
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
+            restartNotifier: BlockchainRestartNotifier,
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
         val currentNodeConfig = nodeConfig
@@ -86,7 +96,9 @@ open class EBFTSynchronizationInfrastructure(
                     peerCommConfiguration,
                     postchainContext.appConfig,
                     currentNodeConfig,
-                    messageProcessingLatch
+                    restartNotifier,
+                    blockchainConfigurationProvider,
+                    postchainContext.nodeDiagnosticContext
             )
 
             /*
@@ -124,7 +136,9 @@ open class EBFTSynchronizationInfrastructure(
                             historicPeerCommConfiguration,
                             postchainContext.appConfig,
                             currentNodeConfig,
-                            messageProcessingLatch
+                            restartNotifier,
+                            blockchainConfigurationProvider,
+                            postchainContext.nodeDiagnosticContext
                     )
 
                 }

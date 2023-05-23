@@ -29,8 +29,6 @@ interface BlockchainEngine : Shutdownable {
     val storage: Storage
 
     fun isRunning(): Boolean
-    fun initialize()
-    fun setAfterCommitHandler(afterCommitHandler: AfterCommitHandler)
 
     fun loadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?>
     fun buildBlock(): Pair<ManagedBlockBuilder, Exception?>
@@ -38,6 +36,7 @@ interface BlockchainEngine : Shutdownable {
     fun getBlockBuildingStrategy(): BlockBuildingStrategy
     fun getBlockQueries(): BlockQueries
     fun getConfiguration(): BlockchainConfiguration
+    fun hasBuiltFirstBlockAfterConfigUpdate(): Boolean
 }
 
 /**
@@ -55,6 +54,7 @@ interface BlockchainProcess {
     fun start()
     fun shutdown()
     fun registerDiagnosticData(diagnosticData: DiagnosticData) = Unit
+    fun isSigner(): Boolean
 }
 
 // TODO: [POS-358]: Should we add chainId and brid to BlockchainProcess?

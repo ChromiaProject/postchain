@@ -19,9 +19,9 @@ import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.crypto.devtools.MockCryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
-import kotlin.test.assertEquals
 
 class BaseBlockBuilderTest {
     val cryptoSystem = MockCryptoSystem()

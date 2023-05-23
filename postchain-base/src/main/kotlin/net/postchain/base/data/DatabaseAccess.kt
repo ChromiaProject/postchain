@@ -3,10 +3,12 @@
 package net.postchain.base.data
 
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.AppContext
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
@@ -46,7 +48,15 @@ interface DatabaseAccess {
             val stateN: Long,
             val data: ByteArray)
 
+    class BlockWithTransactions(
+            val blockHeight: Long,
+            val blockHeader: ByteArray,
+            val witness: ByteArray,
+            val transactions: List<ByteArray>)
+
     fun tableName(ctx: EContext, table: String): String
+
+    fun checkCollation(connection: Connection, suppressError: Boolean)
 
     fun isSavepointSupported(): Boolean
     fun isSchemaExists(connection: Connection, schema: String): Boolean
@@ -94,14 +104,34 @@ interface DatabaseAccess {
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
     fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt>
 
+    /**
+     * @param fromHeight   only fetch blocks from and including this height,
+     *                     set to `0L` to start from first block
+     * @param upToHeight   only fetch blocks up to and including this height,
+     *                     set to `Long.MAX_VALUE` to continue to last block
+     */
+    fun getAllBlocksWithTransactions(ctx: EContext, fromHeight: Long = 0L, upToHeight: Long = Long.MAX_VALUE,
+                                     blockHandler: (BlockWithTransactions) -> Unit)
+
     // Blockchain configurations
     fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long?
     fun findNextConfigurationHeight(ctx: EContext, height: Long): Long?
     fun listConfigurations(ctx: EContext): List<Long>
     fun removeConfiguration(ctx: EContext, height: Long): Int
+    fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray>>
 
+    /** Get configuration data at exactly given height */
     fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
+
+    /** Get configuration data at <= given height */
+    fun getConfigurationDataForHeight(ctx: EContext, height: Long): ByteArray?
+
+    fun getConfigurationData(ctx: EContext, hash: ByteArray): ByteArray?
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
+
+    fun getFaultyConfiguration(ctx: EContext): FaultyConfiguration?
+    fun addFaultyConfiguration(ctx: EContext, faultyConfiguration: FaultyConfiguration)
+    fun updateFaultyConfigurationReportHeight(ctx: EContext, height: Long)
 
     // Event and State
     fun insertEvent(ctx: TxEContext, prefix: String, height: Long, position: Long, hash: Hash, data: ByteArray)
@@ -121,8 +151,8 @@ interface DatabaseAccess {
     fun findPeerInfo(ctx: AppContext, host: String?, port: Int?, pubKeyPattern: String?): Array<PeerInfo>
     fun addPeerInfo(ctx: AppContext, peerInfo: PeerInfo): Boolean
     fun addPeerInfo(ctx: AppContext, host: String, port: Int, pubKey: String, timestamp: Instant? = null): Boolean
-    fun updatePeerInfo(ctx: AppContext, host: String, port: Int, pubKey: String, timestamp: Instant? = null): Boolean
-    fun removePeerInfo(ctx: AppContext, pubKey: String): Array<PeerInfo>
+    fun updatePeerInfo(ctx: AppContext, host: String, port: Int, pubKey: PubKey, timestamp: Instant? = null): Boolean
+    fun removePeerInfo(ctx: AppContext, pubKey: PubKey): Array<PeerInfo>
 
     // Extra nodes to sync from
     fun getBlockchainReplicaCollection(ctx: AppContext): Map<BlockchainRid, List<NodeRid>>

@@ -8,16 +8,10 @@ import java.math.BigInteger
 
 data class GtvBigInteger(val integer: BigInteger) : GtvPrimitive() {
 
-    constructor(l: Long): this(BigInteger.valueOf(l))
-
     override val type: GtvType = GtvType.BIGINTEGER
 
     override fun asBigInteger(): BigInteger {
         return integer
-    }
-
-    override fun asBoolean(): Boolean {
-        return integer != BigInteger.ZERO
     }
 
     override fun getRawGtv(): RawGtv {
@@ -33,6 +27,6 @@ data class GtvBigInteger(val integer: BigInteger) : GtvPrimitive() {
     }
 
     override fun toString(): String {
-        return integer.toString()
+        return integer.toString() + "L"
     }
 }

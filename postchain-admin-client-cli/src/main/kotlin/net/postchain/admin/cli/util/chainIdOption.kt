@@ -6,6 +6,6 @@ import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
 
 fun CliktCommand.chainIdOption() =
-    option("--chain-id", "-cid", envvar = "POSTCHAIN_CHAIN_ID", help = "Chain ID to start")
+    option("--chain-id", "-cid", envvar = "POSTCHAIN_CHAIN_ID", help = "Chain ID")
         .long()
         .required()

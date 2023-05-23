@@ -1,5 +1,10 @@
 package net.postchain.client.impl
 
+import assertk.assertFailure
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
+import assertk.assertions.isNull
 import net.postchain.client.DeterministicEndpointPool
 import net.postchain.client.config.PostchainClientConfig
 import net.postchain.client.core.BlockDetail
@@ -20,9 +25,6 @@ import org.http4k.core.Response
 import org.http4k.core.Status
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
-import kotlin.test.assertEquals
-import kotlin.test.assertNull
 
 internal class QueryMajorityTest {
     private val urls = listOf("http://localhost:1", "http://localhost:2", "http://localhost:3", "http://localhost:4")
@@ -43,21 +45,21 @@ internal class QueryMajorityTest {
                 fn(Response(Status.OK).body(encodeGtv(gtv("query_response")).inputStream()))
             }
         })
-        assertEquals("query_response", queryResponse.asString())
-        assertEquals(4, requestCounter)
+        assertThat(queryResponse.asString()).isEqualTo("query_response")
+        assertThat(requestCounter).isEqualTo(4)
     }
 
     @Test
     fun `all nodes disagree`() {
-        assertThrows<NodesDisagree> {
+        assertFailure {
             makeQuery(object : AsyncHttpHandler {
                 override fun invoke(request: Request, fn: (Response) -> Unit) {
                     requestCounter++
                     fn(Response(Status.OK).body(encodeGtv(gtv("query_response ${request.uri.port}")).inputStream()))
                 }
             })
-        }
-        assertEquals(4, requestCounter)
+        }.isInstanceOf(NodesDisagree::class)
+        assertThat(requestCounter).isEqualTo(4)
     }
 
     @Test
@@ -70,13 +72,13 @@ internal class QueryMajorityTest {
                 )).inputStream()))
             }
         })
-        assertEquals("query_response", queryResponse.asString())
-        assertEquals(4, requestCounter)
+        assertThat(queryResponse.asString()).isEqualTo("query_response")
+        assertThat(requestCounter).isEqualTo(4)
     }
 
     @Test
     fun `first node fails and rest disagree`() {
-        assertThrows<NodesDisagree> {
+        assertFailure {
             makeQuery(object : AsyncHttpHandler {
                 override fun invoke(request: Request, fn: (Response) -> Unit) {
                     requestCounter++
@@ -86,32 +88,32 @@ internal class QueryMajorityTest {
                         Response(Status.BAD_REQUEST).body(encodeGtv(gtv("the error")).inputStream()))
                 }
             })
-        }
-        assertEquals(4, requestCounter)
+        }.isInstanceOf(NodesDisagree::class)
+        assertThat(requestCounter).isEqualTo(4)
     }
 
     @Test
     fun `first node fails and rest agree`() {
-        assertEquals("query_response", nodesFail(1).asString())
-        assertEquals(4, requestCounter)
+        assertThat(nodesFail(1).asString()).isEqualTo("query_response")
+        assertThat(requestCounter).isEqualTo(4)
     }
 
     @Test
     fun `two nodes fail`() {
-        assertThrows<ClientError> { nodesFail(2) }
-        assertEquals(4, requestCounter)
+        assertFailure { nodesFail(2) }.isInstanceOf(ClientError::class)
+        assertThat(requestCounter).isEqualTo(4)
     }
 
     @Test
     fun `three nodes fail`() {
-        assertThrows<ClientError> { nodesFail(3) }
-        assertEquals(4, requestCounter)
+        assertFailure { nodesFail(3) }.isInstanceOf(ClientError::class)
+        assertThat(requestCounter).isEqualTo(4)
     }
 
     @Test
     fun `all nodes fail`() {
-        assertThrows<ClientError> { nodesFail(4) }
-        assertEquals(4, requestCounter)
+        assertFailure { nodesFail(4) }.isInstanceOf(ClientError::class)
+        assertThat(requestCounter).isEqualTo(4)
     }
 
     private fun nodesFail(failingNodes: Int): Gtv =
@@ -141,12 +143,12 @@ internal class QueryMajorityTest {
                 requestStrategy = QueryMajorityRequestStrategyFactory(object : AsyncHttpHandler {
                     override fun invoke(request: Request, fn: (Response) -> Unit) {
                         requestCounter++
-                        assertEquals("application/octet-stream", request.header("Accept"))
+                        assertThat(request.header("Accept")).isEqualTo("application/octet-stream")
                         fn(Response(Status.OK).body(blockDetail(1).inputStream()))
                     }
                 }))).blockAtHeight(1L)
-        assertEquals(1L, someBlock!!.height)
-        assertEquals(4, requestCounter)
+        assertThat(someBlock!!.height).isEqualTo(1L)
+        assertThat(requestCounter).isEqualTo(4)
     }
 
     @Test
@@ -157,49 +159,49 @@ internal class QueryMajorityTest {
                 requestStrategy = QueryMajorityRequestStrategyFactory(object : AsyncHttpHandler {
                     override fun invoke(request: Request, fn: (Response) -> Unit) {
                         requestCounter++
-                        assertEquals("application/octet-stream", request.header("Accept"))
+                        assertThat(request.header("Accept")).isEqualTo("application/octet-stream")
                         fn(Response(Status.OK).body(encodeGtv(GtvNull).inputStream()))
                     }
                 }))).blockAtHeight(1L)
-        assertNull(someBlock)
-        assertEquals(4, requestCounter)
+        assertThat(someBlock).isNull()
+        assertThat(requestCounter).isEqualTo(4)
     }
 
     @Test
     fun `blockAtHeight disagree`() {
-        assertThrows<NodesDisagree> {
+        assertFailure {
             PostchainClientImpl(PostchainClientConfig(
                     BlockchainRid.buildFromHex(bcRid),
                     DeterministicEndpointPool(urls),
                     requestStrategy = QueryMajorityRequestStrategyFactory(object : AsyncHttpHandler {
                         override fun invoke(request: Request, fn: (Response) -> Unit) {
                             requestCounter++
-                            assertEquals("application/octet-stream", request.header("Accept"))
+                            assertThat(request.header("Accept")).isEqualTo("application/octet-stream")
                             fn(Response(Status.OK).body(blockDetail((request.uri.port ?: 0).toLong()).inputStream()))
                         }
                     }))).blockAtHeight(1L)
-        }
-        assertEquals(4, requestCounter)
+        }.isInstanceOf(NodesDisagree::class)
+        assertThat(requestCounter).isEqualTo(4)
     }
 
     @Test
     fun `blockAtHeight disagree found or not found`() {
-        assertThrows<NodesDisagree> {
+        assertFailure {
             PostchainClientImpl(PostchainClientConfig(
                     BlockchainRid.buildFromHex(bcRid),
                     DeterministicEndpointPool(urls),
                     requestStrategy = QueryMajorityRequestStrategyFactory(object : AsyncHttpHandler {
                         override fun invoke(request: Request, fn: (Response) -> Unit) {
                             requestCounter++
-                            assertEquals("application/octet-stream", request.header("Accept"))
+                            assertThat(request.header("Accept")).isEqualTo("application/octet-stream")
                             fn(if ((request.uri.port ?: 0) > 2)
                                 Response(Status.OK).body(encodeGtv(GtvNull).inputStream())
                             else
                                 Response(Status.OK).body(blockDetail(1).inputStream()))
                         }
                     }))).blockAtHeight(1L)
-        }
-        assertEquals(4, requestCounter)
+        }.isInstanceOf(NodesDisagree::class)
+        assertThat(requestCounter).isEqualTo(4)
     }
 
     @Test
@@ -213,8 +215,8 @@ internal class QueryMajorityTest {
                         fn(Response(Status.OK).body("""{"status":"CONFIRMED"}"""))
                     }
                 }))).checkTxStatus(TxRid("62F71D71BA63D03FA0C6741DE22B116A3A8022893E7977DDC2A9CD981BBADE29"))
-        assertEquals(TransactionStatus.CONFIRMED, txStatus.status)
-        assertEquals(4, requestCounter)
+        assertThat(txStatus.status).isEqualTo(TransactionStatus.CONFIRMED)
+        assertThat(requestCounter).isEqualTo(4)
     }
 
     private fun blockDetail(timestamp: Long) = encodeGtv(gtv(mapOf(

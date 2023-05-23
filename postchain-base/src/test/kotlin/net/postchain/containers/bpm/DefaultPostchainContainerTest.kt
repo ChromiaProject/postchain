@@ -9,9 +9,9 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.doReturnConsecutively
 import org.mockito.kotlin.mock
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 
 class DefaultPostchainContainerTest {
 
@@ -30,7 +30,7 @@ class DefaultPostchainContainerTest {
         }
 
         // sut
-        val sut = DefaultPostchainContainer(dataSource, containerName, mock(), mock(), mock(), mock())
+        val sut = DefaultPostchainContainer(dataSource, containerName, mock(), mock(), mock())
 
         // interaction(s)
         // 1. no updates

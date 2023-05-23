@@ -2,6 +2,7 @@
 
 package net.postchain.devtools
 
+import assertk.assertThat
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import net.postchain.concurrent.util.get
@@ -27,11 +28,11 @@ fun PostchainTestNode.addBlockchainAndStart(chainId: Long, blockchainConfig: Gtv
 }
 
 fun PostchainTestNode.assertChainStarted(chainId: Long = PostchainTestNode.DEFAULT_CHAIN_IID) {
-    assertk.assert(retrieveBlockchain(chainId)).isNotNull()
+    assertThat(retrieveBlockchain(chainId)).isNotNull()
 }
 
 fun PostchainTestNode.assertChainNotStarted(chainId: Long = PostchainTestNode.DEFAULT_CHAIN_IID) {
-    assertk.assert(retrieveBlockchain(chainId)).isNull()
+    assertThat(retrieveBlockchain(chainId)).isNull()
 }
 
 fun PostchainTestNode.assertNodeConnectedWith(chainId: Long, vararg nodes: PostchainTestNode) {
@@ -52,11 +53,11 @@ fun PostchainTestNode.blockSignatures(chainId: Long, height: Long): Array<Signat
 }
 
 fun PostchainTestNode.currentHeight(chainId: Long): Long {
-    return query(chainId) { it.getBestHeight() } ?: -1L
+    return query(chainId) { it.getLastBlockHeight() } ?: -1L
 }
 
 fun PostchainTestNode.awaitedHeight(chainId: Long): Long {
-    return query(chainId) { it.getBestHeight() }
+    return query(chainId) { it.getLastBlockHeight() }
             ?.plus(1) ?: -1L
 }
 

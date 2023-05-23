@@ -3,7 +3,8 @@ package net.postchain.ebft.syncmanager.common
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.NodeRid
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 
 @Suppress("UNUSED_PARAMETER")
 class SlowSyncStateMachineTest {
@@ -19,8 +20,7 @@ class SlowSyncStateMachineTest {
 
     @Test
     fun happy() {
-
-        val sssm = SlowSyncStateMachine(1)
+        val sssm = SlowSyncStateMachine(1, SyncParameters())
         assertEquals(SlowSyncStates.WAIT_FOR_ACTION, sssm.state)
         assertEquals(-1L, sssm.lastCommittedBlockHeight)
 
@@ -30,17 +30,16 @@ class SlowSyncStateMachineTest {
         assertEquals(theOnlyOtherNode, sssm.waitForNodeId)
 
         // Getting 3 blocks (heights: 0,1,2)
-        sssm.updateToWaitForCommit(2, 113L)
-        assertEquals(SlowSyncStates.WAIT_FOR_COMMIT, sssm.state)
+        sssm.updateUncommittedBlockHeight(2)
+        sssm.resetToWaitForAction()
+        assertEquals(SlowSyncStates.WAIT_FOR_ACTION, sssm.state)
         assertEquals(2L, sssm.lastUncommittedBlockHeight)
 
         // 3 successful commit
         sssm.updateAfterSuccessfulCommit(0L)
-        assertEquals(SlowSyncStates.WAIT_FOR_COMMIT, sssm.state)
         sssm.updateAfterSuccessfulCommit(1L)
-        assertEquals(SlowSyncStates.WAIT_FOR_COMMIT, sssm.state)
         sssm.updateAfterSuccessfulCommit(2L)
-        assertEquals(SlowSyncStates.WAIT_FOR_ACTION, sssm.state)
+        assertEquals(sssm.lastCommittedBlockHeight, sssm.lastUncommittedBlockHeight)
 
         // Send another request
         sssm.maybeGetBlockRange(211L, ::dummySend)
@@ -48,17 +47,17 @@ class SlowSyncStateMachineTest {
         assertEquals(3L, sssm.waitForHeight)
 
         // Getting 1 block (heights: 3)
-        sssm.updateToWaitForCommit(3, 213L)
-        assertEquals(SlowSyncStates.WAIT_FOR_COMMIT, sssm.state)
+        sssm.updateUncommittedBlockHeight(3)
+        sssm.resetToWaitForAction()
 
         sssm.updateAfterSuccessfulCommit(3L)
+        assertEquals(sssm.lastCommittedBlockHeight, sssm.lastUncommittedBlockHeight)
         assertEquals(SlowSyncStates.WAIT_FOR_ACTION, sssm.state)
     }
 
     @Test
     fun failing_commit() {
-
-        val sssm = SlowSyncStateMachine(1)
+        val sssm = SlowSyncStateMachine(1, SyncParameters())
         assertEquals(SlowSyncStates.WAIT_FOR_ACTION, sssm.state)
         assertEquals(-1L, sssm.lastCommittedBlockHeight)
 
@@ -68,12 +67,13 @@ class SlowSyncStateMachineTest {
         assertEquals(theOnlyOtherNode, sssm.waitForNodeId)
 
         // Getting 3 blocks (heights: 0,1,2)
-        sssm.updateToWaitForCommit(2, 113L)
-        assertEquals(SlowSyncStates.WAIT_FOR_COMMIT, sssm.state)
+        sssm.updateUncommittedBlockHeight(2)
+        sssm.resetToWaitForAction()
         assertEquals(2L, sssm.lastUncommittedBlockHeight)
 
         // 3 first commit fails
         sssm.updateAfterFailedCommit(0L)
+        assertTrue(sssm.hasUnacknowledgedFailedCommit())
         assertEquals(SlowSyncStates.WAIT_FOR_ACTION, sssm.state) // Back to beginning
         assertEquals(-1L, sssm.lastUncommittedBlockHeight) // We are back to square zero
         assertEquals(-1L, sssm.lastCommittedBlockHeight) // We are back to square zero

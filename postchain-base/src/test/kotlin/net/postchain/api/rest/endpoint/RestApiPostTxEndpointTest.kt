@@ -2,16 +2,23 @@
 
 package net.postchain.api.rest.endpoint
 
+import assertk.assertThat
+import assertk.isContentEqualTo
 import io.restassured.RestAssured.given
+import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
-import net.postchain.api.rest.model.ApiTx
 import net.postchain.common.toHex
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory.gtv
+import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 
 class RestApiPostTxEndpointTest {
 
@@ -36,17 +43,39 @@ class RestApiPostTxEndpointTest {
     }
 
     @Test
-    fun test_postTx_Ok() {
-        val txHexString = "hello".toByteArray().toHex()
-        model.postTransaction(ApiTx(txHexString))
+    fun test_postTx_binary_Ok() {
+        val tx = "hello".toByteArray()
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = given().basePath(basePath).port(restApi.actualPort())
+                .contentType(ContentType.BINARY)
+                .accept(ContentType.BINARY)
+                .body(tx)
+                .post("/tx/$blockchainRID")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+        assertThat(body.extract().body().asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(gtv(mapOf())))
+
+        verify(model, times(1)).postTransaction(tx)
+    }
+
+    @Test
+    fun test_postTx_Json_Ok() {
+        val tx = "hello".toByteArray()
 
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
-                .body("{\"tx\": \"$txHexString\"}")
+                .body("{\"tx\": \"${tx.toHex()}\"}")
                 .post("/tx/$blockchainRID")
                 .then()
                 .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body(equalTo("{}"))
+
+        verify(model, times(1)).postTransaction(tx)
     }
 
     @Test
@@ -58,6 +87,23 @@ class RestApiPostTxEndpointTest {
                 .post("/tx/$blockchainRID")
                 .then()
                 .statusCode(400)
+                .contentType(ContentType.JSON)
+                .body("error", equalTo("Invalid tx format. Expected {\"tx\": <hex-string>}"))
+    }
+
+    @Test
+    fun test_postTx_when_empty_message_then_400_received_binary() {
+        restApi.attachModel(blockchainRID, model)
+
+        val body = given().basePath(basePath).port(restApi.actualPort())
+                .accept(ContentType.BINARY)
+                .body("")
+                .post("/tx/$blockchainRID")
+                .then()
+                .statusCode(400)
+                .contentType(ContentType.BINARY)
+        assertThat(body.extract().body().asByteArray()).isContentEqualTo(
+                GtvEncoder.encodeGtv(gtv("Invalid tx format. Expected {\"tx\": <hex-string>}")))
     }
 
     @Test

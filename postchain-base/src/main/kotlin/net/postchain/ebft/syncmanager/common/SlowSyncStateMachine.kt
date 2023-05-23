@@ -13,28 +13,22 @@ import net.postchain.devtools.NameHelper
  * WAIT_FOR_ACTION -> WAIT_FOR_REPLY
  *
  * 2.
- * WAIT_FOR_REPLY -> WAIT_FOR_COMMIT, or
- * WAIT_FOR_REPLY -> WAIT_FOR_ACTION (if nothing to commit)
- *
- * 3.
- * WAIT_FOR_COMMIT -> WAIT_FOR_ACTION
+ * WAIT_FOR_REPLY -> WAIT_FOR_ACTION
  */
 class SlowSyncStateMachine(
-    val chainIid: Int,
-    var state: SlowSyncStates = SlowSyncStates.WAIT_FOR_ACTION,
-    var waitForNodeId: NodeRid? = null, // The node we expect to send us an answer
-    var waitForHeight: Long? = null, // The height we are waiting for
-    var waitTime: Long? = null, // When did we last ask for a BlockRange
-    var lastUncommittedBlockHeight: Long = -1L, // Remember: before we have any block the height is -1.
-    var lastCommittedBlockHeight: Long = -1L // Only update this after the actual commit
+        val chainIid: Int,
+        val params: SyncParameters,
+        var state: SlowSyncStates = SlowSyncStates.WAIT_FOR_ACTION,
+        var waitForNodeId: NodeRid? = null, // The node we expect to send us an answer
+        var waitForHeight: Long? = null, // The height we are waiting for
+        private var waitTime: Long? = null, // When did we last ask for a BlockRange
+        var lastUncommittedBlockHeight: Long = -1L, // Remember: before we have any block the height is -1.
+        var lastCommittedBlockHeight: Long = -1L // Only update this after the actual commit
 ) {
+    private var hasFailedCommit = false
 
-    companion object: KLogging() {
-
-        fun buildWithChain(chainIid: Int): SlowSyncStateMachine {
-            val slowSyncStateMachine = SlowSyncStateMachine(chainIid)
-            return slowSyncStateMachine
-        }
+    companion object : KLogging() {
+        fun buildWithChain(chainIid: Int, params: SyncParameters) = SlowSyncStateMachine(chainIid, params)
     }
 
     override fun toString(): String {
@@ -51,7 +45,7 @@ class SlowSyncStateMachine(
     }
 
     fun getStartHeight(): Long {
-        return lastCommittedBlockHeight + 1L
+        return lastUncommittedBlockHeight + 1L
     }
 
     /**
@@ -65,8 +59,9 @@ class SlowSyncStateMachine(
                 logger.debug { "maybeGetBlockRange() - ChainIid: $chainIid, not waiting for anything, so get height $startingAtHeight and above." }
                 sendRequest(nowMs, this, null) // We don't mind asking the old peer
             }
+
             SlowSyncStates.WAIT_FOR_REPLY -> {
-                if (nowMs > (waitTime!! + SlowSyncSleepConst.MAX_PEER_WAIT_TIME_MS)) {
+                if (nowMs > (waitTime!! + params.slowSyncMaxPeerWaitTime)) {
                     // We waited too long, let's ask someone else
                     logger.debug {
                         "maybeGetBlockRange() - ChainIid: $chainIid waited too long, for anything, try again with height: $waitForHeight " +
@@ -78,9 +73,6 @@ class SlowSyncStateMachine(
                     logger.debug { "maybeGetBlockRange() - ChainIid: $chainIid still waiting for height: $waitForHeight, go back to sleep." }
                     // Still waiting for last request, go back to sleep
                 }
-            }
-            SlowSyncStates.WAIT_FOR_COMMIT -> {
-                logger.debug { "maybeGetBlockRange() - ChainIid: $chainIid do nothing, waiting for height: $lastUncommittedBlockHeight to commit." }
             }
         }
     }
@@ -94,22 +86,17 @@ class SlowSyncStateMachine(
         waitForNodeId = peer
         waitForHeight = startAtHeight
         waitTime = nowMs
-        lastUncommittedBlockHeight = startAtHeight - 1
     }
 
     /**
      * @param heightToCommit - the height of the block we are waiting for to be committed
      */
-    fun updateToWaitForCommit(heightToCommit: Long, nowMs: Long) {
-        if (state != SlowSyncStates.WAIT_FOR_COMMIT) {
-            if (state != SlowSyncStates.WAIT_FOR_REPLY) {
-                throw ProgrammerMistake("updateToWaitForCommit(): Incorrect state: $state")
-            }
-            state = SlowSyncStates.WAIT_FOR_COMMIT
+    fun updateUncommittedBlockHeight(heightToCommit: Long) {
+        if (heightToCommit < lastUncommittedBlockHeight) {
+            throw ProgrammerMistake("Trying to update uncommitted block height to a lower height than we are already waiting for")
         }
 
         lastUncommittedBlockHeight = heightToCommit
-        waitTime = nowMs
     }
 
     /**
@@ -117,24 +104,13 @@ class SlowSyncStateMachine(
      * This might seem slow but it doesn't matter, since this is slow sync.
      */
     fun updateAfterSuccessfulCommit(committedBlockHeight: Long) {
-        if (state != SlowSyncStates.WAIT_FOR_COMMIT) {
-            throw ProgrammerMistake("updateAfterSuccessfulCommit(): Incorrect state: $state")
-        }
-
-        if (getStartHeight() != committedBlockHeight) {
+        if (lastCommittedBlockHeight + 1 != committedBlockHeight) {
             logger.warn("updateAfterSuccessfulCommit() - ChainIid: $chainIid something is wrong. Committed height: $committedBlockHeight but last commit was $lastCommittedBlockHeight")
         }
 
         if (committedBlockHeight > lastUncommittedBlockHeight) {
             throw ProgrammerMistake("Why are we committing higher than we are expecting? " +
                     "Expected: $lastUncommittedBlockHeight but got height: $committedBlockHeight")
-        }
-
-        if (committedBlockHeight == lastUncommittedBlockHeight) {
-            // Time to move on
-            state = SlowSyncStates.WAIT_FOR_ACTION
-            waitForNodeId = null
-            waitForHeight = null
         }
 
         logger.debug { "updateAfterSuccessfulCommit() - Prev last committed height: $lastCommittedBlockHeight , now: $committedBlockHeight, $this" }
@@ -148,15 +124,26 @@ class SlowSyncStateMachine(
      */
     fun updateAfterFailedCommit(committedBlockHeight: Long) {
         logger.warn("ChainIid: $chainIid block height: $committedBlockHeight failed, last successful was $lastCommittedBlockHeight.")
-        state = SlowSyncStates.WAIT_FOR_ACTION
         lastUncommittedBlockHeight = lastCommittedBlockHeight
+        hasFailedCommit = true
     }
 
-}
+    fun isWaitingForBlocksToCommit() = lastCommittedBlockHeight < lastUncommittedBlockHeight
 
+    fun resetToWaitForAction() {
+        state = SlowSyncStates.WAIT_FOR_ACTION
+        waitForNodeId = null
+        waitForHeight = null
+    }
+
+    fun hasUnacknowledgedFailedCommit() = hasFailedCommit
+
+    fun acknowledgeFailedCommit() {
+        hasFailedCommit = false
+    }
+}
 
 enum class SlowSyncStates {
     WAIT_FOR_ACTION,
-    WAIT_FOR_REPLY,
-    WAIT_FOR_COMMIT
+    WAIT_FOR_REPLY
 }

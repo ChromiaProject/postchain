@@ -13,12 +13,12 @@ import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManager
+import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.InfrastructureFactory
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
-import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.peer.DefaultPeerConnectionManager
 
@@ -37,6 +37,8 @@ class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : B
         shutdownDebug("End")
     }
 
+    override fun isSigner(): Boolean = true
+
     private fun shutdownDebug(str: String) {
         if (logger.isDebugEnabled) {
             logger.debug("$name: shutdown() - $str.")
@@ -50,7 +52,8 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
     override fun makeBlockchainProcess(
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            messageProcessingLatch: MessageProcessingLatch
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
+            restartNotifier: BlockchainRestartNotifier
     ): BlockchainProcess {
         return TestBlockchainProcess(engine)
     }
@@ -78,7 +81,7 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
         with(postchainContext) {
             val syncInfra = TestSynchronizationInfrastructure()
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, configurationProvider, true)
+            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, true, postchainContext)
 
             return BaseBlockchainInfrastructure(syncInfra, apiInfra, this)
         }

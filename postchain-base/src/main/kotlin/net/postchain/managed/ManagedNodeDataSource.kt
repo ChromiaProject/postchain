@@ -10,7 +10,6 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
 
     val nmApiVersion: Int
 
-    fun getPeerListVersion(): Long
     fun computeBlockchainList(): List<ByteArray>
     fun computeBlockchainInfoList(): List<BlockchainInfo>
     fun getLastBuiltHeight(blockchainRidRaw: ByteArray): Long
@@ -22,7 +21,7 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
      */
     fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long?
 
-    fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): PendingBlockchainConfiguration?
+    fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): List<PendingBlockchainConfiguration>
 
-    fun isPendingBlockchainConfigurationApplied(blockchainRid: BlockchainRid, height: Long, configHash: ByteArray): Boolean
+    fun getFaultyBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): ByteArray?
 }

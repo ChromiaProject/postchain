@@ -7,6 +7,7 @@ import net.postchain.gtv.GtvString
 import net.postchain.gtx.data.OpData
 
 class GtxOp(val opName: String, vararg val args: Gtv) {
+    private val opData = OpData(opName, args)
 
     /**
      * Elements are structured like an ordered array with elements:
@@ -15,7 +16,7 @@ class GtxOp(val opName: String, vararg val args: Gtv) {
      */
     fun toGtv() = gtv(gtv(opName), gtv(args.toList()))
 
-    fun toOpData() = OpData(opName, args)
+    fun asOpData() = opData
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -13,8 +13,8 @@ import net.postchain.gtv.merkle.path.GtvPathSet
 import net.postchain.gtv.merkle.proof.toGtvVirtual
 import net.postchain.gtv.merkleHash
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.fail
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.fail
 
 class MixArrayDictProofToVirtualTest {
 

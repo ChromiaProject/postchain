@@ -1,6 +1,6 @@
 package net.postchain.gtv.mapper
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import net.postchain.gtv.GtvFactory.gtv
@@ -14,7 +14,7 @@ class GtvObjectMapperTransientTest {
 
     @Test
     fun transientField() {
-        assert(gtv(mapOf()).toObject<ClassWithTransientField>(mapOf("transientValue" to 1)).longValue).isEqualTo(1L)
+        assertThat(gtv(mapOf()).toObject<ClassWithTransientField>(mapOf("transientValue" to 1)).longValue).isEqualTo(1L)
         assertThrows<IllegalArgumentException> {
             gtv(mapOf()).toObject<ClassWithTransientField>()
         }
@@ -22,13 +22,13 @@ class GtvObjectMapperTransientTest {
 
     @Test
     fun transientNullable() {
-        assert(gtv(mapOf()).toObject<ClassWithNullableTransientField>().longValue).isNull()
+        assertThat(gtv(mapOf()).toObject<ClassWithNullableTransientField>().longValue).isNull()
     }
 
     @Test
     fun transientListField() {
         val gtvArray = gtv(gtv(mapOf()))
-        assert(gtvArray.toList<ClassWithTransientField>(mapOf("transientValue" to 1))[0].longValue).isEqualTo(1L)
+        assertThat(gtvArray.toList<ClassWithTransientField>(mapOf("transientValue" to 1))[0].longValue).isEqualTo(1L)
 
     }
 
@@ -45,7 +45,7 @@ class GtvObjectMapperTransientTest {
         assertThrows<IllegalArgumentException> {
             gtv.toObject<ClassWithTransientInnerField>()
         }
-        assert(gtv.toObject<ClassWithTransientInnerField>(mapOf("transientValue" to 1L)).a.longValue).isEqualTo(1L)
-        assert(gtv(gtv).toList<ClassWithTransientInnerField>(mapOf("transientValue" to 1L))[0].a.longValue).isEqualTo(1L)
+        assertThat(gtv.toObject<ClassWithTransientInnerField>(mapOf("transientValue" to 1L)).a.longValue).isEqualTo(1L)
+        assertThat(gtv(gtv).toList<ClassWithTransientInnerField>(mapOf("transientValue" to 1L))[0].a.longValue).isEqualTo(1L)
     }
 }
