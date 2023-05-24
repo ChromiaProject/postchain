@@ -57,17 +57,6 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         }
     }
 
-    override fun getLastBuiltHeight(blockchainRidRaw: ByteArray): Long {
-        return if (nmApiVersion >= 4) {
-            query(
-                    "nm_get_blockchain_last_built_height",
-                    buildArgs("blockchain_rid" to gtv(blockchainRidRaw))
-            ).asInteger()
-        } else {
-            -1L
-        }
-    }
-
     override fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray? {
         val res = query(
                 "nm_get_blockchain_configuration",
