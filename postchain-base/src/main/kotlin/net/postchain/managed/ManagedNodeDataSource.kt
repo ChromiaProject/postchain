@@ -12,7 +12,6 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
 
     fun computeBlockchainList(): List<ByteArray>
     fun computeBlockchainInfoList(): List<BlockchainInfo>
-    fun getLastBuiltHeight(blockchainRidRaw: ByteArray): Long
     fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray?
 
     /**
