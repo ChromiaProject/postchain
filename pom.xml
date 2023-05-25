@@ -161,16 +161,6 @@
                 <artifactId>postchain-devtools</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            <dependency>
-                <groupId>net.postchain</groupId>
-                <artifactId>postchain-client</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.postchain</groupId>
-                <artifactId>postchain-client-cli</artifactId>
-                <version>${project.version}</version>
-            </dependency>
 
             <!-- Logging -->
             <dependency>
