@@ -8,6 +8,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
+import net.postchain.core.BlockchainState
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.managed.DirectoryDataSource
@@ -17,7 +18,6 @@ import net.postchain.network.mastersub.master.MasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterConnectionManager
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
-
 
 open class DefaultMasterSyncInfra(
         postchainContext: PostchainContext,
@@ -35,6 +35,7 @@ open class DefaultMasterSyncInfra(
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
             targetContainer: PostchainContainer,
+            blockchainState: BlockchainState
     ): ContainerBlockchainProcess {
 
         val communicationManager = DefaultMasterCommunicationManager(
@@ -58,6 +59,7 @@ open class DefaultMasterSyncInfra(
                 processName,
                 chainId,
                 blockchainRid,
+                blockchainState,
                 communicationManager
         )
     }

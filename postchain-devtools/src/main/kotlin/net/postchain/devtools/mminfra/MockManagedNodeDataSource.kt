@@ -4,6 +4,7 @@ import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainState
 import net.postchain.core.NodeRid
 import net.postchain.devtools.awaitDebug
 import net.postchain.devtools.utils.ChainUtil
@@ -20,6 +21,7 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     val bridToConfigs: MutableMap<BlockchainRid, MutableMap<Long, Pair<BlockchainConfiguration, ByteArray>>> = mutableMapOf()
     val pendingBridToConfigs: MutableMap<BlockchainRid, TreeMap<Long, MutableList<Pair<BlockchainConfiguration, ByteArray>>>> = mutableMapOf()
     val faultyConfigHashes: MutableMap<BlockchainRid, MutableMap<Long, ByteArray>> = mutableMapOf()
+    val bridState: MutableMap<BlockchainRid, BlockchainState> = mutableMapOf()
     private val extraReplicas = mutableMapOf<BlockchainRid, MutableSet<NodeRid>>()
     private lateinit var nodes: Map<NodeSeqNumber, NodeSetup>
     private lateinit var myNode: NodeSetup
@@ -40,7 +42,8 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         return computeBlockchainList().map {
             BlockchainInfo(
                     BlockchainRid(it),
-                    false
+                    false,
+                    bridState[BlockchainRid(it)] ?: BlockchainState.RUNNING
             )
         }
     }
@@ -81,6 +84,14 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
 
     override fun getFaultyBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): ByteArray? {
         return faultyConfigHashes[blockchainRid]?.let { it[height] }
+    }
+
+    fun setBlockchainState(blockchainRid: BlockchainRid, blockchainState: BlockchainState) {
+        bridState[blockchainRid] = blockchainState
+    }
+
+    override fun getBlockchainState(blockchainRid: BlockchainRid): BlockchainState {
+        return bridState[blockchainRid]!!
     }
 
     override fun query(name: String, args: Gtv): Gtv {

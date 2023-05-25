@@ -14,6 +14,7 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.BlockchainRestartNotifier
+import net.postchain.core.BlockchainState
 import net.postchain.core.InfrastructureFactory
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
@@ -39,6 +40,8 @@ class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : B
 
     override fun isSigner(): Boolean = true
 
+    override fun getBlockchainState(): BlockchainState = BlockchainState.RUNNING
+
     private fun shutdownDebug(str: String) {
         if (logger.isDebugEnabled) {
             logger.debug("$name: shutdown() - $str.")
@@ -53,7 +56,8 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
-            restartNotifier: BlockchainRestartNotifier
+            restartNotifier: BlockchainRestartNotifier,
+            blockchainState: BlockchainState
     ): BlockchainProcess {
         return TestBlockchainProcess(engine)
     }

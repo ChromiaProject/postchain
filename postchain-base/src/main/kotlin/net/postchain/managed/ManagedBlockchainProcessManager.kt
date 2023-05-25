@@ -6,6 +6,7 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -211,9 +212,10 @@ open class ManagedBlockchainProcessManager(
     private fun startStopBlockchainsAsync(reloadChain0: Boolean, bTrace: BlockTrace?) {
         synchronized(synchronizer) {
             ssaTrace("Begin", bTrace)
-            val toLaunch = retrieveBlockchainsToLaunch().map { it.chainId }.toSet()
+            val toLaunch = retrieveBlockchainsToLaunch()
+            val chainIdsToLaunch = toLaunch.map { it.chainId }.toSet()
             val launched = getLaunchedBlockchains()
-            logChains(toLaunch, launched, reloadChain0)
+            logChains(chainIdsToLaunch, launched.keys, reloadChain0)
 
             // Launching blockchain 0
             if (reloadChain0) {
@@ -221,16 +223,20 @@ open class ManagedBlockchainProcessManager(
                 startBlockchainAsync(0L, bTrace)
             }
 
-            // Launching new blockchains except blockchain 0
-            toLaunch.filter { it != 0L }
-                    .filter { it !in launched }
+            toLaunch.filter { it.chainId != 0L }
                     .forEach {
-                        ssaInfo("Launching blockchain", it)
-                        startBlockchainAsync(it, bTrace)
+                        val process = launched[it.chainId]
+                        if (process == null) {
+                            ssaInfo("Launching blockchain", it.chainId)
+                            startBlockchainAsync(it.chainId, bTrace)
+                        } else if (process.getBlockchainState() != it.state) {
+                            ssaInfo("Restarting blockchain due to state change", it.chainId)
+                            startBlockchainAsync(it.chainId, bTrace)
+                        }
                     }
 
             // Stopping launched blockchains
-            launched.filterNot(toLaunch::contains)
+            launched.keys.filterNot(chainIdsToLaunch::contains)
                     .forEach {
                         ssaInfo("Stopping blockchain", it)
                         stopBlockchainAsync(it, bTrace)
@@ -293,7 +299,7 @@ open class ManagedBlockchainProcessManager(
     protected open fun retrieveBlockchainsToLaunch(): Set<LocalBlockchainInfo> {
         retrieveTrace("Begin")
         // chain-zero is always in the list
-        val blockchains = mutableSetOf(LocalBlockchainInfo(CHAIN0, true))
+        val blockchains = mutableSetOf(LocalBlockchainInfo(CHAIN0, true, BlockchainState.RUNNING))
 
         withWriteConnection(storage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
@@ -311,9 +317,9 @@ open class ManagedBlockchainProcessManager(
                     withReadWriteConnection(storage, calculatedChainId) { newCtx ->
                         db.initializeBlockchain(newCtx, blockchainInfo.rid)
                     }
-                    LocalBlockchainInfo(calculatedChainId, blockchainInfo.system)
+                    LocalBlockchainInfo(calculatedChainId, blockchainInfo.system, blockchainInfo.state)
                 } else {
-                    LocalBlockchainInfo(chainId, blockchainInfo.system)
+                    LocalBlockchainInfo(chainId, blockchainInfo.system, blockchainInfo.state)
                 }
 
                 if (localBlockchainInfo.chainId != CHAIN0) {
@@ -328,11 +334,11 @@ open class ManagedBlockchainProcessManager(
 
     protected open fun locallyConfiguredBlockchainsToReplicate() =
             (postchainContext.nodeConfigProvider.getConfiguration() as? ManagedNodeConfig)
-                    ?.locallyConfiguredBlockchainsToReplicate?.map { BlockchainInfo(it, false) }?.toSet()
+                    ?.locallyConfiguredBlockchainsToReplicate?.map { BlockchainInfo(it, false, BlockchainState.RUNNING) }?.toSet()
                     ?: emptySet()
 
-    protected open fun getLaunchedBlockchains(): Set<Long> {
-        return blockchainProcesses.keys
+    protected open fun getLaunchedBlockchains(): MutableMap<Long, BlockchainProcess> {
+        return blockchainProcesses
     }
 
     // ----------------------------------------------
@@ -368,4 +374,7 @@ open class ManagedBlockchainProcessManager(
     protected fun retrieveDebug(str: String) {
         logger.debug { "retrieveBlockchainsToLaunch() -- $str " }
     }
+
+    override fun getBlockchainState(chainId: Long, blockchainRid: BlockchainRid): BlockchainState =
+            if (chainId == CHAIN0) BlockchainState.RUNNING else dataSource.getBlockchainState(blockchainRid)
 }

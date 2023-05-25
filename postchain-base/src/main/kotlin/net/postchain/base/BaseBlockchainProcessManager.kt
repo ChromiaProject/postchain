@@ -221,7 +221,8 @@ open class BaseBlockchainProcessManager(
                 blockchainConfig,
                 processName,
                 engine,
-                restartNotifier
+                restartNotifier,
+                getBlockchainState(chainId, blockchainConfig.blockchainRid)
         )
         logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
 
@@ -234,6 +235,8 @@ open class BaseBlockchainProcessManager(
                 bTrace
         )
     }
+
+    protected open fun getBlockchainState(chainId: Long, blockchainRid: BlockchainRid): BlockchainState = BlockchainState.RUNNING
 
     private fun hasBuiltInitialBlock(eContext: EContext) = DatabaseAccess.of(eContext).getLastBlockHeight(eContext) > -1L
 
@@ -268,9 +271,10 @@ open class BaseBlockchainProcessManager(
             blockchainConfig: BlockchainConfiguration,
             processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            restartNotifier: BlockchainRestartNotifier
+            restartNotifier: BlockchainRestartNotifier,
+            blockchainState: BlockchainState
     ) {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, blockchainConfigProvider, restartNotifier)
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, blockchainConfigProvider, restartNotifier, blockchainState)
                 .also {
                     val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainConfig.blockchainRid).also { data ->
                         data[DiagnosticProperty.BLOCKCHAIN_LAST_HEIGHT] = LazyDiagnosticValue { engine.getBlockQueries().getLastBlockHeight().get() }

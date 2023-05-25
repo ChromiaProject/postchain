@@ -12,6 +12,7 @@ import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
+import net.postchain.core.BlockchainState
 import net.postchain.core.EContext
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.block.BlockDataWithWitness
@@ -397,4 +398,5 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     }
 
     override fun isSigner() = false // TODO: [pcu]: false?
+    override fun getBlockchainState(): BlockchainState = BlockchainState.RUNNING
 }

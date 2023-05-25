@@ -51,7 +51,7 @@ open class TestManagedBlockchainProcessManager(
         testDataSource.computeBlockchainInfoList().forEach {
             val brid = it.rid
             val chainIid = ChainUtil.iidOf(brid)
-            result.add(LocalBlockchainInfo(chainIid, it.system))
+            result.add(LocalBlockchainInfo(chainIid, it.system, it.state))
             retrieveDebug("NOTE TEST! -- launch chainIid: $chainIid,  BC RID: ${brid.toShortHex()} ")
             withReadWriteConnection(storage, chainIid) { newCtx ->
                 val db = DatabaseAccess.of(newCtx)

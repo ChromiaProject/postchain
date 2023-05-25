@@ -16,6 +16,7 @@ interface PostchainContainer {
     fun shortContainerId(): String?
     fun findProcesses(chainId: Long): ContainerBlockchainProcess?
     fun getAllChains(): Set<Long>
+    fun getAllProcesses(): Map<Long, ContainerBlockchainProcess>
     fun getStoppedChains(): Set<Long>
     fun startProcess(process: ContainerBlockchainProcess): Boolean
     fun removeProcess(chainId: Long): ContainerBlockchainProcess?

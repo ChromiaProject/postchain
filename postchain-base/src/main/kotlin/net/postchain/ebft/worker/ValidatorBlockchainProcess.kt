@@ -5,6 +5,7 @@ package net.postchain.ebft.worker
 import mu.KLogging
 import net.postchain.base.NetworkAwareTxQueue
 import net.postchain.concurrent.util.get
+import net.postchain.core.BlockchainState
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
@@ -120,4 +121,5 @@ class ValidatorBlockchainProcess(
     }
 
     override fun isSigner(): Boolean = !syncManager.isInFastSync()
+    override fun getBlockchainState(): BlockchainState = BlockchainState.RUNNING
 }
