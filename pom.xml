@@ -14,8 +14,6 @@
         <module>postchain-gtx-data</module>
         <module>postchain-base</module>
         <module>postchain-devtools</module>
-        <module>postchain-client</module>
-        <module>postchain-client-cli</module>
         <module>postchain-cli</module>
         <module>postchain-admin-service</module>
         <module>postchain-admin-client-cli</module>
@@ -161,16 +159,6 @@
             <dependency>
                 <groupId>net.postchain</groupId>
                 <artifactId>postchain-devtools</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.postchain</groupId>
-                <artifactId>postchain-client</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.postchain</groupId>
-                <artifactId>postchain-client-cli</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
