@@ -8,10 +8,12 @@ import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockQueries
 import net.postchain.ebft.message.BlockHeader
 import net.postchain.ebft.message.BlockRange
+import net.postchain.ebft.message.BlockSignature
 import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockRange
+import net.postchain.ebft.message.Signature
 import net.postchain.ebft.message.UnfinishedBlock
 import net.postchain.network.CommunicationManager
 
@@ -118,5 +120,17 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
         logger.trace { "Replying with BlockHeader at height $sentHeight to peer $peerID for requested height $requestedHeight" }
         communicationManager.sendPacket(h, peerID)
         return h
+    }
+
+    fun sendBlockSignature(peerID: NodeRid, blockRID: ByteArray) {
+        val blockSignature = blockQueries.getBlockSignature(blockRID)
+        blockSignature.whenComplete { signature, error ->
+            if (error == null) {
+                val packet = BlockSignature(blockRID, Signature(signature.subjectID, signature.data))
+                communicationManager.sendPacket(packet, peerID)
+            } else {
+                logger.debug(error) { "Error sending BlockSignature" }
+            }
+        }
     }
 }

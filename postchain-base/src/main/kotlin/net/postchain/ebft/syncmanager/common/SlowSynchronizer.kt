@@ -20,6 +20,7 @@ import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
+import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.worker.WorkerContext
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -129,6 +130,7 @@ class SlowSynchronizer(
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight)
                     is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight) // A replica might ask us
+                    is GetBlockSignature -> sendBlockSignature(peerId, message.blockRID)
 
                     // But we only expect ranges and status to be sent to us
                     is BlockRange -> {
