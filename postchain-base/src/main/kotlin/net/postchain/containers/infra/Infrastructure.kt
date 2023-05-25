@@ -6,6 +6,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.BlockchainState
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.debug.BlockchainProcessName
 import net.postchain.managed.DirectoryDataSource
@@ -21,6 +22,7 @@ interface MasterSyncInfra : SynchronizationInfrastructure {
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
             targetContainer: PostchainContainer,
+            blockchainState: BlockchainState
     ): ContainerBlockchainProcess
 
     fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess)

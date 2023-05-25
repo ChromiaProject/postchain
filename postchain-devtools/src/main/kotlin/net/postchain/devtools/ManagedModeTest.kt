@@ -14,6 +14,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withWriteConnection
 import net.postchain.common.hexStringToByteArray
 import net.postchain.concurrent.util.get
+import net.postchain.core.BlockchainState
 import net.postchain.core.Infrastructure
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.crypto.KeyPair
@@ -63,6 +64,14 @@ open class ManagedModeTest : AbstractSyncTest() {
         mockDataSources.values.forEach {
             it.markPendingConfigurationAsFaulty(chainId, height)
         }
+    }
+
+    fun setBlockchainState(chainId: Long, state: BlockchainState) {
+        val brid = ChainUtil.ridOf(chainId)
+        mockDataSources.values.forEach {
+            it.setBlockchainState(brid, state)
+        }
+        buildBlock(0)
     }
 
     fun addBlockchainConfiguration(chainId: Long, signerKeys: Map<Int, ByteArray>, historicChain: Long?, height: Long, overrides: Map<String, Gtv> = emptyMap(), pending: Boolean = false) {
@@ -181,8 +190,8 @@ open class ManagedModeTest : AbstractSyncTest() {
     ): Long {
         if (signers.intersect(replicas).isNotEmpty()) throw IllegalArgumentException("a node cannot be both signer and replica")
         val newChainId = chainId++
+        val brid = ChainUtil.ridOf(newChainId)
         if (rawBlockchainConfiguration != null) {
-            val brid = ChainUtil.ridOf(newChainId)
             mockDataSources.forEach { (nodeId, dataSource) ->
                 val pubkey = nodes[nodeId].pubKey.hexStringToByteArray()
                 val sigMaker = createSigMaker(pubkey)
@@ -202,6 +211,10 @@ open class ManagedModeTest : AbstractSyncTest() {
         } else {
             val signerKeys = signers.associateWith { nodes[it].pubKey.hexStringToByteArray() }
             addBlockchainConfiguration(newChainId, signerKeys, historicChain, 0)
+        }
+
+        mockDataSources.values.forEach {
+            it.setBlockchainState(brid, BlockchainState.RUNNING)
         }
 
         setChainSigners(signers, newChainId)

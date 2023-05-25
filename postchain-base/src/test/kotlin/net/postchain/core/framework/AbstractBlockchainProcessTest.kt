@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import net.postchain.core.BlockchainEngine
+import net.postchain.core.BlockchainState
 import org.awaitility.Duration
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.Test
@@ -38,6 +39,7 @@ class DummyBlockchainProcess(private val testAction: () -> Unit) : AbstractBlock
 
     override fun cleanup() {}
     override fun isSigner(): Boolean = true
+    override fun getBlockchainState(): BlockchainState = BlockchainState.RUNNING
 
     override fun action() {
         testAction()

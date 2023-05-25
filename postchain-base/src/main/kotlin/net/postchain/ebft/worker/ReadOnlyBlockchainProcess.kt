@@ -4,6 +4,7 @@ package net.postchain.ebft.worker
 
 import mu.KLogging
 import net.postchain.concurrent.util.get
+import net.postchain.core.BlockchainState
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.framework.AbstractBlockchainProcess
@@ -21,8 +22,9 @@ import net.postchain.ebft.syncmanager.common.SyncMethod
 import net.postchain.ebft.syncmanager.common.SyncParameters
 
 class ReadOnlyBlockchainProcess(
-        val workerContext: WorkerContext,
-        val blockQueries: BlockQueries
+        private val workerContext: WorkerContext,
+        val blockQueries: BlockQueries,
+        private val blockchainState: BlockchainState
 ) : AbstractBlockchainProcess("replica-${workerContext.processName}", workerContext.engine) {
 
     companion object : KLogging()
@@ -59,19 +61,23 @@ class ReadOnlyBlockchainProcess(
      * When the nodes are drained we move to slow sync instead.
      */
     override fun action() {
-        if (params.slowSyncEnabled) {
-            logger.debug { "Using slow sync for read only bc process" }
-            syncMethod = SyncMethod.FAST_SYNC
-            fastSynchronizer.syncUntilResponsiveNodesDrained()
-            // Move to slow sync and proceed until shutdown
-            syncMethod = SyncMethod.SLOW_SYNC
-            slowSynchronizer.syncUntil()
-            syncMethod = SyncMethod.NOT_SYNCING
+        if (blockchainState == BlockchainState.PAUSED) {
+            Thread.sleep(1000)
         } else {
-            logger.debug { "Using fast sync for read only bc process" }
-            syncMethod = SyncMethod.FAST_SYNC
-            fastSynchronizer.syncUntil { !isProcessRunning() }
-            syncMethod = SyncMethod.NOT_SYNCING
+            if (params.slowSyncEnabled) {
+                logger.debug { "Using slow sync for read only bc process" }
+                syncMethod = SyncMethod.FAST_SYNC
+                fastSynchronizer.syncUntilResponsiveNodesDrained()
+                // Move to slow sync and proceed until shutdown
+                syncMethod = SyncMethod.SLOW_SYNC
+                slowSynchronizer.syncUntil()
+                syncMethod = SyncMethod.NOT_SYNCING
+            } else {
+                logger.debug { "Using fast sync for read only bc process" }
+                syncMethod = SyncMethod.FAST_SYNC
+                fastSynchronizer.syncUntil { !isProcessRunning() }
+                syncMethod = SyncMethod.NOT_SYNCING
+            }
         }
     }
 
@@ -97,4 +103,5 @@ class ReadOnlyBlockchainProcess(
     }
 
     override fun isSigner() = false
+    override fun getBlockchainState(): BlockchainState = blockchainState
 }

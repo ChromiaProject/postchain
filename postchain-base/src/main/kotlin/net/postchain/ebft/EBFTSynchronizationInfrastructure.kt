@@ -17,6 +17,7 @@ import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainRestartNotifier
+import net.postchain.core.BlockchainState
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.NodeRid
 import net.postchain.core.SynchronizationInfrastructure
@@ -54,6 +55,7 @@ open class EBFTSynchronizationInfrastructure(
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
+            blockchainState: BlockchainState
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
         val currentNodeConfig = nodeConfig
@@ -115,7 +117,7 @@ open class EBFTSynchronizationInfrastructure(
             3 Sync from FB until drained or timeout
             4 Goto 2
             */
-            return if (historicBlockchainContext != null) {
+            return if (historicBlockchainContext != null && blockchainState == BlockchainState.RUNNING) {
 
                 historicBlockchainContext.contextCreator = { brid ->
                     val historicPeerCommConfiguration = if (brid == historicBrid) {
@@ -143,10 +145,10 @@ open class EBFTSynchronizationInfrastructure(
 
                 }
                 HistoricBlockchainProcess(workerContext, historicBlockchainContext)
-            } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY) {
+            } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY && blockchainState == BlockchainState.RUNNING) {
                 ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID))
             } else {
-                ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries())
+                ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries(), blockchainState)
             }
         }
     }

@@ -8,6 +8,7 @@ import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
+import net.postchain.core.BlockchainState
 import net.postchain.core.NodeRid
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
@@ -50,10 +51,13 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
                     "nm_compute_blockchain_info_list",
                     buildArgs("node_id" to gtv(appConfig.pubKeyByteArray))
             )
-            res.asArray().map { BlockchainInfo(BlockchainRid(it["rid"]!!.asByteArray()), it["system"]!!.asBoolean()) }
+            res.asArray().map { BlockchainInfo(
+                    BlockchainRid(it["rid"]!!.asByteArray()),
+                    it["system"]!!.asBoolean(),
+                    BlockchainState.valueOf(it["state"]?.asString() ?: BlockchainState.RUNNING.name)) }
         } else {
             // Fallback for legacy API versions
-            computeBlockchainList().map { BlockchainInfo(BlockchainRid(it), false) }
+            computeBlockchainList().map { BlockchainInfo(BlockchainRid(it), false, BlockchainState.RUNNING) }
         }
     }
 
@@ -150,4 +154,15 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
     }
 
     fun buildArgs(vararg args: Pair<String, Gtv>): Gtv = gtv(*args)
+
+    override fun getBlockchainState(blockchainRid: BlockchainRid): BlockchainState {
+        return if (nmApiVersion >= 6) {
+            val res = query(
+                    "nm_get_blockchain_state",
+                    buildArgs("blockchain_rid" to gtv(blockchainRid.data)))
+            BlockchainState.valueOf(res.asString())
+        } else {
+            BlockchainState.RUNNING
+        }
+    }
 }

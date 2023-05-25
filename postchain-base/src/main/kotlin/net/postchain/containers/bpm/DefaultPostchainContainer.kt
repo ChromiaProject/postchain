@@ -33,6 +33,9 @@ class DefaultPostchainContainer(
     }
 
     override fun getAllChains(): Set<Long> = processes.keys
+
+    override fun getAllProcesses(): Map<Long, ContainerBlockchainProcess> = processes
+
     override fun getStoppedChains(): Set<Long> {
         return processes.keys
                 .filter { !subnodeAdminClient.isBlockchainRunning(it) }
