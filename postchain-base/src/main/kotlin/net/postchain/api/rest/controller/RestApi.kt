@@ -30,6 +30,7 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvException
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvType
@@ -47,7 +48,6 @@ import spark.QueryParamsMap
 import spark.Request
 import spark.Response
 import spark.Service
-import java.io.IOException
 
 /**
  * Contains information on the rest API, such as network parameters and available queries
@@ -592,7 +592,9 @@ class RestApi(
             val hexQuery = it.asString
             val gtxQuery = try {
                 GtxQuery.decode(hexQuery.hexStringToByteArray())
-            } catch (e: IOException) {
+            } catch (e: GtvException) {
+                throw BadFormatError(e.message ?: "")
+            } catch (e: IllegalArgumentException) {
                 throw BadFormatError(e.message ?: "")
             }
             response.add(GtvEncoder.encodeGtv(model(request).query(gtxQuery)).toHex())
@@ -604,7 +606,9 @@ class RestApi(
     private fun handleGtvQuery(request: Request): ByteArray {
         val gtvQuery = try {
             GtxQuery.decode(request.bodyAsBytes())
-        } catch (e: IOException) {
+        } catch (e: GtvException) {
+            throw BadFormatError(e.message ?: "")
+        } catch (e: IllegalArgumentException) {
             throw BadFormatError(e.message ?: "")
         }
         return GtvEncoder.encodeGtv(model(request).query(gtvQuery))
