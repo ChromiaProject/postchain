@@ -160,7 +160,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
             "ALTER TABLE $tableName ALTER COLUMN $columnName TYPE BYTEA USING decode($columnName, 'hex')"
 
     override fun cmdDropTableConstraint(tableName: String, constraintName: String): String =
-            "ALTER TABLE $tableName DROP CONSTRAINT $constraintName"
+            "ALTER TABLE \"${stripQuotes(tableName)}\" DROP CONSTRAINT \"${stripQuotes(constraintName)}\""
 
     override fun cmdGetTableBlockchainReplicasPubKeyConstraint(): String =
             cmdGetTableConstraints(tableBlockchainReplicas())

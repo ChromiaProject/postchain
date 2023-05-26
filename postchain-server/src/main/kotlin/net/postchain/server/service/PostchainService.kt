@@ -98,4 +98,13 @@ class PostchainService(private val nodeProvider: NodeProvider) {
                     configurationsFile = configurationFile,
                     blocksFile = blocksFile,
                     incremental)
+
+    fun removeBlockchain(chainId: Long) {
+        stopBlockchain(chainId)
+
+        withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
+            BlockchainApi.deleteBlockchain(ctx, chainId)
+            true
+        }
+    }
 }
