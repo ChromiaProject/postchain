@@ -63,6 +63,7 @@ interface DatabaseAccess {
     fun createSchema(connection: Connection, schema: String)
     fun setCurrentSchema(connection: Connection, schema: String)
     fun dropSchemaCascade(connection: Connection, schema: String)
+    fun dropTable(connection: Connection, tableName: String)
 
     /**
      * @return iid of the newly created container
@@ -72,11 +73,15 @@ interface DatabaseAccess {
 
     fun initializeApp(connection: Connection, expectedDbVersion: Int)
     fun initializeBlockchain(ctx: EContext, blockchainRid: BlockchainRid)
+    fun removeBlockchain(ctx: AppContext, chainId: Long): Boolean
+    fun removeAllBlockchainSpecificTables(ctx: EContext)
+    fun removeBlockchainFromMustSyncUntil(ctx: AppContext, chainId: Long): Boolean
     fun getChainId(ctx: EContext, blockchainRid: BlockchainRid): Long?
     fun getMaxChainId(ctx: EContext): Long?
     fun getMaxSystemChainId(ctx: EContext): Long?
 
     fun getBlockchainRid(ctx: EContext): BlockchainRid?
+    fun getBlockchainRid(connection: Connection, chainId: Long): BlockchainRid?
     fun insertBlock(ctx: EContext, height: Long): Long
     fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long
     fun finalizeBlock(ctx: BlockEContext, header: BlockHeader)
@@ -119,6 +124,8 @@ interface DatabaseAccess {
     fun listConfigurations(ctx: EContext): List<Long>
     fun removeConfiguration(ctx: EContext, height: Long): Int
     fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray>>
+    fun getAllConfigurations(connection: Connection, chainId: Long): List<Pair<Long, WrappedByteArray>>
+    fun getDependenciesOnBlockchain(ctx: EContext, chainId: Long): List<BlockchainRid>
 
     /** Get configuration data at exactly given height */
     fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
@@ -159,6 +166,7 @@ interface DatabaseAccess {
     fun existsBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubkey: PubKey): Boolean
     fun addBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubKey: PubKey): Boolean
     fun removeBlockchainReplica(ctx: AppContext, brid: BlockchainRid?, pubKey: PubKey): Set<BlockchainRid>
+    fun removeBlockchainReplica(ctx: AppContext, brid: BlockchainRid): Boolean
     fun getBlockchainsToReplicate(ctx: AppContext, pubkey: String): Set<BlockchainRid>
 
     //Avoid potential chain split

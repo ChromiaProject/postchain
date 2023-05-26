@@ -3,6 +3,7 @@ package net.postchain.base.data
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.SqlUtils.isUniqueViolation
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
@@ -14,6 +15,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.core.AppContext
 import net.postchain.core.BlockEContext
@@ -64,6 +66,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     private fun tableName(chainId: Long, table: String): String = "\"c${chainId}.$table\""
 
+    protected fun stripQuotes(string: String): String = "${string.replace("\"", "")}"
+
     // --- Create Table ---
     protected abstract fun cmdCreateTableMeta(): String
     protected abstract fun cmdCreateTableContainers(): String
@@ -87,6 +91,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdAlterHexColumnToBytea(tableName: String, columnName: String): String
     protected abstract fun cmdDropTableConstraint(tableName: String, constraintName: String): String
     protected abstract fun cmdGetTableBlockchainReplicasPubKeyConstraint(): String
+    protected abstract fun cmdGetTableConstraints(tableName: String): String
+    protected abstract fun cmdGetAllBlockchainTables(chainId: Long): String
 
     // Tables not part of the batch creation run
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
@@ -101,6 +107,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdInsertState(ctx: EContext, prefix: String): String
     protected abstract fun cmdPruneEvents(ctx: EContext, prefix: String): String
     protected abstract fun cmdPruneStates(ctx: EContext, prefix: String): String
+
     abstract fun cmdCreateTableGtxModuleVersion(ctx: EContext): String
 
     var queryRunner = QueryRunner()
@@ -113,12 +120,15 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     internal val mapListHandler = MapListHandler()
 
     companion object : KLogging() {
+        const val FIELD_NAME_CHAIN_IID = "chain_iid"
+
         const val TABLE_PEERINFOS_FIELD_HOST = "host"
         const val TABLE_PEERINFOS_FIELD_PORT = "port"
         const val TABLE_PEERINFOS_FIELD_PUBKEY = "pub_key"
-        const val TABLE_PEERINFOS_FIELD_TIMESTAMP = "timestamp"
 
+        const val TABLE_PEERINFOS_FIELD_TIMESTAMP = "timestamp"
         const val TABLE_REPLICAS_FIELD_BRID = "blockchain_rid"
+
         const val TABLE_REPLICAS_FIELD_PUBKEY = "node"
 
         const val TABLE_SYNC_UNTIL_FIELD_CHAIN_IID = "chain_iid"
@@ -231,6 +241,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 val blockRid = res.first()["block_rid"] as ByteArray
                 Pair(height, blockRid)
             }
+
             else -> {
                 throw ProgrammerMistake("Incorrect query getBlockHeightInfo got many lines (${res.size})")
             }
@@ -338,8 +349,12 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun getBlockchainRid(ctx: EContext): BlockchainRid? {
+        return getBlockchainRid(ctx.conn, ctx.chainID)
+    }
+
+    override fun getBlockchainRid(connection: Connection, chainId: Long): BlockchainRid? {
         val sql = "SELECT blockchain_rid FROM ${tableBlockchains()} WHERE chain_iid = ?"
-        val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, ctx.chainID)
+        val data = queryRunner.query(connection, sql, nullableByteArrayRes, chainId)
         return data?.let(::BlockchainRid)
     }
 
@@ -683,6 +698,32 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
+    override fun removeBlockchain(ctx: AppContext, chainId: Long): Boolean {
+        val sql = """DELETE FROM ${tableBlockchains()} 
+                WHERE $FIELD_NAME_CHAIN_IID = ?"""
+                .trimIndent()
+        return queryRunner.update(ctx.conn, sql, chainId) != 0
+    }
+
+    override fun removeAllBlockchainSpecificTables(ctx: EContext) {
+        val bcTables = queryRunner.query(ctx.conn, cmdGetAllBlockchainTables(ctx.chainID), ColumnListHandler<String>())
+        bcTables.forEach { tableName ->
+            queryRunner.query(ctx.conn, cmdGetTableConstraints(tableName), ColumnListHandler<String>()).forEach { constraintName ->
+                queryRunner.update(ctx.conn, cmdDropTableConstraint(tableName, constraintName))
+            }
+        }
+        bcTables.forEach { tableName ->
+            dropTable(ctx.conn, tableName)
+        }
+    }
+
+    override fun removeBlockchainFromMustSyncUntil(ctx: AppContext, chainId: Long): Boolean {
+        val sql = """DELETE FROM ${tableMustSyncUntil()} 
+                WHERE $FIELD_NAME_CHAIN_IID = ?"""
+                .trimIndent()
+        return queryRunner.update(ctx.conn, sql, chainId) != 0
+    }
+
     override fun getChainId(ctx: EContext, blockchainRid: BlockchainRid): Long? {
         val sql = "SELECT chain_iid FROM ${tableBlockchains()} WHERE blockchain_rid = ?"
         return queryRunner.query(ctx.conn, sql, nullableLongRes, blockchainRid.data)
@@ -793,6 +834,38 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.update(ctx.conn, "DELETE FROM ${tableConfigurations(ctx)} WHERE height = ?", height)
     }
 
+    override fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray>> {
+        return getAllConfigurations(ctx.conn, ctx.chainID)
+    }
+
+    override fun getAllConfigurations(connection: Connection, chainId: Long): List<Pair<Long, WrappedByteArray>> {
+        val sql = """
+            SELECT height, configuration_data  
+            FROM ${tableConfigurations(chainId)} 
+            ORDER BY height
+        """.trimIndent()
+        return queryRunner.query(connection, sql, mapListHandler).map { configuration ->
+            (configuration["height"] as Long) to (configuration["configuration_data"] as ByteArray).wrap()
+        }
+    }
+
+    override fun getDependenciesOnBlockchain(ctx: EContext, chainId: Long): List<BlockchainRid> {
+        val brid = getBlockchainRid(ctx.conn, chainId)
+        val dependentChains = mutableListOf<BlockchainRid>()
+        queryRunner.query(ctx.conn, "SELECT blockchain_rid, chain_iid FROM ${tableBlockchains()}", mapListHandler)
+                .map { it["chain_iid"] as Long to BlockchainRid(it["blockchain_rid"] as ByteArray) }
+                .forEach { (dependentChainId, dependentBrid) ->
+                    if (dependentBrid != brid) {
+                        getAllConfigurations(ctx.conn, dependentChainId).forEach { (_, conf) ->
+                            BlockchainConfigurationData.fromRaw(conf.data).blockchainDependencies.forEach {
+                                if (it.blockchainRid == brid) dependentChains.add(dependentBrid)
+                            }
+                        }
+                    }
+                }
+        return dependentChains
+    }
+
     override fun getConfigurationData(ctx: EContext, height: Long): ByteArray? {
         val sql = "SELECT configuration_data FROM ${tableConfigurations(ctx)} WHERE height = ?"
         return queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height)
@@ -811,6 +884,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             1 -> res[0]["configuration_data"] as ByteArray
             else -> throw ProgrammerMistake("Found multiple configurations with hash ${hash.toHex()}")
         }
+    }
+
+    override fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray) {
+        val hash = calcConfigurationHash(data)
+        queryRunner.insert(ctx.conn, cmdInsertConfiguration(ctx), longRes, height, data, hash, data, hash)
     }
 
     override fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo> {
@@ -960,6 +1038,13 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             queryRunner.query(ctx.conn, sql, ColumnListHandler(TABLE_REPLICAS_FIELD_BRID), pubKey.data, brid.data)
         }
         return res.map { BlockchainRid(it) }.toSet()
+    }
+
+    override fun removeBlockchainReplica(ctx: AppContext, brid: BlockchainRid): Boolean {
+        val sql = """DELETE FROM ${tableBlockchainReplicas()} 
+                WHERE $TABLE_REPLICAS_FIELD_BRID = ?"""
+                .trimIndent()
+        return queryRunner.update(ctx.conn, sql, brid.data) != 0
     }
 
     override fun setMustSyncUntil(ctx: AppContext, blockchainRID: BlockchainRid, height: Long): Boolean {
