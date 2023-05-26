@@ -181,7 +181,7 @@ class DatabaseIT {
 
         withWriteConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
-            db.removeBlockchain(ctx, chainId)
+            db.removeBlockchain(ctx)
         }
 
         withReadConnection(storage, chainId) { ctx ->
@@ -240,7 +240,7 @@ class DatabaseIT {
 
         withWriteConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
-            db.removeBlockchainFromMustSyncUntil(ctx, chainId)
+            db.removeBlockchainFromMustSyncUntil(ctx)
         }
 
         withReadConnection(storage, chainId) { ctx ->
@@ -270,7 +270,7 @@ class DatabaseIT {
 
         withWriteConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
-            db.removeBlockchainReplica(ctx, BlockchainRid.ZERO_RID)
+            db.removeAllBlockchainReplicas(ctx)
         }
 
         withReadConnection(storage, chainId) { ctx ->
@@ -336,7 +336,7 @@ class DatabaseIT {
 
         withReadConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
-            val deps = db.getDependenciesOnBlockchain(ctx, chainId)
+            val deps = db.getDependenciesOnBlockchain(ctx)
             assertEquals(1, deps.size)
             assertEquals(BlockchainRid.buildRepeat(1), deps[0])
         }

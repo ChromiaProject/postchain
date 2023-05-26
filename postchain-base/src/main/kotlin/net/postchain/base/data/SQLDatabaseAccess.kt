@@ -11,6 +11,7 @@ import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.HASH_LENGTH
 import net.postchain.common.data.Hash
+import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
@@ -66,7 +67,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     private fun tableName(chainId: Long, table: String): String = "\"c${chainId}.$table\""
 
-    protected fun stripQuotes(string: String): String = "${string.replace("\"", "")}"
+    protected fun stripQuotes(string: String): String = string.replace("\"", "")
 
     // --- Create Table ---
     protected abstract fun cmdCreateTableMeta(): String
@@ -349,12 +350,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun getBlockchainRid(ctx: EContext): BlockchainRid? {
-        return getBlockchainRid(ctx.conn, ctx.chainID)
-    }
-
-    override fun getBlockchainRid(connection: Connection, chainId: Long): BlockchainRid? {
         val sql = "SELECT blockchain_rid FROM ${tableBlockchains()} WHERE chain_iid = ?"
-        val data = queryRunner.query(connection, sql, nullableByteArrayRes, chainId)
+        val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, ctx.chainID)
         return data?.let(::BlockchainRid)
     }
 
@@ -698,11 +695,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
-    override fun removeBlockchain(ctx: AppContext, chainId: Long): Boolean {
+    override fun removeBlockchain(ctx: EContext): Boolean {
         val sql = """DELETE FROM ${tableBlockchains()} 
                 WHERE $FIELD_NAME_CHAIN_IID = ?"""
                 .trimIndent()
-        return queryRunner.update(ctx.conn, sql, chainId) != 0
+        return queryRunner.update(ctx.conn, sql, ctx.chainID) != 0
     }
 
     override fun removeAllBlockchainSpecificTables(ctx: EContext) {
@@ -717,11 +714,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
-    override fun removeBlockchainFromMustSyncUntil(ctx: AppContext, chainId: Long): Boolean {
+    override fun removeBlockchainFromMustSyncUntil(ctx: EContext): Boolean {
         val sql = """DELETE FROM ${tableMustSyncUntil()} 
                 WHERE $FIELD_NAME_CHAIN_IID = ?"""
                 .trimIndent()
-        return queryRunner.update(ctx.conn, sql, chainId) != 0
+        return queryRunner.update(ctx.conn, sql, ctx.chainID) != 0
     }
 
     override fun getChainId(ctx: EContext, blockchainRid: BlockchainRid): Long? {
@@ -849,8 +846,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
-    override fun getDependenciesOnBlockchain(ctx: EContext, chainId: Long): List<BlockchainRid> {
-        val brid = getBlockchainRid(ctx.conn, chainId)
+    override fun getDependenciesOnBlockchain(ctx: EContext): List<BlockchainRid> {
+        val brid = getBlockchainRid(ctx)
         val dependentChains = mutableListOf<BlockchainRid>()
         queryRunner.query(ctx.conn, "SELECT blockchain_rid, chain_iid FROM ${tableBlockchains()}", mapListHandler)
                 .map { it["chain_iid"] as Long to BlockchainRid(it["blockchain_rid"] as ByteArray) }
@@ -1040,7 +1037,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return res.map { BlockchainRid(it) }.toSet()
     }
 
-    override fun removeBlockchainReplica(ctx: AppContext, brid: BlockchainRid): Boolean {
+    override fun removeAllBlockchainReplicas(ctx: EContext): Boolean {
+        val brid = getBlockchainRid(ctx) ?: throw NotFound("Blockchain RID not found")
         val sql = """DELETE FROM ${tableBlockchainReplicas()} 
                 WHERE $TABLE_REPLICAS_FIELD_BRID = ?"""
                 .trimIndent()

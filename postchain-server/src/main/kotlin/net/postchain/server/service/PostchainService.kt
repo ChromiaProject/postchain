@@ -103,7 +103,7 @@ class PostchainService(private val nodeProvider: NodeProvider) {
         stopBlockchain(chainId)
 
         withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
-            BlockchainApi.deleteBlockchain(ctx, chainId)
+            BlockchainApi.deleteBlockchain(ctx)
             true
         }
     }

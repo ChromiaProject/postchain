@@ -22,7 +22,7 @@ class CommandDeleteBlockchain : CliktCommand(name = "delete-blockchain", help = 
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         try {
             withWriteConnection(StorageBuilder.buildStorage(appConfig), chainId) { ctx ->
-                BlockchainApi.deleteBlockchain(ctx, chainId)
+                BlockchainApi.deleteBlockchain(ctx)
                 true
             }
             println("OK: Blockchain was deleted")
