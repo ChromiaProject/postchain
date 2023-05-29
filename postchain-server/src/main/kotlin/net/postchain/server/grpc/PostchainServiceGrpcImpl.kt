@@ -226,4 +226,27 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
             )
         }
     }
+
+    override fun removeBlockchain(request: RemoveBlockchainRequest, responseObserver: StreamObserver<RemoveBlockchainReply>) {
+        try {
+            postchainService.removeBlockchain(request.chainId)
+            responseObserver.onNext(RemoveBlockchainReply.newBuilder()
+                    .setMessage("Blockchain has been removed")
+                    .build()
+            )
+            responseObserver.onCompleted()
+        } catch (e: NotFound) {
+            responseObserver.onError(
+                    Status.NOT_FOUND.withDescription(e.message).asRuntimeException()
+            )
+        } catch (e: UserMistake) {
+            responseObserver.onError(
+                    Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+            )
+        } catch (e: Exception) {
+            responseObserver.onError(
+                    Status.INTERNAL.withDescription(e.message).asRuntimeException()
+            )
+        }
+    }
 }

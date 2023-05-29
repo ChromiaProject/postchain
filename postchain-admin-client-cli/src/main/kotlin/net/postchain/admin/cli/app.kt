@@ -46,6 +46,7 @@ fun main(args: Array<String>) = PostchainAdminClientCommand()
                 StopBlockchainCommand(),
                 AddConfigurationCommand(),
                 InitializeBlockchainCommand(),
+                DeleteBlockchainCommand(),
                 AddBlockchainReplicaCommand(),
                 RemoveBlockchainReplicaCommand(),
                 ExportBlockchainCommand(),

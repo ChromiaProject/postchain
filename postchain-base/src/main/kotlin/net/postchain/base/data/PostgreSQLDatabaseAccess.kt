@@ -3,8 +3,6 @@
 package net.postchain.base.data
 
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.types.WrappedByteArray
-import net.postchain.common.wrap
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.Transaction
@@ -43,6 +41,11 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
 
     override fun dropSchemaCascade(connection: Connection, schema: String) {
         val sql = "DROP SCHEMA IF EXISTS $schema CASCADE"
+        queryRunner.update(connection, sql)
+    }
+
+    override fun dropTable(connection: Connection, tableName: String) {
+        val sql = "DROP TABLE \"${stripQuotes(tableName)}\" CASCADE"
         queryRunner.update(connection, sql)
     }
 
@@ -157,12 +160,19 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
             "ALTER TABLE $tableName ALTER COLUMN $columnName TYPE BYTEA USING decode($columnName, 'hex')"
 
     override fun cmdDropTableConstraint(tableName: String, constraintName: String): String =
-            "ALTER TABLE $tableName DROP CONSTRAINT $constraintName"
+            "ALTER TABLE \"${stripQuotes(tableName)}\" DROP CONSTRAINT \"${stripQuotes(constraintName)}\""
 
     override fun cmdGetTableBlockchainReplicasPubKeyConstraint(): String =
+            cmdGetTableConstraints(tableBlockchainReplicas())
+
+    override fun cmdGetTableConstraints(tableName: String): String =
             "SELECT tc.constraint_name FROM information_schema.table_constraints AS tc" +
-                    " WHERE tc.table_schema = current_schema() AND tc.table_name = '${tableBlockchainReplicas()}'" +
+                    " WHERE tc.table_schema = current_schema() AND tc.table_name = '${tableName}'" +
                     " AND tc.constraint_type = 'FOREIGN KEY'"
+
+    override fun cmdGetAllBlockchainTables(chainId: Long): String =
+            "SELECT tables.table_name FROM information_schema.tables AS tables" +
+                    " WHERE tables.table_schema = current_schema() AND tables.table_name LIKE 'c${chainId}.%'"
 
     override fun cmdCreateTablePeerInfos(): String {
         return "CREATE TABLE ${tablePeerinfos()} (" +
@@ -268,22 +278,6 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
      */
     override fun cmdPruneStates(ctx: EContext, prefix: String): String {
         return "DELETE FROM ${tableStateLeafs(ctx, prefix)} WHERE (state_n BETWEEN ? and ?) AND height <= ?"
-    }
-
-    override fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray) {
-        val hash = calcConfigurationHash(data)
-        queryRunner.insert(ctx.conn, cmdInsertConfiguration(ctx), longRes, height, data, hash, data, hash)
-    }
-
-    override fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray>> {
-        val sql = """
-            SELECT height, configuration_data  
-            FROM ${tableConfigurations(ctx)} 
-            ORDER BY height
-        """.trimIndent()
-        return queryRunner.query(ctx.conn, sql, mapListHandler).map { configuration ->
-            (configuration["height"] as Long) to (configuration["configuration_data"] as ByteArray).wrap()
-        }
     }
 
     override fun getAllBlocksWithTransactions(ctx: EContext, fromHeight: Long, upToHeight: Long,
