@@ -108,7 +108,7 @@ container-scanning:
     matrix:
       - IMAGE: [ postchain-cli,
                  postchain-admin-client ]
-        VERSION: [ 3.10.0-SNAPSHOT ]
+        VERSION: [ 3.10.0, 3.11.0-SNAPSHOT ]
   only:
     variables:
       - $RUN_DEPENDENCY_CHECK == "true"
