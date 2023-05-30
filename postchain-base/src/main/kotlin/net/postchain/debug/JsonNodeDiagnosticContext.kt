@@ -1,5 +1,6 @@
 package net.postchain.debug
 
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.common.BlockchainRid
@@ -21,7 +22,7 @@ class JsonNodeDiagnosticContext(
 
     constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values), mutableMapOf())
 
-    private val json = JsonFactory.makePrettyJson()
+    private val json = JsonFactory.makeJson()
 
     init {
         properties[DiagnosticProperty.BLOCKCHAIN] = LazyDiagnosticValueCollection { blockchainDiagnosticData.values }
@@ -47,7 +48,7 @@ class JsonNodeDiagnosticContext(
         get() = properties.size
 
 
-    override fun format(): String = JsonObject().apply {
+    override fun format(): JsonElement = JsonObject().apply {
         properties.forEach { (p, v) -> add(p.prettyName, json.toJsonTree(v.value)) }
-    }.let(json::toJson)
+    }
 }

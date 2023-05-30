@@ -2,21 +2,23 @@
 
 package net.postchain.api.rest.controller
 
+import net.postchain.common.BlockchainRid
+
 interface Modellable {
 
     /**
      * Attaches a [chainModel] associated with key [blockchainRid]
      */
-    fun attachModel(blockchainRid: String, chainModel: ChainModel)
+    fun attachModel(blockchainRid: BlockchainRid, chainModel: ChainModel)
 
     /**
      * Detaches a model associated with key [blockchainRid]
      */
-    fun detachModel(blockchainRid: String)
+    fun detachModel(blockchainRid: BlockchainRid)
 
     /**
      * Retrieves a model associated with key [blockchainRid]
      */
-    fun retrieveModel(blockchainRid: String): ChainModel?
+    fun retrieveModel(blockchainRid: BlockchainRid): ChainModel?
 
 }

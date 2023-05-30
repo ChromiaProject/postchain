@@ -31,7 +31,7 @@
 
         <!-- Kotlin -->
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
-        <kotlin.version>1.8.10</kotlin.version>
+        <kotlin.version>1.8.21</kotlin.version>
         <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
 
@@ -58,9 +58,8 @@
         <log4j2.version>2.20.0</log4j2.version>
 
         <!-- 3rd party -->
-        <netty.version>4.1.86.Final</netty.version>
+        <netty.version>4.1.92.Final</netty.version>
         <jasn.version>1.11.3</jasn.version>
-        <spark-core.version>2.9.4</spark-core.version>
         <json.version>20170516</json.version>
         <jaxb.version>4.0.1</jaxb.version>
         <jackson.version>2.15.0</jackson.version>
@@ -230,18 +229,10 @@
 
             <dependency>
                 <groupId>org.http4k</groupId>
-                <artifactId>http4k-core</artifactId>
-                <version>4.41.1.1</version> <!-- Cannot upgrade to 4.41.2 or later since it requires Kotlin 1.8.20 -->
-            </dependency>
-            <dependency>
-                <groupId>org.http4k</groupId>
-                <artifactId>http4k-client-apache</artifactId>
-                <version>4.41.1.1</version> <!-- Cannot upgrade to 4.41.2 or later since it requires Kotlin 1.8.20 -->
-            </dependency>
-            <dependency>
-                <groupId>org.http4k</groupId>
-                <artifactId>http4k-client-apache-async</artifactId>
-                <version>4.41.1.1</version> <!-- Cannot upgrade to 4.41.2 or later since it requires Kotlin 1.8.20 -->
+                <artifactId>http4k-bom</artifactId>
+                <version>4.45.0.0</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
 
             <!-- Json -->
@@ -283,17 +274,6 @@
                 <groupId>io.github.microutils</groupId>
                 <artifactId>kotlin-logging</artifactId>
                 <version>1.12.5</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.konghq</groupId>
-                <artifactId>unirest-java</artifactId>
-                <version>3.13.13</version>
-            </dependency>
-            <dependency> <!-- for rest-assured also -->
-                <groupId>commons-codec</groupId>
-                <artifactId>commons-codec</artifactId>
-                <version>1.13</version>
             </dependency>
 
             <!-- DockerClient -->
@@ -349,6 +329,12 @@
                 <artifactId>rest-assured</artifactId>
                 <version>5.3.0</version>
             </dependency>
+            <dependency> <!-- for rest-assured -->
+                <groupId>commons-codec</groupId>
+                <artifactId>commons-codec</artifactId>
+                <version>1.13</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.awaitility</groupId>
                 <artifactId>awaitility</artifactId>
@@ -428,12 +414,6 @@
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
                 <version>2.11.0</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.sparkjava</groupId>
-                <artifactId>spark-core</artifactId>
-                <version>${spark-core.version}</version>
             </dependency>
 
             <dependency>

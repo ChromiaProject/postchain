@@ -2,6 +2,7 @@
 
 package net.postchain.api.rest.controller
 
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import net.postchain.debug.NodeDiagnosticContext
 
@@ -10,31 +11,25 @@ interface DebugInfoQuery {
     /**
      * Returns string representation of [NodeDiagnosticContext] object converted to Json
      */
-    fun queryDebugInfo(query: String?): String
+    fun queryDebugInfo(query: String?): JsonElement
 }
 
-class DisabledDebugInfoQuery: DebugInfoQuery {
-    override fun queryDebugInfo(query: String?): String {
-        return JsonObject().apply {
-            addProperty("error", "Debug endpoint is not enabled. Use --debug cli option to enable it.")
-        }.toString()
+class DisabledDebugInfoQuery : DebugInfoQuery {
+    override fun queryDebugInfo(query: String?): JsonElement = JsonObject().apply {
+        addProperty("error", "Debug endpoint is not enabled. Use --debug cli option to enable it.")
     }
 }
 
 class DefaultDebugInfoQuery(val nodeDiagnosticContext: NodeDiagnosticContext) : DebugInfoQuery {
 
-    override fun queryDebugInfo(query: String?): String {
-        return when (query) {
-            null -> collectDebugInfo()
-            else -> unknownQuery(query)
-        }
+    override fun queryDebugInfo(query: String?): JsonElement = when (query) {
+        null -> collectDebugInfo()
+        else -> unknownQuery(query)
     }
 
     private fun collectDebugInfo() = nodeDiagnosticContext.format()
 
-    private fun unknownQuery(query: String): String {
-        return JsonObject().apply {
-            addProperty("Error", "Unknown query: $query")
-        }.toString()
+    private fun unknownQuery(query: String): JsonElement = JsonObject().apply {
+        addProperty("Error", "Unknown query: $query")
     }
 }

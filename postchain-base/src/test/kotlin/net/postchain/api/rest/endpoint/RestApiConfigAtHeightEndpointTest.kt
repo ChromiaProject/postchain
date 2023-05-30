@@ -7,9 +7,10 @@ import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
+import net.postchain.common.BlockchainRid
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFileReader
-import org.hamcrest.CoreMatchers
+import org.hamcrest.CoreMatchers.startsWith
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -22,7 +23,7 @@ import java.nio.file.Paths
 class RestApiConfigAtHeightEndpointTest {
 
     private val basePath = "/api/v1"
-    private val blockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
+    private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
 
     private lateinit var bccFile: File
     private lateinit var bccByteArray: ByteArray
@@ -33,18 +34,19 @@ class RestApiConfigAtHeightEndpointTest {
     fun setup() {
         model = mock {
             on { chainIID } doReturn 1L
+            on { blockchainRid } doReturn blockchainRID
             on { live } doReturn true
         }
 
         bccFile = Paths.get(javaClass.getResource("/net/postchain/config/blockchain_config.xml")!!.toURI()).toFile()
         bccByteArray = GtvEncoder.encodeGtv(GtvFileReader.readFile(bccFile))
 
-        restApi = RestApi(0, basePath)
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
     }
 
     @AfterEach
     fun tearDown() {
-        restApi.stop()
+        restApi.close()
     }
 
     @Test
@@ -124,7 +126,7 @@ class RestApiConfigAtHeightEndpointTest {
                 .then()
                 .statusCode(400)
                 .contentType(ContentType.JSON)
-                .body("error", CoreMatchers.startsWith("Failed to find configuration"))
+                .body("error", startsWith("Failed to find configuration"))
     }
 
     @Test
@@ -136,7 +138,7 @@ class RestApiConfigAtHeightEndpointTest {
                 .then()
                 .statusCode(404)
                 .contentType(ContentType.JSON)
-                .body("error", CoreMatchers.startsWith("Can't find blockchain with blockchainRID"))
+                .body("error", startsWith("Can't find blockchain with blockchainRID"))
     }
 
 }

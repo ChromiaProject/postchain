@@ -1,6 +1,5 @@
 package net.postchain.api.rest.endpoint
 
-import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.block.BlockDetail
@@ -11,6 +10,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.mapper.GtvObjectMapper
 import org.http4k.asString
+import org.http4k.core.ContentType
 import org.http4k.core.HttpHandler
 import org.http4k.core.Method
 import org.http4k.core.Request
@@ -50,9 +50,9 @@ object MockPostchainRestApi : HttpHandler, Closeable {
                         gtvQuery[1]
 
                         if (queryName == "error_query") {
-                            Response(Status.BAD_REQUEST).header("Content-Type", RestApi.JSON_CONTENT_TYPE).body("error")
+                            Response(Status.BAD_REQUEST).header("Content-Type", ContentType.APPLICATION_JSON.value).body("error")
                         } else {
-                            Response(Status.OK).header("Content-Type", RestApi.JSON_CONTENT_TYPE).body(gtvGson.toJson(gtvQueryResponse))
+                            Response(Status.OK).header("Content-Type", ContentType.APPLICATION_JSON.value).body(gtvGson.toJson(gtvQueryResponse))
                         }
 
                     },
@@ -61,16 +61,16 @@ object MockPostchainRestApi : HttpHandler, Closeable {
                         gtvQuery[0].asString()
                         gtvQuery[1]
 
-                        Response(Status.OK).header("Content-Type", RestApi.OCTET_CONTENT_TYPE).body(GtvEncoder.encodeGtv(gtvQueryResponse).inputStream())
+                        Response(Status.OK).header("Content-Type", ContentType.OCTET_STREAM.value).body(GtvEncoder.encodeGtv(gtvQueryResponse).inputStream())
                     },
                     "/blocks/{blockchainRID}/height/{height}" bind Method.GET to { request ->
                         when (request.header("Accept")) {
-                            RestApi.OCTET_CONTENT_TYPE -> Response(Status.OK)
-                                    .header("Content-Type", RestApi.OCTET_CONTENT_TYPE)
+                            ContentType.OCTET_STREAM.value -> Response(Status.OK)
+                                    .header("Content-Type", ContentType.OCTET_STREAM.value)
                                     .body(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(block)).inputStream())
 
                             else -> Response(Status.OK)
-                                    .header("Content-Type", RestApi.JSON_CONTENT_TYPE)
+                                    .header("Content-Type", ContentType.APPLICATION_JSON.value)
                                     .body(gson.toJson(block))
                         }
                     }

@@ -4,23 +4,26 @@ package net.postchain.api.rest.json
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import net.postchain.api.rest.json.JsonFactory.gsonBuilder
 import net.postchain.api.rest.model.ApiStatus
-import net.postchain.api.rest.model.ApiTx
 import net.postchain.api.rest.model.GTXQuery
 import net.postchain.base.ConfirmationProof
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.block.BlockDetail
+import org.http4k.format.ConfigurableGson
 
-object JsonFactory {
+object JsonFactory : ConfigurableGson(gsonBuilder(false)) {
 
     fun makeJson(): Gson = buildGson(false)
 
     fun makePrettyJson(): Gson = buildGson(true)
 
-    private fun buildGson(pretty: Boolean): Gson {
-        return GsonBuilder()
+    private fun buildGson(pretty: Boolean): Gson = gsonBuilder(pretty)
+            .create()!!
+
+    @JvmStatic
+    private fun gsonBuilder(pretty: Boolean): GsonBuilder = GsonBuilder()
             .registerTypeAdapter(ConfirmationProof::class.java, ConfirmationProofSerializer())
-            .registerTypeAdapter(ApiTx::class.java, TransactionDeserializer())
             .registerTypeAdapter(ApiStatus::class.java, ApiStatusSerializer())
             .registerTypeAdapter(GTXQuery::class.java, GTXQueryDeserializer())
             .registerTypeAdapter(TransactionInfoExt::class.java, TransactionInfoExtSerializer())
@@ -28,6 +31,4 @@ object JsonFactory {
             .apply {
                 if (pretty) setPrettyPrinting()
             }
-            .create()!!
-    }
 }

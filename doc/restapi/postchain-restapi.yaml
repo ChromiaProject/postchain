@@ -746,38 +746,6 @@ paths:
           description: Not found
           content:
             application/octet-stream: { }
-  /node/{blockchainRid}/height:
-    get:
-      tags:
-        - node
-      summary: Query the current block height in node EBFT status
-      parameters:
-        - $ref: "#/components/parameters/blockchainRid"
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                  - blockHeight
-                properties:
-                  blockHeight:
-                    type: integer
-                    format: int64
-              example:
-                blockHeight: 4711
-        404:
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/error"
-              examples:
-                chainNotFound:
-                  value:
-                    error: "Can't find blockchain with blockchainRID: <hex-string>"
   /node/{blockchainRid}/my_status:
     get:
       tags:

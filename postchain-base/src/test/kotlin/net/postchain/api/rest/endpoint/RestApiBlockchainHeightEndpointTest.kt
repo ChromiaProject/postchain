@@ -1,25 +1,26 @@
-// Copyright (c) 2020 ChromaWay AB. See README for license information.
-
 package net.postchain.api.rest.endpoint
 
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
+import net.postchain.api.rest.BlockHeight
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.common.BlockchainRid
-import org.hamcrest.text.IsEqualIgnoringCase.equalToIgnoringCase
+import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
-class RestApiBridEndpointTest {
+class RestApiBlockchainHeightEndpointTest {
 
     private val basePath = "/api/v1"
+    private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
+
     private lateinit var restApi: RestApi
     private lateinit var model: Model
-    private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
 
     @BeforeEach
     fun setup() {
@@ -38,14 +39,17 @@ class RestApiBridEndpointTest {
     }
 
     @Test
-    fun test_getBrid_Ok() {
+    fun blockchainHeight() {
+        val blockHeight = BlockHeight(17)
+        whenever(model.getCurrentBlockHeight()).thenReturn(blockHeight)
+
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
-                .get("/brid/iid_1")
+                .get("/blockchain/$blockchainRID/height")
                 .then()
                 .statusCode(200)
-                .contentType(ContentType.TEXT)
-                .body(equalToIgnoringCase(blockchainRID.toHex()))
+                .contentType(ContentType.JSON)
+                .body("blockHeight", equalTo(17))
     }
 }

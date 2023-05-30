@@ -8,12 +8,13 @@ import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.ExternalModel
 import net.postchain.api.rest.controller.HttpExternalModel
 import net.postchain.api.rest.controller.RestApi
+import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.mapper.GtvObjectMapper
-import org.hamcrest.core.IsEqual
+import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
@@ -21,8 +22,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class RestApiRedirectEndpointTest {
-    private val basePath = ""
-    private val blockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
+    private val basePath = "/api"
+    private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
     private lateinit var restApi: RestApi
     private lateinit var model: ExternalModel
 
@@ -42,13 +43,13 @@ class RestApiRedirectEndpointTest {
 
     @BeforeEach
     fun setup() {
-        model = HttpExternalModel("http://localhost:${MockPostchainRestApi.port}", 1L)
-        restApi = RestApi(0, basePath)
+        model = HttpExternalModel(basePath, "http://localhost:${MockPostchainRestApi.port}", 1L)
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
     }
 
     @AfterEach
     fun tearDown() {
-        restApi.stop()
+        restApi.close()
     }
 
     @Test
@@ -56,12 +57,12 @@ class RestApiRedirectEndpointTest {
         restApi.attachModel(blockchainRID, model)
 
         RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .header("Accept", RestApi.JSON_CONTENT_TYPE)
+                .header("Accept", ContentType.JSON)
                 .get("/blocks/$blockchainRID/height/0")
                 .then()
                 .statusCode(200)
-                .contentType(RestApi.JSON_CONTENT_TYPE)
-                .body("rid", IsEqual.equalTo(MockPostchainRestApi.block.rid.toHex()))
+                .contentType(ContentType.JSON)
+                .body("rid", equalTo(MockPostchainRestApi.block.rid.toHex()))
     }
 
     @Test
@@ -69,11 +70,11 @@ class RestApiRedirectEndpointTest {
         restApi.attachModel(blockchainRID, model)
 
         val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .header("Accept", RestApi.OCTET_CONTENT_TYPE)
+                .header("Accept", ContentType.BINARY)
                 .get("/blocks/$blockchainRID/height/0")
                 .then()
                 .statusCode(200)
-                .contentType(RestApi.OCTET_CONTENT_TYPE)
+                .contentType(ContentType.BINARY)
 
         assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(
                 GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(MockPostchainRestApi.block)))
@@ -86,13 +87,13 @@ class RestApiRedirectEndpointTest {
         restApi.attachModel(blockchainRID, model)
 
         val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .header("Accept", RestApi.OCTET_CONTENT_TYPE)
+                .header("Accept", ContentType.BINARY)
                 .contentType(ContentType.BINARY)
                 .body(GtvEncoder.encodeGtv(query))
                 .post("/query_gtv/${blockchainRID}")
                 .then()
                 .statusCode(200)
-                .contentType(RestApi.OCTET_CONTENT_TYPE)
+                .contentType(ContentType.BINARY)
 
         assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(
                 GtvEncoder.encodeGtv(MockPostchainRestApi.gtvQueryResponse))
@@ -109,7 +110,7 @@ class RestApiRedirectEndpointTest {
                 .post("/query/$blockchainRID")
                 .then()
                 .statusCode(200)
-                .contentType(RestApi.JSON_CONTENT_TYPE)
+                .contentType(ContentType.JSON)
 
         assertThat(body.extract().body().asString()).isEqualTo(make_gtv_gson().toJson(MockPostchainRestApi.gtvQueryResponse))
     }
@@ -125,6 +126,6 @@ class RestApiRedirectEndpointTest {
                 .post("/query/$blockchainRID")
                 .then()
                 .statusCode(400)
-                .contentType(RestApi.JSON_CONTENT_TYPE)
+                .contentType(ContentType.JSON)
     }
 }

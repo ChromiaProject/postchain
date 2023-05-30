@@ -2,10 +2,12 @@
 
 package net.postchain.api.rest.controller
 
+import com.google.gson.JsonElement
 import mu.KLogging
 import net.postchain.PostchainContext
+import net.postchain.api.rest.BlockHeight
 import net.postchain.api.rest.model.ApiStatus
-import net.postchain.api.rest.model.TxRID
+import net.postchain.api.rest.model.TxRid
 import net.postchain.base.BaseBlockQueries
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.ConfirmationProof
@@ -21,6 +23,7 @@ import net.postchain.common.tx.TransactionStatus.REJECTED
 import net.postchain.common.tx.TransactionStatus.UNKNOWN
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
+import net.postchain.core.BlockRid
 import net.postchain.core.DefaultBlockchainConfigurationFactory
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.core.Storage
@@ -40,7 +43,7 @@ open class PostchainModel(
         val txQueue: TransactionQueue,
         val blockQueries: BaseBlockQueries,
         private val debugInfoQuery: DebugInfoQuery,
-        val blockchainRid: BlockchainRid,
+        override val blockchainRid: BlockchainRid,
         val storage: Storage,
         val postchainContext: PostchainContext,
         private val diagnosticData: DiagnosticData
@@ -52,10 +55,10 @@ open class PostchainModel(
 
     override fun postTransaction(tx: ByteArray): Unit = throw NotSupported("NotSupported: Posting a transaction on a non-signer node is not supported.")
 
-    override fun getTransaction(txRID: TxRID): ByteArray? = blockQueries.getTransaction(txRID.bytes).get()
+    override fun getTransaction(txRID: TxRid): ByteArray? = blockQueries.getTransaction(txRID.bytes).get()
             .takeIf { it != null }?.getRawData()
 
-    override fun getTransactionInfo(txRID: TxRID): TransactionInfoExt? {
+    override fun getTransactionInfo(txRID: TxRid): TransactionInfoExt? {
         return blockQueries.getTransactionInfo(txRID.bytes).get()
     }
 
@@ -71,20 +74,20 @@ open class PostchainModel(
         return blockQueries.getBlocksBeforeHeight(beforeHeight, limit, txHashesOnly).get()
     }
 
-    override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail? {
-        return blockQueries.getBlock(blockRID, txHashesOnly).get()
+    override fun getBlock(blockRID: BlockRid, txHashesOnly: Boolean): BlockDetail? {
+        return blockQueries.getBlock(blockRID.data, txHashesOnly).get()
     }
 
     override fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail? {
         val blockRid = blockQueries.getBlockRid(height).get()
-        return blockRid?.let { getBlock(it, txHashesOnly) }
+        return blockRid?.let { getBlock(BlockRid(it), txHashesOnly) }
     }
 
-    override fun getConfirmationProof(txRID: TxRID): ConfirmationProof? {
+    override fun getConfirmationProof(txRID: TxRid): ConfirmationProof? {
         return blockQueries.getConfirmationProof(txRID.bytes).get()
     }
 
-    override fun getStatus(txRID: TxRID): ApiStatus {
+    override fun getStatus(txRID: TxRid): ApiStatus {
         var status = txQueue.getTransactionStatus(txRID.bytes)
 
         if (status == UNKNOWN) {
@@ -115,7 +118,7 @@ open class PostchainModel(
                 ?: throw NotFoundError("NotFound")
     }
 
-    override fun debugQuery(subQuery: String?): String {
+    override fun debugQuery(subQuery: String?): JsonElement {
         return debugInfoQuery.queryDebugInfo(subQuery)
     }
 
