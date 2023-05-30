@@ -4,9 +4,10 @@ package net.postchain.integrationtest
 
 import assertk.assertThat
 import assertk.assertions.*
-import net.postchain.api.rest.model.TxRID
+import net.postchain.api.rest.model.TxRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.core.BlockRid
 import net.postchain.core.Transaction
 import net.postchain.core.TxDetail
 import net.postchain.devtools.IntegrationTestSetup
@@ -110,7 +111,7 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
         // get a random block and save blockRID
         val randomBlock = nodes[0].getRestApiModel().getBlocks(Long.MAX_VALUE, 1, true)[0]
 
-        val block = nodes[0].getRestApiModel().getBlock(randomBlock.rid, true)
+        val block = nodes[0].getRestApiModel().getBlock(BlockRid(randomBlock.rid), true)
         assertThat(block).isNotNull()
         assertThat(block!!.height).isEqualTo(block.height)
     }
@@ -118,7 +119,7 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
     @Test
     fun test_get_a_block_does_not_exist() {
         val randomBlockRID = "ce4ae9fbb66228a5dbaf89384217d1466df478753f3f3970af9cae8f485100f2".hexStringToByteArray()
-        val block = nodes[0].getRestApiModel().getBlock(randomBlockRID, true)
+        val block = nodes[0].getRestApiModel().getBlock(BlockRid(randomBlockRID), true)
         assertThat(block).isNull()
     }
 
@@ -126,13 +127,13 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
     fun test_get_one_tx() {
         val txRID = tx(0).getRID()
 
-        val tx = nodes[0].getRestApiModel().getTransactionInfo(TxRID((txRID)))
+        val tx = nodes[0].getRestApiModel().getTransactionInfo(TxRid((txRID)))
         assertThat(tx).isNotNull()
     }
 
     fun test_get_a_tx_does_not_exist() {
         val randomTxRID = "ce4ae9fbb66228a5dbaf89384217d1466df478753f3f3970af9cae8f485100f2".hexStringToByteArray()
-        val tx = nodes[0].getRestApiModel().getTransactionInfo(TxRID((randomTxRID)))
+        val tx = nodes[0].getRestApiModel().getTransactionInfo(TxRid((randomTxRID)))
         assertThat(tx).isNull()
     }
 

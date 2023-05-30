@@ -15,12 +15,12 @@ class RestApiVersionEndpointTest {
 
     @BeforeEach
     fun setup() {
-        restApi = RestApi(0, basePath)
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
     }
 
     @AfterEach
     fun tearDown() {
-        restApi.stop()
+        restApi.close()
     }
 
     @Test

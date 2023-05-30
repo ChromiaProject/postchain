@@ -3,6 +3,7 @@ package net.postchain.debug
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
+import net.postchain.api.rest.json.JsonFactory
 import org.junit.jupiter.api.Test
 
 class JsonNodeDiagnosticContextTest {
@@ -84,7 +85,7 @@ class JsonNodeDiagnosticContextTest {
 
         sut[DiagnosticProperty.BLOCKCHAIN] = blockchains
 
-        assertThat(sut.format()).isEqualTo("""
+        assertThat(JsonFactory.makePrettyJson().toJson(sut.format())).isEqualTo("""
             {
               "version": "4.4.4",
               "container-name": "my-container",

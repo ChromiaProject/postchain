@@ -8,6 +8,7 @@ import net.postchain.api.rest.controller.DisabledDebugInfoQuery
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.base.BaseBlockQueries
+import net.postchain.common.BlockchainRid
 import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.debug.NodeDiagnosticContext
@@ -23,19 +24,10 @@ open class BaseApiInfrastructure(
 
     val restApi: RestApi? = with(restApiConfig) {
         if (port != -1) {
-            if (tls) {
-                RestApi(
-                        port,
-                        basePath,
-                        tlsCertificate,
-                        tlsCertificatePassword,
-                        nodeDiagnosticContext)
-            } else {
-                RestApi(
-                        port,
-                        basePath,
-                        nodeDiagnosticContext = nodeDiagnosticContext)
-            }
+            RestApi(
+                    port,
+                    basePath,
+                    nodeDiagnosticContext = nodeDiagnosticContext)
         } else {
             null
         }
@@ -87,10 +79,10 @@ open class BaseApiInfrastructure(
     }
 
     override fun shutdown() {
-        restApi?.stop()
+        restApi?.close()
     }
 
-    private fun bridOf(process: BlockchainProcess): String {
-        return process.blockchainEngine.getConfiguration().blockchainRid.toHex()
+    private fun bridOf(process: BlockchainProcess): BlockchainRid {
+        return process.blockchainEngine.getConfiguration().blockchainRid
     }
 }

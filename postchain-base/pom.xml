@@ -106,36 +106,20 @@
 
         <!-- REST -->
         <dependency>
-            <groupId>com.sparkjava</groupId>
-            <artifactId>spark-core</artifactId>
-        </dependency>
-        <!-- Added due to dependency-check failing. When spark-core includes updated versions of these remove them -->
-        <!-- //////////////////////////// -->
-        <dependency>
-            <groupId>org.eclipse.jetty.websocket</groupId>
-            <artifactId>websocket-server</artifactId>
-            <version>9.4.51.v20230217</version>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.jetty.websocket</groupId>
-            <artifactId>websocket-servlet</artifactId>
-            <version>9.4.51.v20230217</version>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-format-gson</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-server</artifactId>
-            <version>9.4.51.v20230217</version>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-server-netty</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-webapp</artifactId>
-            <version>9.4.51.v20230217</version>
-        </dependency>
-        <!-- //////////////////////////// -->
-
-        <dependency>
-            <groupId>com.konghq</groupId>
-            <artifactId>unirest-java</artifactId>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-client-apache</artifactId>
         </dependency>
 
         <!-- Netty -->
@@ -257,11 +241,6 @@
         <dependency>
             <groupId>org.skyscreamer</groupId>
             <artifactId>jsonassert</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.http4k</groupId>
-            <artifactId>http4k-core</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

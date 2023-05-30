@@ -6,7 +6,8 @@ import io.restassured.RestAssured.given
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.ApiStatus
-import net.postchain.api.rest.model.TxRID
+import net.postchain.api.rest.model.TxRid
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
 import org.hamcrest.Matchers.equalToIgnoringCase
@@ -25,7 +26,7 @@ class RestApiGetStatusEndpointTest {
     private val basePath = "/api/v1"
     private lateinit var restApi: RestApi
     private lateinit var model: Model
-    private val blockchainRID = "ABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABAB"
+    private val blockchainRID = BlockchainRid.buildFromHex("ABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABABAB")
 
     private val chainIid = 1L
     private val txHashHex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -34,16 +35,17 @@ class RestApiGetStatusEndpointTest {
     fun setup() {
         model = mock {
             on { chainIID } doReturn 1L
+            on { blockchainRid } doReturn blockchainRID
             on { live } doReturn true
-            on { getStatus(TxRID(txHashHex.hexStringToByteArray())) } doReturn ApiStatus(TransactionStatus.CONFIRMED)
+            on { getStatus(TxRid(txHashHex.hexStringToByteArray())) } doReturn ApiStatus(TransactionStatus.CONFIRMED)
         }
 
-        restApi = RestApi(0, basePath, null, null)
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
     }
 
     @AfterEach
     fun tearDown() {
-        restApi.stop()
+        restApi.close()
     }
 
     @Test

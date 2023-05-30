@@ -1,9 +1,10 @@
 package net.postchain.debug
 
+import com.google.gson.JsonElement
 import net.postchain.common.BlockchainRid
 
 interface NodeDiagnosticContext : MutableMap<DiagnosticProperty, DiagnosticValue> {
-    fun format(): String
+    fun format(): JsonElement
 
     fun hasBlockchainErrors(blockchainRid: BlockchainRid): Boolean
     fun blockchainErrorQueue(blockchainRid: BlockchainRid): DiagnosticQueue<String>

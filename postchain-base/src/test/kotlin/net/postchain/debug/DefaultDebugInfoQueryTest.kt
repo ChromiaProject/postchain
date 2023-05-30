@@ -1,6 +1,5 @@
 package net.postchain.debug
 
-import com.google.gson.JsonParser
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import net.postchain.api.rest.controller.DisabledDebugInfoQuery
 import org.junit.jupiter.api.Test
@@ -16,7 +15,7 @@ class DefaultDebugInfoQueryTest {
 
         // Actions
         val json = sut.queryDebugInfo(null)
-        val actual = JsonParser.parseString(json).asJsonObject
+        val actual = json.asJsonObject
 
         // Asserts
         assertEquals(1, actual.size())
@@ -33,7 +32,7 @@ class DefaultDebugInfoQueryTest {
 
         // Actions
         val json = sut.queryDebugInfo(null)
-        val actual = JsonParser.parseString(json).asJsonObject
+        val actual = json.asJsonObject
 
         // Asserts
         assertEquals(3, actual.size())
@@ -50,7 +49,7 @@ class DefaultDebugInfoQueryTest {
 
         // Actions
         val json = sut.queryDebugInfo("subquery")
-        val actual = JsonParser.parseString(json).asJsonObject
+        val actual = json.asJsonObject
 
         // Asserts
         assertEquals(1, actual.size())
@@ -63,7 +62,7 @@ class DefaultDebugInfoQueryTest {
 
         // Actions
         val json = sut.queryDebugInfo(null)
-        val actual = JsonParser.parseString(json).asJsonObject
+        val actual = json.asJsonObject
 
         // Asserts
         assertEquals(1, actual.size())
