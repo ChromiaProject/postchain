@@ -404,6 +404,7 @@ class RestApi(
     val server = ServerFilters.InitialiseRequestContext(contexts)
             .then(ServerFilters.Cors(
                     CorsPolicy(OriginPolicy.AllowAll(), listOf("Content-Type", "Accept"), listOf(GET, POST, OPTIONS), credentials = false)))
+            .then(ServerFilters.GZip())
             .then(Filter { next ->
                 { request ->
                     if (logger.isDebugEnabled) {
