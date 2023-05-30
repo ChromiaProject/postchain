@@ -4,8 +4,11 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
 import net.postchain.core.BlockchainState
 import net.postchain.devtools.ManagedModeTest
+import net.postchain.devtools.mminfra.TestManagedBlockchainProcessManager
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import org.awaitility.Awaitility
@@ -27,6 +30,21 @@ class BlockchainStateTest : ManagedModeTest() {
         verifyState(c1, BlockchainState.RUNNING, ValidatorBlockchainProcess::class)
 
         buildBlock(c1)
+    }
+
+    @Test
+    fun `Test deleting blockchain`() {
+        val c1 = basicSystem()
+        verifyState(c1, BlockchainState.RUNNING, ValidatorBlockchainProcess::class)
+
+        setBlockchainState(c1, BlockchainState.REMOVED)
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            getChainNodes(c1).forEach {
+                assertThat(it.retrieveBlockchain(c1)).isNull()
+                val processManager = it.processManager as TestManagedBlockchainProcessManager
+                assertThat(processManager.removedBlockchains.containsKey(c1)).isTrue()
+            }
+        }
     }
 
     private fun <T : Any> verifyState(chainId: Long, state: BlockchainState, clazz: KClass<in T>) {

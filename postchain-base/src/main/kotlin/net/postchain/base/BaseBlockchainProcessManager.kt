@@ -6,6 +6,7 @@ import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
 import net.postchain.StorageBuilder
+import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
@@ -314,12 +315,30 @@ open class BaseBlockchainProcessManager(
                 ) {
                     stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
                     stopDebug("Blockchain process has been purged", chainId, bTrace)
-                }
 
-                if (!restart) {
-                    chainIdToBrid.remove(chainId).also { bridToChainId.remove(it) }
-                    chainStartAndStopSynchronizers.remove(chainId)
+                    if (!restart) {
+                        val brid = chainIdToBrid.remove(chainId)
+                        if (brid != null) {
+                            bridToChainId.remove(brid)
+                            deleteBlockchainIfRemoved(chainId, brid)
+                        } else {
+                            logger.error("No blockchain RID mapping for chainId: $chainId was found when stopping blockchain")
+                        }
+
+                        chainStartAndStopSynchronizers.remove(chainId)
+                    }
                 }
+            }
+        }
+    }
+
+    protected open fun deleteBlockchainIfRemoved(chainId: Long, brid: BlockchainRid) {
+        val state = getBlockchainState(chainId, brid)
+        if (state == BlockchainState.REMOVED) {
+            logger.info("Deleting blockchain with chainId: $chainId and blockchain-rid: ${brid.toHex()}")
+            withWriteConnection(storage, chainId) {
+                BlockchainApi.deleteBlockchain(it)
+                true
             }
         }
     }
