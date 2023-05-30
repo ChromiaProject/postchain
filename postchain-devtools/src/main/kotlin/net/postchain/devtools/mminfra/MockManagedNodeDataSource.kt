@@ -39,13 +39,15 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     }
 
     override fun computeBlockchainInfoList(): List<BlockchainInfo> {
-        return computeBlockchainList().map {
-            BlockchainInfo(
-                    BlockchainRid(it),
-                    false,
-                    bridState[BlockchainRid(it)] ?: BlockchainState.RUNNING
-            )
-        }
+        return computeBlockchainList()
+                .filter { bridState[BlockchainRid(it)] != BlockchainState.REMOVED }
+                .map {
+                    BlockchainInfo(
+                            BlockchainRid(it),
+                            false,
+                            bridState[BlockchainRid(it)] ?: BlockchainState.RUNNING
+                    )
+                }
     }
 
     override fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray? {

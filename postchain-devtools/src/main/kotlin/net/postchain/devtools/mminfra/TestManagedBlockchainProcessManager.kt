@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadWriteConnection
+import net.postchain.common.BlockchainRid
 import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
@@ -75,6 +76,8 @@ open class TestManagedBlockchainProcessManager(
     var lastHeightStarted = ConcurrentHashMap<Long, Long>()
     var lastConfigStarted = ConcurrentHashMap<Long, ByteArray>()
 
+    val removedBlockchains = ConcurrentHashMap<Long, Boolean>()
+
     /**
      * Adding extra logic for measuring restarts.
      *
@@ -106,5 +109,10 @@ open class TestManagedBlockchainProcessManager(
             Thread.sleep(10)
         }
         awaitDebug("++++++ WAIT OVER! node idx: " + nodeIndex + ", chain: " + chainId + ", height: " + atLeastHeight)
+    }
+
+    override fun deleteBlockchainIfRemoved(chainId: Long, brid: BlockchainRid) {
+        removedBlockchains[chainId] = true
+        super.deleteBlockchainIfRemoved(chainId, brid)
     }
 }
