@@ -96,6 +96,7 @@ import org.http4k.lens.ParamMeta
 import org.http4k.lens.RequestContextKey
 import org.http4k.routing.ResourceLoader
 import org.http4k.routing.bind
+import org.http4k.routing.path
 import org.http4k.routing.routes
 import org.http4k.routing.static
 import org.http4k.server.Netty
@@ -122,8 +123,8 @@ class RestApi(
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
         private const val MAX_NUMBER_OF_TXS_PER_REQUEST = 600
 
-        private val blockchainRidPattern = Regex("/[^/]+/([0-9a-fA-F]+).*")
-        private val chainIidPattern = Regex("/[^/]+/iid_([0-9]+).*")
+        private val blockchainRidPattern = Regex("([0-9a-fA-F]+)")
+        private val chainIidPattern = Regex("iid_([0-9]+)")
     }
 
     private val models = mutableMapOf<BlockchainRid, ChainModel>()
@@ -147,40 +148,79 @@ class RestApi(
 
     private val gtvGson = make_gtv_gson()
 
+    private val blockchainRef = Filter { next ->
+        { request ->
+            val ref = request.path("blockchainRid")?.let { parseBlockchainRid(it) }
+            if (ref != null) {
+                val blockchainRid = resolveBlockchain(ref)
+                val chainModel = chainModel(blockchainRid)
+                withLoggingContext(
+                        BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
+                        CHAIN_IID_TAG to chainModel.chainIID.toString()) {
+                    when (chainModel) {
+                        is Model -> {
+                            logger.trace { "Local REST API model found: $chainModel" }
+                            next(request.with(modelKey of chainModel))
+                        }
+
+                        is ExternalModel -> {
+                            logger.trace { "External REST API model found: $chainModel" }
+                            chainModel(request)
+                        }
+                    }
+                }
+            } else {
+                next(request)
+            }
+        }
+    }
+
     private val app = routes(
             "/" bind static(ResourceLoader.Classpath("/restapi-root")),
             "/apidocs" bind static(ResourceLoader.Classpath("/restapi-docs")),
-
-            "/tx/{blockchainRid}" bind POST to ::postTransaction,
-            "/tx/{blockchainRid}/{txRid}" bind GET to ::getTransaction,
-            "/transactions/{blockchainRid}/{txRid}" bind GET to ::getTransactionInfo,
-            "/transactions/{blockchainRid}" bind GET to ::getTransactionsInfo,
-            "/tx/{blockchainRid}/{txRid}/confirmationProof" bind GET to ::getConfirmationProof,
-            "/tx/{blockchainRid}/{txRid}/status" bind GET to ::getTransactionStatus,
-
-            "/blocks/{blockchainRid}" bind GET to ::getBlocks,
-            "/blocks/{blockchainRid}/{blockRid}" bind GET to ::getBlock,
-            "/blocks/{blockchainRid}/height/{height}" bind GET to ::getBlockByHeight,
-
-            "/query/{blockchainRid}" bind GET to ::getQuery,
-            "/query/{blockchainRid}" bind POST to ::postQuery,
-            "/batch_query/{blockchainRid}" bind POST to ::batchQuery,
-            // Direct query. That should be used as example: <img src="http://node/dquery/brid?type=get_picture&id=4555" />
-            "/dquery/{blockchainRid}" bind GET to ::directQuery,
-            "/query_gtx/{blockchainRid}" bind POST to ::queryGtx,
-            "/query_gtv/{blockchainRid}" bind POST to ::queryGtv,
-
-            "/node/{blockchainRid}/my_status" bind GET to ::getNodeStatus,
-            "/node/{blockchainRid}/statuses" bind GET to ::getNodeStatuses,
+            "/version" bind GET to ::getVersion,
             "/_debug" bind GET to ::getDebug,
-            "/brid/{blockchainRid}" bind GET to ::getBlockchainRid,
-            "/blockchain/{blockchainRid}/height" bind GET to ::getCurrentHeight,
 
-            "/config/{blockchainRid}" bind GET to ::getBlockchainConfiguration,
-            "/config/{blockchainRid}" bind POST to ::validateBlockchainConfiguration,
+            "/tx/{blockchainRid}" bind POST to blockchainRef.then(::postTransaction),
+            "/tx/{blockchainRid}/{txRid}" bind GET to blockchainRef.then(::getTransaction),
+            "/transactions/{blockchainRid}/{txRid}" bind GET to blockchainRef.then(::getTransactionInfo),
+            "/transactions/{blockchainRid}" bind GET to blockchainRef.then(::getTransactionsInfo),
+            "/tx/{blockchainRid}/{txRid}/confirmationProof" bind GET to blockchainRef.then(::getConfirmationProof),
+            "/tx/{blockchainRid}/{txRid}/status" bind GET to blockchainRef.then(::getTransactionStatus),
 
-            "/version" bind GET to ::getVersion
+            "/blocks/{blockchainRid}" bind GET to blockchainRef.then(::getBlocks),
+            "/blocks/{blockchainRid}/{blockRid}" bind GET to blockchainRef.then(::getBlock),
+            "/blocks/{blockchainRid}/height/{height}" bind GET to blockchainRef.then(::getBlockByHeight),
+
+            "/query/{blockchainRid}" bind GET to blockchainRef.then(::getQuery),
+            "/query/{blockchainRid}" bind POST to blockchainRef.then(::postQuery),
+            "/batch_query/{blockchainRid}" bind POST to blockchainRef.then(::batchQuery),
+            // Direct query. That should be used as example: <img src="http://node/dquery/brid?type=get_picture&id=4555" />
+            "/dquery/{blockchainRid}" bind GET to blockchainRef.then(::directQuery),
+            "/query_gtx/{blockchainRid}" bind POST to blockchainRef.then(::queryGtx),
+            "/query_gtv/{blockchainRid}" bind POST to blockchainRef.then(::queryGtv),
+
+            "/node/{blockchainRid}/my_status" bind GET to blockchainRef.then(::getNodeStatus),
+            "/node/{blockchainRid}/statuses" bind GET to blockchainRef.then(::getNodeStatuses),
+            "/brid/{blockchainRid}" bind GET to blockchainRef.then(::getBlockchainRid),
+            "/blockchain/{blockchainRid}/height" bind GET to blockchainRef.then(::getCurrentHeight),
+
+            "/config/{blockchainRid}" bind GET to blockchainRef.then(::getBlockchainConfiguration),
+            "/config/{blockchainRid}" bind POST to blockchainRef.then(::validateBlockchainConfiguration),
     )
+
+    private fun getVersion(request: Request): Response = Response(OK).with(
+            versionBody of Version(REST_API_VERSION)
+    )
+
+    private fun getDebug(request: Request): Response {
+        val debugInfo = models.values
+                .filterIsInstance(Model::class.java)
+                .firstOrNull()
+                ?.debugQuery(null)
+                ?: throw NotFoundError("There are no running chains")
+        return Response(OK).with(prettyJsonBody of debugInfo)
+    }
 
     private fun postTransaction(request: Request): Response {
         val model = model(request)
@@ -353,15 +393,6 @@ class RestApi(
         return Response(OK).with(nodeStatusesBody of model.nodePeersStatusQuery())
     }
 
-    private fun getDebug(request: Request): Response {
-        val debugInfo = models.values
-                .filterIsInstance(Model::class.java)
-                .firstOrNull()
-                ?.debugQuery(null)
-                ?: throw NotFoundError("There are no running chains")
-        return Response(OK).with(prettyJsonBody of debugInfo)
-    }
-
     private fun getBlockchainRid(request: Request): Response {
         val model = model(request)
         return Response(OK).with(textBody of model.blockchainRid.toHex())
@@ -394,10 +425,6 @@ class RestApi(
         }
         return Response(OK).with(emptyBody.outbound(request) of Empty)
     }
-
-    private fun getVersion(request: Request): Response = Response(OK).with(
-            versionBody of Version(REST_API_VERSION)
-    )
 
     val handler = routes(
             basePath bind app
@@ -447,32 +474,6 @@ class RestApi(
                 Response(BAD_REQUEST).with(
                         errorBody.outbound(request) of ErrorBody(lensFailure.failures.joinToString("; "))
                 )
-            })
-            .then(Filter { next ->
-                { request ->
-                    val blockchainRef = parseBlockchainRid(request.uri.path)
-                    if (blockchainRef != null) {
-                        val blockchainRid = resolveBlockchain(blockchainRef)
-                        val chainModel = chainModel(blockchainRid)
-                        withLoggingContext(
-                                BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
-                                CHAIN_IID_TAG to chainModel.chainIID.toString()) {
-                            when (chainModel) {
-                                is Model -> {
-                                    logger.trace { "Local REST API model found: $chainModel" }
-                                    next(request.with(modelKey of chainModel))
-                                }
-
-                                is ExternalModel -> {
-                                    logger.trace { "External REST API model found: $chainModel" }
-                                    chainModel(request)
-                                }
-                            }
-                        }
-                    } else {
-                        next(request)
-                    }
-                }
             })
             .then(handler)
             .asServer(Netty(listenPort,
@@ -596,10 +597,9 @@ class RestApi(
      * 1. provide BC RID
      * 2. provide Chain IID (should not be used in production, since to ChainIid could be anything).
      */
-    private fun parseBlockchainRid(path: String): BlockchainRef? {
-        val localPath = path.substring(basePath.length)
-        val blockchainRidMatch = blockchainRidPattern.matchEntire(localPath)
-        val chainIidMatch = chainIidPattern.matchEntire(localPath)
+    private fun parseBlockchainRid(s: String): BlockchainRef? {
+        val blockchainRidMatch = blockchainRidPattern.matchEntire(s)
+        val chainIidMatch = chainIidPattern.matchEntire(s)
         return if (blockchainRidMatch != null) {
             BlockchainRidRef(BlockchainRid.buildFromHex(blockchainRidMatch.groupValues[1]))
         } else if (chainIidMatch != null) {
