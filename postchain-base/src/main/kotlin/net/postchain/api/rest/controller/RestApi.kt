@@ -94,8 +94,10 @@ import org.http4k.lens.LensFailure
 import org.http4k.lens.Meta
 import org.http4k.lens.ParamMeta
 import org.http4k.lens.RequestContextKey
+import org.http4k.routing.ResourceLoader
 import org.http4k.routing.bind
 import org.http4k.routing.routes
+import org.http4k.routing.static
 import org.http4k.server.Netty
 import org.http4k.server.ServerConfig
 import org.http4k.server.asServer
@@ -146,6 +148,9 @@ class RestApi(
     private val gtvGson = make_gtv_gson()
 
     private val app = routes(
+            "/" bind static(ResourceLoader.Classpath("/restapi-root")),
+            "/apidocs" bind static(ResourceLoader.Classpath("/restapi-docs")),
+
             "/tx/{blockchainRid}" bind POST to ::postTransaction,
             "/tx/{blockchainRid}/{txRid}" bind GET to ::getTransaction,
             "/transactions/{blockchainRid}/{txRid}" bind GET to ::getTransactionInfo,
