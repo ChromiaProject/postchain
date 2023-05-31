@@ -823,9 +823,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
-    override fun listConfigurationHash(ctx: EContext): List<ByteArray> {
+    override fun listConfigurationHashes(ctx: EContext): List<ByteArray> {
         val sql = """
-            SELECT height, configuration_hash
+            SELECT configuration_hash
             FROM ${tableConfigurations(ctx)}
             order by height
         """.trimIndent()

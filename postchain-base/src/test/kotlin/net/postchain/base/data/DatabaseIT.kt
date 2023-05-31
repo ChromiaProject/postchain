@@ -115,7 +115,7 @@ class DatabaseIT {
         withReadConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             assertEquals(listOf(0L, 5L), db.listConfigurations(ctx))
-            assertEquals(listOf(hash1.wData, hash2.wData), db.listConfigurationHash(ctx).map { it.wrap() })
+            assertEquals(listOf(hash1.wData, hash2.wData), db.listConfigurationHashes(ctx).map { it.wrap() })
             assertTrue(db.configurationHashExists(ctx, hash1.data))
             assertFalse(db.configurationHashExists(ctx, hash3.data))
             assertArrayEquals(encodeGtv(configData1), db.getConfigurationData(ctx, 0L))

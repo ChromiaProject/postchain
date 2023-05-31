@@ -82,8 +82,8 @@ object BlockchainApi {
     fun listConfigurations(ctx: EContext) =
             DatabaseAccess.of(ctx).listConfigurations(ctx)
 
-    fun listConfigurationHash(ctx: EContext) = DatabaseAccess.of(ctx).listConfigurationHash(ctx)
-    fun configurationExists(ctx: EContext, blockchainRID: BlockchainRid) = DatabaseAccess.of(ctx).configurationHashExists(ctx, blockchainRID.data)
+    fun listConfigurationHashes(ctx: EContext) = DatabaseAccess.of(ctx).listConfigurationHashes(ctx)
+    fun configurationExists(ctx: EContext, hash: ByteArray) = DatabaseAccess.of(ctx).configurationHashExists(ctx, hash)
 
     /** When a new (height > 0) configuration is added, we automatically add signers in that config to table
      * blockchainReplicaNodes (for current blockchain). Useful for synchronization.
