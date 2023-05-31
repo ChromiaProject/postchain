@@ -44,7 +44,7 @@ class FaultyConfigTest : IntegrationTestSetup() {
                 "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_invalid_1.xml"
         )
         node.addConfiguration(DEFAULT_CHAIN_IID, 2, invalidConfig)
-        withReadConnection(node.postchainContext.storage, DEFAULT_CHAIN_IID) { ctx ->
+        withReadConnection(node.postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { ctx ->
             val db = DatabaseAccess.of(ctx)
             assertThat(db.getConfigurationData(ctx, 2)).isNotNull()
         }
@@ -54,12 +54,12 @@ class FaultyConfigTest : IntegrationTestSetup() {
         buildBlock(DEFAULT_CHAIN_IID, 3)
 
         // Assert that DB schema change by faulty config is rolled back
-        node.postchainContext.storage.withReadConnection { ctx ->
+        node.postchainContext.sharedStorage.withReadConnection { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
             assertThat(db.tableExists(ctx.conn, "should_fail")).isFalse()
         }
         // Assert that the invalid configuration was removed from DB
-        withReadConnection(node.postchainContext.storage, DEFAULT_CHAIN_IID) { ctx ->
+        withReadConnection(node.postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { ctx ->
             val db = DatabaseAccess.of(ctx)
             assertThat(db.getConfigurationData(ctx, 2)).isNull()
         }
@@ -85,7 +85,7 @@ class FaultyConfigTest : IntegrationTestSetup() {
         }
 
         // Assert that DB schema change by faulty config is not persisted
-        node.postchainContext.storage.withReadConnection { ctx ->
+        node.postchainContext.sharedStorage.withReadConnection { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
             assertThat(db.tableExists(ctx.conn, "should_fail")).isFalse()
         }
@@ -101,7 +101,7 @@ class FaultyConfigTest : IntegrationTestSetup() {
         assertThat(SimulateFaultyConfigSpecialTxExtension.hasFailed).isFalse()
 
         // Assert that DB schema change by correct config is persisted
-        node.postchainContext.storage.withReadConnection { ctx ->
+        node.postchainContext.sharedStorage.withReadConnection { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
             assertThat(db.tableExists(ctx.conn, "should_fail")).isTrue()
         }
@@ -127,12 +127,12 @@ class FaultyConfigTest : IntegrationTestSetup() {
 
         buildBlock(DEFAULT_CHAIN_IID, 3)
         // Assert that DB schema change by faulty config is rolled back
-        node.postchainContext.storage.withReadConnection { ctx ->
+        node.postchainContext.sharedStorage.withReadConnection { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
             assertThat(db.tableExists(ctx.conn, "should_fail")).isFalse()
         }
         // Assert that the invalid configuration was removed from DB
-        withReadConnection(node.postchainContext.storage, DEFAULT_CHAIN_IID) { ctx ->
+        withReadConnection(node.postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { ctx ->
             val db = DatabaseAccess.of(ctx)
             assertThat(db.getConfigurationData(ctx, 2)).isNull()
         }

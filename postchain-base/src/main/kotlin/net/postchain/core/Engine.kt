@@ -26,7 +26,8 @@ interface Synchronizable {
  * - [BlockBuildingStrategy] knows HOW to build a block
  */
 interface BlockchainEngine : Shutdownable {
-    val storage: Storage
+    val blockBuilderStorage: Storage
+    val sharedStorage: Storage
 
     fun isRunning(): Boolean
 

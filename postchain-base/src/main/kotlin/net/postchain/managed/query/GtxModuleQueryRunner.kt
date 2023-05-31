@@ -1,16 +1,17 @@
 package net.postchain.managed.query
 
 import mu.KLogging
-import net.postchain.StorageBuilder
 import net.postchain.config.app.AppConfig
+import net.postchain.core.Storage
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GTXBlockchainConfiguration
 
-open class GtxModuleQueryRunner(val configuration: GTXBlockchainConfiguration, val appConfig: AppConfig) : QueryRunner {
+open class GtxModuleQueryRunner(val configuration: GTXBlockchainConfiguration,
+                                val appConfig: AppConfig,
+                                val storage: Storage
+) : QueryRunner {
 
     companion object : KLogging()
-
-    protected val storage = StorageBuilder.buildStorage(appConfig)
 
     override fun query(name: String, args: Gtv): Gtv {
         val ctx = storage.openReadConnection(configuration.chainID)

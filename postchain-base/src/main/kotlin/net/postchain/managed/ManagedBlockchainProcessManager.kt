@@ -96,7 +96,7 @@ open class ManagedBlockchainProcessManager(
                 try {
                     val factory = newInstanceOf<GTXBlockchainConfigurationFactory>(factoryName)
                     if (chainId == CHAIN0) {
-                        Chain0BlockchainConfigurationFactory(factory, appConfig)
+                        Chain0BlockchainConfigurationFactory(factory, appConfig, blockBuilderStorage)
                     } else {
                         DappBlockchainConfigurationFactory(factory, dataSource)
                     }
@@ -192,7 +192,7 @@ open class ManagedBlockchainProcessManager(
     }
 
     private fun saveConfigurationInDatabaseIfNotAlreadyExists(chainId: Long, blockchainConfig: BlockchainConfiguration, blockHeight: Long) {
-        withWriteConnection(storage, chainId) { ctx ->
+        withWriteConnection(blockBuilderStorage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             if (db.getConfigurationData(ctx, blockchainConfig.configHash) == null) {
                 db.addConfigurationData(ctx, blockHeight, encodeGtv(blockchainConfig.rawConfig))
@@ -266,7 +266,7 @@ open class ManagedBlockchainProcessManager(
      * @param chainId is the chain we are interested in.
      */
     protected fun preloadChain0Configuration() {
-        withWriteConnection(storage, CHAIN0) { ctx ->
+        withWriteConnection(blockBuilderStorage, CHAIN0) { ctx ->
             val db = DatabaseAccess.of(ctx)
             val brid = db.getBlockchainRid(ctx)!! // We can only load chains this way if we know their BC RID.
             val height = db.getLastBlockHeight(ctx)
@@ -301,7 +301,7 @@ open class ManagedBlockchainProcessManager(
         // chain-zero is always in the list
         val blockchains = mutableSetOf(LocalBlockchainInfo(CHAIN0, true, BlockchainState.RUNNING))
 
-        withWriteConnection(storage, 0) { ctx0 ->
+        withWriteConnection(blockBuilderStorage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
             val domainBlockchains = dataSource.computeBlockchainInfoList().distinctBy { it.rid }
             val all = domainBlockchains.union(locallyConfiguredBlockchainsToReplicate())
@@ -314,7 +314,7 @@ open class ManagedBlockchainProcessManager(
                     } else {
                         maxOf(db.getMaxChainId(ctx0) ?: 0, 99) + 1
                     }
-                    withReadWriteConnection(storage, calculatedChainId) { newCtx ->
+                    withReadWriteConnection(blockBuilderStorage, calculatedChainId) { newCtx ->
                         db.initializeBlockchain(newCtx, blockchainInfo.rid)
                     }
                     LocalBlockchainInfo(calculatedChainId, blockchainInfo.system, blockchainInfo.state)

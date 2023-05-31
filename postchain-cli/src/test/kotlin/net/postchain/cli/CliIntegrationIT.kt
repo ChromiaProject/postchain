@@ -37,7 +37,7 @@ class CliIntegrationIT {
     @BeforeEach
     fun setup() {
         // this wipes the database.
-        storage = StorageBuilder.buildStorage(appConfig, true)
+        storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         // add-blockchain goes here
         val gtv = GtvFileReader.readFile(fullPath("blockchain_config.xml"))
         CliExecution.addBlockchain(AppConfig.fromPropertiesFile(nodeConfigPath), chainId, gtv, AlreadyExistMode.FORCE)

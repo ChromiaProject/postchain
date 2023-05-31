@@ -118,7 +118,7 @@ open class ContainerManagedBlockchainProcessManager(
                             "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass) for chain0.", e)
                 }
                 if (chainId == CHAIN0) {
-                    ContainerChain0BlockchainConfigurationFactory(appConfig, factory, containerNodeConfig)
+                    ContainerChain0BlockchainConfigurationFactory(appConfig, factory, containerNodeConfig, blockBuilderStorage)
                 } else {
                     DappBlockchainConfigurationFactory(factory, dataSource)
                 }
@@ -282,11 +282,11 @@ open class ContainerManagedBlockchainProcessManager(
         }
     }
 
-    private fun getBridByChainId(chainId: Long): BlockchainRid = withReadConnection(storage, chainId) { ctx ->
+    private fun getBridByChainId(chainId: Long): BlockchainRid = withReadConnection(blockBuilderStorage, chainId) { ctx ->
         DatabaseAccess.of(ctx).getBlockchainRid(ctx)!!
     }
 
-    private fun getContainerIid(name: String): Int = storage.withWriteConnection { ctx ->
+    private fun getContainerIid(name: String): Int = blockBuilderStorage.withWriteConnection { ctx ->
         DatabaseAccess.of(ctx).getContainerIid(ctx, name) ?: DatabaseAccess.of(ctx).createContainer(ctx, name)
     }
 

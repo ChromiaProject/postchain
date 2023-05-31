@@ -19,6 +19,9 @@ import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
 import java.io.File
+import kotlin.time.Duration
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 /**
  * Wrapper to the generic [Configuration]
@@ -92,6 +95,18 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
 
     val databaseReadConcurrency: Int
         get() = config.getEnvOrIntProperty("POSTCHAIN_DB_READ_CONCURRENCY", "database.readConcurrency", 10)
+
+    val databaseBlockBuilderWriteConcurrency: Int
+        get() = config.getEnvOrIntProperty("POSTCHAIN_DB_BLOCK_BUILDER_WRITE_CONCURRENCY", "database.blockBuilderWriteConcurrency", 8)
+
+    val databaseSharedWriteConcurrency: Int
+        get() = config.getEnvOrIntProperty("POSTCHAIN_DB_SHARED_WRITE_CONCURRENCY", "database.sharedWriteConcurrency", 2)
+
+    val databaseBlockBuilderMaxWaitWrite: Duration
+        get() = config.getEnvOrLongProperty("POSTCHAIN_DB_BLOCK_BUILDER_MAX_WAIT_WRITE", "database.blockBuilderMaxWaitWrite", 100).toDuration(DurationUnit.MILLISECONDS)
+
+    val databaseSharedMaxWaitWrite: Duration
+        get() = config.getEnvOrLongProperty("POSTCHAIN_DB_SHARED_MAX_WAIT_WRITE", "database.sharedMaxWaitWrite", 10_000).toDuration(DurationUnit.MILLISECONDS)
 
     val databaseSuppressCollationCheck: Boolean
         get() = config.getEnvOrBooleanProperty("POSTCHAIN_DB_SUPPRESS_COLLATION_CHECK", "database.suppressCollationCheck", false)

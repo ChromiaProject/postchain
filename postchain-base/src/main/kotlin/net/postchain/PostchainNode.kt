@@ -39,9 +39,10 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
     init {
         initMetrics(appConfig)
 
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDb)
+        val blockBuilderStorage = StorageBuilder.buildStorage(appConfig, appConfig.databaseBlockBuilderMaxWaitWrite, appConfig.databaseBlockBuilderWriteConcurrency, wipeDb)
+        val sharedStorage = StorageBuilder.buildStorage(appConfig, appConfig.databaseSharedMaxWaitWrite, appConfig.databaseSharedWriteConcurrency, wipeDb)
 
-        storage.withReadConnection { ctx ->
+        sharedStorage.withReadConnection { ctx ->
             DatabaseAccess.of(ctx).checkCollation(ctx.conn, suppressError = appConfig.databaseSuppressCollationCheck)
         }
 
@@ -52,8 +53,9 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         postchainContext = PostchainContext(
                 appConfig,
-                NodeConfigurationProviderFactory.createProvider(appConfig) { storage },
-                storage,
+                NodeConfigurationProviderFactory.createProvider(appConfig) { sharedStorage },
+                blockBuilderStorage,
+                sharedStorage,
                 infrastructureFactory.makeConnectionManager(appConfig),
                 blockQueriesProvider,
                 JsonNodeDiagnosticContext(version, appConfig.pubKey, infrastructureFactory),
@@ -90,7 +92,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
     }
 
     private fun chainExists(chainId: Long): Boolean {
-        return withReadConnection(postchainContext.storage, chainId) {
+        return withReadConnection(postchainContext.sharedStorage, chainId) {
             DatabaseAccess.of(it).getChainIds(it).containsValue(chainId)
         }
     }

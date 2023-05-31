@@ -12,8 +12,8 @@ class SubnodeService(private val nodeProvider: LazyPostchainNodeProvider) {
 
     companion object : KLogging()
 
-    val storage: Storage
-        get() = nodeProvider.get().postchainContext.storage
+    private val sharedStorage: Storage
+        get() = nodeProvider.get().postchainContext.sharedStorage
 
     fun initNode(privKey: PrivKey) {
         nodeProvider.init(privKey, false)
@@ -21,7 +21,7 @@ class SubnodeService(private val nodeProvider: LazyPostchainNodeProvider) {
 
     fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid) {
         logger.info("Initializing blockchain $chainId")
-        withWriteConnection(storage, chainId) {
+        withWriteConnection(sharedStorage, chainId) {
             val db = DatabaseAccess.of(it)
             db.initializeBlockchain(it, blockchainRid)
             true

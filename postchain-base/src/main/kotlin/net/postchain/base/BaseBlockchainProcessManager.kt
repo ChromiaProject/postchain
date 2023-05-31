@@ -5,7 +5,6 @@ package net.postchain.base
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
-import net.postchain.StorageBuilder
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.DatabaseAccess
@@ -58,7 +57,8 @@ open class BaseBlockchainProcessManager(
     val appConfig = postchainContext.appConfig
     val connectionManager = postchainContext.connectionManager
     val nodeDiagnosticContext = postchainContext.nodeDiagnosticContext
-    val storage get() = postchainContext.storage
+    val sharedStorage get() = postchainContext.sharedStorage
+    val blockBuilderStorage get() = postchainContext.blockBuilderStorage
     protected val blockchainProcesses = mutableMapOf<Long, BlockchainProcess>()
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val bridToChainId = mutableMapOf<BlockchainRid, Long>()
@@ -141,10 +141,8 @@ open class BaseBlockchainProcessManager(
 
                     startInfo("Starting of blockchain", chainId)
 
-                    // We create a new storage instance to open new db connections for each engine
-                    val chainStorage = StorageBuilder.buildStorage(postchainContext.appConfig)
                     try {
-                        val initialEContext = chainStorage.openWriteConnection(chainId)
+                        val initialEContext = blockBuilderStorage.openWriteConnection(chainId)
                         val blockHeight = blockchainConfigProvider.getActiveBlocksHeight(initialEContext, DatabaseAccess.of(initialEContext))
 
                         val rawConfigurationData = blockchainConfigProvider.getActiveBlocksConfiguration(initialEContext, chainId, loadNextPendingConfig)
@@ -159,17 +157,17 @@ open class BaseBlockchainProcessManager(
 
                             // Initial configuration will be committed immediately
                             if (DatabaseAccess.of(initialEContext).getLastBlockHeight(initialEContext) == -1L) {
-                                chainStorage.closeWriteConnection(initialEContext, true)
+                                blockBuilderStorage.closeWriteConnection(initialEContext, true)
                             }
                             afterMakeConfiguration(chainId, blockchainConfig)
                             withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()) {
-                                startBlockchainImpl(blockchainConfig, chainId, bTrace, chainStorage, initialEContext)
+                                startBlockchainImpl(blockchainConfig, chainId, bTrace, initialEContext)
                             }
                             blockchainConfig.blockchainRid
                         } catch (e: Exception) {
                             try {
                                 if (hasBuiltInitialBlock(initialEContext)) {
-                                    revertConfiguration(chainId, bTrace, chainStorage, initialEContext, blockHeight, rawConfigurationData)
+                                    revertConfiguration(chainId, bTrace, initialEContext, blockHeight, rawConfigurationData)
                                 }
                             } catch (e: Exception) {
                                 logger.warn(e) { "Unable to revert configuration: $e" }
@@ -179,9 +177,6 @@ open class BaseBlockchainProcessManager(
 
                             throw e
                         }
-                    } catch (e: Exception) {
-                        chainStorage.close()
-                        throw e
                     } finally {
                         scheduledForStart.remove(chainId)
                     }
@@ -197,7 +192,7 @@ open class BaseBlockchainProcessManager(
     protected open fun afterStartBlockchain(chainId: Long) {}
 
     private fun startBlockchainImpl(blockchainConfig: BlockchainConfiguration, chainId: Long, bTrace: BlockTrace?,
-                                    chainStorage: Storage, initialEContext: EContext) {
+                                    initialEContext: EContext) {
         val processName = BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
         startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
 
@@ -209,7 +204,8 @@ open class BaseBlockchainProcessManager(
                 processName,
                 blockchainConfig,
                 afterCommitHandler,
-                chainStorage,
+                blockBuilderStorage,
+                sharedStorage,
                 initialEContext,
                 blockchainConfigProvider,
                 restartNotifier
@@ -241,7 +237,7 @@ open class BaseBlockchainProcessManager(
 
     private fun hasBuiltInitialBlock(eContext: EContext) = DatabaseAccess.of(eContext).getLastBlockHeight(eContext) > -1L
 
-    private fun revertConfiguration(chainId: Long, bTrace: BlockTrace?, chainStorage: Storage, eContext: EContext, blockHeight: Long,
+    private fun revertConfiguration(chainId: Long, bTrace: BlockTrace?, eContext: EContext, blockHeight: Long,
                                     failedConfig: ByteArray) {
         logger.info("Reverting faulty configuration at height $blockHeight")
         val failedConfigHash = GtvToBlockchainRidFactory.calculateBlockchainRid(GtvFactory.decodeGtv(failedConfig), ::sha256Digest).data
@@ -251,13 +247,13 @@ open class BaseBlockchainProcessManager(
             addFaultyConfiguration(eContext, FaultyConfiguration(failedConfigHash.wrap(), blockHeight))
             removeConfiguration(eContext, blockHeight)
         }
-        chainStorage.closeWriteConnection(eContext, true)
+        blockBuilderStorage.closeWriteConnection(eContext, true)
 
         startBlockchainAsyncInternal(chainId, bTrace, false)
     }
 
     private fun addToErrorQueue(chainId: Long, e: Exception) {
-        withReadConnection(storage, chainId) {
+        withReadConnection(sharedStorage, chainId) {
             DatabaseAccess.of(it).getBlockchainRid(it)?.let { brid ->
                 nodeDiagnosticContext.blockchainErrorQueue(brid).add(e.message)
             }
@@ -336,7 +332,7 @@ open class BaseBlockchainProcessManager(
         val state = getBlockchainState(chainId, brid)
         if (state == BlockchainState.REMOVED) {
             logger.info("Deleting blockchain with chainId: $chainId and blockchain-rid: ${brid.toHex()}")
-            withWriteConnection(storage, chainId) {
+            withWriteConnection(blockBuilderStorage, chainId) {
                 BlockchainApi.deleteBlockchain(it)
                 true
             }
@@ -443,7 +439,7 @@ open class BaseBlockchainProcessManager(
     }
 
     protected fun isConfigurationChanged(chainId: Long): Boolean {
-        return withReadConnection(storage, chainId) { eContext ->
+        return withReadConnection(blockBuilderStorage, chainId) { eContext ->
             val isSigner = blockchainProcesses[chainId]?.isSigner() ?: false
             blockchainConfigProvider.activeBlockNeedsConfigurationChange(eContext, chainId, isSigner)
         }

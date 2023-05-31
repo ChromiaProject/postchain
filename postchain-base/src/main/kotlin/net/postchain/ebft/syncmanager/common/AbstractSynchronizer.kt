@@ -85,7 +85,7 @@ abstract class AbstractSynchronizer(
             logger.debug { "incomingHeight = $incomingHeight, incomingConfigHash = ${incomingConfigHash.wrap()}" }
 
             if (!currentConfigHash.contentEquals(incomingConfigHash)) {
-                val isIncomingConfigPending = withReadConnection(workerContext.engine.storage, blockchainConfiguration.chainID) { ctx ->
+                val isIncomingConfigPending = withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
                     configProvider.isConfigPending(
                             ctx,
                             blockchainConfiguration.blockchainRid,
@@ -164,7 +164,7 @@ abstract class AbstractSynchronizer(
     private fun checkIfNewConfigurationCanBeLoaded(block: BlockDataWithWitness): Boolean {
         val bcConfigProvider = workerContext.blockchainConfigurationProvider
         val bcConfig = workerContext.blockchainConfiguration
-        val hasNewConfig = withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+        val hasNewConfig = withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
             bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, false)
         }
 
@@ -185,7 +185,7 @@ abstract class AbstractSynchronizer(
         val bcConfigProvider = workerContext.blockchainConfigurationProvider
         val bcConfig = workerContext.blockchainConfiguration
         if (bcConfigProvider is ManagedBlockchainConfigurationProvider && configHash != null && bcConfigProvider.isPcuEnabled()) {
-            val isIncomingConfigPending = withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+            val isIncomingConfigPending = withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
                 bcConfigProvider.isConfigPending(
                         ctx,
                         blockchainConfiguration.blockchainRid,

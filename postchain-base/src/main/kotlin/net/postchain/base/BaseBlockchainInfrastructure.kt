@@ -91,14 +91,15 @@ open class BaseBlockchainInfrastructure(
             processName: BlockchainProcessName,
             configuration: BlockchainConfiguration,
             afterCommitHandler: AfterCommitHandler,
-            storage: Storage,
+            blockBuilderStorage: Storage,
+            sharedStorage: Storage,
             initialEContext: EContext,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier
     ): BaseBlockchainEngine {
         val transactionQueue = BaseTransactionQueue(configuration.transactionQueueSize)
 
-        return BaseBlockchainEngine(processName, configuration, storage, configuration.chainID, transactionQueue,
+        return BaseBlockchainEngine(processName, configuration, blockBuilderStorage, sharedStorage, configuration.chainID, transactionQueue,
                 initialEContext, blockchainConfigurationProvider, restartNotifier, postchainContext.nodeDiagnosticContext, afterCommitHandler)
     }
 
