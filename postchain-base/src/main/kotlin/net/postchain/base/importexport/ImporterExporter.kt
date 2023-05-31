@@ -10,11 +10,10 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.common.toHex
-import net.postchain.common.types.WrappedByteArray
-import net.postchain.common.wrap
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.EContext
@@ -23,6 +22,7 @@ import net.postchain.core.Storage
 import net.postchain.core.Transaction
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
+import net.postchain.crypto.SigMaker
 import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
@@ -123,7 +123,7 @@ object ImporterExporter : KLogging() {
      */
     fun importBlockchain(nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem, storage: Storage, chainId: Long,
                          configurationsFile: Path, blocksFile: Path, incremental: Boolean = false, logNBlocks: Int = 100): ImportResult {
-        val (blockchainRid, configurations) = withReadWriteConnection(storage, chainId) { ctx ->
+        val (blockchainRid, heights) = withReadWriteConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
 
             val existingChain = db.getBlockchainRid(ctx)
@@ -134,11 +134,7 @@ object ImporterExporter : KLogging() {
                 throw UserMistake("Blockchain $chainId not found in incremental mode")
             }
 
-            val existingConfigurations = if (incremental) db.getAllConfigurations(ctx) else listOf()
-
-            val (blockchainRid, importedConfigurations) = importConfigurations(ctx, db, configurationsFile, existingChain)
-
-            blockchainRid to (existingConfigurations + importedConfigurations)
+            importConfigurations(ctx, db, configurationsFile, existingChain)
         }
 
         return withLoggingContext(
@@ -146,7 +142,7 @@ object ImporterExporter : KLogging() {
                 BLOCKCHAIN_RID_TAG to blockchainRid.toHex()
         ) {
             logger.info("Importing blockchain from ${configurationsFile.toAbsolutePath()} and ${blocksFile.toAbsolutePath()} to chain $chainId with bc-rid ${blockchainRid.toHex()}...")
-            val importResult = importBlocks(blocksFile, configurations, logNBlocks, storage, chainId, blockchainRid, nodeKeyPair, cryptoSystem)
+            val importResult = importBlocks(heights.toSet(), blocksFile, logNBlocks, storage, chainId, blockchainRid, nodeKeyPair, cryptoSystem)
 
             val message = if (importResult.numBlocks > 0)
                 "Import of ${importResult.numBlocks} blocks ${importResult.fromHeight}..${importResult.toHeight} to chain $chainId with bc-rid ${blockchainRid.toHex()} completed"
@@ -164,38 +160,45 @@ object ImporterExporter : KLogging() {
                     throw UserMistake("Blockchain RID mismatch in incremental mode, has ${existingChain.toHex()} but trying to import ${blockchainRid.toHex()}")
                 }
                 db.initializeBlockchain(ctx, blockchainRid)
-                val configurations = buildList {
+                val heights = buildList {
                     while (true) {
                         val gtv = GtvDecoder.decodeGtv(stream)
                         if (gtv.isNull()) break
                         val height = gtv.asArray()[0].asInteger()
+                        add(height)
                         val configurationData = gtv.asArray()[1].asByteArray()
                         db.addConfigurationData(ctx, height, configurationData)
-                        add(height to configurationData.wrap())
                     }
                 }
-                blockchainRid to configurations
+                blockchainRid to heights
             }
 
-    private fun importBlocks(blocksFile: Path, configurations: List<Pair<Long, WrappedByteArray>>, logNBlocks: Int,
-                             storage: Storage, chainId: Long, blockchainRid: BlockchainRid, nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem): ImportResult {
+    private fun importBlocks(configurationHeights: Set<Long>, blocksFile: Path, logNBlocks: Int, storage: Storage, chainId: Long, blockchainRid: BlockchainRid,
+                             nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem): ImportResult {
+        val partialContext = BaseBlockchainContext(chainId, blockchainRid, NODE_ID_READ_ONLY, nodeKeyPair.pubKey.data)
+        val blockSigMaker = cryptoSystem.buildSigMaker(nodeKeyPair)
+
         var firstBlock = -1L
         var lastBlock = -1L
         var numBlocks = 0L
         BufferedInputStream(FileInputStream(blocksFile.toFile())).use { stream ->
+            var currentConfiguration: BlockchainConfiguration? = null
             while (true) {
                 val gtv = GtvDecoder.decodeGtv(stream)
                 if (gtv.isNull()) break
                 val (blockHeader, blockWitness, transactions) = decodeBlockEntry(gtv)
-
                 val blockHeight = blockHeader.blockHeaderRec.getHeight()
                 if (firstBlock == -1L) firstBlock = blockHeight
-                val rawConfigurationData = configurations.filter { it.first <= blockHeight }.maxByOrNull { it.first }?.second
-                        ?: throw UserMistake("No initial configuration")
-                if (blockHeight % logNBlocks == 0L) logger.info("Import block ${blockHeader.blockRID.toHex()} at height $blockHeight")
 
                 withReadWriteConnection(storage, chainId) { ctx ->
-                    importBlock(rawConfigurationData.data, chainId, blockchainRid, nodeKeyPair, cryptoSystem, ctx, blockHeader, transactions, blockWitness)
+                    if (blockHeight in configurationHeights) {
+                        val rawConfigurationData = DatabaseAccess.of(ctx).getConfigurationData(ctx, blockHeight)
+                                ?: throw ProgrammerMistake("Cannot load configuration for height $blockHeight even though we just added it")
+                        currentConfiguration = makeBlockchainConfiguration(rawConfigurationData, partialContext, blockSigMaker, ctx, cryptoSystem)
+                    }
+                    val thisConfiguration = currentConfiguration ?: throw UserMistake("No initial configuration")
+                    if (blockHeight % logNBlocks == 0L) logger.info("Import block ${blockHeader.blockRID.toHex()} at height $blockHeight")
+                    importBlock(ctx, thisConfiguration, blockHeader, transactions, blockWitness)
                 }
                 lastBlock = blockHeight
                 numBlocks++
@@ -204,14 +207,16 @@ object ImporterExporter : KLogging() {
         return ImportResult(fromHeight = firstBlock, toHeight = lastBlock, numBlocks = numBlocks, blockchainRid = blockchainRid)
     }
 
-    private fun importBlock(rawConfigurationData: ByteArray, chainId: Long, blockchainRid: BlockchainRid, nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem, ctx: EContext, blockHeader: BaseBlockHeader, rawTransactions: List<ByteArray>, blockWitness: BaseBlockWitness) {
+    private fun makeBlockchainConfiguration(rawConfigurationData: ByteArray, partialContext: BaseBlockchainContext,
+                                            blockSigMaker: SigMaker, ctx: EContext, cryptoSystem: CryptoSystem): BlockchainConfiguration {
         val blockConfData = BlockchainConfigurationData.fromRaw(rawConfigurationData)
         val factory = newInstanceOf<BlockchainConfigurationFactory>(blockConfData.configurationFactory)
-        val partialContext = BaseBlockchainContext(chainId, blockchainRid, NODE_ID_READ_ONLY, nodeKeyPair.pubKey.data)
-        val blockSigMaker = cryptoSystem.buildSigMaker(nodeKeyPair)
-        val blockchainConfiguration = factory.makeBlockchainConfiguration(blockConfData, partialContext, blockSigMaker, ctx, cryptoSystem)
-        val blockBuilder = blockchainConfiguration.makeBlockBuilder(ctx)
+        return factory.makeBlockchainConfiguration(blockConfData, partialContext, blockSigMaker, ctx, cryptoSystem)
+    }
 
+    private fun importBlock(ctx: EContext, blockchainConfiguration: BlockchainConfiguration, blockHeader: BaseBlockHeader,
+                            rawTransactions: List<ByteArray>, blockWitness: BaseBlockWitness) {
+        val blockBuilder = blockchainConfiguration.makeBlockBuilder(ctx)
         blockBuilder.begin(blockHeader)
         val transactions = rawTransactions.parallelStream().map { rawTransaction ->
             decodeTransaction(blockchainConfiguration, rawTransaction)
