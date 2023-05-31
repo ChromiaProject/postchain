@@ -116,7 +116,7 @@ class BaseBlockDatabase(
             queuedBlockCount.decrementAndGet()
             if (dependsOn != null) {
                 if (dependsOn.isCompletedExceptionally) {
-                    throw BDBAbortException(block, dependsOn)
+                    throw BDBAbortException(block)
                 }
                 if (!dependsOn.isDone) {
                     // If we get here the caller must have sent the incorrect future.
