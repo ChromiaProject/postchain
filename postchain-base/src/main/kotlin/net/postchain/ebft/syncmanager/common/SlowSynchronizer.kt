@@ -139,7 +139,7 @@ class SlowSynchronizer(
                     }
 
                     is AppliedConfig -> {
-                        if (checkIfWeNeedToApplyPendingConfig(peerId, message)) return
+                        if (checkIfWeNeedToApplyPendingConfig(message)) return
                     }
 
                     else -> logger.debug { "Unhandled type $message from peer $peerId" }

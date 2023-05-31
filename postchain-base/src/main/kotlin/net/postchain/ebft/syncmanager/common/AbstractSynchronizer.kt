@@ -40,9 +40,6 @@ abstract class AbstractSynchronizer(
 
     var blockHeight: Long = blockQueries.getLastBlockHeight().get()
 
-    private var pendingConfigPromotingUsAsSigner: ByteArray? = null
-    private val relevantSignersThatHaveAppliedConfig = mutableSetOf<PubKey>()
-
     protected fun getHeight(header: BlockHeader): Long {
         // A bit ugly hack. Figure out something better. We shouldn't rely on specific
         // implementation here.
@@ -69,7 +66,7 @@ abstract class AbstractSynchronizer(
      * We do this check to avoid getting stuck when chain is waiting for a pending config where we are promoted to signer to be applied
      * In other cases config updates will be handled when adding blocks
      */
-    protected fun checkIfWeNeedToApplyPendingConfig(peer: NodeRid, appliedConfig: AppliedConfig): Boolean {
+    protected fun checkIfWeNeedToApplyPendingConfig(appliedConfig: AppliedConfig): Boolean {
         val incomingConfigHash = appliedConfig.configHash
         val incomingHeight = appliedConfig.height
 
@@ -84,7 +81,7 @@ abstract class AbstractSynchronizer(
             logger.debug { "blockHeight = $blockHeight, blockQueries.getLastBlockHeight() = ${blockQueries.getLastBlockHeight().get()}, currentConfigHash = ${currentConfigHash.wrap()}" }
             logger.debug { "incomingHeight = $incomingHeight, incomingConfigHash = ${incomingConfigHash.wrap()}" }
 
-            if (!currentConfigHash.contentEquals(incomingConfigHash)) {
+            return if (!currentConfigHash.contentEquals(incomingConfigHash)) {
                 val isIncomingConfigPending = withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
                     configProvider.isConfigPending(
                             ctx,
@@ -98,40 +95,24 @@ abstract class AbstractSynchronizer(
 
                 val pendingSigners = configProvider.getPendingConfigSigners(blockchainConfiguration.blockchainRid, incomingHeight, incomingConfigHash)
                 val myPubKey = PubKey(workerContext.appConfig.pubKeyByteArray)
-                val peerPubKey = PubKey(peer)
-                return if (pendingSigners.contains(myPubKey)) {
-                    val promotedNodesAmount = pendingSigners.subtract(blockchainConfiguration.signers.map { PubKey(it) }.toSet()).size
+                if (pendingSigners.contains(myPubKey)) {
+                    val currentSigners = blockchainConfiguration.signers
+                    val promotedNodesAmount = pendingSigners.subtract(currentSigners.map { PubKey(it) }.toSet()).size
                     val pendingBftRequiredSignatureCount = getBFTRequiredSignatureCount(pendingSigners.size)
 
                     if (pendingSigners.size - promotedNodesAmount >= pendingBftRequiredSignatureCount) {
                         logger.debug { "Incoming config is pending with us as signer but we don't have to apply it since we are not blocking production of blocks" }
-                        return false
-                    }
-
-                    if (!incomingConfigHash.contentEquals(pendingConfigPromotingUsAsSigner)) {
-                        pendingConfigPromotingUsAsSigner = incomingConfigHash
-                        relevantSignersThatHaveAppliedConfig.clear()
-                    }
-
-                    if (pendingSigners.contains(peerPubKey) && blockchainConfiguration.signers.any { it.contentEquals(peerPubKey.data) }) {
-                        relevantSignersThatHaveAppliedConfig.add(peerPubKey)
-                    }
-
-                    logger.debug { "Promoted nodes amount: $promotedNodesAmount, signers that have applied config: $relevantSignersThatHaveAppliedConfig" }
-                    // We don't care if other promoted nodes have applied the config or not, they can't build blocks with older config anyway
-                    if (relevantSignersThatHaveAppliedConfig.size + promotedNodesAmount >= pendingBftRequiredSignatureCount) {
+                        false
+                    } else {
                         logger.debug { "Incoming config is pending with us as signer, will restart" }
                         workerContext.restartNotifier.notifyRestart(true)
                         true
-                    } else {
-                        logger.debug { "Incoming config is pending with us as signer, waiting for more nodes to apply it" }
-                        false
                     }
                 } else {
                     false
                 }
             } else {
-                return false
+                false
             }
         }
     }
