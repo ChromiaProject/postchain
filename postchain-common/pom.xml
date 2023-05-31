@@ -10,6 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>postchain-common</artifactId>
     <name>Postchain Common</name>
+    <description>Postchain-common holds essential types other Postchain modules need, some common exceptions and utils.</description>
 
     <dependencies>
         <dependency>

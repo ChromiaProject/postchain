@@ -10,6 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>postchain-crypto</artifactId>
     <name>Postchain Crypto</name>
+    <description>Here we find CryptoSystem, SigMaker and Signature for example.</description>
 
     <dependencies>
         <dependency>

@@ -10,6 +10,7 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>postchain-config</artifactId>
     <name>Postchain Config</name>
+    <description>Utilities for dealing with configuration files.</description>
 
     <dependencies>
         <dependency>
