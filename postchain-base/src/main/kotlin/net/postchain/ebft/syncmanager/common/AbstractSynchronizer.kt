@@ -138,8 +138,10 @@ abstract class AbstractSynchronizer(
 
     protected fun handleAddBlockException(exception: Throwable, block: BlockDataWithWitness, bTrace: BlockTrace?, peerStatuses: AbstractPeerStatuses<*>, peerId: NodeRid) {
         val height = getHeight(block.header)
-        if (exception is PmEngineIsAlreadyClosed || exception is BDBAbortException) {
+        if (exception is PmEngineIsAlreadyClosed) {
             logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
+        } else if (exception is BDBAbortException) {
+            logger.info { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
         } else if (exception is BadDataMistake && exception.type == BadDataType.CONFIGURATION_MISMATCH) {
             if (!checkIfNewConfigurationCanBeLoaded(block)) {
                 peerStatuses.maybeBlacklist(peerId, "Received a block with mismatching config but we could not apply any new config")
@@ -155,7 +157,7 @@ abstract class AbstractSynchronizer(
                 peerStatuses.maybeBlacklist(peerId, "Received a block without expected failed config hash")
             }
         } else {
-            logger.warn(exception) { "Exception committing block height $height from peer: $peerId${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
+            logger.warn(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
         }
     }
 
