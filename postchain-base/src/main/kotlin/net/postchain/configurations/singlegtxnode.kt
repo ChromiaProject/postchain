@@ -2,6 +2,7 @@
 
 package net.postchain.configurations
 
+import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
@@ -83,9 +84,12 @@ class GTXTestModule : SimpleGTXModule<Unit>(Unit,
                 gtv(value)
         })
 ) {
+    companion object : KLogging()
+
     override fun initializeDB(ctx: EContext) {
         val moduleName = this::class.qualifiedName!!
         val version = GTXSchemaManager.getModuleVersion(ctx, moduleName)
+        logger.info("initializeDB version = $version")
         if (version == null) {
             val sql = "CREATE TABLE ${table_gtx_test_value(ctx)}(tx_iid BIGINT PRIMARY KEY, value TEXT NOT NULL)"
             r.update(ctx.conn, sql)
