@@ -33,6 +33,14 @@
             <classifier>tests</classifier>
             <type>test-jar</type>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-crypto</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+            <classifier>tests</classifier>
+            <type>test-jar</type>
+        </dependency>
 
         <!-- Kotlin -->
         <dependency>

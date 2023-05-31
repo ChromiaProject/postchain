@@ -7,7 +7,7 @@ import com.github.ajalt.clikt.parameters.options.required
 import io.grpc.StatusRuntimeException
 import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.chainIdOption
-import net.postchain.admin.cli.util.toHex
+import net.postchain.common.toHex
 import net.postchain.server.grpc.ImportBlockchainRequest
 
 class ImportBlockchainCommand : CliktCommand(help = "Import a blockchain from file") {

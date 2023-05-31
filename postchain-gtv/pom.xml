@@ -18,6 +18,10 @@
             <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-crypto</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>io.github.microutils</groupId>
