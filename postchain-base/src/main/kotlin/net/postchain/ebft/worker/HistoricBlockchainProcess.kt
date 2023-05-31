@@ -54,7 +54,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     private val AWAIT_PROMISE_MS = 5L // The amount of millis we wait before we check if the add block promise has been completed
 
     private var historicSynchronizer: FastSynchronizer? = null
-    private val storage = workerContext.engine.storage
+    private val blockBuilderStorage = workerContext.engine.blockBuilderStorage
     private val blockDatabase = BaseBlockDatabase(
             blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
     private val fastSynchronizer = FastSynchronizer(
@@ -159,7 +159,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     }
 
     private fun getLocalChainId(brid: BlockchainRid): Long? {
-        return withReadConnection(storage, -1) {
+        return withReadConnection(blockBuilderStorage, -1) {
             DatabaseAccess.of(it).getChainId(it, brid)
         }
     }
@@ -177,7 +177,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         if (localChainID == null) return // Don't have the chain, can't sync locally
         copyInfo("Begin cross syncing locally", -1)
 
-        val fromCtx = storage.openReadConnection(localChainID)
+        val fromCtx = blockBuilderStorage.openReadConnection(localChainID)
         val fromBstore = BaseBlockStore()
         var heightToCopy: Long = -2L
         var lastHeight: Long = -2L
@@ -226,7 +226,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
             }
         } finally {
             copyInfo("Shutdown cross syncing, lastHeight: $lastHeight", heightToCopy)
-            storage.closeReadConnection(fromCtx)
+            blockBuilderStorage.closeReadConnection(fromCtx)
         }
     }
 

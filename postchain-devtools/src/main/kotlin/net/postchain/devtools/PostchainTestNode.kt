@@ -68,7 +68,7 @@ class PostchainTestNode(
     fun addBlockchain(chainId: Long, blockchainConfig: Gtv): BlockchainRid {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.sharedStorage, chainId) { eContext: EContext ->
             val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, postchainContext.cryptoSystem)
             withLoggingContext(
                     NODE_PUBKEY_TAG to appConfig.pubKey,
@@ -87,7 +87,7 @@ class PostchainTestNode(
     fun addConfiguration(chainId: Long, height: Long, blockchainConfig: Gtv): BlockchainRid {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.sharedStorage, chainId) { eContext: EContext ->
             val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, postchainContext.cryptoSystem)
             withLoggingContext(
                     NODE_PUBKEY_TAG to appConfig.pubKey,
@@ -105,7 +105,7 @@ class PostchainTestNode(
     fun setMustSyncUntil(chainId: Long, brid: BlockchainRid, height: Long): Boolean {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.sharedStorage, chainId) { eContext: EContext ->
             withLoggingContext(
                     NODE_PUBKEY_TAG to appConfig.pubKey,
                     CHAIN_IID_TAG to chainId.toString(),

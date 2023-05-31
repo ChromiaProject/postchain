@@ -481,7 +481,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         if (liveSigners < getBFTRequiredSignatureCount(statusManager.nodeStatuses.size)) {
             val bcConfigProvider = workerContext.blockchainConfigurationProvider
             val bcConfig = workerContext.blockchainConfiguration
-            val hasNewConfig = withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+            val hasNewConfig = withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
                 bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, true)
             }
 

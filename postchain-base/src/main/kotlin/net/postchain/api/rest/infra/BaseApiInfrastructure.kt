@@ -53,7 +53,7 @@ open class BaseApiInfrastructure(
                         engine.getBlockQueries() as BaseBlockQueries, // TODO: [et]: Resolve type cast
                         debugInfoQuery,
                         blockchainRid,
-                        engine.storage,
+                        engine.sharedStorage,
                         postchainContext,
                         diagnosticData
                 )
@@ -64,7 +64,7 @@ open class BaseApiInfrastructure(
                         engine.getBlockQueries() as BaseBlockQueries,
                         debugInfoQuery,
                         blockchainRid,
-                        engine.storage,
+                        engine.sharedStorage,
                         postchainContext,
                         diagnosticData
                 )

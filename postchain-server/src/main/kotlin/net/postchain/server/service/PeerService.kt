@@ -10,7 +10,7 @@ import net.postchain.server.NodeProvider
 
 class PeerService(private val nodeProvider: NodeProvider) {
 
-    val storage: Storage get() = nodeProvider.get().postchainContext.storage
+    val storage: Storage get() = nodeProvider.get().postchainContext.sharedStorage
 
     fun addPeer(pubkey: PubKey, host: String, port: Int, override: Boolean): Boolean =
             storage.withWriteConnection { ctx ->

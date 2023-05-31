@@ -62,7 +62,7 @@ class SubNodeBlockchainProcessManager(
             if (blockchainProcess != null) {
                 try {
                     val blockchainRid = blockchainProcess.blockchainEngine.getConfiguration().blockchainRid
-                    val committedBlockMessage = withReadConnection(storage, chainId) { eContext ->
+                    val committedBlockMessage = withReadConnection(blockBuilderStorage, chainId) { eContext ->
                         val db = DatabaseAccess.of(eContext)
                         val blockRid = db.getBlockRID(eContext, height)!!
                         val blockHeader = db.getBlockHeader(eContext, blockRid)

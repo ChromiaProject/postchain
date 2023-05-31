@@ -17,7 +17,7 @@ class CommandWipeDb : CliktCommand(name = "wipe-db", help = "Wipe Database") {
     override fun run() {
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         if (recreate) {
-            StorageBuilder.buildStorage(appConfig, true).close()
+            StorageBuilder.buildStorage(appConfig, wipeDatabase = true).close()
         } else {
             StorageBuilder.wipeDatabase(appConfig)
         }

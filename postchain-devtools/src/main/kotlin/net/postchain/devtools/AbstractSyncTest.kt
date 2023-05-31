@@ -175,7 +175,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
             logger.debug { "++ Building DB (no wipe) for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}" }
         }
 
-        StorageBuilder.buildStorage(appConfig, wipeDb).close()
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = wipeDb).close()
 
         // TODO: Olle: Not sure what's going on here
         if (wipeDb) {

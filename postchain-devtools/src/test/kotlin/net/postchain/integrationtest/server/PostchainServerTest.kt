@@ -175,7 +175,7 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
                         .setPubkey(replicaKey)
                         .build()
         )
-        val replicaExistsAfterAdd = withReadConnection(node.getBlockchainInstance(1L).blockchainEngine.storage, 1L) {
+        val replicaExistsAfterAdd = withReadConnection(node.getBlockchainInstance(1L).blockchainEngine.sharedStorage, 1L) {
             DatabaseAccess.of(it).existsBlockchainReplica(it, brid, PubKey(replicaKey))
         }
         assertThat(replicaExistsAfterAdd).isTrue()
@@ -187,7 +187,7 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
                         .setPubkey(replicaKey)
                         .build()
         )
-        val replicaExistsAfterRemove = withReadConnection(node.getBlockchainInstance(1L).blockchainEngine.storage, 1L) {
+        val replicaExistsAfterRemove = withReadConnection(node.getBlockchainInstance(1L).blockchainEngine.sharedStorage, 1L) {
             DatabaseAccess.of(it).existsBlockchainReplica(it, brid, PubKey(replicaKey))
         }
         assertThat(replicaExistsAfterRemove).isFalse()
