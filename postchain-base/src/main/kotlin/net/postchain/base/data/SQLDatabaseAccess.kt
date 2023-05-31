@@ -823,6 +823,26 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
+    override fun listConfigurationHashes(ctx: EContext): List<ByteArray> {
+        val sql = """
+            SELECT configuration_hash
+            FROM ${tableConfigurations(ctx)}
+            order by height
+        """.trimIndent()
+        return queryRunner.query(ctx.conn, sql, mapListHandler).map { res ->
+            res["configuration_hash"] as ByteArray
+        }
+    }
+
+    override fun configurationHashExists(ctx: EContext, hash: ByteArray): Boolean {
+        val sql = """
+            SELECT configuration_hash
+            FROM ${tableConfigurations(ctx)}
+            WHERE configuration_hash = ?
+        """.trimIndent()
+        return queryRunner.query(ctx.conn, sql, nullableByteArrayRes, hash) != null
+    }
+
     override fun removeConfiguration(ctx: EContext, height: Long): Int {
         val lastBlockHeight = getLastBlockHeight(ctx)
         if (lastBlockHeight >= height) {

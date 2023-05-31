@@ -121,6 +121,8 @@ interface DatabaseAccess {
     fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long?
     fun findNextConfigurationHeight(ctx: EContext, height: Long): Long?
     fun listConfigurations(ctx: EContext): List<Long>
+    fun listConfigurationHashes(ctx: EContext): List<ByteArray>
+    fun configurationHashExists(ctx: EContext, hash: ByteArray): Boolean
     fun removeConfiguration(ctx: EContext, height: Long): Int
     fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray>>
     fun getAllConfigurations(connection: Connection, chainId: Long): List<Pair<Long, WrappedByteArray>>
