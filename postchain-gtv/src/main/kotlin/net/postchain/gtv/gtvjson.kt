@@ -59,16 +59,14 @@ class GtvAdapter : JsonDeserializer<Gtv>, JsonSerializer<Gtv> {
         return a
     }
 
-    override fun serialize(v: Gtv, t: Type, c: JsonSerializationContext): JsonElement {
-        when (v.type) {
-            GtvType.INTEGER -> return JsonPrimitive(v.asInteger())
-            GtvType.STRING -> return JsonPrimitive(v.asString())
-            GtvType.NULL -> return JsonNull.INSTANCE
-            GtvType.BYTEARRAY -> return JsonPrimitive(v.asByteArray().toHex())
-            GtvType.DICT -> return encodeDict(v, t, c)
-            GtvType.ARRAY -> return encodeArray(v, t, c)
-            else -> throw IllegalStateException("Should have taken care of all cases, type not known: ${v.type}" )
-        }
+    override fun serialize(v: Gtv, t: Type, c: JsonSerializationContext): JsonElement = when (v.type) {
+        GtvType.INTEGER -> JsonPrimitive(v.asInteger())
+        GtvType.STRING -> JsonPrimitive(v.asString())
+        GtvType.NULL -> JsonNull.INSTANCE
+        GtvType.BYTEARRAY -> JsonPrimitive(v.asByteArray().toHex())
+        GtvType.DICT -> encodeDict(v, t, c)
+        GtvType.ARRAY -> encodeArray(v, t, c)
+        GtvType.BIGINTEGER -> throw IllegalStateException("big_integer cannot be serialized as JSON")
     }
 }
 
