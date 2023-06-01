@@ -6,7 +6,7 @@
 
     <groupId>net.postchain</groupId>
     <artifactId>postchain</artifactId>
-    <version>3.11.0-SNAPSHOT</version>
+    <version>${revision}</version>
     <modules>
         <module>postchain-common</module>
         <module>postchain-gtv</module>
@@ -25,6 +25,7 @@
     <name>Postchain</name>
     <url>https://docs.chromia.com</url>
     <properties>
+        <revision>dev</revision>
         <doclint>none</doclint>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.outputTimestamp>1684828760</project.build.outputTimestamp>
@@ -64,7 +65,6 @@
         <jaxb.version>4.0.1</jaxb.version>
         <jackson.version>2.15.0</jackson.version>
         <gson.version>2.10</gson.version>
-        <gitflow.maven.plugin.version>1.19.0</gitflow.maven.plugin.version>
         <commons-dbutils.version>1.7</commons-dbutils.version>
         <commons-dbcp2.version>2.9.0</commons-dbcp2.version>
         <commons-lang3.version>3.12.0</commons-lang3.version>
@@ -648,7 +648,31 @@
                     <target>11</target>
                 </configuration>
             </plugin>
-
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>flatten-maven-plugin</artifactId>
+                    <version>1.1.0</version>
+                    <configuration>
+                        <updatePomFile>true</updatePomFile>
+                        <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>flatten</id>
+                            <phase>process-resources</phase>
+                            <goals>
+                                <goal>flatten</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>flatten.clean</id>
+                            <phase>clean</phase>
+                            <goals>
+                                <goal>clean</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -726,19 +750,6 @@
                     <dateFormatTimeZone>UTC</dateFormatTimeZone>
                 </configuration>
             </plugin>
-
-            <plugin>
-                <groupId>com.amashchenko.maven.plugin</groupId>
-                <artifactId>gitflow-maven-plugin</artifactId>
-                <version>${gitflow.maven.plugin.version}</version>
-                <configuration>
-                    <gitFlowConfig>
-                        <developmentBranch>dev</developmentBranch>
-                        <versionTagPrefix>ver-</versionTagPrefix>
-                    </gitFlowConfig>
-                </configuration>
-            </plugin>
-
         </plugins>
     </build>
 
@@ -838,7 +849,7 @@
         </profile>
 
         <profile>
-            <id>docker-image</id>
+            <id>docker</id>
             <build>
                 <pluginManagement>
                     <plugins>
@@ -893,43 +904,40 @@
             </build>
         </profile>
         <profile>
-            <id>gitlab-registry</id>
+            <id>docker-push</id>
             <build>
                 <pluginManagement>
                     <plugins>
                         <plugin>
                             <groupId>com.google.cloud.tools</groupId>
                             <artifactId>jib-maven-plugin</artifactId>
-                            <configuration>
-                                <from>
-                                    <platforms>
-                                        <platform>
-                                            <architecture>amd64</architecture>
-                                            <os>linux</os>
-                                        </platform>
-                                        <platform>
-                                            <architecture>arm64</architecture>
-                                            <os>linux</os>
-                                        </platform>
-                                    </platforms>
-                                </from>
-                                <to>
-                                    <image>${gitlab.registry}/${image.name}:${project.version}</image>
-                                    <auth>
-                                        <username>${env.CI_REGISTRY_USER}</username>
-                                        <password>${env.CI_REGISTRY_PASSWORD}</password>
-                                    </auth>
-                                    <tags>
-                                        <tag>${latest.tag}</tag>
-                                    </tags>
-                                </to>
-                            </configuration>
                             <executions>
                                 <execution>
                                     <phase>deploy</phase>
                                     <goals>
                                         <goal>build</goal>
                                     </goals>
+                                    <configuration>
+                                        <from>
+                                            <platforms>
+                                                <platform>
+                                                    <architecture>amd64</architecture>
+                                                    <os>linux</os>
+                                                </platform>
+                                                <platform>
+                                                    <architecture>arm64</architecture>
+                                                    <os>linux</os>
+                                                </platform>
+                                            </platforms>
+                                        </from>
+                                        <to>
+                                            <image>${gitlab.registry}/${image.name}:${project.version}</image>
+                                            <auth>
+                                                <username>${env.CI_REGISTRY_USER}</username>
+                                                <password>${env.CI_REGISTRY_PASSWORD}</password>
+                                            </auth>
+                                        </to>
+                                    </configuration>
                                 </execution>
                             </executions>
                         </plugin>

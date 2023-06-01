@@ -15,3 +15,4 @@ postchain-distribution/lib
 *.jar
 /postchain-containerized/containers/
 /containers/
+.flattened-pom.xml
