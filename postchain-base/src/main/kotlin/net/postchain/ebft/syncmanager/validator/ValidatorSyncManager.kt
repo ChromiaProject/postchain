@@ -148,14 +148,14 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                     is BlockSignature -> {
                                         val signature = Signature(message.sig.subjectID, message.sig.data)
                                         val smBlockRID = this.statusManager.myStatus.blockRID
-                                        if (smBlockRID == null) {
+                                        if (smBlockRID == null || processingIntent !is FetchCommitSignatureIntent) {
                                             logger.debug("Received signature not needed")
                                         } else if (!smBlockRID.contentEquals(message.blockRID)) {
                                             logger.info("Receive signature for a different block")
                                         } else if (this.blockDatabase.verifyBlockSignature(signature)) {
                                             this.statusManager.onCommitSignature(nodeIndex, message.blockRID, signature)
                                         } else {
-                                            logger.error { "BlockSignature is invalid" }
+                                            logger.warn { "BlockSignature from peer: $xPeerId is invalid for block with with RID: ${smBlockRID.toHex()}" }
                                         }
                                     }
 

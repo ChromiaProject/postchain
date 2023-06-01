@@ -194,11 +194,11 @@ class BaseStatusManager(
                 acceptBlock(blockRID, mySignature)
                 true
             } else {
-                logger.error("Received block which is irrelevant. Need ${theIntent.blockRID.toHex()}, got ${blockRID.toHex()}")
+                logger.info("Received block which is irrelevant. Need ${theIntent.blockRID.toHex()}, got ${blockRID.toHex()}")
                 false
             }
         } else {
-            logger.error("Received block which is irrelevant, intent was ${theIntent::class.simpleName}")
+            logger.info("Received block which is irrelevant, intent was ${theIntent::class.simpleName}")
             false
         }
     }
