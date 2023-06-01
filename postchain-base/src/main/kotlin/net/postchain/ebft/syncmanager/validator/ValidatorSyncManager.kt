@@ -194,7 +194,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                         //  are still responding to our old requests. For this case this is harmless.
                                     }
 
-                                    is AppliedConfig -> {}
+                                    is AppliedConfig -> {
+                                        if (statusManager.myStatus.revolting) {
+                                            processIncomingConfig(message.configHash, message.height)
+                                        }
+                                    }
 
                                     else -> throw ProgrammerMistake("Unhandled type ${message::class}")
                                 }
@@ -204,6 +208,25 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 } catch (e: Exception) {
                     logger.error("Couldn't handle message $message. Ignoring and continuing", e)
                 }
+            }
+        }
+    }
+
+    private fun processIncomingConfig(incomingConfigHash: ByteArray, incomingHeight: Long) {
+        val bcConfig = workerContext.blockchainConfiguration
+        if (incomingHeight == statusManager.myStatus.height && !incomingConfigHash.contentEquals(bcConfig.configHash)) {
+            restartWithNewConfigIfPossible()
+        }
+    }
+
+    private fun restartWithNewConfigIfPossible() {
+        val chainId = workerContext.blockchainConfiguration.chainID
+        val bcConfigProvider = workerContext.blockchainConfigurationProvider
+        withReadConnection(workerContext.engine.blockBuilderStorage, chainId) { ctx ->
+            if (workerContext.engine.hasBuiltFirstBlockAfterConfigUpdate()
+                    && bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, chainId, true)) {
+                logger.debug("New config found. Reloading.")
+                workerContext.restartNotifier.notifyRestart(true)
             }
         }
     }
@@ -459,7 +482,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 nodeStateTracker.nodeStatuses = statusManager.nodeStatuses
                 nodeStateTracker.blockHeight = statusManager.myStatus.height
 
-                if (workerContext.engine.hasBuiltFirstBlockAfterConfigUpdate()) {
+                if (statusManager.myStatus.revolting) {
                     checkIfConfigReloadIsNeeded()
                 }
 
@@ -473,22 +496,14 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
     private fun checkIfConfigReloadIsNeeded() {
         val now = System.currentTimeMillis()
+
         val liveSigners = statusManager.nodeStatuses.indices.count {
             it == statusManager.getMyIndex() || now - statusManager.getLatestStatusTimestamp(it) < STATUS_TIMEOUT
         }
 
         // If the amount of live signers is less than BFT majority it may indicate that there is a new config with removed signers
         if (liveSigners < getBFTRequiredSignatureCount(statusManager.nodeStatuses.size)) {
-            val bcConfigProvider = workerContext.blockchainConfigurationProvider
-            val bcConfig = workerContext.blockchainConfiguration
-            val hasNewConfig = withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
-                bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, true)
-            }
-
-            if (hasNewConfig) {
-                logger.debug("New config found. Reloading.")
-                workerContext.restartNotifier.notifyRestart(true)
-            }
+            restartWithNewConfigIfPossible()
         }
     }
 
