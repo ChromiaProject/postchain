@@ -65,7 +65,9 @@ data class ContainerNodeConfig(
         val zfsPoolInitScript: String?,
         val bindPgdataVolume: Boolean,
         val dockerLogConf: DockerLogConfig?,
-        val containerIID: Int
+        val containerIID: Int,
+        val remoteDebugEnabled: Boolean,
+        val remoteDebugSuspend: Boolean
 ) : Config {
     val subnodePorts = listOf(subnodeRestApiPort, subnodeAdminRpcPort)
 
@@ -93,6 +95,8 @@ data class ContainerNodeConfig(
         const val KEY_ZFS_POOL_NAME = "zfs.pool-name"
         const val KEY_ZFS_POOL_INIT_SCRIPT = "zfs.pool-init-script"
         const val KEY_BIND_PGDATA_VOLUME = "bind-pgdata-volume"
+        const val KEY_REMOTE_DEBUG_ENABLED = "remote-debug-enabled"
+        const val KEY_REMOTE_DEBUG_SUSPEND = "remote-debug-suspend"
 
         fun fullKey(subKey: String) = "$KEY_CONTAINER_PREFIX.${subKey}"
 
@@ -145,7 +149,9 @@ data class ContainerNodeConfig(
                         getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_INIT_SCRIPT", KEY_ZFS_POOL_INIT_SCRIPT),
                         getEnvOrBooleanProperty("POSTCHAIN_BIND_PGDATA_VOLUME", KEY_BIND_PGDATA_VOLUME, true),
                         logConf,
-                        System.getenv("POSTCHAIN_CONTAINER_ID")?.toInt() ?: -1
+                        System.getenv("POSTCHAIN_CONTAINER_ID")?.toInt() ?: -1,
+                        getEnvOrBooleanProperty("POSTCHAIN_SUBNODE_REMOTE_DEBUG_ENABLED", KEY_REMOTE_DEBUG_ENABLED, false),
+                        getEnvOrBooleanProperty("POSTCHAIN_SUBNODE_REMOTE_DEBUG_SUSPEND", KEY_REMOTE_DEBUG_SUSPEND, false),
                 )
             }
         }

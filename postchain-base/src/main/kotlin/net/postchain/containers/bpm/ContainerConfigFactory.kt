@@ -15,6 +15,8 @@ import org.mandas.docker.client.messages.PortBinding
 
 object ContainerConfigFactory : KLogging() {
 
+    private const val REMOTE_DEBUG_PORT = 8000
+
     fun createConfig(fs: FileSystem, appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer): ContainerConfig {
         // Container volumes
         val volumes = mutableListOf<HostConfig.Bind>()
@@ -74,6 +76,11 @@ object ContainerConfigFactory : KLogging() {
         // admin-rpc-port
         val adminRpcPort = "${containerNodeConfig.subnodeAdminRpcPort}/tcp"
         portBindings[adminRpcPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
+
+        if (containerNodeConfig.remoteDebugEnabled) {
+            val remoteDebugPort = "$REMOTE_DEBUG_PORT/tcp"
+            portBindings[remoteDebugPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
+        }
 
         /**
          * CPU:
@@ -187,5 +194,10 @@ object ContainerConfigFactory : KLogging() {
 
         add("POSTCHAIN_EXIT_ON_FATAL_ERROR=true")
         add("POSTCHAIN_CONTAINER_ID=${container.containerName.containerIID}")
+
+        if (containerNodeConfig.remoteDebugEnabled) {
+            val suspend = if (containerNodeConfig.remoteDebugSuspend) "y" else "n"
+            add("JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,address=*:$REMOTE_DEBUG_PORT,suspend=$suspend")
+        }
     }
 }
