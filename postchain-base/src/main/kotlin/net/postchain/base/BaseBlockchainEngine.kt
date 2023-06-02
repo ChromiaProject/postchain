@@ -79,6 +79,20 @@ open class BaseBlockchainEngine(
     private var currentEContext = initialEContext
     private var hasBuiltFirstBlockAfterConfigUpdate = false
 
+    init {
+        hasBuiltFirstBlockAfterConfigUpdate = withReadConnection(blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            val configIsSaved = db.configurationHashExists(ctx, blockchainConfiguration.configHash)
+            if (!configIsSaved) {
+                false
+            } else {
+                val activeHeight = db.getLastBlockHeight(ctx) + 1
+                val configHeight = db.findConfigurationHeightForBlock(ctx, activeHeight) ?: 0
+                activeHeight > configHeight
+            }
+        }
+    }
+
     override fun isRunning() = !closed
 
     override fun getTransactionQueue(): TransactionQueue {
