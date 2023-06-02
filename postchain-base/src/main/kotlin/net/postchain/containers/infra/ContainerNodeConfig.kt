@@ -67,7 +67,8 @@ data class ContainerNodeConfig(
         val dockerLogConf: DockerLogConfig?,
         val containerIID: Int,
         val remoteDebugEnabled: Boolean,
-        val remoteDebugSuspend: Boolean
+        val remoteDebugSuspend: Boolean,
+        val prometheusPort: Int
 ) : Config {
     val subnodePorts = listOf(subnodeRestApiPort, subnodeAdminRpcPort)
 
@@ -97,6 +98,7 @@ data class ContainerNodeConfig(
         const val KEY_BIND_PGDATA_VOLUME = "bind-pgdata-volume"
         const val KEY_REMOTE_DEBUG_ENABLED = "remote-debug-enabled"
         const val KEY_REMOTE_DEBUG_SUSPEND = "remote-debug-suspend"
+        const val KEY_PROMETHEUS_PORT = "metrics.prometheus.port"
 
         fun fullKey(subKey: String) = "$KEY_CONTAINER_PREFIX.${subKey}"
 
@@ -152,6 +154,7 @@ data class ContainerNodeConfig(
                         System.getenv("POSTCHAIN_CONTAINER_ID")?.toInt() ?: -1,
                         getEnvOrBooleanProperty("POSTCHAIN_SUBNODE_REMOTE_DEBUG_ENABLED", KEY_REMOTE_DEBUG_ENABLED, false),
                         getEnvOrBooleanProperty("POSTCHAIN_SUBNODE_REMOTE_DEBUG_SUSPEND", KEY_REMOTE_DEBUG_SUSPEND, false),
+                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_PROMETHEUS_PORT", KEY_PROMETHEUS_PORT, -1)
                 )
             }
         }

@@ -195,6 +195,8 @@ object ContainerConfigFactory : KLogging() {
         add("POSTCHAIN_EXIT_ON_FATAL_ERROR=true")
         add("POSTCHAIN_CONTAINER_ID=${container.containerName.containerIID}")
 
+        add("POSTCHAIN_PROMETHEUS_PORT=${containerNodeConfig.prometheusPort}")
+
         if (containerNodeConfig.remoteDebugEnabled) {
             val suspend = if (containerNodeConfig.remoteDebugSuspend) "y" else "n"
             add("JAVA_TOOL_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,address=*:$REMOTE_DEBUG_PORT,suspend=$suspend")
