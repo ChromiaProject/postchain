@@ -53,7 +53,7 @@ object ImporterExporter : KLogging() {
      *                            set to `Long.MAX_VALUE` to continue to last block
      * @param logNBlocks          log every N block
      */
-    fun exportBlockchain(storage: Storage, chainId: Long, configurationsFile: Path, blocksFile: Path, overwrite: Boolean,
+    fun exportBlockchain(storage: Storage, chainId: Long, configurationsFile: Path, blocksFile: Path?, overwrite: Boolean,
                          fromHeight: Long = 0L, upToHeight: Long = Long.MAX_VALUE, logNBlocks: Int = 100): ExportResult =
             withReadConnection(storage, chainId) { ctx ->
                 val db = DatabaseAccess.of(ctx)
@@ -64,7 +64,7 @@ object ImporterExporter : KLogging() {
                 if (!overwrite) {
                     if (Files.exists(configurationsFile))
                         throw UserMistake("${configurationsFile.toAbsolutePath()} already exists and overwrite was not specified")
-                    if (Files.exists(blocksFile))
+                    if (blocksFile != null && Files.exists(blocksFile))
                         throw UserMistake("${blocksFile.toAbsolutePath()} already exists and overwrite was not specified")
                 }
 
@@ -74,42 +74,56 @@ object ImporterExporter : KLogging() {
                 ) {
                     logger.info("Exporting blockchain $chainId with bc-rid ${blockchainRid.toHex()}...")
 
-                    BufferedOutputStream(FileOutputStream(configurationsFile.toFile())).use { output ->
-                        output.write(GtvEncoder.encodeGtv(GtvFactory.gtv(blockchainRid.data)))
+                    exportConfigurations(configurationsFile, blockchainRid, db, ctx, fromHeight = fromHeight, upToHeight = upToHeight)
 
-                        for ((height, configurationData) in db.getAllConfigurations(ctx)) {
-                            if (height > upToHeight) break
-                            if (height >= fromHeight) {
-                                output.write(GtvEncoder.encodeGtv(GtvFactory.gtv(GtvFactory.gtv(height), GtvFactory.gtv(configurationData))))
-                            }
-                        }
+                    if (blocksFile != null) {
+                        val (firstBlock, lastBlock, numBlocks) = exportBlocks(blocksFile, db, ctx, fromHeight, upToHeight, logNBlocks)
+                        val message = if (numBlocks > 0)
+                            "Export of $numBlocks blocks $firstBlock..$lastBlock to ${configurationsFile.toAbsolutePath()} and ${blocksFile.toAbsolutePath()} completed"
+                        else
+                            "No blocks to export to ${configurationsFile.toAbsolutePath()} and ${blocksFile.toAbsolutePath()}"
 
-                        output.write(GtvEncoder.encodeGtv(GtvNull))
+                        logger.info(message)
+                        ExportResult(fromHeight = firstBlock, toHeight = lastBlock, numBlocks = numBlocks)
+                    } else {
+                        logger.info("Export of configurations to ${configurationsFile.toAbsolutePath()} completed")
+                        ExportResult(fromHeight = fromHeight, toHeight = upToHeight, numBlocks = 0)
                     }
-
-                    var firstBlock = -1L
-                    var lastBlock = -1L
-                    var numBlocks = 0L
-                    BufferedOutputStream(FileOutputStream(blocksFile.toFile())).use { output ->
-                        db.getAllBlocksWithTransactions(ctx, fromHeight = fromHeight, upToHeight = upToHeight) {
-                            if (firstBlock == -1L) firstBlock = it.blockHeight
-                            if (numBlocks % logNBlocks == 0L) logger.info("Export block at height ${it.blockHeight}")
-                            output.write(GtvEncoder.encodeGtv(encodeBlockEntry(it)))
-                            lastBlock = it.blockHeight
-                            numBlocks++
-                        }
-
-                        output.write(GtvEncoder.encodeGtv(GtvNull))
-                    }
-
-                    val message = if (numBlocks > 0)
-                        "Export of $numBlocks blocks $firstBlock..$lastBlock to ${configurationsFile.toAbsolutePath()} and ${blocksFile.toAbsolutePath()} completed"
-                    else
-                        "No blocks to export to ${configurationsFile.toAbsolutePath()} and ${blocksFile.toAbsolutePath()}"
-                    logger.info(message)
-                    ExportResult(fromHeight = firstBlock, toHeight = lastBlock, numBlocks = numBlocks)
                 }
             }
+
+    private fun exportConfigurations(configurationsFile: Path, blockchainRid: BlockchainRid, db: DatabaseAccess, ctx: EContext, fromHeight: Long, upToHeight: Long) {
+        BufferedOutputStream(FileOutputStream(configurationsFile.toFile())).use { output ->
+            output.write(GtvEncoder.encodeGtv(GtvFactory.gtv(blockchainRid.data)))
+
+            for ((height, configurationData) in db.getAllConfigurations(ctx)) {
+                if (height > upToHeight) break
+                if (height >= fromHeight) {
+                    output.write(GtvEncoder.encodeGtv(GtvFactory.gtv(GtvFactory.gtv(height), GtvFactory.gtv(configurationData))))
+                }
+            }
+
+            output.write(GtvEncoder.encodeGtv(GtvNull))
+        }
+    }
+
+    private fun exportBlocks(blocksFile: Path, db: DatabaseAccess, ctx: EContext, fromHeight: Long, upToHeight: Long, logNBlocks: Int): ExportResult {
+        var firstBlock = -1L
+        var lastBlock = -1L
+        var numBlocks = 0L
+        BufferedOutputStream(FileOutputStream(blocksFile.toFile())).use { output ->
+            db.getAllBlocksWithTransactions(ctx, fromHeight = fromHeight, upToHeight = upToHeight) {
+                if (firstBlock == -1L) firstBlock = it.blockHeight
+                if (numBlocks % logNBlocks == 0L) logger.info("Export block at height ${it.blockHeight}")
+                output.write(GtvEncoder.encodeGtv(encodeBlockEntry(it)))
+                lastBlock = it.blockHeight
+                numBlocks++
+            }
+
+            output.write(GtvEncoder.encodeGtv(GtvNull))
+        }
+        return ExportResult(fromHeight = firstBlock, toHeight = lastBlock, numBlocks = numBlocks)
+    }
 
     /**
      * @param nodeKeyPair         KeyPair of the node
