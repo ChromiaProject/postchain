@@ -187,7 +187,7 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
             val exportResult = postchainService.exportBlockchain(
                     request.chainId,
                     Path.of(request.configurationsFile),
-                    Path.of(request.blocksFile),
+                    if (request.blocksFile.isNullOrBlank()) null else Path.of(request.blocksFile),
                     request.overwrite,
                     request.fromHeight,
                     request.upToHeight,

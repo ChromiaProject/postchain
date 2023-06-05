@@ -69,6 +69,27 @@ class ImportExportIT {
     private val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configData0, ::sha256Digest)
 
     @Test
+    fun exportConfigurationsOnly(@TempDir tempDir: Path) {
+        val configurationsFile = tempDir.resolve("configurations.gtv")
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildBlockchain(storage, listOf(0L to configData0, 2L to configData2),
+                    listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
+            val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, null,
+                    overwrite = false, logNBlocks = 1)
+            assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 0, toHeight = Long.MAX_VALUE, numBlocks = 0))
+        }
+
+        FileInputStream(configurationsFile.toFile()).use {
+            assertThat(GtvDecoder.decodeGtv(it).asByteArray()).isContentEqualTo(blockchainRid.data)
+            assertExportedConfiguration(0, configData0, GtvDecoder.decodeGtv(it))
+            assertExportedConfiguration(2, configData2, GtvDecoder.decodeGtv(it))
+            assertThat(GtvDecoder.decodeGtv(it).isNull())
+            assertThat(it.read()).isEqualTo(-1) // EOF
+        }
+    }
+
+    @Test
     fun exportAll(@TempDir tempDir: Path) {
         val configurationsFile = tempDir.resolve("configurations.gtv")
         val blocksFile = tempDir.resolve("blocks.gtv")
