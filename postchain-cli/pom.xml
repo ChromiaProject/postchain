@@ -99,7 +99,7 @@
                 <configuration>
                     <allowInsecureRegistries>false</allowInsecureRegistries>
                     <from>
-                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17:1.0.0</image> <!--No hash here until https://github.com/GoogleContainerTools/jib/pull/3974 -->
+                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17:1.0.0@sha256:94bc0a1964e08ee42ff1dcd6178802e0156a2e24a3afa4e675670d5e2f8372a5</image>
                     </from>
                     <container>
                         <appRoot>/opt/chromaway/postchain</appRoot>
