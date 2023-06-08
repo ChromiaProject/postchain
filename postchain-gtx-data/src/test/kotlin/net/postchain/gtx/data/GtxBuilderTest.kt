@@ -18,11 +18,16 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
 
-class GTXDataTest {
+class GtxBuilderTest {
 
-    private fun addOperations(b: GtxBuilder, signerPub: List<ByteArray>) {
+    private val crypto = Secp256K1CryptoSystem()
+
+    private val signerPub = (0..3).map(::pubKey)
+    private val signerPriv = (0..3).map(::privKey)
+
+    private fun addOperations(b: GtxBuilder, signer: ByteArray?) {
         // primitives
-        b.addOperation("hello", GtvNull, gtv(42), gtv("Wow"), gtv(signerPub[0]))
+        b.addOperation("hello", GtvNull, gtv(42), gtv("Wow"), gtv(signer ?: ByteArray(0)))
         // array of primitives
         b.addOperation("bro", gtv(GtvNull, gtv(2), gtv("Nope")))
         // dict
@@ -38,12 +43,8 @@ class GTXDataTest {
 
     @Test
     fun testGTXData() {
-        val signerPub = (0..3).map(::pubKey)
-        val signerPriv = (0..3).map(::privKey)
-        val crypto = Secp256K1CryptoSystem()
-
         val b = GtxBuilder(BlockchainRid.buildRepeat(0), signerPub.slice(0..2), crypto)
-        addOperations(b, signerPub)
+        addOperations(b, signerPub[0])
         val txBuilder = b.finish()
                 .sign(crypto.buildSigMaker(KeyPair(signerPub[0], signerPriv[0])))
 
@@ -97,5 +98,71 @@ class GTXDataTest {
         assertEquals(2, mapWithArray["array"]!![1].asInteger())
         val arrayWithMap = body.operations[3].args[1]
         assertEquals("space", arrayWithMap[0]["inner"]!!.asString())
+    }
+
+    @Test
+    fun sizeOne() {
+        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, maxTxSize = 1000)
+        b.addOperation("dictator", gtv(mapOf("two" to gtv(2), "five" to GtvNull)))
+        checkSize(b, 1)
+    }
+
+    @Test
+    fun sizeTwo() {
+        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, maxTxSize = 1000)
+        b.addOperation("dictator", gtv(mapOf("two" to gtv(2), "five" to GtvNull)))
+        // complex structure
+        b.addOperation("soup",
+                // map with array
+                gtv(mapOf("array" to gtv(gtv(1), gtv(2), gtv(3)))),
+                // array with map
+                gtv(gtv(mapOf("inner" to gtv("space"))), GtvNull)
+        )
+        checkSize(b, 2)
+    }
+
+    @Test
+    fun sizeThree() {
+        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, maxTxSize = 1000)
+        b.addOperation("dictator", gtv(mapOf("two" to gtv(2), "five" to GtvNull)))
+        // complex structure
+        b.addOperation("soup",
+                // map with array
+                gtv(mapOf("array" to gtv(gtv(1), gtv(2), gtv(3)))),
+                // array with map
+                gtv(gtv(mapOf("inner" to gtv("space"))), GtvNull)
+        )
+        b.addOperation("desert", gtv(gtv("foo"), gtv(17)))
+        checkSize(b, 3)
+    }
+
+    @Test
+    fun sizeFour() {
+        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, maxTxSize = 1000)
+        addOperations(b, null)
+        checkSize(b, 4)
+    }
+
+    @Test
+    fun noFit() {
+        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, maxTxSize = 250)
+        b.addOperation("dictator", gtv(mapOf("two" to gtv(2), "five" to GtvNull)))
+        assertThrows<IllegalStateException> {
+            b.addOperation("soup",
+                    // map with array
+                    gtv(mapOf("array" to gtv(gtv(1), gtv(2), gtv(3)))),
+                    // array with map
+                    gtv(gtv(mapOf("inner" to gtv("space"))), GtvNull)
+            )
+        }
+        checkSize(b, 1)
+    }
+
+    private fun checkSize(b: GtxBuilder, numOps: Int) {
+        val gtx = b.finish().sign(crypto.buildSigMaker(KeyPair(signerPub[0], signerPriv[0]))).buildGtx()
+        assertEquals(numOps, gtx.gtxBody.operations.size)
+        val actualSize = gtx.encode().size
+        assertTrue(actualSize < b.maxTxSize)
+        assertTrue(b.totalSize > actualSize) { "${b.totalSize} <= $actualSize" }
     }
 }
