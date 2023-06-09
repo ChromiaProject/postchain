@@ -78,6 +78,8 @@
                             <POSTCHAIN_BLOCKCHAIN_CONFIG>/config/0.xml</POSTCHAIN_BLOCKCHAIN_CONFIG>
                         </environment>
                         <ports>50051</ports>
+                        <creationTime>${git.commit.time}</creationTime>
+                        <filesModificationTime>${git.commit.time}</filesModificationTime>
                     </container>
                     <containerizingMode>packaged</containerizingMode>
                 </configuration>
