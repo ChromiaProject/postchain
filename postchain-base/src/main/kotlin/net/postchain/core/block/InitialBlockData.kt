@@ -16,5 +16,5 @@ class InitialBlockData(
         val prevBlockRID: ByteArray,
         val height: Long,
         val timestamp: Long,
-        val blockHeightDependencyArr: Array<ByteArray?>?,
+        val blockHeightDependencyArr: Array<ByteArray?>?
 )

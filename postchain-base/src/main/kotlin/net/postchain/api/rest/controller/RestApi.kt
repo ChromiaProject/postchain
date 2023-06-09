@@ -37,6 +37,7 @@ import net.postchain.api.rest.proofBody
 import net.postchain.api.rest.statusBody
 import net.postchain.api.rest.stringsBody
 import net.postchain.api.rest.textBody
+import net.postchain.api.rest.transactionsCountBody
 import net.postchain.api.rest.txBody
 import net.postchain.api.rest.txInfoBody
 import net.postchain.api.rest.txInfosBody
@@ -204,6 +205,7 @@ class RestApi(
 
             "/tx/{blockchainRid}" bind POST to blockchain.then(::postTransaction),
             "/tx/{blockchainRid}/{txRid}" bind GET to blockchain.then(::getTransaction),
+            "/transactions/{blockchainRid}/count" bind GET to blockchain.then(::getTransactionsCount),
             "/transactions/{blockchainRid}/{txRid}" bind GET to blockchain.then(::getTransactionInfo),
             "/transactions/{blockchainRid}" bind GET to blockchain.then(::getTransactionsInfo),
             "/tx/{blockchainRid}/{txRid}/confirmationProof" bind GET to blockchain.then(::getConfirmationProof),
@@ -273,6 +275,12 @@ class RestApi(
         val beforeTime = beforeTimeQuery(request) ?: Long.MAX_VALUE
         val txInfos = model.getTransactionsInfo(beforeTime, limit)
         return Response(OK).with(txInfosBody of txInfos)
+    }
+
+    private fun getTransactionsCount(request: Request): Response {
+        val model = model(request)
+        val lastTransactionNumber = model.getLastTransactionNumber()
+        return Response(OK).with(transactionsCountBody of lastTransactionNumber)
     }
 
     private fun getConfirmationProof(request: Request): Response {

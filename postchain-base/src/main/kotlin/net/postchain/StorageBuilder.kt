@@ -13,7 +13,7 @@ import kotlin.time.Duration
 
 object StorageBuilder {
 
-    private const val DB_VERSION = 7
+    private const val DB_VERSION = 8
 
     fun buildStorage(appConfig: AppConfig, maxWaitWrite: Duration = Duration.ZERO, maxWriteTotal: Int = 2,
                      wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION): Storage {

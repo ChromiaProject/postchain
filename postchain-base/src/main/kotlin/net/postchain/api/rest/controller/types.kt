@@ -4,6 +4,7 @@ package net.postchain.api.rest.controller
 
 import com.google.gson.JsonElement
 import net.postchain.api.rest.BlockHeight
+import net.postchain.api.rest.TransactionsCount
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
 import net.postchain.base.ConfirmationProof
@@ -35,6 +36,7 @@ interface Model : ChainModel {
     fun getTransaction(txRID: TxRid): ByteArray?
     fun getTransactionInfo(txRID: TxRid): TransactionInfoExt?
     fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt>
+    fun getLastTransactionNumber(): TransactionsCount
     fun getBlock(blockRID: BlockRid, txHashesOnly: Boolean): BlockDetail?
     fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail?
     fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>

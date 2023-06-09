@@ -187,6 +187,10 @@ class RestApiMockForClientManual {
             return transactionsInfo.toList()
         }
 
+        override fun getLastTransactionNumber(): TransactionsCount {
+            TODO("Not yet implemented")
+        }
+
         override fun debugQuery(subQuery: String?): JsonElement {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }

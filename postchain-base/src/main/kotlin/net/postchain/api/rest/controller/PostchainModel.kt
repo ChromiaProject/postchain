@@ -6,6 +6,7 @@ import com.google.gson.JsonElement
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.BlockHeight
+import net.postchain.api.rest.TransactionsCount
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
 import net.postchain.base.BaseBlockQueries
@@ -64,6 +65,10 @@ open class PostchainModel(
 
     override fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt> {
         return blockQueries.getTransactionsInfo(beforeTime, limit).get()
+    }
+
+    override fun getLastTransactionNumber(): TransactionsCount {
+        return TransactionsCount(blockQueries.getLastTransactionNumber().get())
     }
 
     override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> {

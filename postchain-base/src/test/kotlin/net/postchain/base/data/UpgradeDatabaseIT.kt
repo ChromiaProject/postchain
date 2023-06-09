@@ -19,15 +19,16 @@ import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
+import org.apache.commons.dbutils.handlers.ScalarHandler
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 
 class UpgradeDatabaseIT {
 
@@ -35,6 +36,7 @@ class UpgradeDatabaseIT {
 
     private val configData1 = gtv(mapOf("any" to gtv("value1")))
     private val configData2 = gtv(mapOf("any" to gtv("value2")))
+    private val longRes = ScalarHandler<Long>()
 
     @Test
     fun testDbVersion1() {
@@ -382,6 +384,47 @@ class UpgradeDatabaseIT {
         assertThrows<UserMistake> {
             StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 7)
         }
+    }
+
+    @Test
+    fun testUpgradeFromVersion7to8() {
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 7)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
+
+                        // Revert transactions table to pre version 8
+                        db.queryRunner.update(ctx.conn, "ALTER TABLE ${db.tableTransactions(ctx)} DROP COLUMN tx_number")
+
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableBlocks(ctx)} (block_height) VALUES (?)", 0)
+                        addTransaction(db, ctx, 1, 1)
+                        addTransaction(db, ctx, 2, 1)
+                        addTransaction(db, ctx, 3, 1)
+                        addTransaction(db, ctx, 4, 1)
+                        addTransaction(db, ctx, 5, 1)
+                        db.queryRunner.update(ctx.conn, "DELETE FROM ${db.tableTransactions(ctx)} WHERE tx_iid = ? ", 2)
+                        db.queryRunner.update(ctx.conn, "DELETE FROM ${db.tableTransactions(ctx)} WHERE tx_iid = ? ", 4)
+                        true
+                    }
+                }
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 8)
+                .use {
+                    withReadConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        assertEquals(1, db.queryRunner.query(ctx.conn, "SELECT tx_number FROM ${db.tableTransactions(ctx)} WHERE tx_iid = 1 ", longRes))
+                        assertEquals(2, db.queryRunner.query(ctx.conn, "SELECT tx_number FROM ${db.tableTransactions(ctx)} WHERE tx_iid = 3 ", longRes))
+                        assertEquals(3, db.queryRunner.query(ctx.conn, "SELECT tx_number FROM ${db.tableTransactions(ctx)} WHERE tx_iid = 5 ", longRes))
+                        assertEquals(3, db.getLastTransactionNumber(ctx))
+                        true
+                    }
+                }
+    }
+
+    private fun addTransaction(db: SQLDatabaseAccess, ctx: EContext, tx_base: Byte, block_iid: Long) {
+        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid) " +
+                "VALUES (?, ?, ?, ?)", ByteArray(32) { tx_base }, ByteArray(32) { tx_base }, ByteArray(32) { tx_base }, block_iid)
     }
 
     private fun assertVersion3(storage: Storage) {
