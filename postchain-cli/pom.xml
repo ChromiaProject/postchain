@@ -105,6 +105,8 @@
                         <appRoot>/opt/chromaway/postchain</appRoot>
                         <workingDirectory>/opt/chromaway/postchain</workingDirectory>
                         <mainClass>${main.class}</mainClass>
+                        <creationTime>${git.commit.time}</creationTime>
+                        <filesModificationTime>${git.commit.time}</filesModificationTime>
                     </container>
                     <containerizingMode>packaged</containerizingMode>
                 </configuration>
