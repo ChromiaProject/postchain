@@ -180,8 +180,7 @@ class RestApi(
         }
     }
 
-    private val blockchainMetricsFilter = ServerFilters.MicrometerMetrics.RequestCounter(Metrics.globalRegistry, labeler = ::blockchainLabeler)
-                .then(ServerFilters.MicrometerMetrics.RequestTimer(Metrics.globalRegistry, labeler = ::blockchainLabeler))
+    private val blockchainMetricsFilter = ServerFilters.MicrometerMetrics.RequestTimer(Metrics.globalRegistry, labeler = ::blockchainLabeler)
 
     private fun blockchainLabeler(httpTransaction: HttpTransaction): HttpTransaction {
         val model = modelKey(httpTransaction.request)

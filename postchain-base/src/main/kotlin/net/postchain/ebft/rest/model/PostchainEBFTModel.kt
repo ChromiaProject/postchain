@@ -18,7 +18,6 @@ import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionQueue
 import net.postchain.debug.DiagnosticData
-import net.postchain.metrics.PostchainModelMetrics
 
 class PostchainEBFTModel(
         chainIID: Long,
@@ -31,8 +30,6 @@ class PostchainEBFTModel(
         postchainContext: PostchainContext,
         diagnosticData: DiagnosticData
 ) : PostchainModel(chainIID, txQueue, blockQueries, debugInfoQuery, blockchainRid, storage, postchainContext, diagnosticData) {
-
-    private val metrics = PostchainModelMetrics(chainIID, blockchainRid)
 
     override fun postTransaction(tx: ByteArray) {
         val sample = Timer.start(Metrics.globalRegistry)
