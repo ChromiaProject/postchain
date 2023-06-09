@@ -3,6 +3,8 @@
 package net.postchain.api.rest.controller
 
 import com.google.gson.JsonElement
+import io.micrometer.core.instrument.Metrics
+import io.micrometer.core.instrument.Timer
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.BlockHeight
@@ -38,19 +40,31 @@ import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GtxQuery
+import net.postchain.gtx.UnknownQuery
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.logging.FAILURE_RESULT
+import net.postchain.logging.QUERY_NAME_TAG
+import net.postchain.logging.RESULT_TAG
+import net.postchain.logging.SUCCESS_RESULT
+import net.postchain.metrics.PostchainModelMetrics
+import net.postchain.metrics.QUERIES_METRIC_DESCRIPTION
+import net.postchain.metrics.QUERIES_METRIC_NAME
 
 open class PostchainModel(
         final override val chainIID: Long,
         val txQueue: TransactionQueue,
         val blockQueries: BaseBlockQueries,
         private val debugInfoQuery: DebugInfoQuery,
-        override val blockchainRid: BlockchainRid,
+        final override val blockchainRid: BlockchainRid,
         val storage: Storage,
         val postchainContext: PostchainContext,
         private val diagnosticData: DiagnosticData
 ) : Model {
 
     companion object : KLogging()
+
+    protected val metrics = PostchainModelMetrics(chainIID, blockchainRid)
 
     override var live = true
 
@@ -109,7 +123,27 @@ open class PostchainModel(
     }
 
     override fun query(query: GtxQuery): Gtv {
-        return blockQueries.query(query.name, query.args).get()
+        val timerBuilder = Timer.builder(QUERIES_METRIC_NAME)
+                .description(QUERIES_METRIC_DESCRIPTION)
+                .tag(CHAIN_IID_TAG, chainIID.toString())
+                .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toHex())
+                .tag(QUERY_NAME_TAG, query.name)
+        val sample = Timer.start(Metrics.globalRegistry)
+        return try {
+            val result = blockQueries.query(query.name, query.args).get()
+            sample.stop(timerBuilder
+                    .tag(RESULT_TAG, SUCCESS_RESULT)
+                    .register(Metrics.globalRegistry))
+            result
+        } catch (e: UnknownQuery) {
+            // do not add metrics for unknown queries to avoid blowing up QUERY_NAME_TAG dimension
+            throw e
+        } catch (e: Exception) {
+            sample.stop(timerBuilder
+                    .tag(RESULT_TAG, FAILURE_RESULT)
+                    .register(Metrics.globalRegistry))
+            throw e
+        }
     }
 
     override fun nodeStatusQuery(): StateNodeStatus {

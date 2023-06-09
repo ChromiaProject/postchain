@@ -6,6 +6,7 @@ import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.exception.UserMistake
+import net.postchain.core.ExecutionContext
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.core.NodeRid
 import net.postchain.crypto.devtools.MockCryptoSystem
@@ -14,6 +15,7 @@ import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.mapper.toObject
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.sql.Connection
 
 class GTXBlockchainConfigurationTest {
 
@@ -37,6 +39,11 @@ class GTXBlockchainConfigurationTest {
         val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configGtv, ::sha256Digest)
         val configData = configGtv.toObject<BlockchainConfigurationData>()
         val gtxModule = GTXBlockchainConfigurationFactory.makeGtxModule(blockchainRid, configData)
+        gtxModule.initializeDB(object : ExecutionContext {
+            override val chainID: Long = 1L
+            override val conn: Connection
+                get() = throw NotImplementedError()
+        })
 
         GTXBlockchainConfiguration(
                 configData,

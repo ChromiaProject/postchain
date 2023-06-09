@@ -8,8 +8,10 @@ import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.logging.RESULT_TAG
 
-private const val SUBMITTED_METRIC_NAME = "submitted.transactions"
-private const val SUBMITTED_METRIC_DESCRIPTION = "Transactions submitted/enqueued"
+internal const val SUBMITTED_METRIC_NAME = "submitted.transactions"
+internal const val SUBMITTED_METRIC_DESCRIPTION = "Transactions submitted/enqueued"
+internal const val QUERIES_METRIC_NAME = "queries"
+internal const val QUERIES_METRIC_DESCRIPTION = "Queries"
 
 class PostchainModelMetrics(chainIID: Long, blockchainRid: BlockchainRid) {
      val fullTransactions: Timer = Timer.builder(SUBMITTED_METRIC_NAME)
