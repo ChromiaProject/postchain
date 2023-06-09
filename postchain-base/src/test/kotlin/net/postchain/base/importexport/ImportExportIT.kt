@@ -244,10 +244,12 @@ class ImportExportIT {
                             .finish().buildGtx())
 
     private fun addBlock(ctx: EContext, db: DatabaseAccess, blockchainRid: BlockchainRid, blockHeight: Long,
-                         prevBlockRID: ByteArray, configData: Gtv, transactions: List<Transaction>, witnesses: List<KeyPair>): Pair<BaseBlockHeader, List<Transaction>> {
+                         prevBlockRID: ByteArray, configData: Gtv, transactions: List<Transaction>,
+                         witnesses: List<KeyPair>): Pair<BaseBlockHeader, List<Transaction>> {
         val blockIID = db.insertBlock(ctx, blockHeight)
         val rootHash = gtv(transactions.map { gtv(it.getHash()) }).merkleHash(hashCalculator)
         val timestamp = 10000L + blockHeight
+        var nextTransactionNumber = db.getLastTransactionNumber(ctx) + 1
         val blockData =
                 InitialBlockData(blockchainRid, blockIID, ctx.chainID, prevBlockRID, blockHeight, timestamp, null)
         val blockHeader = BaseBlockHeader.make(hashCalculator, blockData, rootHash, timestamp,
@@ -263,7 +265,7 @@ class ImportExportIT {
                 }
         )
         for (tx in transactions) {
-            db.insertTransaction(blockEContext, tx)
+            db.insertTransaction(blockEContext, tx, nextTransactionNumber++)
         }
         db.finalizeBlock(blockEContext, blockHeader)
         val witnessBuilder = BaseBlockWitnessProvider(cryptoSystem, cryptoSystem.buildSigMaker(KeyPairHelper.keyPair(0)),

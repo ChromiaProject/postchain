@@ -67,6 +67,7 @@ abstract class AbstractBlockBuilder(
     protected var buildingNewBlock: Boolean = false            // remains "false" as long we got a block from some other node
 
     var blockTrace: BlockTrace? = null               // Only for logging, remains "null" unless TRACE
+    private var nextTransactionNumber: Long = 0
 
     /**
      * Retrieve initial block data and set block context
@@ -91,6 +92,7 @@ abstract class AbstractBlockBuilder(
             this
         )
         buildingNewBlock = partialBlockHeader == null // If we have a header this must be an old block we are loading
+        nextTransactionNumber = store.getLastTransactionNumber(ectx) + 1
         beginLog("End")
     }
 
@@ -108,13 +110,14 @@ abstract class AbstractBlockBuilder(
         tx.checkCorrectness()
         val txctx: TxEContext
         try {
-            txctx = store.addTransaction(bctx, tx)
+            txctx = store.addTransaction(bctx, tx, nextTransactionNumber)
         } catch (e: Exception) {
             throw UserMistake("Failed to save tx to database", e)
         }
         // In case of errors, tx.apply may either return false or throw UserMistake
 
         if (applyTransaction(tx, txctx)) {
+            nextTransactionNumber++
             txctx.done()
             transactions.add(tx)
             rawTransactions.add(tx.getRawData())
