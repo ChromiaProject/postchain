@@ -55,6 +55,10 @@ Configuration:
 
     Logger:
 
+    - name: net.postchain.api.rest.controller
+      level: warn
+      additivity: false
+
     - name: net.postchain
       level: info
       additivity: false

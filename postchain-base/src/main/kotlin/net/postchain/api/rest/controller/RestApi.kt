@@ -514,22 +514,22 @@ class RestApi(
     private fun onError(error: Exception, request: Request): Response {
         return when (error) {
             is NotFoundError -> {
-                logger.debug { "NotFound: ${error.message}" }
+                logger.info { "NotFound: ${error.message}" }
                 transformErrorResponseFromDiagnostics(request, NOT_FOUND, error)
             }
 
             is LensFailure -> {
-                logger.debug { "BadFormat: ${error.message}" }
+                logger.info { "BadFormat: ${error.message}" }
                 errorResponse(request, BAD_REQUEST, error.message!!)
             }
 
             is IllegalArgumentException -> {
-                logger.debug { "IllegalArgument: ${error.message}" }
+                logger.info { "IllegalArgument: ${error.message}" }
                 errorResponse(request, BAD_REQUEST, error.message!!)
             }
 
             is UserMistake -> {
-                logger.debug { "UserMistake: ${error.message}" }
+                logger.info { "UserMistake: ${error.message}" }
                 errorResponse(request, BAD_REQUEST, error.message!!)
             }
 
