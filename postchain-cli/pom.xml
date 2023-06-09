@@ -106,6 +106,7 @@
                         <workingDirectory>/opt/chromaway/postchain</workingDirectory>
                         <mainClass>${main.class}</mainClass>
                     </container>
+                    <containerizingMode>packaged</containerizingMode>
                 </configuration>
             </plugin>
         </plugins>

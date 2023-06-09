@@ -79,6 +79,7 @@
                         </environment>
                         <ports>50051</ports>
                     </container>
+                    <containerizingMode>packaged</containerizingMode>
                 </configuration>
             </plugin>
         </plugins>
