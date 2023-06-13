@@ -310,7 +310,7 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, 
 
 fun getEnumValue(enumClassName: String, enumValue: String): Any {
     @Suppress("UNCHECKED_CAST") val enum = Class.forName(enumClassName).enumConstants as Array<Enum<*>>
-    return enum.first { it.name == enumValue }
+    return enum.firstOrNull { it.name == enumValue } ?: throw IllegalArgumentException("invalid value '$enumValue' for enum $enumClassName")
 }
 
 private fun Class<*>.isPrimitiveType(): Boolean {
