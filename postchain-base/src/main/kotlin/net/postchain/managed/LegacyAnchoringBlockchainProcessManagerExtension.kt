@@ -66,7 +66,7 @@ class LegacyAnchoringBlockchainProcessManagerExtension(private val postchainCont
     override fun shutdown() {}
 
     private fun anchorLastBlock(chainId: Long, chain0Engine: BlockchainEngine) {
-        withReadConnection(postchainContext.storage, chainId) { eContext ->
+        withReadConnection(postchainContext.blockBuilderStorage, chainId) { eContext ->
             val db = DatabaseAccess.of(eContext)
             val blockRID = db.getLastBlockRid(eContext, chainId)
             if (blockRID != null) {

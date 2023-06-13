@@ -24,6 +24,7 @@ class BlockchainConfigurationFactoryTest {
     private val contextMock: PostchainContext = mock {
         on { appConfig } doReturn appConfigMock
         on { nodeDiagnosticContext } doReturn JsonNodeDiagnosticContext()
+        on { blockBuilderStorage } doReturn mock()
     }
 
     private val bpm = spy(ManagedBlockchainProcessManagerMock(contextMock))

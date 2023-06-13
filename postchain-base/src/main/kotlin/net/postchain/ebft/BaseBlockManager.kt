@@ -135,7 +135,7 @@ class BaseBlockManager(
                 val bcConfig = workerContext.blockchainConfiguration
                 val incomingBlockConfigHash = blockHeader.getConfigHash()?.wrap()
 
-                withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+                withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
                     val isMyConfigPending = bcConfigProvider.isConfigPending(
                             ctx, bcConfig.blockchainRid, statusManager.myStatus.height, bcConfig.configHash
                     )
@@ -164,7 +164,7 @@ class BaseBlockManager(
                 val incomingBlockFailedConfigHash = baseBlockHeader.getFailedConfigHash()?.wrap()
                 if (incomingBlockFailedConfigHash == null) {
                     // We seem to be an early adopter of failed config, push reporting to the future
-                    withWriteConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+                    withWriteConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
                         DatabaseAccess.of(ctx).apply {
                             // Check if we can push failure reporting to next block
                             val storedFaultyConfig = getFaultyConfiguration(ctx)
@@ -176,7 +176,7 @@ class BaseBlockManager(
                         true
                     }
                 } else if (incomingBlockFailedConfigHash != bcConfig.configHash.wrap()) {
-                    withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+                    withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
                         val isIncomingFaultyConfigPending = bcConfigProvider.isConfigPending(
                                 ctx, bcConfig.blockchainRid, statusManager.myStatus.height, bcConfig.configHash
                         )

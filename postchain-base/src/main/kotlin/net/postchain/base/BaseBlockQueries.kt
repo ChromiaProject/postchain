@@ -155,6 +155,12 @@ open class BaseBlockQueries(
         }
     }
 
+    override fun getLastTransactionNumber(): CompletionStage<Long> {
+        return runOp {
+            blockStore.getLastTransactionNumber(it)
+        }
+    }
+
     override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> {
         return runOp {
             blockStore.getBlocks(it, beforeTime, limit, txHashesOnly)

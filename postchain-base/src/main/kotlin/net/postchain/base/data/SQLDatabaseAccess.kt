@@ -53,8 +53,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected fun tableConfigurations(chainId: Long): String = tableName(chainId, "configurations")
     protected fun tableFaultyConfiguration(chainId: Long): String = tableName(chainId, "sys.faulty_configuration")
     private fun tableFaultyConfiguration(ctx: EContext): String = tableFaultyConfiguration(ctx.chainID)
-    protected fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
-    protected fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
+    internal fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
+    protected fun tableTransactions(chainId: Long): String = tableName(chainId, "transactions")
+    internal fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
     private fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
     protected fun tablePages(ctx: EContext, name: String): String = tableName(ctx, "${name}_pages")
     protected fun tableEventLeafs(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_event_leafs")
@@ -65,7 +66,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     override fun tableName(ctx: EContext, table: String): String = tableName(ctx.chainID, table)
 
-    private fun tableName(chainId: Long, table: String): String = "\"c${chainId}.$table\""
+    protected fun tableName(chainId: Long, table: String): String = "\"c${chainId}.$table\""
 
     protected fun stripQuotes(string: String): String = string.replace("\"", "")
 
@@ -79,6 +80,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdCreateTableMustSyncUntil(): String
     protected abstract fun cmdCreateTableConfigurations(ctx: EContext): String
     protected abstract fun cmdCreateTableTransactions(ctx: EContext): String
+    protected abstract fun cmdUpdateTableTransactionsV8First(chainId: Long): String
+    protected abstract fun cmdUpdateTableTransactionsV8Second(chainId: Long): String
+    protected abstract fun cmdUpdateTableTransactionsV8Third(chainId: Long): String
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
     protected abstract fun cmdCreateTablePage(ctx: EContext, name: String): String
@@ -155,8 +159,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, longRes, height)
     }
 
-    override fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long {
-        queryRunner.update(ctx.conn, cmdInsertTransactions(ctx), tx.getRID(), tx.getRawData(), tx.getHash(), ctx.blockIID)
+    override fun insertTransaction(ctx: BlockEContext, tx: Transaction, transactionNumber: Long): Long {
+        queryRunner.update(ctx.conn, cmdInsertTransactions(ctx), tx.getRID(), tx.getRawData(), tx.getHash(), ctx.blockIID, transactionNumber)
 
         val sql = "SELECT tx_iid FROM ${tableTransactions(ctx)} WHERE tx_rid = ?"
         return queryRunner.query(ctx.conn, sql, longRes, tx.getRID())
@@ -321,6 +325,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             TransactionInfoExt(
                     blockRID, blockHeight, blockHeader, blockWitness, blockTimestamp, txRID, txHash, txData)
         }
+    }
+
+    override fun getLastTransactionNumber(ctx: EContext): Long {
+        val sql = "SELECT tx_number FROM ${tableTransactions(ctx)} ORDER BY tx_number DESC LIMIT 1"
+        return queryRunner.query(ctx.conn, sql, longRes) ?: 0L
     }
 
     override fun getTxHash(ctx: EContext, txRID: ByteArray): ByteArray {
@@ -502,7 +511,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int) {
-        if (expectedDbVersion !in 1..7) {
+        if (expectedDbVersion !in 1..8) {
             throw UserMistake("Unsupported DB version $expectedDbVersion")
         }
 
@@ -558,6 +567,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 }
             }
 
+            if (version < 8 && expectedDbVersion >= 8) {
+                logger.info("Upgrading to version 8")
+                version8(connection)
+            }
+
             if (expectedDbVersion > version) {
                 queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
                 logger.info("Database version has been updated to version: $expectedDbVersion")
@@ -598,6 +612,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
             if (expectedDbVersion >= 7) {
                 version7(connection)
+            }
+
+            if (expectedDbVersion >= 8) {
+                version8(connection)
             }
         }
     }
@@ -650,6 +668,24 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     private fun version7(connection: Connection) {
         queryRunner.update(connection, cmdUpdateTableBlockchainsV7())
+    }
+
+    private fun version8(connection: Connection) {
+        queryRunner.query(connection, "SELECT chain_iid FROM ${tableBlockchains()}", mapListHandler)
+                .map { it["chain_iid"] as Long }
+                .forEach { chainId ->
+                    queryRunner.update(connection, cmdUpdateTableTransactionsV8First(chainId))
+                    var txCount = 1
+                    queryRunner.query(connection, "SELECT tx_iid FROM ${tableTransactions(chainId)} ORDER BY tx_iid", mapListHandler)
+                            .forEach {
+                                val txIId = it["tx_iid"] as Long
+                                queryRunner.update(connection,
+                                        "UPDATE ${tableTransactions(chainId)} SET tx_number=? WHERE tx_iid=?",
+                                        txCount++, txIId)
+                            }
+                    queryRunner.update(connection, cmdUpdateTableTransactionsV8Second(chainId))
+                    queryRunner.update(connection, cmdUpdateTableTransactionsV8Third(chainId))
+                }
     }
 
     protected fun calcConfigurationHash(configurationData: ByteArray) = GtvToBlockchainRidFactory.calculateBlockchainRid(
@@ -821,6 +857,26 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, mapListHandler).map { configuration ->
             configuration["height"] as Long
         }
+    }
+
+    override fun listConfigurationHashes(ctx: EContext): List<ByteArray> {
+        val sql = """
+            SELECT configuration_hash
+            FROM ${tableConfigurations(ctx)}
+            order by height
+        """.trimIndent()
+        return queryRunner.query(ctx.conn, sql, mapListHandler).map { res ->
+            res["configuration_hash"] as ByteArray
+        }
+    }
+
+    override fun configurationHashExists(ctx: EContext, hash: ByteArray): Boolean {
+        val sql = """
+            SELECT configuration_hash
+            FROM ${tableConfigurations(ctx)}
+            WHERE configuration_hash = ?
+        """.trimIndent()
+        return queryRunner.query(ctx.conn, sql, nullableByteArrayRes, hash) != null
     }
 
     override fun removeConfiguration(ctx: EContext, height: Long): Int {

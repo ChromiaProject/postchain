@@ -71,7 +71,7 @@ abstract class SimpleGTXModule<ConfT>(
         if (opData.opName in opmap) {
             return opmap[opData.opName]!!(conf, opData)
         } else {
-            throw UserMistake("Unknown operation: ${opData.opName}")
+            throw UnknownOperation(opData.opName)
         }
     }
 
@@ -86,7 +86,7 @@ abstract class SimpleGTXModule<ConfT>(
     override fun query(ctxt: EContext, name: String, args: Gtv): Gtv {
         if (name in querymap) {
             return querymap[name]!!(conf, ctxt, args)
-        } else throw UserMistake("Unknown query: $name")
+        } else throw UnknownQuery(name)
     }
 }
 
@@ -115,7 +115,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         if (opData.opName in ops) {
             return (wrappingOpMap[opData.opName] ?: opmap[opData.opName])!!.makeTransactor(opData)
         } else {
-            throw UserMistake("Unknown operation: ${opData.opName}")
+            throw UnknownOperation(opData.opName)
         }
     }
 
@@ -131,7 +131,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         if (name in qmap) {
             return qmap[name]!!.query(ctxt, name, args)
         } else {
-            throw UserMistake("Unknown query: $name")
+            throw UnknownQuery(name)
         }
     }
 
@@ -163,7 +163,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
                 if (opData.opName in ops) {
                     opmap[opData.opName]!!.makeTransactor(opData)
                 } else {
-                    throw UserMistake("Unknown operation: ${opData.opName}")
+                    throw UnknownOperation(opData.opName)
                 }
             })
         }
@@ -185,3 +185,6 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         }
     }
 }
+
+class UnknownQuery(val name: String) : UserMistake("Unknown query: $name")
+class UnknownOperation(val name: String) : UserMistake("Unknown operation: $name")

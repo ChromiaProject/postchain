@@ -85,7 +85,7 @@ abstract class AbstractSynchronizer(
             logger.debug { "incomingHeight = $incomingHeight, incomingConfigHash = ${incomingConfigHash.wrap()}" }
 
             if (!currentConfigHash.contentEquals(incomingConfigHash)) {
-                val isIncomingConfigPending = withReadConnection(workerContext.engine.storage, blockchainConfiguration.chainID) { ctx ->
+                val isIncomingConfigPending = withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
                     configProvider.isConfigPending(
                             ctx,
                             blockchainConfiguration.blockchainRid,
@@ -138,8 +138,10 @@ abstract class AbstractSynchronizer(
 
     protected fun handleAddBlockException(exception: Throwable, block: BlockDataWithWitness, bTrace: BlockTrace?, peerStatuses: AbstractPeerStatuses<*>, peerId: NodeRid) {
         val height = getHeight(block.header)
-        if (exception is PmEngineIsAlreadyClosed || exception is BDBAbortException) {
+        if (exception is PmEngineIsAlreadyClosed) {
             logger.warn { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
+        } else if (exception is BDBAbortException) {
+            logger.info { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
         } else if (exception is BadDataMistake && exception.type == BadDataType.CONFIGURATION_MISMATCH) {
             if (!checkIfNewConfigurationCanBeLoaded(block)) {
                 peerStatuses.maybeBlacklist(peerId, "Received a block with mismatching config but we could not apply any new config")
@@ -155,14 +157,14 @@ abstract class AbstractSynchronizer(
                 peerStatuses.maybeBlacklist(peerId, "Received a block without expected failed config hash")
             }
         } else {
-            logger.warn(exception) { "Exception committing block height $height from peer: $peerId${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
+            logger.warn(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
         }
     }
 
     private fun checkIfNewConfigurationCanBeLoaded(block: BlockDataWithWitness): Boolean {
         val bcConfigProvider = workerContext.blockchainConfigurationProvider
         val bcConfig = workerContext.blockchainConfiguration
-        val hasNewConfig = withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+        val hasNewConfig = withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
             bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, false)
         }
 
@@ -183,7 +185,7 @@ abstract class AbstractSynchronizer(
         val bcConfigProvider = workerContext.blockchainConfigurationProvider
         val bcConfig = workerContext.blockchainConfiguration
         if (bcConfigProvider is ManagedBlockchainConfigurationProvider && configHash != null && bcConfigProvider.isPcuEnabled()) {
-            val isIncomingConfigPending = withReadConnection(workerContext.engine.storage, bcConfig.chainID) { ctx ->
+            val isIncomingConfigPending = withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
                 bcConfigProvider.isConfigPending(
                         ctx,
                         blockchainConfiguration.blockchainRid,

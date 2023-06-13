@@ -41,7 +41,7 @@ import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.logging.NODE_PUBKEY_TAG
 import net.postchain.metrics.BaseBlockchainEngineMetrics
 import java.lang.Long.max
-import kotlin.streams.toList
+import java.util.stream.Collectors
 
 /**
  * An [BlockchainEngine] will only produce [BlockBuilder]s for a single chain.
@@ -52,7 +52,8 @@ import kotlin.streams.toList
 open class BaseBlockchainEngine(
         private val processName: BlockchainProcessName,
         private val blockchainConfiguration: BlockchainConfiguration,
-        final override val storage: Storage,
+        final override val blockBuilderStorage: Storage,
+        final override val sharedStorage: Storage,
         private val chainID: Long,
         private val transactionQueue: TransactionQueue,
         initialEContext: EContext,
@@ -65,7 +66,7 @@ open class BaseBlockchainEngine(
 
     companion object : KLogging()
 
-    private val blockQueries: BlockQueries = blockchainConfiguration.makeBlockQueries(storage)
+    private val blockQueries: BlockQueries = blockchainConfiguration.makeBlockQueries(sharedStorage)
     private val strategy: BlockBuildingStrategy = blockchainConfiguration.getBlockBuildingStrategy(blockQueries, transactionQueue)
     private val metrics = BaseBlockchainEngineMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid, transactionQueue)
     private val loggingContext = mapOf(
@@ -77,6 +78,20 @@ open class BaseBlockchainEngine(
     private var closed = false
     private var currentEContext = initialEContext
     private var hasBuiltFirstBlockAfterConfigUpdate = false
+
+    init {
+        hasBuiltFirstBlockAfterConfigUpdate = withReadConnection(blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            val configIsSaved = db.configurationHashExists(ctx, blockchainConfiguration.configHash)
+            if (!configIsSaved) {
+                false
+            } else {
+                val activeHeight = db.getLastBlockHeight(ctx) + 1
+                val configHeight = db.findConfigurationHeightForBlock(ctx, activeHeight) ?: 0
+                activeHeight > configHeight
+            }
+        }
+    }
 
     override fun isRunning() = !closed
 
@@ -105,21 +120,20 @@ open class BaseBlockchainEngine(
         blockchainConfiguration.shutdownModules()
         blockQueries.shutdown()
         if (!currentEContext.conn.isClosed) {
-            storage.closeWriteConnection(currentEContext, false)
+            blockBuilderStorage.closeWriteConnection(currentEContext, false)
         }
-        storage.close()
     }
 
     private fun makeBlockBuilder(): BaseManagedBlockBuilder {
         if (closed) throw PmEngineIsAlreadyClosed("Engine is already closed")
         currentEContext = if (currentEContext.conn.isClosed) {
-            storage.openWriteConnection(chainID)
+            blockBuilderStorage.openWriteConnection(chainID)
         } else {
             currentEContext
         }
         val savepoint = currentEContext.conn.setSavepoint("blockBuilder${System.nanoTime()}")
 
-        return BaseManagedBlockBuilder(currentEContext, savepoint, storage, blockchainConfiguration.makeBlockBuilder(currentEContext), { },
+        return BaseManagedBlockBuilder(currentEContext, savepoint, blockBuilderStorage, blockchainConfiguration.makeBlockBuilder(currentEContext), { },
                 {
                     afterLog("Begin", it.getBTrace())
                     val blockBuilder = it as AbstractBlockBuilder
@@ -164,7 +178,7 @@ open class BaseBlockchainEngine(
 
     private fun parallelLoadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?> {
         return loadUnfinishedBlockImpl(block) { txs ->
-            txs.parallelStream().map { smartDecodeTransaction(it) }.toList()
+            txs.parallelStream().map { smartDecodeTransaction(it) }.collect(Collectors.toList())
         }
     }
 
@@ -250,7 +264,7 @@ open class BaseBlockchainEngine(
     }
 
     private fun checkForNewConfiguration() {
-        withReadConnection(storage, chainID) { ctx ->
+        withReadConnection(blockBuilderStorage, chainID) { ctx ->
             if (blockchainConfigurationProvider.activeBlockNeedsConfigurationChange(ctx, chainID, false)) {
                 logger.debug("Found new configuration at current height. Will restart and apply it.")
                 restartNotifier.notifyRestart(false)
@@ -337,7 +351,7 @@ open class BaseBlockchainEngine(
                 removeConfiguration(currentEContext, it)
             }
         }
-        storage.closeWriteConnection(currentEContext, true)
+        blockBuilderStorage.closeWriteConnection(currentEContext, true)
 
         restartNotifier.notifyRestart(false)
         closed = true

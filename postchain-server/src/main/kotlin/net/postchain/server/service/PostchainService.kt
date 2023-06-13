@@ -34,7 +34,7 @@ class PostchainService(private val nodeProvider: NodeProvider) {
      * @throws BadDataMistake if signer pubkey does not exist in peerinfos and allowUnknownSigners is false
      */
     fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: Gtv, allowUnknownSigners: Boolean = false): Boolean =
-            withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
+            withWriteConnection(postchainNode.postchainContext.sharedStorage, chainId) { ctx ->
                 BlockchainApi.addConfiguration(ctx, height, override, config, allowUnknownSigners)
             }
 
@@ -47,7 +47,7 @@ class PostchainService(private val nodeProvider: NodeProvider) {
                 ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config, postchainNode.postchainContext.cryptoSystem)
 
         return try {
-            val initialized = withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
+            val initialized = withWriteConnection(postchainNode.postchainContext.sharedStorage, chainId) { ctx ->
                 BlockchainApi.initializeBlockchain(ctx, brid, override, config, givenDependencies)
             }
             if (initialized) brid else null
@@ -61,7 +61,7 @@ class PostchainService(private val nodeProvider: NodeProvider) {
     class InitializationError(m: String?) : RuntimeException(m)
 
     fun findBlockchain(chainId: Long): Triple<BlockchainRid?, Boolean?, Long> =
-            withReadConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
+            withReadConnection(postchainNode.postchainContext.sharedStorage, chainId) { ctx ->
                 Triple(
                         BlockchainApi.findBlockchain(ctx),
                         postchainNode.isBlockchainRunning(chainId),
@@ -70,18 +70,18 @@ class PostchainService(private val nodeProvider: NodeProvider) {
             }
 
     fun addBlockchainReplica(brid: BlockchainRid, pubkey: PubKey): Boolean =
-            postchainNode.postchainContext.storage.withWriteConnection { ctx ->
+            postchainNode.postchainContext.sharedStorage.withWriteConnection { ctx ->
                 BlockchainApi.addBlockchainReplica(ctx, brid, pubkey)
             }
 
     fun removeBlockchainReplica(brid: BlockchainRid, pubkey: PubKey): Set<BlockchainRid> =
-            postchainNode.postchainContext.storage.withWriteConnection { ctx ->
+            postchainNode.postchainContext.sharedStorage.withWriteConnection { ctx ->
                 BlockchainApi.removeBlockchainReplica(ctx, brid, pubkey)
             }
 
-    fun exportBlockchain(chainId: Long, configurationFile: Path, blocksFile: Path, overwrite: Boolean, fromHeight: Long, upToHeight: Long): ExportResult =
+    fun exportBlockchain(chainId: Long, configurationFile: Path, blocksFile: Path?, overwrite: Boolean, fromHeight: Long, upToHeight: Long): ExportResult =
             ImporterExporter.exportBlockchain(
-                    postchainNode.postchainContext.storage,
+                    postchainNode.postchainContext.sharedStorage,
                     chainId,
                     configurationsFile = configurationFile,
                     blocksFile = blocksFile,
@@ -93,7 +93,7 @@ class PostchainService(private val nodeProvider: NodeProvider) {
             ImporterExporter.importBlockchain(
                     KeyPair(PubKey(postchainNode.appConfig.pubKeyByteArray), PrivKey(postchainNode.appConfig.privKeyByteArray)),
                     postchainNode.postchainContext.cryptoSystem,
-                    postchainNode.postchainContext.storage,
+                    postchainNode.postchainContext.sharedStorage,
                     chainId,
                     configurationsFile = configurationFile,
                     blocksFile = blocksFile,
@@ -102,7 +102,7 @@ class PostchainService(private val nodeProvider: NodeProvider) {
     fun removeBlockchain(chainId: Long) {
         stopBlockchain(chainId)
 
-        withWriteConnection(postchainNode.postchainContext.storage, chainId) { ctx ->
+        withWriteConnection(postchainNode.postchainContext.sharedStorage, chainId) { ctx ->
             BlockchainApi.deleteBlockchain(ctx)
             true
         }

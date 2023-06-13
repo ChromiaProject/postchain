@@ -28,7 +28,7 @@ interface MultiSigBlockWitnessBuilder : BlockWitnessBuilder {
 
 interface BlockStore {
     fun beginBlock(ctx: EContext, blockchainRID: BlockchainRid, blockHeightDependencies: Array<Hash?>?): InitialBlockData
-    fun addTransaction(bctx: BlockEContext, tx: Transaction): TxEContext
+    fun addTransaction(bctx: BlockEContext, tx: Transaction, transactionNumber: Long): TxEContext
     fun finalizeBlock(bctx: BlockEContext, bh: BlockHeader)
     fun commitBlock(bctx: BlockEContext, w: BlockWitness)
     fun getBlockHeightFromOwnBlockchain(ctx: EContext, blockRID: ByteArray): Long? // returns null if not found
@@ -47,7 +47,7 @@ interface BlockStore {
     fun getBlock(ctx: EContext, blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail?
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
     fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt>
-
+    fun getLastTransactionNumber(ctx: EContext): Long
     fun getBlockHeader(ctx: EContext, blockRID: ByteArray): ByteArray
     fun getTxRIDsAtHeight(ctx: EContext, height: Long): Array<ByteArray>
     fun getTxBytes(ctx: EContext, txRID: ByteArray): ByteArray?
@@ -75,6 +75,7 @@ interface BlockQueries : Shutdownable {
     fun getTransaction(txRID: ByteArray): CompletionStage<Transaction?>
     fun getTransactionInfo(txRID: ByteArray): CompletionStage<TransactionInfoExt?>
     fun getTransactionsInfo(beforeTime: Long, limit: Int): CompletionStage<List<TransactionInfoExt>>
+    fun getLastTransactionNumber(): CompletionStage<Long>
     fun query(name: String, args: Gtv): CompletionStage<Gtv>
     fun isTransactionConfirmed(txRID: ByteArray): CompletionStage<Boolean>
 }

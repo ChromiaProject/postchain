@@ -167,5 +167,5 @@ interface StatusManager {
     fun getLatestStatusTimestamp(nodeIndex: Int): Long
 }
 
-class BDBAbortException(val block: BlockDataWithWitness, val prev: CompletableFuture<Unit>) :
+class BDBAbortException(val block: BlockDataWithWitness) :
         RuntimeException("BlockDatabase aborted execution of an addBlock task because previous task failed")

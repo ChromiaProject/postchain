@@ -82,7 +82,7 @@ interface DatabaseAccess {
 
     fun getBlockchainRid(ctx: EContext): BlockchainRid?
     fun insertBlock(ctx: EContext, height: Long): Long
-    fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long
+    fun insertTransaction(ctx: BlockEContext, tx: Transaction, transactionNumber: Long): Long
     fun finalizeBlock(ctx: BlockEContext, header: BlockHeader)
 
     fun commitBlock(ctx: BlockEContext, w: BlockWitness)
@@ -107,6 +107,7 @@ interface DatabaseAccess {
     fun getBlocksBeforeHeight(ctx: EContext, blockHeight: Long, limit: Int): List<BlockInfoExt>
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
     fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt>
+    fun getLastTransactionNumber(ctx: EContext): Long
 
     /**
      * @param fromHeight   only fetch blocks from and including this height,
@@ -121,6 +122,8 @@ interface DatabaseAccess {
     fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long?
     fun findNextConfigurationHeight(ctx: EContext, height: Long): Long?
     fun listConfigurations(ctx: EContext): List<Long>
+    fun listConfigurationHashes(ctx: EContext): List<ByteArray>
+    fun configurationHashExists(ctx: EContext, hash: ByteArray): Boolean
     fun removeConfiguration(ctx: EContext, height: Long): Int
     fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray>>
     fun getAllConfigurations(connection: Connection, chainId: Long): List<Pair<Long, WrappedByteArray>>

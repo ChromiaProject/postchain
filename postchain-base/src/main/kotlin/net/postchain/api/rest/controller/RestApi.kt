@@ -2,6 +2,7 @@
 
 package net.postchain.api.rest.controller
 
+import io.micrometer.core.instrument.Metrics
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.api.rest.BlockchainIidRef
@@ -36,6 +37,7 @@ import net.postchain.api.rest.proofBody
 import net.postchain.api.rest.statusBody
 import net.postchain.api.rest.stringsBody
 import net.postchain.api.rest.textBody
+import net.postchain.api.rest.transactionsCountBody
 import net.postchain.api.rest.txBody
 import net.postchain.api.rest.txInfoBody
 import net.postchain.api.rest.txInfosBody
@@ -48,6 +50,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.PmEngineIsAlreadyClosed
+import net.postchain.core.block.BlockDetail
 import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
@@ -64,6 +67,7 @@ import net.postchain.logging.CHAIN_IID_TAG
 import org.http4k.core.Body
 import org.http4k.core.ContentType
 import org.http4k.core.Filter
+import org.http4k.core.HttpTransaction
 import org.http4k.core.Method.GET
 import org.http4k.core.Method.OPTIONS
 import org.http4k.core.Method.POST
@@ -84,6 +88,7 @@ import org.http4k.core.toParametersMap
 import org.http4k.core.with
 import org.http4k.filter.AllowAll
 import org.http4k.filter.CorsPolicy
+import org.http4k.filter.MicrometerMetrics
 import org.http4k.filter.OriginPolicy
 import org.http4k.filter.ServerFilters
 import org.http4k.format.auto
@@ -148,7 +153,7 @@ class RestApi(
 
     private val gtvGson = make_gtv_gson()
 
-    private val blockchainRef = Filter { next ->
+    private val blockchainRefFilter = Filter { next ->
         { request ->
             val ref = request.path("blockchainRid")?.let { parseBlockchainRid(it) }
             if (ref != null) {
@@ -175,44 +180,63 @@ class RestApi(
         }
     }
 
+    private val blockchainMetricsFilter = ServerFilters.MicrometerMetrics.RequestTimer(Metrics.globalRegistry, labeler = ::blockchainLabeler)
+
+    private fun blockchainLabeler(httpTransaction: HttpTransaction): HttpTransaction {
+        val model = modelKey(httpTransaction.request)
+        return if (model != null) {
+            httpTransaction
+                    .label(CHAIN_IID_TAG, model.chainIID.toString())
+                    .label(BLOCKCHAIN_RID_TAG, model.blockchainRid.toHex())
+        } else {
+            httpTransaction
+        }
+    }
+
+    private val blockchain = blockchainRefFilter.then(blockchainMetricsFilter)
+
     private val app = routes(
             "/" bind static(ResourceLoader.Classpath("/restapi-root")),
             "/apidocs" bind static(ResourceLoader.Classpath("/restapi-docs")),
+
             "/version" bind GET to ::getVersion,
             "/_debug" bind GET to ::getDebug,
 
-            "/tx/{blockchainRid}" bind POST to blockchainRef.then(::postTransaction),
-            "/tx/{blockchainRid}/{txRid}" bind GET to blockchainRef.then(::getTransaction),
-            "/transactions/{blockchainRid}/{txRid}" bind GET to blockchainRef.then(::getTransactionInfo),
-            "/transactions/{blockchainRid}" bind GET to blockchainRef.then(::getTransactionsInfo),
-            "/tx/{blockchainRid}/{txRid}/confirmationProof" bind GET to blockchainRef.then(::getConfirmationProof),
-            "/tx/{blockchainRid}/{txRid}/status" bind GET to blockchainRef.then(::getTransactionStatus),
+            "/tx/{blockchainRid}" bind POST to blockchain.then(::postTransaction),
+            "/tx/{blockchainRid}/{txRid}" bind GET to blockchain.then(::getTransaction),
+            "/transactions/{blockchainRid}/count" bind GET to blockchain.then(::getTransactionsCount),
+            "/transactions/{blockchainRid}/{txRid}" bind GET to blockchain.then(::getTransactionInfo),
+            "/transactions/{blockchainRid}" bind GET to blockchain.then(::getTransactionsInfo),
+            "/tx/{blockchainRid}/{txRid}/confirmationProof" bind GET to blockchain.then(::getConfirmationProof),
+            "/tx/{blockchainRid}/{txRid}/status" bind GET to blockchain.then(::getTransactionStatus),
 
-            "/blocks/{blockchainRid}" bind GET to blockchainRef.then(::getBlocks),
-            "/blocks/{blockchainRid}/{blockRid}" bind GET to blockchainRef.then(::getBlock),
-            "/blocks/{blockchainRid}/height/{height}" bind GET to blockchainRef.then(::getBlockByHeight),
+            "/blocks/{blockchainRid}" bind GET to blockchain.then(::getBlocks),
+            "/blocks/{blockchainRid}/{blockRid}" bind GET to blockchain.then(::getBlock),
+            "/blocks/{blockchainRid}/height/{height}" bind GET to blockchain.then(::getBlockByHeight),
 
-            "/query/{blockchainRid}" bind GET to blockchainRef.then(::getQuery),
-            "/query/{blockchainRid}" bind POST to blockchainRef.then(::postQuery),
-            "/batch_query/{blockchainRid}" bind POST to blockchainRef.then(::batchQuery),
+            "/query/{blockchainRid}" bind GET to blockchain.then(::getQuery),
+            "/query/{blockchainRid}" bind POST to blockchain.then(::postQuery),
+            "/batch_query/{blockchainRid}" bind POST to blockchain.then(::batchQuery),
             // Direct query. That should be used as example: <img src="http://node/dquery/brid?type=get_picture&id=4555" />
-            "/dquery/{blockchainRid}" bind GET to blockchainRef.then(::directQuery),
-            "/query_gtx/{blockchainRid}" bind POST to blockchainRef.then(::queryGtx),
-            "/query_gtv/{blockchainRid}" bind POST to blockchainRef.then(::queryGtv),
+            "/dquery/{blockchainRid}" bind GET to blockchain.then(::directQuery),
+            "/query_gtx/{blockchainRid}" bind POST to blockchain.then(::queryGtx),
+            "/query_gtv/{blockchainRid}" bind POST to blockchain.then(::queryGtv),
 
-            "/node/{blockchainRid}/my_status" bind GET to blockchainRef.then(::getNodeStatus),
-            "/node/{blockchainRid}/statuses" bind GET to blockchainRef.then(::getNodeStatuses),
-            "/brid/{blockchainRid}" bind GET to blockchainRef.then(::getBlockchainRid),
-            "/blockchain/{blockchainRid}/height" bind GET to blockchainRef.then(::getCurrentHeight),
+            "/node/{blockchainRid}/my_status" bind GET to blockchain.then(::getNodeStatus),
+            "/node/{blockchainRid}/statuses" bind GET to blockchain.then(::getNodeStatuses),
+            "/brid/{blockchainRid}" bind GET to blockchain.then(::getBlockchainRid),
+            "/blockchain/{blockchainRid}/height" bind GET to blockchain.then(::getCurrentHeight),
 
-            "/config/{blockchainRid}" bind GET to blockchainRef.then(::getBlockchainConfiguration),
-            "/config/{blockchainRid}" bind POST to blockchainRef.then(::validateBlockchainConfiguration),
+            "/config/{blockchainRid}" bind GET to blockchain.then(::getBlockchainConfiguration),
+            "/config/{blockchainRid}" bind POST to blockchain.then(::validateBlockchainConfiguration),
     )
 
+    @Suppress("UNUSED_PARAMETER")
     private fun getVersion(request: Request): Response = Response(OK).with(
             versionBody of Version(REST_API_VERSION)
     )
 
+    @Suppress("UNUSED_PARAMETER")
     private fun getDebug(request: Request): Response {
         val debugInfo = models.values
                 .filterIsInstance(Model::class.java)
@@ -252,6 +276,12 @@ class RestApi(
         return Response(OK).with(txInfosBody of txInfos)
     }
 
+    private fun getTransactionsCount(request: Request): Response {
+        val model = model(request)
+        val lastTransactionNumber = model.getLastTransactionNumber()
+        return Response(OK).with(transactionsCountBody of lastTransactionNumber)
+    }
+
     private fun getConfirmationProof(request: Request): Response {
         val proof = runTxActionOnModel(model(request), txRidPath(request)) { model, txRID ->
             model.getConfirmationProof(txRID)
@@ -289,11 +319,7 @@ class RestApi(
         val blockRID = blockRidPath(request)
         val txHashesOnly = txsQuery(request) != true
         val block = model.getBlock(blockRID, txHashesOnly)
-        return if (block != null) {
-            Response(OK).with(blockBody.outbound(request) of block)
-        } else {
-            Response(OK).with(nullBody.outbound(request) of Unit)
-        }
+        return blockResponse(block, request)
     }
 
     private fun getBlockByHeight(request: Request): Response {
@@ -301,11 +327,13 @@ class RestApi(
         val height = heightPath(request)
         val txHashesOnly = txsQuery(request) != true
         val block = model.getBlock(height, txHashesOnly)
-        return if (block != null) {
-            Response(OK).with(blockBody.outbound(request) of block)
-        } else {
-            Response(OK).with(nullBody.outbound(request) of Unit)
-        }
+        return blockResponse(block, request)
+    }
+
+    private fun blockResponse(block: BlockDetail?, request: Request): Response = if (block != null) {
+        Response(OK).with(blockBody.outbound(request) of block)
+    } else {
+        Response(OK).with(nullBody.outbound(request) of Unit)
     }
 
     private fun getQuery(request: Request): Response {
@@ -486,22 +514,22 @@ class RestApi(
     private fun onError(error: Exception, request: Request): Response {
         return when (error) {
             is NotFoundError -> {
-                logger.debug { "NotFound: ${error.message}" }
+                logger.info { "NotFound: ${error.message}" }
                 transformErrorResponseFromDiagnostics(request, NOT_FOUND, error)
             }
 
             is LensFailure -> {
-                logger.debug { "BadFormat: ${error.message}" }
+                logger.info { "BadFormat: ${error.message}" }
                 errorResponse(request, BAD_REQUEST, error.message!!)
             }
 
             is IllegalArgumentException -> {
-                logger.debug { "IllegalArgument: ${error.message}" }
+                logger.info { "IllegalArgument: ${error.message}" }
                 errorResponse(request, BAD_REQUEST, error.message!!)
             }
 
             is UserMistake -> {
-                logger.debug { "UserMistake: ${error.message}" }
+                logger.info { "UserMistake: ${error.message}" }
                 errorResponse(request, BAD_REQUEST, error.message!!)
             }
 

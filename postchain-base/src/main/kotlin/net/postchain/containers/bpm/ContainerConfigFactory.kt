@@ -15,6 +15,8 @@ import org.mandas.docker.client.messages.PortBinding
 
 object ContainerConfigFactory : KLogging() {
 
+    private const val REMOTE_DEBUG_PORT = 8000
+
     fun createConfig(fs: FileSystem, appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer): ContainerConfig {
         // Container volumes
         val volumes = mutableListOf<HostConfig.Bind>()
@@ -74,6 +76,17 @@ object ContainerConfigFactory : KLogging() {
         // admin-rpc-port
         val adminRpcPort = "${containerNodeConfig.subnodeAdminRpcPort}/tcp"
         portBindings[adminRpcPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
+
+        if (containerNodeConfig.remoteDebugEnabled) {
+            val remoteDebugPort = "$REMOTE_DEBUG_PORT/tcp"
+            portBindings[remoteDebugPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
+        }
+
+        if (containerNodeConfig.jmxBasePort > -1) {
+            val calculatedJmxPort = calculateJmxPort(containerNodeConfig, container)
+            val jmxPort = "$calculatedJmxPort/tcp"
+            portBindings[jmxPort] = listOf(PortBinding.of(containerNodeConfig.subnodeHost, calculatedJmxPort))
+        }
 
         /**
          * CPU:
@@ -187,5 +200,40 @@ object ContainerConfigFactory : KLogging() {
 
         add("POSTCHAIN_EXIT_ON_FATAL_ERROR=true")
         add("POSTCHAIN_CONTAINER_ID=${container.containerName.containerIID}")
+
+        add("POSTCHAIN_PROMETHEUS_PORT=${containerNodeConfig.prometheusPort}")
+
+        val javaToolOptions = createJavaToolOptions(containerNodeConfig, container)
+        if (javaToolOptions.isNotEmpty()) {
+            add("JAVA_TOOL_OPTIONS=${javaToolOptions.joinToString(" ")}")
+        }
     }
+
+    private fun createJavaToolOptions(containerNodeConfig: ContainerNodeConfig, container: PostchainContainer): List<String> {
+        val options = mutableListOf<String>()
+        if (containerNodeConfig.remoteDebugEnabled) {
+            val suspend = if (containerNodeConfig.remoteDebugSuspend) "y" else "n"
+            options.add("-agentlib:jdwp=transport=dt_socket,server=y,address=*:$REMOTE_DEBUG_PORT,suspend=$suspend")
+        }
+
+        if (containerNodeConfig.jmxBasePort > -1) {
+            val jmxPort = calculateJmxPort(containerNodeConfig, container)
+            options.add("-Dcom.sun.management.jmxremote")
+            options.add("-Dcom.sun.management.jmxremote.authenticate=false")
+            options.add("-Dcom.sun.management.jmxremote.ssl=false")
+            options.add("-Dcom.sun.management.jmxremote.port=$jmxPort")
+            options.add("-Dcom.sun.management.jmxremote.rmi.port=$jmxPort")
+            options.add("-Djava.rmi.server.hostname=localhost")
+        }
+
+        return options
+    }
+
+    /**
+     * Unfortunately JMX RMI connections will only work if internal port is mapped to the same host port.
+     * To make ports unique per subnode we use the scheme JMX_BASE_PORT + CONTAINER_IID.
+     * Should be a good enough workaround for debugging purposes.
+     */
+    private fun calculateJmxPort(containerNodeConfig: ContainerNodeConfig, container: PostchainContainer) =
+            containerNodeConfig.jmxBasePort + container.containerName.containerIID
 }

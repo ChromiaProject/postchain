@@ -9,12 +9,14 @@ import net.postchain.config.app.AppConfig
 import net.postchain.core.Storage
 import org.apache.commons.dbcp2.BasicDataSource
 import javax.sql.DataSource
+import kotlin.time.Duration
 
 object StorageBuilder {
 
-    private const val DB_VERSION = 7
+    private const val DB_VERSION = 8
 
-    fun buildStorage(appConfig: AppConfig, wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION): Storage {
+    fun buildStorage(appConfig: AppConfig, maxWaitWrite: Duration = Duration.ZERO, maxWriteTotal: Int = 2,
+                     wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION): Storage {
         val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
         initStorage(appConfig, wipeDatabase, db, expectedDbVersion)
 
@@ -27,9 +29,9 @@ object StorageBuilder {
 
         // Write DataSource
         val writeDataSource = createBasicDataSource(appConfig).apply {
-            maxWaitMillis = 0
+            this.maxWaitMillis = maxWaitWrite.inWholeMilliseconds
             defaultAutoCommit = false
-            maxTotal = 2
+            maxTotal = maxWriteTotal
         }
 
         return BaseStorage(

@@ -23,7 +23,7 @@ class CommandExportBlockchain : CliktCommand(name = "export-blockchain", help = 
             .path(mustExist = false, canBeDir = false).required()
 
     private val blocksFile by option("--blocks-file", help = "File to export blocks and transactions to")
-            .path(mustExist = false, canBeDir = false).required()
+            .path(mustExist = false, canBeDir = false)
 
     private val overwrite by option("--overwrite", help = "Overwrite existing files")
             .flag()

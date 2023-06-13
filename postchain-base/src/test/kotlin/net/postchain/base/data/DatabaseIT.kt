@@ -7,6 +7,8 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.KEY_CONFIGURATIONFACTORY
 import net.postchain.base.configuration.KEY_DEPENDENCIES
 import net.postchain.base.configuration.KEY_SIGNERS
+import net.postchain.base.cryptoSystem
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
@@ -106,9 +108,16 @@ class DatabaseIT {
             true
         }
 
+        val hash1 = GtvToBlockchainRidFactory.calculateBlockchainRid(configData1, cryptoSystem)
+        val hash2 = GtvToBlockchainRidFactory.calculateBlockchainRid(configData2, cryptoSystem)
+        val hash3 = GtvToBlockchainRidFactory.calculateBlockchainRid(configData3, cryptoSystem)
+
         withReadConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             assertEquals(listOf(0L, 5L), db.listConfigurations(ctx))
+            assertEquals(listOf(hash1.wData, hash2.wData), db.listConfigurationHashes(ctx).map { it.wrap() })
+            assertTrue(db.configurationHashExists(ctx, hash1.data))
+            assertFalse(db.configurationHashExists(ctx, hash3.data))
             assertArrayEquals(encodeGtv(configData1), db.getConfigurationData(ctx, 0L))
             assertArrayEquals(encodeGtv(configData2), db.getConfigurationData(ctx, 5L))
             assertNull(db.getConfigurationData(ctx, 7L))

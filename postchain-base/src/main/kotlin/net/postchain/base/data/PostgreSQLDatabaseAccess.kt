@@ -123,7 +123,23 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 "    tx_data BYTEA NOT NULL," +
                 "    tx_hash BYTEA NOT NULL," +
                 "    block_iid bigint NOT NULL REFERENCES ${tableBlocks(ctx)}(block_iid)," +
+                "    tx_number BIGINT UNIQUE NOT NULL," +
                 "    UNIQUE (tx_rid))"
+    }
+
+    override fun cmdUpdateTableTransactionsV8First(chainId: Long): String {
+        return "ALTER TABLE ${tableTransactions(chainId)}" +
+                " ADD COLUMN tx_number BIGINT NULL"
+    }
+
+    override fun cmdUpdateTableTransactionsV8Second(chainId: Long): String {
+        return "ALTER TABLE \"${stripQuotes(tableTransactions(chainId))}\" " +
+                "ADD CONSTRAINT \"${stripQuotes(tableTransactions(chainId))}_tx_number_key\" UNIQUE (tx_number)"
+    }
+
+    override fun cmdUpdateTableTransactionsV8Third(chainId: Long): String {
+        return "ALTER TABLE ${tableTransactions(chainId)} " +
+                "ALTER COLUMN tx_number SET NOT NULL"
     }
 
     override fun cmdCreateTableConfigurations(ctx: EContext): String {
@@ -206,8 +222,8 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
     }
 
     override fun cmdInsertTransactions(ctx: EContext): String {
-        return "INSERT INTO ${tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid) " +
-                "VALUES (?, ?, ?, ?)"
+        return "INSERT INTO ${tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid, tx_number) " +
+                "VALUES (?, ?, ?, ?, ?)"
     }
 
     override fun cmdInsertPage(ctx: EContext, name: String): String {
@@ -232,11 +248,11 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
         return queryRunner.query(ctx.conn, sql, longRes, height)
     }
 
-    override fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long {
-        val sql = "INSERT INTO ${tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid) " +
-                "VALUES (?, ?, ?, ?) RETURNING tx_iid"
+    override fun insertTransaction(ctx: BlockEContext, tx: Transaction, transactionNumber: Long): Long {
+        val sql = "INSERT INTO ${tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid, tx_number) " +
+                "VALUES (?, ?, ?, ?, ?) RETURNING tx_iid"
 
-        return queryRunner.query(ctx.conn, sql, longRes, tx.getRID(), tx.getRawData(), tx.getHash(), ctx.blockIID)
+        return queryRunner.query(ctx.conn, sql, longRes, tx.getRID(), tx.getRawData(), tx.getHash(), ctx.blockIID, transactionNumber)
     }
 
     /**

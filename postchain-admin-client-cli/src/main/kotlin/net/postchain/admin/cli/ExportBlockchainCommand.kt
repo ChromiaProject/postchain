@@ -16,11 +16,10 @@ class ExportBlockchainCommand : CliktCommand(help = "Export a blockchain to file
 
     private val chainId by chainIdOption()
 
-    private val configurationsFile by option("--configurations-file", help = "File to import blockchain configurations from")
+    private val configurationsFile by option("--configurations-file", help = "File to export blockchain configurations to")
             .required()
 
-    private val blocksFile by option("--blocks-file", help = "File to import blocks and transactions from")
-            .required()
+    private val blocksFile by option("--blocks-file", help = "File to export blocks and transactions to")
 
     private val fromHeight by option("--from-height",
             help = "Only export configurations and blocks from and including this height (will start from first block by default)")
@@ -35,14 +34,18 @@ class ExportBlockchainCommand : CliktCommand(help = "Export a blockchain to file
             val requestBuilder = ExportBlockchainRequest.newBuilder()
                     .setChainId(chainId)
                     .setConfigurationsFile(configurationsFile)
-                    .setBlocksFile(blocksFile)
                     .setFromHeight(fromHeight)
                     .setUpToHeight(upToHeight)
+                    .let { if (blocksFile != null) it.setBlocksFile(blocksFile) else it }
             val reply = channel.exportBlockchain(requestBuilder.build())
-            val message = if (reply.numBlocks > 0)
-                "Export of ${reply.numBlocks} blocks ${reply.fromHeight}..${reply.upHeight} to $configurationsFile and $blocksFile completed"
-            else
-                "No blocks to export to $configurationsFile and $blocksFile"
+            val message = if (blocksFile != null) {
+                if (reply.numBlocks > 0)
+                    "Export of ${reply.numBlocks} blocks ${reply.fromHeight}..${reply.upHeight} to $configurationsFile and $blocksFile completed"
+                else
+                    "No blocks to export to $configurationsFile"
+            } else {
+                "Export of configurations to $configurationsFile completed"
+            }
             echo(message)
         } catch (e: StatusRuntimeException) {
             echo("Failed with: ${e.message}")

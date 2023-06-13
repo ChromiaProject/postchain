@@ -1,9 +1,11 @@
 package net.postchain.gtv.mapper
 
+import assertk.assertFailure
 import assertk.assertThat
 import assertk.assertions.containsAll
 import assertk.assertions.containsExactly
 import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
 import assertk.assertions.isNull
 import assertk.isContentEqualTo
 import net.postchain.common.BlockchainRid
@@ -97,6 +99,19 @@ internal class GtvObjectMapperTest {
         assertThat(actual.r).isEqualTo(RowId(17))
         assertThat(actual.pk).isEqualTo(PubKey(ByteArray(33)))
         assertThat(actual.brid).isEqualTo(BlockchainRid.ZERO_RID)
+    }
+
+    @Test
+    fun testMissingEnumValue() {
+        data class MissingEnumValue(
+                @Name("enum") val e: SimpleEnum,
+        )
+
+        assertFailure {
+            gtv(mapOf(
+                    "enum" to gtv("C")
+            )).toObject<MissingEnumValue>()
+        }.isInstanceOf(IllegalArgumentException::class)
     }
 
     @Test
