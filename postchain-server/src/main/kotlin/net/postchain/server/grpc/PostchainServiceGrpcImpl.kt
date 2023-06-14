@@ -88,6 +88,27 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         }
     }
 
+    override fun listConfigurations(
+            request: ListConfigurationsRequest,
+            responseObserver: StreamObserver<ListConfigurationsReply>
+    ) {
+        if (postchainService.findBlockchain(request.chainId).first != null) {
+            responseObserver.onNext(
+                    ListConfigurationsReply.newBuilder().run {
+                        addAllHeight(postchainService.listConfigurations(request.chainId))
+                        build()
+                    }
+            )
+            responseObserver.onCompleted()
+        } else {
+            responseObserver.onError(
+                    Status.NOT_FOUND
+                            .withDescription("Blockchain not found: ${request.chainId}")
+                            .asRuntimeException()
+            )
+        }
+    }
+
     override fun initializeBlockchain(
             request: InitializeBlockchainRequest,
             responseObserver: StreamObserver<InitializeBlockchainReply>,
