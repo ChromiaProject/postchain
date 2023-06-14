@@ -4,6 +4,8 @@ package net.postchain.base.data
 
 import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.FaultyConfiguration
+import net.postchain.base.importexport.ImportJob
+import net.postchain.base.importexport.ImportJobState
 import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
@@ -182,6 +184,11 @@ interface DatabaseAccess {
     fun createPageTable(ctx: EContext, prefix: String)
     fun createStateLeafTable(ctx: EContext, prefix: String)
     fun createStateLeafTableIndex(ctx: EContext, prefix: String, index: Int)
+
+    fun getImportJobs(ctx: AppContext): List<ImportJob>
+    fun createImportJob(ctx: AppContext, chainId: Long, configurationsFile: String, blocksFile: String, state: ImportJobState): Int
+    fun updateImportJob(ctx: AppContext, jobId: Int, state: ImportJobState)
+    fun deleteImportJob(ctx: AppContext, jobId: Int)
 
     companion object {
         fun of(ctx: AppContext): DatabaseAccess {

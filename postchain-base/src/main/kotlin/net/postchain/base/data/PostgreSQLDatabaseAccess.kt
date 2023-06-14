@@ -6,6 +6,11 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.Transaction
+import org.jooq.DSLContext
+import org.jooq.Field
+import org.jooq.SQLDialect
+import org.jooq.impl.DSL
+import org.jooq.util.postgres.PostgresDataType
 import java.sql.Connection
 
 class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
@@ -157,6 +162,12 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 ", report_height BIGINT NOT NULL" +
                 ")"
     }
+
+    override val COLUMN_IMPORT_JOB_ID: Field<Int> = DSL.field("import_job_iid", PostgresDataType.SERIAL.nullable(false))
+    override val COLUMN_CHAIN_IID: Field<Long> = DSL.field("chain_iid", PostgresDataType.BIGINT.nullable(false))
+    override val COLUMN_CONFIGURATIONS_FILE: Field<String> = DSL.field("configurations_file", PostgresDataType.TEXT.nullable(false))
+    override val COLUMN_BLOCKS_FILE: Field<String> = DSL.field("blocks_file", PostgresDataType.TEXT.nullable(false))
+    override val COLUMN_STATE: Field<String> = DSL.field("state", PostgresDataType.TEXT.nullable(false))
 
     override fun cmdUpdateTableConfigurationsV4First(chainId: Long): String {
         return "ALTER TABLE ${tableConfigurations(chainId)}" +
@@ -327,4 +338,6 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
             }
         }
     }
+
+    override fun createJooq(conn: Connection): DSLContext = DSL.using(conn, SQLDialect.POSTGRES)
 }

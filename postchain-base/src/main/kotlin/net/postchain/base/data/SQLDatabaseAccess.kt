@@ -7,6 +7,8 @@ import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.SqlUtils.isUniqueViolation
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.base.importexport.ImportJob
+import net.postchain.base.importexport.ImportJobState
 import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.HASH_LENGTH
@@ -35,6 +37,9 @@ import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ColumnListHandler
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.apache.commons.dbutils.handlers.ScalarHandler
+import org.jooq.DSLContext
+import org.jooq.Field
+import org.jooq.impl.DSL
 import java.sql.Connection
 import java.sql.SQLException
 import java.sql.Timestamp
@@ -61,6 +66,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected fun tableEventLeafs(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_event_leafs")
     protected fun tableStateLeafs(ctx: EContext, prefix: String): String = tableName(ctx, "${prefix}_state_leafs")
     protected fun indexTableStateLeafs(ctx: EContext, prefix: String, index: Int): String = tableName(ctx, "idx${index}_${prefix}_state_leafs")
+    protected fun tableImportJobs(): String = "import_jobs"
 
     fun tableGtxModuleVersion(ctx: EContext): String = tableName(ctx, "gtx_module_version")
 
@@ -511,7 +517,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int) {
-        if (expectedDbVersion !in 1..8) {
+        if (expectedDbVersion !in 1..9) {
             throw UserMistake("Unsupported DB version $expectedDbVersion")
         }
 
@@ -572,6 +578,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 version8(connection)
             }
 
+            if (version < 9 && expectedDbVersion >= 9) {
+                logger.info("Upgrading to version 9")
+                version9(connection)
+            }
+
             if (expectedDbVersion > version) {
                 queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
                 logger.info("Database version has been updated to version: $expectedDbVersion")
@@ -616,6 +627,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
             if (expectedDbVersion >= 8) {
                 version8(connection)
+            }
+
+            if (expectedDbVersion >= 9) {
+                version9(connection)
             }
         }
     }
@@ -686,6 +701,18 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                     queryRunner.update(connection, cmdUpdateTableTransactionsV8Second(chainId))
                     queryRunner.update(connection, cmdUpdateTableTransactionsV8Third(chainId))
                 }
+    }
+
+    private fun version9(connection: Connection) {
+        createJooq(connection).createTableIfNotExists(DSL.table(tableImportJobs()))
+                .column(COLUMN_IMPORT_JOB_ID)
+                .column(COLUMN_CHAIN_IID)
+                .column(COLUMN_CONFIGURATIONS_FILE)
+                .column(COLUMN_BLOCKS_FILE)
+                .column(COLUMN_STATE)
+                .constraint(DSL.unique(COLUMN_CHAIN_IID))
+                .constraint(DSL.foreignKey(COLUMN_CHAIN_IID.name).references(tableBlockchains(), COLUMN_CHAIN_IID.name))
+                .execute()
     }
 
     protected fun calcConfigurationHash(configurationData: ByteArray) = GtvToBlockchainRidFactory.calculateBlockchainRid(
@@ -1163,6 +1190,51 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, "UPDATE ${tableFaultyConfiguration(ctx)} SET report_height = ?", height)
     }
 
+    protected abstract val COLUMN_IMPORT_JOB_ID: Field<Int>
+    protected abstract val COLUMN_CHAIN_IID: Field<Long>
+    protected abstract val COLUMN_CONFIGURATIONS_FILE: Field<String>
+    protected abstract val COLUMN_BLOCKS_FILE: Field<String>
+    protected abstract val COLUMN_STATE: Field<String>
+
+    override fun getImportJobs(ctx: AppContext): List<ImportJob> =
+            createJooq(ctx).select(COLUMN_IMPORT_JOB_ID, COLUMN_CHAIN_IID, COLUMN_CONFIGURATIONS_FILE, COLUMN_BLOCKS_FILE, COLUMN_STATE)
+                    .from(tableImportJobs())
+                    .orderBy(COLUMN_IMPORT_JOB_ID)
+                    .fetch()
+                    .map {
+                        ImportJob(
+                                jobId = it[COLUMN_IMPORT_JOB_ID],
+                                chainId = it[COLUMN_CHAIN_IID],
+                                configurationsFile = it[COLUMN_CONFIGURATIONS_FILE],
+                                blocksFile = it[COLUMN_BLOCKS_FILE],
+                                state = ImportJobState.valueOf(it[COLUMN_STATE])
+                        )
+                    }
+
+    override fun createImportJob(ctx: AppContext, chainId: Long, configurationsFile: String, blocksFile: String, state: ImportJobState): Int =
+            createJooq(ctx).insertInto(DSL.table(tableImportJobs()))
+                    .set(COLUMN_CHAIN_IID, chainId)
+                    .set(COLUMN_CONFIGURATIONS_FILE, configurationsFile)
+                    .set(COLUMN_BLOCKS_FILE, blocksFile)
+                    .set(COLUMN_STATE, state.name)
+                    .returning(COLUMN_IMPORT_JOB_ID)
+                    .execute()
+
+    override fun updateImportJob(ctx: AppContext, jobId: Int, state: ImportJobState) {
+        val rowCount = createJooq(ctx).update(DSL.table(tableImportJobs()))
+                .set(COLUMN_STATE, state.name)
+                .where(COLUMN_IMPORT_JOB_ID.eq(jobId))
+                .execute()
+        check(rowCount == 1)
+    }
+
+    override fun deleteImportJob(ctx: AppContext, jobId: Int) {
+        val rowCount = createJooq(ctx).deleteFrom(DSL.table(tableImportJobs()))
+                .where(COLUMN_IMPORT_JOB_ID.eq(jobId))
+                .execute()
+        check(rowCount == 1)
+    }
+
     fun tableExists(connection: Connection, tableName: String): Boolean {
         val tableName0 = tableName.removeSurrounding("\"")
         val types: Array<String> = arrayOf("TABLE")
@@ -1178,4 +1250,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
         return false
     }
+
+    private fun createJooq(ctx: AppContext): DSLContext = createJooq(ctx.conn)
+    protected abstract fun createJooq(conn: Connection): DSLContext
 }

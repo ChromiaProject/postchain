@@ -9,6 +9,7 @@ import net.postchain.base.configuration.KEY_DEPENDENCIES
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.cryptoSystem
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.base.importexport.ImportJobState
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
@@ -348,6 +349,34 @@ class DatabaseIT {
             val deps = db.getDependenciesOnBlockchain(ctx)
             assertEquals(1, deps.size)
             assertEquals(BlockchainRid.buildRepeat(1), deps[0])
+        }
+    }
+
+    @Test
+    fun importJobs() {
+        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
+
+        val chainID = 1L
+        withWriteConnection(storage, chainID) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+
+            db.initializeBlockchain(ctx, BlockchainRid.buildRepeat(1))
+            assertTrue(db.getImportJobs(ctx).isEmpty())
+
+            val jobId = db.createImportJob(ctx, chainID, "configurations.gtv", "blocks.gtv", ImportJobState.CONFIGURATIONS)
+            val jobs = db.getImportJobs(ctx)
+            assertEquals(1, jobs.size)
+            assertEquals(jobId, jobs.first().jobId)
+            assertEquals(chainID, jobs.first().chainId)
+            assertEquals(ImportJobState.CONFIGURATIONS, jobs.first().state)
+
+            db.updateImportJob(ctx, jobId, ImportJobState.BLOCKS)
+            assertEquals(ImportJobState.BLOCKS, db.getImportJobs(ctx).first().state)
+
+            db.deleteImportJob(ctx, jobId)
+            assertTrue(db.getImportJobs(ctx).isEmpty())
+
+            true
         }
     }
 }

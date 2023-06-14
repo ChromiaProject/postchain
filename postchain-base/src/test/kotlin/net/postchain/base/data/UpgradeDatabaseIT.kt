@@ -422,6 +422,17 @@ class UpgradeDatabaseIT {
                 }
     }
 
+    @Test
+    fun testDbVersion9() {
+        // Initial launch
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 9)
+                .use { assertVersion9(it) }
+
+        // Reopen
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 9)
+                .use { assertVersion9(it) }
+    }
+
     private fun addTransaction(db: SQLDatabaseAccess, ctx: EContext, tx_base: Byte, block_iid: Long) {
         db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid) " +
                 "VALUES (?, ?, ?, ?)", ByteArray(32) { tx_base }, ByteArray(32) { tx_base }, ByteArray(32) { tx_base }, block_iid)
@@ -457,6 +468,17 @@ class UpgradeDatabaseIT {
         assertArrayEquals(configurationHash(configData2),
                 db.queryRunner.query(ctx.conn, "SELECT configuration_hash FROM ${db.tableConfigurations(ctx)} WHERE height=10",
                         db.byteArrayRes))
+    }
+
+    private fun assertVersion9(storage: Storage) {
+        withReadConnection(storage, 0) { ctx ->
+            val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+            assertVersion9(db, ctx)
+        }
+    }
+
+    private fun assertVersion9(db: SQLDatabaseAccess, ctx: EContext) {
+        db.getImportJobs(ctx)
     }
 
     @Test
