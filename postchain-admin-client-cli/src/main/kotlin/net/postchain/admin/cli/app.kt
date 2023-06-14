@@ -42,10 +42,11 @@ class PostchainAdminClientCommand : CliktCommand(
 
 fun main(args: Array<String>) = PostchainAdminClientCommand()
         .subcommands(
+                InitializeBlockchainCommand(),
                 StartBlockchainCommand(),
                 StopBlockchainCommand(),
                 AddConfigurationCommand(),
-                InitializeBlockchainCommand(),
+                ListConfigurationsCommand(),
                 DeleteBlockchainCommand(),
                 AddBlockchainReplicaCommand(),
                 RemoveBlockchainReplicaCommand(),
