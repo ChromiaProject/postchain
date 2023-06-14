@@ -1,4 +1,10 @@
 image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.0.0
+include:
+  - project: "chromaway/core-infra/gitlab-automation"
+    ref: 1.1.0
+    file:
+      - templates/release.yml
+      - templates/dependency-scanning.yml
 
 .setup:
   tags:
@@ -29,21 +35,6 @@ image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.0.
         - "*/target/surefire-reports/TEST-*.xml"
         - "*/target/failsafe-reports/TEST-*.xml"
     expire_in: 1 week
-
-.git_template: &git_setup |
-  git remote set-url --push origin "https://oauth2:${BUILD_USER_GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
-  git config user.name "build-user core-dev"
-  git config user.email build_user@chromaway.com
-
-.release:
-  stage: release
-  when: manual
-  before_script:
-    - set -eu
-    - *git_setup
-    - git checkout $CI_COMMIT_REF_NAME
-    - CURRENT_VERSION=$(git describe --tags --abbrev=0)
-    - IFS=. read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
 
 stages:
   - build
@@ -110,45 +101,17 @@ nightly-tests:
       --activate-profiles ci,nightly
       verify
 
-release-minor:
-  extends: .release
-  script:
-    - git tag $MAJOR.$((MINOR + 1)).0
-    - git push --tags
-  only:
-    - dev
-
-release-patch:
-  extends: .release
-  script:
-    - git tag $MAJOR.$MINOR.$((PATCH + 1))
-    - git push --tags
-  only:
-    - dev
-    - /^support\/.*$/
-
 dependency-check:
-  extends: .setup
+  extends: .maven-dependency-check
   stage: dependency-check
   interruptible: true
-  script:
-    - mvn
-      $MAVEN_CLI_OPTS
-      --activate-profiles ci,dependency-check
-      verify
   only:
     variables:
       - $RUN_DEPENDENCY_CHECK == "true"
 
 container-scanning:
-  extends: .setup
-  stage: dependency-check
-  interruptible: true
-  script:
-    - echo "Scanning image $IMAGE:$VERSION"
-    - curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin
-    - grype registry:registry.gitlab.com/chromaway/postchain/$IMAGE:$VERSION --only-fixed -q
-    - grype registry:registry.gitlab.com/chromaway/postchain/$IMAGE:$VERSION --fail-on high -q
+  variables:
+    REGISTRY: registry.gitlab.com/chromaway/postchain
   parallel:
     matrix:
       - IMAGE: [ postchain-cli, postchain-admin-client ]
