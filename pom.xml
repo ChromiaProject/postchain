@@ -122,6 +122,11 @@
             </dependency>
             <dependency>
                 <groupId>net.postchain</groupId>
+                <artifactId>postchain-gtv-yaml</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
                 <artifactId>postchain-gtx-data</artifactId>
                 <version>${project.version}</version>
             </dependency>
