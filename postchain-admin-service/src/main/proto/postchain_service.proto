@@ -16,7 +16,7 @@ service PostchainService {
   rpc AddBlockchainReplica (AddBlockchainReplicaRequest) returns (AddBlockchainReplicaReply) {} // Add a bc replica
   rpc RemoveBlockchainReplica (RemoveBlockchainReplicaRequest) returns (RemoveBlockchainReplicaReply) {} // Remove a bc replica
   rpc ExportBlockchain (ExportBlockchainRequest) returns (ExportBlockchainReply) {} // Export blockchain to file
-  rpc ImportBlockchain (ImportBlockchainRequest) returns (ImportBlockchainReply) {} // Import blockchain from file
+  rpc CreateImportJob (CreateImportJobRequest) returns (CreateImportJobReply) {} // Import blockchain from file
   rpc RemoveBlockchain (RemoveBlockchainRequest) returns (RemoveBlockchainReply) {} // Delete all blockchain data
 }
 
@@ -109,18 +109,15 @@ message ExportBlockchainReply {
   int64 numBlocks = 3;
 }
 
-message ImportBlockchainRequest {
+message CreateImportJobRequest {
   int64 chainId = 1;
   string configurationsFile = 2;
   string blocksFile = 3;
   bool incremental = 4;
 }
 
-message ImportBlockchainReply {
-  int64 fromHeight = 1;
-  int64 toHeight = 2;
-  int64 numBlocks = 3;
-  bytes blockchainRid = 4;
+message CreateImportJobReply {
+  int32 jobId = 1;
 }
 
 message RemoveBlockchainRequest {

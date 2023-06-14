@@ -126,10 +126,45 @@ object ImporterExporter : KLogging() {
     }
 
     /**
+     * @param storage             storage
+     * @param chainId             chain to import
+     * @param configurationsFile  file to import blockchain configurations from
+     * @param blocksFile          file to import blocks and transactions from
+     * @param incremental         import new configurations and blocks to existing blockchain
+     *
+     * @return jobId
+     */
+    fun createImportJob(storage: Storage, chainId: Long, configurationsFile: Path, blocksFile: Path, incremental: Boolean): Int =
+        withReadWriteConnection(storage, chainId) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+
+            val existingChain = db.getBlockchainRid(ctx)
+            if (existingChain != null && !incremental) {
+                throw UserMistake("Cannot import to already existing chain $chainId with bc-rid ${existingChain.toHex()} in non-incremental mode")
+            }
+            if (existingChain == null && incremental) {
+                throw UserMistake("Blockchain $chainId not found in incremental mode")
+            }
+
+            BufferedInputStream(FileInputStream(configurationsFile.toFile())).use { stream ->
+                val blockchainRid = BlockchainRid(GtvDecoder.decodeGtv(stream).asByteArray())
+                if (existingChain != null && existingChain != blockchainRid) {
+                    throw UserMistake("Blockchain RID mismatch in incremental mode, has ${existingChain.toHex()} but trying to import ${blockchainRid.toHex()}")
+                }
+                db.initializeBlockchain(ctx, blockchainRid)
+            }
+
+            db.createImportJob(ctx, chainId,
+                    configurationsFile = configurationsFile.toAbsolutePath().toString(),
+                    blocksFile = blocksFile.toAbsolutePath().toString(),
+                    ImportJobState.CONFIGURATIONS)
+        }
+
+    /**
      * @param nodeKeyPair         KeyPair of the node
      * @param cryptoSystem        CryptoSystem of the node
      * @param storage             storage
-     * @param chainId             chain to export
+     * @param chainId             chain to import
      * @param configurationsFile  file to import blockchain configurations from
      * @param blocksFile          file to import blocks and transactions from
      * @param incremental         import new configurations and blocks to existing blockchain

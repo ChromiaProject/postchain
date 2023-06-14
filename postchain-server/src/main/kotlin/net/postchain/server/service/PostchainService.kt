@@ -5,14 +5,11 @@ import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.importexport.ExportResult
-import net.postchain.base.importexport.ImportResult
 import net.postchain.base.importexport.ImporterExporter
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BadDataMistake
-import net.postchain.crypto.KeyPair
-import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.server.NodeProvider
@@ -89,10 +86,8 @@ class PostchainService(private val nodeProvider: NodeProvider) {
                     fromHeight = fromHeight,
                     upToHeight = upToHeight)
 
-    fun importBlockchain(chainId: Long, configurationFile: Path, blocksFile: Path, incremental: Boolean): ImportResult =
-            ImporterExporter.importBlockchain(
-                    KeyPair(PubKey(postchainNode.appConfig.pubKeyByteArray), PrivKey(postchainNode.appConfig.privKeyByteArray)),
-                    postchainNode.postchainContext.cryptoSystem,
+    fun createImportJob(chainId: Long, configurationFile: Path, blocksFile: Path, incremental: Boolean): Int =
+            ImporterExporter.createImportJob(
                     postchainNode.postchainContext.sharedStorage,
                     chainId,
                     configurationsFile = configurationFile,

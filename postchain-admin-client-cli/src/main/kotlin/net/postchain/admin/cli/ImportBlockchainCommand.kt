@@ -7,8 +7,7 @@ import com.github.ajalt.clikt.parameters.options.required
 import io.grpc.StatusRuntimeException
 import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.chainIdOption
-import net.postchain.admin.cli.util.toHex
-import net.postchain.server.grpc.ImportBlockchainRequest
+import net.postchain.server.grpc.CreateImportJobRequest
 
 class ImportBlockchainCommand : CliktCommand(help = "Import a blockchain from file") {
 
@@ -27,17 +26,13 @@ class ImportBlockchainCommand : CliktCommand(help = "Import a blockchain from fi
 
     override fun run() {
         try {
-            val requestBuilder = ImportBlockchainRequest.newBuilder()
+            val requestBuilder = CreateImportJobRequest.newBuilder()
                     .setChainId(chainId)
                     .setConfigurationsFile(configurationsFile)
                     .setBlocksFile(blocksFile)
                     .setIncremental(incremental)
-            val reply = channel.importBlockchain(requestBuilder.build())
-            val message = if (reply.numBlocks > 0)
-                "Import of ${reply.numBlocks} blocks ${reply.fromHeight}..${reply.toHeight} to chain $chainId with bc-rid ${reply.blockchainRid.toByteArray().toHex()} completed"
-            else
-                "No blocks to import to chain $chainId with bc-rid ${reply.blockchainRid.toByteArray().toHex()}"
-            echo(message)
+            val reply = channel.createImportJob(requestBuilder.build())
+            echo("Import job ${reply.jobId} created")
         } catch (e: StatusRuntimeException) {
             echo("Failed with: ${e.message}")
         }

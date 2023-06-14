@@ -1,6 +1,5 @@
 package net.postchain.server.grpc
 
-import com.google.protobuf.ByteString
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import net.postchain.common.BlockchainRid
@@ -205,19 +204,16 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         }
     }
 
-    override fun importBlockchain(request: ImportBlockchainRequest, responseObserver: StreamObserver<ImportBlockchainReply>) {
+    override fun createImportJob(request: CreateImportJobRequest, responseObserver: StreamObserver<CreateImportJobReply>) {
         try {
-            val importResult = postchainService.importBlockchain(
+            val jobId = postchainService.createImportJob(
                     request.chainId,
                     Path.of(request.configurationsFile),
                     Path.of(request.blocksFile),
                     request.incremental
             )
-            responseObserver.onNext(ImportBlockchainReply.newBuilder()
-                    .setFromHeight(importResult.fromHeight)
-                    .setToHeight(importResult.toHeight)
-                    .setNumBlocks(importResult.numBlocks)
-                    .setBlockchainRid(ByteString.copyFrom(importResult.blockchainRid.data))
+            responseObserver.onNext(CreateImportJobReply.newBuilder()
+                    .setJobId(jobId)
                     .build())
             responseObserver.onCompleted()
         } catch (e: UserMistake) {
