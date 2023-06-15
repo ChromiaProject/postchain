@@ -59,7 +59,6 @@ class ValidatorBlockchainProcess(
         statusManager = BaseStatusManager(
                 blockchainConfiguration.signers.size,
                 blockchainConfiguration.blockchainContext.nodeID,
-                blockchainConfiguration.configHash,
                 blockchainEngine.getBlockQueries().getLastBlockHeight().get() + 1
         )
 
