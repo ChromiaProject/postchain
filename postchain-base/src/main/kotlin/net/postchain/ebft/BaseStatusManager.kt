@@ -14,7 +14,6 @@ import java.util.*
 class BaseStatusManager(
         private val nodeCount: Int,
         private val myIndex: Int,
-        configHash: ByteArray,
         myNextHeight: Long
 ) : StatusManager {
 
