@@ -10,7 +10,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
-import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.BaseInfrastructureFactoryProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
@@ -41,13 +40,15 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
             DatabaseAccess.of(ctx).checkCollation(ctx.conn, suppressError = appConfig.databaseSuppressCollationCheck)
         }
 
+        StorageInitializer.setupInitialPeers(appConfig, sharedStorage)
+
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
 
         val blockQueriesProvider = BlockQueriesProviderImpl()
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
         postchainContext = PostchainContext(
                 appConfig,
-                NodeConfigurationProviderFactory.createProvider(appConfig) { sharedStorage },
+                infrastructureFactory.makeNodeConfigurationProvider(appConfig, sharedStorage),
                 blockBuilderStorage,
                 sharedStorage,
                 infrastructureFactory.makeConnectionManager(appConfig),
