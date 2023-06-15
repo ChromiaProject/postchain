@@ -153,7 +153,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
             nodesCount: Int,
             blockchainConfigFilename: String,
             preWipeDatabase: Boolean = true,
-            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
     ): Array<PostchainTestNode> {
 
         // 1. Build the BC Setup
@@ -182,7 +182,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected fun createNodesFromSystemSetup(
             sysSetup: SystemSetup,
             preWipeDatabase: Boolean = true,
-            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
     ) {
         this.systemSetup = sysSetup
 
@@ -262,7 +262,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected fun createNodeConfProvidersAndAddToNodeSetup(
             sysSetup: SystemSetup,
             confOverrides: MapConfiguration,
-            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
     ) {
         val peerList = sysSetup.toPeerInfoList()
         confOverrides.setProperty("testpeerinfos", peerList.toTypedArray())
@@ -297,7 +297,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected fun addConfigProviderToNodeSetups(
             systemSetup: SystemSetup,
             configOverrides: MapConfiguration,
-            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
     ) {
         val testName = this::class.simpleName!!
         for (nodeSetup in systemSetup.nodeMap.values) {

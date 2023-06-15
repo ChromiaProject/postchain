@@ -5,6 +5,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProviderFactory
+import net.postchain.core.BaseInfrastructureFactoryProvider
 import net.postchain.devtools.TestNodeConfigProducer
 import org.apache.commons.configuration2.CompositeConfiguration
 import org.apache.commons.configuration2.Configuration
@@ -44,7 +45,7 @@ object NodeConfigurationProviderGenerator {
             configOverrides: MapConfiguration,
             nodeSetup: NodeSetup,
             systemSetup: SystemSetup,
-            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
     ): NodeConfigurationProvider {
 
         val baseConfig = when (systemSetup.nodeConfProvider) {
@@ -68,7 +69,7 @@ object NodeConfigurationProviderGenerator {
         baseConfig: Configuration,
         configOverrides: MapConfiguration,
         nodeSetup: NodeSetup,
-        setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+        setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
     ): NodeConfigurationProvider {
         val compositeConfig = CompositeConfiguration().apply {
             addConfiguration(nodeSetup.nodeSpecificConfigs) // The node might have unique config settings, must add these first to "override"
@@ -78,12 +79,11 @@ object NodeConfigurationProviderGenerator {
 
         val appConfig = AppConfig(compositeConfig)
         val storage = StorageBuilder.buildStorage(appConfig)
-        val provider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
 
         // Run the action, default won't do anything
-        setupAction(appConfig, provider.getConfiguration())
+        setupAction(appConfig)
 
-        return provider
+        return BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig).makeNodeConfigurationProvider(appConfig, storage)
     }
 
     /**

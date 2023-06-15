@@ -23,7 +23,7 @@ class NodeConfigurationProviderFactoryTest {
             on { nodeConfigProvider } doReturn config
         }
         val mockStorage = MockStorage.mockAppContext()
-        assertThat(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage.storage }).isInstanceOf(expected)
+        assertThat(NodeConfigurationProviderFactory.createProvider(appConfig, mockStorage.storage)).isInstanceOf(expected)
     }
 
     companion object {
@@ -32,7 +32,6 @@ class NodeConfigurationProviderFactoryTest {
                 arrayOf("legacy", PropertiesNodeConfigurationProvider::class), // Deprecated and will be removed in 3.6?
                 arrayOf("properties", PropertiesNodeConfigurationProvider::class),
                 arrayOf("Manual", ManualNodeConfigurationProvider::class), // case insensitive
-                arrayOf("ManageD", ManagedNodeConfigurationProvider::class), // case insensitive
         )
     }
 
@@ -44,7 +43,7 @@ class NodeConfigurationProviderFactoryTest {
         val mockStorage = MockStorage.mockAppContext()
 
         assertThrows<UserMistake> {
-            NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage.storage }
+            NodeConfigurationProviderFactory.createProvider(appConfig, mockStorage.storage)
         }
     }
 }

@@ -1,14 +1,18 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base
+package net.postchain.devtools.testinfra
 
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.BaseApiInfrastructure
 import net.postchain.api.rest.infra.RestApiConfig
+import net.postchain.base.BaseBlockchainInfrastructure
+import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
+import net.postchain.config.node.ManualNodeConfigurationProvider
+import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
@@ -16,6 +20,7 @@ import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.BlockchainState
 import net.postchain.core.InfrastructureFactory
+import net.postchain.core.Storage
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
@@ -66,6 +71,10 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 }
 
 class BaseTestInfrastructureFactory : InfrastructureFactory {
+
+    override fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider {
+        return ManualNodeConfigurationProvider(appConfig, storage)
+    }
 
     override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager {
         return DefaultPeerConnectionManager(

@@ -69,10 +69,10 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     val exitOnFatalError: Boolean = getEnvOrBoolean("POSTCHAIN_EXIT_ON_FATAL_ERROR", "exit-on-fatal-error", false)
 
     /**
-     * Configuration provider
+     * Configuration provider. Can only be used with manual mode
      */
     val nodeConfigProvider: String
-        // properties | manual | managed
+        // properties | manual
         get() = config.getEnvOrStringProperty("POSTCHAIN_NODE_CONFIG_PROVIDER", "configuration.provider.node", "properties")
 
     /**

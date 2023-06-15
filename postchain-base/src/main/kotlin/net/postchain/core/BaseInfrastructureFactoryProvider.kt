@@ -2,12 +2,16 @@
 
 package net.postchain.core
 
-import net.postchain.base.BaseTestInfrastructureFactory
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.MasterManagedEbftInfraFactory
 import net.postchain.containers.infra.SubEbftInfraFactory
-import net.postchain.core.Infrastructure.*
+import net.postchain.core.Infrastructure.Ebft
+import net.postchain.core.Infrastructure.EbftContainerSub
+import net.postchain.core.Infrastructure.EbftManaged
+import net.postchain.core.Infrastructure.EbftManagedChromia0
+import net.postchain.core.Infrastructure.EbftManagedChromia0ContainerMaster
+import net.postchain.core.Infrastructure.EbftManagedContainerMaster
 import net.postchain.ebft.BaseEBFTInfrastructureFactory
 import net.postchain.managed.Chromia0InfrastructureFactory
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
@@ -28,9 +32,6 @@ object BaseInfrastructureFactoryProvider : InfrastructureFactoryProvider {
             in EbftManagedContainerMaster.key -> MasterManagedEbftInfraFactory()
             in EbftContainerSub.key -> SubEbftInfraFactory()
             in EbftManagedChromia0ContainerMaster.key -> newInstanceOf(infra) // TODO: [POS-129]: Will be implemented
-
-            // Tests
-            in BaseTest.key -> BaseTestInfrastructureFactory()
 
             else -> newInstanceOf(infra)
         }
