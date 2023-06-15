@@ -11,12 +11,12 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.Storage
 import net.postchain.gtv.GtvFileReader
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.io.File
 import java.nio.file.Paths
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
 
 /* schema name: test0 */
 class CliIntegrationIT {
@@ -125,7 +125,7 @@ class CliIntegrationIT {
     @Test
     fun testAddConfigurationPeersAdded() {
         // add peerinfos for the new signers.
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig, storage)
         val peerinfos = nodeConfigProvider.getConfiguration().peerInfoMap
         for ((_, value) in peerinfos) {
             CommandPeerInfoAdd().parse(arrayOf(

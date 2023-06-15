@@ -45,7 +45,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
             DatabaseAccess.of(ctx).checkCollation(ctx.conn, suppressError = appConfig.databaseSuppressCollationCheck)
         }
 
-        StorageBuilder.setupInitialPeers(appConfig, sharedStorage)
+        StorageInitializer.setupInitialPeers(appConfig, sharedStorage)
 
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
         logPrefix = peerName(appConfig.pubKey)
