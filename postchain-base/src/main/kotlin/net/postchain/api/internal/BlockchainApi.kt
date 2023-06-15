@@ -4,6 +4,7 @@ import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
@@ -13,6 +14,7 @@ import net.postchain.core.BadDataMistake
 import net.postchain.core.BadDataType
 import net.postchain.core.EContext
 import net.postchain.crypto.PubKey
+import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
@@ -25,7 +27,7 @@ object BlockchainApi {
      * @throws IllegalStateException if current height => given height
      * @throws BadDataMistake if signer pubkey does not exist in peerinfos and allowUnknownSigners is false
      */
-    fun addConfiguration(ctx: EContext, height: Long, override: Boolean, config: Gtv, allowUnknownSigners: Boolean = false): Boolean {
+    fun addConfiguration(ctx: EContext, height: Long, override: Boolean, config: Gtv, allowUnknownSigners: Boolean = false, validate: Boolean = true): Boolean {
         val db = DatabaseAccess.of(ctx)
 
         val blockchainRid = db.getBlockchainRid(ctx)
@@ -35,8 +37,15 @@ object BlockchainApi {
             throw IllegalStateException("Cannot add configuration at $height, since last block is already at $lastBlockHeight")
         }
 
+        val configHash = GtvToBlockchainRidFactory.calculateBlockchainRid(config, ::sha256Digest)
+        if (configurationExists(ctx, configHash.data)) {
+            throw IllegalStateException("Configuration already exists: $configHash")
+        }
+
         return if (override || db.getConfigurationData(ctx, height) == null) {
-            GTXBlockchainConfigurationFactory.validateConfiguration(config, blockchainRid)
+            if (validate) {
+                GTXBlockchainConfigurationFactory.validateConfiguration(config, blockchainRid)
+            }
             db.addConfigurationData(ctx, height, GtvEncoder.encodeGtv(config))
             addFutureSignersAsReplicas(ctx, db, height, config, allowUnknownSigners)
             true
@@ -83,6 +92,7 @@ object BlockchainApi {
             DatabaseAccess.of(ctx).listConfigurations(ctx)
 
     fun listConfigurationHashes(ctx: EContext) = DatabaseAccess.of(ctx).listConfigurationHashes(ctx)
+
     fun configurationExists(ctx: EContext, hash: ByteArray) = DatabaseAccess.of(ctx).configurationHashExists(ctx, hash)
 
     /** When a new (height > 0) configuration is added, we automatically add signers in that config to table
@@ -114,14 +124,16 @@ object BlockchainApi {
     /**
      * @return `true` if chain was initialized, `false` if already existed and `override` is `false`
      */
-    fun initializeBlockchain(ctx: EContext, brid: BlockchainRid, override: Boolean, config: Gtv, givenDependencies: List<BlockchainRelatedInfo> = listOf()): Boolean {
+    fun initializeBlockchain(ctx: EContext, brid: BlockchainRid, override: Boolean, config: Gtv, givenDependencies: List<BlockchainRelatedInfo> = listOf(), validate: Boolean = true): Boolean {
         val db = DatabaseAccess.of(ctx)
 
         return if (override || db.getBlockchainRid(ctx) == null) {
             db.initializeBlockchain(ctx, brid)
             DependenciesValidator.validateBlockchainRids(ctx, givenDependencies)
             // TODO: Blockchain dependencies [DependenciesValidator#validateBlockchainRids]
-            GTXBlockchainConfigurationFactory.validateConfiguration(config, brid)
+            if (validate) {
+                GTXBlockchainConfigurationFactory.validateConfiguration(config, brid)
+            }
             db.addConfigurationData(ctx, 0, GtvEncoder.encodeGtv(config))
             true
         } else {

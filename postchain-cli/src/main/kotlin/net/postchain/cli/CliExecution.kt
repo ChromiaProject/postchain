@@ -25,19 +25,10 @@ object CliExecution {
     fun addBlockchain(
             appConfig: AppConfig,
             chainId: Long,
-            blockchainConfigGtv: Gtv,
-            mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
-            givenDependencies: List<BlockchainRelatedInfo> = listOf()
-    ): BlockchainRid {
-        return addBlockchainGtv(appConfig, chainId, blockchainConfigGtv, mode, givenDependencies)
-    }
-
-    private fun addBlockchainGtv(
-            appConfig: AppConfig,
-            chainId: Long,
             blockchainConfig: Gtv,
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
-            givenDependencies: List<BlockchainRelatedInfo> = listOf()
+            givenDependencies: List<BlockchainRelatedInfo> = listOf(),
+            validate: Boolean = true
     ): BlockchainRid {
         // If brid is specified in nodeConfigFile, use that instead of calculating it from blockchain configuration.
         val keyString = "brid.chainid.$chainId"
@@ -47,7 +38,7 @@ object CliExecution {
         return runStorageCommand(appConfig, chainId) { ctx ->
             when (mode) {
                 AlreadyExistMode.ERROR -> {
-                    if (BlockchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, givenDependencies)) {
+                    if (BlockchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, givenDependencies, validate)) {
                         brid
                     } else {
                         throw CliException(
@@ -57,12 +48,12 @@ object CliExecution {
                 }
 
                 AlreadyExistMode.FORCE -> {
-                    BlockchainApi.initializeBlockchain(ctx, brid, true, blockchainConfig, givenDependencies)
+                    BlockchainApi.initializeBlockchain(ctx, brid, true, blockchainConfig, givenDependencies, validate)
                     brid
                 }
 
                 AlreadyExistMode.IGNORE -> {
-                    BlockchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, givenDependencies)
+                    BlockchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, givenDependencies, validate)
                     brid
                 }
             }
@@ -74,14 +65,15 @@ object CliExecution {
             blockchainConfig: Gtv,
             chainId: Long,
             height: Long,
-            mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
-            allowUnknownSigners: Boolean
+            mode: AlreadyExistMode,
+            allowUnknownSigners: Boolean,
+            validate: Boolean
     ) {
         runStorageCommand(appConfig, chainId) { ctx: EContext ->
             try {
                 when (mode) {
                     AlreadyExistMode.ERROR -> {
-                        if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners)) {
+                        if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners, validate)) {
                             throw CliException(
                                     "Blockchain configuration of chainId $chainId at " +
                                             "height $height already exists. Use -f flag to force addition."
@@ -90,11 +82,11 @@ object CliExecution {
                     }
 
                     AlreadyExistMode.FORCE -> {
-                        BlockchainApi.addConfiguration(ctx, height, true, blockchainConfig, allowUnknownSigners)
+                        BlockchainApi.addConfiguration(ctx, height, true, blockchainConfig, allowUnknownSigners, validate)
                     }
 
                     AlreadyExistMode.IGNORE -> {
-                        if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners))
+                        if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners, validate))
                             println("Blockchain configuration of chainId $chainId at height $height already exists")
                     }
                 }

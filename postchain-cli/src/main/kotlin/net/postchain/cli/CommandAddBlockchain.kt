@@ -10,6 +10,7 @@ import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.forceOption
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.validationOption
 import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvFileReader
 
@@ -23,6 +24,7 @@ class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add b
 
     private val force by forceOption().help("Force the addition of already existed blockchain-rid (by chain-id)")
 
+    private val validation by validationOption()
 
     override fun run() {
         withDbVersionMismatch {
@@ -34,7 +36,7 @@ class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add b
             }
 
             val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
-            CliExecution.addBlockchain(appConfig, chainId, gtv, force)
+            CliExecution.addBlockchain(appConfig, chainId, gtv, force, validate = validation)
             println("Configuration has been added successfully")
         }
     }
