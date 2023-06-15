@@ -51,19 +51,20 @@ class SubQueryHandler(private val chainId: Long,
                     } else {
                         blockQueries.getBlock(it, true)
                     }
-                }?.whenCompleteUnwrapped { response, exception ->
-                    if (exception == null) {
-                        subConnectionManager.sendMessageToMaster(chainId, MsBlockAtHeightResponse(
-                                message.requestId,
-                                response
-                        ))
-                    } else {
-                        subConnectionManager.sendMessageToMaster(chainId, MsQueryFailure(
-                                message.requestId,
-                                exception.toString()
-                        ))
-                    }
                 } ?: CompletableFuture.failedFuture(UserMistake("blockchain ${message.targetBlockchainRid} not found")))
+                        .whenCompleteUnwrapped { response, exception ->
+                            if (exception == null) {
+                                subConnectionManager.sendMessageToMaster(chainId, MsBlockAtHeightResponse(
+                                        message.requestId,
+                                        response
+                                ))
+                            } else {
+                                subConnectionManager.sendMessageToMaster(chainId, MsQueryFailure(
+                                        message.requestId,
+                                        exception.toString()
+                                ))
+                            }
+                        }
             }
         }
     }
