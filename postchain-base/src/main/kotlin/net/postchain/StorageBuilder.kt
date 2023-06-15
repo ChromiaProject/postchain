@@ -16,9 +16,9 @@ object StorageBuilder {
     private const val DB_VERSION = 8
 
     fun buildStorage(appConfig: AppConfig, maxWaitWrite: Duration = Duration.ZERO, maxWriteTotal: Int = 2,
-                     wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION): Storage {
+                     wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION, allowUpgrade: Boolean = true): Storage {
         val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
-        initStorage(appConfig, wipeDatabase, db, expectedDbVersion)
+        initStorage(appConfig, wipeDatabase, db, expectedDbVersion, allowUpgrade)
 
         // Read DataSource
         val readDataSource = createBasicDataSource(appConfig).apply {
@@ -43,7 +43,7 @@ object StorageBuilder {
                 db.isSavepointSupported())
     }
 
-    private fun initStorage(appConfig: AppConfig, wipeDatabase: Boolean, db: DatabaseAccess, expectedDbVersion: Int) {
+    private fun initStorage(appConfig: AppConfig, wipeDatabase: Boolean, db: DatabaseAccess, expectedDbVersion: Int, allowUpgrade: Boolean) {
         val initDataSource = createBasicDataSource(appConfig)
 
         if (wipeDatabase) {
@@ -51,15 +51,8 @@ object StorageBuilder {
         }
 
         createSchemaIfNotExists(initDataSource, appConfig.databaseSchema, db)
-        createTablesIfNotExists(initDataSource, db, expectedDbVersion)
+        createTablesIfNotExists(initDataSource, db, expectedDbVersion, allowUpgrade)
         initDataSource.close()
-    }
-
-    private fun setCurrentSchema(dataSource: DataSource, schema: String, db: DatabaseAccess) {
-        dataSource.connection.use { connection ->
-            db.setCurrentSchema(connection, schema)
-            connection.commit()
-        }
     }
 
     private fun createBasicDataSource(appConfig: AppConfig, withSchema: Boolean = true): BasicDataSource {
@@ -113,9 +106,9 @@ object StorageBuilder {
         }
     }
 
-    private fun createTablesIfNotExists(dataSource: DataSource, db: DatabaseAccess, expectedDbVersion: Int) {
+    private fun createTablesIfNotExists(dataSource: DataSource, db: DatabaseAccess, expectedDbVersion: Int, allowUpgrade: Boolean) {
         dataSource.connection.use { connection ->
-            db.initializeApp(connection, expectedDbVersion)
+            db.initializeApp(connection, expectedDbVersion, allowUpgrade)
             connection.commit()
         }
     }

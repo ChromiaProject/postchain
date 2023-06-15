@@ -40,7 +40,7 @@ class CommandExportBlockchain : CliktCommand(name = "export-blockchain", help = 
 
     override fun run() {
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
-        StorageBuilder.buildStorage(appConfig).use { storage ->
+        StorageBuilder.buildStorage(appConfig, allowUpgrade = false).use { storage ->
             ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite,
                     fromHeight = fromHeight, upToHeight = upToHeight)
         }

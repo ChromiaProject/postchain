@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.StorageBuilder
 import net.postchain.api.internal.BlockchainApi
+import net.postchain.base.runStorageCommand
 import net.postchain.base.withWriteConnection
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
@@ -21,9 +22,8 @@ class CommandDeleteBlockchain : CliktCommand(name = "delete-blockchain", help = 
     override fun run() {
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         try {
-            withWriteConnection(StorageBuilder.buildStorage(appConfig), chainId) { ctx ->
-                BlockchainApi.deleteBlockchain(ctx)
-                true
+            runStorageCommand(appConfig, chainId) {
+                BlockchainApi.deleteBlockchain(it)
             }
             println("OK: Blockchain was deleted")
         } catch (e: UserMistake) {

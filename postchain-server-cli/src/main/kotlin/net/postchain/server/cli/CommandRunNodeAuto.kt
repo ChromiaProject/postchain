@@ -92,7 +92,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
                         }
 
                         lastHeights[chainId] = if (chainExists) {
-                            runStorageCommand(appConfig, chainId) { ctx: EContext ->
+                            runStorageCommand(appConfig, chainId, true) { ctx: EContext ->
                                 BlockchainApi.getLastBlockHeight(ctx)
                             }
                         } else -1L
@@ -141,7 +141,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
     }
 
     private fun findBlockchainRid(appConfig: AppConfig, chainId: Long): BlockchainRid? {
-        return runStorageCommand(appConfig, chainId) { ctx: EContext ->
+        return runStorageCommand(appConfig, chainId, true) { ctx: EContext ->
             DatabaseAccess.of(ctx).getBlockchainRid(ctx)
         }
     }
@@ -156,7 +156,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
         val brid = if (appConfig.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.getString(keyString)) else
             GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, appConfig.cryptoSystem)
 
-        return runStorageCommand(appConfig, chainId) { ctx ->
+        return runStorageCommand(appConfig, chainId, true) { ctx ->
             BlockchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, listOf())
             brid
         }
@@ -168,7 +168,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
             chainId: Long,
             height: Long
     ) {
-        runStorageCommand(appConfig, chainId) { ctx: EContext ->
+        runStorageCommand(appConfig, chainId, true) { ctx: EContext ->
             try {
                 if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners = false))
                     println("Blockchain configuration of chainId $chainId at height $height already exists")
