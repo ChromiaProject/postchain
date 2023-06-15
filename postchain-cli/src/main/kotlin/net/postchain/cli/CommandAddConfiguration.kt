@@ -23,6 +23,7 @@ import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.forceOption
 import net.postchain.cli.util.nodeConfigOption
+import net.postchain.cli.util.validationOption
 import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvFileReader
 
@@ -57,6 +58,8 @@ class CommandAddConfiguration : CliktCommand(
 
     private val allowUnknownSigners by option("-a", "--allow-unknown-signers", help = "Allow signers that are not in the list of peerInfos.").flag()
 
+    private val validation by validationOption()
+
     override fun run() {
         withDbVersionMismatch {
             val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
@@ -77,7 +80,7 @@ class CommandAddConfiguration : CliktCommand(
 
             runOnChain(appConfig, chainId) {
                 try {
-                    CliExecution.addConfiguration(appConfig, gtv, chainId, height0, force, allowUnknownSigners)
+                    CliExecution.addConfiguration(appConfig, gtv, chainId, height0, force, allowUnknownSigners, validation)
                     println("Configuration has been added successfully")
                 } catch (e: CliException) {
                     println(e.message)

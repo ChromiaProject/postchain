@@ -25,7 +25,7 @@ object BlockchainApi {
      * @throws IllegalStateException if current height => given height
      * @throws BadDataMistake if signer pubkey does not exist in peerinfos and allowUnknownSigners is false
      */
-    fun addConfiguration(ctx: EContext, height: Long, override: Boolean, config: Gtv, allowUnknownSigners: Boolean = false): Boolean {
+    fun addConfiguration(ctx: EContext, height: Long, override: Boolean, config: Gtv, allowUnknownSigners: Boolean = false, validate: Boolean = true): Boolean {
         val db = DatabaseAccess.of(ctx)
 
         val blockchainRid = db.getBlockchainRid(ctx)
@@ -36,7 +36,9 @@ object BlockchainApi {
         }
 
         return if (override || db.getConfigurationData(ctx, height) == null) {
-            GTXBlockchainConfigurationFactory.validateConfiguration(config, blockchainRid)
+            if (validate) {
+                GTXBlockchainConfigurationFactory.validateConfiguration(config, blockchainRid)
+            }
             db.addConfigurationData(ctx, height, GtvEncoder.encodeGtv(config))
             addFutureSignersAsReplicas(ctx, db, height, config, allowUnknownSigners)
             true
@@ -114,14 +116,16 @@ object BlockchainApi {
     /**
      * @return `true` if chain was initialized, `false` if already existed and `override` is `false`
      */
-    fun initializeBlockchain(ctx: EContext, brid: BlockchainRid, override: Boolean, config: Gtv, givenDependencies: List<BlockchainRelatedInfo> = listOf()): Boolean {
+    fun initializeBlockchain(ctx: EContext, brid: BlockchainRid, override: Boolean, config: Gtv, givenDependencies: List<BlockchainRelatedInfo> = listOf(), validate: Boolean = true): Boolean {
         val db = DatabaseAccess.of(ctx)
 
         return if (override || db.getBlockchainRid(ctx) == null) {
             db.initializeBlockchain(ctx, brid)
             DependenciesValidator.validateBlockchainRids(ctx, givenDependencies)
             // TODO: Blockchain dependencies [DependenciesValidator#validateBlockchainRids]
-            GTXBlockchainConfigurationFactory.validateConfiguration(config, brid)
+            if (validate) {
+                GTXBlockchainConfigurationFactory.validateConfiguration(config, brid)
+            }
             db.addConfigurationData(ctx, 0, GtvEncoder.encodeGtv(config))
             true
         } else {

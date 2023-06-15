@@ -35,6 +35,9 @@ fun CliktCommand.chainIdOption() = option("-cid", "--chain-id", help = "Local nu
 fun CliktCommand.forceOption() = option("-f", "--force").flag()
         .convert { if (it) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR }
 
+fun CliktCommand.validationOption() = option("-v", "--validation", help = "Skip validation")
+        .flag("--no-validation", default = true)
+
 fun CliktCommand.heightOption() = option("-h", "--height", envvar = "POSTCHAIN_HEIGHT").long()
 
 fun CliktCommand.hostOption() = option("-h", "--host", help = "Host", envvar = "POSTCHAIN_HOST")
