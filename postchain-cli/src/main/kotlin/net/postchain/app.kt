@@ -22,7 +22,6 @@ import net.postchain.cli.CommandPeerInfoImport
 import net.postchain.cli.CommandPeerInfoList
 import net.postchain.cli.CommandPeerInfoRemove
 import net.postchain.cli.CommandRemoveConfiguration
-import net.postchain.cli.CommandUpgradeDb
 import net.postchain.cli.CommandWipeDb
 
 
@@ -57,7 +56,6 @@ fun main(args: Array<String>) {
                     CommandPeerInfoImport(),
                     CommandPeerInfoList(),
                     CommandPeerInfoRemove(),
-                    CommandUpgradeDb(),
                     CommandWipeDb()
             )
             .main(args)
