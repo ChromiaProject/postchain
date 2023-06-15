@@ -9,7 +9,6 @@ import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.core.BlockchainState
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
@@ -30,7 +29,6 @@ open class DefaultMasterSyncInfra(
      * We create a new [MasterCommunicationManager] for every new BC process we make.
      */
     override fun makeMasterBlockchainProcess(
-            processName: BlockchainProcessName,
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
@@ -47,7 +45,6 @@ open class DefaultMasterSyncInfra(
                 peersCommConfigFactory,
                 connectionManager,
                 masterConnectionManager,
-                processName,
                 afterSubnodeCommitListeners
         ).apply { init() }
 
@@ -56,7 +53,6 @@ open class DefaultMasterSyncInfra(
                 containerNodeConfig,
                 targetContainer.containerPortMapping[containerNodeConfig.subnodeRestApiPort]
                         ?: throw ProgrammerMistake("No port mapping for subnode REST API"),
-                processName,
                 chainId,
                 blockchainRid,
                 blockchainState,

@@ -29,11 +29,9 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.logging.CONTAINER_NAME_TAG
-import net.postchain.logging.NODE_PUBKEY_TAG
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
@@ -63,9 +61,8 @@ open class ContainerManagedBlockchainProcessManager(
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableMapOf<ContainerName, PostchainContainer>() // { ContainerName -> PsContainer }
-    private val containerHealthcheckHandler = ContainerHealthcheckHandler(appConfig, nodeName(), dockerClient,
-            ::containers, ::removeBlockchainProcess)
-    private val containerJobHandler = ContainerJobHandler(appConfig, nodeDiagnosticContext, nodeName(), dockerClient,
+    private val containerHealthcheckHandler = ContainerHealthcheckHandler(dockerClient, ::containers, ::removeBlockchainProcess)
+    private val containerJobHandler = ContainerJobHandler(appConfig, nodeDiagnosticContext, dockerClient,
             ::directoryDataSource, ::containers, ::terminateBlockchainProcess, ::createBlockchainProcess)
     private val containerJobManager = DefaultContainerJobManager(containerNodeConfig, containerJobHandler, containerHealthcheckHandler)
     private val runningInContainer = System.getenv("POSTCHAIN_RUNNING_IN_CONTAINER").toBoolean()
@@ -84,19 +81,17 @@ open class ContainerManagedBlockchainProcessManager(
         }
         Runtime.getRuntime().addShutdownHook(
                 Thread {
-                    withLoggingContext(NODE_PUBKEY_TAG to appConfig.pubKey) {
-                        logger.info("Shutting down master node")
-                        shutdown()
-                        logger.info("Stopping subnode containers...")
-                        for ((name, psContainer) in postchainContainers) {
-                            withLoggingContext(CONTAINER_NAME_TAG to psContainer.containerName.name) {
-                                logger.info("Stopping subnode $name...")
-                                psContainer.stop()
-                                dockerClient.stopContainer(psContainer.containerId, 10)
-                            }
+                    logger.info("Shutting down master node")
+                    shutdown()
+                    logger.info("Stopping subnode containers...")
+                    for ((name, psContainer) in postchainContainers) {
+                        withLoggingContext(CONTAINER_NAME_TAG to psContainer.containerName.name) {
+                            logger.info("Stopping subnode $name...")
+                            psContainer.stop()
+                            dockerClient.stopContainer(psContainer.containerId, 10)
                         }
-                        logger.info("Stopping subnode containers done")
                     }
+                    logger.info("Stopping subnode containers done")
                 }
         )
     }
@@ -113,7 +108,7 @@ open class ContainerManagedBlockchainProcessManager(
                 val factory = try {
                     newInstanceOf<GTXBlockchainConfigurationFactory>(factoryName)
                 } catch (e: Exception) {
-                    throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId " +
+                    throw UserMistake("Can't start blockchain chainId: $chainId " +
                             "due to configuration is wrong. Check /configurationfactory value: $factoryName." +
                             "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass) for chain0.", e)
                 }
@@ -127,7 +122,7 @@ open class ContainerManagedBlockchainProcessManager(
     override fun buildAfterCommitHandler(chainId: Long, blockchainConfig: BlockchainConfiguration): AfterCommitHandler {
         fun chain0AfterCommitHandler(blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long): Boolean {
             return try {
-                rTrace("Before", chainId, blockTrace)
+                rTrace("Before", blockTrace)
 
                 // If chain is already being stopped/restarted by another thread we will not get the lock and may return
                 if (!tryAcquireChainLock(chainId)) return false
@@ -137,17 +132,17 @@ open class ContainerManagedBlockchainProcessManager(
                 // Preloading blockchain configuration
                 preloadChain0Configuration()
 
-                rTrace("Sync", chainId, blockTrace)
+                rTrace("Sync", blockTrace)
                 val res = containerJobManager.withLock {
                     // Reload/start/stops blockchains
-                    rTrace("about to restart chain0", chainId, blockTrace)
+                    rTrace("about to restart chain0", blockTrace)
                     // Checking out for chain0 configuration changes
                     val reloadChain0 = isConfigurationChanged(CHAIN0)
                     stopStartBlockchains(reloadChain0)
                     reloadChain0
                 }
 
-                rTrace("After", chainId, blockTrace)
+                rTrace("After", blockTrace)
                 res
             } catch (e: Exception) {
                 logger.error(e) { "Exception in RestartHandler: $e" }
@@ -173,17 +168,17 @@ open class ContainerManagedBlockchainProcessManager(
 
         // Chain0
         if (reloadChain0) {
-            logger.debug("[${nodeName()}]: ContainerJob -- Restart chain0")
+            logger.debug("ContainerJob -- Restart chain0")
             startBlockchainAsync(CHAIN0, null)
         }
 
         // Stopping launched blockchains
         masterLaunched.keys.filterNot(chainIdsToLaunch::contains).forEach {
-            logger.debug { "[${nodeName()}]: ContainerJob -- Stop system chain: $it" }
+            logger.debug { "ContainerJob -- Stop system chain: $it" }
             stopBlockchainAsync(it, null)
         }
         subnodeLaunched.keys.filterNot(chainIdsToLaunch::contains).forEach {
-            logger.debug { "[${nodeName()}]: ContainerJob -- Stop subnode chain: ${getChain(it)}" }
+            logger.debug { "ContainerJob -- Stop subnode chain: ${getChain(it)}" }
             containerJobManager.stopChain(getChain(it))
         }
 
@@ -192,19 +187,19 @@ open class ContainerManagedBlockchainProcessManager(
             if (it.system) {
                 val process = masterLaunched[it.chainId]
                 if (process == null) {
-                    logger.debug { "[${nodeName()}]: ContainerJob -- Start system chain: ${it.chainId}" }
+                    logger.debug { "ContainerJob -- Start system chain: ${it.chainId}" }
                     startBlockchainAsync(it.chainId, null)
                 } else if (process.getBlockchainState() != it.state) {
-                    logger.debug { "[${nodeName()}]: ContainerJob -- Restart system chain due to state change: ${it.chainId}" }
+                    logger.debug { "ContainerJob -- Restart system chain due to state change: ${it.chainId}" }
                     startBlockchainAsync(it.chainId, null)
                 }
             } else {
                 val process = subnodeLaunched[it.chainId]
                 if (process == null) {
-                    logger.debug { "[${nodeName()}]: ContainerJob -- Start subnode chain: ${getChain(it.chainId)}" }
+                    logger.debug { "ContainerJob -- Start subnode chain: ${getChain(it.chainId)}" }
                     containerJobManager.startChain(getChain(it.chainId))
                 } else if (process.blockchainState != it.state) {
-                    logger.debug { "[${nodeName()}]: ContainerJob -- Restart subnode chain due to state change: ${getChain(it.chainId)}" }
+                    logger.debug { "ContainerJob -- Restart subnode chain due to state change: ${getChain(it.chainId)}" }
                     containerJobManager.startChain(getChain(it.chainId))
                 }
             }
@@ -221,7 +216,6 @@ open class ContainerManagedBlockchainProcessManager(
     private fun createBlockchainProcess(chain: Chain, psContainer: PostchainContainer): ContainerBlockchainProcess? {
         val blockchainState = directoryDataSource.getBlockchainState(chain.brid)
         val process = masterBlockchainInfra.makeMasterBlockchainProcess(
-                BlockchainProcessName(appConfig.pubKey, chain.brid),
                 chain.chainId,
                 chain.brid,
                 directoryDataSource,

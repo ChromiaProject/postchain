@@ -1,12 +1,13 @@
 package net.postchain.network.mastersub.master
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.block.BlockQueriesProvider
-import net.postchain.debug.BlockchainProcessName
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.network.common.ChainsWithOneConnection
 import net.postchain.network.mastersub.MasterSubQueryManager
@@ -47,27 +48,26 @@ class DefaultMasterConnectionManager(
     private val queryConnections = mutableMapOf<Int, MasterConnection>()
 
     @Synchronized
-    override fun initSubChainConnection(processName: BlockchainProcessName, subChainConfig: SubChainConfig) {
-        val logMsg = subChainConfig.log()
-        logger.debug { "$processName: connectSubChain() - Initializing subnode chain connection: $logMsg" }
+    override fun initSubChainConnection(subChainConfig: SubChainConfig) {
+        logger.debug("connectSubChain() - Initializing subnode chain connection")
 
         if (isShutDown) {
             logger.warn(
-                    "$processName: connectSubChain() - Already shut down: connecting subnode chains is " +
-                            "not possible. $logMsg"
+                    "connectSubChain() - Already shut down: connecting subnode chains is " +
+                            "not possible."
             )
         } else {
             if (chainsWithOneSubConnection.hasChain(subChainConfig.blockchainRid)) {
                 // TODO: Olle: This needs some explanation. Why do we "disconnect" and
                 //  then "connect" on an existing connection? Do we expect it to be stale?
                 logger.info(
-                        "$processName: connectSubChain() - This chain is already connected, disconnecting " +
-                                "old sub-node connection first. $logMsg"
+                        "connectSubChain() - This chain is already connected, disconnecting " +
+                                "old sub-node connection first."
                 )
-                disconnectSubChain(processName, subChainConfig.chainId)
+                disconnectSubChain(subChainConfig.chainId)
             }
             chainsWithOneSubConnection.add(ChainWithOneSubConnection(subChainConfig))
-            logger.debug { "$processName: connectSubChain() - Subnode chain connection initialized: $logMsg" }
+            logger.debug("connectSubChain() - Subnode chain connection initialized")
         }
     }
 
@@ -91,15 +91,15 @@ class DefaultMasterConnectionManager(
     }
 
     @Synchronized
-    override fun disconnectSubChain(processName: BlockchainProcessName, chainId: Long) {
-        logger.debug { "$processName: Disconnecting subnode chain: $chainId" }
+    override fun disconnectSubChain(chainId: Long) {
+        logger.debug("Disconnecting subnode chain")
 
         val chain = chainsWithOneSubConnection.get(chainId)
         if (chain != null) {
             chainsWithOneSubConnection.removeAndClose(chain.config.blockchainRid)
-            logger.debug { "$processName: Subnode chain disconnected: $chainId" }
+            logger.debug("Subnode chain disconnected")
         } else {
-            logger.debug { "$processName: Subnode chain is not connected: $chainId" }
+            logger.debug("Subnode chain is not connected")
         }
     }
 
@@ -116,26 +116,27 @@ class DefaultMasterConnectionManager(
             return MasterQueryHandler({ message -> connection.sendPacket { MsCodec.encode(message) } },
                     masterSubQueryManager, dataSource, blockQueriesProvider)
         } else {
-            val processName = buildProcessName(descriptor.blockchainRid)
             val chain = chainsWithOneSubConnection.get(descriptor.blockchainRid)
-            return when {
-                chain == null -> {
-                    logger.warn("$processName: Sub chain not found by blockchainRid = ${descriptor.blockchainRid}")
-                    connection.close()
-                    null
-                }
+            withLoggingContext(BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex()) {
+                return when {
+                    chain == null -> {
+                        logger.warn("Sub chain not found")
+                        connection.close()
+                        null
+                    }
 
-                chain.getConnection() != null -> {
-                    logger.warn { "$processName: Subnode already connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
-                    chain.closeConnection() // Close old connection here and store a new one
-                    chain.setConnection(connection)
-                    chain.config.messageHandler
-                }
+                    chain.getConnection() != null -> {
+                        logger.warn("Subnode already connected")
+                        chain.closeConnection() // Close old connection here and store a new one
+                        chain.setConnection(connection)
+                        chain.config.messageHandler
+                    }
 
-                else -> {
-                    logger.info { "$processName: Subnode connected: blockchainRid: ${descriptor.blockchainRid.toShortHex()}" }
-                    chain.setConnection(connection)
-                    chain.config.messageHandler
+                    else -> {
+                        logger.info("Subnode connected")
+                        chain.setConnection(connection)
+                        chain.config.messageHandler
+                    }
                 }
             }
         }
@@ -150,18 +151,19 @@ class DefaultMasterConnectionManager(
             logger.debug { "Disconnected query runner for container: ${descriptor.containerIID}" }
             queryConnections.remove(descriptor.containerIID)?.close()
         } else {
-            val processName = buildProcessName(descriptor.blockchainRid)
-            logger.debug { "$processName: Subnode disconnected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
+            withLoggingContext(BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex()) {
+                logger.debug("Subnode disconnected")
 
-            val chain = chainsWithOneSubConnection.get(descriptor.blockchainRid)
-            if (chain == null) {
-                connection.close()
-                logger.warn("$processName: Subnode chain not found by blockchainRid = ${descriptor.blockchainRid.toShortHex()}")
-            } else {
-                if (chain.getConnection() !== connection) { // Don't get it, is this expected?
+                val chain = chainsWithOneSubConnection.get(descriptor.blockchainRid)
+                if (chain == null) {
                     connection.close()
+                    logger.warn("Subnode chain not found")
+                } else {
+                    if (chain.getConnection() !== connection) { // Don't get it, is this expected?
+                        connection.close()
+                    }
+                    chain.removeAndCloseConnection()
                 }
-                chain.removeAndCloseConnection()
             }
         }
     }
@@ -177,8 +179,4 @@ class DefaultMasterConnectionManager(
         // The shutdown is intentionally called outside the sync-block to avoid deadlock
         masterConnector.shutdown()
     }
-
-    private fun buildProcessName(blockchainRid: BlockchainRid): String = BlockchainProcessName(
-            appConfig.pubKey, blockchainRid
-    ).toString()
 }

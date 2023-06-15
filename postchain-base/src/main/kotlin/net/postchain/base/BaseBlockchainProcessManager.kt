@@ -20,14 +20,12 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
 import net.postchain.crypto.sha256Digest
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.gtv.GtvFactory
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
-import net.postchain.logging.NODE_PUBKEY_TAG
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
@@ -92,12 +90,14 @@ open class BaseBlockchainProcessManager(
     }
 
     private fun startBlockchainAsyncInternal(chainId: Long, bTrace: BlockTrace?, loadNextPendingConfig: Boolean) {
-        startAsyncInfo("Enqueue async starting of blockchain", chainId)
+        logger.info { "startBlockchainAsync() - Enqueue async starting of blockchain with chainId: $chainId" }
         executor.execute {
-            try {
-                startBlockchainInternal(chainId, bTrace, loadNextPendingConfig)
-            } catch (e: Exception) {
-                logger.error(e) { e.message }
+            withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
+                try {
+                    startBlockchainInternal(chainId, bTrace, loadNextPendingConfig)
+                } catch (e: Exception) {
+                    logger.error(e) { e.message }
+                }
             }
         }
     }
@@ -108,12 +108,14 @@ open class BaseBlockchainProcessManager(
      * @param chainId is the chain to stop.
      */
     protected fun stopBlockchainAsync(chainId: Long, bTrace: BlockTrace?) {
-        startAsyncInfo("Enqueue async stopping of blockchain", chainId)
+        logger.info { "stopBlockchainAsync() - Enqueue async stopping of blockchain with chainId: $chainId" }
         executor.execute {
-            try {
-                stopBlockchain(chainId, bTrace)
-            } catch (e: Exception) {
-                logger.error(e) { e.message }
+            withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
+                try {
+                    stopBlockchain(chainId, bTrace)
+                } catch (e: Exception) {
+                    logger.error(e) { e.message }
+                }
             }
         }
     }
@@ -126,60 +128,56 @@ open class BaseBlockchainProcessManager(
      * @return the Blockchain's RID if successful
      * @throws UserMistake if failed
      */
-    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid =
-            startBlockchainInternal(chainId, bTrace, false)
+    override fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid = withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
+        startBlockchainInternal(chainId, bTrace, false)
+    }
 
     private fun startBlockchainInternal(chainId: Long, bTrace: BlockTrace?, loadNextPendingConfig: Boolean): BlockchainRid {
         chainStartAndStopSynchronizers.getOrPut(chainId) { ReentrantLock() }.withLock {
             val blockchainRid = synchronized(synchronizer) {
-                withLoggingContext(
-                        NODE_PUBKEY_TAG to appConfig.pubKey,
-                        CHAIN_IID_TAG to chainId.toString()
-                ) {
-                    startDebug("Begin by stopping blockchain", chainId, bTrace)
-                    stopBlockchain(chainId, bTrace, true)
+                startDebug("Begin by stopping blockchain", bTrace)
+                stopBlockchain(chainId, bTrace, true)
 
-                    startInfo("Starting of blockchain", chainId)
+                logger.info("Starting of blockchain")
 
+                try {
+                    val initialEContext = blockBuilderStorage.openWriteConnection(chainId)
+                    val blockHeight = blockchainConfigProvider.getActiveBlocksHeight(initialEContext, DatabaseAccess.of(initialEContext))
+
+                    val rawConfigurationData = blockchainConfigProvider.getActiveBlocksConfiguration(initialEContext, chainId, loadNextPendingConfig)
+                            ?: throw UserMistake("Can't start blockchain chainId: $chainId due to configuration is absent")
                     try {
-                        val initialEContext = blockBuilderStorage.openWriteConnection(chainId)
-                        val blockHeight = blockchainConfigProvider.getActiveBlocksHeight(initialEContext, DatabaseAccess.of(initialEContext))
-
-                        val rawConfigurationData = blockchainConfigProvider.getActiveBlocksConfiguration(initialEContext, chainId, loadNextPendingConfig)
-                                ?: throw UserMistake("[${nodeName()}]: Can't start blockchain chainId: $chainId due to configuration is absent")
-                        try {
-                            val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
-                                    rawConfigurationData, initialEContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory(chainId)
-                            ).also {
-                                DependenciesValidator.validateBlockchainRids(initialEContext, it.blockchainDependencies)
-                                it.initializeModules(postchainContext)
-                            }
-
-                            // Initial configuration will be committed immediately
-                            if (DatabaseAccess.of(initialEContext).getLastBlockHeight(initialEContext) == -1L) {
-                                blockBuilderStorage.closeWriteConnection(initialEContext, true)
-                            }
-                            afterMakeConfiguration(chainId, blockchainConfig)
-                            withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()) {
-                                startBlockchainImpl(blockchainConfig, chainId, bTrace, initialEContext)
-                            }
-                            blockchainConfig.blockchainRid
-                        } catch (e: Exception) {
-                            try {
-                                if (hasBuiltInitialBlock(initialEContext)) {
-                                    revertConfiguration(chainId, bTrace, initialEContext, blockHeight, rawConfigurationData)
-                                }
-                            } catch (e: Exception) {
-                                logger.warn(e) { "Unable to revert configuration: $e" }
-                            }
-
-                            addToErrorQueue(chainId, e)
-
-                            throw e
+                        val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
+                                rawConfigurationData, initialEContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory(chainId)
+                        ).also {
+                            DependenciesValidator.validateBlockchainRids(initialEContext, it.blockchainDependencies)
+                            it.initializeModules(postchainContext)
                         }
-                    } finally {
-                        scheduledForStart.remove(chainId)
+
+                        // Initial configuration will be committed immediately
+                        if (DatabaseAccess.of(initialEContext).getLastBlockHeight(initialEContext) == -1L) {
+                            blockBuilderStorage.closeWriteConnection(initialEContext, true)
+                        }
+                        afterMakeConfiguration(chainId, blockchainConfig)
+                        withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()) {
+                            startBlockchainImpl(blockchainConfig, chainId, bTrace, initialEContext)
+                        }
+                        blockchainConfig.blockchainRid
+                    } catch (e: Exception) {
+                        try {
+                            if (hasBuiltInitialBlock(initialEContext)) {
+                                revertConfiguration(chainId, bTrace, initialEContext, blockHeight, rawConfigurationData)
+                            }
+                        } catch (e: Exception) {
+                            logger.warn(e) { "Unable to revert configuration: $e" }
+                        }
+
+                        addToErrorQueue(chainId, e)
+
+                        throw e
                     }
+                } finally {
+                    scheduledForStart.remove(chainId)
                 }
             }
             afterStartBlockchain(chainId)
@@ -193,15 +191,13 @@ open class BaseBlockchainProcessManager(
 
     private fun startBlockchainImpl(blockchainConfig: BlockchainConfiguration, chainId: Long, bTrace: BlockTrace?,
                                     initialEContext: EContext) {
-        val processName = BlockchainProcessName(appConfig.pubKey, blockchainConfig.blockchainRid)
-        startDebug("BlockchainConfiguration has been created", processName, chainId, bTrace)
+        startDebug("BlockchainConfiguration has been created", bTrace)
 
         val afterCommitHandler = buildAfterCommitHandler(chainId, blockchainConfig)
         val restartNotifier = BlockchainRestartNotifier { loadNextPendingConfig ->
             startBlockchainAsync(chainId, bTrace, loadNextPendingConfig)
         }
         val engine = blockchainInfrastructure.makeBlockchainEngine(
-                processName,
                 blockchainConfig,
                 afterCommitHandler,
                 blockBuilderStorage,
@@ -211,26 +207,21 @@ open class BaseBlockchainProcessManager(
                 restartNotifier
         )
 
-        startDebug("BlockchainEngine has been created", processName, chainId, bTrace)
+        startDebug("BlockchainEngine has been created", bTrace)
 
         createAndRegisterBlockchainProcess(
                 chainId,
                 blockchainConfig,
-                processName,
                 engine,
                 restartNotifier,
                 getBlockchainState(chainId, blockchainConfig.blockchainRid)
         )
-        logger.debug { "$processName: BlockchainProcess has been launched: chainId: $chainId" }
+        logger.debug("BlockchainProcess has been launched")
 
-        startInfoDebug(
-                "Blockchain has been started",
-                blockchainConfig.signers,
-                processName,
-                chainId,
-                blockchainConfig.blockchainRid,
-                bTrace
-        )
+        logger.info(
+                "startBlockchain() - Blockchain has been started: ${blockchainProcesses[chainId]?.javaClass?.simpleName}," +
+                        " full blockchain RID: ${blockchainConfig.blockchainRid.toHex()}, signers: ${blockchainConfig.signers.map { it.toHex() }}"
+        ) // We need to print full BC RID so that users can see in INFO logs what it is.
     }
 
     protected open fun getBlockchainState(chainId: Long, blockchainRid: BlockchainRid): BlockchainState = BlockchainState.RUNNING
@@ -266,12 +257,11 @@ open class BaseBlockchainProcessManager(
     protected open fun createAndRegisterBlockchainProcess(
             chainId: Long,
             blockchainConfig: BlockchainConfiguration,
-            processName: BlockchainProcessName,
             engine: BlockchainEngine,
             restartNotifier: BlockchainRestartNotifier,
             blockchainState: BlockchainState
     ) {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(processName, engine, blockchainConfigProvider, restartNotifier, blockchainState)
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(engine, blockchainConfigProvider, restartNotifier, blockchainState)
                 .also {
                     val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainConfig.blockchainRid).also { data ->
                         data[DiagnosticProperty.BLOCKCHAIN_LAST_HEIGHT] = LazyDiagnosticValue { engine.getBlockQueries().getLastBlockHeight().get() }
@@ -305,12 +295,11 @@ open class BaseBlockchainProcessManager(
         chainStartAndStopSynchronizers[chainId]?.withLock {
             synchronized(synchronizer) {
                 withLoggingContext(
-                        NODE_PUBKEY_TAG to appConfig.pubKey,
                         CHAIN_IID_TAG to chainId.toString(),
                         BLOCKCHAIN_RID_TAG to chainIdToBrid[chainId]?.toHex()
                 ) {
                     stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
-                    stopDebug("Blockchain process has been purged", chainId, bTrace)
+                    stopDebug("Blockchain process has been purged", bTrace)
 
                     if (!restart) {
                         val brid = chainIdToBrid.remove(chainId)
@@ -331,7 +320,7 @@ open class BaseBlockchainProcessManager(
     protected open fun deleteBlockchainIfRemoved(chainId: Long, brid: BlockchainRid) {
         val state = getBlockchainState(chainId, brid)
         if (state == BlockchainState.REMOVED) {
-            logger.info("Deleting blockchain with chainId: $chainId and blockchain-rid: ${brid.toHex()}")
+            logger.info("Deleting blockchain")
             withWriteConnection(blockBuilderStorage, chainId) {
                 BlockchainApi.deleteBlockchain(it)
                 true
@@ -343,7 +332,7 @@ open class BaseBlockchainProcessManager(
         val blockchainRid = chainIdToBrid[chainId]
         nodeDiagnosticContext.removeBlockchainData(blockchainRid)
         blockchainProcesses.remove(chainId)?.also {
-            stopInfoDebug("Stopping of blockchain", chainId, bTrace)
+            stopInfoDebug("Stopping of blockchain", bTrace)
             extensions.forEach { ext -> ext.disconnectProcess(it) }
             if (restart) {
                 blockchainInfrastructure.restartBlockchainProcess(it)
@@ -351,12 +340,12 @@ open class BaseBlockchainProcessManager(
                 blockchainInfrastructure.exitBlockchainProcess(it)
             }
             it.shutdown()
-            stopInfoDebug("Stopping blockchain, shutdown complete", chainId, bTrace)
+            stopInfoDebug("Stopping blockchain, shutdown complete", bTrace)
         }
     }
 
     override fun shutdown() {
-        logger.debug("[${nodeName()}]: Stopping BlockchainProcessManager")
+        logger.debug("Stopping BlockchainProcessManager")
         executor.shutdownNow()
         executor.awaitTermination(1000, TimeUnit.MILLISECONDS)
 
@@ -369,7 +358,7 @@ open class BaseBlockchainProcessManager(
         nodeDiagnosticContext.clearBlockchainData()
         chainIdToBrid.clear()
         bridToChainId.clear()
-        logger.debug("[${nodeName()}]: Stopped BlockchainProcessManager")
+        logger.debug("Stopped BlockchainProcessManager")
     }
 
     /**
@@ -410,7 +399,7 @@ open class BaseBlockchainProcessManager(
                 e.afterCommit(blockchainProcess, blockHeight)
             }
         } else {
-            logger.warn("No blockchain process for $chainId")
+            logger.warn("No blockchain process found")
         }
     }
 
@@ -434,7 +423,7 @@ open class BaseBlockchainProcessManager(
         }
 
         logger.trace {
-            "[${nodeName()}]: Topology: ${prettyTopology.values}"
+            "Topology: ${prettyTopology.values}"
         }
     }
 
@@ -467,72 +456,28 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-
-    // Start BC async
-    private fun startAsyncInfo(str: String, chainId: Long) {
-        if (logger.isInfoEnabled) {
-            logger.info("[${nodeName()}]: startBlockchainAsync() - $str: chainId: $chainId")
-        }
-    }
-
     // Start BC
-    private fun startDebug(str: String, chainId: Long, bTrace: BlockTrace?) {
+    private fun startDebug(str: String, bTrace: BlockTrace?) {
         if (logger.isDebugEnabled) {
             val extraStr = if (bTrace != null) {
                 ", block causing the start: $bTrace"
             } else {
                 ""
             }
-            logger.debug("[${nodeName()}]: startBlockchain() -- $str: chainId: $chainId $extraStr")
+            logger.debug("startBlockchain() -- $str $extraStr")
         }
-    }
-
-    private fun startDebug(str: String, processName: BlockchainProcessName, chainId: Long, bTrace: BlockTrace?) {
-        if (logger.isDebugEnabled) {
-            val extraStr = if (bTrace != null) {
-                ", block causing the start: $bTrace"
-            } else {
-                ""
-            }
-            logger.debug { "$processName: startBlockchain() -- $str: chainId: $chainId $extraStr" }
-        }
-    }
-
-    private fun startInfo(str: String, chainId: Long) {
-        if (logger.isInfoEnabled) {
-            logger.info("[${nodeName()}]: startBlockchain() - $str: chainId: $chainId")
-        }
-    }
-
-    private fun startInfo(str: String, processName: BlockchainProcessName, chainId: Long) {
-        if (logger.isInfoEnabled) {
-            logger.info("$processName: startBlockchain() - $str: chainId: $chainId")
-        }
-    }
-
-    private fun startInfoDebug(str: String, signers: List<ByteArray>, processName: BlockchainProcessName, chainId: Long, bcRid: BlockchainRid, bTrace: BlockTrace?) {
-        if (logger.isInfoEnabled) {
-            logger.info("$processName: startBlockchain() - $str: ${blockchainProcesses[chainId]?.javaClass?.simpleName}, chainId: $chainId, Blockchain RID: ${bcRid.toHex()}, signers: ${signers.map { it.toHex() }}") // We need to print full BC RID so that users can see in INFO logs what it is.
-        }
-        startDebug(str, processName, chainId, bTrace)
     }
 
     // Stop BC
-    private fun stopDebug(str: String, chainId: Long, bTrace: BlockTrace?) {
+    private fun stopDebug(str: String, bTrace: BlockTrace?) {
         if (logger.isDebugEnabled) {
-            logger.debug { "[${nodeName()}]: stopBlockchain() -- $str: chainId: $chainId, block causing the start: $bTrace" }
+            logger.debug { "stopBlockchain() -- $str: block causing the start: $bTrace" }
         }
     }
 
-    private fun stopInfo(str: String, chainId: Long) {
-        if (logger.isInfoEnabled) {
-            logger.info("[${nodeName()}]: stopBlockchain() - $str: chainId: $chainId")
-        }
-    }
-
-    private fun stopInfoDebug(str: String, chainId: Long, bTrace: BlockTrace?) {
-        stopInfo(str, chainId)
-        stopDebug(str, chainId, bTrace)
+    private fun stopInfoDebug(str: String, bTrace: BlockTrace?) {
+        logger.info { "stopBlockchain() - $str" }
+        stopDebug(str, bTrace)
     }
 
 }

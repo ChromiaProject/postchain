@@ -7,7 +7,6 @@ import net.postchain.containers.api.MasterApiInfra
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.core.BlockchainState
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 
@@ -23,7 +22,6 @@ open class DefaultMasterBlockchainInfra(
     override val masterConnectionManager = masterSyncInfra.masterConnectionManager
 
     override fun makeMasterBlockchainProcess(
-            processName: BlockchainProcessName,
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
@@ -31,7 +29,7 @@ open class DefaultMasterBlockchainInfra(
             blockchainState: BlockchainState
     ): ContainerBlockchainProcess {
         return masterSyncInfra.makeMasterBlockchainProcess(
-                processName, chainId, blockchainRid, dataSource, targetContainer, blockchainState
+                chainId, blockchainRid, dataSource, targetContainer, blockchainState
         ).also(masterApiInfra::connectContainerProcess)
     }
 

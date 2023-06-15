@@ -2,13 +2,15 @@ package net.postchain.network.mastersub.master
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.BlockRid
 import net.postchain.core.NodeRid
-import net.postchain.debug.BlockchainProcessName
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.MsBlockAtHeightResponse
@@ -41,7 +43,6 @@ open class DefaultMasterCommunicationManager(
         private val peersCommConfigFactory: PeersCommConfigFactory,
         private val connectionManager: ConnectionManager,
         private val masterConnectionManager: MasterConnectionManager,
-        private val processName: BlockchainProcessName,
         private val afterSubnodeCommitListeners: Set<AfterSubnodeCommitListener>
 ) : MasterCommunicationManager {
 
@@ -53,51 +54,60 @@ open class DefaultMasterCommunicationManager(
 
     override fun init() {
         val subnodeChainConfig = SubChainConfig(chainId, blockchainRid, subnodePacketConsumer())
-        masterConnectionManager.initSubChainConnection(processName, subnodeChainConfig)
+        masterConnectionManager.initSubChainConnection(subnodeChainConfig)
 
         // Scheduling SendConnectedPeers task
         sendConnectedPeersTask = peerTaskScheduler.scheduleAtFixedRate({
-            val peers = connectionManager.getConnectedNodes(chainId)
-            val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.data })
-            masterConnectionManager.sendPacketToSub(blockchainRid, msg)
+            withLoggingContext(
+                    BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
+                    CHAIN_IID_TAG to chainId.toString()
+            ) {
+                val peers = connectionManager.getConnectedNodes(chainId)
+                val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.data })
+                masterConnectionManager.sendPacketToSub(blockchainRid, msg)
+            }
         }, 0, containerNodeConfig.sendMasterConnectedPeersPeriod, TimeUnit.MILLISECONDS)
     }
 
-    fun subnodePacketConsumer(): MsMessageHandler {
+    private fun subnodePacketConsumer(): MsMessageHandler {
         return object : MsMessageHandler {
             override fun onMessage(message: MsMessage) {
-                logger.trace {
-                    "${process()}: Receiving a message ${message.javaClass.simpleName} from subnode: " +
-                            "blockchainRid = ${blockchainRid.toShortHex()}"
-                }
-
-                when (message) {
-                    is MsHandshakeMessage -> {
-                        disconnectChainPeers()
-                        connectChainPeers(message.peers)
+                withLoggingContext(
+                        BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
+                        CHAIN_IID_TAG to chainId.toString()
+                ) {
+                    logger.trace {
+                        "Receiving a message ${message.javaClass.simpleName} from subnode"
                     }
 
-                    is MsDataMessage -> {
-                        connectionManager.sendPacket(
-                                { message.xPacket },
-                                chainId,
-                                NodeRid(message.destination)
-                        )
-                    }
+                    when (message) {
+                        is MsHandshakeMessage -> {
+                            disconnectChainPeers()
+                            connectChainPeers(message.peers)
+                        }
 
-                    is MsCommittedBlockMessage -> {
-                        afterSubnodeCommitListeners.forEach {
-                            it.onAfterCommitInSubnode(
-                                    BlockchainRid(message.blockchainRid),
-                                    BlockRid(message.blockRid),
-                                    blockHeader = message.blockHeader,
-                                    witnessData = message.witnessData
+                        is MsDataMessage -> {
+                            connectionManager.sendPacket(
+                                    { message.xPacket },
+                                    chainId,
+                                    NodeRid(message.destination)
                             )
                         }
-                    }
 
-                    is MsQueryResponse, is MsBlockAtHeightResponse, is MsQueryFailure -> {
-                        masterConnectionManager.masterSubQueryManager.onMessage(message)
+                        is MsCommittedBlockMessage -> {
+                            afterSubnodeCommitListeners.forEach {
+                                it.onAfterCommitInSubnode(
+                                        BlockchainRid(message.blockchainRid),
+                                        BlockRid(message.blockRid),
+                                        blockHeader = message.blockHeader,
+                                        witnessData = message.witnessData
+                                )
+                            }
+                        }
+
+                        is MsQueryResponse, is MsBlockAtHeightResponse, is MsQueryFailure -> {
+                            masterConnectionManager.masterSubQueryManager.onMessage(message)
+                        }
                     }
                 }
             }
@@ -110,24 +120,28 @@ open class DefaultMasterCommunicationManager(
      * @param peers all "normal" peers in our network
      */
     private fun connectChainPeers(peers: List<ByteArray>) {
-        logger.info { "${process()}: Connecting chain peers" }
+        logger.info("Connecting chain peers")
 
         val peersCommConfig = peersCommConfigFactory.create(appConfig, nodeConfig, blockchainRid, peers, null)
 
         val packetHandler = object : PeerPacketHandler {
             override fun handle(data: ByteArray, nodeId: NodeRid) {
-                consumePacket(nodeId, data)
+                withLoggingContext(
+                        BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
+                        CHAIN_IID_TAG to chainId.toString()
+                ) {
+                    consumePacket(nodeId, data)
+                }
             }
         }
         val peersConfig = XChainPeersConfiguration(chainId, blockchainRid, peersCommConfig, packetHandler)
 
-        connectionManager.connectChain(peersConfig, true) { processName.toString() }
+        connectionManager.connectChain(peersConfig, true)
     }
 
     private fun disconnectChainPeers() {
-        logger.info { "${process()}: Disconnecting chain peers" }
-        val prefixFun: () -> String = { processName.toString() }
-        connectionManager.disconnectChain(prefixFun, chainId)
+        logger.info("Disconnecting chain peers")
+        connectionManager.disconnectChain(chainId)
     }
 
     /**
@@ -137,7 +151,7 @@ open class DefaultMasterCommunicationManager(
      * @param packet is the message data
      */
     private fun consumePacket(nodeId: NodeRid, packet: ByteArray) {
-        logger.trace { "${process()}: consumePacket() - Receiving a packet from peer: ${nodeId.toHex()}" }
+        logger.trace { "consumePacket() - Receiving a packet from peer: ${nodeId.toHex()}" }
 
         val message = MsDataMessage(
                 nodeId.data, // sender
@@ -147,7 +161,7 @@ open class DefaultMasterCommunicationManager(
 
         masterConnectionManager.sendPacketToSub(blockchainRid, message)
 
-        logger.trace { "${process()}: consumePacket() - end" }
+        logger.trace("consumePacket() - end")
     }
 
     override fun shutdown() {
@@ -156,12 +170,7 @@ open class DefaultMasterCommunicationManager(
             sendConnectedPeersTask.cancel(true)
         }
 
-        val prefixFun: () -> String = { processName.toString() }
-        connectionManager.disconnectChain(prefixFun, chainId)
-        masterConnectionManager.disconnectSubChain(processName, chainId)
-    }
-
-    private fun process(): String {
-        return processName.toString()
+        connectionManager.disconnectChain(chainId)
+        masterConnectionManager.disconnectSubChain(chainId)
     }
 }

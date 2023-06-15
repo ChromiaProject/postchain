@@ -3,6 +3,7 @@
 package net.postchain.ebft.worker
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.DatabaseAccess
@@ -30,6 +31,8 @@ import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.KnownState
 import net.postchain.ebft.syncmanager.common.SyncMethod
 import net.postchain.ebft.syncmanager.common.SyncParameters
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
 import java.lang.Thread.sleep
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
@@ -47,7 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 class HistoricBlockchainProcess(val workerContext: WorkerContext,
                                 private val historicBlockchainContext: HistoricBlockchainContext
-) : AbstractBlockchainProcess("historic-${workerContext.processName}", workerContext.engine) {
+) : AbstractBlockchainProcess("historic-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine) {
 
     companion object : KLogging()
 
@@ -55,8 +58,13 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
 
     private var historicSynchronizer: FastSynchronizer? = null
     private val blockBuilderStorage = workerContext.engine.blockBuilderStorage
+    private val loggingContext = mapOf(
+            CHAIN_IID_TAG to workerContext.blockchainConfiguration.chainID.toString(),
+            BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex()
+    )
     private val blockDatabase = BaseBlockDatabase(
-            blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY)
+            loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY
+    )
     private val fastSynchronizer = FastSynchronizer(
             workerContext, blockDatabase,
             SyncParameters.fromAppConfig(workerContext.appConfig),
@@ -72,34 +80,36 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     val myBRID = blockchainEngine.getConfiguration().blockchainRid
 
     override fun action() {
-        val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)
+        withLoggingContext(loggingContext) {
+            val chainsToSyncFrom = historicBlockchainContext.getChainsToSyncFrom(myBRID)
 
-        val lastHeightSoFar = blockchainEngine.getBlockQueries().getLastBlockHeight().get()
-        initDebug("Historic sync bc ${myBRID}, height: $lastHeightSoFar")
+            val lastHeightSoFar = blockchainEngine.getBlockQueries().getLastBlockHeight().get()
+            initDebug("Historic sync bc ${myBRID}, height: $lastHeightSoFar")
 
-        // try local sync first
-        for (brid in chainsToSyncFrom) {
-            if (!isProcessRunning()) break
-            if (brid == myBRID) continue
-            syncMethod = SyncMethod.LOCAL_DB
-            copyBlocksLocally(brid, blockDatabase)
-        }
+            // try local sync first
+            for (brid in chainsToSyncFrom) {
+                if (!isProcessRunning()) break
+                if (brid == myBRID) continue
+                syncMethod = SyncMethod.LOCAL_DB
+                copyBlocksLocally(brid, blockDatabase)
+            }
 
-        // try syncing via network
-        for (brid in chainsToSyncFrom) {
-            if (!isProcessRunning()) break
-            syncMethod = SyncMethod.FAST_SYNC
-            copyBlocksNetwork(brid, myBRID, blockDatabase, fastSynchronizer.params)
-            if (!isProcessRunning()) break // Check before sleep
-            initTrace("Network synch go sleep")
+            // try syncing via network
+            for (brid in chainsToSyncFrom) {
+                if (!isProcessRunning()) break
+                syncMethod = SyncMethod.FAST_SYNC
+                copyBlocksNetwork(brid, myBRID, blockDatabase, fastSynchronizer.params)
+                if (!isProcessRunning()) break // Check before sleep
+                initTrace("Network synch go sleep")
+                sleep(1000)
+                initTrace("Network synch waking up")
+            }
+            syncMethod = SyncMethod.NOT_SYNCING
+            if (!isProcessRunning()) return // Check before sleep
+            initTrace("Network synch full go sleep")
             sleep(1000)
-            initTrace("Network synch waking up")
+            initTrace("Network synch full waking up")
         }
-        syncMethod = SyncMethod.NOT_SYNCING
-        if (!isProcessRunning()) return // Check before sleep
-        initTrace("Network synch full go sleep")
-        sleep(1000)
-        initTrace("Network synch full waking up")
     }
 
     /**
@@ -207,7 +217,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                         if (isProcessRunning() && readMoreBlocks.get()) {
                             pendingFuture = newBlockDatabase.addBlock(historicBlock, pendingFuture, bTrace)
                             val myHeightToCopy = heightToCopy
-                            pendingFuture.whenCompleteUnwrapped { _: Any?, exception ->
+                            pendingFuture.whenCompleteUnwrapped(loggingContext) { _: Any?, exception ->
                                 if (exception == null) {
                                     copyTrace("Successfully added", bTrace, myHeightToCopy) // Now we should have the block RID in the debug
                                 } else {
@@ -268,10 +278,12 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     }
 
     override fun cleanup() {
-        shutdownDebug("Historic worker shutting down")
-        blockDatabase.stop()
-        workerContext.shutdown()
-        shutdownDebug("Shutdown finished")
+        withLoggingContext(loggingContext) {
+            shutdownDebug("Historic worker shutting down")
+            blockDatabase.stop()
+            workerContext.shutdown()
+            shutdownDebug("Shutdown finished")
+        }
     }
 
     // ----------------------------------------------
@@ -345,9 +357,9 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
 
     private fun getCopyBTrace(heightToCopy: Long): BlockTrace? {
         return if (logger.isTraceEnabled) {
-            logger.trace { "getCopyBTrace() - Creating block trace with procname: $process , height: $heightToCopy " }
+            logger.trace { "getCopyBTrace() - Creating block trace with height: $heightToCopy " }
 
-            this.blockTrace = BlockTrace.buildBeforeBlock(workerContext.processName, heightToCopy) // At this point we don't have the Block RID.
+            this.blockTrace = BlockTrace.buildBeforeBlock(heightToCopy) // At this point we don't have the Block RID.
             this.blockTrace
         } else {
             null // Use null for speed

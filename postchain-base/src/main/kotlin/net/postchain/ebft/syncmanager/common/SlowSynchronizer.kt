@@ -279,9 +279,9 @@ class SlowSynchronizer(
         logger.trace { "handleBlock() - Received for height: $height" }
         var bTrace: BlockTrace? = null
         if (logger.isTraceEnabled) {
-            logger.trace("handleBlock() - Creating block trace with procname: $procName , height: $height")
+            logger.trace("handleBlock() - Creating block trace at height: $height")
 
-            bTrace = BlockTrace.build(procName, header.blockRID, height)
+            bTrace = BlockTrace.build(header.blockRID, height)
         }
 
         // The witness has already been verified in handleBlockHeader().
@@ -303,7 +303,7 @@ class SlowSynchronizer(
         // (this is usually slow and is therefore handled via a future).
         addBlockCompletionFuture = blockDatabase
                 .addBlock(block, addBlockCompletionFuture, bTrace)
-                .whenCompleteUnwrapped { _: Any?, exception ->
+                .whenCompleteUnwrapped(loggingContext) { _: Any?, exception ->
                     stateMachineLock.withLock {
                         if (exception == null) {
                             logger.debug { "commitBlock() - Block height: $height committed successfully." }

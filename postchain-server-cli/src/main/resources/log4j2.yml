@@ -7,7 +7,7 @@ Configuration:
       name: ConsoleAppender
       target: SYSTEM_OUT
       PatternLayout:
-        pattern: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} - %msg%n"
+        pattern: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} -%notEmpty{ [%notEmpty{bc-rid=%.-2X{blockchainRID}:%.4X{blockchainRID}}%notEmpty{, chain-id=%X{chainIID}}]:} %msg%n"
 
   Loggers:
 

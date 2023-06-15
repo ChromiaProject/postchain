@@ -19,11 +19,11 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import java.util.concurrent.CompletableFuture
@@ -43,6 +43,11 @@ abstract class AbstractSynchronizer(
     private var pendingConfigPromotingUsAsSigner: ByteArray? = null
     private val relevantSignersThatHaveAppliedConfig = mutableSetOf<PubKey>()
 
+    protected val loggingContext = mapOf(
+            BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex(),
+            CHAIN_IID_TAG to workerContext.blockchainConfiguration.chainID.toString()
+    )
+
     protected fun getHeight(header: BlockHeader): Long {
         // A bit ugly hack. Figure out something better. We shouldn't rely on specific
         // implementation here.
@@ -59,11 +64,6 @@ abstract class AbstractSynchronizer(
         }
         return header.blockHeaderRec.getHeight()
     }
-
-    protected val procName = BlockchainProcessName(
-            workerContext.appConfig.pubKey,
-            blockchainConfiguration.blockchainRid
-    )
 
     /**
      * We do this check to avoid getting stuck when chain is waiting for a pending config where we are promoted to signer to be applied

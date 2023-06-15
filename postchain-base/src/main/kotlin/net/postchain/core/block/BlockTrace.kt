@@ -2,7 +2,6 @@ package net.postchain.core.block
 
 import mu.KLogging
 import net.postchain.common.toHex
-import net.postchain.debug.BlockchainProcessName
 
 /**
  * READ THIS BEFORE DELETING THIS CLASS!
@@ -32,31 +31,21 @@ import net.postchain.debug.BlockchainProcessName
  * Incomplete data
  * ---------------
  * Often we don't have all info at once, so it has to be collected over time.
- * Example: Initially, in [PostchainNode] we might only know the chainId and node's PubKey.
- *          Later, in the [BaseBlockManager] we know the block we are building, so we add that info.
  */
 class BlockTrace(
-    var procName: BlockchainProcessName?,  // What node and blockchain is building this block
     var blockRid: String?, // What block
     var height: Long?) { // What height
 
     companion object : KLogging() {
-        fun build(procName: BlockchainProcessName?, blockRid: ByteArray?, height: Long?): BlockTrace {
-            return BlockTrace(procName, blockRid?.toHex(), height)
+        fun build(blockRid: ByteArray?, height: Long?): BlockTrace {
+            return BlockTrace(blockRid?.toHex(), height)
         }
 
         /**
          * Sometimes we start before we have the block
          */
-        fun buildBeforeBlock(procName: BlockchainProcessName?, height: Long?): BlockTrace {
-            return BlockTrace(procName, null , height) // We cannot know the Block RID before we start
-        }
-
-        /**
-         * Sometimes we don't even have the height
-         */
-        fun buildBeforeBlock(procName: BlockchainProcessName): BlockTrace {
-            return buildBeforeBlock(procName, null)
+        fun buildBeforeBlock(height: Long?): BlockTrace {
+            return BlockTrace(null, height) // We cannot know the Block RID before we start
         }
     }
 
@@ -66,19 +55,6 @@ class BlockTrace(
     fun addDataIfMissing(other: BlockTrace?) {
 
         if (other != null) {
-            if (procName != null) {
-                if (other.procName != null) {
-                    if (procName != other.procName) {
-                        logger.debug{ "Why do node/BC info differ? me: ${toString()}, they: $other" }
-                    } else {
-                        // Same, do nothing
-                    }
-
-                }
-            } else if (other.procName != null) {
-                procName = other.procName
-            }
-
             // Block RID
             if (blockRid != null) {
                 if (other.blockRid != null) {
@@ -118,6 +94,6 @@ class BlockTrace(
     }
 
     override fun toString(): String {
-        return "$procName, height: $height, block: ${shortBlockRid()}"
+        return "height: $height, block: ${shortBlockRid()}"
     }
 }

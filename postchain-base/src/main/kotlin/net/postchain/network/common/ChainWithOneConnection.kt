@@ -36,7 +36,4 @@ interface ChainWithOneConnection<NodeConnectionType, PacketHandler> {
      * Remove and class conn
      */
     fun removeAndCloseConnection()
-
-    fun log(): String = "chainIid: ${getChainIid()}, blockchainRid: ${getBlockchainRid().toShortHex()}"
-
 }

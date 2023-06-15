@@ -8,12 +8,10 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.BlockchainState
 import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.Shutdownable
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.mastersub.master.MasterCommunicationManager
 import java.net.URL
 
 interface ContainerBlockchainProcess : RemoteBlockchainProcess, Shutdownable {
-    val processName: BlockchainProcessName
     val blockchainState: BlockchainState
 }
 
@@ -21,7 +19,6 @@ class DefaultContainerBlockchainProcess(
         val nodeConfig: NodeConfig,
         val containerNodeConfig: ContainerNodeConfig,
         restApiPort: Int,
-        override val processName: BlockchainProcessName,
         override val chainId: Long,
         override val blockchainRid: BlockchainRid,
         override val blockchainState: BlockchainState,
@@ -39,6 +36,4 @@ class DefaultContainerBlockchainProcess(
     override fun shutdown() {
         communicationManager.shutdown()
     }
-
-    override fun toString(): String = processName.toString()
 }
