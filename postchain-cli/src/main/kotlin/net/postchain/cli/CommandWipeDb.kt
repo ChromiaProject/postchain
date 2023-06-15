@@ -21,6 +21,6 @@ class CommandWipeDb : CliktCommand(name = "wipe-db", help = "Wipe Database") {
         } else {
             StorageBuilder.wipeDatabase(appConfig)
         }
-        println("Database has been wiped successfully")
+        echo("Database has been wiped successfully")
     }
 }

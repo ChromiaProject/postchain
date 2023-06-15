@@ -11,6 +11,7 @@ import com.github.ajalt.clikt.parameters.types.long
 import com.github.ajalt.clikt.parameters.types.path
 import net.postchain.StorageBuilder
 import net.postchain.base.importexport.ImporterExporter
+import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.config.app.AppConfig
@@ -39,10 +40,12 @@ class CommandExportBlockchain : CliktCommand(name = "export-blockchain", help = 
     private val chainId by chainIdOption().required()
 
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
-        StorageBuilder.buildStorage(appConfig).use { storage ->
-            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite,
-                    fromHeight = fromHeight, upToHeight = upToHeight)
+        withDbVersionMismatch {
+            val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
+            StorageBuilder.buildStorage(appConfig, allowUpgrade = false).use { storage ->
+                ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite,
+                        fromHeight = fromHeight, upToHeight = upToHeight)
+            }
         }
     }
 }

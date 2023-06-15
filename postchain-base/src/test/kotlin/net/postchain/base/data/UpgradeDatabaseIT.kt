@@ -467,4 +467,19 @@ class UpgradeDatabaseIT {
             StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 1)
         }
     }
+
+    @Test
+    fun testUpgradingAllowance() {
+        // Initial launch
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 2)
+
+        // Reopen without wiping
+        assertThrows<UserMistake> {
+            StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 3, allowUpgrade = false)
+        }
+
+        // Reopen with wiping
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 3, allowUpgrade = false)
+                .use { assertVersion3(it) }
+    }
 }

@@ -18,6 +18,7 @@ import net.postchain.base.runStorageCommand
 import net.postchain.cli.CommandAddConfiguration.Height.Absolute
 import net.postchain.cli.CommandAddConfiguration.Height.Relative
 import net.postchain.cli.util.SafeExecutor.runOnChain
+import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
 import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.forceOption
@@ -57,30 +58,32 @@ class CommandAddConfiguration : CliktCommand(
     private val allowUnknownSigners by option("-a", "--allow-unknown-signers", help = "Allow signers that are not in the list of peerInfos.").flag()
 
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
+        withDbVersionMismatch {
+            val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
 
-        val height0 = when (height.first) {
-            Absolute -> height.second
-            else -> height.second + runStorageCommand(appConfig, chainId) { ctx ->
-                BlockchainApi.getLastBlockHeight(ctx)
+            val height0 = when (height.first) {
+                Absolute -> height.second
+                else -> height.second + runStorageCommand(appConfig, chainId) { ctx ->
+                    BlockchainApi.getLastBlockHeight(ctx)
+                }
             }
-        }
 
-        val gtv = try {
-            GtvFileReader.readFile(blockchainConfigFile)
-        } catch (e: Exception) {
-            println("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}")
-            return
-        }
-
-        runOnChain(appConfig, chainId) {
-            try {
-                CliExecution.addConfiguration(appConfig, gtv, chainId, height0, force, allowUnknownSigners)
-                println("Configuration has been added successfully")
-            } catch (e: CliException) {
-                println(e.message)
+            val gtv = try {
+                GtvFileReader.readFile(blockchainConfigFile)
             } catch (e: Exception) {
-                println("Can't add configuration: $e")
+                println("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}")
+                return@withDbVersionMismatch
+            }
+
+            runOnChain(appConfig, chainId) {
+                try {
+                    CliExecution.addConfiguration(appConfig, gtv, chainId, height0, force, allowUnknownSigners)
+                    println("Configuration has been added successfully")
+                } catch (e: CliException) {
+                    println(e.message)
+                } catch (e: Exception) {
+                    println("Can't add configuration: $e")
+                }
             }
         }
     }
