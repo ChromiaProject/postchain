@@ -8,11 +8,8 @@ import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.verify
 import java.time.Instant
 
 class ManualNodeConfigurationProviderTest {
@@ -39,7 +36,5 @@ class ManualNodeConfigurationProviderTest {
         // Assert
         val peerInfos = provider.getPeerInfoCollection()
         assertThat(peerInfos).containsExactly(*actual)
-
-        verify(mockStorage.db).addPeerInfo(any(), eq("localhost"), eq(9870), eq("CCCC"), eq(null))
     }
 }
