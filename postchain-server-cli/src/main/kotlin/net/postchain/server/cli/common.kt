@@ -31,7 +31,7 @@ fun waitDb(retryTimes: Int, retryInterval: Long, appConfig: AppConfig) {
 private fun tryCreateBasicDataSource(appConfig: AppConfig): Connection? {
     return try {
         val storage = StorageBuilder.buildStorage(appConfig)
-        NodeConfigurationProviderFactory.createProvider(appConfig) { storage }.getConfiguration()
+        NodeConfigurationProviderFactory.createProvider(appConfig, storage).getConfiguration()
 
         BasicDataSource().apply {
             addConnectionProperty("currentSchema", appConfig.databaseSchema)

@@ -47,8 +47,6 @@ import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.gtv.mapper.toObject
-import net.postchain.logging.CHAIN_IID_TAG
-import net.postchain.logging.NODE_PUBKEY_TAG
 import java.util.*
 import java.util.concurrent.CompletableFuture
 
@@ -56,6 +54,7 @@ import java.util.concurrent.CompletableFuture
  * The ValidatorSyncManager handles communications with our peers.
  */
 class ValidatorSyncManager(private val workerContext: WorkerContext,
+                           private val loggingContext: Map<String, String>,
                            private val statusManager: StatusManager,
                            private val blockManager: BlockManager,
                            private val blockDatabase: BlockDatabase,
@@ -71,7 +70,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private var processingIntent: BlockIntent
     private var processingIntentDeadline = 0L
     private var lastStatusLogged: Long
-    private val processName = workerContext.processName
     private var useFastSyncAlgorithm: Boolean
     private val fastSynchronizer: FastSynchronizer
 
@@ -106,108 +104,103 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      * Handle incoming messages
      */
     private fun dispatchMessages() {
-        withLoggingContext(
-                NODE_PUBKEY_TAG to workerContext.appConfig.pubKey,
-                CHAIN_IID_TAG to blockchainConfiguration.chainID.toString()
-        ) {
-            for (packet in communicationManager.getPackets()) {
-                val (xPeerId, message) = packet
-                val nodeIndex = indexOfValidator(xPeerId)
-                val isReadOnlyNode = nodeIndex == -1 // This must be a read-only node since not in the validator list
+        for (packet in communicationManager.getPackets()) {
+            val (xPeerId, message) = packet
+            val nodeIndex = indexOfValidator(xPeerId)
+            val isReadOnlyNode = nodeIndex == -1 // This must be a read-only node since not in the validator list
 
-                logger.trace { "Received message type ${message.javaClass.simpleName} from node $nodeIndex" }
+            logger.trace { "Received message type ${message.javaClass.simpleName} from node $nodeIndex" }
 
-                try {
-                    when (message) {
-                        // same case for replica and validator node
-                        is GetBlockAtHeight -> sendBlockAtHeight(xPeerId, message.height)
-                        is GetBlockRange -> sendBlockRangeFromHeight(xPeerId, message.startAtHeight,
-                                this.statusManager.myStatus.height - 1)
+            try {
+                when (message) {
+                    // same case for replica and validator node
+                    is GetBlockAtHeight -> sendBlockAtHeight(xPeerId, message.height)
+                    is GetBlockRange -> sendBlockRangeFromHeight(xPeerId, message.startAtHeight,
+                            this.statusManager.myStatus.height - 1)
 
-                        is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(xPeerId, message.height,
-                                this.statusManager.myStatus.height - 1)
+                    is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(xPeerId, message.height,
+                            this.statusManager.myStatus.height - 1)
 
-                        else -> {
-                            if (!isReadOnlyNode) { // TODO: [POS-90]: Is it necessary here `isReadOnlyNode`?
-                                // validator consensus logic
-                                when (message) {
-                                    is Status -> {
-                                        NodeStatus(message.height, message.serial)
-                                                .apply {
-                                                    blockRID = message.blockRID
-                                                    revolting = message.revolting
-                                                    round = message.round
-                                                    state = NodeBlockState.values()[message.state]
-                                                }.also {
-                                                    statusManager.onStatusUpdate(nodeIndex, it)
-                                                }
+                    else -> {
+                        if (!isReadOnlyNode) { // TODO: [POS-90]: Is it necessary here `isReadOnlyNode`?
+                            // validator consensus logic
+                            when (message) {
+                                is Status -> {
+                                    NodeStatus(message.height, message.serial)
+                                            .apply {
+                                                blockRID = message.blockRID
+                                                revolting = message.revolting
+                                                round = message.round
+                                                state = NodeBlockState.values()[message.state]
+                                            }.also {
+                                                statusManager.onStatusUpdate(nodeIndex, it)
+                                            }
 
-                                        tryToSwitchToFastSync()
-                                    }
-
-                                    is BlockSignature -> {
-                                        val signature = Signature(message.sig.subjectID, message.sig.data)
-                                        val smBlockRID = this.statusManager.myStatus.blockRID
-                                        if (smBlockRID == null || processingIntent !is FetchCommitSignatureIntent) {
-                                            logger.debug("Received signature not needed")
-                                        } else if (!smBlockRID.contentEquals(message.blockRID)) {
-                                            logger.info("Receive signature for a different block")
-                                        } else if (this.blockDatabase.verifyBlockSignature(signature)) {
-                                            this.statusManager.onCommitSignature(nodeIndex, message.blockRID, signature)
-                                        } else {
-                                            logger.warn { "BlockSignature from peer: $xPeerId is invalid for block with with RID: ${smBlockRID.toHex()}" }
-                                        }
-                                    }
-
-                                    is CompleteBlock -> {
-                                        try {
-                                            blockManager.onReceivedBlockAtHeight(
-                                                    decodeBlockDataWithWitness(message, blockchainConfiguration),
-                                                    message.height)
-                                        } catch (e: Exception) {
-                                            logger.error("Failed to add block to database. Resetting state...", e)
-                                            // reset state to last known from database
-                                            statusManager.fastForwardHeight(blockQueries.getLastBlockHeight().get())
-                                            blockManager.currentBlock = null
-                                        }
-                                    }
-
-                                    is UnfinishedBlock -> {
-                                        blockManager.onReceivedUnfinishedBlock(
-                                                decodeBlockData(
-                                                        BlockData(message.header, message.transactions),
-                                                        blockchainConfiguration)
-                                        )
-                                    }
-
-                                    is BlockRange -> {
-                                        // Only replicas should receive BlockRanges (via SlowSync)
-                                        logger.warn("Why did we get a block range from peer: ${xPeerId}? (Starting " +
-                                                "height: ${message.startAtHeight}, blocks: ${message.blocks.size}) ")
-                                    }
-
-                                    is GetUnfinishedBlock -> sendUnfinishedBlock(nodeIndex)
-                                    is GetBlockSignature -> sendBlockSignature(nodeIndex, message.blockRID)
-                                    is Transaction -> handleTransaction(message)
-                                    is BlockHeader -> {
-                                        // TODO: This might happen because we've already exited FastSync but other nodes
-                                        //  are still responding to our old requests. For this case this is harmless.
-                                    }
-
-                                    is AppliedConfig -> {
-                                        if (statusManager.myStatus.revolting) {
-                                            processIncomingConfig(message.configHash, message.height)
-                                        }
-                                    }
-
-                                    else -> throw ProgrammerMistake("Unhandled type ${message::class}")
+                                    tryToSwitchToFastSync()
                                 }
+
+                                is BlockSignature -> {
+                                    val signature = Signature(message.sig.subjectID, message.sig.data)
+                                    val smBlockRID = this.statusManager.myStatus.blockRID
+                                    if (smBlockRID == null || processingIntent !is FetchCommitSignatureIntent) {
+                                        logger.debug("Received signature not needed")
+                                    } else if (!smBlockRID.contentEquals(message.blockRID)) {
+                                        logger.info("Receive signature for a different block")
+                                    } else if (this.blockDatabase.verifyBlockSignature(signature)) {
+                                        this.statusManager.onCommitSignature(nodeIndex, message.blockRID, signature)
+                                    } else {
+                                        logger.warn { "BlockSignature from peer: $xPeerId is invalid for block with with RID: ${smBlockRID.toHex()}" }
+                                    }
+                                }
+
+                                is CompleteBlock -> {
+                                    try {
+                                        blockManager.onReceivedBlockAtHeight(
+                                                decodeBlockDataWithWitness(message, blockchainConfiguration),
+                                                message.height)
+                                    } catch (e: Exception) {
+                                        logger.error("Failed to add block to database. Resetting state...", e)
+                                        // reset state to last known from database
+                                        statusManager.fastForwardHeight(blockQueries.getLastBlockHeight().get())
+                                        blockManager.currentBlock = null
+                                    }
+                                }
+
+                                is UnfinishedBlock -> {
+                                    blockManager.onReceivedUnfinishedBlock(
+                                            decodeBlockData(
+                                                    BlockData(message.header, message.transactions),
+                                                    blockchainConfiguration)
+                                    )
+                                }
+
+                                is BlockRange -> {
+                                    // Only replicas should receive BlockRanges (via SlowSync)
+                                    logger.warn("Why did we get a block range from peer: ${xPeerId}? (Starting " +
+                                            "height: ${message.startAtHeight}, blocks: ${message.blocks.size}) ")
+                                }
+
+                                is GetUnfinishedBlock -> sendUnfinishedBlock(nodeIndex)
+                                is GetBlockSignature -> sendBlockSignature(nodeIndex, message.blockRID)
+                                is Transaction -> handleTransaction(message)
+                                is BlockHeader -> {
+                                    // TODO: This might happen because we've already exited FastSync but other nodes
+                                    //  are still responding to our old requests. For this case this is harmless.
+                                }
+
+                                is AppliedConfig -> {
+                                    if (statusManager.myStatus.revolting) {
+                                        processIncomingConfig(message.configHash, message.height)
+                                    }
+                                }
+
+                                else -> throw ProgrammerMistake("Unhandled type ${message::class}")
                             }
                         }
                     }
-                } catch (e: Exception) {
-                    logger.error("Couldn't handle message $message. Ignoring and continuing", e)
                 }
+            } catch (e: Exception) {
+                logger.error("Couldn't handle message $message. Ignoring and continuing", e)
             }
         }
     }
@@ -239,8 +232,10 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private fun handleTransaction(message: Transaction) {
         // TODO: reject if queue is full
         CompletableFuture.runAsync {
-            val tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(message.data)
-            workerContext.engine.getTransactionQueue().enqueue(tx)
+            withLoggingContext(loggingContext) {
+                val tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(message.data)
+                workerContext.engine.getTransactionQueue().enqueue(tx)
+            }
         }
     }
 
@@ -266,12 +261,12 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             return
         }
         val blockSignature = blockDatabase.getBlockSignature(blockRID)
-        blockSignature.whenCompleteUnwrapped { response, error ->
+        blockSignature.whenCompleteUnwrapped(loggingContext) { response, error ->
             if (error == null) {
                 val packet = BlockSignature(blockRID, net.postchain.ebft.message.Signature(response.subjectID, response.data))
                 communicationManager.sendPacket(packet, validatorAtIndex(nodeIndex))
             } else {
-                logger.debug(error) { "$processName: Error sending BlockSignature" }
+                logger.debug(error) { "Error sending BlockSignature" }
             }
         }
     }
@@ -312,7 +307,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun fetchBlockAtHeight(height: Long) {
         val nodeIndex = selectRandomNode { it.height > height } ?: return
-        logger.debug { "$processName: Fetching block at height $height from node $nodeIndex" }
+        logger.debug { "Fetching block at height $height from node $nodeIndex" }
         communicationManager.sendPacket(GetBlockAtHeight(height), validatorAtIndex(nodeIndex))
     }
 
@@ -324,7 +319,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun fetchCommitSignatures(blockRID: ByteArray, nodes: Array<Int>) {
         val message = GetBlockSignature(blockRID)
-        logger.debug { "$processName: Fetching commit signature for block with RID ${blockRID.toHex()} from nodes ${Arrays.toString(nodes)}" }
+        logger.debug { "Fetching commit signature for block with RID ${blockRID.toHex()} from nodes ${Arrays.toString(nodes)}" }
         communicationManager.sendPacket(message, nodes.map { validatorAtIndex(it) })
     }
 
@@ -338,7 +333,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         val nodeIndex = selectRandomNode {
             it.height == height && (it.blockRID?.contentEquals(blockRID) ?: false)
         } ?: return
-        logger.debug { "$processName: Fetching unfinished block with RID ${blockRID.toHex()} from node $nodeIndex " }
+        logger.debug { "Fetching unfinished block with RID ${blockRID.toHex()} from node $nodeIndex " }
         communicationManager.sendPacket(GetUnfinishedBlock(blockRID), validatorAtIndex(nodeIndex))
     }
 
@@ -386,14 +381,14 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             } else {
                 "(prim = ${statusManager.primaryIndex()}),"
             }
-            logger.debug { "$processName: (Fast sync) Height: $currentBlockHeight. My node: ${statusManager.getMyIndex()}, $primary block mngr: $bmIntent, status mngr: $smIntent" }
+            logger.debug { "(Fast sync) Height: $currentBlockHeight. My node: ${statusManager.getMyIndex()}, $primary block mngr: $bmIntent, status mngr: $smIntent" }
         }
         for ((idx, ns) in statusManager.nodeStatuses.withIndex()) {
             val blockRID = ns.blockRID
             val haveSignature = statusManager.commitSignatures[idx] != null
             if (logger.isDebugEnabled) {
                 logger.debug {
-                    "$processName: (Fast sync) node:$idx he:${ns.height} ro:${ns.round} st:${ns.state}" +
+                    "(Fast sync) node:$idx he:${ns.height} ro:${ns.round} st:${ns.state}" +
                             (if (ns.revolting) " R" else "") +
                             " blockRID:${blockRID?.toHex() ?: "null"}" +
                             " havesig:$haveSignature"
@@ -415,14 +410,14 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             } else {
                 "(prim = ${statusManager.primaryIndex()}),"
             }
-            logger.debug { "$processName: My node: ${statusManager.getMyIndex()}, $primary block mngr: $bmIntent, status mngr: $smIntent" }
+            logger.debug { "My node: ${statusManager.getMyIndex()}, $primary block mngr: $bmIntent, status mngr: $smIntent" }
         }
         for ((idx, ns) in statusManager.nodeStatuses.withIndex()) {
             val blockRID = ns.blockRID
             val haveSignature = statusManager.commitSignatures[idx] != null
             if (logger.isDebugEnabled) {
                 logger.debug {
-                    "$processName: node:$idx he:${ns.height} ro:${ns.round} st:${ns.state}" +
+                    "node:$idx he:${ns.height} ro:${ns.round} st:${ns.state}" +
                             (if (ns.revolting) " R" else "") +
                             " blockRID:${blockRID?.toHex() ?: "null"}" +
                             " havesig:$haveSignature"
@@ -443,9 +438,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     fun update() {
         if (useFastSyncAlgorithm) {
-            if (logger.isDebugEnabled) {
-                logger.debug("$processName Using fast sync") // Doesn't happen very often
-            }
+            logger.debug("Using fast sync") // Doesn't happen very often
             fastSynchronizer.syncUntilResponsiveNodesDrained()
             // turn off fast sync, reset current block to null, and query for the last known state from db to prevent
             // possible race conditions

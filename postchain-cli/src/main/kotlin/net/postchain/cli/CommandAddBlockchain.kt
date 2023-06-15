@@ -5,6 +5,7 @@ package net.postchain.cli
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.required
+import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
 import net.postchain.cli.util.blockchainConfigOption
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.forceOption
@@ -24,15 +25,17 @@ class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add b
 
 
     override fun run() {
-        val gtv = try {
-            GtvFileReader.readFile(blockchainConfigFile)
-        } catch (e: Exception) {
-            println("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}")
-            return
-        }
+        withDbVersionMismatch {
+            val gtv = try {
+                GtvFileReader.readFile(blockchainConfigFile)
+            } catch (e: Exception) {
+                println("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}")
+                return@withDbVersionMismatch
+            }
 
-        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
-        CliExecution.addBlockchain(appConfig, chainId, gtv, force)
-        println("Configuration has been added successfully")
+            val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
+            CliExecution.addBlockchain(appConfig, chainId, gtv, force)
+            println("Configuration has been added successfully")
+        }
     }
 }

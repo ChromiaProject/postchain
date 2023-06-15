@@ -7,7 +7,6 @@ import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 import net.postchain.core.EContext
 import net.postchain.core.Storage
-import java.io.File
 
 fun <RT> Storage.withReadConnection(op: (AppContext) -> RT): RT {
     val ctx = openReadConnection()
@@ -17,21 +16,6 @@ fun <RT> Storage.withReadConnection(op: (AppContext) -> RT): RT {
         closeReadConnection(ctx)
     }
 }
-
-/*
-fun Storage.withWriteConnection(op: (AppContext) -> Boolean): Boolean {
-    val ctx = openWriteConnection()
-    var commit = false
-
-    try {
-        commit = op(ctx)
-    } finally {
-        closeWriteConnection(ctx, commit)
-    }
-
-    return commit
-}
- */
 
 fun <RT> Storage.withWriteConnection(op: (AppContext) -> RT): RT {
     val ctx = openWriteConnection()
@@ -90,8 +74,8 @@ fun <RT> withReadWriteConnection(storage: Storage, chainID: Long, op: (EContext)
     }
 }
 
-fun <RT> runStorageCommand(appConfig: AppConfig, op: (ctx: AppContext) -> RT): RT {
-    val storage = StorageBuilder.buildStorage(appConfig)
+fun <RT> runStorageCommand(appConfig: AppConfig, allowUpgrade: Boolean = false, op: (ctx: AppContext) -> RT): RT {
+    val storage = StorageBuilder.buildStorage(appConfig, allowUpgrade = allowUpgrade)
 
     return storage.use {
         it.withWriteConnection { ctx ->
@@ -100,44 +84,12 @@ fun <RT> runStorageCommand(appConfig: AppConfig, op: (ctx: AppContext) -> RT): R
     }
 }
 
-@Deprecated(message = "use runStorageCommand(AppConfig, (ctx: AppContext) -> RT) instead",
-        replaceWith = ReplaceWith("runStorageCommand(AppConfig.fromPropertiesFile(File(nodeConfigFilename)), op)",
-                imports = arrayOf("net.postchain.config.app.AppConfig", "java.io.File")))
-fun <RT> runStorageCommand(nodeConfigFilename: String, op: (ctx: AppContext) -> RT): RT {
-    val appConfig = AppConfig.fromPropertiesFile(File(nodeConfigFilename))
-    return runStorageCommand(appConfig, op)
-}
-
-@Deprecated(message = "use runStorageCommand(AppConfig, (ctx: AppContext) -> RT) instead",
-        replaceWith = ReplaceWith("runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFilename), op)",
-                imports = arrayOf("net.postchain.config.app.AppConfig")))
-fun <RT> runStorageCommand(nodeConfigFile: File, op: (ctx: AppContext) -> RT): RT {
-    val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
-    return runStorageCommand(appConfig, op)
-}
-
-fun <RT> runStorageCommand(appConfig: AppConfig, chainId: Long, op: (ctx: EContext) -> RT): RT {
-    val storage = StorageBuilder.buildStorage(appConfig)
+fun <RT> runStorageCommand(appConfig: AppConfig, chainId: Long, allowUpgrade: Boolean = false, op: (ctx: EContext) -> RT): RT {
+    val storage = StorageBuilder.buildStorage(appConfig, allowUpgrade = allowUpgrade)
 
     return storage.use {
         withReadWriteConnection(it, chainId) { ctx ->
             op(ctx)
         }
     }
-}
-
-@Deprecated(message = "use runStorageCommand(AppConfig, Long, (ctx: EContext) -> RT) instead",
-        replaceWith = ReplaceWith("runStorageCommand(AppConfig.fromPropertiesFile(File(nodeConfigFilename)), chainId, op)",
-                imports = arrayOf("net.postchain.config.app.AppConfig", "java.io.File")))
-fun <RT> runStorageCommand(nodeConfigFilename: String, chainId: Long, op: (ctx: EContext) -> RT): RT {
-    val appConfig = AppConfig.fromPropertiesFile(File(nodeConfigFilename))
-    return runStorageCommand(appConfig, chainId, op)
-}
-
-@Deprecated(message = "use runStorageCommand(AppConfig, Long, (ctx: EContext) -> RT) instead",
-        replaceWith = ReplaceWith("runStorageCommand(AppConfig.fromPropertiesFile(nodeConfigFile), chainId, op)",
-                imports = arrayOf("net.postchain.config.app.AppConfig")))
-fun <RT> runStorageCommand(nodeConfigFile: File, chainId: Long, op: (ctx: EContext) -> RT): RT {
-    val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
-    return runStorageCommand(appConfig, chainId, op)
 }

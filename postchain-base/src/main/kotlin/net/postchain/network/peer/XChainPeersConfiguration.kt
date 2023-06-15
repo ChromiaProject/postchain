@@ -10,6 +10,4 @@ open class XChainPeersConfiguration(
         val blockchainRid: BlockchainRid,
         val commConfiguration: PeerCommConfiguration,
         val peerPacketHandler: PeerPacketHandler
-) {
-        fun log() = "chainId: $chainId, blockchainRid: ${blockchainRid.toShortHex()}"
-}
+)

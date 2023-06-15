@@ -205,13 +205,13 @@ abstract class AbstractBlockBuilder(
 
     private fun beginLog(str: String) {
         if (logger.isTraceEnabled) {
-            logger.trace("${ectx.chainID} begin() -- $str, from block: ${getBTrace()}")
+            logger.trace("begin() -- $str, from block: ${getBTrace()}")
         }
     }
 
     private fun commitLog(str: String) {
         if (logger.isTraceEnabled) {
-            logger.trace("${ectx.chainID} commit() -- $str, from block: ${getBTrace()}")
+            logger.trace("commit() -- $str, from block: ${getBTrace()}")
         }
     }
 }

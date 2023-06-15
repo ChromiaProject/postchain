@@ -73,7 +73,7 @@ interface DatabaseAccess {
     fun createContainer(ctx: AppContext, name: String): Int
     fun getContainerIid(ctx: AppContext, name: String): Int?
 
-    fun initializeApp(connection: Connection, expectedDbVersion: Int)
+    fun initializeApp(connection: Connection, expectedDbVersion: Int, allowUpgrade: Boolean)
     fun initializeBlockchain(ctx: EContext, blockchainRid: BlockchainRid)
     fun removeBlockchain(ctx: EContext): Boolean
     fun removeAllBlockchainSpecificTables(ctx: EContext)

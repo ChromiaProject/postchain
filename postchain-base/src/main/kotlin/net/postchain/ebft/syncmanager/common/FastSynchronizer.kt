@@ -74,7 +74,7 @@ class FastSynchronizer(
         val startTime = System.currentTimeMillis()
         var hasRestartFailed = false
         override fun toString(): String {
-            return "${this@FastSynchronizer.workerContext.processName}-h${height}-${NameHelper.peerName(peerId)}"
+            return "h${height}-${NameHelper.peerName(peerId)}"
         }
     }
 
@@ -487,9 +487,9 @@ class FastSynchronizer(
         unfinishedTrace("Received for $j")
         var bTrace: BlockTrace? = null
         if (logger.isDebugEnabled) {
-            logger.trace { "handleUnfinishedBlock() - Creating block trace with procname: $procName , height: $height " }
+            logger.trace { "handleUnfinishedBlock() - Creating block trace with height: $height " }
 
-            bTrace = BlockTrace.build(procName, h.blockRID, height)
+            bTrace = BlockTrace.build(h.blockRID, height)
         }
         val expectedHeader = j.header
 
@@ -574,7 +574,7 @@ class FastSynchronizer(
         val block = job.block ?: throw ProgrammerMistake("Attempting to commit an unfinished job")
         addBlockCompletionFuture = blockDatabase
                 .addBlock(block, addBlockCompletionFuture, bTrace)
-                .whenCompleteUnwrapped { _: Any?, exception ->
+                .whenCompleteUnwrapped(loggingContext) { _: Any?, exception ->
                     if (exception != null) {
                         handleAddBlockException(exception, block, bTrace, peerStatuses, job.peerId)
                         job.addBlockException = exception

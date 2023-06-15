@@ -3,6 +3,7 @@
 package net.postchain.ebft
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockchainEngine
@@ -29,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * We use only one thread, which means we know the previous task was completed before we begin the next.
  */
 class BaseBlockDatabase(
+        private val loggingContext: Map<String, String>,
         private val engine: BlockchainEngine,
         private val blockQueries: BlockQueries,
         val nodeIndex: Int
@@ -69,18 +71,20 @@ class BaseBlockDatabase(
         }
 
         return CompletableFuture.supplyAsync({
-            try {
-                if (logger.isDebugEnabled) {
-                    logger.debug("Starting job $name")
+            withLoggingContext(loggingContext) {
+                try {
+                    if (logger.isDebugEnabled) {
+                        logger.debug("Starting job $name")
+                    }
+                    val res = op()
+                    if (logger.isDebugEnabled) {
+                        logger.debug("Finished job $name")
+                    }
+                    res
+                } catch (e: Exception) {
+                    logger.debug(e) { "Failed job $name" }
+                    throw e
                 }
-                val res = op()
-                if (logger.isDebugEnabled) {
-                    logger.debug("Finished job $name")
-                }
-                res
-            } catch (e: Exception) {
-                logger.debug(e) { "Failed job $name" }
-                throw e
             }
         }, executor)
     }

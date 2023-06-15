@@ -21,7 +21,6 @@ class ContainerHealthcheckHandlerTest {
 
     companion object {
         private const val PUBKEY = "12345678"
-        private const val NODE_NAME = "NODE"
         private const val CONTAINER_IID = 42
         private const val CHAIN_ID = 54L
     }
@@ -48,7 +47,7 @@ class ContainerHealthcheckHandlerTest {
         chainsRemoved = 0
         psContainers.clear()
         psContainers[cname] = postchainContainer
-        sut = ContainerHealthcheckHandler(appConfig, NODE_NAME, dockerClient, postchainContainers, removeBlockchainProcess)
+        sut = ContainerHealthcheckHandler(dockerClient, postchainContainers, removeBlockchainProcess)
     }
 
     @Test

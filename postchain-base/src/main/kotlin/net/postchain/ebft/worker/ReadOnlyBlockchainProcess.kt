@@ -3,6 +3,7 @@
 package net.postchain.ebft.worker
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainState
 import net.postchain.core.NODE_ID_READ_ONLY
@@ -20,19 +21,26 @@ import net.postchain.ebft.syncmanager.common.KnownState
 import net.postchain.ebft.syncmanager.common.SlowSynchronizer
 import net.postchain.ebft.syncmanager.common.SyncMethod
 import net.postchain.ebft.syncmanager.common.SyncParameters
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
 
 class ReadOnlyBlockchainProcess(
         private val workerContext: WorkerContext,
         val blockQueries: BlockQueries,
         private val blockchainState: BlockchainState
-) : AbstractBlockchainProcess("replica-${workerContext.processName}", workerContext.engine) {
+) : AbstractBlockchainProcess("replica-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine) {
 
     companion object : KLogging()
 
     private val myPubKey = workerContext.appConfig.pubKey
 
+    private val loggingContext = mapOf(
+            CHAIN_IID_TAG to workerContext.blockchainConfiguration.chainID.toString(),
+            BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex()
+    )
+
     private val blockDatabase = BaseBlockDatabase(
-            blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY
+            loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY
     )
 
     private val params = SyncParameters.fromAppConfig(workerContext.appConfig)
@@ -64,26 +72,30 @@ class ReadOnlyBlockchainProcess(
         if (blockchainState == BlockchainState.PAUSED) {
             Thread.sleep(1000)
         } else {
-            if (params.slowSyncEnabled) {
-                logger.debug { "Using slow sync for read only bc process" }
-                syncMethod = SyncMethod.FAST_SYNC
-                fastSynchronizer.syncUntilResponsiveNodesDrained()
-                // Move to slow sync and proceed until shutdown
-                syncMethod = SyncMethod.SLOW_SYNC
-                slowSynchronizer.syncUntil()
-                syncMethod = SyncMethod.NOT_SYNCING
-            } else {
-                logger.debug { "Using fast sync for read only bc process" }
-                syncMethod = SyncMethod.FAST_SYNC
-                fastSynchronizer.syncUntil { !isProcessRunning() }
-                syncMethod = SyncMethod.NOT_SYNCING
+            withLoggingContext(loggingContext) {
+                if (params.slowSyncEnabled) {
+                    logger.debug { "Using slow sync for read only bc process" }
+                    syncMethod = SyncMethod.FAST_SYNC
+                    fastSynchronizer.syncUntilResponsiveNodesDrained()
+                    // Move to slow sync and proceed until shutdown
+                    syncMethod = SyncMethod.SLOW_SYNC
+                    slowSynchronizer.syncUntil()
+                    syncMethod = SyncMethod.NOT_SYNCING
+                } else {
+                    logger.debug { "Using fast sync for read only bc process" }
+                    syncMethod = SyncMethod.FAST_SYNC
+                    fastSynchronizer.syncUntil { !isProcessRunning() }
+                    syncMethod = SyncMethod.NOT_SYNCING
+                }
             }
         }
     }
 
     override fun cleanup() {
-        blockDatabase.stop()
-        workerContext.shutdown()
+        withLoggingContext(loggingContext) {
+            blockDatabase.stop()
+            workerContext.shutdown()
+        }
     }
 
     override fun registerDiagnosticData(diagnosticData: DiagnosticData) {

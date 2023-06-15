@@ -15,10 +15,10 @@ import java.time.Instant.EPOCH
 
 class ManagedNodeConfigurationProvider(
         appConfig: AppConfig,
-        createStorage: (AppConfig) -> Storage
+        storage: Storage
 ) : ManualNodeConfigurationProvider(
         appConfig,
-        createStorage
+        storage
 ) {
 
     private var managedPeerSource: PeerInfoDataSource? = null
@@ -29,10 +29,10 @@ class ManagedNodeConfigurationProvider(
 
     override fun getConfiguration(): NodeConfig {
         return object : ManagedNodeConfig(appConfig) {
-            override val peerInfoMap = getPeerInfoCollection(appConfig).associateBy(PeerInfo::peerId)
-            override val blockchainReplicaNodes = getBlockchainReplicaCollection(appConfig)
+            override val peerInfoMap = getPeerInfoCollection().associateBy(PeerInfo::peerId)
+            override val blockchainReplicaNodes = getBlockchainReplicaCollection()
             override val locallyConfiguredBlockchainsToReplicate = getLocallyConfiguredBlockchainsToReplicate(appConfig)
-            override val mustSyncUntilHeight = getSyncUntilHeight(appConfig)
+            override val mustSyncUntilHeight = getSyncUntilHeight()
         }
     }
 
@@ -49,7 +49,7 @@ class ManagedNodeConfigurationProvider(
      * The timestamp is taken directly from the respective table, c0.node_list
      * is not involved here.
      */
-    override fun getPeerInfoCollection(appConfig: AppConfig): Array<PeerInfo> {
+    override fun getPeerInfoCollection(): Array<PeerInfo> {
         val peerInfoMap = mutableMapOf<WrappedByteArray, PeerInfo>()
 
         // Define pick function
@@ -60,7 +60,7 @@ class ManagedNodeConfigurationProvider(
         }
 
         // Collect peerInfos from local peerinfos table (common for all bcs)
-        super.getPeerInfoCollection(appConfig).forEach(peerInfoPicker)
+        super.getPeerInfoCollection().forEach(peerInfoPicker)
         // get the peerInfos from the chain0.node table
         managedPeerSource?.getPeerInfos()?.forEach(peerInfoPicker)
 
@@ -74,9 +74,9 @@ class ManagedNodeConfigurationProvider(
      * 2. The chain0 c0.blockchain_replica_node table
      *
      */
-    override fun getBlockchainReplicaCollection(appConfig: AppConfig): Map<BlockchainRid, List<NodeRid>> {
+    override fun getBlockchainReplicaCollection(): Map<BlockchainRid, List<NodeRid>> {
         // Collect from local table (common for all bcs)
-        val localResMap = super.getBlockchainReplicaCollection(appConfig)
+        val localResMap = super.getBlockchainReplicaCollection()
         // get values from the chain0 table
         val chain0ResMap = managedPeerSource?.getBlockchainReplicaNodeMap() ?: mapOf()
 
@@ -98,15 +98,15 @@ class ManagedNodeConfigurationProvider(
         return a.toSet().union(b).toList()
     }
 
-    override fun getSyncUntilHeight(appConfig: AppConfig): Map<Long, Long> {
+    override fun getSyncUntilHeight(): Map<Long, Long> {
         //collect from local table: mapOf<chainID,height>
-        val localMap = super.getSyncUntilHeight(appConfig)
+        val localMap = super.getSyncUntilHeight()
 
         //collect from chain0 table. Mapped to brid instead of chainID, since chainID does not exist here. It is local.
         val bridToHeightMap = managedPeerSource?.getSyncUntilHeight() ?: mapOf()
 
         //brid2Height => chainID2height
-        val bridToChainID = super.getChainIDs(appConfig)
+        val bridToChainID = super.getChainIDs()
         val c0Heights = mutableMapOf<Long, Long>()
         for (x in bridToHeightMap) {
             val chainIdKey = bridToChainID[x.key]

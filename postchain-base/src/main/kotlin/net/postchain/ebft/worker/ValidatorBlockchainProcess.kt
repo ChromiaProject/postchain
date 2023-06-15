@@ -3,6 +3,7 @@
 package net.postchain.ebft.worker
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.base.NetworkAwareTxQueue
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainState
@@ -20,6 +21,8 @@ import net.postchain.ebft.StatusManager
 import net.postchain.ebft.rest.contract.toStateNodeStatus
 import net.postchain.ebft.syncmanager.validator.AppliedConfigSender
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
 import java.lang.Thread.sleep
 import java.time.Duration
 
@@ -31,7 +34,7 @@ import java.time.Duration
 class ValidatorBlockchainProcess(
         val workerContext: WorkerContext,
         startWithFastSync: Boolean
-) : AbstractBlockchainProcess("validator-${workerContext.processName}", workerContext.engine) {
+) : AbstractBlockchainProcess("validator-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine) {
 
     companion object : KLogging()
 
@@ -42,10 +45,13 @@ class ValidatorBlockchainProcess(
     val nodeStateTracker = NodeStateTracker()
     val statusManager: StatusManager
     private val appliedConfigSender = AppliedConfigSender(
-            workerContext.blockchainConfiguration.configHash,
-            workerContext.engine.getBlockQueries(),
-            workerContext.communicationManager,
+            workerContext,
             Duration.ofMillis(workerContext.appConfig.appliedConfigSendInterval())
+    )
+
+    private val loggingContext = mapOf(
+            CHAIN_IID_TAG to workerContext.blockchainConfiguration.chainID.toString(),
+            BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex()
     )
 
     init {
@@ -53,15 +59,13 @@ class ValidatorBlockchainProcess(
         statusManager = BaseStatusManager(
                 blockchainConfiguration.signers.size,
                 blockchainConfiguration.blockchainContext.nodeID,
-                blockchainConfiguration.configHash,
                 blockchainEngine.getBlockQueries().getLastBlockHeight().get() + 1
         )
 
         blockDatabase = BaseBlockDatabase(
-                blockchainEngine, blockchainEngine.getBlockQueries(), blockchainConfiguration.blockchainContext.nodeID)
+                loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), blockchainConfiguration.blockchainContext.nodeID)
 
         blockManager = BaseBlockManager(
-                workerContext.processName,
                 blockDatabase,
                 statusManager,
                 blockchainEngine.getBlockBuildingStrategy(),
@@ -72,6 +76,7 @@ class ValidatorBlockchainProcess(
         // because we don't want tx forwarding/broadcasting when received through p2p network
         syncManager = ValidatorSyncManager(
                 workerContext,
+                loggingContext,
                 statusManager,
                 blockManager,
                 blockDatabase,
@@ -90,14 +95,18 @@ class ValidatorBlockchainProcess(
     fun isInFastSyncMode() = syncManager.isInFastSync()
 
     override fun action() {
-        syncManager.update()
+        withLoggingContext(loggingContext) {
+            syncManager.update()
+        }
         sleep(20)
     }
 
     override fun cleanup() {
-        appliedConfigSender.shutdown()
-        blockDatabase.stop()
-        workerContext.shutdown()
+        withLoggingContext(loggingContext) {
+            appliedConfigSender.shutdown()
+            blockDatabase.stop()
+            workerContext.shutdown()
+        }
     }
 
     override fun registerDiagnosticData(diagnosticData: DiagnosticData) {

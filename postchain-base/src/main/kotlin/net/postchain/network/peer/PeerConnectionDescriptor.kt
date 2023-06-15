@@ -2,7 +2,6 @@ package net.postchain.network.peer
 
 import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.IdentPacketInfo
 import net.postchain.network.common.ConnectionDescriptor
 import net.postchain.network.common.ConnectionDirection
@@ -18,12 +17,7 @@ class PeerConnectionDescriptor(
 
     fun isOutgoing() = (dir == ConnectionDirection.OUTGOING)
 
-    fun loggingPrefix(): String {
-        return BlockchainProcessName(
-                nodeId.toString(),
-                bcRid
-        ).toString()
-    }
+    fun loggingPrefix(): String = "node: ${nodeId.toHex().take(8)}, bc-rid: ${bcRid.toShortHex()}"
 
 }
 

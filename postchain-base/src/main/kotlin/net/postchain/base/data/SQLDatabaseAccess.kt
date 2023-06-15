@@ -516,7 +516,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, intRes, height)
     }
 
-    override fun initializeApp(connection: Connection, expectedDbVersion: Int) {
+    override fun initializeApp(connection: Connection, expectedDbVersion: Int, allowUpgrade: Boolean) {
         if (expectedDbVersion !in 1..9) {
             throw UserMistake("Unsupported DB version $expectedDbVersion")
         }
@@ -531,8 +531,12 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             val sql = "SELECT value FROM ${tableMeta()} WHERE key='version'"
             val version = queryRunner.query(connection, sql, ScalarHandler<String>()).toInt()
 
-            if (expectedDbVersion < version) {
-                throw UserMistake("Will not downgrade database from $version to $expectedDbVersion")
+            when {
+                expectedDbVersion < version ->
+                    throw DbVersionDowngradeDisallowedException("Database downgrade is not allowed from $version to $expectedDbVersion")
+
+                expectedDbVersion != version && !allowUpgrade ->
+                    throw DbVersionUpgradeDisallowedException("Database upgrade is not allowed from $version to $expectedDbVersion")
             }
 
             if (version < 2 && expectedDbVersion >= 2) {

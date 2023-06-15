@@ -35,6 +35,12 @@ class PostchainService(private val nodeProvider: NodeProvider) {
                 BlockchainApi.addConfiguration(ctx, height, override, config, allowUnknownSigners)
             }
 
+    fun listConfigurations(chainId: Long): List<Long> {
+        return withReadConnection(postchainNode.postchainContext.sharedStorage, chainId) { ctx ->
+            BlockchainApi.listConfigurations(ctx)
+        }
+    }
+
     /**
      * @return [BlockchainRid] if chain was initialized, `null` if already existed and `override` is `false`
      */
@@ -59,11 +65,13 @@ class PostchainService(private val nodeProvider: NodeProvider) {
 
     fun findBlockchain(chainId: Long): Triple<BlockchainRid?, Boolean?, Long> =
             withReadConnection(postchainNode.postchainContext.sharedStorage, chainId) { ctx ->
-                Triple(
-                        BlockchainApi.findBlockchain(ctx),
-                        postchainNode.isBlockchainRunning(chainId),
-                        BlockchainApi.getLastBlockHeight(ctx)
-                )
+                BlockchainApi.findBlockchain(ctx)?.let {
+                    Triple(
+                            it,
+                            postchainNode.isBlockchainRunning(chainId),
+                            BlockchainApi.getLastBlockHeight(ctx)
+                    )
+                } ?: Triple(null, null, -1)
             }
 
     fun addBlockchainReplica(brid: BlockchainRid, pubkey: PubKey): Boolean =

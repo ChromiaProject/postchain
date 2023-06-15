@@ -94,6 +94,7 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
                         .setPubkey(node.pubKey)
                         .setHost("localhost")
                         .setPort(7740)
+                        .setOverride(true)
                         .build()
         )
     }

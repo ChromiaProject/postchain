@@ -41,7 +41,7 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
             val blockchainConfig = GtvFileReader.readFile(blockchainConfigFile!!)
             val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, appConfig.cryptoSystem)
 
-            runStorageCommand(appConfig, chainIDs[0]) { ctx ->
+            runStorageCommand(appConfig, chainIDs[0], true) { ctx ->
                 val wasInitialized = BlockchainApi.initializeBlockchain(ctx, blockchainRid, override, blockchainConfig)
 
                 if (!wasInitialized && update) {

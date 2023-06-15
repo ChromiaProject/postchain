@@ -3,7 +3,6 @@
 package net.postchain.base.data
 
 import mu.KLogging
-import mu.withLoggingContext
 import net.postchain.base.data.SqlUtils.isClosed
 import net.postchain.base.data.SqlUtils.isFatal
 import net.postchain.common.exception.ProgrammerMistake
@@ -21,7 +20,6 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.BlockWitnessBuilder
 import net.postchain.core.block.ManagedBlockBuilder
-import net.postchain.logging.CHAIN_IID_TAG
 import java.sql.SQLException
 import java.sql.Savepoint
 import kotlin.system.exitProcess
@@ -105,29 +103,27 @@ class BaseManagedBlockBuilder(
      * @return exception if error occurs
      */
     override fun maybeAppendTransaction(tx: Transaction): Exception? {
-        withLoggingContext(CHAIN_IID_TAG to eContext.chainID.toString()) {
-            val action = {
-                blockBuilder.appendTransaction(tx)
-            }
+        val action = {
+            blockBuilder.appendTransaction(tx)
+        }
 
-            return if (storage.isSavepointSupported()) {
-                storage.withSavepoint(eContext, action).also {
-                    if (it != null) {
-                        when (it) {
-                            // Don't log stacktrace
-                            is TransactionIncorrect -> logger.debug { "Tx Incorrect ${tx.getRID().toHex()}." }
-                            is TransactionFailed -> logger.debug { "Tx failed ${tx.getRID().toHex()}." }
-                            is UserMistake -> logger.debug(it) { "Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}." }
-                            // Should be unusual, so let's log everything
-                            else -> logger.error("Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}.", it)
-                        }
+        return if (storage.isSavepointSupported()) {
+            storage.withSavepoint(eContext, action).also {
+                if (it != null) {
+                    when (it) {
+                        // Don't log stacktrace
+                        is TransactionIncorrect -> logger.debug { "Tx Incorrect ${tx.getRID().toHex()}." }
+                        is TransactionFailed -> logger.debug { "Tx failed ${tx.getRID().toHex()}." }
+                        is UserMistake -> logger.debug(it) { "Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}." }
+                        // Should be unusual, so let's log everything
+                        else -> logger.error("Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}.", it)
                     }
                 }
-            } else {
-                logger.warn("Savepoint not supported! Unclear if Postchain will work under these conditions")
-                action()
-                null
             }
+        } else {
+            logger.warn("Savepoint not supported! Unclear if Postchain will work under these conditions")
+            action()
+            null
         }
     }
 

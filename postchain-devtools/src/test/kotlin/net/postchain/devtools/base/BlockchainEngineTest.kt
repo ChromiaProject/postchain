@@ -13,11 +13,16 @@ import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
+import net.postchain.devtools.testinfra.BaseTestInfrastructureFactory
 import net.postchain.devtools.testinfra.ErrorTransaction
 import net.postchain.devtools.testinfra.TestBlockchainConfiguration
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.testinfra.UnexpectedExceptionTransaction
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.fail
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
@@ -25,7 +30,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
 
     @BeforeEach
     fun setTestInfrastructure() {
-        configOverrides.setProperty("infrastructure", "base/test")
+        configOverrides.setProperty("infrastructure", BaseTestInfrastructureFactory::class.qualifiedName)
     }
 
     @Test

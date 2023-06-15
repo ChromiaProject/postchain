@@ -3,7 +3,6 @@ package net.postchain.containers.bpm
 import mu.KLogging
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.config.app.AppConfig
-import net.postchain.config.node.NodeConfigProviders
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Infrastructure
@@ -160,7 +159,6 @@ object ContainerConfigFactory : KLogging() {
 
         add("POSTCHAIN_DEBUG=${restApiConfig.debug}")
 
-        add("POSTCHAIN_NODE_CONFIG_PROVIDER=${NodeConfigProviders.Managed.name.lowercase()}")
         add("POSTCHAIN_INFRASTRUCTURE=${Infrastructure.EbftContainerSub.get()}")
         add("POSTCHAIN_PCU=${appConfig.isPcuEnabled()}")
 
