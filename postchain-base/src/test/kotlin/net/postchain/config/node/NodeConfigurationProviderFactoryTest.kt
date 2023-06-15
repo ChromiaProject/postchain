@@ -32,7 +32,6 @@ class NodeConfigurationProviderFactoryTest {
                 arrayOf("legacy", PropertiesNodeConfigurationProvider::class), // Deprecated and will be removed in 3.6?
                 arrayOf("properties", PropertiesNodeConfigurationProvider::class),
                 arrayOf("Manual", ManualNodeConfigurationProvider::class), // case insensitive
-                arrayOf("ManageD", ManagedNodeConfigurationProvider::class), // case insensitive
         )
     }
 

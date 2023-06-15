@@ -10,14 +10,21 @@ import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
+import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.InfrastructureFactory
+import net.postchain.core.Storage
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.peer.DefaultPeerConnectionManager
 
 open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
+
+    override fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider {
+        return NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
+    }
 
     override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager {
         return DefaultPeerConnectionManager(
