@@ -10,9 +10,11 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.api.internal.BlockchainApi
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.config.app.AppConfig
+import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvFileReader
 
 class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node with a configuration") {
@@ -43,6 +45,9 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
 
             runStorageCommand(appConfig, chainIDs[0]) { ctx ->
                 val wasInitialized = BlockchainApi.initializeBlockchain(ctx, blockchainRid, override, blockchainConfig)
+                if (wasInitialized) {
+                    appConfig.genesisPeer?.let { DatabaseAccess.of(ctx).addBlockchainReplica(ctx, blockchainRid, PubKey(it.pubKey)) }
+                }
 
                 if (!wasInitialized && update) {
                     val currentHeight = BlockchainApi.getLastBlockHeight(ctx)
