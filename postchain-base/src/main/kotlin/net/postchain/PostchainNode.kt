@@ -16,12 +16,8 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.Shutdownable
 import net.postchain.core.block.BlockQueriesProviderImpl
-import net.postchain.core.block.BlockTrace
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.debug.JsonNodeDiagnosticContext
-import net.postchain.devtools.NameHelper.peerName
 import net.postchain.logging.CHAIN_IID_TAG
-import net.postchain.logging.NODE_PUBKEY_TAG
 import net.postchain.metrics.initMetrics
 
 /**
@@ -32,7 +28,6 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
     protected val blockchainInfrastructure: BlockchainInfrastructure
     val processManager: BlockchainProcessManager
     val postchainContext: PostchainContext
-    private val logPrefix: String
 
     companion object : KLogging()
 
@@ -47,7 +42,6 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
         }
 
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
-        logPrefix = peerName(appConfig.pubKey)
 
         val blockQueriesProvider = BlockQueriesProviderImpl()
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
@@ -69,9 +63,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
     }
 
     fun tryStartBlockchain(chainId: Long) {
-        withLoggingContext(
-                NODE_PUBKEY_TAG to appConfig.pubKey,
-                CHAIN_IID_TAG to chainId.toString()) {
+        withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
             try {
                 startBlockchain(chainId)
             } catch (e: NotFound) {
@@ -84,11 +76,11 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
         }
     }
 
-    fun startBlockchain(chainId: Long): BlockchainRid {
+    open fun startBlockchain(chainId: Long): BlockchainRid {
         if (!chainExists(chainId)) {
             throw NotFound("Cannot start chain $chainId, not found in db.")
         }
-        return processManager.startBlockchain(chainId, buildBbDebug(chainId))
+        return processManager.startBlockchain(chainId, null)
     }
 
     private fun chainExists(chainId: Long): Boolean {
@@ -97,8 +89,8 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
         }
     }
 
-    fun stopBlockchain(chainId: Long) {
-        processManager.stopBlockchain(chainId, buildBbDebug(chainId))
+    open fun stopBlockchain(chainId: Long) {
+        processManager.stopBlockchain(chainId, null)
     }
 
     fun isBlockchainRunning(chainId: Long): Boolean {
@@ -106,16 +98,14 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
     }
 
     override fun shutdown() {
-        withLoggingContext(NODE_PUBKEY_TAG to appConfig.pubKey) {
-            // FYI: Order is important
-            logger.info("$logPrefix: shutdown() - begin")
-            processManager.shutdown()
-            logger.debug("$logPrefix: shutdown() - Stopping BlockchainInfrastructure")
-            blockchainInfrastructure.shutdown()
-            logger.debug("$logPrefix: shutdown() - Stopping PostchainContext")
-            postchainContext.shutDown()
-            logger.info("$logPrefix: shutdown() - end")
-        }
+        // FYI: Order is important
+        logger.info("shutdown() - begin")
+        processManager.shutdown()
+        logger.debug("shutdown() - Stopping BlockchainInfrastructure")
+        blockchainInfrastructure.shutdown()
+        logger.debug("shutdown() - Stopping PostchainContext")
+        postchainContext.shutDown()
+        logger.info("shutdown() - end")
     }
 
     /**
@@ -125,35 +115,6 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
      * debugging than otherwise
      */
     open fun isThisATest(): Boolean = false
-
-    /**
-     * This is for DEBUG operation only
-     *
-     * We don't care about what the most recent block was, or height at this point.
-     * We are just providing the info we have right now
-     */
-    private fun buildBbDebug(chainId: Long): BlockTrace? {
-        return if (logger.isDebugEnabled) {
-            withLoggingContext(
-                    NODE_PUBKEY_TAG to appConfig.pubKey,
-                    CHAIN_IID_TAG to chainId.toString()
-            ) {
-                val x = processManager.retrieveBlockchain(chainId)
-                if (x == null) {
-                    logger.trace { "WARN why didn't we find the blockchain for chainId: $chainId on node: ${postchainContext.appConfig.pubKey}?" }
-                    null
-                } else {
-                    val procName = BlockchainProcessName(
-                            postchainContext.appConfig.pubKey,
-                            x.blockchainEngine.getConfiguration().blockchainRid
-                    )
-                    BlockTrace.buildBeforeBlock(procName)
-                }
-            }
-        } else {
-            null
-        }
-    }
 
     private val version get() = javaClass.getPackage()?.implementationVersion ?: "null"
 }

@@ -86,7 +86,7 @@ class DefaultPeerConnectionManagerTest {
         // When
         val connectionManager = DefaultPeerConnectionManager(
                 packetEncoderFactory, packetDecoderFactory
-        ).apply { connectChain(chainPeerConfig, false, mock()) }
+        ).apply { connectChain(chainPeerConfig, false) }
 
         // Then
         verify(communicationConfig, never()).networkNodes
@@ -113,7 +113,7 @@ class DefaultPeerConnectionManagerTest {
         )
 
         try {
-            connectionManager.also { it.connectChain(chainPeerConfig, true, mock()) }
+            connectionManager.also { it.connectChain(chainPeerConfig, true) }
         } catch (_: IllegalArgumentException) {
         }
 
@@ -145,7 +145,7 @@ class DefaultPeerConnectionManagerTest {
         // When
         val connectionManager = DefaultPeerConnectionManager(
                 packetEncoderFactory, packetDecoderFactory
-        ).apply { connectChain(chainPeerConfig, true, mock()) }
+        ).apply { connectChain(chainPeerConfig, true) }
 
         // Then
         verify(chainPeerConfig, atLeast(1)).chainId
@@ -180,7 +180,7 @@ class DefaultPeerConnectionManagerTest {
                     mock(),
                     df
             ).apply {
-                connectChain(chainPeerConf, false, mock()) // Without connecting to peers
+                connectChain(chainPeerConf, false) // Without connecting to peers
                 connectChainPeer(1, unknownPeerInfo.peerId())
             }
         }
@@ -205,7 +205,7 @@ class DefaultPeerConnectionManagerTest {
         val connectionManager = DefaultPeerConnectionManager(
                 packetEncoderFactory, packetDecoderFactory
         ).apply {
-            connectChain(chainPeerConfig, false, mock()) // Without connecting to peers
+            connectChain(chainPeerConfig, false) // Without connecting to peers
             connectChainPeer(1, peerInfo2.peerId())
         }
 
@@ -236,7 +236,7 @@ class DefaultPeerConnectionManagerTest {
         val connectionManager = DefaultPeerConnectionManager(
                 packetEncoderFactory, packetDecoderFactory
         ).apply {
-            connectChain(chainPeerConfig, true, mock()) // Auto connect all peers
+            connectChain(chainPeerConfig, true) // Auto connect all peers
 
             // Emulates call of onPeerConnected() by XConnector
             onNodeConnected(mockConnection(peerConnectionDescriptor1))
@@ -260,7 +260,7 @@ class DefaultPeerConnectionManagerTest {
 
     @Test
     fun disconnectChain_wont_result_in_exception_if_chain_is_not_connected() {
-        emptyManager().disconnectChain(mock(), 1)
+        emptyManager().disconnectChain(1)
     }
 
     @Test
@@ -287,7 +287,7 @@ class DefaultPeerConnectionManagerTest {
         val connectionManager = DefaultPeerConnectionManager(
                 packetEncoderFactory, packetDecoderFactory
         ).apply {
-            connectChain(chainPeerConfig, true, mock()) // With autoConnect
+            connectChain(chainPeerConfig, true) // With autoConnect
 
             // Then / before peers connected
             // - isPeerConnected
@@ -326,7 +326,7 @@ class DefaultPeerConnectionManagerTest {
 
 
             // When / Disconnecting the whole chain
-            disconnectChain(mock(), 1L)
+            disconnectChain(1L)
             // Then
             val internalChains = FieldUtils.readField(this, "chainsWithConnections", true)
                     as ChainsWithConnections<*, *, *>
@@ -364,7 +364,7 @@ class DefaultPeerConnectionManagerTest {
         val connectionManager = DefaultPeerConnectionManager(
                 packetEncoderFactory, packetDecoderFactory
         ).apply {
-            connectChain(chainPeerConfig, true, mock()) // With autoConnect
+            connectChain(chainPeerConfig, true) // With autoConnect
 
             // Emulates call of onPeerConnected() by XConnector
             onNodeConnected(connection1)
@@ -419,7 +419,7 @@ class DefaultPeerConnectionManagerTest {
         val connectionManager = DefaultPeerConnectionManager(
                 packetEncoderFactory, packetDecoderFactory
         ).apply {
-            connectChain(chainPeerConfig, true, mock()) // With autoConnect
+            connectChain(chainPeerConfig, true) // With autoConnect
 
             // Emulates call of onPeerConnected() by XConnector
             onNodeConnected(connection1)

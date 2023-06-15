@@ -56,7 +56,7 @@ class SlowSyncStateMachine(
         when (state) {
             SlowSyncStates.WAIT_FOR_ACTION -> {
                 val startingAtHeight = getStartHeight()
-                logger.debug { "maybeGetBlockRange() - ChainIid: $chainIid, not waiting for anything, so get height $startingAtHeight and above." }
+                logger.debug { "maybeGetBlockRange() - not waiting for anything, so get height $startingAtHeight and above." }
                 sendRequest(nowMs, this, null) // We don't mind asking the old peer
             }
 
@@ -64,13 +64,13 @@ class SlowSyncStateMachine(
                 if (nowMs > (waitTime!! + params.slowSyncMaxPeerWaitTime)) {
                     // We waited too long, let's ask someone else
                     logger.debug {
-                        "maybeGetBlockRange() - ChainIid: $chainIid waited too long, for anything, try again with height: $waitForHeight " +
+                        "maybeGetBlockRange() - waited too long, for anything, try again with height: $waitForHeight " +
                                 "and above (but don't ask ${NameHelper.peerName(waitForNodeId!!)} )."
                     }
                     state = SlowSyncStates.WAIT_FOR_ACTION // Reset
                     sendRequest(nowMs, this, waitForNodeId!!)
                 } else {
-                    logger.debug { "maybeGetBlockRange() - ChainIid: $chainIid still waiting for height: $waitForHeight, go back to sleep." }
+                    logger.debug { "maybeGetBlockRange() - still waiting for height: $waitForHeight, go back to sleep." }
                     // Still waiting for last request, go back to sleep
                 }
             }

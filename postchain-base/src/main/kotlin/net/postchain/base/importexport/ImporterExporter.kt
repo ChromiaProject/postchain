@@ -72,7 +72,7 @@ object ImporterExporter : KLogging() {
                         CHAIN_IID_TAG to chainId.toString(),
                         BLOCKCHAIN_RID_TAG to blockchainRid.toHex()
                 ) {
-                    logger.info("Exporting blockchain $chainId with bc-rid ${blockchainRid.toHex()}...")
+                    logger.info("Exporting blockchain...")
 
                     exportConfigurations(configurationsFile, blockchainRid, db, ctx, fromHeight = fromHeight, upToHeight = upToHeight)
 
@@ -155,7 +155,7 @@ object ImporterExporter : KLogging() {
                 CHAIN_IID_TAG to chainId.toString(),
                 BLOCKCHAIN_RID_TAG to blockchainRid.toHex()
         ) {
-            logger.info("Importing blockchain from ${configurationsFile.toAbsolutePath()} and ${blocksFile.toAbsolutePath()} to chain $chainId with bc-rid ${blockchainRid.toHex()}...")
+            logger.info("Importing blockchain from ${configurationsFile.toAbsolutePath()} and ${blocksFile.toAbsolutePath()}...")
             val importResult = importBlocks(heights.toSet(), blocksFile, logNBlocks, storage, chainId, blockchainRid, nodeKeyPair, cryptoSystem)
 
             val message = if (importResult.numBlocks > 0)

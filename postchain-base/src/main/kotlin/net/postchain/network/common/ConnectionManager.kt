@@ -12,12 +12,12 @@ interface ConnectionManager : NetworkTopology, Shutdownable {
     /**
      * Connect the given chain to the network (for example "connect to all peers in the consensus network")
      */
-    fun connectChain(chainPeersConfig: XChainPeersConfiguration, autoConnectAll: Boolean, loggingPrefix: () -> String)
+    fun connectChain(chainPeersConfig: XChainPeersConfiguration, autoConnectAll: Boolean)
 
     /**
      * Disconnect all nodes from the chain
      */
-    fun disconnectChain(loggingPrefix: () -> String, chainId: Long)
+    fun disconnectChain(chainId: Long)
 
     /**
      * Send a packet to the given chain at the given node

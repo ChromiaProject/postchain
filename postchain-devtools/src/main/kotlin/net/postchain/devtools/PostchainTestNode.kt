@@ -57,6 +57,9 @@ class PostchainTestNode(
     companion object : KLogging() {
         const val SYSTEM_CHAIN_IID = 0L
         const val DEFAULT_CHAIN_IID = 1L
+
+        // Used for logging purposes
+        val threadLocalPubkey = InheritableThreadLocal<String>()
     }
 
     override fun isThisATest() = true
@@ -118,10 +121,7 @@ class PostchainTestNode(
     }
 
     fun startBlockchain() {
-        withLoggingContext(
-                NODE_PUBKEY_TAG to appConfig.pubKey,
-                CHAIN_IID_TAG to DEFAULT_CHAIN_IID.toString()
-        ) {
+        withLoggingContext(CHAIN_IID_TAG to DEFAULT_CHAIN_IID.toString()) {
             try {
                 startBlockchain(DEFAULT_CHAIN_IID)
             } catch (e: NotFound) {
@@ -134,8 +134,20 @@ class PostchainTestNode(
         }
     }
 
+    override fun startBlockchain(chainId: Long): BlockchainRid {
+        return withPubKeyDecoratedLogs {
+            super.startBlockchain(chainId)
+        }
+    }
+
+    override fun stopBlockchain(chainId: Long) {
+        withPubKeyDecoratedLogs {
+            super.stopBlockchain(chainId)
+        }
+    }
+
     override fun shutdown() {
-        withLoggingContext(NODE_PUBKEY_TAG to appConfig.pubKey) {
+        withPubKeyDecoratedLogs {
             logger.debug("shutdown node ${peerName(pubKey)}")
             super.shutdown()
             logger.debug("shutdown node ${peerName(pubKey)} done")
@@ -204,4 +216,13 @@ class PostchainTestNode(
      * (It's only for test, so I didn't ptu much thought into it.)
      */
     fun getBlockchainRid(chainId: Long): BlockchainRid? = blockchainRidMap[chainId]
+
+    private fun <T> withPubKeyDecoratedLogs(op: () -> T): T {
+        threadLocalPubkey.set(appConfig.pubKey)
+        try {
+            return op()
+        } finally {
+            threadLocalPubkey.remove()
+        }
+    }
 }

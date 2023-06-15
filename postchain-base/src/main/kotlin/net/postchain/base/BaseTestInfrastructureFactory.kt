@@ -17,7 +17,6 @@ import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.BlockchainState
 import net.postchain.core.InfrastructureFactory
 import net.postchain.core.SynchronizationInfrastructure
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoderFactory
 import net.postchain.network.common.ConnectionManager
@@ -28,7 +27,6 @@ class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : B
     companion object : KLogging()
 
     // Need this stuff to make this test class look a bit "normal"
-    val name: String = BlockchainProcessName("?", blockchainEngine.getConfiguration().blockchainRid).toString()
 
     override fun start() {}
 
@@ -44,7 +42,7 @@ class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : B
 
     private fun shutdownDebug(str: String) {
         if (logger.isDebugEnabled) {
-            logger.debug("$name: shutdown() - $str.")
+            logger.debug("shutdown() - $str.")
         }
     }
 }
@@ -53,7 +51,6 @@ class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : B
 class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 
     override fun makeBlockchainProcess(
-            processName: BlockchainProcessName,
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,

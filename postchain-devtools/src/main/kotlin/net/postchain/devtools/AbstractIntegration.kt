@@ -75,7 +75,7 @@ abstract class AbstractIntegration {
             i++
         }
         val witness = witnessBuilder.getWitness()
-        blockBuilder.setBTrace(BlockTrace.build(null, blockHeader.blockRID, null))
+        blockBuilder.setBTrace(BlockTrace.build(blockHeader.blockRID, null))
         blockBuilder.commit(witness)
         return witness
     }

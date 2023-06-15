@@ -28,7 +28,6 @@ import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
 import net.postchain.crypto.SigMaker
-import net.postchain.debug.BlockchainProcessName
 
 open class BaseBlockchainInfrastructure(
         val defaultSynchronizationInfrastructure: SynchronizationInfrastructure,
@@ -88,7 +87,6 @@ open class BaseBlockchainInfrastructure(
     }
 
     override fun makeBlockchainEngine(
-            processName: BlockchainProcessName,
             configuration: BlockchainConfiguration,
             afterCommitHandler: AfterCommitHandler,
             blockBuilderStorage: Storage,
@@ -99,12 +97,11 @@ open class BaseBlockchainInfrastructure(
     ): BaseBlockchainEngine {
         val transactionQueue = BaseTransactionQueue(configuration.transactionQueueSize)
 
-        return BaseBlockchainEngine(processName, configuration, blockBuilderStorage, sharedStorage, configuration.chainID, transactionQueue,
+        return BaseBlockchainEngine(configuration, blockBuilderStorage, sharedStorage, configuration.chainID, transactionQueue,
                 initialEContext, blockchainConfigurationProvider, restartNotifier, postchainContext.nodeDiagnosticContext, afterCommitHandler)
     }
 
     override fun makeBlockchainProcess(
-            processName: BlockchainProcessName,
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
@@ -112,7 +109,7 @@ open class BaseBlockchainInfrastructure(
     ): BlockchainProcess {
         val configuration = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
-        val process = synchronizationInfrastructure.makeBlockchainProcess(processName, engine, blockchainConfigurationProvider, restartNotifier, blockchainState)
+        val process = synchronizationInfrastructure.makeBlockchainProcess(engine, blockchainConfigurationProvider, restartNotifier, blockchainState)
         try {
             connectProcess(configuration, process)
         } catch (e: Exception) {

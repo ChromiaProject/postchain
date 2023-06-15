@@ -20,7 +20,6 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.logging.CONTAINER_NAME_TAG
-import net.postchain.logging.NODE_PUBKEY_TAG
 import net.postchain.managed.DirectoryDataSource
 import org.mandas.docker.client.DockerClient
 import org.mandas.docker.client.messages.Container
@@ -30,7 +29,6 @@ import java.util.concurrent.ConcurrentHashMap
 class ContainerJobHandler(
         private val appConfig: AppConfig,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
-        private val nodeName: String,
         private val dockerClient: DockerClient,
         private val directoryDataSource: () -> DirectoryDataSource,
         private val postchainContainers: () -> MutableMap<ContainerName, PostchainContainer>,
@@ -46,7 +44,7 @@ class ContainerJobHandler(
     private val fs = FileSystem.create(containerNodeConfig)
 
     fun handleJob(job: ContainerJob) {
-        withLoggingContext(NODE_PUBKEY_TAG to appConfig.pubKey, CONTAINER_NAME_TAG to job.containerName.name) {
+        withLoggingContext(CONTAINER_NAME_TAG to job.containerName.name) {
             handleJobInternal(job)
         }
     }
@@ -54,7 +52,7 @@ class ContainerJobHandler(
     private fun handleJobInternal(job: ContainerJob) {
         val containerName = job.containerName
         logger.info {
-            "[${nodeName}]: $SCOPE -- Job for container will be handled: " +
+            "$SCOPE -- Job for container will be handled: " +
                     "containerName: ${containerName}, " +
                     "chains to stop: ${job.chainsToStop.map { it.chainId }.toTypedArray().contentToString()}, " +
                     "chains to start: ${job.chainsToStart.map { it.chainId }.toTypedArray().contentToString()}"
@@ -65,7 +63,7 @@ class ContainerJobHandler(
                 true -> "Job for container $containerName has been finished successfully"
                 false -> "Job for container $containerName hasn't been finished yet and will be postponed"
             }
-            logger.info { "[${nodeName}]: $SCOPE -- $msg" }
+            logger.info { "$SCOPE -- $msg" }
         }
 
         // 1. Create PostchainContainer
@@ -82,7 +80,7 @@ class ContainerJobHandler(
         if (dockerContainer != null && job.chainsToStart.isNotEmpty()) {
             if (!ensureSubNode(psContainer, dockerContainer, containerName, job)) return result(false)
         } else {
-            logger.debug { "[${nodeName}]: $SCOPE -- DockerContainer is not running, 'is subnode connected' check will be skipped, container: ${job.containerName}" }
+            logger.debug { "$SCOPE -- DockerContainer is not running, 'is subnode connected' check will be skipped, container: ${job.containerName}" }
         }
 
         // 4. Stop chains
@@ -120,30 +118,30 @@ class ContainerJobHandler(
             return false
         }
         if (!psContainer.initializePostchainNode(PrivKey(appConfig.privKey))) {
-            logger.warn { "[${nodeName}]: $SCOPE -- Failed to initialize Postchain node, container: ${containerName}" }
+            logger.warn { "$SCOPE -- Failed to initialize Postchain node, container: $containerName" }
             job.postpone(5_000)
             return false
         }
         if (!psContainer.isSubnodeHealthy()) {
-            logger.warn { "[${nodeName}]: $SCOPE -- Subnode is unhealthy, container: ${containerName}" }
+            logger.warn { "$SCOPE -- Subnode is unhealthy, container: $containerName" }
             job.postpone(5_000)
             return false
         }
         job.resetFailedStartCount()
-        logger.info { "[${nodeName}]: $SCOPE -- Subnode is healthy, container: ${containerName}" }
+        logger.info { "$SCOPE -- Subnode is healthy, container: $containerName" }
         return true
     }
 
     private fun stopContainerIfEmpty(job: ContainerJob, psContainer: PostchainContainer, containerName: ContainerName, dockerContainer: Container?) {
         if (job.chainsToStart.isEmpty() && psContainer.isEmpty()) {
-            logger.info { "[${nodeName}]: $SCOPE -- Container is empty and will be stopped: $containerName" }
+            logger.info { "$SCOPE -- Container is empty and will be stopped: $containerName" }
             psContainer.stop()
             postchainContainers().remove(psContainer.containerName)
             if (dockerContainer != null) {
                 dockerClient.stopContainer(dockerContainer.id(), 10)
-                logger.debug { "[${nodeName}]: $SCOPE -- Docker container stopped: $containerName" }
+                logger.debug { "$SCOPE -- Docker container stopped: $containerName" }
             }
-            logger.info { "[${nodeName}]: $SCOPE -- Container stopped: $containerName" }
+            logger.info { "$SCOPE -- Container stopped: $containerName" }
         }
     }
 
@@ -151,11 +149,11 @@ class ContainerJobHandler(
         job.chainsToStart.forEach { chain ->
             withLoggingContext(CHAIN_IID_TAG to chain.chainId.toString(), BLOCKCHAIN_RID_TAG to chain.brid.toHex()) {
                 val process = createBlockchainProcess(chain, psContainer)
-                logger.debug { "[${nodeName}]: $SCOPE -- ContainerBlockchainProcess created: $process" }
+                logger.debug { "$SCOPE -- ContainerBlockchainProcess created" }
                 if (process == null) {
-                    logger.error { "[${nodeName}]: $SCOPE -- Blockchain didn't start: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+                    logger.error { "$SCOPE -- Blockchain didn't start" }
                 } else {
-                    logger.info { "[${nodeName}]: $SCOPE -- Blockchain started: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+                    logger.info { "$SCOPE -- Blockchain started" }
                 }
             }
         }
@@ -163,10 +161,10 @@ class ContainerJobHandler(
 
     private fun stopChains(job: ContainerJob, psContainer: PostchainContainer) {
         job.chainsToStop.forEach { chain ->
-            val process = terminateBlockchainProcess(chain.chainId, psContainer)
+            terminateBlockchainProcess(chain.chainId, psContainer)
             withLoggingContext(CHAIN_IID_TAG to chain.chainId.toString(), BLOCKCHAIN_RID_TAG to chain.brid.toHex()) {
-                logger.debug { "[${nodeName}]: $SCOPE -- ContainerBlockchainProcess terminated: $process" }
-                logger.info { "[${nodeName}]: $SCOPE -- Blockchain stopped: ${chain.chainId} / ${chain.brid.toShortHex()} " }
+                logger.debug { "$SCOPE -- ContainerBlockchainProcess terminated" }
+                logger.info { "$SCOPE -- Blockchain stopped" }
             }
         }
     }
@@ -202,16 +200,16 @@ class ContainerJobHandler(
         val psContainer = postchainContainers()[containerName]
         if (psContainer != null) return psContainer
 
-        logger.debug { "[${nodeName}]: $SCOPE -- PostchainContainer not found and will be created" }
+        logger.debug { "$SCOPE -- PostchainContainer not found and will be created" }
         val newContainer = createPostchainContainer(containerName)
-        logger.debug { "[${nodeName}]: $SCOPE -- PostchainContainer created" }
+        logger.debug { "$SCOPE -- PostchainContainer created" }
         val dir = initContainerWorkingDir(fs, newContainer)
         return if (dir != null) {
             postchainContainers()[newContainer.containerName] = newContainer
-            logger.debug { "[${nodeName}]: $SCOPE -- Container dir initialized, container: ${containerName}, dir: $dir" }
+            logger.debug { "$SCOPE -- Container dir initialized, container: ${containerName}, dir: $dir" }
             newContainer
         } else {
-            logger.error { "[${nodeName}]: $SCOPE -- Container dir hasn't been initialized, container: $containerName" }
+            logger.error { "$SCOPE -- Container dir hasn't been initialized, container: $containerName" }
             null
         }
     }
@@ -226,6 +224,6 @@ class ContainerJobHandler(
     }
 
     private fun dcLog(containerName: ContainerName, state: String, container: PostchainContainer?) =
-            "[${nodeName}]: $SCOPE -- Docker container $state: ${containerName}, " +
+            "$SCOPE -- Docker container $state: ${containerName}, " +
                     "containerId: ${container?.shortContainerId()}"
 }

@@ -11,7 +11,6 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.BlockchainState
 import net.postchain.core.block.BlockTrace
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.gtv.Gtv
 import net.postchain.managed.BaseManagedNodeDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
@@ -44,14 +43,13 @@ class SubNodeBlockchainProcessManager(
     override fun createAndRegisterBlockchainProcess(
             chainId: Long,
             blockchainConfig: BlockchainConfiguration,
-            processName: BlockchainProcessName,
             engine: BlockchainEngine,
             restartNotifier: BlockchainRestartNotifier,
             blockchainState: BlockchainState
     ) {
         val subConnectionManager = connectionManager as SubConnectionManager
         subConnectionManager.preAddMsMessageHandler(chainId, SubQueryHandler(chainId, postchainContext.blockQueriesProvider, subConnectionManager))
-        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, processName, engine, restartNotifier, blockchainState)
+        super.createAndRegisterBlockchainProcess(chainId, blockchainConfig, engine, restartNotifier, blockchainState)
     }
 
     override fun buildAfterCommitHandler(chainId: Long, blockchainConfig: BlockchainConfiguration): AfterCommitHandler {
@@ -79,7 +77,7 @@ class SubNodeBlockchainProcessManager(
                     logger.error(e) { "Error when sending committed block message: $e" }
                 }
             } else {
-                logger.warn("No blockchain process for $chainId")
+                logger.warn("No blockchain process found")
             }
             baseHandler(bTrace, height, blockTimestamp)
         }

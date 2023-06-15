@@ -3,6 +3,7 @@
 package net.postchain.ebft
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.extension.getConfigHash
@@ -21,8 +22,9 @@ import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockTrace
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.ebft.worker.WorkerContext
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.atomic.AtomicBoolean
@@ -31,7 +33,6 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Manages intents and acts as a wrapper for [BlockDatabase] and [StatusManager]
  */
 class BaseBlockManager(
-        private val processName: BlockchainProcessName,
         private val blockDB: BlockDatabase,
         private val statusManager: StatusManager,
         private val blockStrategy: BlockBuildingStrategy,
@@ -54,11 +55,17 @@ class BaseBlockManager(
     private fun <RT> runDBOp(op: () -> CompletionStage<RT>, onSuccess: (RT) -> Unit, onFailure: (Throwable) -> Unit = {}) {
         if (isOperationRunning.compareAndSet(false, true)) {
             intent = DoNothingIntent
-            op().whenCompleteUnwrapped { res, throwable ->
-                if (throwable == null) {
-                    onSuccessfulOperation(res, onSuccess)
-                } else {
-                    onFailedOperation(throwable, onFailure)
+            val loggingContext = mapOf(
+                    BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex(),
+                    CHAIN_IID_TAG to workerContext.blockchainConfiguration.chainID.toString()
+            )
+            withLoggingContext(loggingContext) {
+                op().whenCompleteUnwrapped(loggingContext) { res, throwable ->
+                    if (throwable == null) {
+                        onSuccessfulOperation(res, onSuccess)
+                    } else {
+                        onFailedOperation(throwable, onFailure)
+                    }
                 }
             }
         }
@@ -91,7 +98,7 @@ class BaseBlockManager(
                         lastBlockTimestamp = blockTimestamp(block)
                     }
                 }, { exception ->
-                    val msg = "$processName: Can't load unfinished block ${theIntent.blockRID.toHex()}: " +
+                    val msg = "Can't load unfinished block ${theIntent.blockRID.toHex()}: " +
                             "${exception.message}"
                     handleLoadBlockException(exception, msg, block.header)
                 })
@@ -105,8 +112,8 @@ class BaseBlockManager(
             if (theIntent is FetchBlockAtHeightIntent && theIntent.height == height) {
                 runDBOp({
                     val bTrace = if (logger.isTraceEnabled) {
-                        logger.trace { "onReceivedBlockAtHeight() - Creating block trace with procname: $processName , height: $height " }
-                        BlockTrace.build(processName, block.header.blockRID, height)
+                        logger.trace { "onReceivedBlockAtHeight() - Creating block trace with height: $height " }
+                        BlockTrace.build(block.header.blockRID, height)
                     } else {
                         null // Use null for performance
                     }
@@ -118,7 +125,7 @@ class BaseBlockManager(
                         lastBlockTimestamp = blockTimestamp(block)
                     }
                 }, { exception ->
-                    val msg = "$processName: Can't add received block ${block.header.blockRID.toHex()} " +
+                    val msg = "Can't add received block ${block.header.blockRID.toHex()} " +
                             "at height $height: ${exception.message}"
                     handleLoadBlockException(exception, msg, block.header)
                 })
@@ -203,11 +210,11 @@ class BaseBlockManager(
 
                 is CommitBlockIntent -> {
                     if (currentBlock == null) {
-                        logger.error("$processName: Don't have a block StatusManager wants me to commit")
+                        logger.error("Don't have a block StatusManager wants me to commit")
                         return
                     }
                     if (logger.isTraceEnabled) {
-                        logger.trace("$processName: Schedule commit of block ${currentBlock!!.header.blockRID.toHex()}")
+                        logger.trace("Schedule commit of block ${currentBlock!!.header.blockRID.toHex()}")
                     }
 
                     runDBOp({
@@ -218,7 +225,7 @@ class BaseBlockManager(
                         lastBlockTimestamp = blockTimestamp(currentBlock!!)
                         currentBlock = null
                     }, { exception ->
-                        logger.error("$processName: Can't commit block ${currentBlock!!.header.blockRID.toHex()}: " +
+                        logger.error("Can't commit block ${currentBlock!!.header.blockRID.toHex()}: " +
                                 "${exception.message}")
                     })
                 }
@@ -235,7 +242,7 @@ class BaseBlockManager(
                         return
                     }
                     if (logger.isTraceEnabled) {
-                        logger.trace("$processName: Schedule build block. ${statusManager.myStatus.height}")
+                        logger.trace("Schedule build block. ${statusManager.myStatus.height}")
                     }
 
                     runDBOp({
@@ -249,7 +256,7 @@ class BaseBlockManager(
                             lastBlockTimestamp = blockTimestamp(block)
                         }
                     }, { exception ->
-                        val msg = "$processName: Can't build block at height ${statusManager.myStatus.height}: ${exception.message}"
+                        val msg = "Can't build block at height ${statusManager.myStatus.height}: ${exception.message}"
                         if (exception is PmEngineIsAlreadyClosed) {
                             logger.debug(msg)
                         } else {
@@ -282,10 +289,10 @@ class BaseBlockManager(
                 } else {
                     null
                 }
-                blockDB.setBlockTrace(BlockTrace.build(processName, currentBlock?.header?.blockRID, heightIntent))
+                blockDB.setBlockTrace(BlockTrace.build(currentBlock?.header?.blockRID, heightIntent))
             } catch (e: java.lang.Exception) {
                 // Doesn't matter
-                logger.trace(e) { "$processName: ERROR where adding bTrace." }
+                logger.trace(e) { "ERROR where adding bTrace." }
             }
         }
     }

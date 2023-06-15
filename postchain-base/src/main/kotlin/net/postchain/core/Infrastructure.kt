@@ -6,7 +6,6 @@ import net.postchain.PostchainContext
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.*
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.network.common.ConnectionManager
 
 /**
@@ -18,7 +17,6 @@ interface SynchronizationInfrastructure : Shutdownable {
      * This is how a blockchain process get created.
      */
     fun makeBlockchainProcess(
-            processName: BlockchainProcessName,
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
@@ -58,7 +56,6 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
     ): BlockchainConfiguration
 
     fun makeBlockchainEngine(
-            processName: BlockchainProcessName,
             configuration: BlockchainConfiguration,
             afterCommitHandler: AfterCommitHandler,
             blockBuilderStorage: Storage,
