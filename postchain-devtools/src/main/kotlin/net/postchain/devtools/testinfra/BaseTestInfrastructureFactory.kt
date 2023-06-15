@@ -11,8 +11,8 @@ import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
+import net.postchain.config.node.ManualNodeConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
@@ -76,7 +76,7 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 class BaseTestInfrastructureFactory : InfrastructureFactory {
 
     override fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider {
-        return NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
+        return ManualNodeConfigurationProvider(appConfig, storage)
     }
 
     override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager {

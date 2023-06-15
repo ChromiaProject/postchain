@@ -23,7 +23,7 @@ import net.postchain.network.peer.DefaultPeerConnectionManager
 open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
 
     override fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider {
-        return NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
+        return NodeConfigurationProviderFactory.createProvider(appConfig, storage)
     }
 
     override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager {

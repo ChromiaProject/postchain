@@ -23,7 +23,7 @@ class NodeConfigurationProviderFactoryTest {
             on { nodeConfigProvider } doReturn config
         }
         val mockStorage = MockStorage.mockAppContext()
-        assertThat(NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage.storage }).isInstanceOf(expected)
+        assertThat(NodeConfigurationProviderFactory.createProvider(appConfig, mockStorage.storage)).isInstanceOf(expected)
     }
 
     companion object {
@@ -43,7 +43,7 @@ class NodeConfigurationProviderFactoryTest {
         val mockStorage = MockStorage.mockAppContext()
 
         assertThrows<UserMistake> {
-            NodeConfigurationProviderFactory.createProvider(appConfig) { mockStorage.storage }
+            NodeConfigurationProviderFactory.createProvider(appConfig, mockStorage.storage)
         }
     }
 }

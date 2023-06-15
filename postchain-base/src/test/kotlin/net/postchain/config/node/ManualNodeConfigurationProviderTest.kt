@@ -34,10 +34,10 @@ class ManualNodeConfigurationProviderTest {
             on { pubKey } doReturn "CCCC"
             on { port } doReturn 9870
         }
-        val provider = ManualNodeConfigurationProvider(appConfig) { mockStorage.storage }
+        val provider = ManualNodeConfigurationProvider(appConfig, mockStorage.storage)
 
         // Assert
-        val peerInfos = provider.getPeerInfoCollection(mock())
+        val peerInfos = provider.getPeerInfoCollection()
         assertThat(peerInfos).containsExactly(*actual)
 
         verify(mockStorage.db).addPeerInfo(any(), eq("localhost"), eq(9870), eq("CCCC"), eq(null))

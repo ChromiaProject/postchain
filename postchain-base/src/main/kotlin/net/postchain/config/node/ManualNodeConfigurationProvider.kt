@@ -14,10 +14,12 @@ import net.postchain.core.Storage
 
 open class ManualNodeConfigurationProvider(
         protected val appConfig: AppConfig,
-        createStorage: (AppConfig) -> Storage
+        protected val storage: Storage,
 ) : NodeConfigurationProvider {
 
-    protected val storage = createStorage(appConfig).also { setupMyself(it) }
+    init {
+        setupMyself(storage)
+    }
 
     private fun setupMyself(storage: Storage) {
         val hasOwnPeer = storage.withReadConnection {
@@ -48,9 +50,9 @@ open class ManualNodeConfigurationProvider(
 
     override fun getConfiguration(): NodeConfig {
         return object : NodeConfig(appConfig) {
-            override val peerInfoMap = getPeerInfoCollection(appConfig).associateBy(PeerInfo::peerId)
-            override val blockchainReplicaNodes = getBlockchainReplicaCollection(appConfig)
-            override val mustSyncUntilHeight = getSyncUntilHeight(appConfig)
+            override val peerInfoMap = getPeerInfoCollection().associateBy(PeerInfo::peerId)
+            override val blockchainReplicaNodes = getBlockchainReplicaCollection()
+            override val mustSyncUntilHeight = getSyncUntilHeight()
         }
     }
 
@@ -58,32 +60,25 @@ open class ManualNodeConfigurationProvider(
         storage.close()
     }
 
-    /**
-     *
-     *
-     * @param appConfig is the
-     * @return the [PeerInfo] this node should know about
-     */
-    // TODO: [et]: Make it protected
-    open fun getPeerInfoCollection(appConfig: AppConfig): Array<PeerInfo> {
+    open fun getPeerInfoCollection(): Array<PeerInfo> {
         return storage.withReadConnection { ctx ->
             DatabaseAccess.of(ctx).getPeerInfoCollection(ctx)
         }
     }
 
-    open fun getBlockchainReplicaCollection(appConfig: AppConfig): Map<BlockchainRid, List<NodeRid>> {
+    open fun getBlockchainReplicaCollection(): Map<BlockchainRid, List<NodeRid>> {
         return storage.withReadConnection { ctx ->
             DatabaseAccess.of(ctx).getBlockchainReplicaCollection(ctx)
         }
     }
 
-    open fun getSyncUntilHeight(appConfig: AppConfig): Map<Long, Long> {
+    open fun getSyncUntilHeight(): Map<Long, Long> {
         return storage.withReadConnection { ctx ->
             DatabaseAccess.of(ctx).getMustSyncUntil(ctx)
         }
     }
 
-    open fun getChainIDs(appConfig: AppConfig): Map<BlockchainRid, Long> {
+    open fun getChainIDs(): Map<BlockchainRid, Long> {
         return storage.withReadConnection { ctx ->
             DatabaseAccess.of(ctx).getChainIds(ctx)
         }

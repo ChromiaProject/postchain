@@ -8,8 +8,8 @@ import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.BaseBlockchainInfrastructure
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.containers.bpm.SubNodeBlockchainProcessManager
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
@@ -24,7 +24,7 @@ import net.postchain.network.mastersub.subnode.SubConnectionManager
 class SubEbftInfraFactory : InfrastructureFactory {
 
     override fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider {
-        return NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
+        return ManagedNodeConfigurationProvider(appConfig, storage)
     }
 
     override fun makeConnectionManager(appConfig: AppConfig): SubConnectionManager {

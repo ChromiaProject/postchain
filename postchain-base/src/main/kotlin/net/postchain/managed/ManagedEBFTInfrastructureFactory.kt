@@ -15,7 +15,7 @@ import net.postchain.ebft.BaseEBFTInfrastructureFactory
 open class ManagedEBFTInfrastructureFactory : BaseEBFTInfrastructureFactory() {
 
     final override fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider {
-        return ManagedNodeConfigurationProvider(appConfig) { storage }
+        return ManagedNodeConfigurationProvider(appConfig, storage)
     }
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
