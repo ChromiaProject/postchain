@@ -5,6 +5,7 @@ package net.postchain.cli
 import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.runStorageCommand
+import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
 import net.postchain.cli.util.Templater
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.requiredPubkeyOption
@@ -18,18 +19,20 @@ class CommandPeerInfoRemove : CliktCommand(name = "peerinfo-remove", help = "Rem
     private val pubKey by requiredPubkeyOption()
 
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
-        val removed = runStorageCommand(appConfig) { ctx: AppContext ->
-            PeerApi.removePeer(ctx, pubKey)
-        }
+        withDbVersionMismatch {
+            val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
+            val removed = runStorageCommand(appConfig) { ctx: AppContext ->
+                PeerApi.removePeer(ctx, pubKey)
+            }
 
-        if (removed.isEmpty()) {
-            println("No peerinfo has been removed")
-        } else {
-            removed.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
-                    .forEach {
-                        println("Peerinfo removed (${removed.size}):\n$it")
-                    }
+            if (removed.isEmpty()) {
+                println("No peerinfo has been removed")
+            } else {
+                removed.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
+                        .forEach {
+                            println("Peerinfo removed (${removed.size}):\n$it")
+                        }
+            }
         }
     }
 }

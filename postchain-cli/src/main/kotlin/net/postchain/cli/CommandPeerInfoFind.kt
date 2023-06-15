@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.runStorageCommand
+import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
 import net.postchain.cli.util.Templater
 import net.postchain.cli.util.hostOption
 import net.postchain.cli.util.nodeConfigOption
@@ -24,18 +25,20 @@ class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find pe
     private val pubKey by option("-pk", "--pubkey", help = "Public key (or hex substring)")
 
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
-        val peerInfos = runStorageCommand(appConfig) { ctx: AppContext ->
-            PeerApi.findPeerInfo(ctx, host, port, pubKey)
-        }
+        withDbVersionMismatch {
+            val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
+            val peerInfos = runStorageCommand(appConfig) { ctx: AppContext ->
+                PeerApi.findPeerInfo(ctx, host, port, pubKey)
+            }
 
-        if (peerInfos.isEmpty()) {
-            println("No peerinfo found")
-        } else {
-            peerInfos.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
-                    .forEach {
-                        println("Peerinfos (${peerInfos.size}):\n$it")
-                    }
+            if (peerInfos.isEmpty()) {
+                println("No peerinfo found")
+            } else {
+                peerInfos.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
+                        .forEach {
+                            println("Peerinfos (${peerInfos.size}):\n$it")
+                        }
+            }
         }
     }
 }

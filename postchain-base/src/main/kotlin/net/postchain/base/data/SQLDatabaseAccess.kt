@@ -527,10 +527,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
             when {
                 expectedDbVersion < version ->
-                    throw UserMistake("Will not downgrade database from $version to $expectedDbVersion")
+                    throw DbVersionDowngradeDisallowedException("Database downgrade is not allowed from $version to $expectedDbVersion\"")
 
                 expectedDbVersion != version && !allowUpgrade ->
-                    throw UserMistake("Database upgrading is not allowed from $version to $expectedDbVersion")
+                    throw DbVersionUpgradeDisallowedException("Database upgrade is not allowed from $version to $expectedDbVersion")
             }
 
             if (version < 2 && expectedDbVersion >= 2) {

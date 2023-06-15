@@ -5,6 +5,7 @@ package net.postchain.cli
 import com.github.ajalt.clikt.core.CliktCommand
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
+import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
 import net.postchain.cli.util.blockchainRidOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.cli.util.requiredPubkeyOption
@@ -20,14 +21,16 @@ class CommandBlockchainReplicaAdd : CliktCommand(name = "blockchain-replica-add"
     private val blockchainRID by blockchainRidOption()
 
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
-        val added = runStorageCommand(appConfig) { ctx: AppContext ->
-            BlockchainApi.addBlockchainReplica(ctx, blockchainRID, pubKey)
-        }
+        withDbVersionMismatch {
+            val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
+            val added = runStorageCommand(appConfig) { ctx: AppContext ->
+                BlockchainApi.addBlockchainReplica(ctx, blockchainRID, pubKey)
+            }
 
-        return when {
-            added -> println("$commandName finished successfully")
-            else -> println("Blockchain replica already exists")
+            when {
+                added -> println("$commandName finished successfully")
+                else -> println("Blockchain replica already exists")
+            }
         }
     }
 }

@@ -4,10 +4,9 @@ package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.required
-import net.postchain.StorageBuilder
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
-import net.postchain.base.withWriteConnection
+import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.common.exception.UserMistake
@@ -20,16 +19,18 @@ class CommandDeleteBlockchain : CliktCommand(name = "delete-blockchain", help = 
     private val chainId by chainIdOption().required()
 
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
-        try {
-            runStorageCommand(appConfig, chainId) {
-                BlockchainApi.deleteBlockchain(it)
+        withDbVersionMismatch {
+            val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
+            try {
+                runStorageCommand(appConfig, chainId) {
+                    BlockchainApi.deleteBlockchain(it)
+                }
+                println("OK: Blockchain was deleted")
+            } catch (e: UserMistake) {
+                println(e.message)
+            } catch (e: Exception) {
+                println("Can't delete blockchain: ${e.message}")
             }
-            println("OK: Blockchain was deleted")
-        } catch (e: UserMistake) {
-            println(e.message)
-        } catch (e: Exception) {
-            println("Can't delete blockchain: ${e.message}")
         }
     }
 }

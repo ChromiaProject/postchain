@@ -1,6 +1,10 @@
 package net.postchain.cli.util
 
+import com.github.ajalt.clikt.core.CliktError
+import net.postchain.base.data.DbVersionDowngradeDisallowedException
+import net.postchain.base.data.DbVersionUpgradeDisallowedException
 import net.postchain.cli.CliExecution
+import net.postchain.cli.CommandUpgradeDb
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 
@@ -15,4 +19,11 @@ object SafeExecutor {
         }
     }
 
+    fun <T> withDbVersionMismatch(action: () -> T): T = try {
+        action()
+    } catch (e: DbVersionDowngradeDisallowedException) {
+        throw CliktError("Error: ${e.message}. Update postchain-cli.")
+    } catch (e: DbVersionUpgradeDisallowedException) {
+        throw CliktError("Error: ${e.message}. Use ${CommandUpgradeDb.commandName} command to upgrade database.")
+    }
 }
