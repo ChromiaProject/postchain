@@ -17,9 +17,9 @@ class ListConfigurationsCommand : CliktCommand(help = "List blockchain configura
             val requestBuilder = ListConfigurationsRequest.newBuilder()
                     .setChainId(chainId)
             val reply = channel.listConfigurations(requestBuilder.build())
-            println("Height")
-            println("------")
-            reply.heightList.forEach(::println)
+            echo("Height")
+            echo("------")
+            reply.heightList.forEach(::echo)
         } catch (e: StatusRuntimeException) {
             echo("Failed with: ${e.message}")
         }

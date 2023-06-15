@@ -18,8 +18,8 @@ class CommandListConfigurations : CliktCommand(name = "list-configurations", hel
     override fun run() {
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         runOnChain(appConfig, chainId) {
-            println("Height")
-            println("------")
+            echo("Height")
+            echo("------")
             CliExecution.listConfigurations(appConfig, chainId).forEach(::println)
         }
     }
