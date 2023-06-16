@@ -3,7 +3,7 @@
 package net.postchain
 
 import com.github.ajalt.clikt.completion.completionOption
-import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.NoOpCliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.versionOption
 import net.postchain.cli.CommandAddBlockchain
@@ -25,38 +25,28 @@ import net.postchain.cli.CommandRemoveConfiguration
 import net.postchain.cli.CommandWipeDb
 
 
-class Postchain : CliktCommand(name = "postchain") {
+class Postchain : NoOpCliktCommand(name = "node", help = "Commands to interract directly with the nodes database") {
     init {
         completionOption()
         versionOption(this::class.java.`package`.implementationVersion ?: "(unknown)")
+        subcommands(
+                CommandAddBlockchain(),
+                CommandAddConfiguration(),
+                CommandListConfigurations(),
+                CommandRemoveConfiguration(),
+                CommandBlockchainReplicaAdd(),
+                CommandBlockchainReplicaRemove(),
+                CommandCheckBlockchain(),
+                CommandDeleteBlockchain(),
+                CommandExportBlockchain(),
+                CommandGenerateContainerZfsInitScript(),
+                CommandMustSyncUntil(),
+                CommandPeerInfoAdd(),
+                CommandPeerInfoFind(),
+                CommandPeerInfoImport(),
+                CommandPeerInfoList(),
+                CommandPeerInfoRemove(),
+                CommandWipeDb()
+        )
     }
-
-    override fun run() = Unit
-}
-
-fun main(args: Array<String>) {
-    if (args.isNotEmpty() && args[0] !in setOf("--generate-completion", "--version")) {
-        println("${args[0]} will be executed with: ${args.toList().subList(1, args.size).joinToString(" ", "", "")}")
-    }
-    return Postchain()
-            .subcommands(
-                    CommandAddBlockchain(),
-                    CommandAddConfiguration(),
-                    CommandListConfigurations(),
-                    CommandRemoveConfiguration(),
-                    CommandBlockchainReplicaAdd(),
-                    CommandBlockchainReplicaRemove(),
-                    CommandCheckBlockchain(),
-                    CommandDeleteBlockchain(),
-                    CommandExportBlockchain(),
-                    CommandGenerateContainerZfsInitScript(),
-                    CommandMustSyncUntil(),
-                    CommandPeerInfoAdd(),
-                    CommandPeerInfoFind(),
-                    CommandPeerInfoImport(),
-                    CommandPeerInfoList(),
-                    CommandPeerInfoRemove(),
-                    CommandWipeDb()
-            )
-            .main(args)
 }

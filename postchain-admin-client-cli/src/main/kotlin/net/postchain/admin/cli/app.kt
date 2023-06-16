@@ -10,12 +10,32 @@ import com.github.ajalt.clikt.parameters.types.file
 import net.postchain.admin.cli.util.TlsConfig
 
 class PostchainAdminClientCommand : CliktCommand(
-        name = "postchain-admin-client",
+        name = "admin",
         help = "Client for communicating with postchain running in server mode.",
 ) {
     init {
         completionOption()
         versionOption(this::class.java.`package`.implementationVersion ?: "(unknown)")
+        subcommands(
+                InitializeBlockchainCommand(),
+                StartBlockchainCommand(),
+                StopBlockchainCommand(),
+                AddConfigurationCommand(),
+                ListConfigurationsCommand(),
+                DeleteBlockchainCommand(),
+                AddBlockchainReplicaCommand(),
+                RemoveBlockchainReplicaCommand(),
+                ExportBlockchainCommand(),
+                ImportBlockchainCommand(),
+
+                AddPeerCommand(),
+                RemovePeerCommand(),
+                ListPeersCommand(),
+
+                DebugCommand(),
+
+                HealthCommand(),
+        )
     }
 
     private val tls by option("--tls", envvar = "POSTCHAIN_TLS").flag()
@@ -39,26 +59,3 @@ class PostchainAdminClientCommand : CliktCommand(
         }
     }
 }
-
-fun main(args: Array<String>) = PostchainAdminClientCommand()
-        .subcommands(
-                InitializeBlockchainCommand(),
-                StartBlockchainCommand(),
-                StopBlockchainCommand(),
-                AddConfigurationCommand(),
-                ListConfigurationsCommand(),
-                DeleteBlockchainCommand(),
-                AddBlockchainReplicaCommand(),
-                RemoveBlockchainReplicaCommand(),
-                ExportBlockchainCommand(),
-                ImportBlockchainCommand(),
-
-                AddPeerCommand(),
-                RemovePeerCommand(),
-                ListPeersCommand(),
-
-                DebugCommand(),
-
-                HealthCommand(),
-        )
-        .main(args)
