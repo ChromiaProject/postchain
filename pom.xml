@@ -33,7 +33,7 @@
         <!-- Kotlin -->
         <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
         <kotlin.version>1.8.21</kotlin.version>
-        <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
+        <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
 
         <!-- Maven -->
@@ -70,8 +70,8 @@
         <commons-lang3.version>3.12.0</commons-lang3.version>
         <micrometer.version>1.10.1</micrometer.version>
 
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
 
         <gitlab.registry>registry.gitlab.com/chromaway/postchain</gitlab.registry>
     </properties>
@@ -663,10 +663,6 @@
                         </goals>
                     </execution>
                 </executions>
-                <configuration>
-                    <source>11</source>
-                    <target>11</target>
-                </configuration>
             </plugin>
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
