@@ -5,7 +5,7 @@ Configuration:
     Console:
       name: ConsoleAppender
       PatternLayout:
-        pattern: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} --%notEmpty{ [%notEmpty{bc-rid=%.-2X{blockchainRID}:%.4X{blockchainRID}}%notEmpty{, chain-id=%X{chainIID}}]:} %msg%n"
+        pattern: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} --%notEmpty{ [%equals{bc-rid=%.-2X{blockchainRID}:%.4X{blockchainRID}, }{bc-rid=:, }{}%notEmpty{chain-id=%X{chainIID}}]:} %msg%n"
 
   Loggers:
     Root:
