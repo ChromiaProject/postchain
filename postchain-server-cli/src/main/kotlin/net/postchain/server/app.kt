@@ -13,7 +13,7 @@ import net.postchain.server.cli.CommandRunNodeAuto
 import net.postchain.server.cli.CommandRunServer
 import net.postchain.server.cli.CommandRunSubNode
 
-class PostchainServer : NoOpCliktCommand(name = "postchain") {
+class PostchainServerCommand : NoOpCliktCommand(name = "postchain") {
     init {
         completionOption()
         versionOption(this::class.java.`package`.implementationVersion ?: "(unknown)")
@@ -24,7 +24,7 @@ fun main(args: Array<String>) {
     if (args.isNotEmpty() && args[0] !in setOf("--generate-completion", "--version")) {
         println("${args[0]} will be executed with: ${args.toList().subList(1, args.size).joinToString(" ", "", "")}")
     }
-    return PostchainServer()
+    return PostchainServerCommand()
             .subcommands(
                     Postchain(),
                     PostchainAdminClientCommand(),
