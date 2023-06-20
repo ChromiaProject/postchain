@@ -33,7 +33,7 @@ private fun tryCreateBasicDataSource(appConfig: AppConfig): Connection? {
     return try {
         val storage = StorageBuilder.buildStorage(appConfig)
         storage.withReadConnection {
-            require(DatabaseAccess.of(it).isSchemaExists(it.conn, appConfig.databaseSchema)) { "Database schema ${appConfig.databaseSchema} does not exist" }
+            if (!DatabaseAccess.of(it).isSchemaExists(it.conn, appConfig.databaseSchema)) throw CliException("Database schema ${appConfig.databaseSchema} does not exist")
         }
 
         BasicDataSource().apply {
