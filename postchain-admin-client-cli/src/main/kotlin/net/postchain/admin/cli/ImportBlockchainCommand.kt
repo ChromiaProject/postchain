@@ -10,7 +10,7 @@ import net.postchain.admin.cli.util.chainIdOption
 import net.postchain.admin.cli.util.toHex
 import net.postchain.server.grpc.ImportBlockchainRequest
 
-class ImportBlockchainCommand : CliktCommand(help = "Import a blockchain from file") {
+class ImportBlockchainCommand : CliktCommand(name = "import", help = "Import a blockchain from file") {
 
     private val channel by blockingPostchainServiceChannelOption()
 

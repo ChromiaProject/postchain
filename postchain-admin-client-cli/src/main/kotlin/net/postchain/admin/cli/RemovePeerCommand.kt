@@ -6,7 +6,7 @@ import net.postchain.admin.cli.util.blockingPeerServiceChannelOption
 import net.postchain.admin.cli.util.pubkeyOption
 import net.postchain.server.grpc.RemovePeerRequest
 
-class RemovePeerCommand : CliktCommand(help = "Remove peer information from database") {
+class RemovePeerCommand : CliktCommand(name = "list", help = "Remove peer information from database") {
 
     private val channel by blockingPeerServiceChannelOption()
 

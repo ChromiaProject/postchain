@@ -6,7 +6,7 @@ import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.chainIdOption
 import net.postchain.server.grpc.FindBlockchainRequest
 
-class FindBlockchainCommand : CliktCommand(help = "Find blockchain rid from id") {
+class FindBlockchainCommand : CliktCommand(name = "find", help = "Find blockchain rid from id") {
 
     private val channel by blockingPostchainServiceChannelOption()
 
