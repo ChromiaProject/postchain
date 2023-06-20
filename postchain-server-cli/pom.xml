@@ -26,6 +26,14 @@
             <groupId>net.postchain</groupId>
             <artifactId>postchain-server</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-admin-client-cli</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-cli</artifactId>
+        </dependency>
 
         <!-- Cli -->
         <dependency>
