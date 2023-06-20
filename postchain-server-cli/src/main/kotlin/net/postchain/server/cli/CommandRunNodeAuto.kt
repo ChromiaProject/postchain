@@ -25,10 +25,6 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
 
     companion object : KLogging()
 
-    // TODO Olle No longer needed to have a brid.txt (Blockchain RID) file, should remove it from tests.
-    //./postchain-devtools/src/test/resources/net/postchain/devtools/cli/brid.txt
-    //./postchain-base/src/main/jib/config/blockchains/1/brid.txt
-
     /**
      * Configuration directory structure:
      *
@@ -77,7 +73,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
         if (chainsDir.exists()) {
             chainsDir.listFiles()
                     ?.filter(File::isDirectory)
-                    ?.forEach dirs@ { dir ->
+                    ?.forEach dirs@{ dir ->
                         val chainId = dir.name.toLong()
                         chainIds.add(chainId)
 
@@ -104,7 +100,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
                         run {
                             configs.filterKeys { it > (lastHeights[chainId] ?: -1) }
                                     .toSortedMap()
-                                    .forEach configs@ { (height, blockchainConfigFile) ->
+                                    .forEach configs@{ (height, blockchainConfigFile) ->
                                         val gtv = try {
                                             GtvFileReader.readFile(blockchainConfigFile)
                                         } catch (e: Exception) {
