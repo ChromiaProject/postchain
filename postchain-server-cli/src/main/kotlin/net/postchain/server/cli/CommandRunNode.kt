@@ -37,6 +37,9 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile, debug)
 
         waitDb(retryTimes, retryInterval, appConfig)
+        runStorageCommand(appConfig) {
+            StorageInitializer.setupInitialPeers(appConfig, it)
+        }
 
         if (blockchainConfigFile != null) {
             require(chainIDs.size == 1) { "Cannot start more than one chain if a blockchain configuration is specified" }
@@ -46,7 +49,6 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
 
             runStorageCommand(appConfig, chainIDs[0], true) { ctx ->
                 val wasInitialized = BlockchainApi.initializeBlockchain(ctx, blockchainRid, override, blockchainConfig)
-                StorageInitializer.setupInitialPeers(appConfig, ctx)
                 if (wasInitialized) {
                     appConfig.genesisPeer?.let { DatabaseAccess.of(ctx).addBlockchainReplica(ctx, blockchainRid, PubKey(it.pubKey)) }
                 }

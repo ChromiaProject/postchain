@@ -7,6 +7,8 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.split
 import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.PostchainNode
+import net.postchain.StorageInitializer
+import net.postchain.base.runStorageCommand
 import net.postchain.config.app.AppConfig
 import net.postchain.server.PostchainNodeProvider
 
@@ -22,6 +24,9 @@ class CommandRunServer : CommandRunServerBase("run-server", "Start postchain ser
 
     override fun run() {
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile, debug)
+        runStorageCommand(appConfig) {
+            StorageInitializer.setupInitialPeers(appConfig, it)
+        }
         val nodeProvider = PostchainNodeProvider(PostchainNode(appConfig, false))
         if (dumpPid) dumpPid()
         runServer(nodeProvider, activeChains)

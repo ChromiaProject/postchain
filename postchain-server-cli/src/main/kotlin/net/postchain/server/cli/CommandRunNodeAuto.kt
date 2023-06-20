@@ -6,6 +6,7 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import mu.KLogging
+import net.postchain.StorageInitializer
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
@@ -57,6 +58,9 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
         val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile, debug)
 
         waitDb(50, 1000, appConfig)
+        runStorageCommand(appConfig) {
+            StorageInitializer.setupInitialPeers(appConfig, it)
+        }
         val chainIds = loadChainsConfigs(chainsDir, appConfig)
         if (dumpPid) dumpPid()
         runNode(appConfig, chainIds.sorted())
