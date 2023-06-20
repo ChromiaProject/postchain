@@ -608,11 +608,6 @@
                     <version>${maven.failsafe.plugin.version}</version>
                 </plugin>
                 <plugin>
-                    <groupId>com.google.cloud.tools</groupId>
-                    <artifactId>jib-maven-plugin</artifactId>
-                    <version>3.3.2</version>
-                </plugin>
-                <plugin>
                     <groupId>org.owasp</groupId>
                     <artifactId>dependency-check-maven</artifactId>
                     <version>8.3.1</version>
@@ -821,103 +816,6 @@
                         </executions>
                     </plugin>
                 </plugins>
-            </build>
-        </profile>
-        <profile>
-            <id>docker</id>
-            <build>
-                <pluginManagement>
-                    <plugins>
-                        <plugin>
-                            <groupId>com.google.cloud.tools</groupId>
-                            <artifactId>jib-maven-plugin</artifactId>
-                            <configuration>
-                                <to>
-                                    <image>${image.name}</image>
-                                </to>
-                            </configuration>
-                            <executions>
-                                <execution>
-                                    <phase>package</phase>
-                                    <goals>
-                                        <goal>dockerBuild</goal>
-                                    </goals>
-                                </execution>
-                            </executions>
-                        </plugin>
-                    </plugins>
-                </pluginManagement>
-            </build>
-        </profile>
-        <profile>
-            <id>docker-arm</id>
-            <activation>
-                <os>
-                    <family>mac</family>
-                    <arch>aarch64</arch>
-                </os>
-            </activation>
-            <build>
-                <pluginManagement>
-                    <plugins>
-                        <plugin>
-                            <groupId>com.google.cloud.tools</groupId>
-                            <artifactId>jib-maven-plugin</artifactId>
-                           <configuration>
-                               <from>
-                                   <platforms>
-                                        <platform>
-                                            <os>linux</os>
-                                            <architecture>arm64</architecture>
-                                        </platform>
-                                   </platforms>
-                               </from>
-                           </configuration>
-                        </plugin>
-                    </plugins>
-                </pluginManagement>
-            </build>
-        </profile>
-        <profile>
-            <id>docker-push</id>
-            <build>
-                <pluginManagement>
-                    <plugins>
-                        <plugin>
-                            <groupId>com.google.cloud.tools</groupId>
-                            <artifactId>jib-maven-plugin</artifactId>
-                            <executions>
-                                <execution>
-                                    <phase>deploy</phase>
-                                    <goals>
-                                        <goal>build</goal>
-                                    </goals>
-                                    <configuration>
-                                        <from>
-                                            <platforms>
-                                                <platform>
-                                                    <architecture>amd64</architecture>
-                                                    <os>linux</os>
-                                                </platform>
-                                                <platform>
-                                                    <architecture>arm64</architecture>
-                                                    <os>linux</os>
-                                                </platform>
-                                            </platforms>
-                                        </from>
-                                        <to>
-                                            <image>${gitlab.registry}/${image.name}:${project.version}</image>
-                                            <auth>
-                                                <username>${env.CI_REGISTRY_USER}</username>
-                                                <password>${env.CI_REGISTRY_PASSWORD}</password>
-                                            </auth>
-                                        </to>
-                                    </configuration>
-                                </execution>
-                            </executions>
-                        </plugin>
-                    </plugins>
-                </pluginManagement>
             </build>
         </profile>
     </profiles>

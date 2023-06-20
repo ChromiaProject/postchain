@@ -14,7 +14,6 @@
     <description>CLI for communicating with a postchain node running in server mode.</description>
 
     <properties>
-        <main.class>net.postchain.admin.cli.AppKt</main.class>
         <image.name>postchain-admin-client</image.name>
     </properties>
 
@@ -44,45 +43,6 @@
             <plugin>
                 <groupId>org.jetbrains.kotlin</groupId>
                 <artifactId>kotlin-maven-plugin</artifactId>
-            </plugin>
-
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>${main.class}</mainClass>
-                            <addClasspath>true</addClasspath>
-                            <classpathPrefix/>
-                            <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-                            <!-- To be able get current version: javaClass.getPackage().implementationVersion  -->
-                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                        </manifest>
-                    </archive>
-                </configuration>
-            </plugin>
-            <plugin>
-                <groupId>com.google.cloud.tools</groupId>
-                <artifactId>jib-maven-plugin</artifactId>
-                <configuration>
-                    <allowInsecureRegistries>false</allowInsecureRegistries>
-                    <from>
-                        <image>registry.gitlab.com/chromaway/core-tools/chromia-images/java17:1.0.2@sha256:756673c4f33a67b88dbc4ce0019137b13e9bd351cee804cfbbda3b9aa9a2cba2</image>
-                    </from>
-                    <container>
-                        <appRoot>/opt/chromaway/postchain</appRoot>
-                        <workingDirectory>/opt/chromaway/postchain</workingDirectory>
-                        <mainClass>${main.class}</mainClass>
-                        <environment>
-                            <POSTCHAIN_BLOCKCHAIN_CONFIG>/config/0.xml</POSTCHAIN_BLOCKCHAIN_CONFIG>
-                        </environment>
-                        <ports>50051</ports>
-                        <creationTime>${git.commit.time}</creationTime>
-                        <filesModificationTime>${git.commit.time}</filesModificationTime>
-                    </container>
-                    <containerizingMode>packaged</containerizingMode>
-                </configuration>
             </plugin>
         </plugins>
     </build>
