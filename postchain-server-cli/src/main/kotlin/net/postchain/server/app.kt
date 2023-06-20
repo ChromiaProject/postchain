@@ -6,7 +6,7 @@ import com.github.ajalt.clikt.completion.completionOption
 import com.github.ajalt.clikt.core.NoOpCliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.versionOption
-import net.postchain.Postchain
+import net.postchain.cli.PostchainNodeCommand
 import net.postchain.admin.cli.PostchainAdminClientCommand
 import net.postchain.server.cli.CommandRunNode
 import net.postchain.server.cli.CommandRunNodeAuto
@@ -26,7 +26,7 @@ fun main(args: Array<String>) {
     }
     return PostchainServerCommand()
             .subcommands(
-                    Postchain(),
+                    PostchainNodeCommand(),
                     PostchainAdminClientCommand(),
                     CommandRunNode(),
                     CommandRunNodeAuto(),
