@@ -13,7 +13,7 @@ import net.postchain.cli.util.portOption
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.config.app.AppConfig
 
-class CommandPeerInfoAdd : CliktCommand(name = "peerinfo-add", help = "Add peer information to database") {
+class CommandPeerInfoAdd : CliktCommand(name = "add", help = "Add peer information to database") {
 
     private val nodeConfigFile by nodeConfigOption()
 

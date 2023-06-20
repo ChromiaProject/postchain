@@ -13,6 +13,14 @@ class PostchainNodeCommand : NoOpCliktCommand(name = "node", help = "Commands to
         completionOption()
         versionOption(this::class.java.`package`.implementationVersion ?: "(unknown)")
         subcommands(
+                PeerCommand()
+                        .subcommands(
+                                CommandPeerInfoAdd(),
+                                CommandPeerInfoFind(),
+                                CommandPeerInfoImport(),
+                                CommandPeerInfoList(),
+                                CommandPeerInfoRemove()
+                        ),
                 CommandAddBlockchain(),
                 CommandAddConfiguration(),
                 CommandListConfigurations(),
@@ -24,11 +32,6 @@ class PostchainNodeCommand : NoOpCliktCommand(name = "node", help = "Commands to
                 CommandExportBlockchain(),
                 CommandGenerateContainerZfsInitScript(),
                 CommandMustSyncUntil(),
-                CommandPeerInfoAdd(),
-                CommandPeerInfoFind(),
-                CommandPeerInfoImport(),
-                CommandPeerInfoList(),
-                CommandPeerInfoRemove(),
                 CommandWipeDb()
         )
     }

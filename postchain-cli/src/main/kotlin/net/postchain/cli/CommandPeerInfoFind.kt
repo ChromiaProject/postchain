@@ -14,7 +14,7 @@ import net.postchain.cli.util.portOption
 import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 
-class CommandPeerInfoFind : CliktCommand(name = "peerinfo-find", help = "Find peerinfo") {
+class CommandPeerInfoFind : CliktCommand(name = "find", help = "Find peerinfo") {
 
     private val nodeConfigFile by nodeConfigOption()
 

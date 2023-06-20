@@ -13,7 +13,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 import java.io.File
 
-class CommandPeerInfoList : CliktCommand(name = "peerinfo-list", help = "List peer information") {
+class CommandPeerInfoList : CliktCommand(name = "list", help = "List peer information") {
 
     private val nodeConfigFile by nodeConfigOption()
 

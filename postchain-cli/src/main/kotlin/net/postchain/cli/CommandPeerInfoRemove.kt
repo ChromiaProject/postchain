@@ -12,7 +12,7 @@ import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 
-class CommandPeerInfoRemove : CliktCommand(name = "peerinfo-remove", help = "Remove peer information") {
+class CommandPeerInfoRemove : CliktCommand(name = "remove", help = "Remove peer information") {
 
     private val nodeConfigFile by nodeConfigOption()
 
