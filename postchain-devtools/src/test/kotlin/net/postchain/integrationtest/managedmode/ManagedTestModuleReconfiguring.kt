@@ -89,7 +89,7 @@ open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit
                 GtvNull
             } else {
                 val gtvConfig = GtvMLParser.parseGtvML(
-                        javaClass.getResource(blockchainConfigFilename).readText())
+                        Companion::class.java.getResource(blockchainConfigFilename).readText())
                 val encodedGtvConfig = GtvEncoder.encodeGtv(gtvConfig)
                 GtvFactory.gtv(encodedGtvConfig)
             }

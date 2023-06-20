@@ -122,7 +122,7 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
             }
 
             val gtvConfig = try {
-                GtvMLParser.parseGtvML(javaClass.getResource(blockchainConfigFilename!!).readText())
+                GtvMLParser.parseGtvML(Companion::class.java.getResource(blockchainConfigFilename!!).readText())
             } catch (e: Exception) {
                 logger.error { "Some troubles with resource loading: $blockchainConfigFilename, ${e.message}" }
                 throw e

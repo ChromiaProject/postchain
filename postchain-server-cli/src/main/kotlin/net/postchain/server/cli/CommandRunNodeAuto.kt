@@ -24,7 +24,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
 
     companion object : KLogging()
 
-    // TODO Olle No longer needed to have a brid.txt (Blockchan RID) file, should remove it from tests.
+    // TODO Olle No longer needed to have a brid.txt (Blockchain RID) file, should remove it from tests.
     //./postchain-devtools/src/test/resources/net/postchain/devtools/cli/brid.txt
     //./postchain-base/src/main/jib/config/blockchains/1/brid.txt
 
@@ -73,7 +73,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
         if (chainsDir.exists()) {
             chainsDir.listFiles()
                     ?.filter(File::isDirectory)
-                    ?.forEach { dir ->
+                    ?.forEach dirs@ { dir ->
                         val chainId = dir.name.toLong()
                         chainIds.add(chainId)
 
@@ -88,7 +88,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
                         if (!chainExists && configs.isNotEmpty() && !configs.containsKey(0L)) {
                             val configsCsv = configs.toSortedMap().values.joinToString(separator = ", ") { it.path }
                             println("Can't find blockchain by chainId: $chainId, configs will not be added: $configsCsv")
-                            return@forEach
+                            return@dirs
                         }
 
                         lastHeights[chainId] = if (chainExists) {
@@ -100,14 +100,14 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
                         run {
                             configs.filterKeys { it > (lastHeights[chainId] ?: -1) }
                                     .toSortedMap()
-                                    .forEach { (height, blockchainConfigFile) ->
+                                    .forEach configs@ { (height, blockchainConfigFile) ->
                                         val gtv = try {
                                             GtvFileReader.readFile(blockchainConfigFile)
                                         } catch (e: Exception) {
                                             println("Configuration for chain $chainId can not be loaded at height $height " +
                                                     "from the file ${blockchainConfigFile.path}, an error occurred: ${e.message}")
                                             if (height == 0L) return@run
-                                            else return@forEach
+                                            else return@configs
                                         }
 
                                         if (height == 0L) {

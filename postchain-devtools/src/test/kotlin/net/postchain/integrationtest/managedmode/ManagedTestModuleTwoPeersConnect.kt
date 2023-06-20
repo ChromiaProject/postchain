@@ -96,7 +96,7 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
             }
 
             val gtvConfig = GtvMLParser.parseGtvML(
-                    javaClass.getResource(blockchainConfigFilename).readText())
+                    Companion::class.java.getResource(blockchainConfigFilename).readText())
 
             val encodedGtvConfig = GtvEncoder.encodeGtv(gtvConfig)
 
@@ -121,4 +121,3 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
 class ManagedTestModuleTwoPeersConnect0 : ManagedTestModuleTwoPeersConnect(Companion.Nodes.Node0)
 
 class ManagedTestModuleTwoPeersConnect1 : ManagedTestModuleTwoPeersConnect(Companion.Nodes.Node1)
-
