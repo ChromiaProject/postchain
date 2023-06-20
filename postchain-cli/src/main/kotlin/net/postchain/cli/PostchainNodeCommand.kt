@@ -21,17 +21,23 @@ class PostchainNodeCommand : NoOpCliktCommand(name = "node", help = "Commands to
                                 CommandPeerInfoList(),
                                 CommandPeerInfoRemove()
                         ),
-                CommandAddBlockchain(),
-                CommandAddConfiguration(),
-                CommandListConfigurations(),
-                CommandRemoveConfiguration(),
-                CommandBlockchainReplicaAdd(),
-                CommandBlockchainReplicaRemove(),
-                CommandCheckBlockchain(),
-                CommandDeleteBlockchain(),
-                CommandExportBlockchain(),
+                BlockchainCommand()
+                        .subcommands(
+                                CommandAddBlockchain(),
+                                CommandCheckBlockchain(),
+                                CommandDeleteBlockchain(),
+                                CommandExportBlockchain(),
+                                CommandAddConfiguration(),
+                                CommandListConfigurations(),
+                                CommandRemoveConfiguration(),
+                                CommandMustSyncUntil(),
+                        ),
+                ReplicaCommand()
+                        .subcommands(
+                                CommandBlockchainReplicaAdd(),
+                                CommandBlockchainReplicaRemove()
+                        ),
                 CommandGenerateContainerZfsInitScript(),
-                CommandMustSyncUntil(),
                 CommandWipeDb()
         )
     }

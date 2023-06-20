@@ -16,7 +16,7 @@ import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.config.app.AppConfig
 
-class CommandExportBlockchain : CliktCommand(name = "export-blockchain", help = "Export a blockchain to file") {
+class CommandExportBlockchain : CliktCommand(name = "export", help = "Export a blockchain to file") {
 
     private val nodeConfigFile by nodeConfigOption()
 

@@ -11,7 +11,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 
 class CommandBlockchainReplicaRemove : CliktCommand(
-        name = "blockchain-replica-remove",
+        name = "remove",
         help = "Remove node as replica for given blockchain rid. If brid not given command will be " +
                 "applied on all blockchains."
 ) {

@@ -12,7 +12,7 @@ import net.postchain.cli.util.nodeConfigOption
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 
-class CommandDeleteBlockchain : CliktCommand(name = "delete-blockchain", help = "Delete blockchain") {
+class CommandDeleteBlockchain : CliktCommand(name = "delete", help = "Delete blockchain") {
 
     private val nodeConfigFile by nodeConfigOption()
 
