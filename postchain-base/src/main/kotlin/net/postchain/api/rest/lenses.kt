@@ -27,6 +27,7 @@ import net.postchain.gtv.mapper.GtvObjectMapper
 import org.http4k.core.Body
 import org.http4k.core.ContentType
 import org.http4k.format.auto
+import org.http4k.lens.BiDiBodyLens
 import org.http4k.lens.ContentNegotiation
 import org.http4k.lens.ContentNegotiation.Companion.None
 import org.http4k.lens.Invalid
@@ -159,8 +160,8 @@ val nodeStatusesBody = Body.auto<List<StateNodeStatus>>().toLens()
 val textBody = Body.string(ContentType.TEXT_PLAIN).toLens()
 val blockHeightBody = Body.auto<BlockHeight>().toLens()
 val transactionsCountBody = Body.auto<TransactionsCount>().toLens()
-@Suppress("UNREACHABLE_CODE")
-val configurationXmlOutBody = httpBodyRoot(listOf(Meta(true, location = "body",
+@Suppress("UNREACHABLE_CODE", "USELESS_CAST")
+val configurationXmlOutBody: BiDiBodyLens<ByteArray> = httpBodyRoot(listOf(Meta(true, location = "body",
         ParamMeta.StringParam, "configuration", "GtvML")), ContentType.TEXT_XML, None)
         .map({ it.stream }, { Body(it) }).map(
                 { _: InputStream -> (throw UnsupportedOperationException("output only lens")) as ByteArray },
