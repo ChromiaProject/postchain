@@ -59,7 +59,7 @@ data class SyncParameters(
         var blacklistingErrorTimeoutMs: Long = TimeUnit.HOURS.toMillis(1),
 
         val slowSyncEnabled: Boolean = true,
-        var slowSyncMaxSleepTime: Long = TimeUnit.MINUTES.toMillis(10),
+        var slowSyncMaxSleepTime: Long = TimeUnit.MINUTES.toMillis(1),
         var slowSyncMinSleepTime: Long = 20,
         /**
          * A node must answer before this, or we'll give up
@@ -82,7 +82,7 @@ data class SyncParameters(
                     blacklistingTimeoutMs = config.getEnvOrLong("POSTCHAIN_FASTSYNC_BLACKLISTING_TIMEOUT", "fastsync.blacklisting_timeout", TimeUnit.MINUTES.toMillis(10)),
                     blacklistingErrorTimeoutMs = config.getEnvOrLong("POSTCHAIN_FASTSYNC_BLACKLISTING_ERROR_TIMEOUT", "fastsync.blacklisting_error_timeout", TimeUnit.HOURS.toMillis(1)),
                     slowSyncEnabled = config.getEnvOrBoolean("POSTCHAIN_SLOWSYNC_ENABLED", "slowsync.enabled", true),
-                    slowSyncMaxSleepTime = config.getEnvOrLong("POSTCHAIN_SLOWSYNC_MAX_SLEEP_TIME", "slowsync.max_sleep_time", TimeUnit.MINUTES.toMillis(10)),
+                    slowSyncMaxSleepTime = config.getEnvOrLong("POSTCHAIN_SLOWSYNC_MAX_SLEEP_TIME", "slowsync.max_sleep_time", TimeUnit.MINUTES.toMillis(1)),
                     slowSyncMinSleepTime = config.getEnvOrLong("POSTCHAIN_SLOWSYNC_MIN_SLEEP_TIME", "slowsync.min_sleep_time", 20),
                     slowSyncMaxPeerWaitTime = config.getEnvOrLong("POSTCHAIN_SLOWSYNC_MAX_PEER_WAIT_TIME", "slowsync.max_peer_wait_time", 2000),
             ).also(init)
