@@ -78,6 +78,8 @@ open class EBFTSynchronizationInfrastructure(
                 logger.warn("I am a replica, but I have no peers")
             }
         }
+        val forceReadOnly = postchainContext.appConfig.readOnly
+        if (forceReadOnly) logger.warn("I am running in forced read only mode")
 
         val workerContext = WorkerContext(
                 blockchainConfig,
@@ -105,7 +107,7 @@ open class EBFTSynchronizationInfrastructure(
         3 Sync from FB until drained or timeout
         4 Goto 2
         */
-        return if (historicBlockchainContext != null && blockchainState == BlockchainState.RUNNING) {
+        return if (historicBlockchainContext != null && blockchainState == BlockchainState.RUNNING && !forceReadOnly) {
 
             historicBlockchainContext.contextCreator = { brid ->
                 val historicPeerCommConfiguration = if (brid == historicBrid) {
@@ -132,10 +134,10 @@ open class EBFTSynchronizationInfrastructure(
 
             }
             HistoricBlockchainProcess(workerContext, historicBlockchainContext)
-        } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY && blockchainState == BlockchainState.RUNNING) {
+        } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY && blockchainState == BlockchainState.RUNNING && !forceReadOnly) {
             ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID))
         } else {
-            ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries(), blockchainState)
+            ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries(), blockchainState, forceReadOnly)
         }
     }
 

@@ -27,8 +27,11 @@ import net.postchain.logging.CHAIN_IID_TAG
 class ReadOnlyBlockchainProcess(
         private val workerContext: WorkerContext,
         val blockQueries: BlockQueries,
-        private val blockchainState: BlockchainState
-) : AbstractBlockchainProcess("replica-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine) {
+        private val blockchainState: BlockchainState,
+        forceReadOnly: Boolean
+) : AbstractBlockchainProcess(
+        "${if (blockchainState == BlockchainState.PAUSED || forceReadOnly) "readonly" else "replica"}-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine
+) {
 
     companion object : KLogging()
 
@@ -64,12 +67,14 @@ class ReadOnlyBlockchainProcess(
 
     private var syncMethod = SyncMethod.NOT_SYNCING
 
+    private val isReadOnly = blockchainState == BlockchainState.PAUSED || forceReadOnly
+
     /**
      * For read only nodes we don't want to fast sync forever.
      * When the nodes are drained we move to slow sync instead.
      */
     override fun action() {
-        if (blockchainState == BlockchainState.PAUSED) {
+        if (isReadOnly) {
             Thread.sleep(1000)
         } else {
             withLoggingContext(loggingContext) {

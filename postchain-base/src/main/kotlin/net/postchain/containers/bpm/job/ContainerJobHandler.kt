@@ -30,6 +30,7 @@ class ContainerJobHandler(
         private val appConfig: AppConfig,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
         private val dockerClient: DockerClient,
+        private val fileSystem: FileSystem,
         private val directoryDataSource: () -> DirectoryDataSource,
         private val postchainContainers: () -> MutableMap<ContainerName, PostchainContainer>,
         private val terminateBlockchainProcess: (Long, PostchainContainer) -> ContainerBlockchainProcess?,
@@ -41,7 +42,6 @@ class ContainerJobHandler(
     }
 
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
-    private val fs = FileSystem.create(containerNodeConfig)
 
     fun handleJob(job: ContainerJob) {
         withLoggingContext(CONTAINER_NAME_TAG to job.containerName.name) {
@@ -172,6 +172,7 @@ class ContainerJobHandler(
     private fun startDockerContainer(containerName: ContainerName, psContainer: PostchainContainer, job: ContainerJob) {
         logger.debug { dcLog(containerName, "not found", null) }
         updateResourceLimits(psContainer)
+        psContainer.checkResourceLimits(fileSystem)
         val containerId = createDockerContainer(psContainer, containerName)
         dockerClient.startContainer(containerId)
         psContainer.containerId = containerId
@@ -181,11 +182,11 @@ class ContainerJobHandler(
 
     private fun updateResourceLimits(psContainer: PostchainContainer) {
         psContainer.updateResourceLimits()
-        fs.applyLimits(psContainer.containerName, psContainer.resourceLimits)
+        fileSystem.applyLimits(psContainer.containerName, psContainer.resourceLimits)
     }
 
     private fun createDockerContainer(psContainer: PostchainContainer, containerName: ContainerName): String {
-        val config = ContainerConfigFactory.createConfig(fs, appConfig, containerNodeConfig, psContainer)
+        val config = ContainerConfigFactory.createConfig(fileSystem, appConfig, containerNodeConfig, psContainer)
         return dockerClient.createContainer(config, containerName.toString()).id()!!.also {
             logger.debug { dcLog(containerName, "created", psContainer) }
         }
@@ -199,11 +200,10 @@ class ContainerJobHandler(
     private fun ensurePostchainContainer(containerName: ContainerName): PostchainContainer? {
         val psContainer = postchainContainers()[containerName]
         if (psContainer != null) return psContainer
-
         logger.debug { "$SCOPE -- PostchainContainer not found and will be created" }
         val newContainer = createPostchainContainer(containerName)
         logger.debug { "$SCOPE -- PostchainContainer created" }
-        val dir = initContainerWorkingDir(fs, newContainer)
+        val dir = initContainerWorkingDir(fileSystem, newContainer)
         return if (dir != null) {
             postchainContainers()[newContainer.containerName] = newContainer
             logger.debug { "$SCOPE -- Container dir initialized, container: ${containerName}, dir: $dir" }
@@ -220,7 +220,7 @@ class ContainerJobHandler(
     private fun createPostchainContainer(containerName: ContainerName): PostchainContainer {
         val containerPortMapping = ConcurrentHashMap<Int, Int>()
         val subnodeAdminClient = SubnodeAdminClient.create(containerNodeConfig, containerPortMapping, nodeDiagnosticContext)
-        return DefaultPostchainContainer(directoryDataSource(), containerName, containerPortMapping, ContainerState.STARTING, subnodeAdminClient)
+        return DefaultPostchainContainer(containerNodeConfig, directoryDataSource(), containerName, containerPortMapping, ContainerState.STARTING, subnodeAdminClient)
     }
 
     private fun dcLog(containerName: ContainerName, state: String, container: PostchainContainer?) =

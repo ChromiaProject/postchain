@@ -195,6 +195,7 @@ object ContainerConfigFactory : KLogging() {
         add("POSTCHAIN_SUBNODE_DOCKER_IMAGE=${containerNodeConfig.containerImage}")
         add("POSTCHAIN_SUBNODE_HOST=${containerNodeConfig.subnodeHost}")
         add("POSTCHAIN_SUBNODE_NETWORK=${containerNodeConfig.network}")
+        add("POSTCHAIN_READ_ONLY=${container.readOnly}")
 
         add("POSTCHAIN_EXIT_ON_FATAL_ERROR=true")
         add("POSTCHAIN_CONTAINER_ID=${container.containerName.containerIID}")

@@ -2,11 +2,15 @@ package net.postchain.containers.bpm
 
 import mu.KLogging
 import net.postchain.containers.bpm.docker.DockerTools
+import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.bpm.rpc.SubnodeAdminClient
+import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.crypto.PrivKey
 import net.postchain.managed.DirectoryDataSource
+import java.util.concurrent.atomic.AtomicBoolean
 
 class DefaultPostchainContainer(
+        val containerNodeConfig: ContainerNodeConfig,
         val dataSource: DirectoryDataSource,
         override val containerName: ContainerName,
         override var containerPortMapping: MutableMap<Int, Int>,
@@ -23,6 +27,8 @@ class DefaultPostchainContainer(
     // NB: Resources are per directoryContainerName, not nodeContainerName
     @Volatile
     override var resourceLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
+
+    override val readOnly = AtomicBoolean(false)
 
     override fun shortContainerId(): String? {
         return DockerTools.shortContainerId(containerId)
@@ -100,5 +106,19 @@ class DefaultPostchainContainer(
         } else {
             false
         }
+    }
+
+    override fun checkResourceLimits(fileSystem: FileSystem): Boolean {
+        val readOnlyBeforeCheck = readOnly.get()
+        fileSystem.getCurrentLimitsInfo(containerName, resourceLimits)?.let {
+            readOnly.set(it.spaceUsedMB + containerNodeConfig.minSpaceQuotaBufferMB >= it.spaceHardLimitMB)
+            if (readOnlyBeforeCheck != readOnly.get()) {
+                if (readOnly.get())
+                    logger.warn("Space used is too close to hard limit. Switching to read only mode. (used space: ${it.spaceUsedMB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceUsedMB}MB)")
+                else
+                    logger.info("Space used is no longer too close to hard limit. (used space: ${it.spaceUsedMB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceUsedMB}MB)")
+            }
+        }
+        return readOnlyBeforeCheck == readOnly.get()
     }
 }

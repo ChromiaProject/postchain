@@ -16,6 +16,7 @@ import net.postchain.containers.bpm.chain0.ContainerChain0BlockchainConfiguratio
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.docker.DockerTools.containerName
 import net.postchain.containers.bpm.docker.DockerTools.shortContainerId
+import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.bpm.job.ContainerHealthcheckHandler
 import net.postchain.containers.bpm.job.ContainerJobHandler
 import net.postchain.containers.bpm.job.DefaultContainerJobManager
@@ -61,8 +62,9 @@ open class ContainerManagedBlockchainProcessManager(
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
     private val dockerClient: DockerClient = DockerClientFactory.create()
     private val postchainContainers = mutableMapOf<ContainerName, PostchainContainer>() // { ContainerName -> PsContainer }
-    private val containerHealthcheckHandler = ContainerHealthcheckHandler(dockerClient, ::containers, ::removeBlockchainProcess)
-    private val containerJobHandler = ContainerJobHandler(appConfig, nodeDiagnosticContext, dockerClient,
+    private val fileSystem = FileSystem.create(containerNodeConfig)
+    private val containerHealthcheckHandler = ContainerHealthcheckHandler(dockerClient, fileSystem, ::containers, ::removeBlockchainProcess)
+    private val containerJobHandler = ContainerJobHandler(appConfig, nodeDiagnosticContext, dockerClient, fileSystem,
             ::directoryDataSource, ::containers, ::terminateBlockchainProcess, ::createBlockchainProcess)
     private val containerJobManager = DefaultContainerJobManager(containerNodeConfig, containerJobHandler, containerHealthcheckHandler)
     private val runningInContainer = System.getenv("POSTCHAIN_RUNNING_IN_CONTAINER").toBoolean()

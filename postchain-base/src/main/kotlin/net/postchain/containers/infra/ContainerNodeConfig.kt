@@ -69,7 +69,8 @@ data class ContainerNodeConfig(
         val remoteDebugEnabled: Boolean,
         val remoteDebugSuspend: Boolean,
         val prometheusPort: Int,
-        val jmxBasePort: Int
+        val jmxBasePort: Int,
+        val minSpaceQuotaBufferMB: Int
 ) : Config {
     val subnodePorts = listOf(subnodeRestApiPort, subnodeAdminRpcPort)
 
@@ -101,6 +102,7 @@ data class ContainerNodeConfig(
         const val KEY_REMOTE_DEBUG_SUSPEND = "remote-debug-suspend"
         const val KEY_PROMETHEUS_PORT = "metrics.prometheus.port"
         const val KEY_JMX_BASE_PORT = "jmx-base-port"
+        const val KEY_MIN_SPACE_QUOTA_BUFFER_MB = "min-space-quota-buffer-mb"
 
         fun fullKey(subKey: String) = "$KEY_CONTAINER_PREFIX.${subKey}"
 
@@ -157,7 +159,8 @@ data class ContainerNodeConfig(
                         getEnvOrBooleanProperty("POSTCHAIN_SUBNODE_REMOTE_DEBUG_ENABLED", KEY_REMOTE_DEBUG_ENABLED, false),
                         getEnvOrBooleanProperty("POSTCHAIN_SUBNODE_REMOTE_DEBUG_SUSPEND", KEY_REMOTE_DEBUG_SUSPEND, false),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_PROMETHEUS_PORT", KEY_PROMETHEUS_PORT, -1),
-                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_JMX_BASE_PORT", KEY_JMX_BASE_PORT, -1)
+                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_JMX_BASE_PORT", KEY_JMX_BASE_PORT, -1),
+                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_MIN_SPACE_QUOTA_BUFFER_MB", KEY_MIN_SPACE_QUOTA_BUFFER_MB, 100)
                 )
             }
         }

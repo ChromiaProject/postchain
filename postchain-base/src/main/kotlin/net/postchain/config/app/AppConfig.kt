@@ -120,6 +120,9 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
 
     val cryptoSystem: CryptoSystem = newInstanceOf(cryptoSystemClass)
 
+    val readOnly: Boolean
+        get() = config.getEnvOrBooleanProperty("POSTCHAIN_READ_ONLY", "readOnly", false)
+
     /**
      * Pub/Priv keys
      */
@@ -138,15 +141,16 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     val port: Int
         get() = config.getEnvOrIntProperty("POSTCHAIN_PORT", "messaging.port", DEFAULT_PORT)
 
-    val genesisPeer: PeerInfo? get() {
-        val genesisPubkey = getEnvOrString("POSTCHAIN_GENESIS_PUBKEY", "genesis.pubkey") ?: return null
-        require(hasEnvOrKey("POSTCHAIN_GENESIS_HOST", "genesis.host")) { "Node configuration must contain genesis.host if genesis.pubkey is supplied" }
-        require(hasEnvOrKey("POSTCHAIN_GENESIS_PORT", "genesis.port")) { "Node configuration must contain genesis.port if genesis.pubkey if supplied" }
+    val genesisPeer: PeerInfo?
+        get() {
+            val genesisPubkey = getEnvOrString("POSTCHAIN_GENESIS_PUBKEY", "genesis.pubkey") ?: return null
+            require(hasEnvOrKey("POSTCHAIN_GENESIS_HOST", "genesis.host")) { "Node configuration must contain genesis.host if genesis.pubkey is supplied" }
+            require(hasEnvOrKey("POSTCHAIN_GENESIS_PORT", "genesis.port")) { "Node configuration must contain genesis.port if genesis.pubkey if supplied" }
 
-        val genesisHost = getEnvOrString("POSTCHAIN_GENESIS_HOST", "genesis.host")!!
-        val genesisPort = getEnvOrInt("POSTCHAIN_GENESIS_PORT", "genesis.port", 0)
-        return PeerInfo(genesisHost, genesisPort, genesisPubkey.hexStringToByteArray())
-    }
+            val genesisHost = getEnvOrString("POSTCHAIN_GENESIS_HOST", "genesis.host")!!
+            val genesisPort = getEnvOrInt("POSTCHAIN_GENESIS_PORT", "genesis.port", 0)
+            return PeerInfo(genesisHost, genesisPort, genesisPubkey.hexStringToByteArray())
+        }
 
     // PCU feature toggle
     fun isPcuEnabled(): Boolean = getEnvOrBoolean("POSTCHAIN_PCU", "pcu", true)
