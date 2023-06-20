@@ -9,6 +9,7 @@ import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
+import net.postchain.StorageInitializer
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
@@ -36,6 +37,9 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile, debug)
 
         waitDb(retryTimes, retryInterval, appConfig)
+        runStorageCommand(appConfig) {
+            StorageInitializer.setupInitialPeers(appConfig, it)
+        }
 
         if (blockchainConfigFile != null) {
             require(chainIDs.size == 1) { "Cannot start more than one chain if a blockchain configuration is specified" }

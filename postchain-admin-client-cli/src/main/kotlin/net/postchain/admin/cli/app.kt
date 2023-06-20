@@ -33,9 +33,9 @@ class PostchainAdminClientCommand : CliktCommand(
                         ),
                 ReplicaCommand()
                         .subcommands(
-                        AddBlockchainReplicaCommand(),
-                        RemoveBlockchainReplicaCommand(),
-                ),
+                                AddBlockchainReplicaCommand(),
+                                RemoveBlockchainReplicaCommand(),
+                        ),
                 PeerCommand()
                         .subcommands(
                                 AddPeerCommand(),
