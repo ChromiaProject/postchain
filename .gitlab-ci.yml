@@ -72,6 +72,19 @@ deploy:
       -Drevision=$CI_COMMIT_TAG
       deploy
 
+gitlab-release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^[0-9]+\.[0-9]+\.[0-9]+$/
+  script:
+    - echo "Running the release job."
+  release:
+    tag_name: $CI_COMMIT_TAG
+    name: 'Release $CI_COMMIT_TAG'
+    description: 'Release created using the release-cli.' # Consider setting `doc/release-notes/$CI_COMMIT_TAG.md`
+    
+
 build:
   extends: .setup
   stage: build
