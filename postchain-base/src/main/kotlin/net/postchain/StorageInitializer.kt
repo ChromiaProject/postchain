@@ -1,24 +1,20 @@
 package net.postchain
 
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.withWriteConnection
 import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
-import net.postchain.core.Storage
 
 object StorageInitializer {
 
-    fun setupInitialPeers(appConfig: AppConfig, storage: Storage) {
-        storage.withWriteConnection {
-            val hasOwnPeer =
-                    DatabaseAccess.of(it).findPeerInfo(it, null, null, appConfig.pubKey).isNotEmpty()
-            if (!hasOwnPeer) {
-                DatabaseAccess.of(it).addPeerInfo(it, "localhost", appConfig.port, appConfig.pubKey)
-            }
-            if (appConfig.genesisPeer != null) {
-                addGenesisPeer(it, appConfig)
-            }
+    fun setupInitialPeers(appConfig: AppConfig, ctx: AppContext) {
+        val hasOwnPeer =
+                DatabaseAccess.of(ctx).findPeerInfo(ctx, null, null, appConfig.pubKey).isNotEmpty()
+        if (!hasOwnPeer) {
+            DatabaseAccess.of(ctx).addPeerInfo(ctx, "localhost", appConfig.port, appConfig.pubKey)
+        }
+        if (appConfig.genesisPeer != null) {
+            addGenesisPeer(ctx, appConfig)
         }
     }
 

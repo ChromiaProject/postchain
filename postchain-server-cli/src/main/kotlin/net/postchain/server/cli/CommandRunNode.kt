@@ -9,6 +9,7 @@ import com.github.ajalt.clikt.parameters.options.multiple
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.long
+import net.postchain.StorageInitializer
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
@@ -45,6 +46,7 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
 
             runStorageCommand(appConfig, chainIDs[0], true) { ctx ->
                 val wasInitialized = BlockchainApi.initializeBlockchain(ctx, blockchainRid, override, blockchainConfig)
+                StorageInitializer.setupInitialPeers(appConfig, ctx)
                 if (wasInitialized) {
                     appConfig.genesisPeer?.let { DatabaseAccess.of(ctx).addBlockchainReplica(ctx, blockchainRid, PubKey(it.pubKey)) }
                 }
