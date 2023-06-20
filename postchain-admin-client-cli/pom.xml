@@ -13,10 +13,6 @@
     <name>Postchain Admin Client CLI</name>
     <description>CLI for communicating with a postchain node running in server mode.</description>
 
-    <properties>
-        <image.name>postchain-admin-client</image.name>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>net.postchain</groupId>

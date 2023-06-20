@@ -19,23 +19,3 @@ Use `--help` on a command to get more information.
 | POSTCHAIN_BLOCKCHAIN_CONFIG | /config/0.xml | Convenient default value used when adding a configuration |   
 | POSTCHAIN_TLS               | false         | Enables TLS encryption                                    |   
 | POSTCHAIN_CERTIFICATE       |               | Path to mounted certificate file                          |   
-
-## Example usage
-
-Say that we have a Postchain server running on localhost exposing port 50051. Then we can list peer information by:
-
-```commandline
-docker run -it --rm registry.gitlab.com/chromaway/postchain/chromaway/postchain-admin-client:3.8.0-SNAPSHOT list-peers -t localhost:50051
-or
-docker run -it --rm -e POSTCHAIN_TARGET=localhost:50051 registry.gitlab.com/chromaway/postchain/chromaway/postchain-admin-client:3.8.0-SNAPSHOT list-peers
-```
-
-To initialize a new blockchain, we need to mount the configuration file:
-
-```commandline
-docker run -it --rm \
-    -e POSTCHAIN_TARGET=host.docker.internal:50051 \
-    -v <path-to-config>:/config \
-    registry.gitlab.com/chromaway/postchain/chromaway/postchain-admin-client:3.8.0-SNAPSHOT \
-    initialize-blockchain --chain-id 100
-```
