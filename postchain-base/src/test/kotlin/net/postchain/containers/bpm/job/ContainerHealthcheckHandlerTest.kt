@@ -4,6 +4,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.ContainerName
 import net.postchain.containers.bpm.PostchainContainer
+import net.postchain.containers.bpm.fs.FileSystem
 import org.mandas.docker.client.DockerClient
 import org.mandas.docker.client.messages.Container
 import org.mockito.Mockito.anyInt
@@ -30,6 +31,7 @@ class ContainerHealthcheckHandlerTest {
     }
     private val postchainContainer: PostchainContainer = mock()
     private val dockerClient: DockerClient = mock()
+    private val fileSystem: FileSystem = mock()
     private val psContainers = mutableMapOf<ContainerName, PostchainContainer>()
     private val cname = ContainerName.create(appConfig, "", CONTAINER_IID)
     private val postchainContainers = { psContainers }
@@ -47,7 +49,7 @@ class ContainerHealthcheckHandlerTest {
         chainsRemoved = 0
         psContainers.clear()
         psContainers[cname] = postchainContainer
-        sut = ContainerHealthcheckHandler(dockerClient, postchainContainers, removeBlockchainProcess)
+        sut = ContainerHealthcheckHandler(dockerClient, fileSystem, postchainContainers, removeBlockchainProcess)
     }
 
     @Test
@@ -100,12 +102,29 @@ class ContainerHealthcheckHandlerTest {
         assertEquals(removedBlockchainProcess!!.second, postchainContainer)
     }
 
+
+    @Test
+    fun `changed resource limits reached subnode should restart container`() {
+        // setup
+        `when`(postchainContainer.isSubnodeHealthy()).thenReturn(true)
+        `when`(postchainContainer.getAllChains()).thenReturn(setOf(CHAIN_ID))
+        `when`(postchainContainer.checkResourceLimits(fileSystem)).thenReturn(false)
+        mockContainerIsRunning()
+        // execute
+        sut.check(emptySet())
+        // verify
+        verify(dockerClient).stopContainer(anyString(), anyInt())
+        assertEquals(removedBlockchainProcess!!.first, CHAIN_ID)
+        assertEquals(removedBlockchainProcess!!.second, postchainContainer)
+    }
+
     @Test
     fun `healthy should stop stopped chains`() {
         // setup
         `when`(postchainContainer.isSubnodeHealthy()).thenReturn(true)
         `when`(postchainContainer.getAllChains()).thenReturn(setOf(CHAIN_ID, 123))
         `when`(postchainContainer.getStoppedChains()).thenReturn(setOf(CHAIN_ID))
+        `when`(postchainContainer.checkResourceLimits(fileSystem)).thenReturn(true)
         mockContainerIsRunning()
         // execute
         sut.check(emptySet())

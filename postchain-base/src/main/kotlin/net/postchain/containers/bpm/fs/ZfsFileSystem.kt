@@ -59,6 +59,8 @@ class ZfsFileSystem(private val containerConfig: ContainerNodeConfig) : FileSyst
         }
     }
 
+    override fun getCurrentLimitsInfo(containerName: ContainerName, resourceLimits: ContainerResourceLimits): ResourceLimitsInfo? = null
+
     private fun getFs(containerName: ContainerName) =
             "${containerConfig.zfsPoolName}/${containerName.name}"
 

@@ -3,6 +3,7 @@ package net.postchain.containers.bpm
 import net.postchain.containers.bpm.resources.Cpu
 import net.postchain.containers.bpm.resources.Ram
 import net.postchain.containers.bpm.resources.Storage
+import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.managed.DirectoryDataSource
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -28,9 +29,10 @@ class DefaultPostchainContainerTest {
         val dataSource: DirectoryDataSource = mock {
             on { getResourceLimitForContainer(any()) } doReturnConsecutively listOf(limits1, limits1, limits2)
         }
+        val containerNodeConfig: ContainerNodeConfig = mock()
 
         // sut
-        val sut = DefaultPostchainContainer(dataSource, containerName, mock(), mock(), mock())
+        val sut = DefaultPostchainContainer(containerNodeConfig, dataSource, containerName, mock(), mock(), mock())
 
         // interaction(s)
         // 1. no updates
