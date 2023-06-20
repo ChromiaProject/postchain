@@ -2,8 +2,9 @@ package net.postchain.server.cli
 
 import net.postchain.PostchainNode
 import net.postchain.StorageBuilder
+import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.withReadConnection
 import net.postchain.config.app.AppConfig
-import net.postchain.config.node.NodeConfigurationProviderFactory
 import org.apache.commons.configuration2.ex.ConfigurationException
 import org.apache.commons.dbcp2.BasicDataSource
 import java.io.File
@@ -31,7 +32,9 @@ fun waitDb(retryTimes: Int, retryInterval: Long, appConfig: AppConfig) {
 private fun tryCreateBasicDataSource(appConfig: AppConfig): Connection? {
     return try {
         val storage = StorageBuilder.buildStorage(appConfig)
-        NodeConfigurationProviderFactory.createProvider(appConfig, storage).getConfiguration()
+        storage.withReadConnection {
+            require(DatabaseAccess.of(it).isSchemaExists(it.conn, appConfig.databaseSchema)) { "Database schema ${appConfig.databaseSchema} does not exist" }
+        }
 
         BasicDataSource().apply {
             addConnectionProperty("currentSchema", appConfig.databaseSchema)
