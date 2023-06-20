@@ -10,7 +10,7 @@ import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.chainIdOption
 import net.postchain.server.grpc.ExportBlockchainRequest
 
-class ExportBlockchainCommand : CliktCommand(help = "Export a blockchain to file") {
+class ExportBlockchainCommand : CliktCommand(name = "export", help = "Export a blockchain to file") {
 
     private val channel by blockingPostchainServiceChannelOption()
 

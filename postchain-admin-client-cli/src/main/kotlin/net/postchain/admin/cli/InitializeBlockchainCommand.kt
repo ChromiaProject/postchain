@@ -12,7 +12,7 @@ import net.postchain.admin.cli.util.chainIdOption
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import kotlin.io.path.extension
 
-class InitializeBlockchainCommand : CliktCommand(help = "Add and start blockchain from configuration") {
+class InitializeBlockchainCommand : CliktCommand(name = "initialize", help = "Add and start blockchain from configuration") {
 
     private val channel by blockingPostchainServiceChannelOption()
 

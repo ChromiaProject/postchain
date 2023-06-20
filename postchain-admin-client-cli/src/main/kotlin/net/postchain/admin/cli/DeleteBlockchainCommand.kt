@@ -6,7 +6,7 @@ import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.chainIdOption
 import net.postchain.server.grpc.RemoveBlockchainRequest
 
-class DeleteBlockchainCommand : CliktCommand(help = "Delete a blockchain") {
+class DeleteBlockchainCommand : CliktCommand(name = "delete", help = "Delete a blockchain") {
 
     private val channel by blockingPostchainServiceChannelOption()
 

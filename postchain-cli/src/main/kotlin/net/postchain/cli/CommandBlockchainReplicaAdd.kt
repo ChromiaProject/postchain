@@ -12,7 +12,7 @@ import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 
-class CommandBlockchainReplicaAdd : CliktCommand(name = "blockchain-replica-add", help = "Add info to system about blockchain replicas. To be used to sync this node.") {
+class CommandBlockchainReplicaAdd : CliktCommand(name = "add", help = "Add info to system about blockchain replicas. To be used to sync this node.") {
 
     private val nodeConfigFile by nodeConfigOption()
 

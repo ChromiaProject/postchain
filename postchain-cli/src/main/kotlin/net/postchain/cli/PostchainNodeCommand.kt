@@ -13,22 +13,31 @@ class PostchainNodeCommand : NoOpCliktCommand(name = "node", help = "Commands to
         completionOption()
         versionOption(this::class.java.`package`.implementationVersion ?: "(unknown)")
         subcommands(
-                CommandAddBlockchain(),
-                CommandAddConfiguration(),
-                CommandListConfigurations(),
-                CommandRemoveConfiguration(),
-                CommandBlockchainReplicaAdd(),
-                CommandBlockchainReplicaRemove(),
-                CommandCheckBlockchain(),
-                CommandDeleteBlockchain(),
-                CommandExportBlockchain(),
+                PeerCommand()
+                        .subcommands(
+                                CommandPeerInfoAdd(),
+                                CommandPeerInfoFind(),
+                                CommandPeerInfoImport(),
+                                CommandPeerInfoList(),
+                                CommandPeerInfoRemove()
+                        ),
+                BlockchainCommand()
+                        .subcommands(
+                                CommandAddBlockchain(),
+                                CommandCheckBlockchain(),
+                                CommandDeleteBlockchain(),
+                                CommandExportBlockchain(),
+                                CommandAddConfiguration(),
+                                CommandListConfigurations(),
+                                CommandRemoveConfiguration(),
+                                CommandMustSyncUntil(),
+                        ),
+                ReplicaCommand()
+                        .subcommands(
+                                CommandBlockchainReplicaAdd(),
+                                CommandBlockchainReplicaRemove()
+                        ),
                 CommandGenerateContainerZfsInitScript(),
-                CommandMustSyncUntil(),
-                CommandPeerInfoAdd(),
-                CommandPeerInfoFind(),
-                CommandPeerInfoImport(),
-                CommandPeerInfoList(),
-                CommandPeerInfoRemove(),
                 CommandWipeDb()
         )
     }

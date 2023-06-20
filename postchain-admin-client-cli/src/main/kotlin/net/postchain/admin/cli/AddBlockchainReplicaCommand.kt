@@ -8,7 +8,7 @@ import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.pubkeyOption
 import net.postchain.server.grpc.AddBlockchainReplicaRequest
 
-class AddBlockchainReplicaCommand : CliktCommand("Add a peer as replica for a blockchain") {
+class AddBlockchainReplicaCommand : CliktCommand(name = "add", help = "Add a peer as replica for a blockchain") {
 
     private val channel by blockingPostchainServiceChannelOption()
 

@@ -14,7 +14,7 @@ import net.postchain.cli.util.validationOption
 import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvFileReader
 
-class CommandAddBlockchain : CliktCommand(name = "add-blockchain", help = "Add blockchain") {
+class CommandAddBlockchain : CliktCommand(name = "add", help = "Add blockchain") {
 
     private val nodeConfigFile by nodeConfigOption()
 

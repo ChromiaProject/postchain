@@ -13,7 +13,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.PropertiesNodeConfigurationProvider
 import java.io.File
 
-class CommandPeerInfoImport : CliktCommand(name = "peerinfo-import", help = "Import peer information") {
+class CommandPeerInfoImport : CliktCommand(name = "import", help = "Import peer information") {
 
     private val nodeConfigFile by nodeConfigOption()
 

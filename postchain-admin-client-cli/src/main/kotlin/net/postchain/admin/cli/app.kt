@@ -17,24 +17,31 @@ class PostchainAdminClientCommand : CliktCommand(
         completionOption()
         versionOption(this::class.java.`package`.implementationVersion ?: "(unknown)")
         subcommands(
-                InitializeBlockchainCommand(),
-                StartBlockchainCommand(),
-                StopBlockchainCommand(),
-                AddConfigurationCommand(),
-                ListConfigurationsCommand(),
-                DeleteBlockchainCommand(),
-                AddBlockchainReplicaCommand(),
-                RemoveBlockchainReplicaCommand(),
-                ExportBlockchainCommand(),
-                ImportBlockchainCommand(),
-
-                AddPeerCommand(),
-                RemovePeerCommand(),
-                ListPeersCommand(),
-
                 DebugCommand(),
-
                 HealthCommand(),
+                BlockchainCommand()
+                        .subcommands(
+                                InitializeBlockchainCommand(),
+                                StartBlockchainCommand(),
+                                StopBlockchainCommand(),
+                                FindBlockchainCommand(),
+                                AddConfigurationCommand(),
+                                ListConfigurationsCommand(),
+                                DeleteBlockchainCommand(),
+                                ExportBlockchainCommand(),
+                                ImportBlockchainCommand(),
+                        ),
+                ReplicaCommand()
+                        .subcommands(
+                        AddBlockchainReplicaCommand(),
+                        RemoveBlockchainReplicaCommand(),
+                ),
+                PeerCommand()
+                        .subcommands(
+                                AddPeerCommand(),
+                                RemovePeerCommand(),
+                                ListPeersCommand(),
+                        )
         )
     }
 

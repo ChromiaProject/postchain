@@ -12,7 +12,7 @@ import net.postchain.cli.util.nodeConfigOption
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 
-class CommandCheckBlockchain : CliktCommand(name = "check-blockchain", help = "Checks Blockchain") {
+class CommandCheckBlockchain : CliktCommand(name = "check", help = "Checks Blockchain") {
 
     private val nodeConfigFile by nodeConfigOption()
 
