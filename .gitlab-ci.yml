@@ -57,7 +57,7 @@ deploy-snapshot:
       $MAVEN_CLI_OPTS
       --activate-profiles ci,nightly,docker-push
       -Drevision=$SNAPSHOT_VERSION
-      deploy
+      clean deploy
 
 # Triggered by that a semver tag was pushed
 deploy:
@@ -70,7 +70,7 @@ deploy:
       $MAVEN_CLI_OPTS
       --activate-profiles ci,nightly,docker-push
       -Drevision=$CI_COMMIT_TAG
-      deploy
+      clean deploy
 
 gitlab-release:
   stage: release
@@ -83,7 +83,6 @@ gitlab-release:
     tag_name: $CI_COMMIT_TAG
     name: 'Release $CI_COMMIT_TAG'
     description: 'Release created using the release-cli.' # Consider setting `doc/release-notes/$CI_COMMIT_TAG.md`
-    
 
 build:
   extends: .setup
@@ -112,7 +111,7 @@ nightly-tests:
     - mvn
       $MAVEN_CLI_OPTS
       --activate-profiles ci,nightly
-      verify
+      clean verify
 
 dependency-check:
   extends: .maven-dependency-check

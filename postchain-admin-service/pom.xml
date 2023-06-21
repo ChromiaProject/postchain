@@ -58,6 +58,9 @@
             <plugin>
                 <groupId>org.xolstice.maven.plugins</groupId>
                 <artifactId>protobuf-maven-plugin</artifactId>
+                <configuration>
+                    <checkStaleness>true</checkStaleness>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
