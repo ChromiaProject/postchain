@@ -11,8 +11,7 @@ import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
+import net.postchain.core.BadBlockRIDAtHeightException
 import net.postchain.core.BlockchainState
 import net.postchain.core.EContext
 import net.postchain.core.NODE_ID_READ_ONLY
@@ -271,9 +270,8 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         val historictBlockRID = BlockchainRid(fromBstore.getBlockRID(fromCtx, ourHeight)!!)
         val ourLastBlockRID = BlockchainRid(blockchainEngine.getBlockQueries().getBlockRid(ourHeight).get()!!)
         if (historictBlockRID != ourLastBlockRID) {
-            throw BadDataMistake(BadDataType.OTHER,
-                    "Historic blockchain and fork chain disagree on block RID at height" +
-                            "${ourHeight}. Historic: $historictBlockRID, fork: $ourLastBlockRID")
+            throw BadBlockRIDAtHeightException("Historic blockchain and fork chain disagree on block RID at height" +
+                    "${ourHeight}. Historic: $historictBlockRID, fork: $ourLastBlockRID")
         }
     }
 

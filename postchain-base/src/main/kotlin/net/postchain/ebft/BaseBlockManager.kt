@@ -14,8 +14,9 @@ import net.postchain.common.toHex
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
+import net.postchain.core.BadDataException
+import net.postchain.core.ConfigurationMismatchException
+import net.postchain.core.FailedConfigurationMismatchException
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
@@ -136,13 +137,9 @@ class BaseBlockManager(
     private fun handleLoadBlockException(exception: Throwable, msg: String, blockHeader: BlockHeader) {
         when (exception) {
             is PmEngineIsAlreadyClosed -> logger.debug(msg)
-            is BadDataMistake -> {
-                when (exception.type) {
-                    BadDataType.CONFIGURATION_MISMATCH -> handleConfigurationMismatch(blockHeader)
-                    BadDataType.FAILED_CONFIGURATION_MISMATCH -> handleFailedConfigurationMismatch(blockHeader)
-                    else -> logger.warn(msg)
-                }
-            }
+            is ConfigurationMismatchException -> handleConfigurationMismatch(blockHeader)
+            is FailedConfigurationMismatchException -> handleFailedConfigurationMismatch(blockHeader)
+            is BadDataException -> logger.warn(msg)
             else -> logger.error(msg)
         }
     }

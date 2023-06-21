@@ -5,8 +5,8 @@ package net.postchain.network.peer
 import mu.KLogging
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.BlockchainRid
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
+import net.postchain.core.BadDataException
+import net.postchain.core.BadMessageException
 import net.postchain.core.NodeRid
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.network.CommunicationManager
@@ -127,12 +127,11 @@ class DefaultPeerCommunicationManager<PacketType>(
                 logger.trace { "Successfully decoded the package, now adding it " }
                 inboundPackets.add(peerId to decodedPacket)
             }
-        } catch (e: BadDataMistake) {
-            if (e.type == BadDataType.BAD_MESSAGE) {
-                logger.info("Bad message received from peer ${peerId}: ${e.message}")
-            } else {
-                logger.error("Error when receiving message from peer $peerId", e)
-            }
+
+        } catch (e: BadMessageException) {
+            logger.info("Bad message received from peer ${peerId}: ${e.message}")
+        } catch (e: BadDataException) {
+            logger.error("Error when receiving message from peer $peerId", e)
         }
     }
 }

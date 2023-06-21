@@ -10,9 +10,8 @@ import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.AppContext
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
 import net.postchain.core.EContext
+import net.postchain.core.MissingPeerInfoException
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
@@ -25,7 +24,7 @@ object BlockchainApi {
     /**
      * @return `true` if configuration was added, `false` if already existed and `override` is `false`
      * @throws IllegalStateException if current height => given height
-     * @throws BadDataMistake if signer pubkey does not exist in peerinfos and allowUnknownSigners is false
+     * @throws MissingPeerInfoException if signer pubkey does not exist in peerinfos and allowUnknownSigners is false
      */
     fun addConfiguration(ctx: EContext, height: Long, override: Boolean, config: Gtv, allowUnknownSigners: Boolean = false, validate: Boolean = true): Boolean {
         val db = DatabaseAccess.of(ctx)
@@ -112,7 +111,7 @@ object BlockchainApi {
                     // If the node is not in the peerinfo table, and we do not allow unknown signers in a configuration,
                     // throw error
                 } else if (!allowUnknownSigners) {
-                    throw BadDataMistake(BadDataType.MISSING_PEERINFO, "Signer $nodePubkey does not exist in peerinfos.")
+                    throw MissingPeerInfoException("Signer $nodePubkey does not exist in peerinfos.")
                 }
             }
         }

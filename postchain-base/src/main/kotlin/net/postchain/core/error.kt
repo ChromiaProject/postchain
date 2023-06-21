@@ -7,25 +7,15 @@ import net.postchain.common.exception.ProgrammerMistake
 open class PmEngineIsAlreadyClosed(message: String, cause: Exception? = null) : ProgrammerMistake(message, cause)
 
 /**
- * Used when the format of some data is incorrect, see [BadDataType] for examples
+ * Used when the format of some data is incorrect
  */
-open class BadDataMistake(val type: BadDataType, message: String, cause: Exception? = null) : RuntimeException(message, cause) {
-    override val message: String?
-        get() = "$type: ${super.message}"
-}
-
-class BlockValidationMistake(message: String, cause: Exception? = null) : BadDataMistake(BadDataType.BAD_BLOCK, message, cause)
-
-enum class BadDataType(val type: Int) {
-    BAD_GTV(1), // Something wrong on GTV level, for example GtvDictionary is broken.
-    BAD_GTX(2), // A TX is incorrectly represented (even though the GTV itself is correct)
-    BAD_BLOCK(3), // The block's format is incorrect in some way (including header errors)
-    BAD_CONFIGURATION(4), // The blockchain configuration's format is not allowed.
-    MISSING_DEPENDENCY(5), // We don't have all dependencies required to process this block
-    BAD_MESSAGE(6), // A network message couldn't be parsed
-    MISSING_PEERINFO(7), // The node does not exist in the peerinfo table.
-    PREV_BLOCK_MISMATCH(8),
-    CONFIGURATION_MISMATCH(9),
-    FAILED_CONFIGURATION_MISMATCH(10),
-    OTHER(100) // Please don't use, consider adding a new type instead
-}
+abstract class BadDataException(message: String, cause: Exception? = null) : RuntimeException(message, cause)
+class BadBlockException(message: String, cause: Exception? = null) : BadDataException(message, cause)
+class BadBlockRIDAtHeightException(message: String, cause: Exception? = null) : BadDataException(message, cause)
+class BadConfigurationException(message: String, cause: Exception? = null) : BadDataException(message, cause)
+class BadMessageException(message: String, cause: Exception? = null) : BadDataException(message, cause)
+class ConfigurationMismatchException(message: String, cause: Exception? = null) : BadDataException(message, cause)
+class FailedConfigurationMismatchException(message: String, cause: Exception? = null) : BadDataException(message, cause)
+class MissingDependencyException(message: String, cause: Exception? = null) : BadDataException(message, cause)
+class MissingPeerInfoException(message: String, cause: Exception? = null) : BadDataException(message, cause)
+class PrevBlockMismatchException(message: String, cause: Exception? = null) : BadDataException(message, cause)

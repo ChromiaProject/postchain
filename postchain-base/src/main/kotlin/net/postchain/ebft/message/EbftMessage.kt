@@ -1,8 +1,7 @@
 package net.postchain.ebft.message
 
 import net.postchain.common.BlockchainRid
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
+import net.postchain.core.BadMessageException
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
@@ -30,7 +29,7 @@ abstract class EbftMessage(val topic: MessageTopic) {
                 MessageTopic.GETBLOCKRANGE.value -> GetBlockRange(data[1].asInteger())
                 MessageTopic.BLOCKRANGE.value -> BlockRange.buildFromGtv(data)
                 MessageTopic.APPLIEDCONFIG.value -> AppliedConfig(data[1].asByteArray(), data[2].asInteger())
-                else -> throw BadDataMistake(BadDataType.BAD_MESSAGE, "Message topic $topic is not handled")
+                else -> throw BadMessageException("Message topic $topic is not handled")
             }
         }
 

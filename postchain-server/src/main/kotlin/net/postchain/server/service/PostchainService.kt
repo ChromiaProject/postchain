@@ -10,7 +10,7 @@ import net.postchain.base.importexport.ImporterExporter
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
-import net.postchain.core.BadDataMistake
+import net.postchain.core.BadDataException
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
@@ -31,7 +31,7 @@ class PostchainService(private val nodeProvider: NodeProvider) {
     /**
      * @return `true` if configuration was added, `false` if already existed and `override` is `false`
      * @throws IllegalStateException if current height => given height
-     * @throws BadDataMistake if signer pubkey does not exist in peerinfos and allowUnknownSigners is false
+     * @throws BadDataException if signer pubkey does not exist in peerinfos and allowUnknownSigners is false
      */
     fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: Gtv, allowUnknownSigners: Boolean = false): Boolean =
             withWriteConnection(postchainNode.postchainContext.sharedStorage, chainId) { ctx ->
