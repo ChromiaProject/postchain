@@ -2,8 +2,7 @@ package net.postchain.base.data
 
 import mu.KLogging
 import net.postchain.base.BlockchainRelatedInfo
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
+import net.postchain.core.BadConfigurationException
 import net.postchain.core.EContext
 
 object DependenciesValidator : KLogging() {
@@ -17,10 +16,10 @@ object DependenciesValidator : KLogging() {
 
         // Verify all dependencies
         for (dep in dependencies) {
-            logger.debug{ "Validating" }
+            logger.debug { "Validating" }
             val chainId = db.getChainId(ctx, dep.blockchainRid)
             if (chainId == null) {
-                throw BadDataMistake(BadDataType.BAD_CONFIGURATION,
+                throw BadConfigurationException(
                         "Dependency given in configuration: ${dep.nickname} is missing in DB. Dependent blockchains must be added in correct order!" +
                                 " Dependency not found BC RID ${dep.blockchainRid.toHex()}")
             } else {

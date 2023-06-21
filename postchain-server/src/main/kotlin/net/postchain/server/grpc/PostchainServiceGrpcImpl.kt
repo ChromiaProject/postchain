@@ -6,7 +6,7 @@ import io.grpc.stub.StreamObserver
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
-import net.postchain.core.BadDataMistake
+import net.postchain.core.BadDataException
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -81,7 +81,7 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
             responseObserver.onError(
                     Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
             )
-        } catch (e: BadDataMistake) {
+        } catch (e: BadDataException) {
             responseObserver.onError(
                     Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
             )

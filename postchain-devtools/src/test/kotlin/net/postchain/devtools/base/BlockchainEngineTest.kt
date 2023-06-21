@@ -3,7 +3,7 @@
 package net.postchain.devtools.base
 
 import net.postchain.common.exception.UserMistake
-import net.postchain.core.BadDataMistake
+import net.postchain.core.BadDataException
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockWitness
@@ -146,7 +146,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
         try {
             loadUnfinishedAndCommit(node1, blockData)
             fail()
-        } catch (userMistake: BadDataMistake) {
+        } catch (userMistake: BadDataException) {
             // Expected
         }
         // Block must not have been created.

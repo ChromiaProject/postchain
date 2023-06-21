@@ -21,8 +21,7 @@ import net.postchain.base.data.BaseTransactionFactory
 import net.postchain.base.extension.ConfigurationHashBlockBuilderExtension
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.reflection.constructorOf
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
+import net.postchain.core.BadConfigurationException
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainContext
 import net.postchain.core.DynamicClassName
@@ -173,7 +172,7 @@ open class BaseBlockchainConfiguration(
                 // We have to fill up the cache of ChainIDs
                 for (bcInfo in blockchainDependencies) {
                     val depChainId = blockStore.getChainId(ctx, bcInfo.blockchainRid)
-                    bcInfo.chainId = depChainId ?: throw BadDataMistake(BadDataType.BAD_CONFIGURATION,
+                    bcInfo.chainId = depChainId ?: throw BadConfigurationException(
                             "The blockchain configuration claims we depend on: $bcInfo so this BC must exist in DB"
                                     + "(Order is wrong. It must have been configured BEFORE this point in time)")
                 }

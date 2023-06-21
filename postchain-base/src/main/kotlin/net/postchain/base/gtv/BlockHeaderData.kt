@@ -4,11 +4,16 @@ package net.postchain.base.gtv
 
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
+import net.postchain.core.BadBlockException
 import net.postchain.core.block.InitialBlockData
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvNull
 
 /**
  * The structure of the block header goes like this:
@@ -71,8 +76,8 @@ data class BlockHeaderData(
                 }
                 lastBlockRidArray
             }
-            else -> throw BadDataMistake(BadDataType.BAD_BLOCK,
-                    "Header data has incorrect format in dependency part, where we found type: ${gtvDependencies.type}")
+
+            else -> throw BadBlockException("Header data has incorrect format in dependency part, where we found type: ${gtvDependencies.type}")
         }
 
     }

@@ -91,7 +91,7 @@ class FastSynchronizer(
                 // Would be nicer to be able to just peek here but there is no API for that
                 polledFinishedJob = finishedJobs.poll(params.loopInterval, TimeUnit.MILLISECONDS)
             }
-        } catch (e: BadDataMistake) {
+        } catch (e: BadDataException) {
             logger.error(e) { "Fatal error, shutting down blockchain for safety reasons. Needs manual investigation." }
             throw e
         } catch (e: Exception) {
@@ -215,7 +215,7 @@ class FastSynchronizer(
                 return
             }
 
-            if (exception is BadDataMistake && exception.type == BadDataType.PREV_BLOCK_MISMATCH) {
+            if (exception is PrevBlockMismatchException) {
                 // If we can't connect block, then either
                 // previous block is bad or this block is bad. Unfortunately,
                 // we can't know which. Ideally, we'd like to take different actions:
@@ -476,7 +476,7 @@ class FastSynchronizer(
     private fun handleUnfinishedBlock(peerId: NodeRid, header: ByteArray, txs: List<ByteArray>) {
         val h = blockchainConfiguration.decodeBlockHeader(header)
         if (h !is BaseBlockHeader) {
-            throw BadDataMistake(BadDataType.BAD_MESSAGE, "Expected BaseBlockHeader")
+            throw BadMessageException("Expected BaseBlockHeader")
         }
         val height = getHeight(h)
         val j = jobs[height]

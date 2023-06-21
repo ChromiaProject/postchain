@@ -9,8 +9,9 @@ import net.postchain.base.withReadConnection
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
+import net.postchain.core.BadDataException
+import net.postchain.core.ConfigurationMismatchException
+import net.postchain.core.FailedConfigurationMismatchException
 import net.postchain.core.NodeRid
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockDataWithWitness
@@ -140,27 +141,25 @@ abstract class AbstractSynchronizer(
         val height = getHeight(block.header)
         when (exception) {
             is PmEngineIsAlreadyClosed, is BDBAbortException -> logger.debug { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
-            is BadDataMistake -> {
-                when (exception.type) {
-                    BadDataType.CONFIGURATION_MISMATCH -> {
-                        if (!checkIfNewConfigurationCanBeLoaded(block)) {
-                            peerStatuses.maybeBlacklist(peerId, "Received a block with mismatching config but we could not apply any new config")
-                        }
-                    }
-                    BadDataType.FAILED_CONFIGURATION_MISMATCH -> {
-                        // We only expect the case of us not having applied the failed config yet here
-                        val incomingFailedConfigHash = block.header.getFailedConfigHash()
-                        if (incomingFailedConfigHash != null) {
-                            if (!checkIfConfigIsPendingAndCanBeLoaded(block, incomingFailedConfigHash)) {
-                                peerStatuses.maybeBlacklist(peerId, "Received a block with failing config that we could not apply")
-                            }
-                        } else {
-                            peerStatuses.maybeBlacklist(peerId, "Received a block without expected failed config hash")
-                        }
-                    }
-                    else -> logger.warn(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
+            is ConfigurationMismatchException -> {
+                if (!checkIfNewConfigurationCanBeLoaded(block)) {
+                    peerStatuses.maybeBlacklist(peerId, "Received a block with mismatching config but we could not apply any new config")
                 }
             }
+
+            is FailedConfigurationMismatchException -> {
+                // We only expect the case of us not having applied the failed config yet here
+                val incomingFailedConfigHash = block.header.getFailedConfigHash()
+                if (incomingFailedConfigHash != null) {
+                    if (!checkIfConfigIsPendingAndCanBeLoaded(block, incomingFailedConfigHash)) {
+                        peerStatuses.maybeBlacklist(peerId, "Received a block with failing config that we could not apply")
+                    }
+                } else {
+                    peerStatuses.maybeBlacklist(peerId, "Received a block without expected failed config hash")
+                }
+            }
+
+            is BadDataException -> logger.warn(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
             else -> logger.error(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
         }
     }

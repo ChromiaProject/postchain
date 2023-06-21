@@ -11,9 +11,9 @@ import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
+import net.postchain.core.BadDataException
 import net.postchain.core.EContext
+import net.postchain.core.MissingPeerInfoException
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 
@@ -90,12 +90,10 @@ object CliExecution {
                             println("Blockchain configuration of chainId $chainId at height $height already exists")
                     }
                 }
-            } catch (e: BadDataMistake) {
-                if (e.type == BadDataType.MISSING_PEERINFO) {
-                    throw CliException(e.message + " Please add node with command peerinfo-add or set flag --allow-unknown-signers.")
-                } else {
-                    throw CliException("Bad configuration format.")
-                }
+            } catch (e: MissingPeerInfoException) {
+                throw CliException(e.message + " Please add node with command peerinfo-add or set flag --allow-unknown-signers.")
+            } catch (e: BadDataException) {
+                throw CliException("Bad configuration format.")
             }
             Unit
         }

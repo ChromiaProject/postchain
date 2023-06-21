@@ -6,8 +6,8 @@ import net.postchain.base.extension.getConfigHash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
+import net.postchain.core.BadDataException
+import net.postchain.core.BadMessageException
 import net.postchain.core.NodeRid
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
@@ -74,7 +74,7 @@ class SlowSynchronizer(
                 }
                 Thread.sleep(sleepData.currentSleepMs)
             }
-        } catch (e: BadDataMistake) {
+        } catch (e: BadDataException) {
             logger.error(e) { "Fatal error, shutting down blockchain for safety reasons. Needs manual investigation." }
             throw e
         } catch (e: Exception) {
@@ -273,7 +273,7 @@ class SlowSynchronizer(
             txs: List<ByteArray>
     ) {
         if (header !is BaseBlockHeader) {
-            throw BadDataMistake(BadDataType.BAD_MESSAGE, "Expected BaseBlockHeader")
+            throw BadMessageException("Expected BaseBlockHeader")
         }
 
         logger.trace { "handleBlock() - Received for height: $height" }

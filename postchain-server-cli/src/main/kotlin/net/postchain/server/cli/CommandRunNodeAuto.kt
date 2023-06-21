@@ -13,9 +13,9 @@ import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
+import net.postchain.core.BadDataException
 import net.postchain.core.EContext
+import net.postchain.core.MissingPeerInfoException
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFileReader
 import java.io.File
@@ -172,12 +172,10 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
             try {
                 if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners = false))
                     println("Blockchain configuration of chainId $chainId at height $height already exists")
-            } catch (e: BadDataMistake) {
-                if (e.type == BadDataType.MISSING_PEERINFO) {
-                    throw CliException(e.message + " Please add node with command peerinfo-add or set flag --allow-unknown-signers.")
-                } else {
-                    throw CliException("Bad configuration format.")
-                }
+            } catch (e: MissingPeerInfoException) {
+                throw CliException(e.message + " Please add node with command peerinfo-add or set flag --allow-unknown-signers.")
+            } catch (e: BadDataException) {
+                throw CliException("Bad configuration format.")
             }
         }
     }
