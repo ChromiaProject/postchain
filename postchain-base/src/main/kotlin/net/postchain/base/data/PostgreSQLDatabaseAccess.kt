@@ -190,6 +190,10 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
             "SELECT tables.table_name FROM information_schema.tables AS tables" +
                     " WHERE tables.table_schema = current_schema() AND tables.table_name LIKE 'c${chainId}.%'"
 
+    override fun cmdGetAllBlockchainFunctions(chainId: Long): String =
+            "SELECT routine_name FROM information_schema.routines" +
+                    " WHERE routine_schema = current_schema() AND routine_name LIKE 'c${chainId}.%'"
+
     override fun cmdCreateTablePeerInfos(): String {
         return "CREATE TABLE ${tablePeerinfos()} (" +
                 " $TABLE_PEERINFOS_FIELD_HOST text NOT NULL" +

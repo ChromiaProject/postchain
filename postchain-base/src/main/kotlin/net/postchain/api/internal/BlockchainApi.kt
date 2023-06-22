@@ -169,6 +169,7 @@ object BlockchainApi {
         if (dependentChains.isNotEmpty())
             throw UserMistake("Blockchain may not be deleted due to the following dependent chains: ${dependentChains.joinToString(", ")}")
 
+        db.removeAllBlockchainSpecificFunctions(ctx)
         db.removeAllBlockchainSpecificTables(ctx)
         db.removeBlockchainFromMustSyncUntil(ctx)
         db.removeAllBlockchainReplicas(ctx)
