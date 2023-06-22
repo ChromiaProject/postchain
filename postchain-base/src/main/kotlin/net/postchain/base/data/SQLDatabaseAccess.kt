@@ -68,6 +68,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     protected fun tableName(chainId: Long, table: String): String = "\"c${chainId}.$table\""
 
+    protected fun functionName(chainId: Long, function: String): String = "\"c${chainId}.$function\""
+
     protected fun stripQuotes(string: String): String = string.replace("\"", "")
 
     // --- Create Table ---
@@ -98,6 +100,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdGetTableBlockchainReplicasPubKeyConstraint(): String
     protected abstract fun cmdGetTableConstraints(tableName: String): String
     protected abstract fun cmdGetAllBlockchainTables(chainId: Long): String
+    protected abstract fun cmdGetAllBlockchainFunctions(chainId: Long): String
 
     // Tables not part of the batch creation run
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
@@ -751,6 +754,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
         bcTables.forEach { tableName ->
             dropTable(ctx.conn, tableName)
+        }
+    }
+
+    override fun removeAllBlockchainSpecificFunctions(ctx: EContext) {
+        val allFunctions = queryRunner.query(ctx.conn, cmdGetAllBlockchainFunctions(ctx.chainID), ColumnListHandler<String>())
+        if (allFunctions.isNotEmpty()) {
+            val csvFunctions = allFunctions.joinToString(", ") { "\"$it\"" }
+            queryRunner.update(ctx.conn, "DROP FUNCTION $csvFunctions CASCADE")
         }
     }
 
