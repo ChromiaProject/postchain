@@ -250,13 +250,6 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected fun getTestName() = this::class.java.simpleName ?: "NoName"
 
     /**
-     * Override this in your test to add config overrides directly on the [NodeSetup] (for node specific configs).
-     */
-    open fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
-
-    }
-
-    /**
      * Generates config for all [NodeSetup] objects
      */
     protected fun createNodeConfProvidersAndAddToNodeSetup(
