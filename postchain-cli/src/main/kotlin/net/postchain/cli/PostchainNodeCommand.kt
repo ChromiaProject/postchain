@@ -27,6 +27,7 @@ class PostchainNodeCommand : NoOpCliktCommand(name = "node", help = "Commands to
                                 CommandCheckBlockchain(),
                                 CommandDeleteBlockchain(),
                                 CommandExportBlockchain(),
+                                CommandImportBlockchain(),
                                 CommandAddConfiguration(),
                                 CommandListConfigurations(),
                                 CommandRemoveConfiguration(),
