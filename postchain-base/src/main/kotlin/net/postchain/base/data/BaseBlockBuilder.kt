@@ -81,7 +81,8 @@ open class BaseBlockBuilder(
         val usingHistoricBRID: Boolean,
         val maxBlockSize: Long,
         val maxBlockTransactions: Long,
-        maxTxExecutionTime: Long
+        maxTxExecutionTime: Long,
+        val maxSpecialEndTransactionSize: Long
 ) : AbstractBlockBuilder(eContext, blockchainRID, store, txFactory, maxTxExecutionTime) {
 
     companion object : KLogging()
@@ -90,8 +91,9 @@ open class BaseBlockBuilder(
 
     private val calc = GtvMerkleHashCalculator(cryptoSystem)
 
-    private var blockSize: Long = 0L
+    internal var blockSize: Long = 0L // not private due to test access
     private var haveSpecialEndTransaction = false
+    private var isSpecialEndTransaction = false
 
     /**
      * Computes the root hash for the Merkle tree of transactions currently in a block
@@ -253,8 +255,10 @@ open class BaseBlockBuilder(
      * @return the new [BlockHeader] we are about to create.
      */
     override fun finalizeBlock(): BlockHeader {
-        if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(End))
+        if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(End)) {
+            isSpecialEndTransaction = true
             appendTransaction(specialTxHandler.createSpecialTransaction(End, bctx))
+        }
         return super.finalizeBlock()
     }
 
@@ -317,9 +321,12 @@ open class BaseBlockBuilder(
     }
 
     override fun appendTransaction(tx: Transaction) {
-        if (blockSize + tx.getRawData().size > maxBlockSize) {
+        val addSpecialEndTransactionBuffer = !isSpecialEndTransaction && specialTxHandler.needsSpecialTransaction(End)
+        val transactionsSize = transactions.size + if (addSpecialEndTransactionBuffer) 1 else 0
+        val newBlockSize = blockSize + tx.getRawData().size + if (addSpecialEndTransactionBuffer) maxSpecialEndTransactionSize else 0
+        if (newBlockSize > maxBlockSize) {
             throw BadBlockException("block size exceeds max block size $maxBlockSize bytes")
-        } else if (transactions.size >= maxBlockTransactions) {
+        } else if (transactionsSize >= maxBlockTransactions) {
             throw BadBlockException("Number of transactions exceeds max $maxBlockTransactions transactions in block")
         }
         checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
@@ -346,5 +353,12 @@ open class BaseBlockBuilder(
                 nrOfDependencies,
                 extraData
         )
+    }
+
+    fun shouldStopBuildingBlock(maxBlockTransactions: Long): Boolean {
+        val needsSpecialEndTransaction = specialTxHandler.needsSpecialTransaction(End)
+        val transactionsSize = transactions.size + if (needsSpecialEndTransaction) 1 else 0
+        val currentSize = blockSize + if (needsSpecialEndTransaction) maxSpecialEndTransactionSize else 0
+        return transactionsSize >= maxBlockTransactions || currentSize >= maxBlockSize
     }
 }

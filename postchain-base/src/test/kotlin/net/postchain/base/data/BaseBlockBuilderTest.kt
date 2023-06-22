@@ -1,12 +1,13 @@
 // Copyright (c) 2020 ChromaWay AB. See README for license information.
 
-package net.postchain.base
+package net.postchain.base.data
 
-import net.postchain.base.data.BaseBlockBuilder
-import net.postchain.base.data.BaseBlockStore
-import net.postchain.base.data.BaseBlockWitnessProvider
-import net.postchain.base.data.BaseTransactionFactory
-import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.BaseBlockEContext
+import net.postchain.base.BaseBlockHeader
+import net.postchain.base.BaseEContext
+import net.postchain.base.SpecialTransactionHandler
+import net.postchain.base.SpecialTransactionPosition.End
+import net.postchain.base.TxEventSink
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TxEContext
@@ -20,8 +21,12 @@ import net.postchain.crypto.devtools.MockCryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 class BaseBlockBuilderTest {
     val cryptoSystem = MockCryptoSystem()
@@ -44,12 +49,16 @@ class BaseBlockBuilderTest {
     val subjects = arrayOf("test".toByteArray())
     val signer = cryptoSystem.buildSigMaker(KeyPair(pubKey(0), privKey(0)))
     val validator = BaseBlockWitnessProvider(cryptoSystem, signer, subjects)
+    val specialTransactionHandler: SpecialTransactionHandler = mock()
+    val maxBlockSize = 26 * 1024 * 1024L
+    val maxSpecialEndTransactionSize = 1024L
     val bbb = BaseBlockBuilder(myBlockchainRid, cryptoSystem, ctx, bbs, tf,
-            NullSpecialTransactionHandler(),
+            specialTransactionHandler,
             subjects, signer, validator, listOf(), listOf(), false,
-            maxBlockSize = 26 * 1024 * 1024,
+            maxBlockSize = maxBlockSize,
             maxBlockTransactions = 100,
-            maxTxExecutionTime = 0)
+            maxTxExecutionTime = 0,
+            maxSpecialEndTransactionSize = maxSpecialEndTransactionSize)
 
     @Test
     fun invalidMonotoneTimestamp() {
@@ -80,41 +89,52 @@ class BaseBlockBuilderTest {
         bbb.initialBlockData = blockData
         assertEquals(OK, bbb.validateBlockHeader(header).result)
     }
+
+    @Test
+    fun `with no limits reached should not stop building blocks`() {
+        // setup
+        whenever(specialTransactionHandler.needsSpecialTransaction(End)).doReturn(false)
+        // execute & verify
+        assertFalse(bbb.shouldStopBuildingBlock(2))
+    }
+
+    @Test
+    fun `if max transaction count is reached should stop building blocks`() {
+        // setup
+        whenever(specialTransactionHandler.needsSpecialTransaction(End)).doReturn(false)
+        bbb.transactions.add(mock())
+        bbb.transactions.add(mock())
+        // execute & verify
+        assertTrue(bbb.shouldStopBuildingBlock(2))
+    }
+
+    @Test
+    fun `if max transaction count is reached through special end transaction should stop building blocks`() {
+        // setup
+        whenever(specialTransactionHandler.needsSpecialTransaction(End)).doReturn(true)
+        bbb.transactions.add(mock())
+        assertEquals(1, bbb.transactions.size)
+        // execute & verify
+        assertTrue(bbb.shouldStopBuildingBlock(2))
+    }
+
+    @Test
+    fun `max size of transactions reached should stop building blocks`() {
+        // setup
+        whenever(specialTransactionHandler.needsSpecialTransaction(End)).doReturn(false)
+        bbb.blockSize = maxBlockSize
+        assertEquals(0, bbb.transactions.size)
+        // execute & verify
+        assertTrue(bbb.shouldStopBuildingBlock(2))
+    }
+
+    @Test
+    fun `max size of transactions reached through special end transaction should stop building blocks`() {
+        // setup
+        whenever(specialTransactionHandler.needsSpecialTransaction(End)).doReturn(true)
+        bbb.blockSize = maxBlockSize - maxSpecialEndTransactionSize
+        assertEquals(0, bbb.transactions.size)
+        // execute & verify
+        assertTrue(bbb.shouldStopBuildingBlock(2))
+    }
 }
-/*
-interface BlockBuilder {
-fun begin()
-fun appendTransaction(tx: Transaction)
-fun appendTransaction(txData: ByteArray)
-fun finalize()
-fun finalizeAndValidate(bh: BlockHeader)
-fun getBlockData(): BlockData
-fun getBlockWitnessBuilder(): BlockWitnessBuilder?;
-fun commit(w: BlockWitness?)
-}
-
- */
-
-
-//fun testBegin() {
-//        val conn = mock<Connection> {}
-//        val chainID = 18
-//        val ctx = EContext(conn, chainID)
-//        val initialBlockData = InitialBlockData(1L, ByteArray(32), 0L)
-//        var txFactory = mock<TransactionFactory>()
-//        val blockStore = mock<BlockStore> {
-//            on { beginBlock(ctx) } doReturn(initialBlockData)
-//            on { finalizeBlock() }
-//        }
-//
-//        val SUT = BaseBlockBuilder(MockCryptoSystem(), ctx, blockStore, txFactory) as BlockBuilder
-//        SUT.begin();
-//
-//        verify(blockStore).beginBlock(ctx)
-//
-//        SUT.finalize()
-//
-//        SUT.commit()
-
-//}
-//}

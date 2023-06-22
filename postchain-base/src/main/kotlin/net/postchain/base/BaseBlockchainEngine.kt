@@ -297,7 +297,7 @@ open class BaseBlockchainEngine(
                     transactionSample.stop(metrics.acceptedTransactions)
                     // tx is fine, consider stopping
                     if (strategy.shouldStopBuildingBlock(blockBuilder.blockBuilder)) {
-                        logger.debug { "buildBlock() - Block size limit is reached" }
+                        logger.debug { "buildBlock() - Block limit is reached" }
                         break
                     }
                 }
