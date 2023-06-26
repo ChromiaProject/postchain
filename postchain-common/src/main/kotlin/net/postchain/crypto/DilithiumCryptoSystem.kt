@@ -1,6 +1,10 @@
 package net.postchain.crypto
 
-import org.bouncycastle.pqc.crypto.crystals.dilithium.DilithiumParameters.dilithium2_aes
+import net.postchain.common.exception.UserMistake
+import org.bouncycastle.asn1.ASN1InputStream
+import org.bouncycastle.asn1.bc.BCObjectIdentifiers
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
+import org.bouncycastle.pqc.crypto.crystals.dilithium.DilithiumParameters
 import org.bouncycastle.pqc.jcajce.interfaces.DilithiumPrivateKey
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
 import org.bouncycastle.pqc.jcajce.spec.DilithiumParameterSpec
@@ -14,10 +18,11 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 
 class DilithiumCryptoSystem : BaseCryptoSystem() {
-    private val dilithiumParameters = dilithium2_aes // TODO: Investigate which parameters we should use
+
+    private val dilithiumParameters = DilithiumParameters.dilithium2 // TODO: Investigate which parameters we should use
 
     init {
-        if (Security.getProvider("BCPQC") == null) {
+        if (Security.getProvider(provider) == null) {
             Security.addProvider(BouncyCastlePQCProvider())
         }
     }
@@ -30,7 +35,7 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
     override fun buildSigMaker(keyPair: KeyPair): SigMaker = DilithiumSigMaker(keyPair, ::digest)
 
     override fun generateKeyPair(): KeyPair {
-        val keyPairGenerator = KeyPairGenerator.getInstance("Dilithium", "BCPQC").apply {
+        val keyPairGenerator = KeyPairGenerator.getInstance(algorithm, provider).apply {
             initialize(DilithiumParameterSpec.fromName(dilithiumParameters.name), rand)
         }
 
@@ -51,14 +56,32 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
         return PubKey(decodedPublicKey.encoded)
     }
 
+    override fun deriveSignatureVerificationFromSubject(subjectID: ByteArray): (ByteArray, ByteArray, ByteArray) -> Boolean {
+        // 0x30 indicates that content is ASN1 encoded, it is also not a valid start for an ECDSA key
+        // if (subjectID[0].toInt() == 0x30) {
+        return try {
+            val keyInfo = SubjectPublicKeyInfo.getInstance(ASN1InputStream(subjectID).readObject())
+            val signatureAlgorithmId = keyInfo.algorithm.algorithm
+            // TODO: Investigate which parameters we should use
+            if (signatureAlgorithmId == BCObjectIdentifiers.dilithium2) {
+                ::verifyDilithiumSignature
+            } else throw UserMistake("Unknown signature algorithm identifier $signatureAlgorithmId")
+        } catch (e: Exception) {
+            throw UserMistake("Invalid format of ASN1 encoded public key")
+        }
+    }
 
     companion object {
+
+        const val algorithm = "Dilithium"
+        const val provider = "BCPQC"
+
         fun verifyDilithiumSignature(digest: ByteArray, subjectID: ByteArray, data: ByteArray): Boolean {
-            if (Security.getProvider("BCPQC") == null) {
+            if (Security.getProvider(provider) == null) {
                 Security.addProvider(BouncyCastlePQCProvider())
             }
 
-            val signer = java.security.Signature.getInstance("Dilithium", "BCPQC").apply {
+            val signer = java.security.Signature.getInstance(algorithm, provider).apply {
                 initVerify(decodePublicKey(PubKey(subjectID)))
                 update(digest)
             }
@@ -66,11 +89,11 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
         }
 
         fun decodePrivateKey(privKey: PrivKey): PrivateKey = PKCS8EncodedKeySpec(privKey.data).let {
-            KeyFactory.getInstance("Dilithium", "BCPQC").generatePrivate(it)
+            KeyFactory.getInstance(algorithm, provider).generatePrivate(it)
         }
 
         private fun decodePublicKey(pubKey: PubKey): PublicKey = X509EncodedKeySpec(pubKey.data).let {
-            KeyFactory.getInstance("Dilithium", "BCPQC").generatePublic(it)
+            KeyFactory.getInstance(algorithm, provider).generatePublic(it)
         }
     }
 }

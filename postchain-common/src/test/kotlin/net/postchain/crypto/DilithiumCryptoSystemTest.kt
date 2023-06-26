@@ -2,6 +2,7 @@ package net.postchain.crypto
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import org.junit.jupiter.api.Test
 
@@ -9,27 +10,32 @@ class DilithiumCryptoSystemTest {
 
     @Test
     fun `Can generate keypair and derive pubkey from privkey`() {
-        val dilithiumCryptoSystem = DilithiumCryptoSystem()
+        val sut = DilithiumCryptoSystem()
 
-        val keyPair = dilithiumCryptoSystem.generateKeyPair()
+        val keyPair = sut.generateKeyPair()
+        assertThat(sut.validatePubKey(keyPair.pubKey.data)).isTrue()
 
-        assertThat(dilithiumCryptoSystem.validatePubKey(keyPair.pubKey.data)).isTrue()
-
-        val derivedPubKey = dilithiumCryptoSystem.derivePubKey(keyPair.privKey)
-
+        val derivedPubKey = sut.derivePubKey(keyPair.privKey)
         assertThat(derivedPubKey).isEqualTo(keyPair.pubKey)
     }
 
     @Test
     fun `Can sign and verify signature`() {
-        val dilithiumCryptoSystem = DilithiumCryptoSystem()
+        val sut = DilithiumCryptoSystem()
+        val message = "Hello!".toByteArray()
 
-        val keyPair = dilithiumCryptoSystem.generateKeyPair()
-        val sigMaker = dilithiumCryptoSystem.buildSigMaker(keyPair)
+        // correct signature
+        val keyPair = sut.generateKeyPair()
+        val sigMaker = sut.buildSigMaker(keyPair)
+        val signature = sigMaker.signMessage(message)
+        val verifier = sut.makeVerifier()
+        assertThat(verifier(message, signature)).isTrue()
 
-        val digest = dilithiumCryptoSystem.digest("Hello!".toByteArray())
-        val signature = sigMaker.signDigest(digest)
-
-        assertThat(dilithiumCryptoSystem.verifyDigest(digest, signature)).isTrue()
+        // wrong signature
+        val keyPair2 = sut.generateKeyPair()
+        val sigMaker2 = sut.buildSigMaker(keyPair2)
+        val signature2 = sigMaker2.signMessage(message)
+        val wrongSignature = Signature(signature.subjectID, signature2.data)
+        assertThat(verifier(message, wrongSignature)).isFalse()
     }
 }

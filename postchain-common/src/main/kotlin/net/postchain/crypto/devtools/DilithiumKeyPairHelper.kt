@@ -23,8 +23,8 @@ object DilithiumKeyPairHelper : KeyPairCache {
     init {
         // Fixed seed so we always generate the same keys
         val scr = SecureRandom.getInstance("SHA1PRNG").apply { setSeed(ByteArray(1)) }
-        keyPairGenerator = KeyPairGenerator.getInstance("Dilithium", "BCPQC").apply {
-            initialize(DilithiumParameterSpec.fromName(DilithiumParameters.dilithium2_aes.name), scr)
+        keyPairGenerator = KeyPairGenerator.getInstance(DilithiumCryptoSystem.algorithm, DilithiumCryptoSystem.provider).apply {
+            initialize(DilithiumParameterSpec.fromName(DilithiumParameters.dilithium2.name), scr)
         }
 
         for (i in 0..10) {

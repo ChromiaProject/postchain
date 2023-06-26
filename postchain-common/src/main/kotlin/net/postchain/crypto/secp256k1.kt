@@ -207,4 +207,7 @@ open class Secp256K1CryptoSystem : BaseCryptoSystem() {
         }
         return PrivKey(privateKey)
     }
+
+    override fun deriveSignatureVerificationFromSubject(subjectID: ByteArray): (ByteArray, ByteArray, ByteArray) -> Boolean =
+            ::secp256k1_verify
 }
