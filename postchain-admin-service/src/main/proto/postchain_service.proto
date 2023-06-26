@@ -12,9 +12,13 @@ service PostchainService {
   rpc StopBlockchain (StopBlockchainRequest) returns (StopBlockchainReply) {} // Stop blockchain with ID
   rpc InitializeBlockchain (InitializeBlockchainRequest) returns (InitializeBlockchainReply) {} // Adds and starts blockchain
   rpc AddConfiguration (AddConfigurationRequest) returns (AddConfigurationReply) {} // Add configuration at height
+  rpc ListConfigurations (ListConfigurationsRequest) returns (ListConfigurationsReply) {} // List configurations
   rpc FindBlockchain (FindBlockchainRequest) returns (FindBlockchainReply) {} // Find blockchain rid
   rpc AddBlockchainReplica (AddBlockchainReplicaRequest) returns (AddBlockchainReplicaReply) {} // Add a bc replica
   rpc RemoveBlockchainReplica (RemoveBlockchainReplicaRequest) returns (RemoveBlockchainReplicaReply) {} // Remove a bc replica
+  rpc ExportBlockchain (ExportBlockchainRequest) returns (ExportBlockchainReply) {} // Export blockchain to file
+  rpc ImportBlockchain (ImportBlockchainRequest) returns (ImportBlockchainReply) {} // Import blockchain from file
+  rpc RemoveBlockchain (RemoveBlockchainRequest) returns (RemoveBlockchainReply) {} // Delete all blockchain data
 }
 
 message InitializeBlockchainRequest {
@@ -45,6 +49,14 @@ message AddConfigurationRequest {
 
 message AddConfigurationReply {
   string message = 1;
+}
+
+message ListConfigurationsRequest {
+  int64 chainId = 1;
+}
+
+message ListConfigurationsReply {
+  repeated int64 height = 1;
 }
 
 message StartBlockchainRequest {
@@ -88,5 +100,42 @@ message RemoveBlockchainReplicaRequest {
 }
 
 message RemoveBlockchainReplicaReply {
+  string message = 1;
+}
+
+message ExportBlockchainRequest {
+  int64 chainId = 1;
+  string configurationsFile = 2;
+  string blocksFile = 3;
+  bool overwrite = 4;
+  int64 fromHeight = 5;
+  int64 upToHeight = 6;
+}
+
+message ExportBlockchainReply {
+  int64 fromHeight = 1;
+  int64 upHeight = 2;
+  int64 numBlocks = 3;
+}
+
+message ImportBlockchainRequest {
+  int64 chainId = 1;
+  string configurationsFile = 2;
+  string blocksFile = 3;
+  bool incremental = 4;
+}
+
+message ImportBlockchainReply {
+  int64 fromHeight = 1;
+  int64 toHeight = 2;
+  int64 numBlocks = 3;
+  bytes blockchainRid = 4;
+}
+
+message RemoveBlockchainRequest {
+  int64 chainId = 1;
+}
+
+message RemoveBlockchainReply {
   string message = 1;
 }

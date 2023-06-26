@@ -3,8 +3,6 @@
 package net.postchain.integrationtest
 
 import net.postchain.api.rest.controller.Model
-import net.postchain.api.rest.model.ApiTx
-import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
@@ -23,9 +21,7 @@ class ThreeTxForwardingTest : IntegrationTestSetup() {
                 .getBlockBuildingStrategy() as ThreeTxStrategy
     }
 
-    private fun tx(id: Int): ApiTx {
-        return ApiTx(TestTransaction(id).getRawData().toHex())
-    }
+    private fun tx(id: Int): ByteArray = TestTransaction(id).getRawData()
 
     private fun apiModel(nodeIndex: Int): Model =
             nodes[nodeIndex].getRestApiModel()

@@ -6,7 +6,7 @@ import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.chainIdOption
 import net.postchain.server.grpc.StopBlockchainRequest
 
-class StopBlockchainCommand: CliktCommand(help = "Stop blockchain with id") {
+class StopBlockchainCommand: CliktCommand(name = "stop", help = "Stop blockchain with id") {
 
     private val channel by blockingPostchainServiceChannelOption()
 

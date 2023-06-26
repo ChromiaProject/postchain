@@ -1,6 +1,8 @@
 package net.postchain.gtv.yaml
 
+import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.isContentEqualTo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.common.types.WrappedByteArray
@@ -11,22 +13,20 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.math.BigInteger
-import kotlin.test.assertContentEquals
-import kotlin.test.assertEquals
 
 internal class GtvYamlTest {
 
 
     @Test
     fun empty() {
-        assertk.assert(GtvYaml().load("---")).isEqualTo(GtvNull)
+        assertThat(GtvYaml().load("---")).isEqualTo(GtvNull)
     }
 
     @ParameterizedTest
     @MethodSource("allGtvTypes")
     fun gtvTest(yaml: String, expectedGtv: Gtv) {
         val actual = GtvYaml().load("v: $yaml")
-        assertk.assert(actual["v"]).isEqualTo(expectedGtv)
+        assertThat(actual["v"]).isEqualTo(expectedGtv)
     }
 
     @ParameterizedTest
@@ -36,7 +36,7 @@ internal class GtvYamlTest {
                 val g: Gtv
         )
         val actual = GtvYaml().load<GtvClass>("g: $yaml")
-        assertk.assert(actual).isEqualTo(GtvClass(expectedGtv))
+        assertThat(actual).isEqualTo(GtvClass(expectedGtv))
     }
 
     @Test
@@ -47,9 +47,8 @@ internal class GtvYamlTest {
         )
 
         val actual = GtvYaml().load<Binary>("b: x\"AB\"\nwb: x\"AC\"")
-        assertContentEquals("AB".hexStringToByteArray(), actual.b)
-        assertEquals("AC".hexStringToWrappedByteArray(), actual.wb)
-
+        assertThat(actual.b).isContentEqualTo("AB".hexStringToByteArray())
+        assertThat(actual.wb).isEqualTo("AC".hexStringToWrappedByteArray())
     }
 
     @Test
@@ -59,7 +58,7 @@ internal class GtvYamlTest {
               b:
                 c: 1
         """.trimIndent())
-        assertk.assert(actual).isEqualTo(gtv("a" to gtv("b" to gtv("c" to gtv(1)))))
+        assertThat(actual).isEqualTo(gtv("a" to gtv("b" to gtv("c" to gtv(1)))))
     }
 
 
@@ -100,18 +99,18 @@ internal class GtvYamlTest {
               k2: 5
             def1: "overridden"
         """.trimIndent())
-        assertk.assert(actual.i).isEqualTo(1)
-        assertk.assert(actual.l).isEqualTo(2L)
-        assertk.assert(actual.bo).isEqualTo(true)
-        assertContentEquals("12".hexStringToByteArray(), actual.ba)
-        assertk.assert(actual.wba).isEqualTo("13".hexStringToWrappedByteArray())
-        assertk.assert(actual.s).isEqualTo("foo")
-        assertk.assert(actual.gtv).isEqualTo(gtv(12))
-        assertk.assert(actual.li).isEqualTo(listOf(1L, 2L))
-        assertk.assert(actual.se).isEqualTo(setOf("a", "b"))
-        assertk.assert(actual.ma).isEqualTo(mapOf("k1" to gtv("v1"), "k2" to gtv(5)))
-        assertk.assert(actual.def1).isEqualTo("overridden")
-        assertk.assert(actual.def2).isEqualTo("default2")
+        assertThat(actual.i).isEqualTo(1)
+        assertThat(actual.l).isEqualTo(2L)
+        assertThat(actual.bo).isEqualTo(true)
+        assertThat(actual.ba!!).isContentEqualTo("12".hexStringToByteArray())
+        assertThat(actual.wba).isEqualTo("13".hexStringToWrappedByteArray())
+        assertThat(actual.s).isEqualTo("foo")
+        assertThat(actual.gtv).isEqualTo(gtv(12))
+        assertThat(actual.li).isEqualTo(listOf(1L, 2L))
+        assertThat(actual.se).isEqualTo(setOf("a", "b"))
+        assertThat(actual.ma).isEqualTo(mapOf("k1" to gtv("v1"), "k2" to gtv(5)))
+        assertThat(actual.def1).isEqualTo("overridden")
+        assertThat(actual.def2).isEqualTo("default2")
     }
 
     companion object {

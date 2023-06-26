@@ -6,9 +6,9 @@ import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.getModules
 import net.postchain.gtx.PatchOpsGTXModule
 import org.junit.jupiter.api.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 
 class GTXModuleTest : IntegrationTestSetup() {
 

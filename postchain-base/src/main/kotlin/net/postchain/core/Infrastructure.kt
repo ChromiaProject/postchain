@@ -5,9 +5,8 @@ package net.postchain.core
 import net.postchain.PostchainContext
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.*
-import net.postchain.debug.BlockchainProcessName
-import net.postchain.ebft.worker.MessageProcessingLatch
 import net.postchain.network.common.ConnectionManager
 
 /**
@@ -19,9 +18,10 @@ interface SynchronizationInfrastructure : Shutdownable {
      * This is how a blockchain process get created.
      */
     fun makeBlockchainProcess(
-            processName: BlockchainProcessName,
             engine: BlockchainEngine,
-            messageProcessingLatch: MessageProcessingLatch
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
+            restartNotifier: BlockchainRestartNotifier,
+            blockchainState: BlockchainState
     ): BlockchainProcess
 
     /**
@@ -35,6 +35,10 @@ interface SynchronizationInfrastructure : Shutdownable {
      * Note: responsible for keeping track of the two BC process sync modes (normal sync and fastsync)
      */
     fun exitBlockchainProcess(process: BlockchainProcess)
+}
+
+fun interface BlockchainRestartNotifier {
+    fun notifyRestart(loadNextPendingConfig: Boolean)
 }
 
 /**
@@ -53,9 +57,13 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
     ): BlockchainConfiguration
 
     fun makeBlockchainEngine(
-            processName: BlockchainProcessName,
             configuration: BlockchainConfiguration,
-            afterCommitHandler: AfterCommitHandler
+            afterCommitHandler: AfterCommitHandler,
+            blockBuilderStorage: Storage,
+            sharedStorage: Storage,
+            initialEContext: EContext,
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
+            restartNotifier: BlockchainRestartNotifier
     ): BlockchainEngine
 
 }
@@ -100,6 +108,7 @@ interface BlockchainProcessManagerExtension : BlockchainProcessConnectable, Shut
 }
 
 interface InfrastructureFactory {
+    fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider
 
     fun makeConnectionManager(appConfig: AppConfig): ConnectionManager
 
@@ -122,9 +131,7 @@ enum class Infrastructure(vararg val key: String) {
     EbftManagedContainerMaster("ebft-managed-container-master"),
     EbftContainerSub("ebft-container-sub"),
     EbftManagedChromia0ContainerMaster("ebft-managed-chromia0-container-master"),
-
-    // Tests
-    BaseTest("base-test", "base/test");
+    ;
 
     fun get(): String = key.first()
 }

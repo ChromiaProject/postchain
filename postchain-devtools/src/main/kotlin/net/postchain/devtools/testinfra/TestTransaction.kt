@@ -2,6 +2,7 @@
 
 package net.postchain.devtools.testinfra
 
+import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.core.TxEContext
 import net.postchain.core.Transaction
 import java.io.ByteArrayOutputStream
@@ -13,8 +14,8 @@ open class TestTransaction(
         val correct: Boolean = true
 ) : Transaction {
 
-    override fun isCorrect(): Boolean {
-        return correct
+    override fun checkCorrectness() {
+        if (!correct) throw TransactionIncorrect(getRID())
     }
 
     override fun isSpecial(): Boolean {

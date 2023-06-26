@@ -26,11 +26,10 @@ interface Synchronizable {
  * - [BlockBuildingStrategy] knows HOW to build a block
  */
 interface BlockchainEngine : Shutdownable {
-    val storage: Storage
+    val blockBuilderStorage: Storage
+    val sharedStorage: Storage
 
     fun isRunning(): Boolean
-    fun initialize()
-    fun setAfterCommitHandler(afterCommitHandler: AfterCommitHandler)
 
     fun loadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?>
     fun buildBlock(): Pair<ManagedBlockBuilder, Exception?>
@@ -38,6 +37,7 @@ interface BlockchainEngine : Shutdownable {
     fun getBlockBuildingStrategy(): BlockBuildingStrategy
     fun getBlockQueries(): BlockQueries
     fun getConfiguration(): BlockchainConfiguration
+    fun hasBuiltFirstBlockAfterConfigUpdate(): Boolean
 }
 
 /**
@@ -55,6 +55,8 @@ interface BlockchainProcess {
     fun start()
     fun shutdown()
     fun registerDiagnosticData(diagnosticData: DiagnosticData) = Unit
+    fun isSigner(): Boolean
+    fun getBlockchainState(): BlockchainState
 }
 
 // TODO: [POS-358]: Should we add chainId and brid to BlockchainProcess?

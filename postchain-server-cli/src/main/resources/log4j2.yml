@@ -1,0 +1,29 @@
+Configuration:
+  name: Default
+  monitorInterval: 30 # sec.
+
+  Appenders:
+    Console:
+      name: ConsoleAppender
+      target: SYSTEM_OUT
+      PatternLayout:
+        pattern: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} -%notEmpty{ [%equals{bc-rid=%.-2X{blockchainRID}:%.4X{blockchainRID}, }{bc-rid=:, }{}%notEmpty{chain-id=%X{chainIID}}]:} %msg%n"
+
+  Loggers:
+
+    Root:
+      level: warn
+      AppenderRef:
+      - ref: ConsoleAppender
+
+    Logger:
+
+    - name: net.postchain.api.rest.controller
+      level: warn
+      additivity: false
+
+    - name: net.postchain
+      level: info
+      additivity: false
+      AppenderRef:
+      - ref: ConsoleAppender

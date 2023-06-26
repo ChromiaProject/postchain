@@ -1,13 +1,14 @@
 package net.postchain.network.mastersub.subnode
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
-import net.postchain.common.toHex
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.NodeRid
-import net.postchain.debug.BlockchainProcessName
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.network.common.ChainsWithOneConnection
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.common.LazyPacket
@@ -19,10 +20,12 @@ import net.postchain.network.mastersub.protocol.MsDataMessage
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.subnode.netty.NettySubConnector
 import net.postchain.network.peer.XChainPeersConfiguration
-import java.util.*
+import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.concurrent.schedule
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 
 /**
  * [SubConnectionManager] has only one connection; it's connection to
@@ -52,12 +55,18 @@ interface SubConnectionManager : ConnectionManager {
  */
 class DefaultSubConnectionManager(
         private val appConfig: AppConfig,
-        private val containerNodeConfig: ContainerNodeConfig,
+        val containerNodeConfig: ContainerNodeConfig,
 ) : SubConnectionManager, SubConnectorEvents {
 
     companion object : KLogging()
 
-    override val masterSubQueryManager = MasterSubQueryManager(::sendMessageToMaster)
+    override val masterSubQueryManager = MasterSubQueryManager { _, message ->
+        val connection = queryConnection
+        if (connection != null) {
+            connection.sendPacket { MsCodec.encode(message) }
+            true
+        } else false
+    }
 
     // We don't bother with factory here
     private val subConnector = NettySubConnector(this)
@@ -70,8 +79,10 @@ class DefaultSubConnectionManager(
     private val connectedPeers = ConcurrentHashMap<BlockchainRid, List<NodeRid>>()
 
     private val preAddedMsMessageHandlers = mutableMapOf<Long, MutableList<MsMessageHandler>>()
-    private val reconnectionTimer = Timer("Reconnection timer")
-    private val reconnectionScheduled = AtomicBoolean(false)
+    private val reconnectionExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+    private val reconnectionScheduledForChain = mutableMapOf<BlockchainRid, ScheduledFuture<*>>()
+    private var reconnectionScheduledForQuery: ScheduledFuture<*>? = null
+    private val reconnectDelay = Duration.ofSeconds(15)
     private var isShutDown = false
 
     private val connectedPeersHandler: MsMessageHandler = object : MsMessageHandler {
@@ -82,15 +93,29 @@ class DefaultSubConnectionManager(
         }
     }
 
+    private val masterNodePeerInfo = PeerInfo(
+            containerNodeConfig.masterHost,
+            containerNodeConfig.masterPort,
+            byteArrayOf() // It's not necessary here
+    )
+
+    private var queryConnection: SubConnection? = null
+    private val queryConnectionDescriptor = SubConnectionDescriptor(null, listOf(), containerNodeConfig.containerIID)
+
+    init {
+        logger.debug("Establishing query connection to master node")
+        subConnector.connectMaster(masterNodePeerInfo, queryConnectionDescriptor)
+    }
+
     @Synchronized
-    override fun connectChain(chainPeersConfig: XChainPeersConfiguration, autoConnectAll: Boolean, loggingPrefix: () -> String) {
-        logger.debug { "${loggingPrefix()}: Connecting master chain: ${chainPeersConfig.log()}" }
+    override fun connectChain(chainPeersConfig: XChainPeersConfiguration, autoConnectAll: Boolean) {
+        logger.debug("Connecting master chain")
 
         if (isShutDown) {
-            logger.warn("${loggingPrefix()}: Already shut down: connecting subnode chains is not possible")
+            logger.warn("Already shut down: connecting subnode chains is not possible")
         } else {
             if (chains.hasChain(chainPeersConfig.chainId)) {
-                disconnectChain(loggingPrefix, chainPeersConfig.chainId)
+                disconnectChain(chainPeersConfig.chainId)
             }
 
             val chain = ChainWithOneMasterConnection(chainPeersConfig)
@@ -100,22 +125,16 @@ class DefaultSubConnectionManager(
             chains.add(chain)
             connectToMaster(chain)
 
-            logger.debug { "${logger(chain)}: Master chain connected: ${chainPeersConfig.log()}" }
+            logger.debug("Master chain connected")
         }
     }
 
 
     private fun connectToMaster(chain: ChainWithOneMasterConnection) {
-        val masterNode = PeerInfo(
-                containerNodeConfig.masterHost,
-                containerNodeConfig.masterPort,
-                byteArrayOf() // It's not necessary here
-        )
+        val connectionDescriptor = SubConnectionDescriptor(chain.config.blockchainRid, chain.peers, containerNodeConfig.containerIID)
 
-        val connectionDescriptor = SubConnectionDescriptor(chain.config.blockchainRid, chain.peers)
-
-        logger.info { "${logger(chain)}: Connecting to master node ${masterNode.host}:${masterNode.port}, chanId: ${chain.log()}" }
-        subConnector.connectMaster(masterNode, connectionDescriptor)
+        logger.info { "Connecting to master node ${masterNodePeerInfo.host}:${masterNodePeerInfo.port}" }
+        subConnector.connectMaster(masterNodePeerInfo, connectionDescriptor)
     }
 
     /**
@@ -128,14 +147,13 @@ class DefaultSubConnectionManager(
         val chain = chains.getOrThrow(chainId)
         if (chain.isConnected()) {
             val message = MsDataMessage(
-                    chain.config.blockchainRid.data,
                     appConfig.pubKeyByteArray,
                     nodeRid.data,
                     data()
             )
             chain.getConnection()!!.sendPacket { MsCodec.encode(message) }
         } else {
-            logger.error("${logger(chain)}: sendPacket() - Master is disconnected so cannot send packet to ${chain.log()}")
+            logger.error("sendPacket() - Master is disconnected so cannot send packet")
         }
     }
 
@@ -154,15 +172,15 @@ class DefaultSubConnectionManager(
     }
 
     @Synchronized
-    override fun disconnectChain(loggingPrefix: () -> String, chainId: Long) {
-        logger.debug { "${loggingPrefix()}: Disconnecting master chain: $chainId" }
+    override fun disconnectChain(chainId: Long) {
+        logger.debug("Disconnecting master chain")
 
         val chain = chains.remove(chainId)
         if (chain != null) {
             chain.removeAndCloseConnection()
-            logger.debug { "${loggingPrefix()}: Master chain disconnected: $chainId" }
+            logger.debug("Master chain disconnected")
         } else {
-            logger.debug { "${loggingPrefix()}: Master chain is not connected: $chainId" }
+            logger.debug("Master chain is not connected")
         }
     }
 
@@ -171,10 +189,11 @@ class DefaultSubConnectionManager(
         if (!isShutDown) {
             isShutDown = true
 
-            reconnectionTimer.cancel()
-            reconnectionTimer.purge()
+            reconnectionExecutor.shutdownNow()
+            reconnectionExecutor.awaitTermination(2000, TimeUnit.MILLISECONDS)
 
             chains.removeAllAndClose()
+            queryConnection?.close()
 
             subConnector.shutdown()
         }
@@ -189,23 +208,34 @@ class DefaultSubConnectionManager(
             descriptor: SubConnectionDescriptor,
             connection: SubConnection,
     ): MsMessageHandler? {
+        return if (descriptor.blockchainRid == null) {
+            queryConnection?.close()
+            queryConnection = connection
 
-        val chain = chains.get(descriptor.blockchainRid)
-        return when {
-            chain == null -> {
-                logger.warn("${logger(descriptor)}: Master chain not found by blockchainRid = ${descriptor.blockchainRid.toShortHex()}")
-                connection.close()
-                null
-            }
-            chain.isConnected() -> {
-                logger.warn { "${logger(descriptor)}: Master node already connected: blockchainRid = ${descriptor.blockchainRid.toShortHex()}" }
-                // Don't close connection here, just return handler
-                chain.getPacketHandler()
-            }
-            else -> {
-                logger.info { "${logger(descriptor)}: Master node connected: blockchainRid: ${descriptor.blockchainRid.toShortHex()}" }
-                chain.setConnection(connection)
-                chain.getPacketHandler()
+            logger.debug("Query connection to master established")
+            masterSubQueryManager
+        } else {
+            val chain = chains.get(descriptor.blockchainRid)
+            withLoggingContext(BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex()) {
+                when {
+                    chain == null -> {
+                        logger.warn("Master chain not found")
+                        connection.close()
+                        null
+                    }
+
+                    chain.isConnected() -> {
+                        logger.warn("Master node already connected")
+                        // Don't close connection here, just return handler
+                        chain.getPacketHandler()
+                    }
+
+                    else -> {
+                        logger.info("Master node connected")
+                        chain.setConnection(connection)
+                        chain.getPacketHandler()
+                    }
+                }
             }
         }
     }
@@ -215,26 +245,35 @@ class DefaultSubConnectionManager(
             descriptor: SubConnectionDescriptor,
             connection: SubConnection,
     ) {
-        val brid = descriptor.blockchainRid
-        logger.info { "${logger(descriptor)}: Master node disconnected: blockchainRid = ${brid.toShortHex()}" }
+        if (descriptor.blockchainRid == null) {
+            queryConnection?.close()
 
-        val chain = chains.get(brid)
-        if (chain == null) {
-            logger.warn("${logger(descriptor)}: Master chain not found by blockchainRid: ${brid.toShortHex()}")
-            connection.close()
+            logger.debug("Lost query connection to master")
+            scheduleQueryReconnection()
         } else {
-            if (chain.getConnection() !== connection) {
-                logger.warn("${logger(descriptor)}: Unknown master connection detected for blockchainRid: ${brid.toShortHex()}")
-                connection.close()
-            }
+            val brid = descriptor.blockchainRid
+            withLoggingContext(BLOCKCHAIN_RID_TAG to brid.toHex()) {
+                logger.info("Master node disconnected")
 
-            if (chain.getConnection() != null) {
-                logger.info("${logger(descriptor)}: Master connection will be closed for blockchainRid: ${brid.toShortHex()}")
-            }
-            chain.removeAndCloseConnection()
+                val chain = chains.get(brid)
+                if (chain == null) {
+                    logger.warn("Master chain not found")
+                    connection.close()
+                } else {
+                    if (chain.getConnection() !== connection) {
+                        logger.warn("Unknown master connection detected")
+                        connection.close()
+                    }
 
-            // Schedule reconnection to the Master
-            scheduleReconnection(chain)
+                    if (chain.getConnection() != null) {
+                        logger.info("Master connection will be closed")
+                    }
+                    chain.removeAndCloseConnection()
+
+                    // Schedule reconnection to the Master
+                    scheduleReconnection(chain)
+                }
+            }
         }
     }
 
@@ -252,7 +291,7 @@ class DefaultSubConnectionManager(
             chain.getConnection()!!.sendPacket { MsCodec.encode(message) }
             true
         } else {
-            logger.error("${logger(chain)}: Can't send packet b/c no connection to master node for chainId=${chain.log()} blockchainRid=${message.blockchainRid.toHex()}")
+            logger.error("Can't send packet b/c no connection to master node")
             false
         }
     }
@@ -271,26 +310,29 @@ class DefaultSubConnectionManager(
     // Private
     // ----------------------------------
     private fun scheduleReconnection(chain: ChainWithOneMasterConnection) {
-        logger.debug { "${logger(chain)}: ---------- BEGIN ----------" }
-        val brid = chain.config.blockchainRid.toShortHex()
-        if (reconnectionScheduled.compareAndSet(false, true)) {
-            val (delay, unit) = 15_000L to "ms"
-            logger.info("${logger(chain)}: Reconnecting in $delay $unit to master node: blockchainRid: $brid")
-            reconnectionTimer.schedule(delay) {
-                logger.info("${logger(chain)}: Reconnecting to master node: blockchainRid: $brid")
-                connectToMaster(chain)
-                reconnectionScheduled.set(false)
-            }
+        if (reconnectionScheduledForChain[chain.config.blockchainRid]?.isDone != false) {
+            logger.info("Reconnecting in $reconnectDelay to master node")
+            reconnectionScheduledForChain[chain.config.blockchainRid] = reconnectionExecutor.schedule({
+                withLoggingContext(
+                        BLOCKCHAIN_RID_TAG to chain.config.blockchainRid.toHex(),
+                        CHAIN_IID_TAG to chain.getChainIid().toString()
+                ) {
+                    logger.info("Reconnecting to master node")
+                    connectToMaster(chain)
+                }
+            }, reconnectDelay.toMillis(), TimeUnit.MILLISECONDS)
         } else {
-            logger.debug("${logger(chain)}: Reconnection is already scheduled: blockchainRid: $brid")
+            logger.debug("Reconnection is already scheduled")
         }
-        logger.debug { "${logger(chain)}: ---------- END ----------" }
     }
 
-    private fun loggerPrefix(blockchainRid: BlockchainRid): String =
-            BlockchainProcessName(appConfig.pubKey, blockchainRid).toString()
-
-    private fun logger(descriptor: SubConnectionDescriptor): String = loggerPrefix(descriptor.blockchainRid)
-
-    private fun logger(chain: ChainWithOneMasterConnection): String = loggerPrefix(chain.config.blockchainRid)
+    private fun scheduleQueryReconnection() {
+        if (reconnectionScheduledForQuery?.isDone != false) {
+            logger.info("Reconnecting in $reconnectDelay to master node")
+            reconnectionScheduledForQuery = reconnectionExecutor.schedule({
+                logger.info("Reconnecting to master node")
+                subConnector.connectMaster(masterNodePeerInfo, queryConnectionDescriptor)
+            }, reconnectDelay.toMillis(), TimeUnit.MILLISECONDS)
+        }
+    }
 }

@@ -3,10 +3,14 @@
 package net.postchain.network.peer
 
 import mu.KLogging
+import mu.withLoggingContext
+import net.postchain.common.BlockchainRid
 import net.postchain.common.ExponentialDelay
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.NodeRid
 import net.postchain.devtools.NameHelper.peerName
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
@@ -37,23 +41,28 @@ class DefaultPeersConnectionStrategy(
         logger.debug { "${peerName(me)}: new DefaultPeersConnectionStrategy created" } // It's interesting b/c we have the delay map that gets refreshed
     }
 
-    override fun connectAll(chainID: Long, peerIds: Set<NodeRid>) {
+    override fun connectAll(chainID: Long, blockchainRid: BlockchainRid, peerIds: Set<NodeRid>) {
         for (peerId in peerIds) {
             if (shouldIConnect(peerId)) {
                 connectionManager.connectChainPeer(chainID, peerId)
             }
         }
         timerQueue.schedule({
-            try {
-                // Connect to all unconnected peers
-                val connectedPeers = connectionManager.getConnectedNodes(chainID)
-                for (wantedPeerId in peerIds) {
-                    if (wantedPeerId !in connectedPeers) {
-                        connectionManager.connectChainPeer(chainID, wantedPeerId)
+            withLoggingContext(
+                    BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
+                    CHAIN_IID_TAG to chainID.toString()
+            ) {
+                try {
+                    // Connect to all unconnected peers
+                    val connectedPeers = connectionManager.getConnectedNodes(chainID)
+                    for (wantedPeerId in peerIds) {
+                        if (wantedPeerId !in connectedPeers) {
+                            connectionManager.connectChainPeer(chainID, wantedPeerId)
+                        }
                     }
+                } catch (e: ProgrammerMistake) {
+                    // This happens if the chain has been disconnected while we waited
                 }
-            } catch (e: ProgrammerMistake) {
-                // This happens if the chain has been disconnected while we waited
             }
         }, Random.nextInt(backupConnTimeMin, backupConnTimeMax).toLong(), TimeUnit.MILLISECONDS)
     }
@@ -68,7 +77,7 @@ class DefaultPeersConnectionStrategy(
      * in connectAll to solve this, ie use a backup connection after X time. But this would add complexity
      * for little gain over the simplistic approach chosen.
      */
-    override fun connectionLost(chainID: Long, peerId: NodeRid, isOutgoing: Boolean) {
+    override fun connectionLost(chainID: Long, blockchainRid: BlockchainRid, peerId: NodeRid, isOutgoing: Boolean) {
         if (connectionManager.isPeerConnected(chainID, peerId)) {
             // There is another connection in use, we should ignore the
             // lost connection
@@ -81,11 +90,16 @@ class DefaultPeersConnectionStrategy(
 
         logger.info { "${peerName(me)}/${chainID}: Reconnecting in ${delay.delayCounterMillis} ms to peer = ${peerName(peerId)}" }
         timerQueue.schedule({
-            logger.info { "${peerName(me)}/${chainID}: Reconnecting to peer = ${peerName(peerId)}" }
-            try {
-                connectionManager.connectChainPeer(chainID, peerId)
-            } catch (e: ProgrammerMistake) {
-                // This happens if the chain has been disconnected while we waited
+            withLoggingContext(
+                    BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
+                    CHAIN_IID_TAG to chainID.toString()
+            ) {
+                logger.info { "${peerName(me)}/${chainID}: Reconnecting to peer = ${peerName(peerId)}" }
+                try {
+                    connectionManager.connectChainPeer(chainID, peerId)
+                } catch (e: ProgrammerMistake) {
+                    // This happens if the chain has been disconnected while we waited
+                }
             }
         }, delay.getDelayMillisAndIncrease(), TimeUnit.MILLISECONDS)
     }

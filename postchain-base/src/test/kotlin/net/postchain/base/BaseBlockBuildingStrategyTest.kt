@@ -1,6 +1,6 @@
 package net.postchain.base
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockData
@@ -28,7 +28,7 @@ class BaseBlockBuildingStrategyTest {
         // Mocks
         private val blockQueries: BlockQueries = mock {
             val completionStage: CompletionStage<Long> = CompletableFuture.completedStage(-1)
-            on { getBestHeight() } doReturn completionStage
+            on { getLastBlockHeight() } doReturn completionStage
         }
 
         private fun committedBlockData(): BlockData {
@@ -71,7 +71,7 @@ class BaseBlockBuildingStrategyTest {
     fun test_maxBlockTime_for_block0() {
         // Testing 'maxBlockTime': building block0
         await().untilAsserted {
-            assert(sut.shouldBuildBlock()).isEqualTo(true)
+            assertThat(sut.shouldBuildBlock()).isEqualTo(true)
         }
 
         // Commiting block0 now
@@ -83,12 +83,12 @@ class BaseBlockBuildingStrategyTest {
     fun test_minInterblockInterval_for_block1() {
         // Testing 'mininterblockinterval': building block1 is NOT allowed for 'mininterblockinterval' sec
         await().untilAsserted {
-            assert(sut.shouldBuildBlock()).isEqualTo(false)
+            assertThat(sut.shouldBuildBlock()).isEqualTo(false)
         }
 
         // Testing 'mininterblockinterval': building block1 is allowed
         await().atMost(1100, TimeUnit.MILLISECONDS).untilAsserted {
-            assert(sut.shouldBuildBlock()).isEqualTo(true) // transactionQueueSize >= maxBlockTransactions
+            assertThat(sut.shouldBuildBlock()).isEqualTo(true) // transactionQueueSize >= maxBlockTransactions
         }
         verify(txQueue, times(1)).getTransactionQueueSize()
 
@@ -103,13 +103,13 @@ class BaseBlockBuildingStrategyTest {
 
         // Testing 'maxtxdelay': 'minInterBlockInterval' is NOT passed yet
         await().atMost(1000, TimeUnit.MILLISECONDS).untilAsserted {
-            assert(sut.shouldBuildBlock()).isEqualTo(false) // 1 tx only
+            assertThat(sut.shouldBuildBlock()).isEqualTo(false) // 1 tx only
         }
 
         // Testing 'maxtxdelay': 'maxtxdelay' already passed.
         // minInterBlockInterval + maxtxdelay + delta ~= 2100
         await().atMost(2100, TimeUnit.MILLISECONDS).untilAsserted {
-            assert(sut.shouldBuildBlock()).isEqualTo(true)
+            assertThat(sut.shouldBuildBlock()).isEqualTo(true)
         }
 
         // Commiting block2 now
@@ -120,11 +120,11 @@ class BaseBlockBuildingStrategyTest {
     @Order(4)
     fun test_minimum_backoff_for_blocks() {
         await().untilAsserted {
-            assert(sut.shouldBuildBlock()).isEqualTo(true)
+            assertThat(sut.shouldBuildBlock()).isEqualTo(true)
         }
         failCommit(1) // 1 -> 2 ms
         await().atMost(MIN_BACKOFF_TIME + 2, TimeUnit.MILLISECONDS).untilAsserted {
-            assert(sut.shouldBuildBlock()).isEqualTo(true)
+            assertThat(sut.shouldBuildBlock()).isEqualTo(true)
         }
         sut.blockCommitted(committedBlockData())
     }
@@ -133,11 +133,11 @@ class BaseBlockBuildingStrategyTest {
     @Order(5)
     fun test_backoff_for_blocks() {
         await().untilAsserted {
-            assert(sut.shouldBuildBlock()).isEqualTo(true)
+            assertThat(sut.shouldBuildBlock()).isEqualTo(true)
         }
         failCommit(8) // 8 -> 256 ms
         await().atMost(MIN_BACKOFF_TIME + 256, TimeUnit.MILLISECONDS).untilAsserted {
-            assert(sut.shouldBuildBlock()).isEqualTo(true)
+            assertThat(sut.shouldBuildBlock()).isEqualTo(true)
         }
         sut.blockCommitted(committedBlockData())
     }
@@ -146,16 +146,16 @@ class BaseBlockBuildingStrategyTest {
     @Order(6)
     fun test_max_backoff_for_blocks() {
         await().untilAsserted {
-            assert(sut.shouldBuildBlock()).isEqualTo(true)
+            assertThat(sut.shouldBuildBlock()).isEqualTo(true)
         }
         failCommit(10) // 10 -> 1024 ms
         sut.blockFailed() // 2048
-        assert(sut.getBackoffTime()).isEqualTo(MAX_BACKOFF_TIME)
+        assertThat(sut.getBackoffTime()).isEqualTo(MAX_BACKOFF_TIME)
         await().untilAsserted {
-            assert(sut.shouldBuildBlock()).isEqualTo(false)
+            assertThat(sut.shouldBuildBlock()).isEqualTo(false)
         }
         await().atMost(MAX_BACKOFF_TIME, TimeUnit.MILLISECONDS).untilAsserted {
-            assert(sut.shouldBuildBlock()).isEqualTo(true)
+            assertThat(sut.shouldBuildBlock()).isEqualTo(true)
         }
         sut.blockCommitted(committedBlockData())
     }
@@ -165,10 +165,10 @@ class BaseBlockBuildingStrategyTest {
         for (i in 1..times) {
             sut.blockFailed()
             failTime *= 2
-            assert(sut.getBackoffTime()).isEqualTo(failTime + MIN_BACKOFF_TIME)
+            assertThat(sut.getBackoffTime()).isEqualTo(failTime + MIN_BACKOFF_TIME)
         }
         await().untilAsserted {
-            assert(sut.shouldBuildBlock()).isEqualTo(false)
+            assertThat(sut.shouldBuildBlock()).isEqualTo(false)
         }
     }
 }

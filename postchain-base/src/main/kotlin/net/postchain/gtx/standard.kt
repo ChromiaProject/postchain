@@ -40,39 +40,36 @@ open class GtxNop(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GT
      * 2. Argument is of type GtvNull, GtvString, GtvInteger or GtvByteArray
      * 3. Argument is < 64 bytes
      */
-    override fun isCorrect(): Boolean {
-        if (data.args.size > 1) return false
-        if (data.args.isEmpty()) return true
-        // Validation: To prevent spam from entering the BC we validate the argument
-        return validateArgument(data.args[0])
+    override fun checkCorrectness() {
+        if (data.args.size > 1) throw UserMistake("expected not more than one argument")
+        if (data.args.isNotEmpty()) {
+            // Validation: To prevent spam from entering the BC we validate the argument
+            validateArgument(data.args[0])
+        }
     }
 
     /**
      * Validates the nop argument, making sure it is simple and not too big.
      */
-    private fun validateArgument(arg: Gtv): Boolean {
-        return when (arg) {
-            is GtvNull -> true
+    private fun validateArgument(arg: Gtv) {
+        when (arg) {
+            is GtvNull -> Unit
             is GtvInteger -> checkSize(arg.nrOfBytes(), "GtvInteger")
             is GtvByteArray -> checkSize(arg.nrOfBytes(), "GtvByteArray")
             is GtvString -> checkSize(arg.asString().length, "GtvString")
             else -> {
-                if (GtxNop.logger.isTraceEnabled) {
-                    GtxNop.logger.trace("Argument of type: ${arg.type} not allowed for operation: $OP_NAME. ")
-                }
-                false
+                val message = "Argument of type: ${arg.type} not allowed for operation: $OP_NAME."
+                GtxNop.logger.trace(message)
+                throw UserMistake(message)
             }
         }
     }
 
-    private fun checkSize(size: Int, type: String): Boolean {
-        return if (size <= MAX_SIZE) {
-            true
-        } else {
-            if (GtxNop.logger.isTraceEnabled) {
-                GtxNop.logger.trace("Argument of type: $type too big. Max: $MAX_SIZE chains but was $size (operation: $OP_NAME) ")
-            }
-            false
+    private fun checkSize(size: Int, type: String) {
+        if (size > MAX_SIZE) {
+            val message = "Argument of type: $type too big. Max: $MAX_SIZE chains but was $size (operation: $OP_NAME) "
+            GtxNop.logger.trace(message)
+            throw UserMistake(message)
         }
     }
 }
@@ -103,13 +100,12 @@ class GtxTimeB(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GTXOp
      * 1. Nof args must be two
      * 2. If arg1 is not null, it must be less than arg0
      */
-    override fun isCorrect(): Boolean {
-        if (data.args.size != 2) return false
+    override fun checkCorrectness() {
+        if (data.args.size != 2) throw UserMistake("expected 2 args")
         val from = data.args[0].asInteger()
         if (!data.args[1].isNull()) {
-            if (data.args[1].asInteger() < from) return false
+            if (data.args[1].asInteger() < from) throw UserMistake("expected arg1 < arg0")
         }
-        return true
     }
 
     override fun apply(ctx: TxEContext): Boolean {

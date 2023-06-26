@@ -2,9 +2,6 @@
 
 package net.postchain.cli
 
-import mu.KLogging
-import net.postchain.PostchainNode
-import net.postchain.StorageBuilder
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.BlockchainRelatedInfo
@@ -13,20 +10,14 @@ import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
-import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.AppContext
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
+import net.postchain.core.BadDataException
 import net.postchain.core.EContext
+import net.postchain.core.MissingPeerInfoException
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
-import org.apache.commons.configuration2.ex.ConfigurationException
-import org.apache.commons.dbcp2.BasicDataSource
-import java.sql.Connection
-import java.sql.SQLException
-import java.util.concurrent.TimeoutException
 
-object CliExecution : KLogging() {
+object CliExecution {
 
     /**
      * @return blockchain RID
@@ -34,19 +25,10 @@ object CliExecution : KLogging() {
     fun addBlockchain(
             appConfig: AppConfig,
             chainId: Long,
-            blockchainConfigGtv: Gtv,
-            mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
-            givenDependencies: List<BlockchainRelatedInfo> = listOf()
-    ): BlockchainRid {
-        return addBlockchainGtv(appConfig, chainId, blockchainConfigGtv, mode, givenDependencies)
-    }
-
-    private fun addBlockchainGtv(
-            appConfig: AppConfig,
-            chainId: Long,
             blockchainConfig: Gtv,
             mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
-            givenDependencies: List<BlockchainRelatedInfo> = listOf()
+            givenDependencies: List<BlockchainRelatedInfo> = listOf(),
+            validate: Boolean = true
     ): BlockchainRid {
         // If brid is specified in nodeConfigFile, use that instead of calculating it from blockchain configuration.
         val keyString = "brid.chainid.$chainId"
@@ -56,7 +38,7 @@ object CliExecution : KLogging() {
         return runStorageCommand(appConfig, chainId) { ctx ->
             when (mode) {
                 AlreadyExistMode.ERROR -> {
-                    if (BlockchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, givenDependencies)) {
+                    if (BlockchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, givenDependencies, validate)) {
                         brid
                     } else {
                         throw CliException(
@@ -66,12 +48,12 @@ object CliExecution : KLogging() {
                 }
 
                 AlreadyExistMode.FORCE -> {
-                    BlockchainApi.initializeBlockchain(ctx, brid, true, blockchainConfig, givenDependencies)
+                    BlockchainApi.initializeBlockchain(ctx, brid, true, blockchainConfig, givenDependencies, validate)
                     brid
                 }
 
                 AlreadyExistMode.IGNORE -> {
-                    BlockchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, givenDependencies)
+                    BlockchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, givenDependencies, validate)
                     brid
                 }
             }
@@ -83,14 +65,15 @@ object CliExecution : KLogging() {
             blockchainConfig: Gtv,
             chainId: Long,
             height: Long,
-            mode: AlreadyExistMode = AlreadyExistMode.IGNORE,
-            allowUnknownSigners: Boolean
+            mode: AlreadyExistMode,
+            allowUnknownSigners: Boolean,
+            validate: Boolean
     ) {
         runStorageCommand(appConfig, chainId) { ctx: EContext ->
             try {
                 when (mode) {
                     AlreadyExistMode.ERROR -> {
-                        if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners)) {
+                        if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners, validate)) {
                             throw CliException(
                                     "Blockchain configuration of chainId $chainId at " +
                                             "height $height already exists. Use -f flag to force addition."
@@ -99,20 +82,18 @@ object CliExecution : KLogging() {
                     }
 
                     AlreadyExistMode.FORCE -> {
-                        BlockchainApi.addConfiguration(ctx, height, true, blockchainConfig, allowUnknownSigners)
+                        BlockchainApi.addConfiguration(ctx, height, true, blockchainConfig, allowUnknownSigners, validate)
                     }
 
                     AlreadyExistMode.IGNORE -> {
-                        if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners))
+                        if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners, validate))
                             println("Blockchain configuration of chainId $chainId at height $height already exists")
                     }
                 }
-            } catch (e: BadDataMistake) {
-                if (e.type == BadDataType.MISSING_PEERINFO) {
-                    throw CliException(e.message + " Please add node with command peerinfo-add or set flag --allow-unknown-signers.")
-                } else {
-                    throw CliException("Bad configuration format.")
-                }
+            } catch (e: MissingPeerInfoException) {
+                throw CliException(e.message + " Please add node with command peerinfo-add or set flag --allow-unknown-signers.")
+            } catch (e: BadDataException) {
+                throw CliException("Bad configuration format.")
             }
             Unit
         }
@@ -147,14 +128,6 @@ object CliExecution : KLogging() {
         }
     }
 
-    fun runNode(appConfig: AppConfig, chainIds: List<Long>, debug: Boolean) {
-        with(PostchainNode(appConfig, wipeDb = false)) {
-            chainIds.forEach {
-                tryStartBlockchain(it)
-            }
-        }
-    }
-
     fun findBlockchainRid(appConfig: AppConfig, chainId: Long): BlockchainRid? {
         return runStorageCommand(appConfig, chainId) { ctx: EContext ->
             DatabaseAccess.of(ctx).getBlockchainRid(ctx)
@@ -176,33 +149,6 @@ object CliExecution : KLogging() {
     fun listConfigurations(appConfig: AppConfig, chainId: Long): List<Long> {
         return runStorageCommand(appConfig, chainId) { ctx: EContext ->
             BlockchainApi.listConfigurations(ctx)
-        }
-    }
-
-    fun waitDb(retryTimes: Int, retryInterval: Long, appConfig: AppConfig) {
-        tryCreateBasicDataSource(appConfig)?.let { return } ?: if (retryTimes > 0) {
-            Thread.sleep(retryInterval)
-            waitDb(retryTimes - 1, retryInterval, appConfig)
-        } else throw TimeoutException("Unable to connect to database")
-    }
-
-    private fun tryCreateBasicDataSource(appConfig: AppConfig): Connection? {
-        return try {
-            val storage = StorageBuilder.buildStorage(appConfig)
-            NodeConfigurationProviderFactory.createProvider(appConfig) { storage }.getConfiguration()
-
-            BasicDataSource().apply {
-                addConnectionProperty("currentSchema", appConfig.databaseSchema)
-                driverClassName = appConfig.databaseDriverclass
-                url = appConfig.databaseUrl //?loggerLevel=OFF"
-                username = appConfig.databaseUsername
-                password = appConfig.databasePassword
-                defaultAutoCommit = false
-            }.connection
-        } catch (e: SQLException) {
-            null
-        } catch (e: ConfigurationException) {
-            throw CliException("Failed to read configuration")
         }
     }
 }

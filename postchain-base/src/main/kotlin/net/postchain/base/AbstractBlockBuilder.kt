@@ -67,6 +67,7 @@ abstract class AbstractBlockBuilder(
     protected var buildingNewBlock: Boolean = false            // remains "false" as long we got a block from some other node
 
     var blockTrace: BlockTrace? = null               // Only for logging, remains "null" unless TRACE
+    private var nextTransactionNumber: Long = 0
 
     /**
      * Retrieve initial block data and set block context
@@ -81,6 +82,7 @@ abstract class AbstractBlockBuilder(
         blockchainDependencies = buildBlockchainDependencies(partialBlockHeader)
         initialBlockData =
             store.beginBlock(ectx, blockchainRID, blockchainDependencies!!.extractBlockHeightDependencyArray())
+        logger.debug("buildBlock() -- height=${initialBlockData.height} prevBlockRID=${initialBlockData.prevBlockRID.toHex()} timestamp=${initialBlockData.timestamp} blockIID=${initialBlockData.blockIID}")
         bctx = BaseBlockEContext(
             ectx,
             initialBlockData.height,
@@ -90,6 +92,7 @@ abstract class AbstractBlockBuilder(
             this
         )
         buildingNewBlock = partialBlockHeader == null // If we have a header this must be an old block we are loading
+        nextTransactionNumber = store.getLastTransactionNumber(ectx) + 1
         beginLog("End")
     }
 
@@ -98,26 +101,23 @@ abstract class AbstractBlockBuilder(
      *
      * @param tx transaction to be added to block
      * @throws ProgrammerMistake if block is finalized
-     * @throws UserMistake transaction is not correct
+     * @throws TransactionIncorrect transaction is not correct
      * @throws UserMistake failed to save transaction to database
      * @throws UserMistake failed to apply transaction and update database state
      */
     override fun appendTransaction(tx: Transaction) {
         if (finalized) throw ProgrammerMistake("Block is already finalized")
-        // tx.isCorrect may also throw UserMistake to provide
-        // a meaningful error message to log.
-        if (!tx.isCorrect()) {
-            throw TransactionIncorrect("Transaction ${tx.getRID().toHex()} is not correct")
-        }
+        tx.checkCorrectness()
         val txctx: TxEContext
         try {
-            txctx = store.addTransaction(bctx, tx)
+            txctx = store.addTransaction(bctx, tx, nextTransactionNumber)
         } catch (e: Exception) {
             throw UserMistake("Failed to save tx to database", e)
         }
         // In case of errors, tx.apply may either return false or throw UserMistake
 
         if (applyTransaction(tx, txctx)) {
+            nextTransactionNumber++
             txctx.done()
             transactions.add(tx)
             rawTransactions.add(tx.getRawData())
@@ -181,6 +181,9 @@ abstract class AbstractBlockBuilder(
         commitLog("End")
     }
 
+    override val height: Long?
+        get() = if (::bctx.isInitialized) bctx.height else null
+
     // -----------------
     // Logging boilerplate
     // -----------------
@@ -202,14 +205,13 @@ abstract class AbstractBlockBuilder(
 
     private fun beginLog(str: String) {
         if (logger.isTraceEnabled) {
-            logger.trace("${ectx.chainID} begin() -- $str, from block: ${getBTrace()}")
+            logger.trace("begin() -- $str, from block: ${getBTrace()}")
         }
     }
 
     private fun commitLog(str: String) {
         if (logger.isTraceEnabled) {
-            logger.trace("${ectx.chainID} commit() -- $str, from block: ${getBTrace()}")
+            logger.trace("commit() -- $str, from block: ${getBTrace()}")
         }
     }
 }
-

@@ -2,11 +2,12 @@
 
 package net.postchain.gtv.gtvml
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.gtv.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.math.BigInteger
 
 class GtvMLParserScalarsTest {
 
@@ -16,7 +17,7 @@ class GtvMLParserScalarsTest {
         val actual = GtvMLParser.parseGtvML(xml)
         val expected = GtvNull
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -25,7 +26,7 @@ class GtvMLParserScalarsTest {
         val actual = GtvMLParser.parseGtvML(xml)
         val expected = GtvString("hello")
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -34,16 +35,16 @@ class GtvMLParserScalarsTest {
         val actual = GtvMLParser.parseGtvML(xml)
         val expected = GtvInteger(42L)
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
     fun parseGtv_bigint_successfully() {
         val xml = "<bigint>42</bigint>"
         val actual = GtvMLParser.parseGtvML(xml)
-        val expected = GtvBigInteger(42L)
+        val expected = GtvBigInteger(BigInteger.valueOf(42L))
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -53,7 +54,7 @@ class GtvMLParserScalarsTest {
         val expected = GtvByteArray(
                 byteArrayOf(0x01, 0x02, 0x03, 0x0A, 0x0B, 0x0C))
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -63,7 +64,7 @@ class GtvMLParserScalarsTest {
         val expected = GtvByteArray(
                 byteArrayOf())
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -76,7 +77,7 @@ class GtvMLParserScalarsTest {
 
         val expected = GtvInteger(123)
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test
@@ -89,7 +90,7 @@ class GtvMLParserScalarsTest {
 
         val expected = GtvInteger(123)
 
-        assert(actual).isEqualTo(expected)
+        assertThat(actual).isEqualTo(expected)
     }
 
     @Test

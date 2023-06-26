@@ -6,7 +6,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.10.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
     <artifactId>postchain-base</artifactId>
     <packaging>jar</packaging>
@@ -106,13 +106,24 @@
 
         <!-- REST -->
         <dependency>
-            <groupId>com.sparkjava</groupId>
-            <artifactId>spark-core</artifactId>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-core</artifactId>
         </dependency>
-
         <dependency>
-            <groupId>com.konghq</groupId>
-            <artifactId>unirest-java</artifactId>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-format-gson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-server-netty</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-client-apache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.http4k</groupId>
+            <artifactId>http4k-metrics-micrometer</artifactId>
         </dependency>
 
         <!-- Netty -->
@@ -181,10 +192,25 @@
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-test-junit5</artifactId>
+            <groupId>uk.org.webcompere</groupId>
+            <artifactId>system-stubs-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -200,7 +226,7 @@
         </dependency>
         <dependency>
             <groupId>com.willowtreeapps.assertk</groupId>
-            <artifactId>assertk</artifactId>
+            <artifactId>assertk-jvm</artifactId>
             <scope>test</scope>
         </dependency>
 
@@ -221,15 +247,5 @@
             <artifactId>jsonassert</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.http4k</groupId>
-            <artifactId>http4k-core</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
-
-    <build>
-        <sourceDirectory>src/main/kotlin</sourceDirectory>
-        <testSourceDirectory>src/test/kotlin</testSourceDirectory>
-    </build>
 </project>

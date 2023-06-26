@@ -26,9 +26,9 @@ import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
-import net.postchain.metrics.BLOCKCHAIN_RID_TAG
-import net.postchain.metrics.CHAIN_IID_TAG
-import net.postchain.metrics.NODE_PUBKEY_TAG
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.logging.NODE_PUBKEY_TAG
 import kotlin.properties.Delegates
 
 /**
@@ -57,6 +57,9 @@ class PostchainTestNode(
     companion object : KLogging() {
         const val SYSTEM_CHAIN_IID = 0L
         const val DEFAULT_CHAIN_IID = 1L
+
+        // Used for logging purposes
+        val threadLocalPubkey = InheritableThreadLocal<String>()
     }
 
     override fun isThisATest() = true
@@ -68,7 +71,7 @@ class PostchainTestNode(
     fun addBlockchain(chainId: Long, blockchainConfig: Gtv): BlockchainRid {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.sharedStorage, chainId) { eContext: EContext ->
             val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, postchainContext.cryptoSystem)
             withLoggingContext(
                     NODE_PUBKEY_TAG to appConfig.pubKey,
@@ -87,7 +90,7 @@ class PostchainTestNode(
     fun addConfiguration(chainId: Long, height: Long, blockchainConfig: Gtv): BlockchainRid {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.sharedStorage, chainId) { eContext: EContext ->
             val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, postchainContext.cryptoSystem)
             withLoggingContext(
                     NODE_PUBKEY_TAG to appConfig.pubKey,
@@ -105,7 +108,7 @@ class PostchainTestNode(
     fun setMustSyncUntil(chainId: Long, brid: BlockchainRid, height: Long): Boolean {
         check(isInitialized) { "PostchainNode is not initialized" }
 
-        return withReadWriteConnection(postchainContext.storage, chainId) { eContext: EContext ->
+        return withReadWriteConnection(postchainContext.sharedStorage, chainId) { eContext: EContext ->
             withLoggingContext(
                     NODE_PUBKEY_TAG to appConfig.pubKey,
                     CHAIN_IID_TAG to chainId.toString(),
@@ -118,10 +121,7 @@ class PostchainTestNode(
     }
 
     fun startBlockchain() {
-        withLoggingContext(
-                NODE_PUBKEY_TAG to appConfig.pubKey,
-                CHAIN_IID_TAG to DEFAULT_CHAIN_IID.toString()
-        ) {
+        withLoggingContext(CHAIN_IID_TAG to DEFAULT_CHAIN_IID.toString()) {
             try {
                 startBlockchain(DEFAULT_CHAIN_IID)
             } catch (e: NotFound) {
@@ -134,8 +134,20 @@ class PostchainTestNode(
         }
     }
 
+    override fun startBlockchain(chainId: Long): BlockchainRid {
+        return withPubKeyDecoratedLogs {
+            super.startBlockchain(chainId)
+        }
+    }
+
+    override fun stopBlockchain(chainId: Long) {
+        withPubKeyDecoratedLogs {
+            super.stopBlockchain(chainId)
+        }
+    }
+
     override fun shutdown() {
-        withLoggingContext(NODE_PUBKEY_TAG to appConfig.pubKey) {
+        withPubKeyDecoratedLogs {
             logger.debug("shutdown node ${peerName(pubKey)}")
             super.shutdown()
             logger.debug("shutdown node ${peerName(pubKey)} done")
@@ -152,12 +164,12 @@ class PostchainTestNode(
 
     fun getRestApiModel(blockchainRid: BlockchainRid): Model? {
         return ((blockchainInfrastructure as BaseBlockchainInfrastructure).apiInfrastructure as BaseApiInfrastructure)
-                .restApi?.retrieveModel(blockchainRid.toHex()) as Model?
+                .restApi?.retrieveModel(blockchainRid) as Model?
     }
 
     fun overrideRestApiModel(blockchainRid: BlockchainRid, chainModel: Model) {
         ((blockchainInfrastructure as BaseBlockchainInfrastructure).apiInfrastructure as BaseApiInfrastructure)
-                .restApi?.attachModel(blockchainRid.toHex(), chainModel)
+                .restApi?.attachModel(blockchainRid, chainModel)
     }
 
     fun getRestApiHttpPort(): Int {
@@ -204,4 +216,13 @@ class PostchainTestNode(
      * (It's only for test, so I didn't ptu much thought into it.)
      */
     fun getBlockchainRid(chainId: Long): BlockchainRid? = blockchainRidMap[chainId]
+
+    private fun <T> withPubKeyDecoratedLogs(op: () -> T): T {
+        threadLocalPubkey.set(appConfig.pubKey)
+        try {
+            return op()
+        } finally {
+            threadLocalPubkey.remove()
+        }
+    }
 }

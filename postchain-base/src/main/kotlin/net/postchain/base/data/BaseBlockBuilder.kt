@@ -3,17 +3,43 @@
 package net.postchain.base.data
 
 import mu.KLogging
-import net.postchain.base.*
+import net.postchain.base.AbstractBlockBuilder
+import net.postchain.base.BaseBlockBuilderExtension
+import net.postchain.base.BaseBlockHeader
+import net.postchain.base.BlockWitnessProvider
+import net.postchain.base.BlockchainDependencies
+import net.postchain.base.BlockchainDependency
+import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.base.HeightDependency
+import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.SpecialTransactionPosition.Begin
 import net.postchain.base.SpecialTransactionPosition.End
+import net.postchain.base.TxEventSink
+import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
+import net.postchain.base.extension.FAILED_CONFIG_HASH_EXTRA_HEADER
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
-import net.postchain.core.*
-import net.postchain.core.ValidationResult.Result.*
-import net.postchain.core.block.*
+import net.postchain.core.BadBlockException
+import net.postchain.core.BadConfigurationException
+import net.postchain.core.ConfigurationMismatchException
+import net.postchain.core.EContext
+import net.postchain.core.FailedConfigurationMismatchException
+import net.postchain.core.MissingDependencyException
+import net.postchain.core.PrevBlockMismatchException
+import net.postchain.core.Transaction
+import net.postchain.core.TransactionFactory
+import net.postchain.core.TxEContext
+import net.postchain.core.ValidationResult
+import net.postchain.core.ValidationResult.Result.INVALID_EXTRA_DATA
+import net.postchain.core.ValidationResult.Result.OK
+import net.postchain.core.ValidationResult.Result.PREV_BLOCK_MISMATCH
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockStore
+import net.postchain.core.block.BlockWitnessBuilder
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
@@ -21,14 +47,13 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import java.lang.Long.max
-import java.util.*
 
 /**
  * BaseBlockBuilder is used to aid in building blocks, including construction and validation of block header and witness
  *
  * @property blockchainRID
  * @property cryptoSystem Crypto utilities
- * @property eContext Connection context including blockchain and node identifiers
+ * @param    eContext Connection context including blockchain and node identifiers
  * @property store For database access
  * @property txFactory Used for serializing transaction data
  * @property specialTxHandler is the main entry point for special transaction handling.
@@ -56,7 +81,8 @@ open class BaseBlockBuilder(
         val usingHistoricBRID: Boolean,
         val maxBlockSize: Long,
         val maxBlockTransactions: Long,
-        maxTxExecutionTime: Long
+        maxTxExecutionTime: Long,
+        val maxSpecialEndTransactionSize: Long
 ) : AbstractBlockBuilder(eContext, blockchainRID, store, txFactory, maxTxExecutionTime) {
 
     companion object : KLogging()
@@ -65,8 +91,9 @@ open class BaseBlockBuilder(
 
     private val calc = GtvMerkleHashCalculator(cryptoSystem)
 
-    private var blockSize: Long = 0L
+    internal var blockSize: Long = 0L // not private due to test access
     private var haveSpecialEndTransaction = false
+    private var isSpecialEndTransaction = false
 
     /**
      * Computes the root hash for the Merkle tree of transactions currently in a block
@@ -126,7 +153,7 @@ open class BaseBlockBuilder(
         for (x in extensions) {
             for (kv in x.finalize()) {
                 if (kv.key in m) {
-                    throw BlockValidationMistake("Block builder extensions clash: ${kv.key}")
+                    throw BadBlockException("Block builder extensions clash: ${kv.key}")
                 }
                 m[kv.key] = kv.value
             }
@@ -175,7 +202,7 @@ open class BaseBlockBuilder(
                             BlockchainDependency(bcInfo, HeightDependency(blockRid, dbHeight))
                         } else {
                             // Ok to bang out if we are behind in blocks. Discussed this with Alex (2019-03-29)
-                            throw BadDataMistake(BadDataType.MISSING_DEPENDENCY, "We are not ready to accept the block since block dependency (RID: ${blockRid.toHex()}) is missing.")
+                            throw MissingDependencyException("We are not ready to accept the block since block dependency (blockRID: ${blockRid.toHex()} from blockchainRID: ${bcInfo.blockchainRid.toHex()}) is missing.")
                         }
                     } else {
                         BlockchainDependency(bcInfo, null) // No blocks required -> allowed
@@ -184,8 +211,7 @@ open class BaseBlockBuilder(
                 }
                 BlockchainDependencies(resList)
             } else {
-                throw BadDataMistake(BadDataType.BAD_CONFIGURATION,
-                        "The given block header has ${givenDependencies.size} dependencies our configuration requires ${blockchainRelatedInfoDependencyList.size} ")
+                throw BadConfigurationException("The given block header has ${givenDependencies.size} dependencies our configuration requires ${blockchainRelatedInfoDependencyList.size} ")
             }
         } else {
             BlockchainDependencies(listOf()) // No dependencies
@@ -229,8 +255,10 @@ open class BaseBlockBuilder(
      * @return the new [BlockHeader] we are about to create.
      */
     override fun finalizeBlock(): BlockHeader {
-        if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(End))
+        if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(End)) {
+            isSpecialEndTransaction = true
             appendTransaction(specialTxHandler.createSpecialTransaction(End, bctx))
+        }
         return super.finalizeBlock()
     }
 
@@ -242,7 +270,7 @@ open class BaseBlockBuilder(
      */
     override fun finalizeAndValidate(blockHeader: BlockHeader) {
         if (specialTxHandler.needsSpecialTransaction(End) && !haveSpecialEndTransaction)
-            throw BadDataMistake(BadDataType.BAD_BLOCK, "End special transaction is missing")
+            throw BadBlockException("End special transaction is missing")
         val extraData = finalizeExtensions()
         val validationResult = validateBlockHeader(blockHeader, extraData)
         when (validationResult.result) {
@@ -251,41 +279,55 @@ open class BaseBlockBuilder(
                 _blockData = BlockData(blockHeader, rawTransactions)
                 finalized = true
             }
-            PREV_BLOCK_MISMATCH -> throw BadDataMistake(BadDataType.PREV_BLOCK_MISMATCH, validationResult.message)
-            else -> throw BadDataMistake(BadDataType.BAD_BLOCK, validationResult.message)
+
+            PREV_BLOCK_MISMATCH -> throw PrevBlockMismatchException(validationResult.message)
+            INVALID_EXTRA_DATA -> {
+                if (blockHeader is BaseBlockHeader && blockHeader.extraData[CONFIG_HASH_EXTRA_HEADER] != extraData[CONFIG_HASH_EXTRA_HEADER]) {
+                    throw ConfigurationMismatchException(validationResult.message)
+                } else if (blockHeader is BaseBlockHeader && blockHeader.extraData[FAILED_CONFIG_HASH_EXTRA_HEADER] != extraData[FAILED_CONFIG_HASH_EXTRA_HEADER]) {
+                    throw FailedConfigurationMismatchException(validationResult.message)
+                } else {
+                    throw BadBlockException(validationResult.message)
+                }
+            }
+
+            else -> throw BadBlockException(validationResult.message)
         }
     }
 
     private fun checkSpecialTransaction(tx: Transaction) {
         if (haveSpecialEndTransaction) {
-            throw BlockValidationMistake("Cannot append transactions after end special transaction")
+            throw BadBlockException("Cannot append transactions after end special transaction")
         }
         val expectBeginTx = specialTxHandler.needsSpecialTransaction(Begin) && transactions.size == 0
         if (tx.isSpecial()) {
             if (expectBeginTx) {
                 if (!specialTxHandler.validateSpecialTransaction(Begin, tx, bctx)) {
-                    throw BlockValidationMistake("Special transaction validation failed: $Begin")
+                    throw BadBlockException("Special transaction validation failed: $Begin")
                 }
                 return // all is well, the first transaction is special and valid
             }
             val needEndTx = specialTxHandler.needsSpecialTransaction(End)
             if (!needEndTx) {
-                throw BlockValidationMistake("Found unexpected special transaction")
+                throw BadBlockException("Found unexpected special transaction")
             }
             if (!specialTxHandler.validateSpecialTransaction(End, tx, bctx)) {
-                throw BlockValidationMistake("Special transaction validation failed: $End")
+                throw BadBlockException("Special transaction validation failed: $End")
             }
             haveSpecialEndTransaction = true
         } else if (expectBeginTx) {
-            throw BlockValidationMistake("First transaction must be special transaction")
+            throw BadBlockException("First transaction must be special transaction")
         }
     }
 
     override fun appendTransaction(tx: Transaction) {
-        if (blockSize + tx.getRawData().size > maxBlockSize) {
-            throw BlockValidationMistake("block size exceeds max block size $maxBlockSize bytes")
-        } else if (transactions.size >= maxBlockTransactions) {
-            throw BlockValidationMistake("Number of transactions exceeds max $maxBlockTransactions transactions in block")
+        val addSpecialEndTransactionBuffer = !isSpecialEndTransaction && specialTxHandler.needsSpecialTransaction(End)
+        val transactionsSize = transactions.size + if (addSpecialEndTransactionBuffer) 1 else 0
+        val newBlockSize = blockSize + tx.getRawData().size + if (addSpecialEndTransactionBuffer) maxSpecialEndTransactionSize else 0
+        if (newBlockSize > maxBlockSize) {
+            throw BadBlockException("block size exceeds max block size $maxBlockSize bytes")
+        } else if (transactionsSize >= maxBlockTransactions) {
+            throw BadBlockException("Number of transactions exceeds max $maxBlockTransactions transactions in block")
         }
         checkSpecialTransaction(tx) // note: we check even transactions we construct ourselves
         super.appendTransaction(tx)
@@ -311,5 +353,12 @@ open class BaseBlockBuilder(
                 nrOfDependencies,
                 extraData
         )
+    }
+
+    fun shouldStopBuildingBlock(maxBlockTransactions: Long): Boolean {
+        val needsSpecialEndTransaction = specialTxHandler.needsSpecialTransaction(End)
+        val transactionsSize = transactions.size + if (needsSpecialEndTransaction) 1 else 0
+        val currentSize = blockSize + if (needsSpecialEndTransaction) maxSpecialEndTransactionSize else 0
+        return transactionsSize >= maxBlockTransactions || currentSize >= maxBlockSize
     }
 }

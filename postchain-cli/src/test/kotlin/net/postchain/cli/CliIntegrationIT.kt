@@ -1,6 +1,7 @@
 package net.postchain.cli
 
-import assertk.assert
+import assertk.assertThat
+import assertk.assertions.contains
 import assertk.assertions.isEqualTo
 import net.postchain.StorageBuilder
 import net.postchain.base.data.DatabaseAccess
@@ -10,13 +11,12 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.Storage
 import net.postchain.gtv.GtvFileReader
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.io.File
 import java.nio.file.Paths
-import kotlin.test.assertContains
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 /* schema name: test0 */
 class CliIntegrationIT {
@@ -37,7 +37,7 @@ class CliIntegrationIT {
     @BeforeEach
     fun setup() {
         // this wipes the database.
-        storage = StorageBuilder.buildStorage(appConfig, true)
+        storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         // add-blockchain goes here
         val gtv = GtvFileReader.readFile(fullPath("blockchain_config.xml"))
         CliExecution.addBlockchain(AppConfig.fromPropertiesFile(nodeConfigPath), chainId, gtv, AlreadyExistMode.FORCE)
@@ -55,7 +55,7 @@ class CliIntegrationIT {
                 arrayOf("-nc", nodeConfigPath.absolutePath, "-brid", expectedBlockchainRID, "--height", height2.toString())
         )
         withReadConnection(storage, chainId) {
-            assert(DatabaseAccess.of(it).getMustSyncUntil(it)[chainId]).isEqualTo(height2)
+            assertThat(DatabaseAccess.of(it).getMustSyncUntil(it)[chainId]).isEqualTo(height2)
         }
     }
 
@@ -119,13 +119,13 @@ class CliIntegrationIT {
         val configData = CliExecution.getConfiguration(appConfig, chainId, heightSecondConfig)
         assertNotNull(configData)
         val configurations = CliExecution.listConfigurations(appConfig, chainId)
-        assertContains(configurations, heightSecondConfig)
+        assertThat(configurations).contains(heightSecondConfig)
     }
 
     @Test
     fun testAddConfigurationPeersAdded() {
         // add peerinfos for the new signers.
-        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig) { storage }
+        val nodeConfigProvider = NodeConfigurationProviderFactory.createProvider(appConfig, storage)
         val peerinfos = nodeConfigProvider.getConfiguration().peerInfoMap
         for ((_, value) in peerinfos) {
             CommandPeerInfoAdd().parse(arrayOf(
@@ -154,6 +154,6 @@ class CliIntegrationIT {
         val configData = CliExecution.getConfiguration(appConfig, chainId, heightSecondConfig)
         assertNotNull(configData)
         val configurations = CliExecution.listConfigurations(appConfig, chainId)
-        assertContains(configurations, heightSecondConfig)
+        assertThat(configurations).contains(heightSecondConfig)
     }
 }

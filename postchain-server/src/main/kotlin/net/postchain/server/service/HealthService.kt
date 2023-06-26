@@ -7,7 +7,7 @@ import net.postchain.server.NodeProvider
 
 class HealthService(private val nodeProvider: NodeProvider) {
 
-    val storage: Storage get() = nodeProvider.get().postchainContext.storage
+    val storage: Storage get() = nodeProvider.get().postchainContext.sharedStorage
 
     /**
      * @throws [Exception] on failed health check

@@ -2,7 +2,7 @@
 
 package net.postchain.network.peer
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.containsExactly
 import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.PeerInfo
@@ -64,10 +64,10 @@ class DefaultPeerCommunicationManager2PeersIT {
         await().atMost(Duration.FIVE_SECONDS)
                 .untilAsserted {
                     val actual1 = context1.connectionManager.getConnectedNodes(context1.chainId)
-                    assert(actual1).containsExactly(peerInfo2.pubKey.wrap())
+                    assertThat(actual1).containsExactly(peerInfo2.pubKey.wrap())
 
                     val actual2 = context2.connectionManager.getConnectedNodes(context2.chainId)
-                    assert(actual2).containsExactly(peerInfo1.pubKey.wrap())
+                    assertThat(actual2).containsExactly(peerInfo1.pubKey.wrap())
                 }
 
         // Sending packets
@@ -94,12 +94,12 @@ class DefaultPeerCommunicationManager2PeersIT {
                     // Peer1
                     val actualPackets1 = context1.communicationManager.getPackets()
                     actual1.addAll(actualPackets1.map { (it.second as GetBlockAtHeight).height })
-                    assert(actual1).containsExactly(20L, 21L, 22L)
+                    assertThat(actual1).containsExactly(20L, 21L, 22L)
 
                     // Peer2
                     val actualPackets2 = context2.communicationManager.getPackets()
                     actual2.addAll(actualPackets2.map { (it.second as GetBlockAtHeight).height })
-                    assert(actual2).containsExactly(10L, 11L)
+                    assertThat(actual2).containsExactly(10L, 11L)
                 }
     }
 }

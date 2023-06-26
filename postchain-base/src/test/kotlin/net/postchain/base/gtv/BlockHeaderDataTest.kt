@@ -7,7 +7,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.core.block.InitialBlockData
 import net.postchain.gtv.*
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class BlockHeaderDataTest {
 

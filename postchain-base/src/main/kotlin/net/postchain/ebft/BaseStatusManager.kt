@@ -45,7 +45,7 @@ class BaseStatusManager(
      * @param blockRID latest block
      * @return the number of nodes at the same state as the local node
      */
-    private fun countNodes(state: NodeState, height: Long, blockRID: ByteArray?): Int {
+    private fun countNodes(state: NodeBlockState, height: Long, blockRID: ByteArray?): Int {
         var count = 0
         for (ns in nodeStatuses) {
             if (ns.height == height && ns.state == state) {
@@ -95,7 +95,7 @@ class BaseStatusManager(
             blockRID = null
             round = 0
             revolting = false
-            state = NodeState.WaitBlock
+            state = NodeBlockState.WaitBlock
         }
         resetCommitSignatures()
         intent = DoNothingIntent
@@ -142,10 +142,10 @@ class BaseStatusManager(
             return false
         }
 
-        logger.debug{ "Advancing block height from ${myStatus.height} to $nextHeight ..." }
+        logger.debug { "Advancing block height from ${myStatus.height} to $nextHeight ..." }
         (myStatus.height until nextHeight).forEach { _ -> advanceHeight() }
 
-        logger.debug{ "Current state: ${myStatus.height}" }
+        logger.debug { "Current state: ${myStatus.height}" }
         return true
     }
 
@@ -172,7 +172,7 @@ class BaseStatusManager(
         resetCommitSignatures()
         myStatus.blockRID = blockRID
         myStatus.serial += 1
-        myStatus.state = NodeState.HaveBlock
+        myStatus.state = NodeBlockState.HaveBlock
         commitSignatures[myIndex] = mySignature
         intent = DoNothingIntent
         recomputeStatus()
@@ -193,11 +193,11 @@ class BaseStatusManager(
                 acceptBlock(blockRID, mySignature)
                 true
             } else {
-                logger.error("Received block which is irrelevant. Need ${theIntent.blockRID.toHex()}, got ${blockRID.toHex()}")
+                logger.info("Received block which is irrelevant. Need ${theIntent.blockRID.toHex()}, got ${blockRID.toHex()}")
                 false
             }
         } else {
-            logger.error("Received block which is irrelevant, intent was ${theIntent::class.simpleName}")
+            logger.info("Received block which is irrelevant, intent was ${theIntent::class.simpleName}")
             false
         }
     }
@@ -248,7 +248,7 @@ class BaseStatusManager(
      */
     @Synchronized
     override fun onCommitSignature(nodeIndex: Int, blockRID: ByteArray, signature: Signature) {
-        if (myStatus.state == NodeState.Prepared
+        if (myStatus.state == NodeBlockState.Prepared
                 && Arrays.equals(blockRID, myStatus.blockRID)) {
             this.commitSignatures[nodeIndex] = signature
             recomputeStatus()
@@ -324,7 +324,7 @@ class BaseStatusManager(
          * @return return true if we have new intent
          */
         fun resetBlock() {
-            myStatus.state = NodeState.WaitBlock
+            myStatus.state = NodeBlockState.WaitBlock
             myStatus.blockRID = null
             myStatus.serial += 1
             resetCommitSignatures()
@@ -357,7 +357,7 @@ class BaseStatusManager(
                         return FlowStatus.Continue
                     }
 
-                    if (myStatus.state == NodeState.HaveBlock) {
+                    if (myStatus.state == NodeBlockState.HaveBlock) {
                         logger.warn("Resetting block in HaveBlock state")
                         resetBlock()
                     }
@@ -388,7 +388,7 @@ class BaseStatusManager(
                 // revolt is successful
 
                 // Note: we do not reset block if NodeState is Prepared.
-                if (myStatus.state == NodeState.HaveBlock) {
+                if (myStatus.state == NodeBlockState.HaveBlock) {
                     resetBlock()
                 }
 
@@ -406,10 +406,10 @@ class BaseStatusManager(
          * Will move to state [Prepared] if if enough nodes have reached our BlockRID
          */
         fun handleHaveBlockState(): Boolean {
-            val count = countNodes(NodeState.HaveBlock, myStatus.height, myStatus.blockRID) +
-                    countNodes(NodeState.Prepared, myStatus.height, myStatus.blockRID)
+            val count = countNodes(NodeBlockState.HaveBlock, myStatus.height, myStatus.blockRID) +
+                    countNodes(NodeBlockState.Prepared, myStatus.height, myStatus.blockRID)
             if (count >= this.quorum) {
-                myStatus.state = NodeState.Prepared
+                myStatus.state = NodeBlockState.Prepared
                 myStatus.serial += 1
                 return true
             } else {
@@ -427,7 +427,7 @@ class BaseStatusManager(
             if (count >= this.quorum) {
                 // check if we have (2f+1) commit signatures including ours, in that case we signal commit intent.
                 intent = CommitBlockIntent
-                logger.debug{ "setting CommitBlockIntent for idx: $myIndex " }
+                logger.debug { "setting CommitBlockIntent for idx: $myIndex " }
                 return true
             } else {
                 // otherwise we set intent to FetchCommitSignatureIntent with current blockRID and list of nodes which
@@ -440,7 +440,7 @@ class BaseStatusManager(
                         if ((nodeStatus.height > myStatus.height)
                                 ||
                                 ((nodeStatus.height == myStatus.height)
-                                        && (nodeStatus.state === NodeState.Prepared)
+                                        && (nodeStatus.state === NodeBlockState.Prepared)
                                         && nodeStatus.blockRID != null
                                         && Arrays.equals(nodeStatus.blockRID, myStatus.blockRID))) {
                             unfetchedNodes.add(i)
@@ -502,7 +502,7 @@ class BaseStatusManager(
 
         // We should make sure we have enough nodes who can participate in building a block.
         // (If we are in [Prepared] state we ignore this check, it has been done before we got here)
-        if (myStatus.state != NodeState.Prepared) {
+        if (myStatus.state != NodeBlockState.Prepared) {
             when (potentiallyDoSynch()) {
                 FlowStatus.Break -> return false
                 FlowStatus.Continue -> return true
@@ -521,9 +521,9 @@ class BaseStatusManager(
 
         // Handle the different states
         when (myStatus.state) {
-            NodeState.HaveBlock -> return handleHaveBlockState()
-            NodeState.Prepared -> return handlePreparedState()
-            NodeState.WaitBlock -> return handleWaitBlockState()
+            NodeBlockState.HaveBlock -> return handleHaveBlockState()
+            NodeBlockState.Prepared -> return handlePreparedState()
+            NodeBlockState.WaitBlock -> return handleWaitBlockState()
         }
     }
 

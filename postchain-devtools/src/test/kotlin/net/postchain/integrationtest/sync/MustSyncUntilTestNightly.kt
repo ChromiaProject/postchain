@@ -7,7 +7,7 @@ import org.awaitility.Awaitility
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.concurrent.TimeUnit
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 /* Two signers, no replica nodes.
  * After two blocks, Node 0 is wiped and starts to sync (from node 1)

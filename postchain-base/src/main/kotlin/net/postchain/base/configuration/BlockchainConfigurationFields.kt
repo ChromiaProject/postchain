@@ -9,6 +9,8 @@ const val KEY_BLOCKSTRATEGY_MAXBLOCKTIME = "maxblocktime"
 const val KEY_BLOCKSTRATEGY_MAXTXDELAY = "maxtxdelay"
 const val KEY_BLOCKSTRATEGY_MINBACKOFFTIME = "minbackofftime"
 const val KEY_BLOCKSTRATEGY_MAXBACKOFFTIME = "maxbackofftime"
+const val KEY_BLOCKSTRATEGY_MAXSPECIALENDTRANSACTIONSIZE = "maxspecialendtransactionsize"
+
 const val KEY_QUEUE_CAPACITY = "txqueuecapacity"
 
 const val KEY_CONFIGURATIONFACTORY = "configurationfactory"

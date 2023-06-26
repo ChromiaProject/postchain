@@ -2,7 +2,7 @@
 
 package net.postchain.network.peer
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEmpty
 import assertk.isContentEqualTo
 import net.postchain.base.NetworkNodes
@@ -33,8 +33,8 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 
 class DefaultPeerConnectionManagerTest {
 
@@ -86,7 +86,7 @@ class DefaultPeerConnectionManagerTest {
         // When
         val connectionManager = DefaultPeerConnectionManager(
                 packetEncoderFactory, packetDecoderFactory
-        ).apply { connectChain(chainPeerConfig, false, mock()) }
+        ).apply { connectChain(chainPeerConfig, false) }
 
         // Then
         verify(communicationConfig, never()).networkNodes
@@ -113,7 +113,7 @@ class DefaultPeerConnectionManagerTest {
         )
 
         try {
-            connectionManager.also { it.connectChain(chainPeerConfig, true, mock()) }
+            connectionManager.also { it.connectChain(chainPeerConfig, true) }
         } catch (_: IllegalArgumentException) {
         }
 
@@ -145,7 +145,7 @@ class DefaultPeerConnectionManagerTest {
         // When
         val connectionManager = DefaultPeerConnectionManager(
                 packetEncoderFactory, packetDecoderFactory
-        ).apply { connectChain(chainPeerConfig, true, mock()) }
+        ).apply { connectChain(chainPeerConfig, true) }
 
         // Then
         verify(chainPeerConfig, atLeast(1)).chainId
@@ -180,7 +180,7 @@ class DefaultPeerConnectionManagerTest {
                     mock(),
                     df
             ).apply {
-                connectChain(chainPeerConf, false, mock()) // Without connecting to peers
+                connectChain(chainPeerConf, false) // Without connecting to peers
                 connectChainPeer(1, unknownPeerInfo.peerId())
             }
         }
@@ -205,7 +205,7 @@ class DefaultPeerConnectionManagerTest {
         val connectionManager = DefaultPeerConnectionManager(
                 packetEncoderFactory, packetDecoderFactory
         ).apply {
-            connectChain(chainPeerConfig, false, mock()) // Without connecting to peers
+            connectChain(chainPeerConfig, false) // Without connecting to peers
             connectChainPeer(1, peerInfo2.peerId())
         }
 
@@ -236,7 +236,7 @@ class DefaultPeerConnectionManagerTest {
         val connectionManager = DefaultPeerConnectionManager(
                 packetEncoderFactory, packetDecoderFactory
         ).apply {
-            connectChain(chainPeerConfig, true, mock()) // Auto connect all peers
+            connectChain(chainPeerConfig, true) // Auto connect all peers
 
             // Emulates call of onPeerConnected() by XConnector
             onNodeConnected(mockConnection(peerConnectionDescriptor1))
@@ -260,12 +260,12 @@ class DefaultPeerConnectionManagerTest {
 
     @Test
     fun disconnectChain_wont_result_in_exception_if_chain_is_not_connected() {
-        emptyManager().disconnectChain(mock(), 1)
+        emptyManager().disconnectChain(1)
     }
 
     @Test
     fun getConnectedPeers_returns_emptyList_if_chain_is_not_connected() {
-        assert(emptyManager().getConnectedNodes(1)).isEmpty()
+        assertThat(emptyManager().getConnectedNodes(1)).isEmpty()
     }
 
     @Test
@@ -287,7 +287,7 @@ class DefaultPeerConnectionManagerTest {
         val connectionManager = DefaultPeerConnectionManager(
                 packetEncoderFactory, packetDecoderFactory
         ).apply {
-            connectChain(chainPeerConfig, true, mock()) // With autoConnect
+            connectChain(chainPeerConfig, true) // With autoConnect
 
             // Then / before peers connected
             // - isPeerConnected
@@ -295,7 +295,7 @@ class DefaultPeerConnectionManagerTest {
             assertFalse { isPeerConnected(1L, peerInfo2.peerId()) }
             assertFalse { isPeerConnected(1L, unknownPeerInfo.peerId()) }
             // - getConnectedPeers
-            assert(getConnectedNodes(1L).toTypedArray()).isEmpty()
+            assertThat(getConnectedNodes(1L).toTypedArray()).isEmpty()
 
             // Emulates call of onPeerConnected() by XConnector
             onNodeConnected(mockConnection(peerConnectionDescriptor1))
@@ -307,7 +307,7 @@ class DefaultPeerConnectionManagerTest {
             assertTrue { isPeerConnected(1L, peerInfo2.peerId()) }
             assertFalse { isPeerConnected(1L, unknownPeerInfo.peerId()) }
             // - getConnectedPeers
-            assert(getConnectedNodes(1L).toTypedArray()).isContentEqualTo(
+            assertThat(getConnectedNodes(1L).toTypedArray()).isContentEqualTo(
                     arrayOf(peerInfo1.peerId(), peerInfo2.peerId())
             )
 
@@ -320,13 +320,13 @@ class DefaultPeerConnectionManagerTest {
             assertTrue { isPeerConnected(1L, peerInfo2.peerId()) }
             assertFalse { isPeerConnected(1L, unknownPeerInfo.peerId()) }
             // - getConnectedPeers
-            assert(getConnectedNodes(1L).toTypedArray()).isContentEqualTo(
+            assertThat(getConnectedNodes(1L).toTypedArray()).isContentEqualTo(
                     arrayOf(peerInfo2.peerId())
             )
 
 
             // When / Disconnecting the whole chain
-            disconnectChain(mock(), 1L)
+            disconnectChain(1L)
             // Then
             val internalChains = FieldUtils.readField(this, "chainsWithConnections", true)
                     as ChainsWithConnections<*, *, *>
@@ -364,7 +364,7 @@ class DefaultPeerConnectionManagerTest {
         val connectionManager = DefaultPeerConnectionManager(
                 packetEncoderFactory, packetDecoderFactory
         ).apply {
-            connectChain(chainPeerConfig, true, mock()) // With autoConnect
+            connectChain(chainPeerConfig, true) // With autoConnect
 
             // Emulates call of onPeerConnected() by XConnector
             onNodeConnected(connection1)
@@ -377,7 +377,7 @@ class DefaultPeerConnectionManagerTest {
         verify(connection1, times(0)).sendPacket(any())
         argumentCaptor<LazyPacket>().apply {
             verify(connection2, times(1)).sendPacket(capture())
-            assert(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
+            assertThat(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
 
         connectionManager.shutdown()
@@ -419,7 +419,7 @@ class DefaultPeerConnectionManagerTest {
         val connectionManager = DefaultPeerConnectionManager(
                 packetEncoderFactory, packetDecoderFactory
         ).apply {
-            connectChain(chainPeerConfig, true, mock()) // With autoConnect
+            connectChain(chainPeerConfig, true) // With autoConnect
 
             // Emulates call of onPeerConnected() by XConnector
             onNodeConnected(connection1)
@@ -431,11 +431,11 @@ class DefaultPeerConnectionManagerTest {
         // Then / verify and assert
         argumentCaptor<LazyPacket>().apply {
             verify(connection1, times(1)).sendPacket(capture())
-            assert(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
+            assertThat(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
         argumentCaptor<LazyPacket>().apply {
             verify(connection2, times(1)).sendPacket(capture())
-            assert(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
+            assertThat(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
 
         connectionManager.shutdown()

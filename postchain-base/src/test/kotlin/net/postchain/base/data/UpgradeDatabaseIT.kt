@@ -1,7 +1,9 @@
 package net.postchain.base.data
 
+import assertk.assertThat
 import net.postchain.StorageBuilder
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
@@ -17,15 +19,16 @@ import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
+import org.apache.commons.dbutils.handlers.ScalarHandler
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertArrayEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class UpgradeDatabaseIT {
 
@@ -33,6 +36,7 @@ class UpgradeDatabaseIT {
 
     private val configData1 = gtv(mapOf("any" to gtv("value1")))
     private val configData2 = gtv(mapOf("any" to gtv("value2")))
+    private val longRes = ScalarHandler<Long>()
 
     @Test
     fun testDbVersion1() {
@@ -53,9 +57,9 @@ class UpgradeDatabaseIT {
     }
 
     private fun assertVersion1(db: SQLDatabaseAccess, ctx: AppContext) {
-        assert(db.tableExists(ctx.conn, "meta"))
-        assert(db.tableExists(ctx.conn, "peerinfos"))
-        assert(db.tableExists(ctx.conn, "blockchains"))
+        assertThat(db.tableExists(ctx.conn, "meta"))
+        assertThat(db.tableExists(ctx.conn, "peerinfos"))
+        assertThat(db.tableExists(ctx.conn, "blockchains"))
     }
 
     @Test
@@ -93,8 +97,8 @@ class UpgradeDatabaseIT {
     private fun assertVersion2(db: SQLDatabaseAccess, ctx: AppContext) {
         assertVersion1(db, ctx)
 
-        assert(db.tableExists(ctx.conn, "blockchain_replicas"))
-        assert(db.tableExists(ctx.conn, "must_sync_until"))
+        assertThat(db.tableExists(ctx.conn, "blockchain_replicas"))
+        assertThat(db.tableExists(ctx.conn, "must_sync_until"))
     }
 
     @Test
@@ -250,6 +254,33 @@ class UpgradeDatabaseIT {
                 }
     }
 
+    @Test
+    fun testUpgradeFromVersion5to6() {
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 5)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)",
+                                ctx.chainID, BlockchainRid.ZERO_RID.data)
+                        true
+                    }
+                }
+
+        val testConfig = FaultyConfiguration(BlockchainRid.ZERO_RID.wData, 0)
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 6)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.addFaultyConfiguration(ctx, testConfig)
+                        true
+                    }
+                    withReadConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        assertEquals(testConfig, db.getFaultyConfiguration(ctx))
+                    }
+                }
+    }
+
     private fun verifyBlockchainReplicasInVersion5(db: SQLDatabaseAccess, ctx: EContext, replicaBrid: BlockchainRid, replicaKey: PubKey) {
         assertTrue(db.existsBlockchainReplica(ctx, replicaBrid, replicaKey))
 
@@ -302,6 +333,100 @@ class UpgradeDatabaseIT {
         assertTrue(db.findPeerInfo(ctx, null, null, peer.pubKey.toHex()).isEmpty())
     }
 
+    @Test
+    fun testUpgradeFromVersion6to7normal() {
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 6)
+                .use {
+                    it.withWriteConnection { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)",
+                                1, ByteArray(32) { 1 })
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)",
+                                2, ByteArray(32) { 2 })
+                        true
+                    }
+                }
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 7)
+                .use {
+                    withReadConnection(it, 1) { ctx ->
+                        val db = DatabaseAccess.of(ctx)
+                        assertArrayEquals(ByteArray(32) { 1 }, db.getBlockchainRid(ctx)!!.data)
+                        true
+                    }
+                    withReadConnection(it, 2) { ctx ->
+                        val db = DatabaseAccess.of(ctx)
+                        assertArrayEquals(ByteArray(32) { 2 }, db.getBlockchainRid(ctx)!!.data)
+                        true
+                    }
+                    withReadConnection(it, 3) { ctx ->
+                        val db = DatabaseAccess.of(ctx)
+                        assertNull(db.getBlockchainRid(ctx))
+                        true
+                    }
+                }
+    }
+
+    @Test
+    fun testUpgradeFromVersion6to7withDuplicates() {
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 6)
+                .use {
+                    it.withWriteConnection { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)",
+                                1, ByteArray(32) { 0 })
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)",
+                                2, ByteArray(32) { 0 })
+                        true
+                    }
+                }
+
+        assertThrows<UserMistake> {
+            StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 7)
+        }
+    }
+
+    @Test
+    fun testUpgradeFromVersion7to8() {
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 7)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
+
+                        // Revert transactions table to pre version 8
+                        db.queryRunner.update(ctx.conn, "ALTER TABLE ${db.tableTransactions(ctx)} DROP COLUMN tx_number")
+
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableBlocks(ctx)} (block_height) VALUES (?)", 0)
+                        addTransaction(db, ctx, 1, 1)
+                        addTransaction(db, ctx, 2, 1)
+                        addTransaction(db, ctx, 3, 1)
+                        addTransaction(db, ctx, 4, 1)
+                        addTransaction(db, ctx, 5, 1)
+                        db.queryRunner.update(ctx.conn, "DELETE FROM ${db.tableTransactions(ctx)} WHERE tx_iid = ? ", 2)
+                        db.queryRunner.update(ctx.conn, "DELETE FROM ${db.tableTransactions(ctx)} WHERE tx_iid = ? ", 4)
+                        true
+                    }
+                }
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 8)
+                .use {
+                    withReadConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        assertEquals(1, db.queryRunner.query(ctx.conn, "SELECT tx_number FROM ${db.tableTransactions(ctx)} WHERE tx_iid = 1 ", longRes))
+                        assertEquals(2, db.queryRunner.query(ctx.conn, "SELECT tx_number FROM ${db.tableTransactions(ctx)} WHERE tx_iid = 3 ", longRes))
+                        assertEquals(3, db.queryRunner.query(ctx.conn, "SELECT tx_number FROM ${db.tableTransactions(ctx)} WHERE tx_iid = 5 ", longRes))
+                        assertEquals(3, db.getLastTransactionNumber(ctx))
+                        true
+                    }
+                }
+    }
+
+    private fun addTransaction(db: SQLDatabaseAccess, ctx: EContext, tx_base: Byte, block_iid: Long) {
+        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid) " +
+                "VALUES (?, ?, ?, ?)", ByteArray(32) { tx_base }, ByteArray(32) { tx_base }, ByteArray(32) { tx_base }, block_iid)
+    }
+
     private fun assertVersion3(storage: Storage) {
         storage.withReadConnection { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
@@ -309,17 +434,17 @@ class UpgradeDatabaseIT {
         }
     }
 
+    private fun assertVersion3(db: SQLDatabaseAccess, ctx: AppContext) {
+        assertVersion2(db, ctx)
+
+        assertThat(db.tableExists(ctx.conn, "containers"))
+    }
+
     private fun assertVersion4(storage: Storage) {
         withReadConnection(storage, 0) { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
             assertVersion4(db, ctx)
         }
-    }
-
-    private fun assertVersion3(db: SQLDatabaseAccess, ctx: AppContext) {
-        assertVersion2(db, ctx)
-
-        assert(db.tableExists(ctx.conn, "containers"))
     }
 
     private fun assertVersion4(db: SQLDatabaseAccess, ctx: EContext) {
@@ -341,5 +466,20 @@ class UpgradeDatabaseIT {
         Assertions.assertThrows(UserMistake::class.java) {
             StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 1)
         }
+    }
+
+    @Test
+    fun testUpgradingAllowance() {
+        // Initial launch
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 2)
+
+        // Reopen without wiping
+        assertThrows<UserMistake> {
+            StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 3, allowUpgrade = false)
+        }
+
+        // Reopen with wiping
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 3, allowUpgrade = false)
+                .use { assertVersion3(it) }
     }
 }

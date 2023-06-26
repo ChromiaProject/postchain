@@ -7,7 +7,7 @@ import net.postchain.gtv.merkle.MerkleHashCalculatorDummy
 import net.postchain.gtv.merkle.TreeHelper
 import net.postchain.gtv.merkleHashSummary
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 /**
  * In this class we test if we can calculate merkle roots out of Gtv array structures.

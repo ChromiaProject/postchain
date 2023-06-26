@@ -2,7 +2,7 @@
 
 package net.postchain.network.peer
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
 import org.mockito.kotlin.*
@@ -51,18 +51,18 @@ class DefaultPeerCommunicationManagerTest {
 
         // When
         val communicationManager = DefaultPeerCommunicationManager(
-                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, packetEncoder, packetDecoder, mock())
+                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, packetEncoder, packetDecoder)
         communicationManager.init()
 
         // Then
         argumentCaptor<XChainPeersConfiguration>().apply {
-            verify(connectionManager).connectChain(capture(), eq(true), any())
+            verify(connectionManager).connectChain(capture(), eq(true))
 
-            assert(firstValue.chainId).isEqualTo(CHAIN_ID)
-            assert(firstValue.commConfiguration).isSameAs(peerCommunicationConfig)
+            assertThat(firstValue.chainId).isEqualTo(CHAIN_ID)
+            assertThat(firstValue.commConfiguration).isSameAs(peerCommunicationConfig)
 //            val f: XPacketHandler = { _, _ -> ; } // TODO: Assert function types
-//            assert(firstValue.packetHandler).isInstanceOf(f.javaClass)
-//            assert(firstValue.identPacketConverter).isSameAs(packetConverter)
+//            assertThat(firstValue.packetHandler).isInstanceOf(f.javaClass)
+//            assertThat(firstValue.identPacketConverter).isSameAs(packetConverter)
         }
 
         communicationManager.shutdown()
@@ -82,18 +82,18 @@ class DefaultPeerCommunicationManagerTest {
 
         // When
         val communicationManager = DefaultPeerCommunicationManager(
-                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, packetEncoder, packetDecoder, mock())
+                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, packetEncoder, packetDecoder)
         communicationManager.init()
 
         // Then
         argumentCaptor<XChainPeersConfiguration>().apply {
-            verify(connectionManager).connectChain(capture(), eq(true), any())
+            verify(connectionManager).connectChain(capture(), eq(true))
 
-            assert(firstValue.chainId).isEqualTo(CHAIN_ID)
-            assert(firstValue.commConfiguration).isSameAs(peerCommunicationConfig)
+            assertThat(firstValue.chainId).isEqualTo(CHAIN_ID)
+            assertThat(firstValue.commConfiguration).isSameAs(peerCommunicationConfig)
 //            val f: XPacketHandler = { _, _ -> ; } // TODO: Assert function types
-//            assert(firstValue.packetHandler).isInstanceOf(f.javaClass)
-//            assert(firstValue.identPacketConverter).isSameAs(packetConverter)
+//            assertThat(firstValue.packetHandler).isInstanceOf(f.javaClass)
+//            assertThat(firstValue.identPacketConverter).isSameAs(packetConverter)
         }
 
         communicationManager.shutdown()
@@ -109,7 +109,7 @@ class DefaultPeerCommunicationManagerTest {
 
         // When / Then exception
         assertThrows<IllegalArgumentException> {
-            DefaultPeerCommunicationManager<Int>(mock(), peersConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock())
+            DefaultPeerCommunicationManager<Int>(mock(), peersConfig, CHAIN_ID, blockchainRid, mock(), mock())
                 .apply {
                     sendPacket(0, NodeRid(pubKey1))
                 }
@@ -128,7 +128,7 @@ class DefaultPeerCommunicationManagerTest {
 
         // When
         val communicationManager = DefaultPeerCommunicationManager<Int>(
-                connectionManager, config, CHAIN_ID, blockchainRid, mock(), mock(), mock()
+                connectionManager, config, CHAIN_ID, blockchainRid, mock(), mock()
         )
                 .apply {
                     init()
@@ -150,7 +150,7 @@ class DefaultPeerCommunicationManagerTest {
 
         // When
         val communicationManager = DefaultPeerCommunicationManager<Int>(
-                connectionManager, mock(), CHAIN_ID, blockchainRid, mock(), mock(), mock()
+                connectionManager, mock(), CHAIN_ID, blockchainRid, mock(), mock()
         )
                 .apply {
                     init()
@@ -170,7 +170,7 @@ class DefaultPeerCommunicationManagerTest {
 
         // When
         val communicationManager = DefaultPeerCommunicationManager<Int>(
-                connectionManager, mock(), CHAIN_ID, blockchainRid, mock(), mock(), mock()
+                connectionManager, mock(), CHAIN_ID, blockchainRid, mock(), mock()
         )
                 .apply {
                     init()
@@ -178,7 +178,7 @@ class DefaultPeerCommunicationManagerTest {
                 }
 
         // Then
-        verify(connectionManager).disconnectChain(any(), eq(CHAIN_ID))
+        verify(connectionManager).disconnectChain(eq(CHAIN_ID))
 
         communicationManager.shutdown()
     }

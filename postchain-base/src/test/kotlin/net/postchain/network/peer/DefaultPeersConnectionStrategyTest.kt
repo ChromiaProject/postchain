@@ -3,6 +3,7 @@
 package net.postchain.network.peer
 
 import mu.KLogging
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.NodeRid
 import org.awaitility.Awaitility
@@ -10,7 +11,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
 import java.lang.Thread.sleep
 import java.util.concurrent.TimeUnit
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class DefaultPeersConnectionStrategyTest {
 
@@ -27,7 +28,7 @@ class DefaultPeersConnectionStrategyTest {
 
     fun testConnectAll(me: NodeRid, peerIds: Set<NodeRid>, expectedConns: Set<NodeRid>): DefaultPeersConnectionStrategy {
         val strategy = sut(me)
-        strategy.connectAll(0, peerIds)
+        strategy.connectAll(0, BlockchainRid.ZERO_RID, peerIds)
 
         verify(connMan, times(expectedConns.size)).connectChainPeer(chainCaptor.capture(), peerCaptor.capture())
         assertEquals(expectedConns, peerCaptor.allValues.toSet())
@@ -81,7 +82,7 @@ class DefaultPeersConnectionStrategyTest {
         val strategy = testConnectAll(me, peerIds, setOf())
         reset(connMan)
         whenever(connMan.isPeerConnected(0, lostPeer)).thenReturn(false)
-        strategy.connectionLost(0, lostPeer, outgoing)
+        strategy.connectionLost(0, BlockchainRid.ZERO_RID, lostPeer, outgoing)
         Awaitility.await().atMost(400, TimeUnit.MILLISECONDS).untilAsserted {
             verify(connMan).connectChainPeer(0, lostPeer)
         }
@@ -110,7 +111,7 @@ class DefaultPeersConnectionStrategyTest {
         val strategy = testConnectAll(peer1, setOf(peer2, peer3), setOf())
         reset(connMan)
         whenever(connMan.isPeerConnected(0, peer3)).thenReturn(true)
-        strategy.connectionLost(0, peer3, true)
+        strategy.connectionLost(0, BlockchainRid.ZERO_RID, peer3, true)
         sleep(200)
         verify(connMan, times(0)).connectChainPeer(0, peer3)
     }

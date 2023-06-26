@@ -6,7 +6,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.10.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
     <artifactId>postchain-server</artifactId>
     <packaging>jar</packaging>
@@ -57,18 +57,13 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-test-junit5</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.mockito.kotlin</groupId>
             <artifactId>mockito-kotlin</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.willowtreeapps.assertk</groupId>
-            <artifactId>assertk</artifactId>
+            <artifactId>assertk-jvm</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -77,9 +72,4 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <build>
-        <sourceDirectory>src/main/kotlin</sourceDirectory>
-        <testSourceDirectory>src/test/kotlin</testSourceDirectory>
-    </build>
 </project>

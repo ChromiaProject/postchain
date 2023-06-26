@@ -127,9 +127,9 @@ open class IntegrationTestSetup : AbstractIntegration() {
 
     protected fun verifyBlockchainTransactions(node: PostchainTestNode) {
         val expectAtLeastHeight = expectedSuccessRids.keys.reduce { acc, l -> maxOf(l, acc) }
-        val bestHeight = getBestHeight(node)
-        assertTrue(bestHeight >= expectAtLeastHeight)
-        for (height in 0..bestHeight) {
+        val lastHeight = getLastHeight(node)
+        assertTrue(lastHeight >= expectAtLeastHeight)
+        for (height in 0..lastHeight) {
             val txRidsAtHeight = getTxRidsAtHeight(node, height)
 
             val expectedRidsAtHeight = expectedSuccessRids[height]
@@ -155,7 +155,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
             nodesCount: Int,
             blockchainConfigFilename: String,
             preWipeDatabase: Boolean = true,
-            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit },
+            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit },
             keyPairCache: KeyPairCache = KeyPairHelper
     ): Array<PostchainTestNode> {
 
@@ -185,7 +185,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected fun createNodesFromSystemSetup(
             sysSetup: SystemSetup,
             preWipeDatabase: Boolean = true,
-            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
     ) {
         this.systemSetup = sysSetup
 
@@ -253,19 +253,12 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected fun getTestName() = this::class.java.simpleName ?: "NoName"
 
     /**
-     * Override this in your test to add config overrides directly on the [NodeSetup] (for node specific configs).
-     */
-    open fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
-
-    }
-
-    /**
      * Generates config for all [NodeSetup] objects
      */
     protected fun createNodeConfProvidersAndAddToNodeSetup(
             sysSetup: SystemSetup,
             confOverrides: MapConfiguration,
-            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
     ) {
         val peerList = sysSetup.toPeerInfoList()
         confOverrides.setProperty("testpeerinfos", peerList.toTypedArray())
@@ -300,7 +293,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected fun addConfigProviderToNodeSetups(
             systemSetup: SystemSetup,
             configOverrides: MapConfiguration,
-            setupAction: (appConfig: AppConfig, nodeConfig: NodeConfig) -> Unit = { _, _ -> Unit }
+            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
     ) {
         val testName = this::class.simpleName!!
         for (nodeSetup in systemSetup.nodeMap.values) {

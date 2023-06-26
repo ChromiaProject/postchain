@@ -13,8 +13,7 @@ import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import java.util.concurrent.TimeoutException
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
+import org.junit.jupiter.api.Assertions.assertEquals
 
 /**
  * Extends [IntegrationTestSetup] with extra functions relevant for real GTX transactions on multi chain tests
@@ -209,16 +208,15 @@ open class GtxTxIntegrationTestSetup : IntegrationTestSetup() {
 
         val queries = node.blockQueries(chain)
 
-        // Asserting best height equals to expected
-        val best = queries.getBestHeight().get()
-        assertEquals(expectedHeight, best)
+        // Asserting last height equals to expected
+        assertEquals(expectedHeight, queries.getLastBlockHeight().get())
 
         for (height in 0..expectedHeight) {
             logger.info { "Verifying height $height" }
 
             // Asserting uniqueness of block at height
             val blockRid = queries.getBlockRid(height).get()
-            assertNotNull(blockRid)
+            requireNotNull(blockRid)
 
             // Asserting txs count
             val txs = queries.getBlockTransactionRids(blockRid).get()

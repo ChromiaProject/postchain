@@ -55,8 +55,8 @@ class BaseBlockStore : BlockStore {
         return InitialBlockData(blockchainRID, blockIid, ctx.chainID, prevBlockRID, prevHeight + 1, prevTimestamp, blockHeightDependencies)
     }
 
-    override fun addTransaction(bctx: BlockEContext, tx: Transaction): TxEContext {
-        val txIid = DatabaseAccess.of(bctx).insertTransaction(bctx, tx)
+    override fun addTransaction(bctx: BlockEContext, tx: Transaction, transactionNumber: Long): TxEContext {
+        val txIid = DatabaseAccess.of(bctx).insertTransaction(bctx, tx, transactionNumber)
         return BaseTxEContext(bctx, txIid, tx)
     }
 
@@ -103,6 +103,10 @@ class BaseBlockStore : BlockStore {
 
     override fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt> {
         return DatabaseAccess.of(ctx).getTransactionsInfo(ctx, beforeTime, limit)
+    }
+
+    override fun getLastTransactionNumber(ctx: EContext): Long {
+        return DatabaseAccess.of(ctx).getLastTransactionNumber(ctx)
     }
 
     override fun getWitnessData(ctx: EContext, blockRID: ByteArray): ByteArray {

@@ -3,8 +3,8 @@
 package net.postchain.ebft
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.block.BlockBuilder
@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * We use only one thread, which means we know the previous task was completed before we begin the next.
  */
 class BaseBlockDatabase(
+        private val loggingContext: Map<String, String>,
         private val engine: BlockchainEngine,
         private val blockQueries: BlockQueries,
         val nodeIndex: Int
@@ -70,18 +71,20 @@ class BaseBlockDatabase(
         }
 
         return CompletableFuture.supplyAsync({
-            try {
-                if (logger.isDebugEnabled) {
-                    logger.debug("Starting job $name")
+            withLoggingContext(loggingContext) {
+                try {
+                    if (logger.isDebugEnabled) {
+                        logger.debug("Starting job $name")
+                    }
+                    val res = op()
+                    if (logger.isDebugEnabled) {
+                        logger.debug("Finished job $name")
+                    }
+                    res
+                } catch (e: Exception) {
+                    logger.debug(e) { "Failed job $name" }
+                    throw e
                 }
-                val res = op()
-                if (logger.isDebugEnabled) {
-                    logger.debug("Finished job $name")
-                }
-                res
-            } catch (e: Exception) {
-                logger.debug(e) { "Failed job $name" }
-                throw e
             }
         }, executor)
     }
@@ -117,7 +120,7 @@ class BaseBlockDatabase(
             queuedBlockCount.decrementAndGet()
             if (dependsOn != null) {
                 if (dependsOn.isCompletedExceptionally) {
-                    throw BDBAbortException(block, dependsOn)
+                    throw BDBAbortException(block)
                 }
                 if (!dependsOn.isDone) {
                     // If we get here the caller must have sent the incorrect future.
@@ -129,10 +132,6 @@ class BaseBlockDatabase(
             val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block)
             if (exception != null) {
                 addBlockLog("Got error when loading: ${exception.message}")
-                try {
-                    theBlockBuilder.rollback()
-                } catch (ignore: Exception) {
-                }
                 throw exception
             } else {
                 updateBTrace(existingBTrace, theBlockBuilder.getBTrace())
@@ -147,10 +146,6 @@ class BaseBlockDatabase(
             maybeRollback()
             val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block)
             if (exception != null) {
-                try {
-                    theBlockBuilder.rollback()
-                } catch (ignore: Exception) {
-                }
                 throw exception
             } else {
                 blockBuilder = theBlockBuilder
@@ -174,11 +169,7 @@ class BaseBlockDatabase(
             maybeRollback()
             val (theBlockBuilder, exception) = engine.buildBlock()
             if (exception != null) {
-                try {
-                    theBlockBuilder.rollback()
-                } catch (ignore: Exception) {
-                }
-                throw UserMistake("Can't build block: ${exception.message}", exception)
+                throw exception
             } else {
                 blockBuilder = theBlockBuilder
                 witnessBuilder = blockBuilder!!.getBlockWitnessBuilder() as MultiSigBlockWitnessBuilder

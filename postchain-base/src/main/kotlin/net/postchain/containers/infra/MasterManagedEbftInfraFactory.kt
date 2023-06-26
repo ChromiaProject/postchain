@@ -18,9 +18,9 @@ open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
         with(postchainContext) {
             val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-            val connectionManager = DefaultMasterConnectionManager(appConfig, containerNodeConfig)
+            val connectionManager = DefaultMasterConnectionManager(appConfig, containerNodeConfig, postchainContext.blockQueriesProvider)
             val syncInfra = DefaultMasterSyncInfra(this, connectionManager, containerNodeConfig)
-            val apiInfra = DefaultMasterApiInfra(restApiConfig, nodeDiagnosticContext, debug)
+            val apiInfra = DefaultMasterApiInfra(restApiConfig, nodeDiagnosticContext, debug, postchainContext)
 
             return DefaultMasterBlockchainInfra(this, syncInfra, apiInfra)
         }

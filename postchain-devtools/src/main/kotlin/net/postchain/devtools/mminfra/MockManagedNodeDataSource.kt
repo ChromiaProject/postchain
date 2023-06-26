@@ -4,6 +4,7 @@ import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainState
 import net.postchain.core.NodeRid
 import net.postchain.devtools.awaitDebug
 import net.postchain.devtools.utils.ChainUtil
@@ -13,10 +14,14 @@ import net.postchain.gtv.Gtv
 import net.postchain.managed.BlockchainInfo
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.PendingBlockchainConfiguration
+import java.util.*
 
 open class MockManagedNodeDataSource : ManagedNodeDataSource {
     // Brid -> (height -> Pair(BlockchainConfiguration, binaryBlockchainConfig)
     val bridToConfigs: MutableMap<BlockchainRid, MutableMap<Long, Pair<BlockchainConfiguration, ByteArray>>> = mutableMapOf()
+    val pendingBridToConfigs: MutableMap<BlockchainRid, TreeMap<Long, MutableList<Pair<BlockchainConfiguration, ByteArray>>>> = mutableMapOf()
+    val faultyConfigHashes: MutableMap<BlockchainRid, MutableMap<Long, ByteArray>> = mutableMapOf()
+    val bridState: MutableMap<BlockchainRid, BlockchainState> = mutableMapOf()
     private val extraReplicas = mutableMapOf<BlockchainRid, MutableSet<NodeRid>>()
     private lateinit var nodes: Map<NodeSeqNumber, NodeSetup>
     private lateinit var myNode: NodeSetup
@@ -29,25 +34,20 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     override val nmApiVersion: Int
         get() = TODO("Not yet implemented")
 
-    override fun getPeerListVersion(): Long {
-        return 1L
-    }
-
     override fun computeBlockchainList(): List<ByteArray> {
         return myNode.chainsToRead.union(myNode.chainsToSign).map { ChainUtil.ridOf(it.toLong()).data }
     }
 
     override fun computeBlockchainInfoList(): List<BlockchainInfo> {
-        return computeBlockchainList().map {
-            BlockchainInfo(
-                    BlockchainRid(it),
-                    false
-            )
-        }
-    }
-
-    override fun getLastBuiltHeight(blockchainRidRaw: ByteArray): Long {
-        TODO("Not yet implemented")
+        return computeBlockchainList()
+                .filter { bridState[BlockchainRid(it)] != BlockchainState.REMOVED }
+                .map {
+                    BlockchainInfo(
+                            BlockchainRid(it),
+                            false,
+                            bridState[BlockchainRid(it)] ?: BlockchainState.RUNNING
+                    )
+                }
     }
 
     override fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray? {
@@ -74,7 +74,22 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     }
 
     override fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): List<PendingBlockchainConfiguration> {
-        TODO("Not yet implemented")
+        val allPendingConfigs = pendingBridToConfigs[blockchainRid] ?: return listOf()
+        return allPendingConfigs.lowerEntry(height + 1)?.let { (height, configs) ->
+            configs.map { PendingBlockchainConfiguration.fromBlockchainConfiguration(it.first, height) }
+        } ?: listOf()
+    }
+
+    override fun getFaultyBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): ByteArray? {
+        return faultyConfigHashes[blockchainRid]?.let { it[height] }
+    }
+
+    fun setBlockchainState(blockchainRid: BlockchainRid, blockchainState: BlockchainState) {
+        bridState[blockchainRid] = blockchainState
+    }
+
+    override fun getBlockchainState(blockchainRid: BlockchainRid): BlockchainState {
+        return bridState[blockchainRid]!!
     }
 
     override fun query(name: String, args: Gtv): Gtv {
@@ -106,13 +121,20 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         extraReplicas.computeIfAbsent(brid) { mutableSetOf() }.add(replica)
     }
 
-    fun getBuiltConfiguration(chainId: Long, rawConfigurationData: ByteArray): BlockchainConfiguration {
+    open fun getBuiltConfiguration(chainId: Long, rawConfigurationData: ByteArray): BlockchainConfiguration {
         val brid = ChainUtil.ridOf(chainId)
         val configs = bridToConfigs[brid]!!
-        return configs.values
-                .first { cfgToRaw ->
-                    cfgToRaw.second.contentEquals(rawConfigurationData)
-                }.first
+        val config = configs.values.firstOrNull { cfgToRaw ->
+            cfgToRaw.second.contentEquals(rawConfigurationData)
+        }
+        return if (config != null) {
+            config.first
+        } else {
+            val pendingConfigs = pendingBridToConfigs[brid]!!
+            pendingConfigs.values.flatten().first { cfgToRaw ->
+                cfgToRaw.second.contentEquals(rawConfigurationData)
+            }.first
+        }
     }
 
     fun addConf(chainId: Long, rid: BlockchainRid, height: Long, conf: BlockchainConfiguration, rawBcConf: ByteArray) {
@@ -121,6 +143,21 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
             throw IllegalArgumentException("Setting blockchain configuration for height that already has a configuration")
         } else {
             awaitDebug("### NEW BC CONFIG for chain: $chainId (bc rid: ${rid.toShortHex()}) at height: $height")
+            pendingBridToConfigs.clear()
+        }
+    }
+
+    fun addPendingConf(chainId: Long, rid: BlockchainRid, height: Long, conf: BlockchainConfiguration, rawBcConf: ByteArray) {
+        val configs = pendingBridToConfigs.computeIfAbsent(rid) { TreeMap() }
+        configs.computeIfAbsent(height) { mutableListOf() }.add(conf to rawBcConf)
+        awaitDebug("### NEW PENDING BC CONFIG for chain: $chainId (bc rid: ${rid.toShortHex()}) at height: $height")
+    }
+
+    fun markPendingConfigurationAsFaulty(chainId: Long, height: Long) {
+        val brid = ChainUtil.ridOf(chainId)
+        val config = pendingBridToConfigs[ChainUtil.ridOf(chainId)]!![height]!!.removeFirstOrNull()
+        if (config != null) {
+            faultyConfigHashes.computeIfAbsent(brid) { mutableMapOf() }[height] = config.first.configHash
         }
     }
 

@@ -6,7 +6,7 @@ import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.chainIdOption
 import net.postchain.server.grpc.StartBlockchainRequest
 
-class StartBlockchainCommand: CliktCommand(help = "Start blockchain with id") {
+class StartBlockchainCommand: CliktCommand(name = "start", help = "Start blockchain with id") {
 
     private val channel by blockingPostchainServiceChannelOption()
 

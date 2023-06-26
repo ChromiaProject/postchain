@@ -5,10 +5,9 @@ package net.postchain.network.peer
 import mu.KLogging
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.BlockchainRid
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
+import net.postchain.core.BadDataException
+import net.postchain.core.BadMessageException
 import net.postchain.core.NodeRid
-import net.postchain.debug.BlockchainProcessName
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.network.CommunicationManager
 import net.postchain.network.XPacketDecoder
@@ -21,8 +20,7 @@ class DefaultPeerCommunicationManager<PacketType>(
         val chainId: Long,
         val blockchainRid: BlockchainRid,
         private val packetEncoder: XPacketEncoder<PacketType>,
-        private val packetDecoder: XPacketDecoder<PacketType>,
-        protected val processName: BlockchainProcessName
+        private val packetDecoder: XPacketDecoder<PacketType>
 ) : CommunicationManager<PacketType> {
 
     companion object : KLogging()
@@ -43,7 +41,7 @@ class DefaultPeerCommunicationManager<PacketType>(
             }
         }
         val peerConfig = XChainPeersConfiguration(chainId, blockchainRid, config, packetHandlerImpl)
-        connectionManager.connectChain(peerConfig, true) { processName.toString() }
+        connectionManager.connectChain(peerConfig, true)
         connected = true
     }
 
@@ -55,7 +53,7 @@ class DefaultPeerCommunicationManager<PacketType>(
     }
 
     override fun sendPacket(packet: PacketType, recipient: NodeRid) {
-        logger.trace { "$processName: sendPacket($packet, ${peerName(recipient.toString())})" }
+        logger.trace { "sendPacket($packet, ${peerName(recipient.toString())})" }
 
         val encodingFunction = { packetEncoder.encodePacket(packet) }
         sendEncodedPacket(encodingFunction, recipient)
@@ -64,14 +62,14 @@ class DefaultPeerCommunicationManager<PacketType>(
     override fun sendPacket(packet: PacketType, recipients: List<NodeRid>) {
         val lazyPacket by lazy { packetEncoder.encodePacket(packet) }
         recipients.forEach {
-            logger.trace { "$processName: sendPacket($packet, ${peerName(it.toString())})" }
+            logger.trace { "sendPacket($packet, ${peerName(it.toString())})" }
 
             sendEncodedPacket({ lazyPacket }, it)
         }
     }
 
     override fun broadcastPacket(packet: PacketType) {
-        logger.trace { "$processName: broadcastPacket($packet)" }
+        logger.trace { "broadcastPacket($packet)" }
 
         val lazyPacket by lazy { packetEncoder.encodePacket(packet) }
         connectionManager.broadcastPacket(
@@ -87,7 +85,7 @@ class DefaultPeerCommunicationManager<PacketType>(
         }
         val peer = possiblePeers.random()
         if (logger.isTraceEnabled) {
-            logger.trace("$processName: sendToRandomPeer($packet, ${peerName(peer.toString())})")
+            logger.trace("sendToRandomPeer($packet, ${peerName(peer.toString())})")
         }
         return try {
             sendPacket(packet, peer)
@@ -101,8 +99,7 @@ class DefaultPeerCommunicationManager<PacketType>(
     @Synchronized
     override fun shutdown() {
         if (!connected) return
-        val prefixFun: () -> String = { processName.toString() }
-        connectionManager.disconnectChain(prefixFun, chainId)
+        connectionManager.disconnectChain(chainId)
         connected = false
     }
 
@@ -130,12 +127,11 @@ class DefaultPeerCommunicationManager<PacketType>(
                 logger.trace { "Successfully decoded the package, now adding it " }
                 inboundPackets.add(peerId to decodedPacket)
             }
-        } catch (e: BadDataMistake) {
-            if (e.type == BadDataType.BAD_MESSAGE) {
-                logger.info("Bad message received from peer ${peerId}: ${e.message}")
-            } else {
-                logger.error("Error when receiving message from peer $peerId", e)
-            }
+
+        } catch (e: BadMessageException) {
+            logger.info("Bad message received from peer ${peerId}: ${e.message}")
+        } catch (e: BadDataException) {
+            logger.error("Error when receiving message from peer $peerId", e)
         }
     }
 }

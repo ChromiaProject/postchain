@@ -20,10 +20,8 @@ import net.postchain.base.data.BaseBlockWitnessProvider
 import net.postchain.base.data.BaseTransactionFactory
 import net.postchain.base.extension.ConfigurationHashBlockBuilderExtension
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
-import net.postchain.core.BadDataMistake
-import net.postchain.core.BadDataType
+import net.postchain.core.BadConfigurationException
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainContext
 import net.postchain.core.DynamicClassName
@@ -78,6 +76,13 @@ open class BaseBlockchainConfiguration(
     final override val transactionQueueSize: Int
         get() = configData.txQueueSize.toInt()
 
+    private val blockBuildingStrategyConstructor = constructorOf<BlockBuildingStrategy>(
+            configData.blockStrategyName,
+            BaseBlockBuildingStrategyConfigurationData::class.java,
+            BlockQueries::class.java,
+            TransactionQueue::class.java
+    )
+
     private fun resolveNodeID(nodeID: Int, subjectID: ByteArray): Int {
         return if (nodeID == NODE_ID_AUTO) {
             signers.indexOfFirst { it.contentEquals(subjectID) }
@@ -131,7 +136,7 @@ open class BaseBlockchainConfiguration(
         return listOf()
     }
 
-    override fun makeBlockBuilder(ctx: EContext): BlockBuilder {
+    override fun makeBlockBuilder(ctx: EContext, extraExtensions: List<BaseBlockBuilderExtension>): BlockBuilder {
         addChainIDToDependencies(ctx) // We wait until now with this, b/c now we have an EContext
 
         val bb = BaseBlockBuilder(
@@ -145,11 +150,12 @@ open class BaseBlockchainConfiguration(
                 blockSigMaker,
                 blockWitnessProvider,
                 blockchainDependencies,
-                makeDefaultBBExtensions() + makeBBExtensions(),
+                makeDefaultBBExtensions() + makeBBExtensions() + extraExtensions,
                 effectiveBlockchainRID != blockchainRid,
                 blockStrategyConfig.maxBlockSize,
                 blockStrategyConfig.maxBlockTransactions,
-                configData.maxTxExecutionTime
+                configData.maxTxExecutionTime,
+                blockStrategyConfig.maxSpecialEndTransactionSize
         )
 
         return bb
@@ -167,7 +173,7 @@ open class BaseBlockchainConfiguration(
                 // We have to fill up the cache of ChainIDs
                 for (bcInfo in blockchainDependencies) {
                     val depChainId = blockStore.getChainId(ctx, bcInfo.blockchainRid)
-                    bcInfo.chainId = depChainId ?: throw BadDataMistake(BadDataType.BAD_CONFIGURATION,
+                    bcInfo.chainId = depChainId ?: throw BadConfigurationException(
                             "The blockchain configuration claims we depend on: $bcInfo so this BC must exist in DB"
                                     + "(Order is wrong. It must have been configured BEFORE this point in time)")
                 }
@@ -180,23 +186,13 @@ open class BaseBlockchainConfiguration(
                 this, storage, blockStore, chainID, blockchainContext.nodeRID!!)
     }
 
-    override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy {
-        val strategyClassName = configData.blockStrategyName
-        return try {
-            constructorOf<BlockBuildingStrategy>(
-                    strategyClassName,
-                    BaseBlockBuildingStrategyConfigurationData::class.java,
-                    BlockQueries::class.java,
-                    TransactionQueue::class.java
-            ).newInstance(blockStrategyConfig, blockQueries, txQueue)
-        } catch (e: UserMistake) {
-            throw UserMistake("The block building strategy in the configuration is invalid, " +
-                    "Class name given: $strategyClassName.")
-        } catch (e: java.lang.reflect.InvocationTargetException) {
-            throw ProgrammerMistake("The constructor of the block building strategy given was " +
-                    "unable to finish. Class name given: $strategyClassName, Msg: ${e.message}")
-        }
-    }
+    override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy =
+            try {
+                blockBuildingStrategyConstructor.newInstance(blockStrategyConfig, blockQueries, txQueue)
+            } catch (e: java.lang.reflect.InvocationTargetException) {
+                throw ProgrammerMistake("The constructor of the block building strategy given was " +
+                        "unable to finish. Class name given: ${configData.blockStrategyName}, Msg: ${e.message}")
+            }
 
     override fun initializeModules(postchainContext: PostchainContext) {}
 

@@ -1,11 +1,10 @@
 package net.postchain.debug
 
-import com.google.gson.JsonParser
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import net.postchain.api.rest.controller.DisabledDebugInfoQuery
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import assertk.assert
+import org.junit.jupiter.api.Assertions.assertEquals
+import assertk.assertThat
 
 
 class DefaultDebugInfoQueryTest {
@@ -16,11 +15,11 @@ class DefaultDebugInfoQueryTest {
 
         // Actions
         val json = sut.queryDebugInfo(null)
-        val actual = JsonParser.parseString(json).asJsonObject
+        val actual = json.asJsonObject
 
         // Asserts
         assertEquals(1, actual.size())
-        assert(actual.has("blockchain"))
+        assertThat(actual.has("blockchain"))
     }
 
     @Test
@@ -33,7 +32,7 @@ class DefaultDebugInfoQueryTest {
 
         // Actions
         val json = sut.queryDebugInfo(null)
-        val actual = JsonParser.parseString(json).asJsonObject
+        val actual = json.asJsonObject
 
         // Asserts
         assertEquals(3, actual.size())
@@ -50,11 +49,11 @@ class DefaultDebugInfoQueryTest {
 
         // Actions
         val json = sut.queryDebugInfo("subquery")
-        val actual = JsonParser.parseString(json).asJsonObject
+        val actual = json.asJsonObject
 
         // Asserts
         assertEquals(1, actual.size())
-        assert(actual.has("Error"))
+        assertThat(actual.has("Error"))
     }
 
     @Test
@@ -63,11 +62,11 @@ class DefaultDebugInfoQueryTest {
 
         // Actions
         val json = sut.queryDebugInfo(null)
-        val actual = JsonParser.parseString(json).asJsonObject
+        val actual = json.asJsonObject
 
         // Asserts
         assertEquals(1, actual.size())
-        assert(actual.has("error"))
+        assertThat(actual.has("error"))
     }
 
 }

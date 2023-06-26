@@ -1,6 +1,6 @@
 package net.postchain.debug
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import org.junit.jupiter.api.Test
 
@@ -9,8 +9,8 @@ class DiagnosticDataTest {
     fun diagnosticDataCanBeUpdated() {
         val map = mutableMapOf<DiagnosticProperty, DiagnosticValue>()
         val data = DiagnosticData(map)
-        assert(data.value).isEqualTo(mapOf<DiagnosticProperty, DiagnosticValue>())
+        assertThat(data.value).isEqualTo(mapOf<DiagnosticProperty, DiagnosticValue>())
         map[DiagnosticProperty.VERSION] = EagerDiagnosticValue("1")
-        assert(data.value).isEqualTo(mapOf("version" to "1"))
+        assertThat(data.value).isEqualTo(mapOf("version" to "1"))
     }
 }

@@ -21,7 +21,7 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import java.sql.Connection
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class BaseBlockBuilderValidationTest {
     // Mocks
@@ -56,7 +56,8 @@ class BaseBlockBuilderValidationTest {
             subjects, sigMaker, validator, listOf(), listOf(), false,
             maxBlockSize = 26 * 1024 * 1024,
             maxBlockTransactions = 100,
-            maxTxExecutionTime = 0)
+            maxTxExecutionTime = 0,
+            maxSpecialEndTransactionSize = 1024)
 
     @Test
     fun validateBlockHeader_valid() {

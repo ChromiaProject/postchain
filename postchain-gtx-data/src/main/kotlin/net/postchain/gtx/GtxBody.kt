@@ -29,8 +29,9 @@ class GtxBody(
 
     // Extended OpData
     fun getExtOpData(): Array<ExtOpData> {
-        return operations.mapIndexed { idx, op ->
-            ExtOpData.build(op, idx, this)
+        val allOpData = operations.map { it.asOpData() }.toTypedArray()
+        return allOpData.mapIndexed { index, op ->
+            ExtOpData.build(op, index, this, allOpData)
         }.toTypedArray()
     }
 

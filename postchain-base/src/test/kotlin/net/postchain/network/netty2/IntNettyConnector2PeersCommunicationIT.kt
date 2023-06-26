@@ -2,7 +2,7 @@
 
 package net.postchain.network.netty2
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isIn
 import assertk.isContentEqualTo
 import net.postchain.base.PeerInfo
@@ -64,10 +64,10 @@ class IntNettyConnector2PeersCommunicationIT {
         await().atMost(FIVE_SECONDS)
                 .untilAsserted {
                     verify(context1.events).onNodeConnected(connection1.capture())
-                    assert(connection1.firstValue.descriptor().nodeId.data).isContentEqualTo(peerInfo2.pubKey)
+                    assertThat(connection1.firstValue.descriptor().nodeId.data).isContentEqualTo(peerInfo2.pubKey)
 
                     verify(context2.events).onNodeConnected(connection2.capture())
-                    assert(connection2.firstValue.descriptor().nodeId.data).isContentEqualTo(peerInfo1.pubKey)
+                    assertThat(connection2.firstValue.descriptor().nodeId.data).isContentEqualTo(peerInfo1.pubKey)
                 }
 
         // Sending packets
@@ -93,16 +93,16 @@ class IntNettyConnector2PeersCommunicationIT {
                     val actualPackets1 = argumentCaptor<ByteArray>()
                     val expected1 = packets2.map(ByteArray::wrap).toTypedArray()
                     verify(context1.packets, times(2)).handle(actualPackets1.capture(), any())
-                    assert(actualPackets1.firstValue.wrap()).isIn(*expected1)
-                    assert(actualPackets1.secondValue.wrap()).isIn(*expected1)
+                    assertThat(actualPackets1.firstValue.wrap()).isIn(*expected1)
+                    assertThat(actualPackets1.secondValue.wrap()).isIn(*expected1)
 
                     // Peer2
                     val actualPackets2 = argumentCaptor<ByteArray>()
                     val expected2 = packets1.map(ByteArray::wrap).toTypedArray()
                     verify(context2.packets, times(3)).handle(actualPackets2.capture(), any())
-                    assert(actualPackets2.firstValue.wrap()).isIn(*expected2)
-                    assert(actualPackets2.secondValue.wrap()).isIn(*expected2)
-                    assert(actualPackets2.thirdValue.wrap()).isIn(*expected2)
+                    assertThat(actualPackets2.firstValue.wrap()).isIn(*expected2)
+                    assertThat(actualPackets2.secondValue.wrap()).isIn(*expected2)
+                    assertThat(actualPackets2.thirdValue.wrap()).isIn(*expected2)
                 }
     }
 }

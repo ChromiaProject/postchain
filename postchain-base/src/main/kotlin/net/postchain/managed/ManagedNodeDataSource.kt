@@ -4,16 +4,15 @@ package net.postchain.managed
 
 import net.postchain.common.BlockchainRid
 import net.postchain.config.node.PeerInfoDataSource
+import net.postchain.core.BlockchainState
 import net.postchain.managed.query.QueryRunner
 
 interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
 
     val nmApiVersion: Int
 
-    fun getPeerListVersion(): Long
     fun computeBlockchainList(): List<ByteArray>
     fun computeBlockchainInfoList(): List<BlockchainInfo>
-    fun getLastBuiltHeight(blockchainRidRaw: ByteArray): Long
     fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray?
 
     /**
@@ -23,4 +22,8 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
     fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long?
 
     fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): List<PendingBlockchainConfiguration>
+
+    fun getFaultyBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): ByteArray?
+
+    fun getBlockchainState(blockchainRid: BlockchainRid): BlockchainState
 }

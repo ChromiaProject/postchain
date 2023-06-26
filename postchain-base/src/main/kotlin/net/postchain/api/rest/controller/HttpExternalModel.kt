@@ -1,12 +1,18 @@
 package net.postchain.api.rest.controller
 
-import kong.unirest.Unirest
-import kong.unirest.UnirestException
 import mu.KLogging
-import spark.Request
-import spark.Response
+import org.apache.hc.client5.http.config.RequestConfig
+import org.apache.hc.client5.http.cookie.StandardCookieSpec
+import org.apache.hc.client5.http.impl.classic.HttpClients
+import org.apache.hc.core5.util.Timeout
+import org.http4k.client.ApacheClient
+import org.http4k.core.HttpHandler
+import org.http4k.core.Request
+import org.http4k.core.Response
+import org.http4k.core.Uri
 
 data class HttpExternalModel(
+        val basePath: String,
         override val path: String,
         override val chainIID: Long
 ) : ExternalModel {
@@ -15,36 +21,17 @@ data class HttpExternalModel(
 
     override var live = true
 
+    val client: HttpHandler = ApacheClient(HttpClients.custom()
+            .setDefaultRequestConfig(RequestConfig.custom()
+                    .setRedirectsEnabled(false)
+                    .setCookieSpec(StandardCookieSpec.IGNORE)
+                    .setConnectionRequestTimeout(Timeout.ofSeconds(60))
+                    .setResponseTimeout(Timeout.ofSeconds(60))
+                    .build()).build())
 
-    override fun get(request: Request, response: Response): Any {
-        return try {
-            val url = path + request.uri() + (request.queryString()?.let { "?$it" } ?: "")
-            logger.trace { "Redirecting get request to $url" }
-            val externalResponse = Unirest.get(url)
-                    .header("Accept", request.headers("Accept"))
-                    .asBytes()
-            response.status(externalResponse.status)
-            response.type(externalResponse.headers.get("Content-Type").firstOrNull())
-            externalResponse.body
-        } catch (e: UnirestException) {
-            throw UnavailableException(e.message!!)
-        }
-    }
-
-    override fun post(request: Request, response: Response): Any {
-        return try {
-            val url = path + request.uri()
-            logger.trace { "Redirecting post request to $url" }
-            val externalResponse = Unirest.post(url)
-                    .header("Accept", request.headers("Accept"))
-                    .header("Content-Type", request.headers("Content-Type"))
-                    .body(request.bodyAsBytes())
-                    .asBytes()
-            response.status(externalResponse.status)
-            response.type(externalResponse.headers.get("Content-Type").firstOrNull())
-            externalResponse.body
-        } catch (e: UnirestException) {
-            throw UnavailableException(e.message!!)
-        }
+    override fun invoke(request: Request): Response {
+        val targetUri = Uri.of(path + request.uri.toString().substring(basePath.length))
+        logger.trace { "Redirecting ${request.method} request to $targetUri" }
+        return client(request.uri(targetUri))
     }
 }

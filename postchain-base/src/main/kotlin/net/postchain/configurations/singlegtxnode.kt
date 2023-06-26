@@ -2,6 +2,7 @@
 
 package net.postchain.configurations
 
+import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
@@ -18,10 +19,13 @@ import org.apache.commons.dbutils.handlers.ScalarHandler
 
 // TODO: [POS-128]: Refactor this
 
+const val GTX_TEST_OP_NAME = "gtx_test"
+const val GTX_TEST_QUERY_NAME = "gtx_test_get_value"
+
 private val r = QueryRunner()
 private val nullableStringReader = ScalarHandler<String?>()
 
-private fun table_gtx_test_value(ctx: EContext): String {
+internal fun table_gtx_test_value(ctx: EContext): String {
     val db = DatabaseAccess.of(ctx)
     return db.tableName(ctx, "gtx_test_value")
 }
@@ -36,10 +40,10 @@ class GTXTestOp(@Suppress("UNUSED_PARAMETER") u: Unit, opdata: ExtOpData) : GTXO
     /**
      * The only way for the [GTXTestOp] to be considered correct is if first argument is "1" and the second is a string.
      */
-    override fun isCorrect(): Boolean {
-        if (data.args.size != 2) return false
+    override fun checkCorrectness() {
+        if (data.args.size != 2) throw UserMistake("expected 2 arguments")
         data.args[1].asString()
-        return data.args[0].asInteger() == 1L
+        if (data.args[0].asInteger() != 1L) throw UserMistake("expected first argument to be integer 1")
     }
 
     override fun apply(ctx: TxEContext): Boolean {
@@ -63,8 +67,8 @@ class GTXTestOp(@Suppress("UNUSED_PARAMETER") u: Unit, opdata: ExtOpData) : GTXO
  * A simple module that has its own table where it can store and read things. Useful for testing all the way down to DB.
  */
 class GTXTestModule : SimpleGTXModule<Unit>(Unit,
-        mapOf("gtx_test" to ::GTXTestOp),
-        mapOf("gtx_test_get_value" to { _, ctxt, args ->
+        mapOf(GTX_TEST_OP_NAME to ::GTXTestOp),
+        mapOf(GTX_TEST_QUERY_NAME to { _, ctxt, args ->
             val txRID = (args as GtvDictionary).get("txRID")
                     ?: throw UserMistake("No txRID property supplied")
 
@@ -80,9 +84,12 @@ class GTXTestModule : SimpleGTXModule<Unit>(Unit,
                 gtv(value)
         })
 ) {
+    companion object : KLogging()
+
     override fun initializeDB(ctx: EContext) {
         val moduleName = this::class.qualifiedName!!
         val version = GTXSchemaManager.getModuleVersion(ctx, moduleName)
+        logger.info("initializeDB version = $version")
         if (version == null) {
             val sql = "CREATE TABLE ${table_gtx_test_value(ctx)}(tx_iid BIGINT PRIMARY KEY, value TEXT NOT NULL)"
             r.update(ctx.conn, sql)

@@ -7,6 +7,4 @@ data class SubChainConfig(
         val chainId: Long,
         val blockchainRid: BlockchainRid,
         val messageHandler: MsMessageHandler
-) {
-     fun log() =  "chainId: $chainId, blockchainRid: ${blockchainRid.toShortHex()}"
-}
+)

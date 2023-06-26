@@ -1,6 +1,6 @@
 package net.postchain.base.data
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.base.*
 import net.postchain.common.BlockchainRid
@@ -37,7 +37,7 @@ class BaseBlockHeaderValidatorTest {
 
         val valid = GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(header, myBlockData, ::expectedMerkleHash, ::getBlockRid, myTimestamp - 1, 0,
             mapOf("eif" to GtvString("this is root hash of eif event and state tree")))
-        assert(valid.result).isEqualTo(ValidationResult.Result.OK)
+        assertThat(valid.result).isEqualTo(ValidationResult.Result.OK)
     }
 
     private fun expectedMerkleHash(): ByteArray {

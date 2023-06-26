@@ -2,28 +2,33 @@ package net.postchain.containers.bpm
 
 import mu.KLogging
 import net.postchain.containers.bpm.docker.DockerTools
+import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.bpm.rpc.SubnodeAdminClient
+import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.crypto.PrivKey
-import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.managed.DirectoryDataSource
+import java.util.concurrent.atomic.AtomicBoolean
 
 class DefaultPostchainContainer(
+        val containerNodeConfig: ContainerNodeConfig,
         val dataSource: DirectoryDataSource,
         override val containerName: ContainerName,
         override var containerPortMapping: MutableMap<Int, Int>,
         override var state: ContainerState,
         private val subnodeAdminClient: SubnodeAdminClient,
-        private val nodeDiagnosticContext: NodeDiagnosticContext,
         override var containerId: String? = null,
 ) : PostchainContainer {
 
     companion object : KLogging()
 
     private val processes = mutableMapOf<Long, ContainerBlockchainProcess>()
+    private var initialized = false
 
     // NB: Resources are per directoryContainerName, not nodeContainerName
     @Volatile
     override var resourceLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
+
+    override val readOnly = AtomicBoolean(false)
 
     override fun shortContainerId(): String? {
         return DockerTools.shortContainerId(containerId)
@@ -34,6 +39,9 @@ class DefaultPostchainContainer(
     }
 
     override fun getAllChains(): Set<Long> = processes.keys
+
+    override fun getAllProcesses(): Map<Long, ContainerBlockchainProcess> = processes
+
     override fun getStoppedChains(): Set<Long> {
         return processes.keys
                 .filter { !subnodeAdminClient.isBlockchainRunning(it) }
@@ -41,32 +49,10 @@ class DefaultPostchainContainer(
     }
 
     override fun startProcess(process: ContainerBlockchainProcess): Boolean {
-        val config0 = dataSource.getConfiguration(process.blockchainRid.data, 0L)
-        val peerInfos = dataSource.getPeerInfos()
-        return if (config0 != null) {
-            peerInfos.forEach { subnodeAdminClient.addPeerInfo(it) }
-            val height = dataSource.getLastBuiltHeight(process.blockchainRid.data)
-            logger.info { "Chain ${process.chainId} last built height: $height" }
-            if (height != -1L) {
-                val currentHeight = height + 1
-                val currentConfig = dataSource.getConfiguration(process.blockchainRid.data, currentHeight)
-                if (currentConfig != null) {
-                    logger.info { "Chain ${process.chainId} config at height $currentHeight will be added to subnode" }
-                    subnodeAdminClient.addConfiguration(process.chainId, currentHeight, true, currentConfig)
-                } else {
-                    logger.info { "There is no a config at height $currentHeight for chain ${process.chainId}" }
-                }
-            }
-            subnodeAdminClient.startBlockchain(process.chainId, process.blockchainRid, config0).also {
-                if (it) processes[process.chainId] = process
-            }
-        } else {
-            val errorQueue = nodeDiagnosticContext.blockchainErrorQueue(process.blockchainRid)
-            val msg = "Can't start process: config at height 0 is absent"
-            errorQueue.add(msg)
-            logger.error { msg }
-            false
+        subnodeAdminClient.startBlockchain(process.chainId, process.blockchainRid).also {
+            if (it) processes[process.chainId] = process
         }
+        return true
     }
 
     override fun removeProcess(chainId: Long): ContainerBlockchainProcess? = processes.remove(chainId)
@@ -93,6 +79,7 @@ class DefaultPostchainContainer(
     override fun reset() {
         subnodeAdminClient.disconnect()
         state = ContainerState.STARTING
+        initialized = false
     }
 
     override fun stop() {
@@ -104,7 +91,11 @@ class DefaultPostchainContainer(
 
     override fun isSubnodeHealthy() = subnodeAdminClient.isSubnodeHealthy()
 
-    override fun initializePostchainNode(privKey: PrivKey): Boolean = subnodeAdminClient.initializePostchainNode(privKey)
+    override fun initializePostchainNode(privKey: PrivKey): Boolean = if (!initialized) {
+        val success = subnodeAdminClient.initializePostchainNode(privKey)
+        if (success) initialized = true
+        success
+    } else true
 
     override fun updateResourceLimits(): Boolean {
         val oldResourceLimits = resourceLimits
@@ -115,5 +106,19 @@ class DefaultPostchainContainer(
         } else {
             false
         }
+    }
+
+    override fun checkResourceLimits(fileSystem: FileSystem): Boolean {
+        val readOnlyBeforeCheck = readOnly.get()
+        fileSystem.getCurrentLimitsInfo(containerName, resourceLimits)?.let {
+            readOnly.set(it.spaceUsedMB + containerNodeConfig.minSpaceQuotaBufferMB >= it.spaceHardLimitMB)
+            if (readOnlyBeforeCheck != readOnly.get()) {
+                if (readOnly.get())
+                    logger.warn("Space used is too close to hard limit. Switching to read only mode. (used space: ${it.spaceUsedMB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceUsedMB}MB)")
+                else
+                    logger.info("Space used is no longer too close to hard limit. (used space: ${it.spaceUsedMB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceUsedMB}MB)")
+            }
+        }
+        return readOnlyBeforeCheck == readOnly.get()
     }
 }

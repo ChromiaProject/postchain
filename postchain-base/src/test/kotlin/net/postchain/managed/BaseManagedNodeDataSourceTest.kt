@@ -1,11 +1,14 @@
 package net.postchain.managed
 
+import assertk.assertThat
+import assertk.isContentEqualTo
 import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
+import net.postchain.core.BlockchainState
 import net.postchain.core.NodeRid
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -26,8 +29,7 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.spy
 import java.time.Instant
-import kotlin.test.assertContentEquals
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class BaseManagedNodeDataSourceTest {
 
@@ -38,7 +40,7 @@ class BaseManagedNodeDataSourceTest {
             on { query(eq("nm_get_peer_infos"), any()) } doReturn gtvResult
         }
         val sut = BaseManagedNodeDataSource(queryRunner, mock())
-        assertContentEquals(expected, sut.getPeerInfos())
+        assertThat(sut.getPeerInfos()).isContentEqualTo(expected)
     }
 
     @ParameterizedTest
@@ -124,6 +126,21 @@ class BaseManagedNodeDataSourceTest {
         assertEquals(expected, sut.getPendingBlockchainConfiguration(ZERO_RID, 0L))
     }
 
+    @ParameterizedTest
+    @MethodSource("getBlockchainStateTestData")
+    fun testGetBlockchainState(gtvResult: Gtv, expected: BlockchainState) {
+        val appConfig: AppConfig = mock {
+            on { pubKeyByteArray } doReturn byteArrayOf(0)
+            on { cryptoSystem } doReturn Secp256K1CryptoSystem()
+        }
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(6)
+            on { query(eq("nm_get_blockchain_state"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
+        assertEquals(expected, sut.getBlockchainState(ZERO_RID))
+    }
+
     companion object {
 
         private val hashCalculator: GtvMerkleHashCalculator = GtvMerkleHashCalculator(Secp256K1CryptoSystem())
@@ -154,8 +171,8 @@ class BaseManagedNodeDataSourceTest {
                     gtv(mapOf("rid" to gtv(brid1), "system" to gtv(false)))
             ))
             val nonTrivialExpected = listOf(
-                    BlockchainInfo(brid0, true),
-                    BlockchainInfo(brid1, false)
+                    BlockchainInfo(brid0, true, BlockchainState.RUNNING),
+                    BlockchainInfo(brid1, false, BlockchainState.RUNNING)
             )
 
             return listOf(
@@ -188,8 +205,8 @@ class BaseManagedNodeDataSourceTest {
                     emptyMap<BlockchainRid, Long>()
             )
 
-            val bc1Info = BlockchainInfo(ZERO_RID, true)
-            val bc2Info = BlockchainInfo(BlockchainRid.buildRepeat(1), false)
+            val bc1Info = BlockchainInfo(ZERO_RID, true, BlockchainState.RUNNING)
+            val bc2Info = BlockchainInfo(BlockchainRid.buildRepeat(1), false, BlockchainState.RUNNING)
             val goodParamSet = arrayOf(
                     listOf(bc1Info, bc2Info),
                     GtvArray(arrayOf(gtv(123), gtv(456))),
@@ -276,6 +293,14 @@ class BaseManagedNodeDataSourceTest {
             return listOf(
                     arrayOf(gtv(listOf()), listOf<PendingBlockchainConfiguration>()),
                     arrayOf(gtv(listOf(gtvResult0)), listOf(expected0))
+            )
+        }
+
+        @JvmStatic
+        fun getBlockchainStateTestData(): List<Array<Any?>> {
+            return listOf(
+                    arrayOf(gtv("RUNNING"), BlockchainState.RUNNING),
+                    arrayOf(gtv("PAUSED"), BlockchainState.PAUSED)
             )
         }
     }

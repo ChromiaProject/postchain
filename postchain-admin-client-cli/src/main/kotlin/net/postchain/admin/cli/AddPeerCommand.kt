@@ -10,7 +10,7 @@ import net.postchain.admin.cli.util.blockingPeerServiceChannelOption
 import net.postchain.admin.cli.util.pubkeyOption
 import net.postchain.server.grpc.AddPeerRequest
 
-class AddPeerCommand : CliktCommand(help = "Add peer information to database") {
+class AddPeerCommand : CliktCommand(name = "add", help = "Add peer information to database") {
 
     private val channel by blockingPeerServiceChannelOption()
 

@@ -11,6 +11,7 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.IntegrationTestSetup
+import net.postchain.devtools.testinfra.BaseTestInfrastructureFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GtxBuilder
@@ -57,7 +58,7 @@ class GTXIntegrationTest : IntegrationTestSetup() {
 
     @Test
     fun testBuildBlock() {
-        configOverrides.setProperty("infrastructure", "base/test")
+        configOverrides.setProperty("infrastructure", BaseTestInfrastructureFactory::class.qualifiedName)
         val nodes = createNodes(1, "/net/postchain/devtools/gtx_it/blockchain_config.xml")
         val node = nodes[0]
         val bcRid = systemSetup.blockchainMap[1]!!.rid // Just assume we have chain 1
@@ -79,7 +80,7 @@ class GTXIntegrationTest : IntegrationTestSetup() {
         fun makeSureBlockIsBuiltCorrectly() {
             currentBlockHeight += 1
             buildBlockAndCommit(node.getBlockchainInstance().blockchainEngine)
-            assertEquals(currentBlockHeight, getBestHeight(node))
+            assertEquals(currentBlockHeight, getLastHeight(node))
             val ridsAtHeight = getTxRidsAtHeight(node, currentBlockHeight)
             for (vtx in validTxs) {
                 val vtxRID = vtx.getRID()

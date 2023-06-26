@@ -1,15 +1,17 @@
 package net.postchain.server.grpc
 
+import com.google.protobuf.ByteString
 import io.grpc.Status
 import io.grpc.stub.StreamObserver
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
-import net.postchain.core.BadDataMistake
+import net.postchain.core.BadDataException
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.server.service.PostchainService
+import java.nio.file.Path
 
 class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         PostchainServiceGrpc.PostchainServiceImplBase() {
@@ -79,9 +81,30 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
             responseObserver.onError(
                     Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
             )
-        } catch (e: BadDataMistake) {
+        } catch (e: BadDataException) {
             responseObserver.onError(
                     Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+            )
+        }
+    }
+
+    override fun listConfigurations(
+            request: ListConfigurationsRequest,
+            responseObserver: StreamObserver<ListConfigurationsReply>
+    ) {
+        if (postchainService.findBlockchain(request.chainId).first != null) {
+            responseObserver.onNext(
+                    ListConfigurationsReply.newBuilder().run {
+                        addAllHeight(postchainService.listConfigurations(request.chainId))
+                        build()
+                    }
+            )
+            responseObserver.onCompleted()
+        } else {
+            responseObserver.onError(
+                    Status.NOT_FOUND
+                            .withDescription("Blockchain not found: ${request.chainId}")
+                            .asRuntimeException()
             )
         }
     }
@@ -178,5 +201,73 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
                 RemoveBlockchainReplicaReply.newBuilder().setMessage(message).build()
         )
         responseObserver.onCompleted()
+    }
+
+    override fun exportBlockchain(request: ExportBlockchainRequest, responseObserver: StreamObserver<ExportBlockchainReply>) {
+        try {
+            val exportResult = postchainService.exportBlockchain(
+                    request.chainId,
+                    Path.of(request.configurationsFile),
+                    if (request.blocksFile.isNullOrBlank()) null else Path.of(request.blocksFile),
+                    request.overwrite,
+                    request.fromHeight,
+                    request.upToHeight,
+            )
+            responseObserver.onNext(ExportBlockchainReply.newBuilder()
+                    .setFromHeight(exportResult.fromHeight)
+                    .setUpHeight(exportResult.toHeight)
+                    .setNumBlocks(exportResult.numBlocks)
+                    .build())
+            responseObserver.onCompleted()
+        } catch (e: UserMistake) {
+            responseObserver.onError(
+                    Status.INTERNAL.withDescription(e.message).asRuntimeException()
+            )
+        }
+    }
+
+    override fun importBlockchain(request: ImportBlockchainRequest, responseObserver: StreamObserver<ImportBlockchainReply>) {
+        try {
+            val importResult = postchainService.importBlockchain(
+                    request.chainId,
+                    Path.of(request.configurationsFile),
+                    Path.of(request.blocksFile),
+                    request.incremental
+            )
+            responseObserver.onNext(ImportBlockchainReply.newBuilder()
+                    .setFromHeight(importResult.fromHeight)
+                    .setToHeight(importResult.toHeight)
+                    .setNumBlocks(importResult.numBlocks)
+                    .setBlockchainRid(ByteString.copyFrom(importResult.blockchainRid.data))
+                    .build())
+            responseObserver.onCompleted()
+        } catch (e: UserMistake) {
+            responseObserver.onError(
+                    Status.INTERNAL.withDescription(e.message).asRuntimeException()
+            )
+        }
+    }
+
+    override fun removeBlockchain(request: RemoveBlockchainRequest, responseObserver: StreamObserver<RemoveBlockchainReply>) {
+        try {
+            postchainService.removeBlockchain(request.chainId)
+            responseObserver.onNext(RemoveBlockchainReply.newBuilder()
+                    .setMessage("Blockchain has been removed")
+                    .build()
+            )
+            responseObserver.onCompleted()
+        } catch (e: NotFound) {
+            responseObserver.onError(
+                    Status.NOT_FOUND.withDescription(e.message).asRuntimeException()
+            )
+        } catch (e: UserMistake) {
+            responseObserver.onError(
+                    Status.FAILED_PRECONDITION.withDescription(e.message).asRuntimeException()
+            )
+        } catch (e: Exception) {
+            responseObserver.onError(
+                    Status.INTERNAL.withDescription(e.message).asRuntimeException()
+            )
+        }
     }
 }

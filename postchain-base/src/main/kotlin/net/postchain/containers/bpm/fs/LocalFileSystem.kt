@@ -30,6 +30,7 @@ class LocalFileSystem(private val containerConfig: ContainerNodeConfig) : FileSy
     }
 
     override fun applyLimits(containerName: ContainerName, resourceLimits: ContainerResourceLimits) {}
+    override fun getCurrentLimitsInfo(containerName: ContainerName, resourceLimits: ContainerResourceLimits): ResourceLimitsInfo? = null
 
     override fun rootOf(containerName: ContainerName): Path =
             Paths.get(containerConfig.masterMountDir, containerName.name)

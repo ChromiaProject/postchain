@@ -69,4 +69,40 @@ class Ext4FileSystem(private val containerConfig: ContainerNodeConfig) : FileSys
             }
         }
     }
+
+    override fun getCurrentLimitsInfo(containerName: ContainerName, resourceLimits: ContainerResourceLimits): ResourceLimitsInfo? {
+        val projectName = containerName.containerIID.toString()
+        if (resourceLimits.hasStorage()) {
+            /*
+            repquota command will return something like this:
+                Project,SpaceStatus,FileStatus,SpaceUsed,SpaceSoftLimit,SpaceHardLimit,SpaceGrace,FileUsed,FileSoftLimit,FileHardLimit,FileGrace
+                #0,ok,ok,1M,0M,0M,,1k,0k,0k,
+                #1,ok,ok,51M,0M,16384M,,2k,0k,0k,
+             */
+            runCommandWithOutput(arrayOf(
+                    "repquota",
+                    "-P",
+                    "--human-readable=m,k",
+                    "-O", "csv",
+                    containerConfig.masterMountDir)).let {
+                if (it.exitValue != 0) {
+                    logger.warn("Unable to get quota report for project ${containerName.containerIID}: ${it.output}")
+                } else {
+                    logger.debug("Result from quota report for project ${containerName.containerIID}: ${it.output}")
+                    for (line in it.output) {
+                        if (line.startsWith("#")) {
+                            val columns = line.split(",")
+                            val project = columns[0].removePrefix("#")
+                            if (projectName == project) {
+                                val spaceUsed = columns[3].removeSuffix("M").toLong()
+                                val spaceHardLimit = columns[5].removeSuffix("M").toLong()
+                                return ResourceLimitsInfo(spaceUsed, spaceHardLimit)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null
+    }
 }

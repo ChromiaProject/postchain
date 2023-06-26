@@ -2,6 +2,7 @@
 
 package net.postchain.config.app
 
+import net.postchain.base.PeerInfo
 import net.postchain.common.config.Config
 import net.postchain.common.config.getEnvOrBooleanProperty
 import net.postchain.common.config.getEnvOrIntProperty
@@ -19,6 +20,9 @@ import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
 import java.io.File
+import kotlin.time.Duration
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 /**
  * Wrapper to the generic [Configuration]
@@ -29,6 +33,7 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     companion object {
 
         const val DEFAULT_PORT: Int = 9870
+        const val DEFAULT_APPLIED_CONFIG_SEND_INTERVAL_MS: Long = 1_000
 
         @Deprecated(message = "Use fromPropertiesFile(File, Boolean) instead",
                 replaceWith = ReplaceWith("fromPropertiesFile(File(configFile), debug))", imports = arrayOf("java.io.File")))
@@ -65,10 +70,10 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     val exitOnFatalError: Boolean = getEnvOrBoolean("POSTCHAIN_EXIT_ON_FATAL_ERROR", "exit-on-fatal-error", false)
 
     /**
-     * Configuration provider
+     * Configuration provider. Can only be used with manual mode
      */
     val nodeConfigProvider: String
-        // properties | manual | managed
+        // properties | manual
         get() = config.getEnvOrStringProperty("POSTCHAIN_NODE_CONFIG_PROVIDER", "configuration.provider.node", "properties")
 
     /**
@@ -92,6 +97,21 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     val databaseReadConcurrency: Int
         get() = config.getEnvOrIntProperty("POSTCHAIN_DB_READ_CONCURRENCY", "database.readConcurrency", 10)
 
+    val databaseBlockBuilderWriteConcurrency: Int
+        get() = config.getEnvOrIntProperty("POSTCHAIN_DB_BLOCK_BUILDER_WRITE_CONCURRENCY", "database.blockBuilderWriteConcurrency", 8)
+
+    val databaseSharedWriteConcurrency: Int
+        get() = config.getEnvOrIntProperty("POSTCHAIN_DB_SHARED_WRITE_CONCURRENCY", "database.sharedWriteConcurrency", 2)
+
+    val databaseBlockBuilderMaxWaitWrite: Duration
+        get() = config.getEnvOrLongProperty("POSTCHAIN_DB_BLOCK_BUILDER_MAX_WAIT_WRITE", "database.blockBuilderMaxWaitWrite", 100).toDuration(DurationUnit.MILLISECONDS)
+
+    val databaseSharedMaxWaitWrite: Duration
+        get() = config.getEnvOrLongProperty("POSTCHAIN_DB_SHARED_MAX_WAIT_WRITE", "database.sharedMaxWaitWrite", 10_000).toDuration(DurationUnit.MILLISECONDS)
+
+    val databaseSuppressCollationCheck: Boolean
+        get() = config.getEnvOrBooleanProperty("POSTCHAIN_DB_SUPPRESS_COLLATION_CHECK", "database.suppressCollationCheck", false)
+
     val infrastructure: String
         // "base/ebft" is the default
         get() = config.getEnvOrStringProperty("POSTCHAIN_INFRASTRUCTURE", "infrastructure", Infrastructure.Ebft.get())
@@ -99,6 +119,9 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     val cryptoSystemClass: String = config.getEnvOrStringProperty("POSTCHAIN_CRYPTO_SYSTEM", "cryptosystem", Secp256K1CryptoSystem::class.qualifiedName!!)
 
     val cryptoSystem: CryptoSystem = newInstanceOf(cryptoSystemClass)
+
+    val readOnly: Boolean
+        get() = config.getEnvOrBooleanProperty("POSTCHAIN_READ_ONLY", "readOnly", false)
 
     /**
      * Pub/Priv keys
@@ -117,6 +140,22 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
 
     val port: Int
         get() = config.getEnvOrIntProperty("POSTCHAIN_PORT", "messaging.port", DEFAULT_PORT)
+
+    val genesisPeer: PeerInfo?
+        get() {
+            val genesisPubkey = getEnvOrString("POSTCHAIN_GENESIS_PUBKEY", "genesis.pubkey") ?: return null
+            require(hasEnvOrKey("POSTCHAIN_GENESIS_HOST", "genesis.host")) { "Node configuration must contain genesis.host if genesis.pubkey is supplied" }
+            require(hasEnvOrKey("POSTCHAIN_GENESIS_PORT", "genesis.port")) { "Node configuration must contain genesis.port if genesis.pubkey if supplied" }
+
+            val genesisHost = getEnvOrString("POSTCHAIN_GENESIS_HOST", "genesis.host")!!
+            val genesisPort = getEnvOrInt("POSTCHAIN_GENESIS_PORT", "genesis.port", 0)
+            return PeerInfo(genesisHost, genesisPort, genesisPubkey.hexStringToByteArray())
+        }
+
+    // PCU feature toggle
+    fun isPcuEnabled(): Boolean = getEnvOrBoolean("POSTCHAIN_PCU", "pcu", true)
+
+    fun appliedConfigSendInterval(): Long = getEnvOrLong("POSTCHAIN_CONFIG_SEND_INTERVAL_MS", "applied-config-send-interval-ms", DEFAULT_APPLIED_CONFIG_SEND_INTERVAL_MS)
 
     /**
      * Wrappers for [Configuration] getters and other functionalities

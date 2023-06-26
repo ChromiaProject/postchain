@@ -8,7 +8,6 @@ import net.postchain.ebft.EbftPacketDecoder
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoder
 import net.postchain.ebft.EbftPacketEncoderFactory
-import org.mockito.kotlin.mock
 import java.io.Closeable
 
 class EbftIntegrationTestContext(
@@ -29,8 +28,8 @@ class EbftIntegrationTestContext(
             chainId,
             blockchainRid,
             EbftPacketEncoder(config, blockchainRid),
-            EbftPacketDecoder(config),
-            mock())
+            EbftPacketDecoder(config)
+    )
 
     fun shutdown() {
         communicationManager.shutdown()

@@ -6,7 +6,7 @@
 
     <groupId>net.postchain</groupId>
     <artifactId>postchain</artifactId>
-    <version>3.10.0-SNAPSHOT</version>
+    <version>${revision}</version>
     <modules>
         <module>postchain-common</module>
         <module>postchain-gtv</module>
@@ -14,33 +14,33 @@
         <module>postchain-gtx-data</module>
         <module>postchain-base</module>
         <module>postchain-devtools</module>
-        <module>postchain-client</module>
-        <module>postchain-client-cli</module>
         <module>postchain-cli</module>
         <module>postchain-admin-service</module>
         <module>postchain-admin-client-cli</module>
         <module>postchain-server</module>
+        <module>postchain-server-cli</module>
     </modules>
     <packaging>pom</packaging>
 
     <name>Postchain</name>
     <url>https://docs.chromia.com</url>
     <properties>
+        <revision>dev</revision>
         <doclint>none</doclint>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.build.outputTimestamp>1679474201</project.build.outputTimestamp>
+        <project.build.outputTimestamp>10</project.build.outputTimestamp>
 
         <!-- Kotlin -->
-        <kotlin.compiler.incremental>false</kotlin.compiler.incremental>
-        <kotlin.version>1.8.10</kotlin.version>
-        <kotlin.compiler.jvmTarget>11</kotlin.compiler.jvmTarget>
+        <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
+        <kotlin.version>1.8.21</kotlin.version>
+        <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
 
         <!-- Maven -->
         <maven.source.plugin.version>3.0.1</maven.source.plugin.version>
-        <maven.surefire.plugin.version>2.22.2</maven.surefire.plugin.version>
-        <maven.failsafe.plugin.version>2.22.2</maven.failsafe.plugin.version>
-        <maven.compiler.plugin.version>3.10.1</maven.compiler.plugin.version>
+        <maven.surefire.plugin.version>3.1.2</maven.surefire.plugin.version>
+        <maven.failsafe.plugin.version>3.1.2</maven.failsafe.plugin.version>
+        <maven.compiler.plugin.version>3.11.0</maven.compiler.plugin.version>
         <maven.assembly.plugin.version>3.2.0</maven.assembly.plugin.version>
         <maven.shade.plugin.version>3.1.1</maven.shade.plugin.version>
         <skipSurefireTests>false</skipSurefireTests>
@@ -50,30 +50,31 @@
         <junitparams.version>1.1.1</junitparams.version>
         <mockito-kotlin.version>4.0.0</mockito-kotlin.version>
         <mockito.version>4.9.0</mockito.version>
-        <assertk.version>0.10</assertk.version>
+        <assertk.version>0.26</assertk.version>
         <awaitility.version>3.1.6</awaitility.version>
 
         <!-- Logging -->
         <kotlin-logging.version>2.1.23</kotlin-logging.version>
         <slf4j.version>1.7.36</slf4j.version>
+        <!-- NB! When updating log4j2 version from 2.20.0 check dependency overrides below -->
         <log4j2.version>2.20.0</log4j2.version>
 
         <!-- 3rd party -->
-        <netty.version>4.1.86.Final</netty.version>
+        <netty.version>4.1.94.Final</netty.version>
         <jasn.version>1.11.3</jasn.version>
-        <spark-core.version>2.9.4</spark-core.version>
         <json.version>20170516</json.version>
         <jaxb.version>4.0.1</jaxb.version>
-        <jackson.version>2.14.0</jackson.version>
+        <jackson.version>2.15.0</jackson.version>
         <gson.version>2.10</gson.version>
-        <gitflow.maven.plugin.version>1.19.0</gitflow.maven.plugin.version>
         <commons-dbutils.version>1.7</commons-dbutils.version>
         <commons-dbcp2.version>2.9.0</commons-dbcp2.version>
         <commons-lang3.version>3.12.0</commons-lang3.version>
         <micrometer.version>1.10.1</micrometer.version>
 
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+
+        <gitlab.registry>registry.gitlab.com/chromaway/postchain</gitlab.registry>
     </properties>
 
     <repositories>
@@ -105,8 +106,10 @@
             </dependency>
             <dependency> <!-- used by downstream projects -->
                 <groupId>org.jetbrains.kotlinx</groupId>
-                <artifactId>kotlinx-coroutines-core</artifactId>
+                <artifactId>kotlinx-coroutines-bom</artifactId>
                 <version>1.6.4</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
 
             <!-- Postchain -->
@@ -118,6 +121,11 @@
             <dependency>
                 <groupId>net.postchain</groupId>
                 <artifactId>postchain-gtv</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain-gtv-yaml</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
@@ -142,6 +150,11 @@
             </dependency>
             <dependency>
                 <groupId>net.postchain</groupId>
+                <artifactId>postchain-server-cli</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
                 <artifactId>postchain-admin-service</artifactId>
                 <version>${project.version}</version>
             </dependency>
@@ -155,16 +168,6 @@
                 <artifactId>postchain-devtools</artifactId>
                 <version>${project.version}</version>
             </dependency>
-            <dependency>
-                <groupId>net.postchain</groupId>
-                <artifactId>postchain-client</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>net.postchain</groupId>
-                <artifactId>postchain-client-cli</artifactId>
-                <version>${project.version}</version>
-            </dependency>
 
             <!-- Logging -->
             <dependency>
@@ -174,9 +177,27 @@
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
+            <!-- Override version in log4j2 2.20.0 of spring-test since it contains vulnerability for version 5.3.24 -->
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-test</artifactId>
+                <version>5.3.28</version>
+            </dependency>
+            <!-- Override version in log4j2 2.20.0 of java-allocation-instrumenter since it contains vulnerability for version 3.3.0 -->
+            <dependency>
+                <groupId>com.google.code.java-allocation-instrumenter</groupId>
+                <artifactId>java-allocation-instrumenter</artifactId>
+                <version>3.3.2</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
             <!-- Testing -->
@@ -191,6 +212,14 @@
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
                 <version>4.13.1</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>1.17.3</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
 
             <dependency>
@@ -210,7 +239,7 @@
             </dependency>
             <dependency>
                 <groupId>com.willowtreeapps.assertk</groupId>
-                <artifactId>assertk</artifactId>
+                <artifactId>assertk-jvm</artifactId>
                 <version>${assertk.version}</version>
             </dependency>
             <dependency>
@@ -221,18 +250,10 @@
 
             <dependency>
                 <groupId>org.http4k</groupId>
-                <artifactId>http4k-core</artifactId>
-                <version>4.36.0.0</version> <!-- Cannot upgrade to 4.37 or later since it requires Kotlin 1.8 -->
-            </dependency>
-            <dependency>
-                <groupId>org.http4k</groupId>
-                <artifactId>http4k-client-apache</artifactId>
-                <version>4.36.0.0</version> <!-- Cannot upgrade to 4.37 or later since it requires Kotlin 1.8 -->
-            </dependency>
-            <dependency>
-                <groupId>org.http4k</groupId>
-                <artifactId>http4k-client-apache-async</artifactId>
-                <version>4.36.0.0</version> <!-- Cannot upgrade to 4.37 or later since it requires Kotlin 1.8 -->
+                <artifactId>http4k-bom</artifactId>
+                <version>4.45.0.0</version>
+                <scope>import</scope>
+                <type>pom</type>
             </dependency>
 
             <!-- Json -->
@@ -276,22 +297,11 @@
                 <version>1.12.5</version>
             </dependency>
 
-            <dependency>
-                <groupId>com.konghq</groupId>
-                <artifactId>unirest-java</artifactId>
-                <version>3.13.13</version>
-            </dependency>
-            <dependency> <!-- for rest-assured also -->
-                <groupId>commons-codec</groupId>
-                <artifactId>commons-codec</artifactId>
-                <version>1.13</version>
-            </dependency>
-
             <!-- DockerClient -->
             <dependency>
                 <groupId>org.mandas</groupId>
                 <artifactId>docker-client</artifactId>
-                <version>7.0.1</version>
+                <version>7.0.3</version>
                 <exclusions>
                     <exclusion>
                         <groupId>org.bouncycastle</groupId>
@@ -346,6 +356,12 @@
                 <artifactId>rest-assured</artifactId>
                 <version>5.3.0</version>
             </dependency>
+            <dependency> <!-- for rest-assured -->
+                <groupId>commons-codec</groupId>
+                <artifactId>commons-codec</artifactId>
+                <version>1.13</version>
+            </dependency>
+
             <dependency>
                 <groupId>org.awaitility</groupId>
                 <artifactId>awaitility</artifactId>
@@ -380,7 +396,7 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
-                <version>1.72</version>
+                <version>1.75</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -425,12 +441,6 @@
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
                 <version>2.11.0</version>
-            </dependency>
-
-            <dependency>
-                <groupId>com.sparkjava</groupId>
-                <artifactId>spark-core</artifactId>
-                <version>${spark-core.version}</version>
             </dependency>
 
             <dependency>
@@ -514,14 +524,14 @@
             <dependency>
                 <groupId>io.grpc</groupId>
                 <artifactId>grpc-bom</artifactId>
-                <version>1.51.0</version>
+                <version>1.56.0</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
                 <artifactId>protobuf-java</artifactId>
-                <version>3.21.7</version>
+                <version>3.23.3</version>
             </dependency>
 
             <dependency>
@@ -535,26 +545,18 @@
                 <artifactId>jooq</artifactId>
                 <version>3.10.4</version>
             </dependency>
+
+            <dependency>
+                <groupId>uk.org.webcompere</groupId>
+                <artifactId>system-stubs-jupiter</artifactId>
+                <version>2.0.1</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <build>
-        <sourceDirectory>${project.basedir}/src/main/kotlin</sourceDirectory>
-        <testSourceDirectory>${project.basedir}/src/test/kotlin</testSourceDirectory>
         <pluginManagement>
             <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.2.0</version>
-                    <configuration>
-                        <archive>
-                            <manifest>
-                                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                            </manifest>
-                        </archive>
-                    </configuration>
-                </plugin>
                 <plugin>
                     <groupId>org.jetbrains.kotlin</groupId>
                     <artifactId>kotlin-maven-plugin</artifactId>
@@ -565,20 +567,79 @@
                             <goals>
                                 <goal>compile</goal>
                             </goals>
+                            <configuration>
+                                <sourceDirs>
+                                    <sourceDir>${project.basedir}/src/main/kotlin</sourceDir>
+                                    <sourceDir>${project.basedir}/src/main/java</sourceDir>
+                                </sourceDirs>
+                            </configuration>
                         </execution>
-
                         <execution>
                             <id>test-compile</id>
                             <goals>
                                 <goal>test-compile</goal>
                             </goals>
+                            <configuration>
+                                <sourceDirs>
+                                    <sourceDir>${project.basedir}/src/test/kotlin</sourceDir>
+                                    <sourceDir>${project.basedir}/src/test/java</sourceDir>
+                                </sourceDirs>
+                            </configuration>
                         </execution>
                     </executions>
                 </plugin>
                 <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>${maven.compiler.plugin.version}</version>
+                    <executions>
+                        <!-- Replacing default-compile as it is treated specially by maven -->
+                        <execution>
+                            <id>default-compile</id>
+                            <phase>none</phase>
+                        </execution>
+                        <!-- Replacing default-testCompile as it is treated specially by maven -->
+                        <execution>
+                            <id>default-testCompile</id>
+                            <phase>none</phase>
+                        </execution>
+                        <execution>
+                            <id>java-compile</id>
+                            <phase>compile</phase>
+                            <goals>
+                                <goal>compile</goal>
+                            </goals>
+                        </execution>
+                        <execution>
+                            <id>java-test-compile</id>
+                            <phase>test-compile</phase>
+                            <goals>
+                                <goal>testCompile</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.3.0</version>
+                    <configuration>
+                        <archive>
+                            <manifest>
+                                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                            </manifest>
+                        </archive>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-dependency-plugin</artifactId>
+                    <version>3.2.0</version>
+                </plugin>
+                <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>exec-maven-plugin</artifactId>
-                    <version>3.0.0</version>
+                    <version>3.1.0</version>
                 </plugin>
                 <plugin>
                     <groupId>org.xolstice.maven.plugins</groupId>
@@ -606,6 +667,24 @@
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>${maven.failsafe.plugin.version}</version>
                 </plugin>
+                <plugin>
+                    <groupId>org.owasp</groupId>
+                    <artifactId>dependency-check-maven</artifactId>
+                    <version>8.3.1</version>
+                    <configuration>
+                        <prettyPrint>true</prettyPrint>
+                        <failBuildOnAnyVulnerability>true</failBuildOnAnyVulnerability>
+                        <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
+                        <suppressionFiles>
+                            <suppressionFile>dependencies-suppression.xml</suppressionFile>
+                        </suppressionFiles>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>3.4.0</version>
+                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -615,41 +694,30 @@
             </plugin>
 
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>${maven.compiler.plugin.version}</version>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>flatten-maven-plugin</artifactId>
+                <version>1.5.0</version>
+                <configuration>
+                    <updatePomFile>true</updatePomFile>
+                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
+                </configuration>
                 <executions>
-                    <!-- Replacing default-compile as it is treated specially by maven -->
                     <execution>
-                        <id>default-compile</id>
-                        <phase>none</phase>
-                    </execution>
-                    <!-- Replacing default-testCompile as it is treated specially by maven -->
-                    <execution>
-                        <id>default-testCompile</id>
-                        <phase>none</phase>
-                    </execution>
-                    <execution>
-                        <id>java-compile</id>
-                        <phase>compile</phase>
+                        <id>flatten</id>
+                        <phase>process-resources</phase>
                         <goals>
-                            <goal>compile</goal>
+                            <goal>flatten</goal>
                         </goals>
                     </execution>
                     <execution>
-                        <id>java-test-compile</id>
-                        <phase>test-compile</phase>
+                        <id>flatten.clean</id>
+                        <phase>clean</phase>
                         <goals>
-                            <goal>testCompile</goal>
+                            <goal>clean</goal>
                         </goals>
                     </execution>
                 </executions>
-                <configuration>
-                    <source>11</source>
-                    <target>11</target>
-                </configuration>
             </plugin>
-
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -703,7 +771,7 @@
             <plugin>
                 <groupId>pl.project13.maven</groupId>
                 <artifactId>git-commit-id-plugin</artifactId>
-                <version>4.0.0</version>
+                <version>4.9.10</version>
                 <executions>
                     <execution>
                         <id>get-the-git-infos</id>
@@ -725,21 +793,9 @@
                     </includeOnlyProperties>
                     <commitIdGenerationMode>full</commitIdGenerationMode>
                     <dateFormatTimeZone>UTC</dateFormatTimeZone>
+                    <dateFormat>yyyy-MM-dd'T'HH:mm:ssX</dateFormat>
                 </configuration>
             </plugin>
-
-            <plugin>
-                <groupId>com.amashchenko.maven.plugin</groupId>
-                <artifactId>gitflow-maven-plugin</artifactId>
-                <version>${gitflow.maven.plugin.version}</version>
-                <configuration>
-                    <gitFlowConfig>
-                        <developmentBranch>dev</developmentBranch>
-                        <versionTagPrefix>ver-</versionTagPrefix>
-                    </gitFlowConfig>
-                </configuration>
-            </plugin>
-
         </plugins>
     </build>
 
@@ -796,47 +852,5 @@
                 </plugins>
             </build>
         </profile>
-        <profile>
-            <id>dependency-check</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-surefire-plugin</artifactId>
-                        <configuration>
-                            <skipTests>true</skipTests>
-                        </configuration>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-failsafe-plugin</artifactId>
-                        <configuration>
-                            <skipTests>true</skipTests>
-                        </configuration>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.owasp</groupId>
-                        <artifactId>dependency-check-maven</artifactId>
-                        <version>8.0.2</version>
-                        <configuration>
-                            <prettyPrint>true</prettyPrint>
-                            <failBuildOnAnyVulnerability>true</failBuildOnAnyVulnerability>
-                            <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
-                            <suppressionFiles>
-                                <suppressionFile>dependencies-suppression.xml</suppressionFile>
-                            </suppressionFiles>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>check</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
     </profiles>
-
 </project>

@@ -1,6 +1,6 @@
 package net.postchain.gtv.mapper
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import net.postchain.common.BlockchainRid
@@ -18,12 +18,12 @@ class ObjectToGtvArrayTest {
 
     @Test
     fun simpleToArray() {
-        assert(GtvObjectMapper.toGtvArray(Simple(1L))).isEqualTo(gtv(gtv(1)))
+        assertThat(GtvObjectMapper.toGtvArray(Simple(1L))).isEqualTo(gtv(gtv(1)))
     }
 
     @Test
     fun toGtv() {
-        assert(GtvObjectMapper.toGtvArray(WithCustom("FOO", Custom("BAR")))).isEqualTo(gtv(listOf(gtv("FOO"), gtv("<<<BAR>>>"))))
+        assertThat(GtvObjectMapper.toGtvArray(WithCustom("FOO", Custom("BAR")))).isEqualTo(gtv(listOf(gtv("FOO"), gtv("<<<BAR>>>"))))
     }
 
     @Test
@@ -38,7 +38,7 @@ class ObjectToGtvArrayTest {
 
     @Test
     fun simpleTypes() {
-        @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN", "KotlinConstantConditions")
+        @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
         data class AllPrimitives(
                 val long: Long = 1,
                 val javaLong: java.lang.Long = java.lang.Long.valueOf(2) as java.lang.Long,
@@ -52,7 +52,7 @@ class ObjectToGtvArrayTest {
                 val pubKey: PubKey = PubKey(ByteArray(33)),
                 val blockchainRid: BlockchainRid = BlockchainRid.ZERO_RID
         )
-        assert(GtvObjectMapper.toGtvArray(AllPrimitives()).array).isContentEqualTo(listOf(
+        assertThat(GtvObjectMapper.toGtvArray(AllPrimitives()).array).isContentEqualTo(listOf(
                 gtv(1),
                 gtv(2),
                 gtv("foo"),
@@ -70,13 +70,13 @@ class ObjectToGtvArrayTest {
     @Test
     fun nullableType() {
         data class NullableField(val long: Long?)
-        assert(GtvObjectMapper.toGtvArray(NullableField(null))).isEqualTo(gtv(GtvNull))
+        assertThat(GtvObjectMapper.toGtvArray(NullableField(null))).isEqualTo(gtv(GtvNull))
     }
 
     @Test
     fun nestedType() {
         data class NestedField(val simple: Simple)
-        assert(GtvObjectMapper.toGtvArray(NestedField(Simple(1)))).isEqualTo(gtv(gtv(gtv(1))))
+        assertThat(GtvObjectMapper.toGtvArray(NestedField(Simple(1)))).isEqualTo(gtv(gtv(gtv(1))))
     }
 
     @Test
@@ -87,7 +87,7 @@ class ObjectToGtvArrayTest {
                 val set: Set<Simple> = setOf(Simple(2)),
                 val nestedList: List<List<Boolean>> = listOf(listOf(true)),
         )
-        assert(GtvObjectMapper.toGtvArray(CollectionFields())).isEqualTo(gtv(
+        assertThat(GtvObjectMapper.toGtvArray(CollectionFields())).isEqualTo(gtv(
                 gtv(gtv(1)),
                 gtv(gtv("foo")),
                 gtv(gtv(gtv(2))), // Nested objects are mapped as arrays
@@ -97,13 +97,13 @@ class ObjectToGtvArrayTest {
 
     @Test
     fun listType() {
-        assert(GtvObjectMapper.toGtvArray(listOf(1L))).isEqualTo(gtv(gtv(1)))
+        assertThat(GtvObjectMapper.toGtvArray(listOf(1L))).isEqualTo(gtv(gtv(1)))
     }
 
     @Test
     fun mapType() {
         // [[k1, v1], [k2, v2], ...]
-        assert(GtvObjectMapper.toGtvArray(mapOf("a" to 1L))).isEqualTo(gtv(gtv(gtv("a"), gtv(1))))
+        assertThat(GtvObjectMapper.toGtvArray(mapOf("a" to 1L))).isEqualTo(gtv(gtv(gtv("a"), gtv(1))))
     }
 
     @Test

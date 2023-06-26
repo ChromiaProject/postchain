@@ -32,6 +32,9 @@ data class BaseBlockBuildingStrategyConfigurationData(
         @Name(KEY_BLOCKSTRATEGY_MAXBACKOFFTIME)
         @DefaultValue(defaultLong = 2000) // 2 sec
         val maxBackoffTime: Long,
+        @Name(KEY_BLOCKSTRATEGY_MAXSPECIALENDTRANSACTIONSIZE)
+        @DefaultValue(defaultLong = 1024) // Bytes
+        val maxSpecialEndTransactionSize: Long,
 ) {
     companion object {
         @JvmStatic

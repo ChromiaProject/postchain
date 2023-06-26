@@ -2,12 +2,30 @@
 
 package net.postchain.base.data
 
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.Transaction
 import java.sql.Connection
 
 class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
+
+    override fun checkCollation(connection: Connection, suppressError: Boolean) {
+        connection.createStatement().use { statement ->
+            statement.executeQuery("SELECT 'A'<'a', 'Ї'<'ї', upper('ї') = 'Ї', lower('Ї') = 'ї'").use { resultSet ->
+                resultSet.next()
+                if (!resultSet.getBoolean(1) || !resultSet.getBoolean(2) || !resultSet.getBoolean(3) || !resultSet.getBoolean(4)) {
+                    val errorMessage =
+                            "Database collation check failed, please initialize Postgres with LC_COLLATE = 'C.UTF-8' LC_CTYPE = 'C.UTF-8' ENCODING 'UTF-8'"
+                    if (suppressError) {
+                        logger.warn(errorMessage)
+                    } else {
+                        throw UserMistake(errorMessage)
+                    }
+                }
+            }
+        }
+    }
 
     override fun isSavepointSupported(): Boolean = true
 
@@ -23,6 +41,11 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
 
     override fun dropSchemaCascade(connection: Connection, schema: String) {
         val sql = "DROP SCHEMA IF EXISTS $schema CASCADE"
+        queryRunner.update(connection, sql)
+    }
+
+    override fun dropTable(connection: Connection, tableName: String) {
+        val sql = "DROP TABLE \"${stripQuotes(tableName)}\" CASCADE"
         queryRunner.update(connection, sql)
     }
 
@@ -53,13 +76,13 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " UNIQUE (hash))"
     }
 
-     override fun cmdCreateTableState(ctx: EContext, prefix: String): String {
-         return "CREATE TABLE IF NOT EXISTS ${tableStateLeafs(ctx, prefix)}" +
-                 " (state_iid BIGSERIAL PRIMARY KEY," +
-                 " block_height BIGINT NOT NULL, " +
-                 " state_n BIGINT NOT NULL, " +
-                 " data BYTEA NOT NULL)"
-     }
+    override fun cmdCreateTableState(ctx: EContext, prefix: String): String {
+        return "CREATE TABLE IF NOT EXISTS ${tableStateLeafs(ctx, prefix)}" +
+                " (state_iid BIGSERIAL PRIMARY KEY," +
+                " block_height BIGINT NOT NULL, " +
+                " state_n BIGINT NOT NULL, " +
+                " data BYTEA NOT NULL)"
+    }
 
     override fun cmdCreateIndexTableState(ctx: EContext, prefix: String, index: Int): String {
         return "CREATE INDEX IF NOT EXISTS ${indexTableStateLeafs(ctx, prefix, index)}" +
@@ -89,6 +112,10 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " blockchain_rid BYTEA NOT NULL)"
     }
 
+    override fun cmdUpdateTableBlockchainsV7(): String {
+        return "ALTER TABLE ${tableBlockchains()} ADD CONSTRAINT ${tableBlockchains()}_blockchain_rid_key UNIQUE (blockchain_rid)"
+    }
+
     override fun cmdCreateTableTransactions(ctx: EContext): String {
         return "CREATE TABLE IF NOT EXISTS ${tableTransactions(ctx)} (" +
                 "    tx_iid BIGSERIAL PRIMARY KEY, " +
@@ -96,7 +123,23 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 "    tx_data BYTEA NOT NULL," +
                 "    tx_hash BYTEA NOT NULL," +
                 "    block_iid bigint NOT NULL REFERENCES ${tableBlocks(ctx)}(block_iid)," +
+                "    tx_number BIGINT UNIQUE NOT NULL," +
                 "    UNIQUE (tx_rid))"
+    }
+
+    override fun cmdUpdateTableTransactionsV8First(chainId: Long): String {
+        return "ALTER TABLE ${tableTransactions(chainId)}" +
+                " ADD COLUMN tx_number BIGINT NULL"
+    }
+
+    override fun cmdUpdateTableTransactionsV8Second(chainId: Long): String {
+        return "ALTER TABLE \"${stripQuotes(tableTransactions(chainId))}\" " +
+                "ADD CONSTRAINT \"${stripQuotes(tableTransactions(chainId))}_tx_number_key\" UNIQUE (tx_number)"
+    }
+
+    override fun cmdUpdateTableTransactionsV8Third(chainId: Long): String {
+        return "ALTER TABLE ${tableTransactions(chainId)} " +
+                "ALTER COLUMN tx_number SET NOT NULL"
     }
 
     override fun cmdCreateTableConfigurations(ctx: EContext): String {
@@ -105,6 +148,13 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 ", configuration_data BYTEA NOT NULL" +
                 ", configuration_hash BYTEA NOT NULL" +
                 ", UNIQUE (configuration_hash)" +
+                ")"
+    }
+
+    override fun cmdCreateTableFaultyConfiguration(chainId: Long): String {
+        return "CREATE TABLE IF NOT EXISTS ${tableFaultyConfiguration(chainId)} (" +
+                "configuration_hash BYTEA NOT NULL" +
+                ", report_height BIGINT NOT NULL" +
                 ")"
     }
 
@@ -126,12 +176,23 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
             "ALTER TABLE $tableName ALTER COLUMN $columnName TYPE BYTEA USING decode($columnName, 'hex')"
 
     override fun cmdDropTableConstraint(tableName: String, constraintName: String): String =
-            "ALTER TABLE $tableName DROP CONSTRAINT $constraintName"
+            "ALTER TABLE \"${stripQuotes(tableName)}\" DROP CONSTRAINT \"${stripQuotes(constraintName)}\""
 
     override fun cmdGetTableBlockchainReplicasPubKeyConstraint(): String =
+            cmdGetTableConstraints(tableBlockchainReplicas())
+
+    override fun cmdGetTableConstraints(tableName: String): String =
             "SELECT tc.constraint_name FROM information_schema.table_constraints AS tc" +
-                    " WHERE tc.table_schema = current_schema() AND tc.table_name = '${tableBlockchainReplicas()}'" +
+                    " WHERE tc.table_schema = current_schema() AND tc.table_name = '${tableName}'" +
                     " AND tc.constraint_type = 'FOREIGN KEY'"
+
+    override fun cmdGetAllBlockchainTables(chainId: Long): String =
+            "SELECT tables.table_name FROM information_schema.tables AS tables" +
+                    " WHERE tables.table_schema = current_schema() AND tables.table_name LIKE 'c${chainId}.%'"
+
+    override fun cmdGetAllBlockchainFunctions(chainId: Long): String =
+            "SELECT routine_name FROM information_schema.routines" +
+                    " WHERE routine_schema = current_schema() AND routine_name LIKE 'c${chainId}.%'"
 
     override fun cmdCreateTablePeerInfos(): String {
         return "CREATE TABLE ${tablePeerinfos()} (" +
@@ -165,8 +226,8 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
     }
 
     override fun cmdInsertTransactions(ctx: EContext): String {
-        return "INSERT INTO ${tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid) " +
-                "VALUES (?, ?, ?, ?)"
+        return "INSERT INTO ${tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid, tx_number) " +
+                "VALUES (?, ?, ?, ?, ?)"
     }
 
     override fun cmdInsertPage(ctx: EContext, name: String): String {
@@ -191,11 +252,11 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
         return queryRunner.query(ctx.conn, sql, longRes, height)
     }
 
-    override fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long {
-        val sql = "INSERT INTO ${tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid) " +
-                "VALUES (?, ?, ?, ?) RETURNING tx_iid"
+    override fun insertTransaction(ctx: BlockEContext, tx: Transaction, transactionNumber: Long): Long {
+        val sql = "INSERT INTO ${tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid, tx_number) " +
+                "VALUES (?, ?, ?, ?, ?) RETURNING tx_iid"
 
-        return queryRunner.query(ctx.conn, sql, longRes, tx.getRID(), tx.getRawData(), tx.getHash(), ctx.blockIID)
+        return queryRunner.query(ctx.conn, sql, longRes, tx.getRID(), tx.getRawData(), tx.getHash(), ctx.blockIID, transactionNumber)
     }
 
     /**
@@ -239,8 +300,35 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
         return "DELETE FROM ${tableStateLeafs(ctx, prefix)} WHERE (state_n BETWEEN ? and ?) AND height <= ?"
     }
 
-    override fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray) {
-        val hash = calcConfigurationHash(data)
-        queryRunner.insert(ctx.conn, cmdInsertConfiguration(ctx), longRes, height, data, hash, data, hash)
+    override fun getAllBlocksWithTransactions(ctx: EContext, fromHeight: Long, upToHeight: Long,
+                                              blockHandler: (DatabaseAccess.BlockWithTransactions) -> Unit) {
+        val sql = """
+            SELECT b.block_height, b.block_header_data, b.block_witness, 
+              ARRAY(SELECT t.tx_data FROM ${tableTransactions(ctx)} as t WHERE t.block_iid = b.block_iid ORDER BY t.tx_iid ASC) as transactions 
+            FROM ${tableBlocks(ctx)} as b
+            WHERE b.block_height BETWEEN ? AND ? 
+            ORDER BY b.block_height ASC
+                """.trimIndent()
+        ctx.conn.prepareStatement(sql).use { statement ->
+            statement.setLong(1, fromHeight)
+            statement.setLong(2, upToHeight)
+            statement.executeQuery().use { resultSet ->
+                while (resultSet.next()) {
+                    val blockHeight = resultSet.getLong("block_height")
+                    val blockHeader = resultSet.getBytes("block_header_data")
+                    val witness = resultSet.getBytes("block_witness")
+                    val array = resultSet.getArray("transactions")
+                    val transactions = buildList<ByteArray> {
+                        array.resultSet.use {
+                            while (it.next()) {
+                                add(it.getBytes(2))
+                            }
+                        }
+                    }
+
+                    blockHandler(DatabaseAccess.BlockWithTransactions(blockHeight, blockHeader, witness, transactions))
+                }
+            }
+        }
     }
 }

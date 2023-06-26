@@ -5,6 +5,7 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.BlockchainContext
 import net.postchain.core.EContext
+import net.postchain.core.Storage
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
@@ -12,7 +13,8 @@ import net.postchain.gtx.GTXBlockchainConfigurationFactory
 class ContainerChain0BlockchainConfigurationFactory(
         val appConfig: AppConfig,
         val factory: GTXBlockchainConfigurationFactory,
-        val containerNodeConfig: ContainerNodeConfig
+        val containerNodeConfig: ContainerNodeConfig,
+        val storage: Storage
 ) : BlockchainConfigurationFactory by factory {
 
     override fun makeBlockchainConfiguration(configurationData: Any,
@@ -21,6 +23,6 @@ class ContainerChain0BlockchainConfigurationFactory(
                                              eContext: EContext,
                                              cryptoSystem: CryptoSystem): ContainerChain0BlockchainConfiguration {
         val conf = factory.makeBlockchainConfiguration(configurationData, partialContext, blockSigMaker, eContext, cryptoSystem)
-        return ContainerChain0BlockchainConfiguration(conf, appConfig, containerNodeConfig)
+        return ContainerChain0BlockchainConfiguration(conf, appConfig, containerNodeConfig, storage)
     }
 }

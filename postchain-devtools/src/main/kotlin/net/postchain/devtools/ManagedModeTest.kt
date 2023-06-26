@@ -14,6 +14,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withWriteConnection
 import net.postchain.common.hexStringToByteArray
 import net.postchain.concurrent.util.get
+import net.postchain.core.BlockchainState
 import net.postchain.core.Infrastructure
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.crypto.KeyPair
@@ -59,7 +60,21 @@ open class ManagedModeTest : AbstractSyncTest() {
         return mockDataSources.filterKeys { nodeIdsInChain.contains(it) }
     }
 
-    fun addBlockchainConfiguration(chainId: Long, signerKeys: Map<Int, ByteArray>, historicChain: Long?, height: Long, overrides: Map<String, Gtv> = emptyMap()) {
+    fun markPendingConfigurationAsFaulty(chainId: Long, height: Long) {
+        mockDataSources.values.forEach {
+            it.markPendingConfigurationAsFaulty(chainId, height)
+        }
+    }
+
+    fun setBlockchainState(chainId: Long, state: BlockchainState) {
+        val brid = ChainUtil.ridOf(chainId)
+        mockDataSources.values.forEach {
+            it.setBlockchainState(brid, state)
+        }
+        buildBlock(0)
+    }
+
+    fun addBlockchainConfiguration(chainId: Long, signerKeys: Map<Int, ByteArray>, historicChain: Long?, height: Long, overrides: Map<String, Gtv> = emptyMap(), pending: Boolean = false) {
         val brid = ChainUtil.ridOf(chainId)
 
         val signerGtvs = signerKeys.values.map { GtvByteArray(it) }
@@ -94,7 +109,11 @@ open class ManagedModeTest : AbstractSyncTest() {
             val context = BaseBlockchainContext(chainId, brid, NODE_ID_AUTO, pubkey)
             val confData = data.getDict().toObject<BlockchainConfigurationData>()
             val bcConf = TestBlockchainConfiguration(confData, context, sigMaker, dataSource)
-            dataSource.addConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
+            if (pending) {
+                dataSource.addPendingConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
+            } else {
+                dataSource.addConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
+            }
         }
     }
 
@@ -106,9 +125,9 @@ open class ManagedModeTest : AbstractSyncTest() {
 
     protected open fun createManagedNodeDataSource() = MockManagedNodeDataSource()
 
-    protected open fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long) {
+    protected open fun awaitChainRunning(index: Int, chainId: Long, atLeastHeight: Long, expectedConfigHash: ByteArray? = null) {
         val pm = nodes[index].processManager as TestManagedBlockchainProcessManager
-        pm.awaitStarted(index, chainId, atLeastHeight)
+        pm.awaitStarted(index, chainId, atLeastHeight, expectedConfigHash)
     }
 
     fun restartNodeClean(index: Int, chainId: Long, atLeastHeight: Long) {
@@ -126,7 +145,7 @@ open class ManagedModeTest : AbstractSyncTest() {
         buildBlockNoWait(chainNodes, chainId, height)
         sleep(1000)
         chainNodes.forEach {
-            if (it.blockQueries(chainId).getBestHeight().get() >= height) throw RuntimeException("assertCantBuildBlock: Can build block")
+            if (it.blockQueries(chainId).getLastBlockHeight().get() >= height) throw RuntimeException("assertCantBuildBlock: Can build block")
         }
     }
 
@@ -152,10 +171,10 @@ open class ManagedModeTest : AbstractSyncTest() {
     }
 
 
-    protected open fun awaitChainRestarted(chainId: Long, atLeastHeight: Long) {
+    protected open fun awaitChainRestarted(chainId: Long, atLeastHeight: Long, expectedConfigHash: ByteArray? = null) {
         val nodeSetups = getChainNodeSetups(chainId)
         awaitLog("========= AWAIT ALL ${nodeSetups.size} NODES RESTART chain:  ${chainId}, at least height:  $atLeastHeight")
-        nodeSetups.forEach { awaitChainRunning(it.sequenceNumber.nodeNumber, chainId, atLeastHeight) }
+        nodeSetups.forEach { awaitChainRunning(it.sequenceNumber.nodeNumber, chainId, atLeastHeight, expectedConfigHash) }
         awaitLog("========= DONE WAITING ALL ${nodeSetups.size} NODES RESTART chain:  ${chainId}, at least height:  $atLeastHeight")
     }
 
@@ -171,8 +190,8 @@ open class ManagedModeTest : AbstractSyncTest() {
     ): Long {
         if (signers.intersect(replicas).isNotEmpty()) throw IllegalArgumentException("a node cannot be both signer and replica")
         val newChainId = chainId++
+        val brid = ChainUtil.ridOf(newChainId)
         if (rawBlockchainConfiguration != null) {
-            val brid = ChainUtil.ridOf(newChainId)
             mockDataSources.forEach { (nodeId, dataSource) ->
                 val pubkey = nodes[nodeId].pubKey.hexStringToByteArray()
                 val sigMaker = createSigMaker(pubkey)
@@ -181,7 +200,7 @@ open class ManagedModeTest : AbstractSyncTest() {
                 val bcFactory = blockchainConfigurationFactory ?: GTXBlockchainConfigurationFactory()
                 val dappBcFactory = DappBlockchainConfigurationFactory(bcFactory, dataSource)
                 val postchainContext = nodes[nodeId].postchainContext
-                withWriteConnection(postchainContext.storage, newChainId) { ctx ->
+                withWriteConnection(postchainContext.blockBuilderStorage, newChainId) { ctx ->
                     DatabaseAccess.of(ctx).apply { initializeBlockchain(ctx, brid) }
                     dataSource.addConf(newChainId, brid, 0,
                             dappBcFactory.makeBlockchainConfiguration(bcConf, BaseBlockchainContext(newChainId, brid, NODE_ID_AUTO, pubkey), sigMaker, ctx, postchainContext.cryptoSystem),
@@ -192,6 +211,10 @@ open class ManagedModeTest : AbstractSyncTest() {
         } else {
             val signerKeys = signers.associateWith { nodes[it].pubKey.hexStringToByteArray() }
             addBlockchainConfiguration(newChainId, signerKeys, historicChain, 0)
+        }
+
+        mockDataSources.values.forEach {
+            it.setBlockchainState(brid, BlockchainState.RUNNING)
         }
 
         setChainSigners(signers, newChainId)

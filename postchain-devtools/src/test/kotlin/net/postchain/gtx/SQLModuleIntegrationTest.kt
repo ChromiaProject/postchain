@@ -9,13 +9,14 @@ import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.IntegrationTestSetup
+import net.postchain.devtools.testinfra.BaseTestInfrastructureFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import org.junit.jupiter.api.assertThrows
 
 class SQLModuleIntegrationTest : IntegrationTestSetup() {
 
@@ -32,7 +33,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
 
     @Test
     fun testBuildBlock() {
-        configOverrides.setProperty("infrastructure", "base/test")
+        configOverrides.setProperty("infrastructure", BaseTestInfrastructureFactory::class.qualifiedName)
         val nodes = createNodes(1, "/net/postchain/devtools/gtx/blockchain_config.xml")
         val node = nodes[0]
         val bcRid = node.getBlockchainRid(1L)!!
@@ -47,7 +48,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         verifyBlockchainTransactions(node)
 
         val blockQueries = node.getBlockchainInstance().blockchainEngine.getBlockQueries()
-        assertFailsWith<UserMistake> {
+        assertThrows<UserMistake> {
             blockQueries.query("non-existing", gtv(mapOf())).get()
         }
 
@@ -67,7 +68,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
         assertNotNull(hit0["val"])
         assertEquals("v2", hit0["val"]!!.asString())
         assertNotNull(hit0["owner"])
-        assertTrue(pubKey(0).contentEquals(hit0["owner"]!!.asByteArray(true)))
+        assertTrue(pubKey(0).contentEquals(hit0["owner"]!!.asByteArray()))
 
         // ------------------------------------------
         // Look for type "test_get_count"
@@ -83,7 +84,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
 
     @Test
     fun testQueryWithMultipleParams() {
-        configOverrides.setProperty("infrastructure", "base/test")
+        configOverrides.setProperty("infrastructure", BaseTestInfrastructureFactory::class.qualifiedName)
         val nodes = createNodes(1, "/net/postchain/devtools/gtx/blockchain_config.xml")
         val node = nodes[0]
         val bcRid = node.getBlockchainRid(1L)!!
@@ -98,7 +99,7 @@ class SQLModuleIntegrationTest : IntegrationTestSetup() {
 
     @Test
     fun testQuerySupportNullableValue() {
-        configOverrides.setProperty("infrastructure", "base/test")
+        configOverrides.setProperty("infrastructure", BaseTestInfrastructureFactory::class.qualifiedName)
         val nodes = createNodes(1, "/net/postchain/devtools/gtx/blockchain_config.xml")
         val node = nodes[0]
         val bcRid = node.getBlockchainRid(1L)!!

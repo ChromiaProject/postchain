@@ -27,7 +27,7 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
             makeGtxModule(blockchainRid, configurationData)
         }
 
-        private fun makeGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData): GTXModule {
+        internal fun makeGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData): GTXModule {
             val gtxConfig = data.gtx?.toObject() ?: GtxConfigurationData.default
             val list = gtxConfig.modules.distinct()
             if (list.isEmpty()) {
@@ -49,12 +49,7 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
                 }
             }
 
-            return if (list.size == 1) {
-                makeModule(list[0])
-            } else {
-                val moduleList = list.map(::makeModule)
-                CompositeGTXModule(moduleList.toTypedArray(), gtxConfig.allowOverrides)
-            }
+            return CompositeGTXModule(list.map(::makeModule).toTypedArray(), gtxConfig.allowOverrides)
         }
     }
 

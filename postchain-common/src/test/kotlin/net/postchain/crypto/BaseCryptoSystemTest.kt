@@ -1,6 +1,6 @@
 package net.postchain.crypto
 
-import assertk.assert
+import assertk.assertThat
 import assertk.assertions.isEqualTo
 import org.junit.jupiter.api.Test
 
@@ -17,7 +17,7 @@ class BaseCryptoSystemTest {
         val secp256K1Digest = secp256K1CryptoSystem.digest("Hello!".toByteArray())
         val secp256K1Signature = secp256K1SigMaker.signDigest(secp256K1Digest)
 
-        assert(dilithiumCryptoSystem.verifyDigest(secp256K1Digest, secp256K1Signature)).isEqualTo(true)
+        assertThat(dilithiumCryptoSystem.verifyDigest(secp256K1Digest, secp256K1Signature)).isEqualTo(true)
     }
 
     @Test
@@ -31,6 +31,6 @@ class BaseCryptoSystemTest {
         val dilithiumDigest = dilithiumCryptoSystem.digest("Hello!".toByteArray())
         val dilithiumSignature = dilithiumSigMaker.signDigest(dilithiumDigest)
 
-        assert(secp256K1CryptoSystem.verifyDigest(dilithiumDigest, dilithiumSignature)).isEqualTo(true)
+        assertThat(secp256K1CryptoSystem.verifyDigest(dilithiumDigest, dilithiumSignature)).isEqualTo(true)
     }
 }

@@ -2,16 +2,17 @@
 
 package net.postchain.config.node
 
+import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.isEmpty
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.NodeRid
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import java.time.Instant
-import kotlin.test.assertEquals
 
 class ManagedNodeConfigurationProviderTest {
 
@@ -38,16 +39,16 @@ class ManagedNodeConfigurationProviderTest {
         }
 
         // SUT
-        val provider = ManagedNodeConfigurationProvider(mock()) { mockStorage.storage }
+        val provider = ManagedNodeConfigurationProvider(mock(), mockStorage.storage)
         provider.apply {
             setPeerInfoDataSource(mockManagedPeerInfos)
         }
 
         // Action
-        val peerInfoCollection = provider.getPeerInfoCollection(mock())
+        val peerInfoCollection = provider.getPeerInfoCollection()
 
         // Assert
-        assertk.assert(peerInfoCollection).containsExactly(*expected)
+        assertThat(peerInfoCollection).containsExactly(*expected)
     }
 
     @Test
@@ -91,25 +92,25 @@ class ManagedNodeConfigurationProviderTest {
         }
 
         // SUT
-        val provider = ManagedNodeConfigurationProvider(mock()) { mockStorage.storage }
+        val provider = ManagedNodeConfigurationProvider(mock(), mockStorage.storage)
 
         // Assert
         // 1. managedPeerInfoDataSource field is set
         provider.setPeerInfoDataSource(mockManagedPeerInfos)
-        assertk.assert(
-                provider.getPeerInfoCollection(mock())
+        assertThat(
+                provider.getPeerInfoCollection()
         ).containsExactly(peerInfo0)
 
         // 2. managedPeerInfoDataSource field is null
         provider.setPeerInfoDataSource(null)
-        assertk.assert(
-                provider.getPeerInfoCollection(mock())
+        assertThat(
+                provider.getPeerInfoCollection()
         ).isEmpty()
 
         // 3. managedPeerInfoDataSource field is set again
         provider.setPeerInfoDataSource(mockManagedPeerInfosAnother)
-        assertk.assert(
-                provider.getPeerInfoCollection(mock())
+        assertThat(
+                provider.getPeerInfoCollection()
         ).containsExactly(peerInfo1, peerInfo2)
     }
 
@@ -181,7 +182,7 @@ class ManagedNodeConfigurationProviderTest {
         val a = listOf(p(1), p(2))
         val b = listOf(p(3), p(2))
         val expectedMerged = setOf(p(1), p(2), p(3))
-        val provider = ManagedNodeConfigurationProvider(mock()) { MockStorage.mockAppContext().storage }
+        val provider = ManagedNodeConfigurationProvider(mock(), MockStorage.mockAppContext().storage)
         val result = provider.merge(a, b)
         assertEquals(expectedMerged.size, result.size)
         assertEquals(expectedMerged, result.toSet())

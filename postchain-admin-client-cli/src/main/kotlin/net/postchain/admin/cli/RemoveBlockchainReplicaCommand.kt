@@ -8,7 +8,7 @@ import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.pubkeyOption
 import net.postchain.server.grpc.RemoveBlockchainReplicaRequest
 
-class RemoveBlockchainReplicaCommand : CliktCommand("Remove a replica for a blockchain") {
+class RemoveBlockchainReplicaCommand : CliktCommand(name = "remove", help = "Remove a replica for a blockchain") {
 
     private val channel by blockingPostchainServiceChannelOption()
 

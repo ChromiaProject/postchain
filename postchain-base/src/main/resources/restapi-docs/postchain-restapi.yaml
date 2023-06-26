@@ -1,0 +1,1368 @@
+openapi: 3.0.3
+info:
+  title: Postchain REST API
+  description: |
+    ## GTV
+    GTV (Generic Transfer Value) is DER encoded ASN.1 with this schema:
+    ```
+      Messages DEFINITIONS ::= BEGIN
+    
+        DictPair ::= SEQUENCE {
+          name UTF8String,
+          value RawGtv
+        }
+    
+        RawGtv ::= CHOICE {
+          null [0] NULL,
+          byteArray [1] OCTET STRING,
+          string [2] UTF8String,
+          integer [3] INTEGER,
+          dict [4] SEQUENCE OF DictPair,
+          array [5] SEQUENCE OF RawGtv,
+          bigInteger [6] INTEGER
+        }
+    
+      END
+    ```
+    
+    ## GTX
+    GTX (Generic Transaction) is a way to encode signed transactions in GTV. The structure is:
+    ```
+    [
+      [
+        blockchainRid,
+        [
+          [ "operation1", [arg1, arg2, arg3, ...] ],
+          [ "operation2", [arg1, arg2, arg3, ...] ],
+          ...
+        ],
+        [ signerPubKey1, signerPubKey2, ... ]
+      ],
+      [ signature1, signature2, .. ]
+    ]
+    ```
+    The blockchain RID, signer public keys and signatures are encoded as byteArray. 
+    The signatures are made with ECDSA with the secp256k1 curve. The hash to sign, 
+    which is also use as transaction RID in this API, is SHA-256 computed recursively, 
+    as a Merkle tree. For each node in the tree, a prefix byte is added to data to hash:
+    - 1 for a leaf
+    - 7 for start of an array
+    - 8 for start of a dict
+    - 0 otherwise
+    
+    The exact procedure to calculate the hash can be discovered in the source code in 
+    [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
+    [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
+  version: "2"
+paths:
+  /tx/{blockchainRid}:
+    post:
+      tags:
+        - transaction
+      summary: Submit transaction
+      description: |
+        Submit a transaction to a chain.
+        The request body can either contain hex encoded GTX transaction in JSON wrapper, 
+        or binary GTV (by specifying `Content-Type: application/octet-stream).
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/tx"
+          application/octet-stream: { }
+      responses:
+        200:
+          description: Transaction queued
+          content:
+            application/json:
+              schema:
+                type: object
+            application/octet-stream: { }
+        400:
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                couldNotParseJson:
+                  value:
+                    error: "Could not parse json"
+                incorrectTransaction:
+                  value:
+                    error: "Transaction <hex-string> is not correct"
+                invalidTxFormat:
+                  value:
+                    error: "Invalid tx format. Expected {\"tx\": <hex-string>}"
+                invalidTx:
+                  value:
+                    error: "Transaction is invalid"
+            application/octet-stream: { }
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
+        409:
+          description: Transaction already in queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                transactionAlreadyInQueue:
+                  value:
+                    error: "Transaction already in queue"
+            application/octet-stream: { }
+        503:
+          description: Transaction queue is full
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                queueFull:
+                  value:
+                    error: "Transaction queue is full"
+            application/octet-stream: { }
+  /tx/{blockchainRid}/{txRid}:
+    get:
+      tags:
+        - transaction
+      summary: Fetch transaction
+      description: |
+        Fetch a transaction from a chain.
+        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        otherwise defaults to JSON.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/txRid"
+      responses:
+        200:
+          description: Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/tx"
+            application/octet-stream: { }
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+                txNotFound:
+                  value:
+                    error: "Can't find tx with hash <hex-string>"
+            application/octet-stream: { }
+  /transactions/{blockchainRid}/{txRid}:
+    get:
+      tags:
+        - transaction
+      summary: Fetch transaction info
+      description: Fetch info about a transaction from a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/txRid"
+      responses:
+        200:
+          description: Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/txInfo"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+                txNotFound:
+                  value:
+                    error: "Can't find tx with hash <hex-string>"
+  /transactions/{blockchainRid}:
+    get:
+      tags:
+        - transaction
+      summary: Fetch transactions info
+      description: Fetch info about transactions from a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - name: limit
+          description: Limit number of transactions returned
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 600
+            default: 25
+        - name: before-time
+          description: Return only transactions before this time
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+      responses:
+        200:
+          description: Found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/txInfo"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /transactions/{blockchainRid}/count:
+    get:
+      tags:
+        - transaction
+      summary: Fetch number of successful transactions
+      description: Fetch number of successful transactions for a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      responses:
+        200:
+          description: Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/transactionsCount"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /tx/{blockchainRid}/{txRid}/confirmationProof:
+    get:
+      tags:
+        - transaction
+      summary: Fetch transaction confirmation proof
+      description: Fetch confirmation proof for a transaction from a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/txRid"
+      responses:
+        200:
+          description: Found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/confirmationProof"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+                txNotFound:
+                  value:
+                    error: "Can't find tx with hash <hex-string>"
+  /tx/{blockchainRid}/{txRid}/status:
+    get:
+      tags:
+        - transaction
+      summary: Fetch transaction status
+      description: Fetch the status of a transaction from a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/txRid"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/unknown"
+                  - $ref: "#/components/schemas/waiting"
+                  - $ref: "#/components/schemas/confirmed"
+                  - $ref: "#/components/schemas/rejected"
+                discriminator:
+                  propertyName: status
+              examples:
+                unknown:
+                  value:
+                    status: unknown
+                waiting:
+                  value:
+                    status: waiting
+                confirmed:
+                  value:
+                    status: confirmed
+                rejected:
+                  value:
+                    status: rejected
+                    rejectReason: "[module:operation(dapp/module/module.rell:17)] Operation 'module:operation' failed: Requirement error"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /blocks/{blockchainRid}:
+    get:
+      tags:
+        - block
+      summary: Fetch blocks info
+      description: Fetch info about blocks from a chain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - name: limit
+          description: Limit number of blocks returned
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+            default: 25
+        - name: before-time
+          description: Return only blocks before this time. Incompatible with `before-height`.
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: before-height
+          description: Return only blocks before this height. Incompatible with `before-time`.
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+        - name: txs
+          description: Return full transaction data
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        200:
+          description: Found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/blockInfo"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /blocks/{blockchainRid}/{blockRid}:
+    get:
+      tags:
+        - block
+      summary: Fetch block info by block RID
+      description: |
+        Fetch info about a block from a chain. 
+        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        otherwise defaults to JSON.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/blockRid"
+        - name: txs
+          description: Return full transaction data
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/blockInfo"
+                  - $ref: "#/components/schemas/nullValue"
+            application/octet-stream: { }
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
+  /blocks/{blockchainRid}/height/{height}:
+    get:
+      tags:
+        - block
+      summary: Fetch block info by block height
+      description: |
+        Fetch info about a block from a chain. 
+        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        otherwise defaults to JSON.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/height"
+        - name: txs
+          description: Return full transaction data
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/blockInfo"
+                  - $ref: "#/components/schemas/nullValue"
+            application/octet-stream: { }
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
+  /query/{blockchainRid}:
+    get:
+      tags:
+        - query
+      summary: Make query
+      description: Make a query to a chain. Named arguments to query as additional query parameters.
+        This operation is intended for development, testing and simple web apps, more advanced production use cases should use `POST /query_gtv` instead.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - name: type
+          in: query
+          description: Query name
+          required: true
+          schema:
+            type: string
+          example: my_query
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                description: Query result as JSON
+        400:
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                missingQueryType:
+                  value:
+                    error: "Missing query type"
+                unknownQuery:
+                  value:
+                    error: "Unknown query: the_query"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+    post:
+      tags:
+        - query
+      summary: Make query
+      description: Make a query to a chain.
+        This operation is deprecated, use `GET /query` or `POST /query_gtv` instead.
+      deprecated: true
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/query"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                description: Query result as JSON
+        400:
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                missingQueryType:
+                  value:
+                    error: "Missing query type"
+                unknownQuery:
+                  value:
+                    error: "Unknown query: the_query"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /batch_query/{blockchainRid}:
+    post:
+      tags:
+        - query
+      summary: Make queries
+      description: Make multiple queries to a chain
+        This operation is deprecated, use `POST /query_gtv` instead.
+      deprecated: true
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - queries
+              properties:
+                queries:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/query"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  description: Query result as JSON string
+        400:
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                unknownQuery:
+                  value:
+                    error: "Unknown query: the_query"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+        500:
+          description: Malformed query JSON
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                unknownError:
+                  value:
+                    error: "Unknown error"
+  /dquery/{blockchainRid}:
+    get:
+      tags:
+        - query
+      summary: Make direct query
+      description: |
+        Make a direct query to a chain. Named arguments to query as additional query parameters.
+        The query result will be served directly with appropriate content type, with no JSON wrapping.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - name: type
+          in: query
+          description: Query name
+          required: true
+          schema:
+            type: string
+          example: get_picture
+      responses:
+        200:
+          description: OK
+        400:
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                missingQueryType:
+                  value:
+                    error: "Missing query type"
+                unknownQuery:
+                  value:
+                    error: "Unknown query: the_query"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /query_gtx/{blockchainRid}:
+    post:
+      tags:
+        - query
+      summary: Make GTV encoded queries
+      description: |
+        Make GTV encoded queries to a chain.
+        This operation is deprecated, use `POST /query_gtv` instead.
+      deprecated: true
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - queries
+              properties:
+                queries:
+                  type: array
+                  items:
+                    type: string
+                    pattern: "[0-9a-fA-F]{2,}"
+                    description: Hex encoded two element GTV array with the query name as first element (string) and the named parameters as second element (dict)
+              example:
+                queries:
+                  - "A52E302CA20A0C086D795F7175657279A41E301C300B0C0461726731A303020111300D0C0461726732A2050C03666F6F"
+                  - "A5153013A20D0C0B6F746865725F7175657279A4023000"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                  pattern: "[0-9a-fA-F]{2,}"
+                  description: Query result as hex encoded GTV value
+              example:
+                - "A5023000"
+                - "A5025060"
+        400:
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                unknownQuery:
+                  value:
+                    error: "Unknown query: the_query"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+        500:
+          description: Malformed query JSON
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                unknownError:
+                  value:
+                    error: "Unknown error"
+  /query_gtv/{blockchainRid}:
+    post:
+      tags:
+        - query
+      summary: Make a GTV encoded query
+      description: |
+        Make a GTV encoded query to a chain.
+        Request body contains binary GTV array with the query name as first element (string) and the named parameters as second element (dict).
+        Response body contains binary GTV value.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      requestBody:
+        content:
+          application/octet-stream: { }
+      responses:
+        200:
+          description: OK
+          content:
+            application/octet-stream: { }
+        400:
+          description: Invalid query
+          content:
+            application/octet-stream: { }
+        404:
+          description: Not found
+          content:
+            application/octet-stream: { }
+  /node/{blockchainRid}/my_status:
+    get:
+      tags:
+        - node
+      summary: Query node EBFT status
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/nodeStatus"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /node/{blockchainRid}/statuses:
+    get:
+      tags:
+        - node
+      summary: Query all nodes EBFT statuses
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/nodeStatus"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /_debug:
+    get:
+      tags:
+        - node
+      summary: Get node debug information
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/nodeDebug"
+                  - $ref: "#/components/schemas/noDebug"
+  /brid/iid_{chainIid}:
+    get:
+      tags:
+        - node
+      summary: Get blockchain RID
+      parameters:
+        - name: chainIid
+          description: Chain Iid
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 100
+      responses:
+        200:
+          description: |
+            OK. The response is an unquoted string in plain/text format.
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/hash"
+              example: "0398A1E7B0F87709AFD14CD1821EAAAFB41931A8097FFA2D83E5FE10DA7E4DD5"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with chain Iid: <iid> in DB. Did you add this BC to the node?"
+  /blockchain/{blockchainRid}/height:
+    get:
+      tags:
+        - blockchain
+      summary: Fetch height of next block to be built/synced
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - blockHeight
+                properties:
+                  blockHeight:
+                    type: integer
+                    format: int64
+              example:
+                blockHeight: 4711
+        404:
+          description: Chain not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
+  /config/{blockchainRid}:
+    get:
+      tags:
+        - configuration
+      summary: Fetch blockchain configuration
+      description: |
+        Fetch configuration for a chain. Specifying a height will fetch the active configuration at that height. 
+        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        otherwise defaults to XML.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - name: height
+          description: Block height
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            default: -1
+          example: 42
+      responses:
+        200:
+          description: Found
+          content:
+            text/xml:
+              example: |
+                <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+                <dict>
+                    <entry key="blockstrategy">
+                        <dict>
+                            <entry key="name">
+                                <string>net.postchain.base.BaseBlockBuildingStrategy</string>
+                            </entry>
+                        </dict>
+                    </entry>
+                    <entry key="configurationfactory">
+                        <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+                    </entry>
+                    <entry key="gtx">
+                        <dict>
+                            <entry key="modules">
+                                <array>
+                                    <string>net.postchain.configurations.GTXTestModule</string>
+                                    <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                                </array>
+                            </entry>
+                        </dict>
+                    </entry>
+                    <entry key="signers">
+                        <array>
+                            <bytea>03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070</bytea>
+                            <bytea>031B84C5567B126440995D3ED5AABA0565D71E1834604819FF9C17F5E9D5DD078F</bytea>
+                            <bytea>03B2EF623E7EC933C478135D1763853CBB91FC31BA909AEC1411CA253FDCC1AC94</bytea>
+                            <bytea>0203C6150397F7E4197FF784A8D74357EF20DAF1D09D823FFF8D3FC9150CBAE85D</bytea>
+                        </array>
+                    </entry>
+                </dict>
+            application/octet-stream: { }
+        400:
+          description: Invalid height
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                configurationNotFound:
+                  value:
+                    error: "Failed to find configuration"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+    post:
+      tags:
+        - configuration
+      summary: Validate blockchain configuration
+      description: |
+        Check if a configuration is valid for a blockchain in its current state. This operation will not apply the 
+        configuration, only verify it. The configuration can be sent either as XML (using `text/xml` content type)
+        or GTV (using `application/octet-stream` content type).
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      requestBody:
+        content:
+          text/xml:
+            example: |
+              <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+              <dict>
+                  <entry key="blockstrategy">
+                      <dict>
+                          <entry key="name">
+                              <string>net.postchain.base.BaseBlockBuildingStrategy</string>
+                          </entry>
+                      </dict>
+                  </entry>
+                  <entry key="configurationfactory">
+                      <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+                  </entry>
+                  <entry key="gtx">
+                      <dict>
+                          <entry key="modules">
+                              <array>
+                                  <string>net.postchain.configurations.GTXTestModule</string>
+                                  <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                              </array>
+                          </entry>
+                      </dict>
+                  </entry>
+              </dict>
+          application/octet-stream: { }
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        400:
+          description: Invalid configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                invalidConfiguration:
+                  value:
+                    error: "Invalid configuration"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /version:
+    get:
+      tags:
+        - node
+      summary: Get API version
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/version"
+              examples:
+                version:
+                  value:
+                    version: 2
+
+components:
+  parameters:
+    blockchainRid:
+      name: blockchainRid
+      description: Hex encoded blockchain RID
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/hash"
+      example: "0398A1E7B0F87709AFD14CD1821EAAAFB41931A8097FFA2D83E5FE10DA7E4DD5"
+    txRid:
+      name: txRid
+      description: Hex encoded transaction RID
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/hash"
+      example: "868F5C1BDF086BE6300233B820E1119484665A350CE4C05811D328EFECB6FE93"
+    blockRid:
+      name: blockRid
+      description: Hex encoded block RID
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/hash"
+      example: "A41E83512DF6CF8BC559EC5792BF221817E5D7E48E978E907210D770C75AA32E"
+    height:
+      name: height
+      description: Block height
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/height"
+      example: "123"
+  schemas:
+    tx:
+      type: object
+      required:
+        - tx
+      properties:
+        tx:
+          type: string
+          pattern: "[0-9a-fA-F]{2,}"
+          description: Hex encoded GTX transaction
+          example: "A581B83081B5A56B3069A12204200398A1E7B0F87709AFD14CD1821EAAAFB41931A8097FFA2D83E5FE10DA7E4DD5A51A3018A5163014A20E0C0C6D795F6F7065726174696F6EA5023000A5273025A1230421032BF0FCF83A287FB5EC71E4DAEA5DE892804A5BBBED6130DBCDDB871015C34EA0A5463044A14204404B425779BF8BD5ED503837337BBE102B7013F791F3BCFB812726EA93E076A3267656EC773AA10617E1ABDB25E97AB1CF2992CDB3E059D668C90BDA6BB91FE836"
+    txInfo:
+      type: object
+      required:
+        - blockRID
+        - blockHeight
+        - blockHeader
+        - witness
+        - timestamp
+        - txRID
+        - txHash
+      properties:
+        blockRID:
+          $ref: "#/components/schemas/hash"
+        blockHeight:
+          type: integer
+          format: int64
+        blockHeader:
+          $ref: "#/components/schemas/hex"
+        witness:
+          $ref: "#/components/schemas/hex"
+        timestamp:
+          type: integer
+          format: int64
+        txRID:
+          $ref: "#/components/schemas/hash"
+        txHash:
+          $ref: "#/components/schemas/hash"
+        txData:
+          $ref: "#/components/schemas/hex"
+    confirmationProof:
+      type: object
+      required:
+        - proof
+      properties:
+        proof:
+          $ref: "#/components/schemas/hex"
+    unknown:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - "unknown"
+    waiting:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - "waiting"
+    confirmed:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - "confirmed"
+    rejected:
+      type: object
+      required:
+        - status
+        - rejectReason
+      properties:
+        status:
+          type: string
+          enum:
+            - "rejected"
+        rejectReason:
+          type: string
+    blockInfo:
+      type: object
+      required:
+        - rid
+        - prevBlockRID
+        - header
+        - height
+        - transactions
+        - witness
+        - timestamp
+      properties:
+        rid:
+          $ref: "#/components/schemas/hash"
+        prevBlockRID:
+          $ref: "#/components/schemas/hash"
+        header:
+          $ref: "#/components/schemas/hex"
+        height:
+          type: integer
+          format: int64
+        transactions:
+          type: array
+          items:
+            type: object
+            required:
+              - rid
+              - hash
+            properties:
+              rid:
+                $ref: "#/components/schemas/hash"
+              hash:
+                $ref: "#/components/schemas/hash"
+              data:
+                $ref: "#/components/schemas/hex"
+        witness:
+          $ref: "#/components/schemas/hex"
+        timestamp:
+          type: integer
+          format: int64
+    query:
+      description: Named arguments to query as additional properties
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          description: Query name
+      additionalProperties: true
+      example:
+        type: "my_query"
+        arg1: 17
+        arg2: "foo"
+    nodeDebug:
+      type: object
+      required:
+        - version
+        - pub-key
+        - blockchain-infra
+        - blockchain
+      properties:
+        version:
+          type: string
+        pub-key:
+          type: string
+          pattern: "[0-9a-fA-F]"
+          description: "Hex encoded public key"
+        blockchain-infra:
+          type: string
+        blockchain:
+          type: array
+          items:
+            type: object
+            required:
+              - BLOCKCHAIN_RID
+              - BLOCKCHAIN_NODE_TYPE
+              - BLOCKCHAIN_CURRENT_HEIGHT
+              - BLOCKCHAIN_NODE_PEERS
+            properties:
+              BLOCKCHAIN_RID:
+                $ref: "#/components/schemas/hash"
+              BLOCKCHAIN_NODE_TYPE:
+                type: string
+                enum:
+                  - "Validator"
+                  - "Replica"
+                  - "Historic Replica"
+              BLOCKCHAIN_CURRENT_HEIGHT:
+                type: integer
+                format: int64
+              BLOCKCHAIN_NODE_PEERS:
+                type: object
+      example:
+        version: "3.7.0"
+        pub-key: "0288BDC8ED1FDE8A5E58179E7B1F60EE0700557435E5D3DA89CFA9EE62B5640DD2"
+        blockchain-infra: "BaseBlockchainInfrastructure"
+        blockchain:
+          - BLOCKCHAIN_RID: "0398A1E7B0F87709AFD14CD1821EAAAFB41931A8097FFA2D83E5FE10DA7E4DD5"
+            BLOCKCHAIN_NODE_TYPE: "Validator"
+            BLOCKCHAIN_CURRENT_HEIGHT: 17
+            BLOCKCHAIN_NODE_PEERS: { }
+    noDebug:
+      type: object
+      required:
+        - Error
+      properties:
+        Error:
+          type: string
+      example:
+        Error: "Debug mode is not enabled. Use --debug cli option to enable it."
+    nodeStatus:
+      type: object
+      required:
+        - state
+        - height
+        - serial
+        - round
+        - revolting
+      properties:
+        state:
+          type: string
+          enum:
+            - "WaitBlock"
+            - "HaveBlock"
+            - "Prepared"
+          description: |
+            * WaitBlock - before PRE-PREPARE
+            * HaveBlock - after PRE-PREPARE, PREPARE message is sent
+            * Prepared - _prepared_ state, COMMIT message is sent
+        height:
+          type: integer
+          format: int64
+        serial:
+          type: integer
+          format: int64
+        round:
+          type: integer
+          format: int64
+        revolting:
+          type: boolean
+      example:
+        state: "WaitBlock"
+        height: 4711
+        serial: 135639938065
+        round: 0
+        revolting: false
+    error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+    hash:
+      type: string
+      pattern: "[0-9a-fA-F]{64}"
+      description: Hex encoded hash
+    hex:
+      type: string
+      pattern: "[0-9a-fA-F]"
+      description: Hex encoded data
+    height:
+      type: integer
+      description: Block height
+    nullValue:
+      type: "null"
+    version:
+      type: object
+      required:
+        - version
+      properties:
+        version:
+          type: integer
+          minimum: 1
+          format: int32
+          description: API version
+    transactionsCount:
+      type: object
+      required:
+        - transactionsCount
+      properties:
+        transactionsCount:
+          type: integer
+          format: int64

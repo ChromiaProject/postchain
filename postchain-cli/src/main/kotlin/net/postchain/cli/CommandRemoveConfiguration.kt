@@ -9,6 +9,7 @@ import com.github.ajalt.clikt.parameters.types.long
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.SafeExecutor.runOnChain
+import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
 import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.common.exception.UserMistake
@@ -24,21 +25,23 @@ class CommandRemoveConfiguration : CliktCommand(name = "remove-configuration", h
     private val height by option("-h", "--height", help = "Height of configuration to remove").long().required()
 
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
-        runOnChain(appConfig, chainId) {
-            runStorageCommand(appConfig, chainId) { ctx: EContext ->
-                val config = BlockchainApi.getConfiguration(ctx, height)
-                if (config != null) {
-                    try {
-                        BlockchainApi.removeConfiguration(ctx, height)
-                        println("Removed configuration at height $height")
-                    } catch (e: UserMistake) {
-                        println(e.message)
-                    } catch (e: Exception) {
-                        println("Can't remove configuration at height $height due to: ${e.message}")
+        withDbVersionMismatch {
+            val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
+            runOnChain(appConfig, chainId) {
+                runStorageCommand(appConfig, chainId) { ctx: EContext ->
+                    val config = BlockchainApi.getConfiguration(ctx, height)
+                    if (config != null) {
+                        try {
+                            BlockchainApi.removeConfiguration(ctx, height)
+                            println("Removed configuration at height $height")
+                        } catch (e: UserMistake) {
+                            println(e.message)
+                        } catch (e: Exception) {
+                            println("Can't remove configuration at height $height due to: ${e.message}")
+                        }
+                    } else {
+                        println("Can't find configuration at height: $height")
                     }
-                } else {
-                    println("Can't find configuration at height: $height")
                 }
             }
         }

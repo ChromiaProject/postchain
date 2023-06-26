@@ -75,7 +75,7 @@ abstract class AbstractIntegration {
             i++
         }
         val witness = witnessBuilder.getWitness()
-        blockBuilder.setBTrace(BlockTrace.build(null, blockHeader.blockRID, null))
+        blockBuilder.setBTrace(BlockTrace.build(blockHeader.blockRID, null))
         blockBuilder.commit(witness)
         return witness
     }
@@ -86,7 +86,7 @@ abstract class AbstractIntegration {
         return blockQueries.getBlockTransactionRids(blockRid!!).get().toTypedArray()
     }
 
-    protected fun getBestHeight(node: PostchainTestNode): Long {
-        return node.getBlockchainInstance().blockchainEngine.getBlockQueries().getBestHeight().get()
+    protected fun getLastHeight(node: PostchainTestNode): Long {
+        return node.getBlockchainInstance().blockchainEngine.getBlockQueries().getLastBlockHeight().get()
     }
 }

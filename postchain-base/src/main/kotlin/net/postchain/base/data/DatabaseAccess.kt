@@ -3,10 +3,12 @@
 package net.postchain.base.data
 
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.AppContext
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
@@ -46,13 +48,22 @@ interface DatabaseAccess {
             val stateN: Long,
             val data: ByteArray)
 
+    class BlockWithTransactions(
+            val blockHeight: Long,
+            val blockHeader: ByteArray,
+            val witness: ByteArray,
+            val transactions: List<ByteArray>)
+
     fun tableName(ctx: EContext, table: String): String
+
+    fun checkCollation(connection: Connection, suppressError: Boolean)
 
     fun isSavepointSupported(): Boolean
     fun isSchemaExists(connection: Connection, schema: String): Boolean
     fun createSchema(connection: Connection, schema: String)
     fun setCurrentSchema(connection: Connection, schema: String)
     fun dropSchemaCascade(connection: Connection, schema: String)
+    fun dropTable(connection: Connection, tableName: String)
 
     /**
      * @return iid of the newly created container
@@ -60,15 +71,21 @@ interface DatabaseAccess {
     fun createContainer(ctx: AppContext, name: String): Int
     fun getContainerIid(ctx: AppContext, name: String): Int?
 
-    fun initializeApp(connection: Connection, expectedDbVersion: Int)
+    @Deprecated("Use safe version instead", ReplaceWith("initializeApp(connection, expectedDbVersion, false)"))
+    fun initializeApp(connection: Connection, expectedDbVersion: Int) = initializeApp(connection, expectedDbVersion, false)
+    fun initializeApp(connection: Connection, expectedDbVersion: Int, allowUpgrade: Boolean = false)
     fun initializeBlockchain(ctx: EContext, blockchainRid: BlockchainRid)
+    fun removeBlockchain(ctx: EContext): Boolean
+    fun removeAllBlockchainSpecificTables(ctx: EContext)
+    fun removeAllBlockchainSpecificFunctions(ctx: EContext)
+    fun removeBlockchainFromMustSyncUntil(ctx: EContext): Boolean
     fun getChainId(ctx: EContext, blockchainRid: BlockchainRid): Long?
     fun getMaxChainId(ctx: EContext): Long?
     fun getMaxSystemChainId(ctx: EContext): Long?
 
     fun getBlockchainRid(ctx: EContext): BlockchainRid?
     fun insertBlock(ctx: EContext, height: Long): Long
-    fun insertTransaction(ctx: BlockEContext, tx: Transaction): Long
+    fun insertTransaction(ctx: BlockEContext, tx: Transaction, transactionNumber: Long): Long
     fun finalizeBlock(ctx: BlockEContext, header: BlockHeader)
 
     fun commitBlock(ctx: BlockEContext, w: BlockWitness)
@@ -93,12 +110,27 @@ interface DatabaseAccess {
     fun getBlocksBeforeHeight(ctx: EContext, blockHeight: Long, limit: Int): List<BlockInfoExt>
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
     fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt>
+    fun getLastTransactionNumber(ctx: EContext): Long
+
+    /**
+     * @param fromHeight   only fetch blocks from and including this height,
+     *                     set to `0L` to start from first block
+     * @param upToHeight   only fetch blocks up to and including this height,
+     *                     set to `Long.MAX_VALUE` to continue to last block
+     */
+    fun getAllBlocksWithTransactions(ctx: EContext, fromHeight: Long = 0L, upToHeight: Long = Long.MAX_VALUE,
+                                     blockHandler: (BlockWithTransactions) -> Unit)
 
     // Blockchain configurations
     fun findConfigurationHeightForBlock(ctx: EContext, height: Long): Long?
     fun findNextConfigurationHeight(ctx: EContext, height: Long): Long?
     fun listConfigurations(ctx: EContext): List<Long>
+    fun listConfigurationHashes(ctx: EContext): List<ByteArray>
+    fun configurationHashExists(ctx: EContext, hash: ByteArray): Boolean
     fun removeConfiguration(ctx: EContext, height: Long): Int
+    fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray>>
+    fun getAllConfigurations(connection: Connection, chainId: Long): List<Pair<Long, WrappedByteArray>>
+    fun getDependenciesOnBlockchain(ctx: EContext): List<BlockchainRid>
 
     /** Get configuration data at exactly given height */
     fun getConfigurationData(ctx: EContext, height: Long): ByteArray?
@@ -108,6 +140,10 @@ interface DatabaseAccess {
 
     fun getConfigurationData(ctx: EContext, hash: ByteArray): ByteArray?
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
+
+    fun getFaultyConfiguration(ctx: EContext): FaultyConfiguration?
+    fun addFaultyConfiguration(ctx: EContext, faultyConfiguration: FaultyConfiguration)
+    fun updateFaultyConfigurationReportHeight(ctx: EContext, height: Long)
 
     // Event and State
     fun insertEvent(ctx: TxEContext, prefix: String, height: Long, position: Long, hash: Hash, data: ByteArray)
@@ -135,6 +171,7 @@ interface DatabaseAccess {
     fun existsBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubkey: PubKey): Boolean
     fun addBlockchainReplica(ctx: AppContext, brid: BlockchainRid, pubKey: PubKey): Boolean
     fun removeBlockchainReplica(ctx: AppContext, brid: BlockchainRid?, pubKey: PubKey): Set<BlockchainRid>
+    fun removeAllBlockchainReplicas(ctx: EContext): Boolean
     fun getBlockchainsToReplicate(ctx: AppContext, pubkey: String): Set<BlockchainRid>
 
     //Avoid potential chain split

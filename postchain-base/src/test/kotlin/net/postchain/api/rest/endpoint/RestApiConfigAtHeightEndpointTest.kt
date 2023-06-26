@@ -1,11 +1,16 @@
 package net.postchain.api.rest.endpoint
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.isContentEqualTo
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
+import net.postchain.common.BlockchainRid
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFileReader
+import org.hamcrest.CoreMatchers.startsWith
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -14,13 +19,11 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.io.File
 import java.nio.file.Paths
-import kotlin.test.assertContentEquals
-import kotlin.test.assertEquals
 
 class RestApiConfigAtHeightEndpointTest {
 
     private val basePath = "/api/v1"
-    private val blockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
+    private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
 
     private lateinit var bccFile: File
     private lateinit var bccByteArray: ByteArray
@@ -31,18 +34,19 @@ class RestApiConfigAtHeightEndpointTest {
     fun setup() {
         model = mock {
             on { chainIID } doReturn 1L
+            on { blockchainRid } doReturn blockchainRID
             on { live } doReturn true
         }
 
         bccFile = Paths.get(javaClass.getResource("/net/postchain/config/blockchain_config.xml")!!.toURI()).toFile()
         bccByteArray = GtvEncoder.encodeGtv(GtvFileReader.readFile(bccFile))
 
-        restApi = RestApi(0, basePath)
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
     }
 
     @AfterEach
     fun tearDown() {
-        restApi.stop()
+        restApi.close()
     }
 
     @Test
@@ -58,7 +62,7 @@ class RestApiConfigAtHeightEndpointTest {
                 .statusCode(200)
                 .contentType("text/xml")
 
-        assertEquals(bccFile.readText(), body.extract().response().body.asString())
+        assertThat(body.extract().response().body.asString()).isEqualTo(bccFile.readText())
     }
 
     @Test
@@ -76,7 +80,7 @@ class RestApiConfigAtHeightEndpointTest {
                 .statusCode(200)
                 .contentType("text/xml")
 
-        assertEquals(bccFile.readText(), body.extract().response().body.asString())
+        assertThat(body.extract().response().body.asString()).isEqualTo(bccFile.readText())
     }
 
     @Test
@@ -92,7 +96,7 @@ class RestApiConfigAtHeightEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
 
-        assertContentEquals(bccByteArray, body.extract().response().body.asByteArray())
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(bccByteArray)
     }
 
     @Test
@@ -110,7 +114,31 @@ class RestApiConfigAtHeightEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
 
-        assertContentEquals(bccByteArray, body.extract().response().body.asByteArray())
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(bccByteArray)
+    }
+
+    @Test
+    fun `Configuration at height endpoint can return 400 on invalid height`() {
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/config/$blockchainRID")
+                .then()
+                .statusCode(400)
+                .contentType(ContentType.JSON)
+                .body("error", startsWith("Failed to find configuration"))
+    }
+
+    @Test
+    fun `Configuration at height endpoint can return 404 on unknown blockchain RID`() {
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/config/78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a4")
+                .then()
+                .statusCode(404)
+                .contentType(ContentType.JSON)
+                .body("error", startsWith("Can't find blockchain with blockchainRID"))
     }
 
 }

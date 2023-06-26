@@ -2,23 +2,25 @@
 
 package net.postchain.api.rest
 
+import com.google.gson.JsonElement
 import mu.KLogging
-import net.postchain.api.rest.controller.BlockHeight
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.ApiStatus
-import net.postchain.api.rest.model.ApiTx
-import net.postchain.api.rest.model.TxRID
+import net.postchain.api.rest.model.TxRid
 import net.postchain.base.ConfirmationProof
 import net.postchain.base.cryptoSystem
+import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
-import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.common.wrap
+import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
+import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -30,14 +32,14 @@ import org.junit.jupiter.api.Test
 class RestApiMockForClientManual {
     val listenPort = 49545
     val basePath = "/basepath"
-    private val blockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a1"
+    private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a1")
     lateinit var restApi: RestApi
 
     companion object : KLogging()
 
     @AfterEach
     fun tearDown() {
-        restApi.stop()
+        restApi.close()
         logger.debug { "Stopped" }
     }
 
@@ -45,7 +47,7 @@ class RestApiMockForClientManual {
     @Test
     fun startMockRestApi() {
         val model = MockModel()
-        restApi = RestApi(listenPort, basePath)
+        restApi = RestApi(listenPort, basePath, gracefulShutdown = false)
         restApi.attachModel(blockchainRID, model)
         logger.info("Ready to serve on port ${restApi.actualPort()}")
         Thread.sleep(600000) // Wait 10 minutes
@@ -55,7 +57,7 @@ class RestApiMockForClientManual {
         override val chainIID: Long
             get() = 5L
         override var live = true
-        private val blockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a1"
+        override val blockchainRid: BlockchainRid = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a1")
         val statusUnknown = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         val statusRejected = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
         val statusConfirmed = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
@@ -65,7 +67,7 @@ class RestApiMockForClientManual {
         val blocks = listOf(
                 BlockDetail(
                         "blockRid001".toByteArray(),
-                        blockchainRID.toByteArray(), "some header".toByteArray(),
+                        blockchainRid.data, "some header".toByteArray(),
                         0,
                         listOf(),
                         "signatures".toByteArray(),
@@ -100,36 +102,36 @@ class RestApiMockForClientManual {
                         1574849940)
         )
 
-        override fun postTransaction(tx: ApiTx) {
-            when (tx.tx) {
-                "helloOK".toByteArray().toHex() -> return
-                "hello400".toByteArray().toHex() -> throw UserMistake("expected error")
-                "hello500".toByteArray().toHex() -> throw ProgrammerMistake("expected error")
+        override fun postTransaction(tx: ByteArray) {
+            when (tx.wrap()) {
+                "helloOK".toByteArray().wrap() -> return
+                "hello400".toByteArray().wrap() -> throw UserMistake("expected error")
+                "hello500".toByteArray().wrap() -> throw ProgrammerMistake("expected error")
                 else -> throw ProgrammerMistake("unexpected error")
             }
         }
 
-        override fun getTransaction(txRID: TxRID): ApiTx? {
+        override fun getTransaction(txRID: TxRid): ByteArray? {
             return when (txRID) {
-                TxRID(statusUnknown.hexStringToByteArray()) -> null
-                TxRID(statusConfirmed.hexStringToByteArray()) -> ApiTx("1234")
+                TxRid(statusUnknown.hexStringToByteArray()) -> null
+                TxRid(statusConfirmed.hexStringToByteArray()) -> "1234".hexStringToByteArray()
                 else -> throw ProgrammerMistake("unexpected error")
             }
         }
 
-        override fun getConfirmationProof(txRID: TxRID): ConfirmationProof? {
+        override fun getConfirmationProof(txRID: TxRid): ConfirmationProof? {
             return when (txRID) {
-                TxRID(statusUnknown.hexStringToByteArray()) -> null
+                TxRid(statusUnknown.hexStringToByteArray()) -> null
                 else -> throw ProgrammerMistake("unexpected error")
             }
         }
 
-        override fun getStatus(txRID: TxRID): ApiStatus {
+        override fun getStatus(txRID: TxRid): ApiStatus {
             return when (txRID) {
-                TxRID(statusUnknown.hexStringToByteArray()) -> ApiStatus(TransactionStatus.UNKNOWN)
-                TxRID(statusWaiting.hexStringToByteArray()) -> ApiStatus(TransactionStatus.WAITING)
-                TxRID(statusConfirmed.hexStringToByteArray()) -> ApiStatus(TransactionStatus.CONFIRMED)
-                TxRID(statusRejected.hexStringToByteArray()) -> ApiStatus(TransactionStatus.REJECTED)
+                TxRid(statusUnknown.hexStringToByteArray()) -> ApiStatus(TransactionStatus.UNKNOWN)
+                TxRid(statusWaiting.hexStringToByteArray()) -> ApiStatus(TransactionStatus.WAITING)
+                TxRid(statusConfirmed.hexStringToByteArray()) -> ApiStatus(TransactionStatus.CONFIRMED)
+                TxRid(statusRejected.hexStringToByteArray()) -> ApiStatus(TransactionStatus.REJECTED)
                 else -> throw ProgrammerMistake("unexpected error")
             }
         }
@@ -145,10 +147,12 @@ class RestApiMockForClientManual {
             }
         }
 
-        override fun nodeQuery(subQuery: String): String = TODO()
+        override fun nodeStatusQuery(): StateNodeStatus = TODO()
 
-        override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail? {
-            return (blocks.filter { it.rid.contentEquals(blockRID) }).getOrNull(0)
+        override fun nodePeersStatusQuery(): List<StateNodeStatus> = TODO()
+
+        override fun getBlock(blockRID: BlockRid, txHashesOnly: Boolean): BlockDetail? {
+            return (blocks.filter { it.rid.contentEquals(blockRID.data) }).getOrNull(0)
         }
 
         override fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail? {
@@ -165,7 +169,7 @@ class RestApiMockForClientManual {
             TODO("Not yet implemented")
         }
 
-        override fun getTransactionInfo(txRID: TxRID): TransactionInfoExt {
+        override fun getTransactionInfo(txRID: TxRid): TransactionInfoExt {
             val block = blocks.filter { block -> block.transactions.filter { tx -> cryptoSystem.digest(tx.data!!).contentEquals(txRID.bytes) }.size > 0 }[0]
             val tx = block.transactions.filter { tx -> cryptoSystem.digest(tx.data!!).contentEquals(txRID.bytes) }[0]
             return TransactionInfoExt(block.rid, block.height, block.header, block.witness, block.timestamp, cryptoSystem.digest(tx.data!!), tx.data!!.slice(IntRange(0, 4)).toByteArray(), tx.data!!)
@@ -183,7 +187,11 @@ class RestApiMockForClientManual {
             return transactionsInfo.toList()
         }
 
-        override fun debugQuery(subQuery: String?): String {
+        override fun getLastTransactionNumber(): TransactionsCount {
+            TODO("Not yet implemented")
+        }
+
+        override fun debugQuery(subQuery: String?): JsonElement {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
 
@@ -191,5 +199,8 @@ class RestApiMockForClientManual {
             TODO("Not yet implemented")
         }
 
+        override fun validateBlockchainConfiguration(configuration: Gtv) {
+            TODO("Not yet implemented")
+        }
     }
 }

@@ -2,7 +2,10 @@
 
 package net.postchain.integrationtest.multiple_chains
 
+import assertk.assertFailure
+import assertk.assertions.isInstanceOf
 import mu.KLogging
+import net.postchain.core.BadDataException
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.PostchainTestNode
 import org.junit.jupiter.api.Test
@@ -32,9 +35,7 @@ class SinglePeerDoubleChainsDependencyTest : ConfigFileBasedIntegrationTest() {
         // Launching blockchain
         val blockchainConfig = readBlockchainConfig(blockchainConfigFilename)
         node.addBlockchain(1L, blockchainConfig)
-        assertk.assert {
-            node.startBlockchain(1L)
-        }.thrownError { }
+        assertFailure { node.startBlockchain(1L) }.isInstanceOf(BadDataException::class)
     }
 
 }

@@ -5,7 +5,7 @@
     <parent>
         <artifactId>postchain</artifactId>
         <groupId>net.postchain</groupId>
-        <version>3.10.0-SNAPSHOT</version>
+        <version>${revision}</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
     <artifactId>postchain-devtools</artifactId>
@@ -27,10 +27,6 @@
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
-            <artifactId>postchain-client</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
@@ -47,10 +43,6 @@
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-reflect</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-test-junit5</artifactId>
-        </dependency>
 
         <!-- CLI -->
         <dependency>
@@ -62,7 +54,6 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core-test</artifactId>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.github.microutils</groupId>
@@ -111,7 +102,7 @@
         </dependency>
         <dependency>
             <groupId>com.willowtreeapps.assertk</groupId>
-            <artifactId>assertk</artifactId>
+            <artifactId>assertk-jvm</artifactId>
             <scope>compile</scope> <!-- TODO: Should be test scope -->
         </dependency>
         <dependency>

@@ -106,7 +106,7 @@ open class BaseBlockQueries(
         }
     }
 
-    override fun getBestHeight(): CompletionStage<Long> {
+    override fun getLastBlockHeight(): CompletionStage<Long> {
         return runOp {
             blockStore.getLastBlockHeight(it)
         }
@@ -152,6 +152,12 @@ open class BaseBlockQueries(
     override fun getTransactionsInfo(beforeTime: Long, limit: Int): CompletionStage<List<TransactionInfoExt>> {
         return runOp {
             blockStore.getTransactionsInfo(it, beforeTime, limit)
+        }
+    }
+
+    override fun getLastTransactionNumber(): CompletionStage<Long> {
+        return runOp {
+            blockStore.getLastTransactionNumber(it)
         }
     }
 

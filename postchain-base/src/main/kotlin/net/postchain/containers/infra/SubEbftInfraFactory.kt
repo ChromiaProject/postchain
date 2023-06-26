@@ -8,17 +8,24 @@ import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.BaseBlockchainInfrastructure
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
+import net.postchain.config.node.ManagedNodeConfigurationProvider
+import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.containers.bpm.SubNodeBlockchainProcessManager
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.InfrastructureFactory
+import net.postchain.core.Storage
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
+import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.network.mastersub.subnode.DefaultSubConnectionManager
 import net.postchain.network.mastersub.subnode.DefaultSubPeersCommConfigFactory
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 
 class SubEbftInfraFactory : InfrastructureFactory {
+
+    override fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider {
+        return ManagedNodeConfigurationProvider(appConfig, storage)
+    }
 
     override fun makeConnectionManager(appConfig: AppConfig): SubConnectionManager {
         val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
@@ -26,14 +33,14 @@ class SubEbftInfraFactory : InfrastructureFactory {
     }
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
-        return ManualBlockchainConfigurationProvider()
+        return ManagedBlockchainConfigurationProvider()
     }
 
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
             val syncInfra = EBFTSynchronizationInfrastructure(this, DefaultSubPeersCommConfigFactory())
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, debug)
+            val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, debug, postchainContext)
 
             return BaseBlockchainInfrastructure(syncInfra, apiInfra, this)
         }

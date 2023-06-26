@@ -8,7 +8,7 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import org.junit.jupiter.api.Test
 import java.math.BigInteger
 import kotlin.system.measureTimeMillis
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
 
 class GtvEncoderTest {
 
@@ -26,7 +26,7 @@ class GtvEncoderTest {
         val b = GtvEncoder.encodeGtv(expected)
         val result = GtvDecoder.decodeGtv(b)
         assertEquals(expected, result)
-        assertEquals(expected.asBigInteger().toString(10), result.asBigInteger().toString(10))
+        assertEquals(expected.asInteger().toString(10), result.asInteger().toString(10))
     }
 
     @Test

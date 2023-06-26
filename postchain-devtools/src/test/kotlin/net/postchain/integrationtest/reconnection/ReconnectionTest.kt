@@ -2,6 +2,7 @@
 
 package net.postchain.integrationtest.reconnection
 
+import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.isFalse
 import net.postchain.common.wrap
@@ -36,11 +37,11 @@ open class ReconnectionTest : ConfigFileBasedIntegrationTest() {
     protected fun assertThatNodeInBlockHasTxs(node: PostchainTestNode, height: Long, vararg txs: Transaction) {
         // Asserting number of blocks at height
         val blockRids = queries(node) { it.getBlockRid(height) }
-        assertk.assert(blockRids == null).isFalse()
+        assertThat(blockRids == null).isFalse()
 
         // Asserting content of a block
         val txsRids = queries(node) { it.getBlockTransactionRids(blockRids!!) }.map(ByteArray::wrap)
-        assertk.assert(txsRids).containsExactly(
+        assertThat(txsRids).containsExactly(
                 *txs.map { tx -> tx.getRID().wrap() }.toTypedArray())
     }
 

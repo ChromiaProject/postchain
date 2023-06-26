@@ -30,12 +30,13 @@ fun CliktCommand.blockchainRidOption() =
         option("-brid", "--blockchain-rid", help = "Blockchain RID", envvar = "POSTCHAIN_BRID")
                 .convert { BlockchainRid.buildFromHex(it) }.required()
 
-fun CliktCommand.chainIdOption() = option("-cid", "--chain-id", help = "Local number id of blockchain", envvar = "POSTCHAIN_CHAIN_ID").long()
-
-fun CliktCommand.debugOption() = option("--debug", help = "Enables debug functionalities", envvar = "POSTCHAIN_DEBUG").flag()
+fun CliktCommand.chainIdOption() = option("-cid", "--chain-id", help = "Chain internal ID within a node", envvar = "POSTCHAIN_CHAIN_ID").long()
 
 fun CliktCommand.forceOption() = option("-f", "--force").flag()
         .convert { if (it) AlreadyExistMode.FORCE else AlreadyExistMode.ERROR }
+
+fun CliktCommand.validationOption() = option("-v", "--validation", help = "Skip validation")
+        .flag("--no-validation", default = true)
 
 fun CliktCommand.heightOption() = option("-h", "--height", envvar = "POSTCHAIN_HEIGHT").long()
 

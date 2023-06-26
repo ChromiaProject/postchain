@@ -31,4 +31,6 @@ class TestTransactionFactory : TransactionFactory {
 
         return result
     }
+
+    override fun validateTransaction(data: ByteArray) {}
 }

@@ -2,6 +2,7 @@
 
 package net.postchain.network.peer
 
+import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.core.Shutdownable
 
@@ -10,7 +11,7 @@ import net.postchain.core.Shutdownable
  * will get called from a DefaultXConnectionManager when certain events happen.
  */
 interface PeersConnectionStrategy: Shutdownable {
-    fun connectAll(chainID: Long, peerIds: Set<NodeRid>)
+    fun connectAll(chainID: Long, blockchainRid: BlockchainRid, peerIds: Set<NodeRid>)
 
     /**
      * Called when a connection has been closed for any reason. This method is responsible for
@@ -23,7 +24,7 @@ interface PeersConnectionStrategy: Shutdownable {
      * @param peerId the remote peer of the closed connection
      * @param isOutgoing true if this is a client connection, ie we initiated the connection, false otherwise
      */
-    fun connectionLost(chainID: Long, peerId: NodeRid, isOutgoing: Boolean)
+    fun connectionLost(chainID: Long, blockchainRid: BlockchainRid, peerId: NodeRid, isOutgoing: Boolean)
 
     /**
      * Decides whether to swap the already used connection for a new connection.

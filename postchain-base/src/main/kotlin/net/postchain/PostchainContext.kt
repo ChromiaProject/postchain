@@ -11,7 +11,8 @@ import net.postchain.network.common.ConnectionManager
 data class PostchainContext(
         val appConfig: AppConfig,
         val nodeConfigProvider: NodeConfigurationProvider,
-        val storage: Storage,
+        val blockBuilderStorage: Storage,
+        val sharedStorage: Storage,
         val connectionManager: ConnectionManager,
         val blockQueriesProvider: BlockQueriesProvider,
         val nodeDiagnosticContext: NodeDiagnosticContext,
@@ -23,6 +24,7 @@ data class PostchainContext(
     fun shutDown() {
         connectionManager.shutdown()
         nodeConfigProvider.close()
-        storage.close()
+        blockBuilderStorage.close()
+        sharedStorage.close()
     }
 }

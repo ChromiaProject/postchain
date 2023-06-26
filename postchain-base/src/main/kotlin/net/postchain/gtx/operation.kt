@@ -27,8 +27,8 @@ class SimpleGTXOperation(data: ExtOpData,
         return applyF(ctx)
     }
 
-    override fun isCorrect(): Boolean {
-        return isCorrectF()
+    override fun checkCorrectness() {
+        if (!isCorrectF()) throw UserMistake("Incorrect operation")
     }
 }
 

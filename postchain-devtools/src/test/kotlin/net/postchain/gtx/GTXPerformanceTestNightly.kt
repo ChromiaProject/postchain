@@ -23,14 +23,14 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
 
     companion object : KLogging()
 
-    val dummyBcRid = BlockchainRid.buildFromHex( "ABABAABABABABABABABABABABABABABAABABABABABABABABABABABABABAABABA")
+    val dummyBcRid = BlockchainRid.buildFromHex("ABABAABABABABABABABABABABABABABAABABABABABABABABABABABABABAABABA")
 
     private fun makeTestTx(id: Long, value: String, blockchainRid: BlockchainRid): ByteArray {
         val b = GtxBuilder(blockchainRid, listOf(pubKey(0)), net.postchain.devtools.gtx.myCS)
-            .addOperation("gtx_test", gtv(id), gtv(value))
-            .finish()
-            .sign(net.postchain.devtools.gtx.myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
-            .buildGtx()
+                .addOperation("gtx_test", gtv(id), gtv(value))
+                .finish()
+                .sign(net.postchain.devtools.gtx.myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
+                .buildGtx()
         return b.encode()
     }
 
@@ -42,7 +42,7 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
                 total += makeTestTx(i.toLong(), "Hello", dummyBcRid).size
             }
         }
-       assertTrue(total > 1000)
+        assertTrue(total > 1000)
         println("Time elapsed: ${nanoDelta / 1000000} ms")
     }
 
@@ -59,7 +59,7 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
                 total += gtxData.gtxBody.operations.size
             }
         }
-       assertTrue(total == 1000)
+        assertTrue(total == 1000)
         println("Time elapsed: ${nanoDelta / 1000000} ms")
     }
 
@@ -71,14 +71,14 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
         var total = 0
         val module = GTXTestModule()
         val cs = Secp256K1CryptoSystem()
-        val txFactory = GTXTransactionFactory(dummyBcRid ,module, cs)
+        val txFactory = GTXTransactionFactory(dummyBcRid, module, cs)
         val nanoDelta = measureNanoTime {
             for (rawTx in transactions) {
-                val ttx =  txFactory.decodeTransaction(rawTx) as GTXTransaction
+                val ttx = txFactory.decodeTransaction(rawTx) as GTXTransaction
                 total += ttx.ops.size
             }
         }
-       assertTrue(total == 1000)
+        assertTrue(total == 1000)
         println("Time elapsed: ${nanoDelta / 1000000} ms")
     }
 
@@ -90,15 +90,15 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
         var total = 0
         val module = GTXTestModule()
         val cs = Secp256K1CryptoSystem()
-        val txFactory = GTXTransactionFactory(dummyBcRid ,module, cs)
+        val txFactory = GTXTransactionFactory(dummyBcRid, module, cs)
         val nanoDelta = measureNanoTime {
             for (rawTx in transactions) {
-                val ttx =  txFactory.decodeTransaction(rawTx) as GTXTransaction
+                val ttx = txFactory.decodeTransaction(rawTx) as GTXTransaction
                 total += ttx.ops.size
-               assertTrue(ttx.isCorrect())
+                ttx.checkCorrectness()
             }
         }
-       assertTrue(total == 1000)
+        assertTrue(total == 1000)
         println("Time elapsed: ${nanoDelta / 1000000} ms")
     }
 
@@ -128,7 +128,8 @@ class GTXPerformanceTestNightly : IntegrationTestSetup() {
 
             val nanoDelta = if (mode == 0) {
                 txs.forEach {
-                    queue.enqueue(txFactory.decodeTransaction(it)) }
+                    queue.enqueue(txFactory.decodeTransaction(it))
+                }
                 measureNanoTime {
                     nodes.forEach { strategy(it).buildBlocksUpTo(i.toLong()) }
                     nodes.forEach { strategy(it).awaitCommitted(i) }

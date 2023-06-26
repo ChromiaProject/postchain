@@ -5,9 +5,10 @@ package net.postchain.api.rest.endpoint
 import io.restassured.RestAssured.given
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
-import net.postchain.api.rest.model.TxRID
+import net.postchain.api.rest.model.TxRid
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.ConfirmationProof
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.gtv.GtvEncoder
@@ -35,17 +36,18 @@ class RestApiGetConfirmationProofEndpointTest {
     private lateinit var restApi: RestApi
     private lateinit var model: Model
     private lateinit var proof: GtvMerkleProofTree
-    private val blockchainRID = "78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3"
+    private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
     private val txHashHex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
     @BeforeEach
     fun setup() {
         model = mock {
             on { chainIID } doReturn 1L
+            on { blockchainRid } doReturn blockchainRID
             on { live } doReturn true
         }
 
-        restApi = RestApi(0, basePath)
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
 
         proof = buildDummyProof()
     }
@@ -64,7 +66,7 @@ class RestApiGetConfirmationProofEndpointTest {
 
     @AfterEach
     fun tearDown() {
-        restApi.stop()
+        restApi.close()
     }
 
     /**
@@ -84,7 +86,7 @@ class RestApiGetConfirmationProofEndpointTest {
         )
         val expectedDict = GtvObjectMapper.toGtvDictionary(expectedObject)
 
-        whenever(model.getConfirmationProof(TxRID(txHashHex.hexStringToByteArray())))
+        whenever(model.getConfirmationProof(TxRid(txHashHex.hexStringToByteArray())))
                 .doReturn(expectedObject)
 
         restApi.attachModel(blockchainRID, model)

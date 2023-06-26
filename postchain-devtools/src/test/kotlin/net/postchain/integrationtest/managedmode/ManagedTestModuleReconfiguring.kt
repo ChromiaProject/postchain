@@ -24,7 +24,6 @@ open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit
         mapOf(),
         mapOf(
                 "nm_get_peer_infos" to ::queryGetPeerInfos,
-                "nm_get_peer_list_version" to ::queryGetPeerListVersion,
                 "nm_compute_blockchain_info_list" to ::queryComputeBlockchainInfoList,
                 "nm_get_blockchain_configuration" to ::queryGetConfiguration,
                 "nm_find_next_configuration_height" to ::queryFindNextConfigurationHeight,
@@ -53,11 +52,6 @@ open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit
             return GtvArray(arrayOf(
                     peerInfoToGtv(peerInfo0))
             )
-        }
-
-        fun queryGetPeerListVersion(unit: Unit, eContext: EContext, args: Gtv): Gtv {
-            logger.log { "Query: nm_get_peer_list_version" }
-            return GtvInteger(1L)
         }
 
         fun queryNMApiVersion(unit: Unit, eContext: EContext, args: Gtv): Gtv {
@@ -95,7 +89,7 @@ open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit
                 GtvNull
             } else {
                 val gtvConfig = GtvMLParser.parseGtvML(
-                        javaClass.getResource(blockchainConfigFilename).readText())
+                        Companion::class.java.getResource(blockchainConfigFilename).readText())
                 val encodedGtvConfig = GtvEncoder.encodeGtv(gtvConfig)
                 GtvFactory.gtv(encodedGtvConfig)
             }

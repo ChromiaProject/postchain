@@ -2,543 +2,622 @@
 
 package net.postchain.api.rest.controller
 
-import com.google.gson.JsonArray
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
-import kong.unirest.HttpMethod
+import io.micrometer.core.instrument.Metrics
 import mu.KLogging
-import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_HEADERS
-import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_METHODS
-import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_ALLOW_ORIGIN
-import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_REQUEST_HEADERS
-import net.postchain.api.rest.controller.HttpHelper.Companion.ACCESS_CONTROL_REQUEST_METHOD
-import net.postchain.api.rest.controller.HttpHelper.Companion.PARAM_BLOCKCHAIN_RID
-import net.postchain.api.rest.controller.HttpHelper.Companion.PARAM_HASH_HEX
-import net.postchain.api.rest.controller.HttpHelper.Companion.PARAM_HEIGHT
-import net.postchain.api.rest.controller.HttpHelper.Companion.SUBQUERY
-import net.postchain.api.rest.json.JsonFactory
-import net.postchain.api.rest.model.ApiTx
-import net.postchain.api.rest.model.TxRID
+import mu.withLoggingContext
+import net.postchain.api.rest.BlockchainIidRef
+import net.postchain.api.rest.BlockchainRef
+import net.postchain.api.rest.BlockchainRidRef
+import net.postchain.api.rest.Empty
+import net.postchain.api.rest.ErrorBody
+import net.postchain.api.rest.Version
+import net.postchain.api.rest.batchQueriesBody
+import net.postchain.api.rest.beforeHeightQuery
+import net.postchain.api.rest.beforeTimeQuery
+import net.postchain.api.rest.binaryBody
+import net.postchain.api.rest.blockBody
+import net.postchain.api.rest.blockHeightBody
+import net.postchain.api.rest.blockRidPath
+import net.postchain.api.rest.blocksBody
+import net.postchain.api.rest.configurationInBody
+import net.postchain.api.rest.configurationOutBody
+import net.postchain.api.rest.emptyBody
+import net.postchain.api.rest.errorBody
+import net.postchain.api.rest.gtvJsonBody
+import net.postchain.api.rest.gtxQueriesBody
+import net.postchain.api.rest.heightPath
+import net.postchain.api.rest.heightQuery
+import net.postchain.api.rest.limitQuery
+import net.postchain.api.rest.model.TxRid
+import net.postchain.api.rest.nodeStatusBody
+import net.postchain.api.rest.nodeStatusesBody
+import net.postchain.api.rest.nullBody
+import net.postchain.api.rest.prettyJsonBody
+import net.postchain.api.rest.proofBody
+import net.postchain.api.rest.statusBody
+import net.postchain.api.rest.stringsBody
+import net.postchain.api.rest.textBody
+import net.postchain.api.rest.transactionsCountBody
+import net.postchain.api.rest.txBody
+import net.postchain.api.rest.txInfoBody
+import net.postchain.api.rest.txInfosBody
+import net.postchain.api.rest.txRidPath
+import net.postchain.api.rest.txsQuery
+import net.postchain.api.rest.versionBody
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.PmEngineIsAlreadyClosed
+import net.postchain.core.block.BlockDetail
 import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvDecoder
-import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvException
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvType
 import net.postchain.gtv.gtvToJSON
-import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.make_gtv_gson
-import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtx.GtxQuery
-import spark.Request
-import spark.Response
-import spark.Service
-import java.io.IOException
+import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
+import org.http4k.core.Body
+import org.http4k.core.ContentType
+import org.http4k.core.Filter
+import org.http4k.core.HttpTransaction
+import org.http4k.core.Method.GET
+import org.http4k.core.Method.OPTIONS
+import org.http4k.core.Method.POST
+import org.http4k.core.Request
+import org.http4k.core.RequestContexts
+import org.http4k.core.Response
+import org.http4k.core.Status
+import org.http4k.core.Status.Companion.BAD_REQUEST
+import org.http4k.core.Status.Companion.CONFLICT
+import org.http4k.core.Status.Companion.FORBIDDEN
+import org.http4k.core.Status.Companion.INTERNAL_SERVER_ERROR
+import org.http4k.core.Status.Companion.NOT_FOUND
+import org.http4k.core.Status.Companion.OK
+import org.http4k.core.Status.Companion.SERVICE_UNAVAILABLE
+import org.http4k.core.queries
+import org.http4k.core.then
+import org.http4k.core.toParametersMap
+import org.http4k.core.with
+import org.http4k.filter.AllowAll
+import org.http4k.filter.CorsPolicy
+import org.http4k.filter.MicrometerMetrics
+import org.http4k.filter.OriginPolicy
+import org.http4k.filter.ServerFilters
+import org.http4k.format.auto
+import org.http4k.lens.ContentNegotiation
+import org.http4k.lens.Header
+import org.http4k.lens.Invalid
+import org.http4k.lens.LensFailure
+import org.http4k.lens.Meta
+import org.http4k.lens.ParamMeta
+import org.http4k.lens.RequestContextKey
+import org.http4k.routing.ResourceLoader
+import org.http4k.routing.bind
+import org.http4k.routing.path
+import org.http4k.routing.routes
+import org.http4k.routing.static
+import org.http4k.server.Netty
+import org.http4k.server.ServerConfig
+import org.http4k.server.asServer
+import java.io.Closeable
+import java.nio.ByteBuffer
+import java.time.Duration
 
 /**
- * Contains information on the rest API, such as network parameters and available queries
+ * Implements the REST API.
  */
 class RestApi(
         private val listenPort: Int,
-        private val basePath: String,
-        private val tlsCertificate: String? = null,
-        private val tlsCertificatePassword: String? = null,
-        private val nodeDiagnosticContext: NodeDiagnosticContext = JsonNodeDiagnosticContext()
-) : Modellable {
-
-    private val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
-    private val DEFAULT_ENTRY_RESULTS_REQUEST = 25
-    private val MAX_NUMBER_OF_TXS_PER_REQUEST = 600
+        val basePath: String,
+        private val nodeDiagnosticContext: NodeDiagnosticContext = JsonNodeDiagnosticContext(),
+        gracefulShutdown: Boolean = true
+) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val JSON_CONTENT_TYPE = "application/json"
-        const val OCTET_CONTENT_TYPE = "application/octet-stream"
-        const val XML_CONTENT_TYPE = "text/xml"
+        const val REST_API_VERSION = 2
+
+        private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
+        private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
+        private const val MAX_NUMBER_OF_TXS_PER_REQUEST = 600
+
+        private val blockchainRidPattern = Regex("([0-9a-fA-F]+)")
+        private val chainIidPattern = Regex("iid_([0-9]+)")
     }
 
-    private val http = Service.ignite()!!
-    private val gson = JsonFactory.makeJson()
-    private val gtvGson = make_gtv_gson()
-    private val models = mutableMapOf<String, ChainModel>()
-    private val bridByIID = mutableMapOf<Long, String>()
+    private val models = mutableMapOf<BlockchainRid, ChainModel>()
+    private val bridByIID = mutableMapOf<Long, BlockchainRid>()
 
-    init {
-        buildErrorHandler(http)
-        buildRouter(http)
-        logger.info { "Rest API listening on port ${actualPort()} and were given $listenPort" }
-        logger.info { "Rest API attached on $basePath/" }
+    override fun attachModel(blockchainRid: BlockchainRid, chainModel: ChainModel) {
+        models[blockchainRid] = chainModel
+        bridByIID[chainModel.chainIID] = blockchainRid
     }
 
-    override fun attachModel(blockchainRid: String, chainModel: ChainModel) {
-        val brid = blockchainRid.uppercase()
-        models[brid] = chainModel
-        bridByIID[chainModel.chainIID] = brid
-    }
-
-    override fun detachModel(blockchainRid: String) {
-        val brid = blockchainRid.uppercase()
-        val model = models.remove(brid)
+    override fun detachModel(blockchainRid: BlockchainRid) {
+        val model = models.remove(blockchainRid)
         if (model != null) {
             bridByIID.remove(model.chainIID)
         } else throw ProgrammerMistake("Blockchain $blockchainRid not attached")
     }
 
-    override fun retrieveModel(blockchainRid: String): ChainModel? {
-        return models[blockchainRid.uppercase()] as? Model
-    }
+    override fun retrieveModel(blockchainRid: BlockchainRid): ChainModel? = models[blockchainRid] as? Model
 
-    fun actualPort(): Int {
-        return http.port()
-    }
+    fun actualPort(): Int = server.port()
 
-    private fun buildErrorHandler(http: Service) {
-        http.exception(NotFoundError::class.java) { error, request, response ->
-            logger.warn("NotFound: ${error.message}")
-            response.status(404)
-            transformErrorResponseFromDiagnostics(request, response, error)
-        }
+    private val gtvGson = make_gtv_gson()
 
-        http.exception(BadFormatError::class.java) { error, _, response ->
-            logger.warn("BadFormat: ${error.message}")
-            response.status(400)
-            setErrorResponseBody(response, error)
-        }
+    private val blockchainRefFilter = Filter { next ->
+        { request ->
+            val ref = request.path("blockchainRid")?.let { parseBlockchainRid(it) }
+            if (ref != null) {
+                val blockchainRid = resolveBlockchain(ref)
+                val chainModel = chainModel(blockchainRid)
+                withLoggingContext(
+                        BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
+                        CHAIN_IID_TAG to chainModel.chainIID.toString()) {
+                    when (chainModel) {
+                        is Model -> {
+                            logger.trace { "Local REST API model found: $chainModel" }
+                            next(request.with(modelKey of chainModel))
+                        }
 
-        http.exception(UserMistake::class.java) { error, _, response ->
-            logger.warn("UserMistake: ${error.message}")
-            response.status(400)
-            setErrorResponseBody(response, error)
-        }
-
-        http.exception(InvalidTnxException::class.java) { error, _, response ->
-            response.status(400)
-            setErrorResponseBody(response, error)
-        }
-
-        http.exception(DuplicateTnxException::class.java) { error, _, response ->
-            response.status(409) // Conflict
-            setErrorResponseBody(response, error)
-        }
-
-        http.exception(UnavailableException::class.java) { error, request, response ->
-            response.status(503) // Service unavailable
-            transformErrorResponseFromDiagnostics(request, response, error)
-        }
-
-        http.exception(PmEngineIsAlreadyClosed::class.java) { error, _, response ->
-            response.status(503) // Service unavailable
-            setErrorResponseBody(response, error)
-        }
-
-        http.exception(Exception::class.java) { error, request, response ->
-            logger.error("Exception: $error", error)
-            response.status(500)
-            transformErrorResponseFromDiagnostics(request, response, error)
-        }
-
-        http.notFound { _, _ -> toJson(UserMistake("Not found")) }
-    }
-
-    private fun transformErrorResponseFromDiagnostics(request: Request, response: Response, error: Exception) {
-        val blockchainRid = if (request.params(PARAM_BLOCKCHAIN_RID) != null) checkBlockchainRID(request) else null
-        blockchainRid?.let { checkDiagnosticError(BlockchainRid.buildFromHex(blockchainRid)) }?.let { errorBody ->
-            response.status(500)
-            response.type(JSON_CONTENT_TYPE)
-            response.body(gson.toJson(errorBody))
-        } ?: setErrorResponseBody(response, error)
-    }
-
-    private fun checkDiagnosticError(blockchainRid: BlockchainRid): JsonObject? {
-        if (!nodeDiagnosticContext.hasBlockchainErrors(blockchainRid)) return null
-        return nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).let {
-            JsonObject().apply { addProperty("error", it.value.toString()) }
-        }
-    }
-
-    private fun setErrorResponseBody(response: Response, error: Exception) {
-        if (response.type() == OCTET_CONTENT_TYPE) {
-            response.raw().outputStream.apply {
-                write(GtvEncoder.encodeGtv(gtv(error.message ?: "Unknown error")))
-                flush()
+                        is ExternalModel -> {
+                            logger.trace { "External REST API model found: $chainModel" }
+                            chainModel(request)
+                        }
+                    }
+                }
+            } else {
+                next(request)
             }
+        }
+    }
+
+    private val blockchainMetricsFilter = ServerFilters.MicrometerMetrics.RequestTimer(Metrics.globalRegistry, labeler = ::blockchainLabeler)
+
+    private fun blockchainLabeler(httpTransaction: HttpTransaction): HttpTransaction {
+        val model = modelKey(httpTransaction.request)
+        return if (model != null) {
+            httpTransaction
+                    .label(CHAIN_IID_TAG, model.chainIID.toString())
+                    .label(BLOCKCHAIN_RID_TAG, model.blockchainRid.toHex())
         } else {
-            response.body(toJson(error))
+            httpTransaction
         }
     }
 
-    private fun buildRouter(http: Service) {
-        http.port(listenPort)
-        if (tlsCertificate != null) {
-            http.secure(tlsCertificate, tlsCertificatePassword, null, null)
-        }
+    private val blockchain = blockchainRefFilter.then(blockchainMetricsFilter)
 
-        http.before { req, res ->
-            // Assuming content-type is correctly set we will avoid logging binary request bodies
-            if (!req.contentType().isNullOrBlank() && !req.contentType().contains(OCTET_CONTENT_TYPE) && !req.body().isNullOrBlank()) {
-                logger.debug { "[${req.ip()}] ${req.requestMethod()} ${req.pathInfo()} with body: ${req.body()}" }
-            } else {
-                logger.debug { "[${req.ip()}] ${req.requestMethod()} ${req.pathInfo()}" }
-            }
+    private val app = routes(
+            "/" bind static(ResourceLoader.Classpath("/restapi-root")),
+            "/apidocs" bind static(ResourceLoader.Classpath("/restapi-docs")),
 
-            res.header(ACCESS_CONTROL_ALLOW_ORIGIN, "*")
-            res.header(ACCESS_CONTROL_REQUEST_METHOD, "POST, GET, OPTIONS")
-            //res.header("Access-Control-Allow-Headers", "")
-            res.type(JSON_CONTENT_TYPE)
-        }
+            "/version" bind GET to ::getVersion,
+            "/_debug" bind GET to ::getDebug,
 
-        http.after { _, res ->
-            // This will not log binary response bodies
-            if (!res.body().isNullOrBlank()) {
-                logger.debug { "Response body: ${res.body()}" }
-            }
-        }
+            "/tx/{blockchainRid}" bind POST to blockchain.then(::postTransaction),
+            "/tx/{blockchainRid}/{txRid}" bind GET to blockchain.then(::getTransaction),
+            "/transactions/{blockchainRid}/count" bind GET to blockchain.then(::getTransactionsCount),
+            "/transactions/{blockchainRid}/{txRid}" bind GET to blockchain.then(::getTransactionInfo),
+            "/transactions/{blockchainRid}" bind GET to blockchain.then(::getTransactionsInfo),
+            "/tx/{blockchainRid}/{txRid}/confirmationProof" bind GET to blockchain.then(::getConfirmationProof),
+            "/tx/{blockchainRid}/{txRid}/status" bind GET to blockchain.then(::getTransactionStatus),
 
-        http.path(basePath) {
+            "/blocks/{blockchainRid}" bind GET to blockchain.then(::getBlocks),
+            "/blocks/{blockchainRid}/{blockRid}" bind GET to blockchain.then(::getBlock),
+            "/blocks/{blockchainRid}/height/{height}" bind GET to blockchain.then(::getBlockByHeight),
 
-            http.options("/*") { request, response ->
-                request.headers(ACCESS_CONTROL_REQUEST_HEADERS)?.let {
-                    response.header(ACCESS_CONTROL_ALLOW_HEADERS, it)
-                }
-                request.headers(ACCESS_CONTROL_REQUEST_METHOD)?.let {
-                    response.header(ACCESS_CONTROL_ALLOW_METHODS, it)
-                }
-                "OK"
-            }
-
-            http.post("/tx/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
-                val tx = toTransaction(request)
-                val maxLength = try {
-                    if (tx.bytes.size > 200) 200 else tx.bytes.size
-                } catch (e: Exception) {
-                    throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
-                }
-
-                logger.debug {
-                    """
-                        Processed tx bytes: ${tx.bytes.sliceArray(0 until maxLength).toHex()}
-                    """.trimIndent()
-                }
-                if (!tx.tx.matches(Regex("[0-9a-fA-F]{2,}"))) {
-                    throw UserMistake("Invalid tx format. Expected {\"tx\": <hex-string>}")
-                }
-                model(request).postTransaction(tx)
-                "{}"
-            })
-
-            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", JSON_CONTENT_TYPE, redirectGet { request, _ ->
-                val result = runTxActionOnModel(request) { model, txRID ->
-                    model.getTransaction(txRID)
-                }
-                gson.toJson(result)
-            })
-
-            http.get("/transactions/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", JSON_CONTENT_TYPE, redirectGet { request, _ ->
-                val result = runTxActionOnModel(request) { model, txRID ->
-                    model.getTransactionInfo(txRID)
-                }
-                gson.toJson(result)
-            })
-
-            http.get("/transactions/$PARAM_BLOCKCHAIN_RID", JSON_CONTENT_TYPE, redirectGet { request, _ ->
-                val model = model(request)
-                val paramsMap = request.queryMap()
-                val limit = paramsMap.get("limit")?.value()?.toIntOrNull()?.coerceIn(0, MAX_NUMBER_OF_TXS_PER_REQUEST)
-                        ?: DEFAULT_ENTRY_RESULTS_REQUEST
-                val beforeTime = paramsMap.get("before-time")?.value()?.toLongOrNull() ?: Long.MAX_VALUE
-                val result = model.getTransactionsInfo(beforeTime, limit)
-                gson.toJson(result)
-            })
-
-            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX/confirmationProof", JSON_CONTENT_TYPE, redirectGet { request, _ ->
-                val result = runTxActionOnModel(request) { model, txRID ->
-                    model.getConfirmationProof(txRID)
-                }
-                gson.toJson(result)
-            })
-
-            http.get("/tx/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX/status", redirectGet { request, _ ->
-                val result = runTxActionOnModel(request) { model, txRID ->
-                    model.getStatus(txRID)
-                }
-                gson.toJson(result)
-            })
-
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID", JSON_CONTENT_TYPE, redirectGet { request, _ ->
-                val model = model(request)
-                val paramsMap = request.queryMap()
-                val beforeTime = paramsMap.get("before-time")?.value()?.toLongOrNull()
-                val beforeHeight = paramsMap.get("before-height")?.value()?.toLongOrNull()
-                if (beforeTime != null && beforeHeight != null) {
-                    throw UserMistake("Cannot specify both before-time and before-height")
-                }
-                val limit = paramsMap.get("limit")?.value()?.toIntOrNull()?.coerceIn(0, MAX_NUMBER_OF_BLOCKS_PER_REQUEST)
-                        ?: DEFAULT_ENTRY_RESULTS_REQUEST
-                val txHashesOnly = paramsMap.get("txs")?.value() != "true"
-                val result = if (beforeHeight != null) {
-                    model.getBlocksBeforeHeight(beforeHeight, limit, txHashesOnly)
-                } else {
-                    model.getBlocks(beforeTime ?: Long.MAX_VALUE, limit, txHashesOnly)
-                }
-                gson.toJson(result)
-            })
-
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", JSON_CONTENT_TYPE, redirectGet { request, _ ->
-                val model = model(request)
-                val blockRID = request.params(PARAM_HASH_HEX).hexStringToByteArray()
-                val txHashesOnly = request.queryMap()["txs"].value() != "true"
-                val result = model.getBlock(blockRID, txHashesOnly)
-                gson.toJson(result)
-            })
-
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/$PARAM_HASH_HEX", OCTET_CONTENT_TYPE, redirectGet(OCTET_CONTENT_TYPE) { request, _ ->
-                val model = model(request)
-                val blockRID = request.params(PARAM_HASH_HEX).hexStringToByteArray()
-                val txHashesOnly = request.queryMap()["txs"].value() != "true"
-                val result = model.getBlock(blockRID, txHashesOnly)
-
-                val gtv = result?.let { GtvObjectMapper.toGtvDictionary(it) } ?: GtvNull
-                GtvEncoder.encodeGtv(gtv)
-            })
-
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", JSON_CONTENT_TYPE, redirectGet { request, _ ->
-                val model = model(request)
-                val height = request.params(PARAM_HEIGHT).toLong()
-                val txHashesOnly = request.queryMap()["txs"].value() != "true"
-                val result = model.getBlock(height, txHashesOnly)
-                gson.toJson(result)
-            })
-
-            http.get("/blocks/$PARAM_BLOCKCHAIN_RID/height/$PARAM_HEIGHT", OCTET_CONTENT_TYPE, redirectGet(OCTET_CONTENT_TYPE) { request, _ ->
-                val model = model(request)
-                val height = request.params(PARAM_HEIGHT).toLong()
-                val txHashesOnly = request.queryMap()["txs"].value() != "true"
-                val result = model.getBlock(height, txHashesOnly)
-
-                val gtv = result?.let { GtvObjectMapper.toGtvDictionary(it) } ?: GtvNull
-                GtvEncoder.encodeGtv(gtv)
-            })
-
-            http.post("/query/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
-                handlePostQuery(request)
-            })
-
-            http.post("/batch_query/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
-                handleQueries(request)
-            })
-
+            "/query/{blockchainRid}" bind GET to blockchain.then(::getQuery),
+            "/query/{blockchainRid}" bind POST to blockchain.then(::postQuery),
+            "/batch_query/{blockchainRid}" bind POST to blockchain.then(::batchQuery),
             // Direct query. That should be used as example: <img src="http://node/dquery/brid?type=get_picture&id=4555" />
-            http.get("/dquery/$PARAM_BLOCKCHAIN_RID", redirectGet { request, response ->
-                handleDirectQuery(request, response)
-            })
+            "/dquery/{blockchainRid}" bind GET to blockchain.then(::directQuery),
+            "/query_gtx/{blockchainRid}" bind POST to blockchain.then(::queryGtx),
+            "/query_gtv/{blockchainRid}" bind POST to blockchain.then(::queryGtv),
 
-            http.get("/query/$PARAM_BLOCKCHAIN_RID", redirectGet { request, _ ->
-                handleGetQuery(request)
-            })
+            "/node/{blockchainRid}/my_status" bind GET to blockchain.then(::getNodeStatus),
+            "/node/{blockchainRid}/statuses" bind GET to blockchain.then(::getNodeStatuses),
+            "/brid/{blockchainRid}" bind GET to blockchain.then(::getBlockchainRid),
+            "/blockchain/{blockchainRid}/height" bind GET to blockchain.then(::getCurrentHeight),
 
-            http.post("/query_gtx/$PARAM_BLOCKCHAIN_RID", redirectPost { request, _ ->
-                handleGTXQueries(request)
-            })
+            "/config/{blockchainRid}" bind GET to blockchain.then(::getBlockchainConfiguration),
+            "/config/{blockchainRid}" bind POST to blockchain.then(::validateBlockchainConfiguration),
+    )
 
-            http.post("/query_gtv/$PARAM_BLOCKCHAIN_RID", redirectPost(OCTET_CONTENT_TYPE) { request, _ ->
-                handleGtvQuery(request)
-            })
+    @Suppress("UNUSED_PARAMETER")
+    private fun getVersion(request: Request): Response = Response(OK).with(
+            versionBody of Version(REST_API_VERSION)
+    )
 
-            http.get("/node/$PARAM_BLOCKCHAIN_RID/$SUBQUERY", JSON_CONTENT_TYPE, redirectGet { request, _ ->
-                handleNodeStatusQueries(request)
-            })
-
-            http.get("/_debug", JSON_CONTENT_TYPE) { request, _ ->
-                handleDebugQuery(request)
-            }
-
-            http.get("/_debug/$SUBQUERY", JSON_CONTENT_TYPE) { request, _ ->
-                handleDebugQuery(request)
-            }
-
-            http.get("/brid/$PARAM_BLOCKCHAIN_RID") { request, response ->
-                val brid = checkBlockchainRID(request)
-                response.type("text/plain")
-                brid
-            }
-
-            http.get("/blockchain/$PARAM_BLOCKCHAIN_RID/height", JSON_CONTENT_TYPE, redirectGet { request, _ ->
-                val model = model(request)
-                val result = model.getCurrentBlockHeight()
-                gson.toJson(result)
-            })
-
-            http.get("/config/$PARAM_BLOCKCHAIN_RID", XML_CONTENT_TYPE, redirectGet(XML_CONTENT_TYPE) { request, _ ->
-                val configuration = getBlockchainConfiguration(request)
-                GtvMLEncoder.encodeXMLGtv(GtvDecoder.decodeGtv(configuration))
-            })
-
-            http.get("/config/$PARAM_BLOCKCHAIN_RID", OCTET_CONTENT_TYPE, redirectGet(OCTET_CONTENT_TYPE) { request, _ ->
-                getBlockchainConfiguration(request)
-            })
-        }
-
-        http.awaitInitialization()
+    @Suppress("UNUSED_PARAMETER")
+    private fun getDebug(request: Request): Response {
+        val debugInfo = models.values
+                .filterIsInstance(Model::class.java)
+                .firstOrNull()
+                ?.debugQuery(null)
+                ?: throw NotFoundError("There are no running chains")
+        return Response(OK).with(prettyJsonBody of debugInfo)
     }
 
-    private fun getBlockchainConfiguration(request: Request): ByteArray {
+    private fun postTransaction(request: Request): Response {
         val model = model(request)
-        val paramsMap = request.queryMap()
-        val height = paramsMap.get("height")?.value()?.toLongOrNull() ?: -1
-        if (height < -1) throw BadFormatError("Height must be -1 (current height) or a non-negative integer")
-        return model.getBlockchainConfiguration(height) ?: throw UserMistake("Failed to find configuration")
+        val tx = ContentNegotiation.auto(txBody, binaryBody)(request)
+        model.postTransaction(tx)
+        return Response(OK).with(emptyBody.outbound(request) of Empty)
     }
 
-    private fun toTransaction(request: Request): ApiTx {
-        try {
-            return gson.fromJson(request.body(), ApiTx::class.java)
-        } catch (e: Exception) {
-            throw UserMistake("Could not parse json", e)
+    private fun getTransaction(request: Request): Response {
+        val tx = runTxActionOnModel(model(request), txRidPath(request)) { model, txRID ->
+            model.getTransaction(txRID)
         }
+        return Response(OK).with(ContentNegotiation.auto(txBody, binaryBody).outbound(request) of tx)
     }
 
-    private fun toTxRID(hashHex: String): TxRID {
-        val bytes: ByteArray
-        try {
-            bytes = hashHex.hexStringToByteArray()
-        } catch (e: Exception) {
-            throw UserMistake("Can't parse hashHex $hashHex", e)
+    private fun getTransactionInfo(request: Request): Response {
+        val txInfo = runTxActionOnModel(model(request), txRidPath(request)) { model, txRID ->
+            model.getTransactionInfo(txRID)
         }
-
-        val txRID: TxRID
-        try {
-            txRID = TxRID(bytes)
-        } catch (e: Exception) {
-            throw UserMistake("Bytes $hashHex is not a proper hash", e)
-        }
-
-        return txRID
+        return Response(OK).with(txInfoBody of txInfo)
     }
 
-    private fun toJson(error: Exception): String {
-        return gson.toJson(ErrorBody(error.message ?: "Unknown error"))
-    }
-
-    private fun handlePostQuery(request: Request): String {
+    private fun getTransactionsInfo(request: Request): Response {
         val model = model(request)
-        val gtxQuery = gtvGson.fromJson(request.body(), Gtv::class.java)
-        val queryDict = gtxQuery.asDict()
-        val type = queryDict["type"] ?: throw UserMistake("Missing query type")
-        val args = gtv(queryDict.filterKeys { key -> key != "type" })
-        val queryResult = model.query(GtxQuery(type.asString(), args))
-        return gtvToJSON(queryResult, gtvGson)
+        val limit = limitQuery(request)?.coerceIn(0, MAX_NUMBER_OF_TXS_PER_REQUEST)
+                ?: DEFAULT_ENTRY_RESULTS_REQUEST
+        val beforeTime = beforeTimeQuery(request) ?: Long.MAX_VALUE
+        val txInfos = model.getTransactionsInfo(beforeTime, limit)
+        return Response(OK).with(txInfosBody of txInfos)
     }
 
-    private fun handleGetQuery(request: Request): String {
+    private fun getTransactionsCount(request: Request): Response {
         val model = model(request)
-        val queryMap = request.queryMap()
-        val type = queryMap.value("type") ?: throw UserMistake("Missing query type")
-        val args = mutableMapOf<String, Gtv>()
-
-        queryMap.toMap().filterKeys { it != "type" }.forEach {
-            val paramValue = queryMap.value(it.key)
-            if (paramValue == "true" || paramValue == "false") {
-                args[it.key] = gtv(paramValue.toBoolean())
-            } else if (paramValue.toLongOrNull() != null) {
-                args[it.key] = gtv(paramValue.toLong())
-            } else {
-                args[it.key] = gtv(paramValue)
-            }
-        }
-
-        val queryResult = model.query(GtxQuery(type, gtv(args)))
-        return gtvToJSON(queryResult, gtvGson)
+        val lastTransactionNumber = model.getLastTransactionNumber()
+        return Response(OK).with(transactionsCountBody of lastTransactionNumber)
     }
 
-    private fun handleDirectQuery(request: Request, response: Response): Any {
-        val queryMap = request.queryMap()
-        val args = GtvDictionary.build(queryMap.toMap().mapValues {
-            gtv(queryMap.value(it.key))
-        })
-        val array = model(request).query(GtxQuery(queryMap.value("type"), args)).asArray()
+    private fun getConfirmationProof(request: Request): Response {
+        val proof = runTxActionOnModel(model(request), txRidPath(request)) { model, txRID ->
+            model.getConfirmationProof(txRID)
+        }
+        return Response(OK).with(proofBody of proof)
+    }
 
+    private fun getTransactionStatus(request: Request): Response {
+        val status = runTxActionOnModel(model(request), txRidPath(request)) { model, txRID ->
+            model.getStatus(txRID)
+        }
+        return Response(OK).with(statusBody of status)
+    }
+
+    private fun getBlocks(request: Request): Response {
+        val model = model(request)
+        val beforeTime = beforeTimeQuery(request)
+        val beforeHeight = beforeHeightQuery(request)
+        if (beforeTime != null && beforeHeight != null) {
+            throw UserMistake("Cannot specify both before-time and before-height")
+        }
+        val limit = limitQuery(request)?.coerceIn(0, MAX_NUMBER_OF_BLOCKS_PER_REQUEST)
+                ?: DEFAULT_ENTRY_RESULTS_REQUEST
+        val txHashesOnly = txsQuery(request) != true
+        val blocks = if (beforeHeight != null) {
+            model.getBlocksBeforeHeight(beforeHeight, limit, txHashesOnly)
+        } else {
+            model.getBlocks(beforeTime ?: Long.MAX_VALUE, limit, txHashesOnly)
+        }
+        return Response(OK).with(blocksBody of blocks)
+    }
+
+    private fun getBlock(request: Request): Response {
+        val model = model(request)
+        val blockRID = blockRidPath(request)
+        val txHashesOnly = txsQuery(request) != true
+        val block = model.getBlock(blockRID, txHashesOnly)
+        return blockResponse(block, request)
+    }
+
+    private fun getBlockByHeight(request: Request): Response {
+        val model = model(request)
+        val height = heightPath(request)
+        val txHashesOnly = txsQuery(request) != true
+        val block = model.getBlock(height, txHashesOnly)
+        return blockResponse(block, request)
+    }
+
+    private fun blockResponse(block: BlockDetail?, request: Request): Response = if (block != null) {
+        Response(OK).with(blockBody.outbound(request) of block)
+    } else {
+        Response(OK).with(nullBody.outbound(request) of Unit)
+    }
+
+    private fun getQuery(request: Request): Response {
+        val model = model(request)
+        val query = extractGetQuery(request.uri.queries().toParametersMap())
+        val queryResult = model.query(query)
+        return Response(OK).with(gtvJsonBody of queryResult)
+    }
+
+    private fun postQuery(request: Request): Response {
+        val model = model(request)
+        val gtxQuery = gtvJsonBody(request)
+        val query = parseQuery(gtxQuery)
+        val queryResult = model.query(query)
+        return Response(OK).with(gtvJsonBody of queryResult)
+    }
+
+    private fun batchQuery(request: Request): Response {
+        val model = model(request)
+        val queries: List<Gtv> = batchQueriesBody(request)
+        val responses: List<String> = queries.map { gtxQuery ->
+            val query = parseQuery(gtxQuery)
+            val queryResult = model.query(query)
+            gtvToJSON(queryResult, gtvGson)
+        }
+        return Response(OK).with(stringsBody of responses)
+    }
+
+    private fun directQuery(request: Request): Response {
+        val model = model(request)
+        val query = extractGetQuery(request.uri.queries().toParametersMap())
+        val array = model.query(query).asArray()
         if (array.size < 2) {
             throw UserMistake("Response should have two parts: content-type and content")
         }
         // first element is content-type
-        response.type(array[0].asString())
+        val contentType = array[0].asString()
         val content = array[1]
         return when (content.type) {
-            GtvType.STRING -> content.asString()
-            GtvType.BYTEARRAY -> content.asByteArray()
+            GtvType.STRING -> Response(OK)
+                    .with(Header.CONTENT_TYPE.of(ContentType(contentType)))
+                    .body(content.asString())
+
+            GtvType.BYTEARRAY -> Response(OK)
+                    .with(Header.CONTENT_TYPE.of(ContentType(contentType)))
+                    .body(Body.invoke(ByteBuffer.wrap(content.asByteArray())))
+
             else -> throw UserMistake("Unexpected content")
         }
     }
 
-    private fun handleQueries(request: Request): String {
+    private fun queryGtx(request: Request): Response {
         val model = model(request)
-        val queriesArray: JsonArray = parseMultipleQueriesRequest(request)
-        val response: MutableList<String> = mutableListOf()
-
-        queriesArray.forEach {
-            val gtxQuery = gtvGson.fromJson(it, Gtv::class.java)
-            val queryDict = gtxQuery.asDict()
-            val type = queryDict["type"] ?: throw UserMistake("Missing query type")
-            val args = gtv(queryDict.filterKeys { key -> key != "type" })
-            val queryResult = model.query(GtxQuery(type.asString(), args))
-            response.add(gtvToJSON(queryResult, gtvGson))
-        }
-
-        return gson.toJson(response)
-    }
-
-    private fun handleGTXQueries(request: Request): String {
-        val response: MutableList<String> = mutableListOf()
-        val queriesArray: JsonArray = parseMultipleQueriesRequest(request)
-
-        queriesArray.forEach {
-            val hexQuery = it.asString
+        val queries = gtxQueriesBody(request)
+        val responses = queries.queries.map {
             val gtxQuery = try {
-                GtxQuery.decode(hexQuery.hexStringToByteArray())
-            } catch (e: IOException) {
-                throw BadFormatError(e.message ?: "")
+                GtxQuery.decode(it.hexStringToByteArray())
+            } catch (e: GtvException) {
+                throw IllegalArgumentException(e.message ?: "")
             }
-            response.add(GtvEncoder.encodeGtv(model(request).query(gtxQuery)).toHex())
+            GtvEncoder.encodeGtv(model.query(gtxQuery)).toHex()
         }
-
-        return gson.toJson(response)
+        return Response(OK).with(stringsBody of responses)
     }
 
-    private fun handleGtvQuery(request: Request): ByteArray {
+    private fun queryGtv(request: Request): Response {
+        val model = model(request)
+        val query = binaryBody(request)
         val gtvQuery = try {
-            GtxQuery.decode(request.bodyAsBytes())
-        } catch (e: IOException) {
-            throw BadFormatError(e.message ?: "")
+            GtxQuery.decode(query)
+        } catch (e: GtvException) {
+            throw IllegalArgumentException(e.message ?: "")
         }
-        return GtvEncoder.encodeGtv(model(request).query(gtvQuery))
+        val response = model.query(gtvQuery)
+        return Response(OK).with(binaryBody of GtvEncoder.encodeGtv(response))
     }
 
-    private fun handleNodeStatusQueries(request: Request): String {
-        return model(request).nodeQuery(request.params(SUBQUERY))
+    private fun getNodeStatus(request: Request): Response {
+        val model = model(request)
+        return Response(OK).with(nodeStatusBody of model.nodeStatusQuery())
     }
 
-    private fun handleDebugQuery(request: Request): String {
-        return models.values
-                .filterIsInstance(Model::class.java)
-                .firstOrNull()
-                ?.debugQuery(request.params(SUBQUERY))
-                ?: throw NotFoundError("There are no running chains")
+    private fun getNodeStatuses(request: Request): Response {
+        val model = model(request)
+        return Response(OK).with(nodeStatusesBody of model.nodePeersStatusQuery())
     }
 
-    private fun checkTxHashHex(request: Request): String {
-        val hashHex = request.params(PARAM_HASH_HEX)
-        if (!hashHex.matches(Regex("[0-9a-fA-F]{64}"))) {
-            throw BadFormatError("Invalid hashHex. Expected 64 hex digits [0-9a-fA-F]")
+    private fun getBlockchainRid(request: Request): Response {
+        val model = model(request)
+        return Response(OK).with(textBody of model.blockchainRid.toHex())
+    }
+
+    private fun getCurrentHeight(request: Request): Response {
+        val model = model(request)
+        val blockHeight = model.getCurrentBlockHeight()
+        return Response(OK).with(blockHeightBody of blockHeight)
+    }
+
+    private fun getBlockchainConfiguration(request: Request): Response {
+        val model = model(request)
+        val height = heightQuery(request)
+        val configuration = model.getBlockchainConfiguration(height)
+                ?: throw UserMistake("Failed to find configuration")
+        return Response(OK).with(configurationOutBody.outbound(request) of configuration)
+    }
+
+    private fun validateBlockchainConfiguration(request: Request): Response {
+        val model = model(request)
+        val configuration = configurationInBody(request)
+
+        try {
+            model.validateBlockchainConfiguration(configuration)
+        } catch (e: UserMistake) {
+            throw e
+        } catch (e: Exception) {
+            throw UserMistake("Invalid configuration: ${e.message}", e)
         }
-        return hashHex
+        return Response(OK).with(emptyBody.outbound(request) of Empty)
+    }
+
+    val handler = routes(
+            basePath bind app
+    )
+
+    private val contexts = RequestContexts()
+    private val modelKey = RequestContextKey.optional<Model>(contexts)
+
+    val server = ServerFilters.InitialiseRequestContext(contexts)
+            .then(ServerFilters.Cors(
+                    CorsPolicy(OriginPolicy.AllowAll(), listOf("Content-Type", "Accept"), listOf(GET, POST, OPTIONS), credentials = false)))
+            .then(ServerFilters.GZip())
+            .then(Filter { next ->
+                { request ->
+                    if (logger.isDebugEnabled) {
+                        val requestInfo = "[${request.source?.address ?: "(unknown)"}] ${request.method} ${request.uri.path}"
+                        // Assuming content-type is correctly set we will avoid logging binary request bodies
+                        if (Header.CONTENT_TYPE(request)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
+                                && (request.body.length ?: 0) > 0) {
+                            logger.debug { "$requestInfo with body: ${String(request.body.payload.array())}" }
+                        } else {
+                            val queryString = request.uri.query
+                            logger.debug("$requestInfo${if (queryString.isBlank()) "" else "?$queryString"}")
+                        }
+                    }
+                    val response = next(request)
+                    if (logger.isDebugEnabled) {
+                        // Assuming content-type is correctly set we will avoid logging binary response bodies
+                        if (Header.CONTENT_TYPE(response)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
+                                && (response.body.length ?: 0) > 0) {
+                            logger.debug("Response body: ${String(response.body.payload.array())}")
+                        }
+                    }
+                    response
+                }
+            })
+            .then(Filter { next ->
+                { request ->
+                    try {
+                        next(request)
+                    } catch (e: Exception) {
+                        onError(e, request)
+                    }
+                }
+            })
+            .then(ServerFilters.CatchLensFailure { request, lensFailure ->
+                Response(BAD_REQUEST).with(
+                        errorBody.outbound(request) of ErrorBody(lensFailure.failures.joinToString("; "))
+                )
+            })
+            .then(handler)
+            .asServer(Netty(listenPort,
+                    if (gracefulShutdown) ServerConfig.StopMode.Graceful(Duration.ofSeconds(15)) else ServerConfig.StopMode.Immediate))
+            .start().also {
+                logger.info { "Rest API listening on port ${it.port()} and were given $listenPort" }
+                logger.info { "Rest API attached on $basePath/" }
+            }
+
+    private fun onError(error: Exception, request: Request): Response {
+        return when (error) {
+            is NotFoundError -> {
+                logger.info { "NotFound: ${error.message}" }
+                transformErrorResponseFromDiagnostics(request, NOT_FOUND, error)
+            }
+
+            is LensFailure -> {
+                logger.info { "BadFormat: ${error.message}" }
+                errorResponse(request, BAD_REQUEST, error.message!!)
+            }
+
+            is IllegalArgumentException -> {
+                logger.info { "IllegalArgument: ${error.message}" }
+                errorResponse(request, BAD_REQUEST, error.message!!)
+            }
+
+            is UserMistake -> {
+                logger.info { "UserMistake: ${error.message}" }
+                errorResponse(request, BAD_REQUEST, error.message!!)
+            }
+
+            is InvalidTnxException -> {
+                errorResponse(request, BAD_REQUEST, error.message!!)
+            }
+
+            is DuplicateTnxException -> {
+                errorResponse(request, CONFLICT, error.message!!)
+            }
+
+            is NotSupported -> {
+                errorResponse(request, FORBIDDEN, error.message!!)
+            }
+
+            is UnavailableException -> {
+                transformErrorResponseFromDiagnostics(request, SERVICE_UNAVAILABLE, error)
+            }
+
+            is PmEngineIsAlreadyClosed -> {
+                errorResponse(request, SERVICE_UNAVAILABLE, error.message!!)
+            }
+
+            else -> {
+                logger.warn(error) { "Unexpected exception: $error" }
+                transformErrorResponseFromDiagnostics(request, INTERNAL_SERVER_ERROR, error)
+            }
+        }
+    }
+
+    private fun transformErrorResponseFromDiagnostics(request: Request, status: Status, error: Exception): Response =
+            modelKey(request)?.let { checkDiagnosticError(it.blockchainRid) }?.let { errorMessage ->
+                errorResponse(request, INTERNAL_SERVER_ERROR, errorMessage)
+            } ?: errorResponse(request, status, error.message ?: "Unknown error")
+
+    private fun checkDiagnosticError(blockchainRid: BlockchainRid): String? =
+            if (nodeDiagnosticContext.hasBlockchainErrors(blockchainRid)) {
+                nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).value.toString()
+            } else {
+                null
+            }
+
+    private fun errorResponse(request: Request, status: Status, errorMessage: String): Response =
+            Response(status).with(
+                    errorBody.outbound(request) of ErrorBody(errorMessage)
+            )
+
+    private fun model(request: Request): Model = modelKey(request) ?: throw LensFailure(listOf(
+            Invalid(Meta(true, "path", ParamMeta.StringParam, "blockchainRid", "Invalid blockchainRID. Expected 64 hex digits [0-9a-fA-F]"))))
+
+    private fun resolveBlockchain(ref: BlockchainRef): BlockchainRid = when (ref) {
+        is BlockchainRidRef -> ref.rid
+
+        is BlockchainIidRef -> bridByIID[ref.iid]
+                ?: throw NotFoundError("Can't find blockchain with chain Iid: ${ref.iid} in DB. Did you add this BC to the node?")
+    }
+
+    private fun parseQuery(gtxQuery: Gtv): GtxQuery {
+        val queryDict = gtxQuery.asDict()
+        val type = queryDict["type"] ?: throw UserMistake("Missing query type")
+        val args = gtv(queryDict.filterKeys { key -> key != "type" } + (NON_STRICT_QUERY_ARGUMENT to gtv(true)))
+        return GtxQuery(type.asString(), args)
+    }
+
+    private fun extractGetQuery(queryMap: Map<String, List<String?>>): GtxQuery {
+        val type = queryMap["type"]?.singleOrNull() ?: throw UserMistake("Missing query type")
+        val args = queryMap.filterKeys { it != "type" }.mapValues {
+            val paramValue = requireNotNull(it.value.single())
+            if (paramValue == "true" || paramValue == "false") {
+                gtv(paramValue.toBoolean())
+            } else if (paramValue.toLongOrNull() != null) {
+                gtv(paramValue.toLong())
+            } else {
+                gtv(paramValue)
+            }
+        } + (NON_STRICT_QUERY_ARGUMENT to gtv(true))
+        return GtxQuery(type, gtv(args))
+    }
+
+    private fun <T> runTxActionOnModel(model: Model, txRid: TxRid, txAction: (Model, TxRid) -> T?): T =
+            txAction(model, txRid)
+                    ?: throw NotFoundError("Can't find tx with hash $txRid")
+
+    private fun chainModel(blockchainRid: BlockchainRid): ChainModel {
+        val chainModel = models[blockchainRid]
+                ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRid")
+        if (!chainModel.live) throw UnavailableException("Blockchain is unavailable")
+        return chainModel
     }
 
     /**
@@ -546,79 +625,21 @@ class RestApi(
      * 1. provide BC RID
      * 2. provide Chain IID (should not be used in production, since to ChainIid could be anything).
      */
-    private fun checkBlockchainRID(request: Request): String {
-        val blockchainRID = request.params(PARAM_BLOCKCHAIN_RID)
-        return when {
-            blockchainRID.matches(Regex("[0-9a-fA-F]{64}")) -> blockchainRID
-            blockchainRID.matches(Regex("iid_[0-9]*")) -> {
-                val chainIid = blockchainRID.substring(4).toLong()
-                val brid = bridByIID[chainIid]
-                if (brid != null)
-                    return brid
-                else
-                    throw NotFoundError("Can't find blockchain with chain Iid: $chainIid in DB. Did you add this BC to the node?")
-            }
-
-            else -> throw BadFormatError("Invalid blockchainRID. Expected 64 hex digits [0-9a-fA-F]")
+    private fun parseBlockchainRid(s: String): BlockchainRef? {
+        val blockchainRidMatch = blockchainRidPattern.matchEntire(s)
+        val chainIidMatch = chainIidPattern.matchEntire(s)
+        return if (blockchainRidMatch != null) {
+            BlockchainRidRef(BlockchainRid.buildFromHex(blockchainRidMatch.groupValues[1]))
+        } else if (chainIidMatch != null) {
+            BlockchainIidRef(chainIidMatch.groupValues[1].toLong())
+        } else {
+            null
         }
     }
 
-    fun stop() {
-        http.stop()
-        http.awaitStop()
+    override fun close() {
+        server.close()
         System.gc()
         System.runFinalization()
-    }
-
-    private fun runTxActionOnModel(request: Request, txAction: (Model, TxRID) -> Any?): Any {
-        val model = model(request)
-        val txHashHex = checkTxHashHex(request)
-        return txAction(model, toTxRID(txHashHex))
-                ?: throw NotFoundError("Can't find tx with hash $txHashHex")
-    }
-
-    private fun chainModel(request: Request): ChainModel {
-        val blockchainRID = checkBlockchainRID(request)
-        val model = models[blockchainRID.uppercase()]
-                ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRID")
-
-        if (!model.live) throw UnavailableException("Blockchain is unavailable")
-        return model
-    }
-
-    private fun model(request: Request): Model {
-        return chainModel(request) as Model
-    }
-
-    private fun parseMultipleQueriesRequest(request: Request): JsonArray {
-        val element: JsonElement = gson.fromJson(request.body(), JsonElement::class.java)
-        val jsonObject = element.asJsonObject
-        return jsonObject.get("queries").asJsonArray
-    }
-
-    private fun redirectGet(responseType: String = JSON_CONTENT_TYPE, localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
-        return redirect(HttpMethod.GET, responseType, localHandler)
-    }
-
-    private fun redirectPost(responseType: String = JSON_CONTENT_TYPE, localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
-        return redirect(HttpMethod.POST, responseType, localHandler)
-    }
-
-    private fun redirect(method: HttpMethod, responseType: String = JSON_CONTENT_TYPE, localHandler: (Request, Response) -> Any): (Request, Response) -> Any {
-        return { request, response ->
-            response.type(responseType)
-            val model = chainModel(request)
-            if (model is ExternalModel) {
-                logger.trace { "External REST API model found: $model" }
-                when (method) {
-                    HttpMethod.GET -> model.get(request, response)
-                    HttpMethod.POST -> model.post(request, response)
-                    else -> throw UnsupportedOperationException("Unsupported HTTP method: $method")
-                }
-            } else {
-                logger.trace { "Local REST API model found: $model" }
-                localHandler(request, response)
-            }
-        }
     }
 }

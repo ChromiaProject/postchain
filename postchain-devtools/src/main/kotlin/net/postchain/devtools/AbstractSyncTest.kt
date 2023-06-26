@@ -67,7 +67,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
                 nodeSetups,
                 mapOf(chainId to blockchainSetup),
                 true,
-                "managed",
+                "manual",
                 "unused", // Doesn't matter, not used as of now
                 infra,
                 true
@@ -125,6 +125,13 @@ open class AbstractSyncTest : IntegrationTestSetup() {
     }
 
     /**
+     * Override this in your test to add config overrides directly on the [NodeSetup] (for node specific configs).
+     */
+    open fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
+
+    }
+
+    /**
      * @return the new [NodeSetup] with key pair from [PeerInfo]
      */
     private fun createNodeSetup(nodeIndex: Int, peerInfo: PeerInfo): NodeSetup {
@@ -175,7 +182,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
             logger.debug { "++ Building DB (no wipe) for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}" }
         }
 
-        StorageBuilder.buildStorage(appConfig, wipeDb).close()
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = wipeDb).close()
 
         // TODO: Olle: Not sure what's going on here
         if (wipeDb) {

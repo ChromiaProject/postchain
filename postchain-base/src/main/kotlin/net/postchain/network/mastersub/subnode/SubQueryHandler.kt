@@ -2,7 +2,6 @@ package net.postchain.network.mastersub.subnode
 
 import mu.KLogging
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.toHex
 import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.block.BlockQueriesProvider
 import net.postchain.network.mastersub.MsMessageHandler
@@ -23,7 +22,7 @@ class SubQueryHandler(private val chainId: Long,
     override fun onMessage(message: MsMessage) {
         when (message) {
             is MsQueryRequest -> {
-                logger.trace { "Received query from master with target blockchain-rid ${message.targetBlockchainRid}, message blockchain-rid ${message.blockchainRid.toHex()} and request id ${message.requestId}" }
+                logger.trace { "Received query from master with target blockchain-rid ${message.targetBlockchainRid} and request id ${message.requestId}" }
                 val blockQueries = message.targetBlockchainRid?.let { blockQueriesProvider.getBlockQueries(it) }
                 (blockQueries?.query(message.name, message.args)
                         ?: CompletableFuture.failedFuture(UserMistake("blockchain ${message.targetBlockchainRid} not found")))
@@ -31,14 +30,12 @@ class SubQueryHandler(private val chainId: Long,
                             if (exception == null) {
                                 logger.trace { "Sending response to master for request-id ${message.requestId}" }
                                 subConnectionManager.sendMessageToMaster(chainId, MsQueryResponse(
-                                        message.blockchainRid,
                                         message.requestId,
                                         response
                                 ))
                             } else {
                                 logger.trace { "Sending failure to master for request-id ${message.requestId}" }
                                 subConnectionManager.sendMessageToMaster(chainId, MsQueryFailure(
-                                        message.blockchainRid,
                                         message.requestId,
                                         exception.toString()
                                 ))
@@ -54,21 +51,20 @@ class SubQueryHandler(private val chainId: Long,
                     } else {
                         blockQueries.getBlock(it, true)
                     }
-                }?.whenCompleteUnwrapped { response, exception ->
-                    if (exception == null) {
-                        subConnectionManager.sendMessageToMaster(chainId, MsBlockAtHeightResponse(
-                                message.blockchainRid,
-                                message.requestId,
-                                response
-                        ))
-                    } else {
-                        subConnectionManager.sendMessageToMaster(chainId, MsQueryFailure(
-                                message.blockchainRid,
-                                message.requestId,
-                                exception.toString()
-                        ))
-                    }
                 } ?: CompletableFuture.failedFuture(UserMistake("blockchain ${message.targetBlockchainRid} not found")))
+                        .whenCompleteUnwrapped { response, exception ->
+                            if (exception == null) {
+                                subConnectionManager.sendMessageToMaster(chainId, MsBlockAtHeightResponse(
+                                        message.requestId,
+                                        response
+                                ))
+                            } else {
+                                subConnectionManager.sendMessageToMaster(chainId, MsQueryFailure(
+                                        message.requestId,
+                                        exception.toString()
+                                ))
+                            }
+                        }
             }
         }
     }

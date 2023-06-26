@@ -10,7 +10,6 @@ object MsCodec {
     fun encode(message: MsMessage): ByteArray {
         val gtv = GtvFactory.gtv(
                 GtvFactory.gtv(message.type.toLong()),
-                GtvFactory.gtv(message.blockchainRid),
                 message.getPayload()
         )
 
@@ -20,25 +19,22 @@ object MsCodec {
     fun decode(bytes: ByteArray): MsMessage {
         val gtv = GtvDecoder.decodeGtv(bytes)
         val type = gtv[0].asInteger().toInt()
-        val brid = gtv[1].asByteArray()
-        val payload = gtv[2]
+        val payload = gtv[1]
 
         if (type >= MsMessageType.values().size) {
             throw UnsupportedOperationException("Unknown MsMessage type: $type")
         }
 
         return when (MsMessageType.values()[type]) {
-            HandshakeMessage -> MsHandshakeMessage(brid, payload)
-            DataMessage -> MsDataMessage(brid, payload)
-            FindNextBlockchainConfig -> MsFindNextBlockchainConfigMessage(brid, payload)
-            NextBlockchainConfig -> MsNextBlockchainConfigMessage(brid, payload)
-            ConnectedPeers -> MsConnectedPeersMessage(brid, payload)
-            CommittedBlock -> MsCommittedBlockMessage(brid, payload)
-            QueryRequest -> MsQueryRequest(brid, payload)
-            QueryResponse -> MsQueryResponse(brid, payload)
-            QueryFailure -> MsQueryFailure(brid, payload)
-            BlockAtHeightRequest -> MsBlockAtHeightRequest(brid, payload)
-            BlockAtHeightResponse -> MsBlockAtHeightResponse(brid, payload)
+            HandshakeMessage -> MsHandshakeMessage(payload)
+            DataMessage -> MsDataMessage(payload)
+            ConnectedPeers -> MsConnectedPeersMessage(payload)
+            CommittedBlock -> MsCommittedBlockMessage(payload)
+            QueryRequest -> MsQueryRequest(payload)
+            QueryResponse -> MsQueryResponse(payload)
+            QueryFailure -> MsQueryFailure(payload)
+            BlockAtHeightRequest -> MsBlockAtHeightRequest(payload)
+            BlockAtHeightResponse -> MsBlockAtHeightResponse(payload)
         }
     }
 }
