@@ -345,11 +345,6 @@
                 <artifactId>httpcore</artifactId>
                 <version>4.4.16</version>
             </dependency>
-            <dependency>
-                <groupId>org.bouncycastle</groupId>
-                <artifactId>bcpkix-jdk18on</artifactId>
-                <version>1.72</version>
-            </dependency>
 
             <dependency>
                 <groupId>io.rest-assured</groupId>
@@ -396,6 +391,11 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
+                <version>1.75</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk18on</artifactId>
                 <version>1.75</version>
             </dependency>
             <dependency>
