@@ -131,9 +131,6 @@ open class ContainerManagedBlockchainProcessManager(
 
                 invokeAfterCommitHooks(chainId, blockHeight)
 
-                // Preloading blockchain configuration
-                preloadChain0Configuration()
-
                 rTrace("Sync", blockTrace)
                 val res = containerJobManager.withLock {
                     // Reload/start/stops blockchains
