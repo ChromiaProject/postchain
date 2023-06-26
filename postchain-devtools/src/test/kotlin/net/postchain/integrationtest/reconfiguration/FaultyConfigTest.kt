@@ -27,6 +27,7 @@ import org.apache.commons.dbutils.handlers.ScalarHandler
 import org.awaitility.Awaitility
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.util.concurrent.TimeUnit
 
 class FaultyConfigTest : IntegrationTestSetup() {
@@ -178,6 +179,27 @@ class FaultyConfigTest : IntegrationTestSetup() {
         // Try to build again
         buildBlock(DEFAULT_CHAIN_IID, 4)
     }
+
+    @Test
+    fun `Configurations that have already been used to build blocks should not be marked as faulty`() {
+        val (node) = createNodes(1, "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_toggleable_faulty_1.xml")
+
+        buildBlock(DEFAULT_CHAIN_IID, 0)
+
+        node.stopBlockchain(DEFAULT_CHAIN_IID)
+
+        try {
+            TogglableFaultyGtxModule.shouldFail = true
+            assertThrows<Exception> {
+                node.startBlockchain(DEFAULT_CHAIN_IID)
+            }
+            withReadConnection(node.postchainContext.blockBuilderStorage, DEFAULT_CHAIN_IID) {
+                assertThat(DatabaseAccess.of(it).getFaultyConfiguration(it)).isNull()
+            }
+        } finally {
+            TogglableFaultyGtxModule.shouldFail = false
+        }
+    }
 }
 
 open class FaultyGTXModule : SimpleGTXModule<Unit>(Unit, mapOf(), mapOf()) {
@@ -264,4 +286,14 @@ class EventuallyFaultySpecialTxExtension : GTXSpecialTxExtension {
     override fun needsSpecialTransaction(position: SpecialTransactionPosition) = position == SpecialTransactionPosition.End
 
     override fun validateSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext, ops: List<OpData>) = true
+}
+
+class TogglableFaultyGtxModule : SimpleGTXModule<Unit>(Unit, mapOf(), mapOf()) {
+    companion object {
+        var shouldFail = false
+    }
+
+    override fun initializeDB(ctx: EContext) {
+        if (shouldFail) throw Exception("Going to be trouble now")
+    }
 }
