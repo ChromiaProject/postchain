@@ -4,6 +4,7 @@ package net.postchain.devtools
 
 import mu.KLogging
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.config.app.AppConfig
 import net.postchain.config.app.AppConfig.Companion.DEFAULT_PORT
 import net.postchain.config.node.NodeConfig
@@ -16,6 +17,7 @@ import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
+import net.postchain.gtv.GtvFactory.gtv
 import org.apache.commons.configuration2.MapConfiguration
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterEach
@@ -156,11 +158,19 @@ open class IntegrationTestSetup : AbstractIntegration() {
             blockchainConfigFilename: String,
             preWipeDatabase: Boolean = true,
             setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit },
-            keyPairCache: KeyPairCache = KeyPairHelper
+            keyPairCache: KeyPairCache = KeyPairHelper,
+            overrideSigners: List<ByteArray> = emptyList()
     ): Array<PostchainTestNode> {
 
         // 1. Build the BC Setup
-        val blockchainGtvConfig = readBlockchainConfig(blockchainConfigFilename)
+        val blockchainGtvConfig = readBlockchainConfig(blockchainConfigFilename).let {
+            if (overrideSigners.isNotEmpty()) {
+                val configMap = it.asDict().toMutableMap()
+                configMap[KEY_SIGNERS] = gtv(*overrideSigners.map(::gtv).toTypedArray())
+                gtv(configMap)
+            } else it
+        }
+
         val chainId = 1 // We only have one.
         val blockchainSetup = BlockchainSetupFactory.buildFromGtv(chainId, blockchainGtvConfig, keyPairCache)
 
