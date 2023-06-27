@@ -58,6 +58,7 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
 
     fun makeBlockchainEngine(
             configuration: BlockchainConfiguration,
+            beforeCommitHandler: BeforeCommitHandler,
             afterCommitHandler: AfterCommitHandler,
             blockBuilderStorage: Storage,
             sharedStorage: Storage,

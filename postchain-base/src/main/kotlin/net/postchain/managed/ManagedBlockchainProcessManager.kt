@@ -14,9 +14,11 @@ import net.postchain.config.node.ManagedNodeConfig
 import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.gtx.GTXModuleAware
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.managed.config.ManagedDataSourceAware
@@ -110,6 +112,32 @@ open class ManagedBlockchainProcessManager(
             }
 
     /**
+     * Here we perform any extra database operations that we want to do related to the block before we finally commit it.
+     */
+    override fun buildBeforeCommitHandler(blockchainConfig: BlockchainConfiguration): BeforeCommitHandler {
+        fun beforeCommitHandlerChain0(bTrace: BlockTrace?, bctx: BlockEContext) {
+            logger.trace { "Running before commit handler for chain0 -- block causing handler to run: $bTrace" }
+            // Preloading blockchain configuration
+            preloadChain0Configuration(bctx, blockchainConfig)
+        }
+
+        fun beforeCommitHandlerChainN(bTrace: BlockTrace?, bctx: BlockEContext) {
+            logger.trace { "Running before commit handler -- block causing handler to run: $bTrace" }
+            saveConfigurationInDatabaseIfNotAlreadyExists(bctx, blockchainConfig)
+        }
+
+        fun wrappedBeforeCommitHandler(bTrace: BlockTrace?, bctx: BlockEContext) {
+            if (bctx.chainID == CHAIN0) {
+                beforeCommitHandlerChain0(bTrace, bctx)
+            } else {
+                beforeCommitHandlerChainN(bTrace, bctx)
+            }
+        }
+
+        return ::wrappedBeforeCommitHandler
+    }
+
+    /**
      * @return a [AfterCommitHandler] which is a lambda (This lambda will be called by the Engine after each block
      *          has been committed.)
      */
@@ -126,11 +154,6 @@ open class ManagedBlockchainProcessManager(
         fun afterCommitHandlerChain0(bTrace: BlockTrace?, blockTimestamp: Long): Boolean {
             wrTrace("chain0 begin", bTrace)
 
-            // Preloading blockchain configuration
-            preloadChain0Configuration()
-
-            wrTrace("about to restart chain0", bTrace)
-
             // Checking out for chain0 configuration changes
             val reloadChain0 = isConfigurationChanged(CHAIN0)
             startStopBlockchainsAsync(reloadChain0, bTrace)
@@ -143,8 +166,6 @@ open class ManagedBlockchainProcessManager(
          * b) restart the chain if this is the case.
          */
         fun afterCommitHandlerChainN(bTrace: BlockTrace?, blockHeight: Long): Boolean {
-            saveConfigurationInDatabaseIfNotAlreadyExists(chainId = chainId, blockchainConfig, blockHeight = blockHeight)
-
             // Checking out for a chain configuration changes
             wrTrace("chainN, begin", bTrace)
 
@@ -191,13 +212,10 @@ open class ManagedBlockchainProcessManager(
         return ::wrappedAfterCommitHandler
     }
 
-    private fun saveConfigurationInDatabaseIfNotAlreadyExists(chainId: Long, blockchainConfig: BlockchainConfiguration, blockHeight: Long) {
-        withWriteConnection(blockBuilderStorage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
-            if (db.getConfigurationData(ctx, blockchainConfig.configHash) == null) {
-                db.addConfigurationData(ctx, blockHeight, encodeGtv(blockchainConfig.rawConfig))
-            }
-            true
+    private fun saveConfigurationInDatabaseIfNotAlreadyExists(bctx: BlockEContext, blockchainConfig: BlockchainConfiguration) {
+        val db = DatabaseAccess.of(bctx)
+        if (db.getConfigurationData(bctx, blockchainConfig.configHash) == null) {
+            db.addConfigurationData(bctx, bctx.height, encodeGtv(blockchainConfig.rawConfig))
         }
     }
 
@@ -261,31 +279,30 @@ open class ManagedBlockchainProcessManager(
     }
 
     /**
-     * Makes sure the next configuration is stored in DB.
-     *
-     * @param chainId is the chain we are interested in.
+     * Makes sure the next configuration is stored in DB before committing current block.
      */
-    protected fun preloadChain0Configuration() {
-        withWriteConnection(blockBuilderStorage, CHAIN0) { ctx ->
-            val db = DatabaseAccess.of(ctx)
-            val brid = db.getBlockchainRid(ctx)!! // We can only load chains this way if we know their BC RID.
-            val height = db.getLastBlockHeight(ctx)
-            val nextConfigHeight = dataSource.findNextConfigurationHeight(brid.data, height)
-            if (nextConfigHeight != null) {
-                logger.info { "Next config height found in managed-mode module: $nextConfigHeight" }
-                if (db.findConfigurationHeightForBlock(ctx, nextConfigHeight) != nextConfigHeight) {
-                    logger.info {
-                        "Configuration for the height $nextConfigHeight is not found in ConfigurationDataStore " +
-                                "and will be loaded into it from managed-mode module"
-                    }
-                    val config = dataSource.getConfiguration(brid.data, nextConfigHeight)!!
-                    GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(config), brid)
-                    db.addConfigurationData(ctx, nextConfigHeight, config)
+    private fun preloadChain0Configuration(bctx: BlockEContext, configuration: BlockchainConfiguration) {
+        val db = DatabaseAccess.of(bctx)
+        val brid = db.getBlockchainRid(bctx)!! // We can only load chains this way if we know their BC RID.
+        val currentBlockDataSource = getDatasourceForCurrentBlock(configuration, bctx)
+        val nextConfigHeight = currentBlockDataSource.findNextConfigurationHeight(brid.data, bctx.height)
+        if (nextConfigHeight != null) {
+            logger.info { "Next config height found in managed-mode module: $nextConfigHeight" }
+            if (db.findConfigurationHeightForBlock(bctx, nextConfigHeight) != nextConfigHeight) {
+                logger.info {
+                    "Configuration for the height $nextConfigHeight is not found in ConfigurationDataStore " +
+                            "and will be loaded into it from managed-mode module"
                 }
+                val config = currentBlockDataSource.getConfiguration(brid.data, nextConfigHeight)!!
+                GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(config), brid)
+                db.addConfigurationData(bctx, nextConfigHeight, config)
             }
-
-            true
         }
+    }
+
+    protected open fun getDatasourceForCurrentBlock(configuration: BlockchainConfiguration, bctx: BlockEContext): ManagedNodeDataSource {
+        val currentBlockQueryRunner = { name: String, args: Gtv -> (configuration as GTXModuleAware).module.query(bctx, name, args) }
+        return BaseManagedNodeDataSource(currentBlockQueryRunner, postchainContext.appConfig)
     }
 
     /**

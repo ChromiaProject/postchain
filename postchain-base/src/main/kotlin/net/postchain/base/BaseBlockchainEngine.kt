@@ -16,6 +16,7 @@ import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.AfterCommitHandler
+import net.postchain.core.BeforeCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainRestartNotifier
@@ -54,6 +55,7 @@ open class BaseBlockchainEngine(
         private val blockchainConfigurationProvider: BlockchainConfigurationProvider,
         private val restartNotifier: BlockchainRestartNotifier,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
+        private val beforeCommitHandler: BeforeCommitHandler,
         private val afterCommitHandler: AfterCommitHandler,
         private val useParallelDecoding: Boolean = true,
 ) : BlockchainEngine {
@@ -122,7 +124,11 @@ open class BaseBlockchainEngine(
         }
         val savepoint = currentEContext.conn.setSavepoint("blockBuilder${System.nanoTime()}")
 
-        return BaseManagedBlockBuilder(currentEContext, savepoint, blockBuilderStorage, blockchainConfiguration.makeBlockBuilder(currentEContext), { },
+        return BaseManagedBlockBuilder(currentEContext, savepoint, blockBuilderStorage, blockchainConfiguration.makeBlockBuilder(currentEContext),
+                {
+                    val blockBuilder = it as AbstractBlockBuilder
+                    beforeCommitHandler(blockBuilder.getBTrace(), blockBuilder.bctx)
+                },
                 {
                     afterLog("Begin", it.getBTrace())
                     val blockBuilder = it as AbstractBlockBuilder

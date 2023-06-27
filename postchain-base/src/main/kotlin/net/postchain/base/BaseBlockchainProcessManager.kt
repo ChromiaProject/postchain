@@ -198,12 +198,14 @@ open class BaseBlockchainProcessManager(
                                     initialEContext: EContext) {
         startDebug("BlockchainConfiguration has been created", bTrace)
 
+        val beforeCommitHandler = buildBeforeCommitHandler(blockchainConfig)
         val afterCommitHandler = buildAfterCommitHandler(chainId, blockchainConfig)
         val restartNotifier = BlockchainRestartNotifier { loadNextPendingConfig ->
             startBlockchainAsync(chainId, bTrace, loadNextPendingConfig)
         }
         val engine = blockchainInfrastructure.makeBlockchainEngine(
                 blockchainConfig,
+                beforeCommitHandler,
                 afterCommitHandler,
                 blockBuilderStorage,
                 sharedStorage,
@@ -375,6 +377,14 @@ open class BaseBlockchainProcessManager(
         chainIdToBrid.clear()
         bridToChainId.clear()
         logger.debug("Stopped BlockchainProcessManager")
+    }
+
+    /**
+     * Actions to be taken before committing a block.
+     * These will be performed in the same transaction as the block.
+     */
+    protected open fun buildBeforeCommitHandler(blockchainConfig: BlockchainConfiguration): BeforeCommitHandler {
+        return { _, _ -> }
     }
 
     /**
