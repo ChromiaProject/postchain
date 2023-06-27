@@ -1,102 +1,44 @@
 package net.postchain.integrationtest.server
 
 import assertk.assertThat
-import assertk.assertions.contains
 import assertk.assertions.isEqualTo
-import assertk.assertions.isFalse
 import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotEmpty
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
-import assertk.assertions.isTrue
-import io.grpc.inprocess.InProcessChannelBuilder
-import io.grpc.inprocess.InProcessServerBuilder
-import io.grpc.testing.GrpcCleanupRule
-import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.withReadConnection
-import net.postchain.common.toHex
-import net.postchain.crypto.PubKey
-import net.postchain.devtools.ConfigFileBasedIntegrationTest
-import net.postchain.devtools.PostchainTestNode
+import io.grpc.StatusRuntimeException
+import net.postchain.common.BlockchainRid
 import net.postchain.devtools.getModules
 import net.postchain.integrationtest.reconfiguration.DummyModule1
 import net.postchain.integrationtest.reconfiguration.DummyModule2
-import net.postchain.server.NodeProvider
-import net.postchain.server.grpc.AddBlockchainReplicaRequest
 import net.postchain.server.grpc.AddConfigurationRequest
-import net.postchain.server.grpc.AddPeerRequest
+import net.postchain.server.grpc.ExportBlockchainRequest
 import net.postchain.server.grpc.FindBlockchainRequest
-import net.postchain.server.grpc.ListPeersRequest
+import net.postchain.server.grpc.ImportBlockchainRequest
+import net.postchain.server.grpc.InitializeBlockchainRequest
+import net.postchain.server.grpc.ListConfigurationsRequest
 import net.postchain.server.grpc.PeerServiceGrpc
-import net.postchain.server.grpc.PeerServiceGrpcImpl
 import net.postchain.server.grpc.PostchainServiceGrpc
-import net.postchain.server.grpc.PostchainServiceGrpcImpl
-import net.postchain.server.grpc.RemoveBlockchainReplicaRequest
-import net.postchain.server.grpc.RemovePeerRequest
+import net.postchain.server.grpc.RemoveBlockchainRequest
 import net.postchain.server.grpc.StartBlockchainRequest
 import net.postchain.server.grpc.StopBlockchainRequest
-import net.postchain.server.service.PeerService
-import net.postchain.server.service.PostchainService
 import org.awaitility.Awaitility
 import org.awaitility.Duration
-import org.junit.Rule
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import kotlin.io.path.createTempFile
 
-class PostchainServerTest : ConfigFileBasedIntegrationTest() {
-    private lateinit var node: PostchainTestNode
+class PostchainServerTest : PostchainServerBase() {
+
     private lateinit var postchainServiceStub: PostchainServiceGrpc.PostchainServiceBlockingStub
     private lateinit var peerServiceStub: PeerServiceGrpc.PeerServiceBlockingStub
 
-    @JvmField
-    @Rule
-    val grpcCleanupRule = GrpcCleanupRule()
-
     @BeforeEach
     fun setup() {
-        val nodes = createNodes(1, "/net/postchain/devtools/server/blockchain_config_1.xml")
-        node = nodes[0]
-        val nodeProvider = NodeProvider { node }
-        val postchainServiceServerName = InProcessServerBuilder.generateName()
-        grpcCleanupRule.register(
-                InProcessServerBuilder.forName(postchainServiceServerName)
-                        .directExecutor()
-                        .addService(PostchainServiceGrpcImpl(PostchainService(nodeProvider)))
-                        .build()
-                        .start()
-        )
-        val peerServiceServerName = InProcessServerBuilder.generateName()
-        grpcCleanupRule.register(
-                InProcessServerBuilder.forName(peerServiceServerName)
-                        .directExecutor()
-                        .addService(PeerServiceGrpcImpl(PeerService(nodeProvider)))
-                        .build()
-                        .start()
-        )
-
-        postchainServiceStub = PostchainServiceGrpc.newBlockingStub(
-                grpcCleanupRule.register(
-                        InProcessChannelBuilder.forName(postchainServiceServerName)
-                                .directExecutor()
-                                .build()
-                )
-        )
-        peerServiceStub = PeerServiceGrpc.newBlockingStub(
-                grpcCleanupRule.register(
-                        InProcessChannelBuilder.forName(peerServiceServerName)
-                                .directExecutor()
-                                .build()
-                )
-        )
-
-        peerServiceStub.addPeer(
-                AddPeerRequest.newBuilder()
-                        .setPubkey(node.pubKey)
-                        .setHost("localhost")
-                        .setPort(7740)
-                        .setOverride(true)
-                        .build()
-        )
+        setupNode()
+        postchainServiceStub = setupPostchainService(nodeProvider)
+        peerServiceStub = setupPeerService()
     }
 
     @Test
@@ -131,6 +73,9 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
     fun `Add configuration`() {
         assertThat(node.getModules(1L)[0]).isInstanceOf(DummyModule1::class)
 
+        var listConfigurationsReply = postchainServiceStub.listConfigurations(ListConfigurationsRequest.newBuilder().setChainId(1L).build())
+        assertThat(listConfigurationsReply.heightCount).isEqualTo(1)
+
         val configXml = javaClass.getResource("/net/postchain/devtools/server/blockchain_config_2.xml")!!.readText()
         postchainServiceStub.addConfiguration(
                 AddConfigurationRequest.newBuilder()
@@ -148,58 +93,77 @@ class PostchainServerTest : ConfigFileBasedIntegrationTest() {
             assertThat(node.getModules()).isNotEmpty()
             assertThat(node.getModules(1L)[0]).isInstanceOf(DummyModule2::class)
         }
+
+        listConfigurationsReply = postchainServiceStub.listConfigurations(ListConfigurationsRequest.newBuilder().setChainId(1L).build())
+        assertThat(listConfigurationsReply.heightCount).isEqualTo(2)
+        assertThat(listConfigurationsReply.getHeight(0)).isEqualTo(0L)
+        assertThat(listConfigurationsReply.getHeight(1)).isEqualTo(1L)
     }
 
     @Test
-    fun `Add and remove a peer as a BC replica`() {
-        val replicaKey = generatePubKey(-1).toHex()
-        val brid = node.getBlockchainInstance(1L).blockchainEngine.getConfiguration().blockchainRid
+    fun `Initialize blockchain via configuration`() {
+        val configXml = javaClass.getResource("/net/postchain/devtools/server/blockchain_config_2.xml")!!.readText()
+        postchainServiceStub.initializeBlockchain(InitializeBlockchainRequest.newBuilder()
+                .setChainId(2L)
+                .setOverride(false)
+                .setXml(configXml).build())
 
-        val listPeersReply = peerServiceStub.listPeers(ListPeersRequest.newBuilder().build())
-        assertThat(listPeersReply.message.contains(replicaKey)).isFalse()
-
-        // Add
-        peerServiceStub.addPeer(
-                AddPeerRequest.newBuilder()
-                        .setPubkey(replicaKey)
-                        .setHost("localhost")
-                        .setPort(7741)
+        val actualBrid = node.getBlockchainInstance(2L).blockchainEngine.getConfiguration().blockchainRid
+        val findBlockchainReply = postchainServiceStub.findBlockchain(
+                FindBlockchainRequest.newBuilder()
+                        .setChainId(2L)
                         .build()
         )
+        assertThat(findBlockchainReply.brid).isEqualTo(actualBrid.toHex())
+    }
 
-        val listPeersReplyAfterAdd = peerServiceStub.listPeers(ListPeersRequest.newBuilder().build())
-        assertThat(listPeersReplyAfterAdd.message).contains(replicaKey)
+    @Test
+    fun `Export and Import blockchain`() {
+        buildNonEmptyBlocks(-1, 9)
 
-        postchainServiceStub.addBlockchainReplica(
-                AddBlockchainReplicaRequest.newBuilder()
-                        .setBrid(brid.toHex())
-                        .setPubkey(replicaKey)
+        val confFilePath = createTempFile("configuration")
+        confFilePath.toFile().deleteOnExit()
+        val blockFilePath = createTempFile("blocks")
+        blockFilePath.toFile().deleteOnExit()
+        val actualBrid = node.getBlockchainInstance(1L).blockchainEngine.getConfiguration().blockchainRid
+
+        println(confFilePath.toString())
+        println(blockFilePath.toString())
+
+        val exportBlockchainReply = postchainServiceStub.exportBlockchain(
+                ExportBlockchainRequest.newBuilder()
+                        .setChainId(1L)
+                        .setConfigurationsFile(confFilePath.toString())
+                        .setBlocksFile(blockFilePath.toString())
+                        .setFromHeight(0)
+                        .setUpToHeight(Long.MAX_VALUE)
+                        .setOverwrite(true)
+                        .build())
+
+        assertThat(exportBlockchainReply.fromHeight).isEqualTo(0)
+        assertThat(exportBlockchainReply.upHeight).isEqualTo(9)
+        assertThat(exportBlockchainReply.numBlocks).isEqualTo(10)
+
+        postchainServiceStub.removeBlockchain(RemoveBlockchainRequest.newBuilder().setChainId(1L).build())
+
+        val importBlockchainReply = postchainServiceStub.importBlockchain(
+                ImportBlockchainRequest.newBuilder()
+                        .setChainId(2L)
+                        .setConfigurationsFile(confFilePath.toString())
+                        .setBlocksFile(blockFilePath.toString())
+                        .setIncremental(false)
                         .build()
         )
-        val replicaExistsAfterAdd = withReadConnection(node.getBlockchainInstance(1L).blockchainEngine.sharedStorage, 1L) {
-            DatabaseAccess.of(it).existsBlockchainReplica(it, brid, PubKey(replicaKey))
-        }
-        assertThat(replicaExistsAfterAdd).isTrue()
+        assertThat(importBlockchainReply.fromHeight).isEqualTo(0)
+        assertThat(importBlockchainReply.toHeight).isEqualTo(9)
+        assertThat(importBlockchainReply.numBlocks).isEqualTo(10)
+        assertThat(BlockchainRid(importBlockchainReply.blockchainRid.toByteArray())).isEqualTo(actualBrid)
+    }
 
-        // Remove
-        postchainServiceStub.removeBlockchainReplica(
-                RemoveBlockchainReplicaRequest.newBuilder()
-                        .setBrid(brid.toHex())
-                        .setPubkey(replicaKey)
-                        .build()
-        )
-        val replicaExistsAfterRemove = withReadConnection(node.getBlockchainInstance(1L).blockchainEngine.sharedStorage, 1L) {
-            DatabaseAccess.of(it).existsBlockchainReplica(it, brid, PubKey(replicaKey))
-        }
-        assertThat(replicaExistsAfterRemove).isFalse()
-
-        peerServiceStub.removePeer(
-                RemovePeerRequest.newBuilder()
-                        .setPubkey(replicaKey)
-                        .build()
-        )
-
-        val listPeersReplyAfterRemove = peerServiceStub.listPeers(ListPeersRequest.newBuilder().build())
-        assertThat(listPeersReplyAfterRemove.message.contains(replicaKey)).isFalse()
+    @Test
+    fun `Remove blockchain`() {
+        val removeBlockchainReply = postchainServiceStub.removeBlockchain(RemoveBlockchainRequest.newBuilder().setChainId(1L).build())
+        assertThat(removeBlockchainReply.message).isEqualTo("Blockchain has been removed")
+        assertThrows<StatusRuntimeException> { postchainServiceStub.removeBlockchain(RemoveBlockchainRequest.newBuilder().setChainId(1L).build()) }
     }
 }
