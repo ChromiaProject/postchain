@@ -165,7 +165,7 @@ open class ManagedBlockchainProcessManager(
          * a) see if configuration has changed and
          * b) restart the chain if this is the case.
          */
-        fun afterCommitHandlerChainN(bTrace: BlockTrace?, blockHeight: Long): Boolean {
+        fun afterCommitHandlerChainN(bTrace: BlockTrace?): Boolean {
             // Checking out for a chain configuration changes
             wrTrace("chainN, begin", bTrace)
 
@@ -195,7 +195,7 @@ open class ManagedBlockchainProcessManager(
                 val restart = if (chainId == CHAIN0) {
                     afterCommitHandlerChain0(bTrace, blockTimestamp)
                 } else {
-                    afterCommitHandlerChainN(bTrace, blockHeight)
+                    afterCommitHandlerChainN(bTrace)
                 }
 
                 wrTrace("After", bTrace)
@@ -282,11 +282,11 @@ open class ManagedBlockchainProcessManager(
      * Makes sure the next configuration is stored in DB before committing current block.
      */
     private fun preloadChain0Configuration(bctx: BlockEContext, configuration: BlockchainConfiguration) {
-        val db = DatabaseAccess.of(bctx)
-        val brid = db.getBlockchainRid(bctx)!! // We can only load chains this way if we know their BC RID.
+        val brid = configuration.blockchainRid
         val currentBlockDataSource = getDatasourceForCurrentBlock(configuration, bctx)
         val nextConfigHeight = currentBlockDataSource.findNextConfigurationHeight(brid.data, bctx.height)
         if (nextConfigHeight != null) {
+            val db = DatabaseAccess.of(bctx)
             logger.info { "Next config height found in managed-mode module: $nextConfigHeight" }
             if (db.findConfigurationHeightForBlock(bctx, nextConfigHeight) != nextConfigHeight) {
                 logger.info {
