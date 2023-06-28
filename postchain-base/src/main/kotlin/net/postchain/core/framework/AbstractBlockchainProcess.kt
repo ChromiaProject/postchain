@@ -13,7 +13,7 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
     private val running = AtomicBoolean(false)
     internal lateinit var process: Thread
 
-    fun isProcessRunning() = running.get()
+    override fun isProcessRunning() = running.get()
 
     final override fun start() {
         running.set(true)

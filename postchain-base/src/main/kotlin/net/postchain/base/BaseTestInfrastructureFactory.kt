@@ -42,6 +42,8 @@ class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : B
 
     override fun getBlockchainState(): BlockchainState = BlockchainState.RUNNING
 
+    override fun isProcessRunning() = true
+
     private fun shutdownDebug(str: String) {
         if (logger.isDebugEnabled) {
             logger.debug("$name: shutdown() - $str.")
