@@ -215,12 +215,16 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private fun restartWithNewConfigIfPossible() {
         val chainId = workerContext.blockchainConfiguration.chainID
         val bcConfigProvider = workerContext.blockchainConfigurationProvider
-        withReadConnection(workerContext.engine.blockBuilderStorage, chainId) { ctx ->
-            if (workerContext.engine.hasBuiltFirstBlockAfterConfigUpdate()
-                    && bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, chainId, true)) {
-                logger.debug("New config found. Reloading.")
-                workerContext.restartNotifier.notifyRestart(true)
+        try {
+            withReadConnection(workerContext.engine.blockBuilderStorage, chainId) { ctx ->
+                if (workerContext.engine.hasBuiltFirstBlockAfterConfigUpdate()
+                        && bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, chainId, true)) {
+                    logger.debug("New config found. Reloading.")
+                    workerContext.restartNotifier.notifyRestart(true)
+                }
             }
+        } catch (e: Exception) {
+            logger.error("Couldn't check for config updates, ignoring and continuing", e)
         }
     }
 
