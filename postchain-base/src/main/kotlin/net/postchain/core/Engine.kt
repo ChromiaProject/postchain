@@ -57,6 +57,7 @@ interface BlockchainProcess {
     fun registerDiagnosticData(diagnosticData: DiagnosticData) = Unit
     fun isSigner(): Boolean
     fun getBlockchainState(): BlockchainState
+    fun isProcessRunning(): Boolean
 }
 
 // TODO: [POS-358]: Should we add chainId and brid to BlockchainProcess?

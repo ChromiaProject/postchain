@@ -93,7 +93,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
     }
 
     fun isBlockchainRunning(chainId: Long): Boolean {
-        return processManager.retrieveBlockchain(chainId) != null
+        return processManager.retrieveBlockchain(chainId)?.isProcessRunning() ?: false
     }
 
     override fun shutdown() {
