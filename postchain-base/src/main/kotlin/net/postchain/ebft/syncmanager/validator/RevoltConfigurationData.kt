@@ -12,7 +12,7 @@ data class RevoltConfigurationData(
     @RawGtv
     val rawGtv: Gtv,
     @Name(KEY_REVOLT_TIMEOUT)
-    @DefaultValue(defaultLong = 10_000)
+    @DefaultValue(defaultLong = 1_000)
     val timeout: Long,
     @Name(KEY_REVOLT_EXPONENTIAL_DELAY_BASE)
     @DefaultValue(defaultLong = 1_000)
