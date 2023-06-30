@@ -45,8 +45,8 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
 
     @Test
     fun testMaxTransactionSize() {
-        val blockchainRid = BlockchainRid.buildFromHex("C988399D8295F8AD8CA92EFB8C926308356961980D5E717FE5978CC8AC8C1B20")
         val nodes = createNodes(2, "/net/postchain/devtools/blocks/blockchain_config_max_transaction_size.xml")
+        val blockchainRid = nodes[0].getBlockchainInstance().blockchainEngine.getConfiguration().blockchainRid
 
         // over 2mb
         val largeTx = buildTransaction(blockchainRid, "${RandomStringUtils.randomAlphanumeric(1024 * 1024 * 2)}-test")

@@ -59,11 +59,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val blockManager: BlockManager,
                            private val blockDatabase: BlockDatabase,
                            private val nodeStateTracker: NodeStateTracker,
-                           private val isProcessRunning: () -> Boolean,
+                           isProcessRunning: () -> Boolean,
                            startInFastSync: Boolean
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
-    private val revoltTracker = RevoltTracker(statusManager, getRevoltConfiguration())
+    private val revoltTracker = RevoltTracker(statusManager, getRevoltConfiguration(), workerContext.engine)
     private val statusSender = StatusSender(MAX_STATUS_INTERVAL, statusManager, workerContext.communicationManager)
     private val defaultTimeout = 1000
     private var currentTimeout: Int
