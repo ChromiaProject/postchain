@@ -10,7 +10,6 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.common.toHex
@@ -38,7 +37,6 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.nio.file.Files
 import java.nio.file.Path
-import kotlin.streams.toList
 
 object ImporterExporter : KLogging() {
     /**
@@ -196,7 +194,7 @@ object ImporterExporter : KLogging() {
         var lastBlock = -1L
         var numBlocks = 0L
         BufferedInputStream(FileInputStream(blocksFile.toFile())).use { stream ->
-            var currentConfiguration: BlockchainConfiguration? = null
+            val configs = mutableMapOf<Long, BlockchainConfiguration>()
             while (true) {
                 val gtv = GtvDecoder.decodeGtv(stream)
                 if (gtv.isNull()) break
@@ -205,14 +203,23 @@ object ImporterExporter : KLogging() {
                 if (firstBlock == -1L) firstBlock = blockHeight
 
                 withReadWriteConnection(storage, chainId) { ctx ->
-                    if (blockHeight in configurationHeights) {
-                        val rawConfigurationData = DatabaseAccess.of(ctx).getConfigurationData(ctx, blockHeight)
-                                ?: throw ProgrammerMistake("Cannot load configuration for height $blockHeight even though we just added it")
-                        currentConfiguration = makeBlockchainConfiguration(rawConfigurationData, partialContext, blockSigMaker, ctx, cryptoSystem)
+                    val nextConfigHeight = DatabaseAccess.of(ctx).findConfigurationHeightForBlock(ctx, blockHeight)
+                            ?: throw UserMistake("Can't find initial config")
+                    if (nextConfigHeight !in configs) {
+                        configs.clear()
+                        val rawConfigData = DatabaseAccess.of(ctx).getConfigurationData(ctx, nextConfigHeight)
+                                ?: throw UserMistake("Cannot load configuration for height $blockHeight")
+                        configs[nextConfigHeight] = makeBlockchainConfiguration(rawConfigData, partialContext, blockSigMaker, ctx, cryptoSystem)
+                        logger.info("Building configuration ${configs[nextConfigHeight]?.configHash?.toHex()} for height $blockHeight")
                     }
-                    val thisConfiguration = currentConfiguration ?: throw UserMistake("No initial configuration")
-                    if (blockHeight % logNBlocks == 0L) logger.info("Import block ${blockHeader.blockRID.toHex()} at height $blockHeight")
-                    importBlock(ctx, thisConfiguration, blockHeader, transactions, blockWitness)
+
+                    if (numBlocks % logNBlocks == 0L) {
+                        logger.info("Importing block ${blockHeader.blockRID.toHex()} at height $blockHeight")
+                    }
+
+                    val config = configs[nextConfigHeight]
+                            ?: throw UserMistake("Cannot load configuration for height $blockHeight")
+                    importBlock(ctx, config, blockHeader, transactions, blockWitness)
                 }
                 lastBlock = blockHeight
                 numBlocks++
