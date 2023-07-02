@@ -320,7 +320,9 @@ class ImportExportIT {
                     configurationsFile,
                     blocksFile,
                     logNBlocks = 1)
-            assertThat(importResult).isEqualTo(ImportResult(fromHeight = 0, toHeight = 2, numBlocks = 3, blockchainRid = blockchainRid))
+            assertThat(importResult).isEqualTo(
+                    ImportResult(fromHeight = 0, toHeight = 2, lastSkippedBlock = -1L, firstImportedBlock = 0, numBlocks = 3, blockchainRid = blockchainRid)
+            )
 
             withReadConnection(storage, chainId) { ctx ->
                 val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
@@ -381,7 +383,9 @@ class ImportExportIT {
                     blocksFile1,
                     incremental = false,
                     logNBlocks = 1)
-            assertThat(importResult1).isEqualTo(ImportResult(fromHeight = 0, toHeight = 1, numBlocks = 2, blockchainRid = blockchainRid))
+            assertThat(importResult1).isEqualTo(
+                    ImportResult(fromHeight = 0, toHeight = 1, lastSkippedBlock = -1L, firstImportedBlock = 0, numBlocks = 2, blockchainRid = blockchainRid)
+            )
 
             val importResult2 = ImporterExporter.importBlockchain(
                     KeyPairHelper.keyPair(0),
@@ -392,7 +396,9 @@ class ImportExportIT {
                     blocksFile2,
                     incremental = true,
                     logNBlocks = 1)
-            assertThat(importResult2).isEqualTo(ImportResult(fromHeight = 2, toHeight = 2, numBlocks = 1, blockchainRid = blockchainRid))
+            assertThat(importResult2).isEqualTo(
+                    ImportResult(fromHeight = 2, toHeight = 2, lastSkippedBlock = -1L, firstImportedBlock = 2, numBlocks = 1, blockchainRid = blockchainRid)
+            )
 
             withReadConnection(storage, chainId) { ctx ->
                 val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess

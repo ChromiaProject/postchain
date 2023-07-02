@@ -146,7 +146,9 @@ object ImporterExporter : KLogging() {
                 throw UserMistake("Blockchain $chainId not found in incremental mode")
             }
 
-            importConfigurations(ctx, db, configurationsFile, existingChain)
+            importConfigurations(ctx, db, configurationsFile, existingChain).also {
+                logger.info("Import of configurations completed: ${it.second.joinToString(", ")}")
+            }
         }
 
         return withLoggingContext(
@@ -154,14 +156,13 @@ object ImporterExporter : KLogging() {
                 BLOCKCHAIN_RID_TAG to blockchainRid.toHex()
         ) {
             logger.info("Importing blockchain from ${configurationsFile.toAbsolutePath()} and ${blocksFile.toAbsolutePath()}...")
-            val importResult = importBlocks(heights.toSet(), blocksFile, logNBlocks, storage, chainId, blockchainRid, nodeKeyPair, cryptoSystem)
+            val result = importBlocks(blocksFile, logNBlocks, storage, chainId, blockchainRid, nodeKeyPair, cryptoSystem)
 
-            val message = if (importResult.numBlocks > 0)
-                "Import of ${importResult.numBlocks} blocks ${importResult.fromHeight}..${importResult.toHeight} to chain $chainId with bc-rid ${blockchainRid.toHex()} completed"
-            else
-                "No blocks to import to chain $chainId with bc-rid ${blockchainRid.toHex()}"
-            logger.info(message)
-            importResult
+            logger.info {
+                if (result.numBlocks > 0) "Import of blocks to chain $chainId with blockchain RID ${blockchainRid.toHex()} completed: $result"
+                else "No blocks to import to chain $chainId with blockchain RID ${blockchainRid.toHex()}"
+            }
+            result
         }
     }
 
@@ -185,12 +186,14 @@ object ImporterExporter : KLogging() {
                 blockchainRid to heights
             }
 
-    private fun importBlocks(configurationHeights: Set<Long>, blocksFile: Path, logNBlocks: Int, storage: Storage, chainId: Long, blockchainRid: BlockchainRid,
-                             nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem): ImportResult {
+    private fun importBlocks(blocksFile: Path, logNBlocks: Int, storage: Storage, chainId: Long, blockchainRid: BlockchainRid, nodeKeyPair: KeyPair,
+                             cryptoSystem: CryptoSystem): ImportResult {
         val partialContext = BaseBlockchainContext(chainId, blockchainRid, NODE_ID_READ_ONLY, nodeKeyPair.pubKey.data)
         val blockSigMaker = cryptoSystem.buildSigMaker(nodeKeyPair)
 
         var firstBlock = -1L
+        var lastSkippedBlock = -1L
+        var firstImportedBlock = -1L
         var lastBlock = -1L
         var numBlocks = 0L
         BufferedInputStream(FileInputStream(blocksFile.toFile())).use { stream ->
@@ -200,9 +203,28 @@ object ImporterExporter : KLogging() {
                 if (gtv.isNull()) break
                 val (blockHeader, blockWitness, transactions) = decodeBlockEntry(gtv)
                 val blockHeight = blockHeader.blockHeaderRec.getHeight()
-                if (firstBlock == -1L) firstBlock = blockHeight
+                if (firstBlock == -1L) {
+                    firstBlock = blockHeight
+                    logger.info("First block ${blockHeader.blockRID.toHex()} at height $blockHeight")
+                }
 
                 withReadWriteConnection(storage, chainId) { ctx ->
+                    val db = DatabaseAccess.of(ctx)
+                    val lastHeight = db.getLastBlockHeight(ctx)
+                    if (blockHeight <= lastHeight) {
+                        if (lastSkippedBlock == -1L) {
+                            logger.info("Skipping already imported blocks ...")
+                        } else if (numBlocks % logNBlocks == 0L) {
+                            logger.info("Skipping block ${blockHeader.blockRID.toHex()} at height $blockHeight")
+                        }
+                        lastSkippedBlock = blockHeight
+                        return@withReadWriteConnection
+                    }
+
+                    if (lastSkippedBlock != -1L && firstImportedBlock == -1L) {
+                        logger.info("Last skipped block ${blockHeader.blockRID.toHex()} at height $lastSkippedBlock")
+                    }
+
                     val nextConfigHeight = DatabaseAccess.of(ctx).findConfigurationHeightForBlock(ctx, blockHeight)
                             ?: throw UserMistake("Can't find initial config")
                     if (nextConfigHeight !in configs) {
@@ -213,19 +235,28 @@ object ImporterExporter : KLogging() {
                         logger.info("Building configuration ${configs[nextConfigHeight]?.configHash?.toHex()} for height $blockHeight")
                     }
 
-                    if (numBlocks % logNBlocks == 0L) {
+                    if (numBlocks % logNBlocks == 0L || firstImportedBlock == -1L) {
                         logger.info("Importing block ${blockHeader.blockRID.toHex()} at height $blockHeight")
                     }
 
                     val config = configs[nextConfigHeight]
                             ?: throw UserMistake("Cannot load configuration for height $blockHeight")
                     importBlock(ctx, config, blockHeader, transactions, blockWitness)
+
+                    if (firstImportedBlock == -1L) firstImportedBlock = blockHeight
                 }
                 lastBlock = blockHeight
                 numBlocks++
             }
         }
-        return ImportResult(fromHeight = firstBlock, toHeight = lastBlock, numBlocks = numBlocks, blockchainRid = blockchainRid)
+
+        return ImportResult(
+                fromHeight = firstBlock,
+                toHeight = lastBlock,
+                lastSkippedBlock = lastSkippedBlock,
+                firstImportedBlock = firstImportedBlock,
+                numBlocks = numBlocks,
+                blockchainRid = blockchainRid)
     }
 
     private fun makeBlockchainConfiguration(rawConfigurationData: ByteArray, partialContext: BaseBlockchainContext,
