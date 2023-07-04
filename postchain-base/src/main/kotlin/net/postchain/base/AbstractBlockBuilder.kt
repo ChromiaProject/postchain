@@ -51,7 +51,7 @@ abstract class AbstractBlockBuilder(
     // ----------------------------------
     protected abstract val blockWitnessProvider: BlockWitnessProvider
     protected abstract fun computeMerkleRootHash(): ByteArray              // Computes the root hash for the Merkle tree of transactions currently in a block
-    protected abstract fun makeBlockHeader(): BlockHeader                  // Create block header from initial block data
+    protected abstract fun makeBlockHeader(timestamp: Long): BlockHeader                  // Create block header from initial block data
     protected abstract fun buildBlockchainDependencies(partialBlockHeader: BlockHeader?): BlockchainDependencies
 
     // ----------------------------------
@@ -147,8 +147,8 @@ abstract class AbstractBlockBuilder(
     /**
      * By finalizing the block we won't allow any more transactions to be added, and the block RID and timestamp are set
      */
-    override fun finalizeBlock(): BlockHeader {
-        val blockHeader = makeBlockHeader()
+    override fun finalizeBlock(timestamp: Long): BlockHeader {
+        val blockHeader = makeBlockHeader(timestamp)
         store.finalizeBlock(bctx, blockHeader)
         _blockData = BlockData(blockHeader, rawTransactions)
         finalized = true
