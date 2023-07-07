@@ -11,19 +11,19 @@ import java.math.BigInteger
 abstract class AbstractGtv : Gtv {
 
     override operator fun get(index: Int): Gtv {
-        throw UserMistake("Type error: array expected")
+        throw UserMistake(errorMessage("array"))
     }
 
     override operator fun get(key: String): Gtv? {
-        throw UserMistake("Type error: dict expected")
+        throw UserMistake(errorMessage("dict"))
     }
 
     override fun asString(): String {
-        throw UserMistake("Type error: string expected")
+        throw UserMistake(errorMessage("string"))
     }
 
     override fun asArray(): Array<out Gtv> {
-        throw UserMistake("Type error: array expected")
+        throw UserMistake(errorMessage("array"))
     }
 
     override fun isNull(): Boolean {
@@ -31,26 +31,28 @@ abstract class AbstractGtv : Gtv {
     }
 
     override fun asDict(): Map<String, Gtv> {
-        throw UserMistake("Type error: dict expected")
+        throw UserMistake(errorMessage("dict"))
     }
 
     override fun asInteger(): Long {
-        throw UserMistake("Type error: integer expected")
+        throw UserMistake(errorMessage("integer"))
     }
 
     override fun asBigInteger(): BigInteger {
-        throw UserMistake("Type error: big integer expected")
+        throw UserMistake(errorMessage("big integer"))
     }
 
     override fun asBoolean(): Boolean {
-        throw UserMistake("Type error: boolean expected")
+        throw UserMistake(errorMessage("boolean"))
     }
 
     override fun asByteArray(convert: Boolean): ByteArray {
-        throw UserMistake("Type error: byte array expected")
+        throw UserMistake(errorMessage("byte array"))
     }
 
     override fun nrOfBytes(): Int {
         throw UserMistake("Implementation expected")
     }
+
+    private fun errorMessage(expectedType: String) = "Type error: $expectedType expected, found $type with value ${toString()}"
 }
