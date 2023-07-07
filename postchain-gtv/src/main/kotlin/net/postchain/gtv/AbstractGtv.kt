@@ -2,7 +2,6 @@
 
 package net.postchain.gtv
 
-import net.postchain.common.exception.UserMistake
 import java.math.BigInteger
 
 /**
@@ -11,19 +10,19 @@ import java.math.BigInteger
 abstract class AbstractGtv : Gtv {
 
     override operator fun get(index: Int): Gtv {
-        throw UserMistake(errorMessage("array"))
+        throw GtvTypeException(errorMessage("array"))
     }
 
     override operator fun get(key: String): Gtv? {
-        throw UserMistake(errorMessage("dict"))
+        throw GtvTypeException(errorMessage("dict"))
     }
 
     override fun asString(): String {
-        throw UserMistake(errorMessage("string"))
+        throw GtvTypeException(errorMessage("string"))
     }
 
     override fun asArray(): Array<out Gtv> {
-        throw UserMistake(errorMessage("array"))
+        throw GtvTypeException(errorMessage("array"))
     }
 
     override fun isNull(): Boolean {
@@ -31,27 +30,27 @@ abstract class AbstractGtv : Gtv {
     }
 
     override fun asDict(): Map<String, Gtv> {
-        throw UserMistake(errorMessage("dict"))
+        throw GtvTypeException(errorMessage("dict"))
     }
 
     override fun asInteger(): Long {
-        throw UserMistake(errorMessage("integer"))
+        throw GtvTypeException(errorMessage("integer"))
     }
 
     override fun asBigInteger(): BigInteger {
-        throw UserMistake(errorMessage("big integer"))
+        throw GtvTypeException(errorMessage("big integer"))
     }
 
     override fun asBoolean(): Boolean {
-        throw UserMistake(errorMessage("boolean"))
+        throw GtvTypeException(errorMessage("boolean"))
     }
 
     override fun asByteArray(convert: Boolean): ByteArray {
-        throw UserMistake(errorMessage("byte array"))
+        throw GtvTypeException(errorMessage("byte array"))
     }
 
     override fun nrOfBytes(): Int {
-        throw UserMistake("Implementation expected")
+        throw GtvTypeException("Implementation expected")
     }
 
     private fun errorMessage(expectedType: String) = "Type error: $expectedType expected, found $type with value ${toString()}"
