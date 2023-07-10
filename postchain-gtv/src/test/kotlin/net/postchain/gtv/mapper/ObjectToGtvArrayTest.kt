@@ -40,6 +40,8 @@ class ObjectToGtvArrayTest {
     fun simpleTypes() {
         @Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
         data class AllPrimitives(
+                val gtv: Gtv = gtv("gtv"),
+                val gtvList: List<Gtv> = listOf(gtv(1)),
                 val long: Long = 1,
                 val javaLong: java.lang.Long = java.lang.Long.valueOf(2) as java.lang.Long,
                 val string: String = "foo",
@@ -53,6 +55,8 @@ class ObjectToGtvArrayTest {
                 val blockchainRid: BlockchainRid = BlockchainRid.ZERO_RID
         )
         assertThat(GtvObjectMapper.toGtvArray(AllPrimitives()).array).isContentEqualTo(listOf(
+                gtv("gtv"),
+                gtv(gtv(1)),
                 gtv(1),
                 gtv(2),
                 gtv("foo"),
