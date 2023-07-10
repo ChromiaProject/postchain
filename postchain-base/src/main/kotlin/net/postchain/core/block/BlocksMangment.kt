@@ -97,6 +97,7 @@ interface BlockQueries : Shutdownable {
 interface BlockBuilder {
     fun begin(partialBlockHeader: BlockHeader?)
     fun appendTransaction(tx: Transaction)
+    fun finalizeBlock(): BlockHeader = finalizeBlock(System.currentTimeMillis())
     fun finalizeBlock(timestamp: Long = System.currentTimeMillis()): BlockHeader
     fun finalizeAndValidate(blockHeader: BlockHeader)
     fun getBlockData(): BlockData

@@ -168,9 +168,9 @@ open class BaseBlockBuilder(
      */
     override fun makeBlockHeader(timestamp: Long): BlockHeader {
         // If our time is behind the timestamp of most recent block, do a minimal increment
-        val timestamp = max(timestamp, initialBlockData.timestamp + 1)
+        val safeTimestamp = max(timestamp, initialBlockData.timestamp + 1)
         val rootHash = computeMerkleRootHash()
-        return BaseBlockHeader.make(GtvMerkleHashCalculator(cryptoSystem), initialBlockData, rootHash, timestamp, finalizeExtensions())
+        return BaseBlockHeader.make(GtvMerkleHashCalculator(cryptoSystem), initialBlockData, rootHash, safeTimestamp, finalizeExtensions())
     }
 
     /**
