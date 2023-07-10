@@ -81,15 +81,15 @@ abstract class AbstractBlockBuilder(
         }
         blockchainDependencies = buildBlockchainDependencies(partialBlockHeader)
         initialBlockData =
-            store.beginBlock(ectx, blockchainRID, blockchainDependencies!!.extractBlockHeightDependencyArray())
+                store.beginBlock(ectx, blockchainRID, blockchainDependencies!!.extractBlockHeightDependencyArray())
         logger.debug("buildBlock() -- height=${initialBlockData.height} prevBlockRID=${initialBlockData.prevBlockRID.toHex()} timestamp=${initialBlockData.timestamp} blockIID=${initialBlockData.blockIID}")
         bctx = BaseBlockEContext(
-            ectx,
-            initialBlockData.height,
-            initialBlockData.blockIID,
-            initialBlockData.timestamp,
-            blockchainDependencies!!.extractChainIdToHeightMap(),
-            this
+                ectx,
+                initialBlockData.height,
+                initialBlockData.blockIID,
+                initialBlockData.timestamp,
+                blockchainDependencies!!.extractChainIdToHeightMap(),
+                this
         )
         buildingNewBlock = partialBlockHeader == null // If we have a header this must be an old block we are loading
         nextTransactionNumber = store.getLastTransactionNumber(ectx) + 1
@@ -112,7 +112,7 @@ abstract class AbstractBlockBuilder(
         try {
             txctx = store.addTransaction(bctx, tx, nextTransactionNumber)
         } catch (e: Exception) {
-            throw UserMistake("Failed to save tx to database", e)
+            throw UserMistake("Failed to save tx to database: ${tx.getRID().toHex()}", e)
         }
         // In case of errors, tx.apply may either return false or throw UserMistake
 
