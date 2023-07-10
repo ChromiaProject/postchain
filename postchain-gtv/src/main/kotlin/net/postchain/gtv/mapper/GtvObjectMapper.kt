@@ -10,6 +10,7 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvTypeException
 import java.lang.reflect.Parameter
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
@@ -228,25 +229,29 @@ private fun transientParameterToValue(transient: Map<String, Any>, param: Parame
 
 private fun annotationToValue(gtv: Gtv, param: Parameter, transient: Map<String, Any>): Any? {
     val name = param.getAnnotation(Name::class.java)?.name!!
-    val gtvField = gtv[name]
-    if (gtvField != null && !gtvField.isNull()) return parameterToValue(param, gtvField, transient)
-    if (param.isAnnotationPresent(DefaultValue::class.java)) {
-        val default = param.getAnnotation(DefaultValue::class.java)
-        if (param.type.isPrimitiveType()) {
-            return when {
-                param.type.isLong() -> default.defaultLong
-                param.type.isString() -> default.defaultString
-                param.type.isBoolean() -> default.defaultBoolean
-                param.type.isBigInteger() -> BigInteger(default.defaultBigInteger)
-                else -> default.defaultByteArray
+    try {
+        val gtvField = gtv[name]
+        if (gtvField != null && !gtvField.isNull()) return parameterToValue(param, gtvField, transient)
+        if (param.isAnnotationPresent(DefaultValue::class.java)) {
+            val default = param.getAnnotation(DefaultValue::class.java)
+            if (param.type.isPrimitiveType()) {
+                return when {
+                    param.type.isLong() -> default.defaultLong
+                    param.type.isString() -> default.defaultString
+                    param.type.isBoolean() -> default.defaultBoolean
+                    param.type.isBigInteger() -> BigInteger(default.defaultBigInteger)
+                    else -> default.defaultByteArray
+                }
             }
+            throw IllegalArgumentException("Default value not accepted for type: ${param.type}, must be Long, String or Bytearray")
         }
-        throw IllegalArgumentException("Default value not accepted for type: ${param.type}, must be Long, String or Bytearray")
+        if (param.isAnnotationPresent(Nullable::class.java)) {
+            return null
+        }
+        throw IllegalArgumentException("Gtv is null, but field \"$name\" is neither marked with default nor nullable annotations")
+    } catch (e: GtvTypeException) {
+        throw GtvTypeException("Failed to decode field $name: ${e.message}")
     }
-    if (param.isAnnotationPresent(Nullable::class.java)) {
-        return null
-    }
-    throw IllegalArgumentException("Gtv is null, but field \"$name\" is neither marked with default nor nullable annotations")
 }
 
 private fun parameterToValue(param: Parameter, gtv: Gtv?, transient: Map<String, Any>): Any? {
@@ -310,7 +315,8 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, 
 
 fun getEnumValue(enumClassName: String, enumValue: String): Any {
     @Suppress("UNCHECKED_CAST") val enum = Class.forName(enumClassName).enumConstants as Array<Enum<*>>
-    return enum.firstOrNull { it.name == enumValue } ?: throw IllegalArgumentException("invalid value '$enumValue' for enum $enumClassName")
+    return enum.firstOrNull { it.name == enumValue }
+            ?: throw IllegalArgumentException("invalid value '$enumValue' for enum $enumClassName")
 }
 
 private fun Class<*>.isPrimitiveType(): Boolean {
