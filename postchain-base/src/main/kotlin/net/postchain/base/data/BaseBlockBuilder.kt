@@ -166,11 +166,11 @@ open class BaseBlockBuilder(
      *
      * @return Block header
      */
-    override fun makeBlockHeader(): BlockHeader {
+    override fun makeBlockHeader(timestamp: Long): BlockHeader {
         // If our time is behind the timestamp of most recent block, do a minimal increment
-        val timestamp = max(System.currentTimeMillis(), initialBlockData.timestamp + 1)
+        val safeTimestamp = max(timestamp, initialBlockData.timestamp + 1)
         val rootHash = computeMerkleRootHash()
-        return BaseBlockHeader.make(GtvMerkleHashCalculator(cryptoSystem), initialBlockData, rootHash, timestamp, finalizeExtensions())
+        return BaseBlockHeader.make(GtvMerkleHashCalculator(cryptoSystem), initialBlockData, rootHash, safeTimestamp, finalizeExtensions())
     }
 
     /**
@@ -254,12 +254,12 @@ open class BaseBlockBuilder(
      *
      * @return the new [BlockHeader] we are about to create.
      */
-    override fun finalizeBlock(): BlockHeader {
+    override fun finalizeBlock(timestamp: Long): BlockHeader {
         if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(End)) {
             isSpecialEndTransaction = true
             appendTransaction(specialTxHandler.createSpecialTransaction(End, bctx))
         }
-        return super.finalizeBlock()
+        return super.finalizeBlock(timestamp)
     }
 
     /**
