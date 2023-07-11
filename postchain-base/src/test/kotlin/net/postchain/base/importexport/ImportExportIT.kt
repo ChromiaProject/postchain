@@ -320,7 +320,9 @@ class ImportExportIT {
                     configurationsFile,
                     blocksFile,
                     logNBlocks = 1)
-            assertThat(importResult).isEqualTo(ImportResult(fromHeight = 0, toHeight = 2, numBlocks = 3, blockchainRid = blockchainRid))
+            assertThat(importResult).isEqualTo(
+                    ImportResult(fromHeight = 0, toHeight = 2, lastSkippedBlock = -1, firstImportedBlock = 0, numBlocks = 3, blockchainRid = blockchainRid)
+            )
 
             withReadConnection(storage, chainId) { ctx ->
                 val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
@@ -357,73 +359,119 @@ class ImportExportIT {
 
     @Test
     fun importIncremental(@TempDir tempDir: Path) {
-        val configurationsFile1 = tempDir.resolve("configurations1.gtv")
-        val blocksFile1 = tempDir.resolve("blocks1.gtv")
-        val configurationsFile2 = tempDir.resolve("configurations2.gtv")
-        val blocksFile2 = tempDir.resolve("blocks2.gtv")
+        val (configsFile1, blocksFile1) = tempDir.resolve("configurations1.gtv") to tempDir.resolve("blocks1.gtv")
+        val (configsFile2, blocksFile2) = tempDir.resolve("configurations2.gtv") to tempDir.resolve("blocks2.gtv")
+        val (configsFile3, blocksFile3) = tempDir.resolve("configurations3.gtv") to tempDir.resolve("blocks3.gtv")
 
         val expectedConfigurations = listOf(0L to configData0, 2L to configData2)
         val expectedBlocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val expectedBlocks = buildBlockchain(storage, expectedConfigurations,
-                    listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
-            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile1, blocksFile1, overwrite = false, upToHeight = 1, logNBlocks = 1)
-            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile2, blocksFile2, overwrite = false, fromHeight = 2, logNBlocks = 1)
+            val expectedBlocks = buildBlockchain(
+                    storage,
+                    expectedConfigurations,
+                    listOf(
+                            listOf(buildTransaction("first")),
+                            listOf(),
+                            listOf(buildTransaction("second"), buildTransaction("third")),
+                            listOf(buildTransaction("fourth")),
+                    )
+            )
+            ImporterExporter.exportBlockchain(storage, chainId, configsFile1, blocksFile1, overwrite = false, upToHeight = 1, logNBlocks = 1)
+            ImporterExporter.exportBlockchain(storage, chainId, configsFile2, blocksFile2, overwrite = false, upToHeight = 2, logNBlocks = 1)
+            ImporterExporter.exportBlockchain(storage, chainId, configsFile3, blocksFile3, overwrite = false, fromHeight = 3, logNBlocks = 1)
             expectedBlocks
         }
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            // Import blocks [0, 1]
             val importResult1 = ImporterExporter.importBlockchain(
                     KeyPairHelper.keyPair(0),
                     cryptoSystem,
                     storage,
                     chainId,
-                    configurationsFile1,
+                    configsFile1,
                     blocksFile1,
                     incremental = false,
                     logNBlocks = 1)
-            assertThat(importResult1).isEqualTo(ImportResult(fromHeight = 0, toHeight = 1, numBlocks = 2, blockchainRid = blockchainRid))
+            assertThat(importResult1).isEqualTo(
+                    ImportResult(fromHeight = 0, toHeight = 1, lastSkippedBlock = -1, firstImportedBlock = 0, numBlocks = 2, blockchainRid = blockchainRid)
+            )
 
+            // Import blocks [0, 1, 2] -> [0, 1] will be skipped
             val importResult2 = ImporterExporter.importBlockchain(
                     KeyPairHelper.keyPair(0),
                     cryptoSystem,
                     storage,
                     chainId,
-                    configurationsFile2,
+                    configsFile2,
                     blocksFile2,
                     incremental = true,
                     logNBlocks = 1)
-            assertThat(importResult2).isEqualTo(ImportResult(fromHeight = 2, toHeight = 2, numBlocks = 1, blockchainRid = blockchainRid))
+            assertThat(importResult2).isEqualTo(
+                    ImportResult(fromHeight = 0, toHeight = 2, lastSkippedBlock = 1, firstImportedBlock = 2, numBlocks = 3, blockchainRid = blockchainRid)
+            )
 
-            withReadConnection(storage, chainId) { ctx ->
-                val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
-                assertThat(db.getBlockchainRid(ctx)).isEqualTo(blockchainRid)
+            // Import blocks [0, 1, 2] again -> [0, 1, 2] will be skipped
+            val importResult3 = ImporterExporter.importBlockchain(
+                    KeyPairHelper.keyPair(0),
+                    cryptoSystem,
+                    storage,
+                    chainId,
+                    configsFile2,
+                    blocksFile2,
+                    incremental = true,
+                    logNBlocks = 1)
+            assertThat(importResult3).isEqualTo(
+                    ImportResult(fromHeight = 0, toHeight = 2, lastSkippedBlock = 2, firstImportedBlock = -1, numBlocks = 3, blockchainRid = blockchainRid)
+            )
 
-                val configurations = db.getAllConfigurations(ctx)
-                assertThat(configurations).isEqualTo(expectedConfigurations.map { it.first to encodeGtv(it.second).wrap() })
+            // Import blocks [3]
+            val importResult4 = ImporterExporter.importBlockchain(
+                    KeyPairHelper.keyPair(0),
+                    cryptoSystem,
+                    storage,
+                    chainId,
+                    configsFile3,
+                    blocksFile3,
+                    incremental = true,
+                    logNBlocks = 1)
+            assertThat(importResult4).isEqualTo(
+                    ImportResult(fromHeight = 3, toHeight = 3, lastSkippedBlock = -1, firstImportedBlock = 3, numBlocks = 1, blockchainRid = blockchainRid)
+            )
 
-                val blocks = db.getBlocks(ctx, Long.MAX_VALUE, 1000).sortedBy { it.blockHeight }
-                assertThat(blocks.size).isEqualTo(expectedBlocks.size)
-                for ((block, expectedBlock) in blocks.zip(expectedBlocks)) {
-                    val (expectedBlockHeader, expectedTransactions) = expectedBlock
-                    assertImportedBlock(block, expectedBlockHeader)
+            assertImportedTxs(storage, expectedConfigurations, expectedBlocks)
+        }
+    }
 
-                    val transactions: List<TxDetail> = db.getBlockTransactions(ctx, block.blockRid, hashesOnly = false)
-                    assertThat(transactions.map { it.data!!.wrap() }).isEqualTo(expectedTransactions.map { it.getRawData().wrap() })
-                }
+    private fun assertImportedTxs(storage: Storage, expectedConfigurations: List<Pair<Long, Gtv>>, expectedBlocks: List<Pair<BaseBlockHeader, List<Transaction>>>) {
+        withReadConnection(storage, chainId) { ctx ->
+            val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+            assertThat(db.getBlockchainRid(ctx)).isEqualTo(blockchainRid)
 
-                val expectedOperations = expectedBlocks
-                        .flatMap { it.second }
-                        .flatMap { (it as GTXTransaction).gtxData.gtxBody.operations }
-                        .filter { it.opName == GTX_TEST_OP_NAME }
-                        .map { it.args[1].asString() }
+            val configurations = db.getAllConfigurations(ctx)
+            assertThat(configurations).isEqualTo(expectedConfigurations.map { it.first to encodeGtv(it.second).wrap() })
 
-                val operations = db.queryRunner.query(
-                        ctx.conn,
-                        "SELECT value FROM ${table_gtx_test_value(ctx)} ORDER BY tx_iid",
-                        ColumnListHandler<String>())
+            val blocks = db.getBlocks(ctx, Long.MAX_VALUE, 1000).sortedBy { it.blockHeight }
+            assertThat(blocks.size).isEqualTo(expectedBlocks.size)
+            for ((block, expectedBlock) in blocks.zip(expectedBlocks)) {
+                val (expectedBlockHeader, expectedTransactions) = expectedBlock
+                assertImportedBlock(block, expectedBlockHeader)
 
-                assertThat(operations).isEqualTo(expectedOperations)
+                val transactions: List<TxDetail> = db.getBlockTransactions(ctx, block.blockRid, hashesOnly = false)
+                assertThat(transactions.map { it.data!!.wrap() }).isEqualTo(expectedTransactions.map { it.getRawData().wrap() })
             }
+
+            val expectedOperations = expectedBlocks
+                    .flatMap { it.second }
+                    .flatMap { (it as GTXTransaction).gtxData.gtxBody.operations }
+                    .filter { it.opName == GTX_TEST_OP_NAME }
+                    .map { it.args[1].asString() }
+
+            val operations = db.queryRunner.query(
+                    ctx.conn,
+                    "SELECT value FROM ${table_gtx_test_value(ctx)} ORDER BY tx_iid",
+                    ColumnListHandler<String>())
+
+            assertThat(operations).isEqualTo(expectedOperations)
         }
     }
 
@@ -468,6 +516,7 @@ class ImportExportIT {
             }
         }
     }
+
 
     @Test
     fun importRejectedTransaction(@TempDir tempDir: Path) {
