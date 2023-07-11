@@ -32,7 +32,7 @@ class DefaultMasterConnectionManager(
         sendPacketToSub(blockchainRid, message)
     }
 
-    var isShutDown = false
+    private var isShutDown = false
 
     // Here we don't bother with factory
     private val masterConnector = NettyMasterConnector(this).apply {
@@ -49,43 +49,37 @@ class DefaultMasterConnectionManager(
 
     @Synchronized
     override fun initSubChainConnection(subChainConfig: SubChainConfig) {
-        logger.debug("connectSubChain() - Initializing subnode chain connection")
+        val prefix = "connectSubChain()"
+        logger.debug("$prefix - Initializing subnode chain connection")
 
         if (isShutDown) {
-            logger.warn(
-                    "connectSubChain() - Already shut down: connecting subnode chains is " +
-                            "not possible."
-            )
+            logger.warn("$prefix - Already shut down: connecting subnode chains is not possible.")
         } else {
             if (chainsWithOneSubConnection.hasChain(subChainConfig.blockchainRid)) {
-                // TODO: Olle: This needs some explanation. Why do we "disconnect" and
-                //  then "connect" on an existing connection? Do we expect it to be stale?
-                logger.info(
-                        "connectSubChain() - This chain is already connected, disconnecting " +
-                                "old sub-node connection first."
-                )
+                logger.warn("$prefix - This chain is already connected, disconnecting old sub-node connection first.")
                 disconnectSubChain(subChainConfig.chainId)
             }
             chainsWithOneSubConnection.add(ChainWithOneSubConnection(subChainConfig))
-            logger.debug("connectSubChain() - Subnode chain connection initialized")
+            logger.debug("$prefix - Subnode chain connection initialized")
         }
     }
 
     @Synchronized
     override fun sendPacketToSub(blockchainRid: BlockchainRid, message: MsMessage): Boolean {
-        logger.debug { "sendPacketToSub() - begin, type: ${message.type}" }
+        val prefix = "sendPacketToSub()"
+        logger.debug { "$prefix - begin, type: ${message.type}" }
         val chain = chainsWithOneSubConnection.get(blockchainRid)
         return if (chain != null) {
             val conn = chain.getConnection()
             if (conn != null) {
                 conn.sendPacket { MsCodec.encode(message) }
-                logger.trace { "sendPacketToSub() - end: message sent" }
+                logger.trace { "$prefix - end: message sent" }
             } else {
-                logger.debug { "sendPacketToSub() - end: conn not found" }
+                logger.debug { "$prefix - end: conn not found" }
             }
             true
         } else {
-            logger.debug { "sendPacketToSub() - end: chain not found: ${blockchainRid.toShortHex()}" }
+            logger.debug { "$prefix - end: chain not found: ${blockchainRid.toShortHex()}" }
             false
         }
     }
