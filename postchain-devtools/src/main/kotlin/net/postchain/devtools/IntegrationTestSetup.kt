@@ -10,7 +10,6 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.Transaction
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
-import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
@@ -328,7 +327,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
      *
      * @throws TimeoutException if timeout
      */
-    protected fun buildBlock(chainId: Long, toHeight: Long, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
+    protected fun buildBlock(chainId: Long, toHeight: Long, vararg txs: Transaction, timeout: Duration = Duration.INFINITE) {
         buildBlock(getChainNodes(chainId), chainId, toHeight, *txs, timeout = timeout)
     }
 
@@ -339,7 +338,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
      *
      * @throws TimeoutException if timeout
      */
-    protected fun buildBlock(chainId: Long, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
+    protected fun buildBlock(chainId: Long, vararg txs: Transaction, timeout: Duration = Duration.INFINITE) {
         val currentHeight = getChainNodes(chainId).first().currentHeight(chainId)
         buildBlock(getChainNodes(chainId), chainId, currentHeight + 1, *txs, timeout = timeout)
     }
@@ -350,7 +349,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
      *
      * @throws TimeoutException if timeout
      */
-    protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, toHeight: Long, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
+    protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, toHeight: Long, vararg txs: Transaction, timeout: Duration = Duration.INFINITE) {
         buildBlockNoWait(nodes, chainId, toHeight, *txs)
         awaitHeight(nodes, chainId, toHeight, timeout)
     }
@@ -362,7 +361,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
      *
      * @throws TimeoutException if timeout
      */
-    protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, vararg txs: TestTransaction, timeout: Duration = Duration.INFINITE) {
+    protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, vararg txs: Transaction, timeout: Duration = Duration.INFINITE) {
         val currentHeight = nodes.first().currentHeight(chainId)
         buildBlockNoWait(nodes, chainId, currentHeight + 1, *txs)
         awaitHeight(nodes, chainId, currentHeight + 1, timeout)
