@@ -11,6 +11,7 @@ import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProviderFactory
+import net.postchain.containers.bpm.ContainerEnvironment
 import net.postchain.core.BaseInfrastructureFactoryProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
@@ -62,8 +63,8 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 blockchainConfigProvider,
                 appConfig.debug
         )
+        ContainerEnvironment.init(appConfig)
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
-
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
         blockQueriesProvider.processManager = processManager
     }
