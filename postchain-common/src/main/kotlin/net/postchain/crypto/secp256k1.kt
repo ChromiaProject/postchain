@@ -202,12 +202,9 @@ open class Secp256K1CryptoSystem : BaseCryptoSystem() {
                 ECPrivateKeyParameters(d, CURVE) // validate private key
                 break
             } catch (e: Exception) {
-                logger.debug("Generated invalid private key: $d")
+                logger.debug { "Generated invalid private key: $d" }
             }
         }
         return PrivKey(privateKey)
     }
-
-    override fun deriveSignatureVerificationFromSubject(subjectID: ByteArray): (ByteArray, ByteArray, ByteArray) -> Boolean =
-            ::secp256k1_verify
 }

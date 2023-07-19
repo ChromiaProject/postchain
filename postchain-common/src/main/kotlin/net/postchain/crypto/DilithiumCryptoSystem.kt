@@ -1,9 +1,5 @@
 package net.postchain.crypto
 
-import net.postchain.common.exception.UserMistake
-import org.bouncycastle.asn1.ASN1InputStream
-import org.bouncycastle.asn1.bc.BCObjectIdentifiers
-import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.pqc.crypto.crystals.dilithium.DilithiumParameters
 import org.bouncycastle.pqc.jcajce.interfaces.DilithiumPrivateKey
 import org.bouncycastle.pqc.jcajce.provider.BouncyCastlePQCProvider
@@ -54,21 +50,6 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
         val decodedPrivateKey = decodePrivateKey(privKey)
         val decodedPublicKey = (decodedPrivateKey as DilithiumPrivateKey).publicKey
         return PubKey(decodedPublicKey.encoded)
-    }
-
-    override fun deriveSignatureVerificationFromSubject(subjectID: ByteArray): (ByteArray, ByteArray, ByteArray) -> Boolean {
-        // 0x30 indicates that content is ASN1 encoded, it is also not a valid start for an ECDSA key
-        // if (subjectID[0].toInt() == 0x30) {
-        return try {
-            val keyInfo = SubjectPublicKeyInfo.getInstance(ASN1InputStream(subjectID).readObject())
-            val signatureAlgorithmId = keyInfo.algorithm.algorithm
-            // TODO: Investigate which parameters we should use
-            if (signatureAlgorithmId == BCObjectIdentifiers.dilithium2) {
-                ::verifyDilithiumSignature
-            } else throw UserMistake("Unknown signature algorithm identifier $signatureAlgorithmId")
-        } catch (e: Exception) {
-            throw UserMistake("Invalid format of ASN1 encoded public key")
-        }
     }
 
     companion object {
