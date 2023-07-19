@@ -2,23 +2,49 @@
 
 package net.postchain.ebft.syncmanager.validator
 
+import net.postchain.core.BlockchainEngine
+import net.postchain.ebft.NodeStatus
 import net.postchain.ebft.StatusManager
-import java.util.*
 import kotlin.math.log
 import kotlin.math.pow
 
-class RevoltTracker(private val statusManager: StatusManager, private val config: RevoltConfigurationData) {
-    private val initialHeight = statusManager.myStatus.height
+open class RevoltTracker(
+        private val statusManager: StatusManager,
+        private val config: RevoltConfigurationData,
+        engine: BlockchainEngine
+) {
+    private val blockBuildingStrategy = engine.getBlockBuildingStrategy()
     private val maxDelayRound = log(
-        ((config.exponentialDelayMax + config.exponentialDelayBase) / config.exponentialDelayBase).toDouble(),
-        DELAY_POWER_BASE
+            ((config.exponentialDelayMax + config.exponentialDelayBase) / config.exponentialDelayBase).toDouble(),
+            DELAY_POWER_BASE
     ).toLong()
-    private var deadLine = newDeadLine(0)
+    private val initialHeight = statusManager.myStatus.height
     private var prevHeight = initialHeight
     private var prevRound = statusManager.myStatus.round
+    var deadLine = newDeadLine(0)
+        private set
 
     companion object {
         const val DELAY_POWER_BASE = 1.2
+    }
+
+    /**
+     * Starts a revolt if certain conditions are met.
+     */
+    fun update() {
+        val current = statusManager.myStatus
+        if (fastRevolt(current)) return
+
+        if (!shouldBuildBlock()) return
+
+        if (current.height > prevHeight ||
+                current.height == prevHeight && current.round > prevRound) {
+            prevHeight = current.height
+            prevRound = current.round
+            deadLine = newDeadLine(current.round)
+        } else if (currentTimeMillis() > deadLine && !current.revolting) {
+            this.statusManager.onStartRevolting()
+        }
     }
 
     /**
@@ -27,7 +53,7 @@ class RevoltTracker(private val statusManager: StatusManager, private val config
      * @return the time at which the deadline is passed
      */
     private fun newDeadLine(round: Long): Long {
-        val baseTimeout = Date().time + config.timeout
+        val baseTimeout = currentTimeMillis() + config.timeout
         return if (round >= maxDelayRound) {
             baseTimeout + config.exponentialDelayMax
         } else {
@@ -35,29 +61,24 @@ class RevoltTracker(private val statusManager: StatusManager, private val config
         }
     }
 
-    /**
-     * Starts a revolt if certain conditions are met.
-     */
-    fun update() {
-        val current = statusManager.myStatus
-        if (current.height > prevHeight ||
-                current.height == prevHeight && current.round > prevRound) {
-            prevHeight = current.height
-            prevRound = current.round
-            deadLine = newDeadLine(current.round)
-        } else if ((Date().time > deadLine || shouldDoFastRevolt()) && !current.revolting) {
-            this.statusManager.onStartRevolting()
-        }
-    }
+    private fun fastRevolt(current: NodeStatus): Boolean =
+            if (shouldDoFastRevolt(current)) {
+                if (!current.revolting) statusManager.onStartRevolting()
+                true
+            } else
+                false
 
-    private fun shouldDoFastRevolt(): Boolean {
+    private fun shouldDoFastRevolt(current: NodeStatus): Boolean {
         // Check if fast revolt is enabled
         if (config.fastRevoltStatusTimeout < 0) return false
 
-        val current = statusManager.myStatus
         if (current.height == initialHeight || statusManager.isMyNodePrimary()) return false
 
         val lastUpdateFromPrimary = statusManager.getLatestStatusTimestamp(statusManager.primaryIndex())
-        return System.currentTimeMillis() - lastUpdateFromPrimary > config.fastRevoltStatusTimeout
+        return currentTimeMillis() - lastUpdateFromPrimary > config.fastRevoltStatusTimeout
     }
+
+    private fun shouldBuildBlock(): Boolean = blockBuildingStrategy.shouldBuildBlock()
+
+    protected open fun currentTimeMillis() = System.currentTimeMillis()
 }

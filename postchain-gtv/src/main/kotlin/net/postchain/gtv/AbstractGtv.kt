@@ -2,7 +2,6 @@
 
 package net.postchain.gtv
 
-import net.postchain.common.exception.UserMistake
 import java.math.BigInteger
 
 /**
@@ -11,19 +10,19 @@ import java.math.BigInteger
 abstract class AbstractGtv : Gtv {
 
     override operator fun get(index: Int): Gtv {
-        throw UserMistake("Type error: array expected")
+        throw GtvTypeException(errorMessage("array"))
     }
 
     override operator fun get(key: String): Gtv? {
-        throw UserMistake("Type error: dict expected")
+        throw GtvTypeException(errorMessage("dict"))
     }
 
     override fun asString(): String {
-        throw UserMistake("Type error: string expected")
+        throw GtvTypeException(errorMessage("string"))
     }
 
     override fun asArray(): Array<out Gtv> {
-        throw UserMistake("Type error: array expected")
+        throw GtvTypeException(errorMessage("array"))
     }
 
     override fun isNull(): Boolean {
@@ -31,26 +30,28 @@ abstract class AbstractGtv : Gtv {
     }
 
     override fun asDict(): Map<String, Gtv> {
-        throw UserMistake("Type error: dict expected")
+        throw GtvTypeException(errorMessage("dict"))
     }
 
     override fun asInteger(): Long {
-        throw UserMistake("Type error: integer expected")
+        throw GtvTypeException(errorMessage("integer"))
     }
 
     override fun asBigInteger(): BigInteger {
-        throw UserMistake("Type error: big integer expected")
+        throw GtvTypeException(errorMessage("big integer"))
     }
 
     override fun asBoolean(): Boolean {
-        throw UserMistake("Type error: boolean expected")
+        throw GtvTypeException(errorMessage("boolean"))
     }
 
     override fun asByteArray(convert: Boolean): ByteArray {
-        throw UserMistake("Type error: byte array expected")
+        throw GtvTypeException(errorMessage("byte array"))
     }
 
     override fun nrOfBytes(): Int {
-        throw UserMistake("Implementation expected")
+        throw GtvTypeException("Implementation expected")
     }
+
+    private fun errorMessage(expectedType: String) = "Type error: $expectedType expected, found $type with value ${toString()}"
 }

@@ -127,8 +127,8 @@ class BaseManagedBlockBuilder(
         }
     }
 
-    override fun finalizeBlock(): BlockHeader {
-        return runOpSafely { blockBuilder.finalizeBlock() }
+    override fun finalizeBlock(timestamp: Long): BlockHeader {
+        return runOpSafely { blockBuilder.finalizeBlock(timestamp) }
     }
 
     override fun finalizeAndValidate(blockHeader: BlockHeader) {

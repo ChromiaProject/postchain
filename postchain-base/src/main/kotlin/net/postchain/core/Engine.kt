@@ -57,6 +57,7 @@ interface BlockchainProcess {
     fun registerDiagnosticData(diagnosticData: DiagnosticData) = Unit
     fun isSigner(): Boolean
     fun getBlockchainState(): BlockchainState
+    fun isProcessRunning(): Boolean
 }
 
 // TODO: [POS-358]: Should we add chainId and brid to BlockchainProcess?
@@ -79,3 +80,4 @@ interface BlockchainProcessManager : Shutdownable, Synchronizable {
 // A return value of "true" means a restart is needed.
 typealias AfterCommitHandler = (bTrace: BlockTrace?, height: Long, blockTimestamp: Long) -> Boolean
 
+typealias BeforeCommitHandler = (bTrace: BlockTrace?, bctx: BlockEContext) -> Unit

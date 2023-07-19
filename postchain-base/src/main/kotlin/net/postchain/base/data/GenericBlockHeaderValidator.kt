@@ -32,61 +32,61 @@ object GenericBlockHeaderValidator {
      * @return the validation result
      */
     fun basicValidationAgainstKnownBlocks(
-        headerBlockRid: BlockRid,
-        headerPrevBlockRid: BlockRid?, // Might be missing (for first block)
-        headerHeight: Long,
-        expectedPrevBlockRid: BlockRid?, // Might be missing (for first block)
-        expectedHeight: Long,
-        blockRidFromHeight: (height: Long) -> ByteArray? // We will probably need to go to DB to find this, so don't call this in vain
+            headerBlockRid: BlockRid,
+            headerPrevBlockRid: BlockRid?, // Might be missing (for first block)
+            headerHeight: Long,
+            expectedPrevBlockRid: BlockRid?, // Might be missing (for first block)
+            expectedHeight: Long,
+            blockRidFromHeight: (height: Long) -> ByteArray? // We will probably need to go to DB to find this, so don't call this in vain
     ): ValidationResult {
 
         return when {
             headerPrevBlockRid == null && expectedPrevBlockRid != null ->
                 ValidationResult(
-                    ValidationResult.Result.PREV_BLOCK_MISMATCH, "header.prevBlockRID doesn't exist, while we " +
-                            "expected previous BlockRID = ${expectedPrevBlockRid.toHex()} , " +
-                            " height: $headerHeight and $expectedHeight "
+                        ValidationResult.Result.PREV_BLOCK_MISMATCH, "header.prevBlockRID doesn't exist, while we " +
+                        "expected previous BlockRID = ${expectedPrevBlockRid.toHex()} , " +
+                        " height: $headerHeight and $expectedHeight "
                 )
 
-            expectedPrevBlockRid == null && headerPrevBlockRid != null  ->
+            expectedPrevBlockRid == null && headerPrevBlockRid != null ->
                 ValidationResult(
-                    ValidationResult.Result.PREV_BLOCK_MISMATCH, "We expected null but got header.prevBlockRID " +
-                            "= ${headerPrevBlockRid.toHex()} height: $headerHeight and $expectedHeight "
+                        ValidationResult.Result.PREV_BLOCK_MISMATCH, "We expected null but got header.prevBlockRID " +
+                        "= ${headerPrevBlockRid.toHex()} height: $headerHeight and $expectedHeight "
                 )
 
             headerPrevBlockRid!! != expectedPrevBlockRid!! ->
                 ValidationResult(
-                    ValidationResult.Result.PREV_BLOCK_MISMATCH, "header.prevBlockRID != expected previous " +
-                            "BlockRID,( ${headerPrevBlockRid.toHex()} != ${expectedPrevBlockRid.toHex()} ), " +
-                            " height: $headerHeight and $expectedHeight "
+                        ValidationResult.Result.PREV_BLOCK_MISMATCH, "header.prevBlockRID != expected previous " +
+                        "BlockRID,( ${headerPrevBlockRid.toHex()} != ${expectedPrevBlockRid.toHex()} ), " +
+                        " height: $headerHeight and $expectedHeight "
                 )
 
             headerHeight > expectedHeight ->
                 ValidationResult(
-                    ValidationResult.Result.BLOCK_FROM_THE_FUTURE,
-                    "Expected height: $expectedHeight, got: $headerHeight, Block RID: ${headerBlockRid.toHex()}"
+                        ValidationResult.Result.BLOCK_FROM_THE_FUTURE,
+                        "Expected height: $expectedHeight, got: $headerHeight, Block RID: ${headerBlockRid.toHex()}"
                 )
 
             headerHeight < expectedHeight -> {
                 val bRidByte = blockRidFromHeight(headerHeight)
                 if (bRidByte == null) { // This means our DB is broken (shouldn't happen during regular block building)
                     ValidationResult(
-                        ValidationResult.Result.OLD_BLOCK_NOT_FOUND,
-                        "Got a block at height: $headerHeight while we expect height: "
-                                + "$expectedHeight, (even thought we cannot find the locally)."
+                            ValidationResult.Result.OLD_BLOCK_NOT_FOUND,
+                            "Got a block at height: $headerHeight while we expect height: "
+                                    + "$expectedHeight, (even thought we cannot find the locally)."
                     )
                 } else {
                     val ourBlockRID = BlockRid(bRidByte)
                     if (ourBlockRID == headerBlockRid)
                         ValidationResult(
-                            ValidationResult.Result.DUPLICATE_BLOCK,
-                            "Duplicate block at height: $headerHeight, Block RID: ${headerBlockRid.toHex()}"
+                                ValidationResult.Result.DUPLICATE_BLOCK,
+                                "Duplicate block at height: $headerHeight, Block RID: ${headerBlockRid.toHex()}"
                         )
                     else
                         ValidationResult(
-                            ValidationResult.Result.SPLIT,
-                            "Blockchain split detected at height $headerHeight. Our block: ${ourBlockRID.toHex()}, " +
-                                    "received block: ${headerBlockRid.toHex()}"
+                                ValidationResult.Result.SPLIT,
+                                "Blockchain split detected at height $headerHeight. Our block: ${ourBlockRID.toHex()}, " +
+                                        "received block: ${headerBlockRid.toHex()}"
                         )
                 }
             }
@@ -146,13 +146,13 @@ object GenericBlockHeaderValidator {
      * @return a [ValidationResult] containing success or info about what went wrong
      */
     fun advancedValidateAgainstKnownBlocks(
-        blockHeader: BlockHeader,
-        initialBlockData: InitialBlockData,
-        expectedMerkleRootHash: () -> ByteArray,
-        blockRidFromHeight: (height: Long) -> ByteArray?, // We will probably need to go to DB to find this, so don't call this in vain
-        currentBlockTimestamp: Long,
-        nrOfDependencies: Int,
-        extraData: Map<String, Gtv>
+            blockHeader: BlockHeader,
+            initialBlockData: InitialBlockData,
+            expectedMerkleRootHash: () -> ByteArray,
+            blockRidFromHeight: (height: Long) -> ByteArray?, // We will probably need to go to DB to find this, so don't call this in vain
+            currentBlockTimestamp: Long,
+            nrOfDependencies: Int,
+            extraData: Map<String, Gtv>
     ): ValidationResult {
         val header = blockHeader as BaseBlockHeader
 

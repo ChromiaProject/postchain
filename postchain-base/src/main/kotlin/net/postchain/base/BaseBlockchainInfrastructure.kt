@@ -13,6 +13,7 @@ import net.postchain.common.reflection.constructorOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.ApiInfrastructure
+import net.postchain.core.BeforeCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainConfigurationFactorySupplier
 import net.postchain.core.BlockchainEngine
@@ -88,6 +89,7 @@ open class BaseBlockchainInfrastructure(
 
     override fun makeBlockchainEngine(
             configuration: BlockchainConfiguration,
+            beforeCommitHandler: BeforeCommitHandler,
             afterCommitHandler: AfterCommitHandler,
             blockBuilderStorage: Storage,
             sharedStorage: Storage,
@@ -98,7 +100,7 @@ open class BaseBlockchainInfrastructure(
         val transactionQueue = BaseTransactionQueue(configuration.transactionQueueSize)
 
         return BaseBlockchainEngine(configuration, blockBuilderStorage, sharedStorage, configuration.chainID, transactionQueue,
-                initialEContext, blockchainConfigurationProvider, restartNotifier, postchainContext.nodeDiagnosticContext, afterCommitHandler)
+                initialEContext, blockchainConfigurationProvider, restartNotifier, postchainContext.nodeDiagnosticContext, beforeCommitHandler, afterCommitHandler)
     }
 
     override fun makeBlockchainProcess(
