@@ -59,6 +59,20 @@ deploy-snapshot:
       -Drevision=$SNAPSHOT_VERSION
       clean deploy
 
+deploy-pqc:
+  extends: .setup
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == "pqc/dev"
+  script:
+    - CURRENT_VERSION=$(git describe --tags --abbrev=0)
+    - PQC_VERSION=$CURRENT_VERSION.$CI_MERGE_REQUEST_IID-pqc
+    - mvn
+      $MAVEN_CLI_OPTS
+      --activate-profiles ci,nightly,docker-push
+      -Drevision=$PQC_VERSION
+      clean deploy
+
 # Triggered by that a semver tag was pushed
 deploy:
   extends: .setup
