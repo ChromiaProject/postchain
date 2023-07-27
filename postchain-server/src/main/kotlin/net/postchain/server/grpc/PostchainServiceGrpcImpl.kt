@@ -230,6 +230,7 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         try {
             val importResult = postchainService.importBlockchain(
                     request.chainId,
+                    request.blockchainRid.toByteArray(),
                     Path.of(request.configurationsFile),
                     Path.of(request.blocksFile),
                     request.incremental
@@ -241,7 +242,9 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
                     .setBlockchainRid(ByteString.copyFrom(importResult.blockchainRid.data))
                     .build())
             responseObserver.onCompleted()
-        } catch (e: UserMistake) {
+        } catch (e: NotFound) {
+            responseObserver.onError(Status.NOT_FOUND.withDescription(e.message).asRuntimeException())
+        } catch (e: Exception) {
             responseObserver.onError(
                     Status.INTERNAL.withDescription(e.message).asRuntimeException()
             )
