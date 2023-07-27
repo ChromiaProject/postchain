@@ -28,7 +28,7 @@ fun CliktCommand.requiredPubkeyOption() = option("-pk", "--pubkey", help = "Publ
 
 fun CliktCommand.blockchainRidOption() =
         option("-brid", "--blockchain-rid", help = "Blockchain RID", envvar = "POSTCHAIN_BRID")
-                .convert { BlockchainRid.buildFromHex(it) }.required()
+                .convert { BlockchainRid.buildFromHex(it) }
 
 fun CliktCommand.chainIdOption() = option("-cid", "--chain-id", help = "Chain internal ID within a node", envvar = "POSTCHAIN_CHAIN_ID").long()
 

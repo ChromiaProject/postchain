@@ -79,7 +79,7 @@ interface DatabaseAccess {
     fun removeAllBlockchainSpecificTables(ctx: EContext)
     fun removeAllBlockchainSpecificFunctions(ctx: EContext)
     fun removeBlockchainFromMustSyncUntil(ctx: EContext): Boolean
-    fun getChainId(ctx: EContext, blockchainRid: BlockchainRid): Long?
+    fun getChainId(ctx: AppContext, blockchainRid: BlockchainRid): Long?
     fun getMaxChainId(ctx: EContext): Long?
     fun getMaxSystemChainId(ctx: EContext): Long?
 

@@ -18,7 +18,7 @@ class CommandCheckBlockchain : CliktCommand(name = "check", help = "Checks Block
 
     private val chainId by chainIdOption().required()
 
-    private val blockchainRID by blockchainRidOption()
+    private val blockchainRID by blockchainRidOption().required()
 
     override fun run() {
         withDbVersionMismatch {

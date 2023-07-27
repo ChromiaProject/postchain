@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
@@ -18,7 +19,7 @@ class CommandBlockchainReplicaAdd : CliktCommand(name = "add", help = "Add info 
 
     private val pubKey by requiredPubkeyOption()
 
-    private val blockchainRID by blockchainRidOption()
+    private val blockchainRID by blockchainRidOption().required()
 
     override fun run() {
         withDbVersionMismatch {

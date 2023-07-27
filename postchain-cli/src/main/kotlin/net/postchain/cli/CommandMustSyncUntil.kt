@@ -15,7 +15,7 @@ class CommandMustSyncUntil : CliktCommand(name = "must-sync-until", help = "Set 
 
     private val nodeConfigFile by nodeConfigOption()
 
-    private val blockchainRid by blockchainRidOption()
+    private val blockchainRid by blockchainRidOption().required()
 
     private val height by heightOption().help("Node must sync to this height before trying to build new blocks.")
             .required()
