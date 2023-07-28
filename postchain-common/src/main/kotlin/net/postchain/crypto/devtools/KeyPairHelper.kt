@@ -22,7 +22,6 @@ object KeyPairHelper {
     private val pubKeys = mutableMapOf<Int, Pair<ByteArray, String>>()
     private val pubKeyHexToIndex = mutableMapOf<String, Int>()
 
-    // TODO Olle POS-114 Note A bit sad that I had to do this, but it's the usage of [pubKeyFromByteArray()] from BlockchainSetupFactory that breaks
     init {
         for (i in 0..10) {
             pubKey(i)
