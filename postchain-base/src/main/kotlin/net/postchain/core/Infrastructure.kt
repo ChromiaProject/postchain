@@ -131,7 +131,6 @@ enum class Infrastructure(vararg val key: String) {
     // Container chains
     EbftManagedContainerMaster("ebft-managed-container-master"),
     EbftContainerSub("ebft-container-sub"),
-    EbftManagedChromia0ContainerMaster("ebft-managed-chromia0-container-master"),
     ;
 
     fun get(): String = key.first()
