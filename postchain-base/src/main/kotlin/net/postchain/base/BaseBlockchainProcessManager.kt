@@ -225,10 +225,12 @@ open class BaseBlockchainProcessManager(
         )
         logger.debug("BlockchainProcess has been launched")
 
-        logger.info(
-                "startBlockchain() - Blockchain has been started: ${blockchainProcesses[chainId]?.javaClass?.simpleName}," +
-                        " full blockchain RID: ${blockchainConfig.blockchainRid.toHex()}, signers: ${blockchainConfig.signers.map { it.toHex() }}"
-        ) // We need to print full BC RID so that users can see in INFO logs what it is.
+        logger.info {
+            // We need to print full BC RID so that users can see in INFO logs what it is.
+            val process = blockchainProcesses[chainId]
+            "startBlockchain() - Blockchain has been started: ${process?.javaClass?.simpleName}:${process?.getBlockchainState()}," +
+                    " full blockchain RID: ${blockchainConfig.blockchainRid.toHex()}, signers: ${blockchainConfig.signers.map { it.toHex() }}"
+        }
     }
 
     protected open fun getBlockchainState(chainId: Long, blockchainRid: BlockchainRid): BlockchainState = BlockchainState.RUNNING
