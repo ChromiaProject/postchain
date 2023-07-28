@@ -56,7 +56,6 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 blockchainConfigProvider,
                 appConfig.debug
         )
-        ContainerEnvironment.init(appConfig)
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
         blockQueriesProvider.processManager = processManager
