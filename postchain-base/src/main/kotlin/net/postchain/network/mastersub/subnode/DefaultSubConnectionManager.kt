@@ -311,7 +311,7 @@ class DefaultSubConnectionManager(
     // ----------------------------------
     private fun scheduleReconnection(chain: ChainWithOneMasterConnection) {
         if (reconnectionScheduledForChain[chain.config.blockchainRid]?.isDone != false) {
-            logger.info("Reconnecting in $reconnectDelay to master node")
+            logger.info("Reconnecting in ${reconnectDelay.toSeconds()} sec. to master node")
             reconnectionScheduledForChain[chain.config.blockchainRid] = reconnectionExecutor.schedule({
                 withLoggingContext(
                         BLOCKCHAIN_RID_TAG to chain.config.blockchainRid.toHex(),
@@ -328,7 +328,7 @@ class DefaultSubConnectionManager(
 
     private fun scheduleQueryReconnection() {
         if (reconnectionScheduledForQuery?.isDone != false) {
-            logger.info("Reconnecting in $reconnectDelay to master node")
+            logger.info("Reconnecting in ${reconnectDelay.toSeconds()} sec. to master node")
             reconnectionScheduledForQuery = reconnectionExecutor.schedule({
                 logger.info("Reconnecting to master node")
                 subConnector.connectMaster(masterNodePeerInfo, queryConnectionDescriptor)
