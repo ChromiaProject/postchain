@@ -3,6 +3,7 @@ package net.postchain.containers.bpm
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
+import net.postchain.base.configuration.KEY_CONFIGURATIONFACTORY
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
@@ -35,6 +36,7 @@ import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
+import net.postchain.managed.config.ManagedDataSourceProvider
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 import org.mandas.docker.client.DockerClient
 
@@ -44,11 +46,13 @@ open class ContainerManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
         private val masterBlockchainInfra: MasterBlockchainInfra,
         blockchainConfigProvider: BlockchainConfigurationProvider,
+        managedDataSourceProvider: ManagedDataSourceProvider,
         bpmExtensions: List<BlockchainProcessManagerExtension> = listOf()
 ) : ManagedBlockchainProcessManager(
         postchainContext,
         masterBlockchainInfra,
         blockchainConfigProvider,
+        managedDataSourceProvider,
         bpmExtensions
 ), AfterSubnodeCommitListener {
 
@@ -98,11 +102,11 @@ open class ContainerManagedBlockchainProcessManager(
                     newInstanceOf<GTXBlockchainConfigurationFactory>(factoryName)
                 } catch (e: Exception) {
                     throw UserMistake("Can't start blockchain chainId: $chainId " +
-                            "due to configuration is wrong. Check /configurationfactory value: $factoryName." +
+                            "due to configuration is wrong. Check /$KEY_CONFIGURATIONFACTORY value: $factoryName." +
                             "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass) for chain0.", e)
                 }
                 if (chainId == CHAIN0) {
-                    ContainerChain0BlockchainConfigurationFactory(appConfig, factory, containerNodeConfig, blockBuilderStorage)
+                    ContainerChain0BlockchainConfigurationFactory(factory, managedDataSourceProvider, appConfig, containerNodeConfig, blockBuilderStorage)
                 } else {
                     DappBlockchainConfigurationFactory(factory, dataSource)
                 }

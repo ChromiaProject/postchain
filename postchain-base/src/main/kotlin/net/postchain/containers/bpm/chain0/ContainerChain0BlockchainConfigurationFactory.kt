@@ -9,20 +9,25 @@ import net.postchain.core.Storage
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.managed.config.ManagedDataSourceProvider
 
 class ContainerChain0BlockchainConfigurationFactory(
-        val appConfig: AppConfig,
         val factory: GTXBlockchainConfigurationFactory,
+        val managedDataSourceProvider: ManagedDataSourceProvider,
+        val appConfig: AppConfig,
         val containerNodeConfig: ContainerNodeConfig,
         val storage: Storage
 ) : BlockchainConfigurationFactory by factory {
 
-    override fun makeBlockchainConfiguration(configurationData: Any,
-                                             partialContext: BlockchainContext,
-                                             blockSigMaker: SigMaker,
-                                             eContext: EContext,
-                                             cryptoSystem: CryptoSystem): ContainerChain0BlockchainConfiguration {
-        val conf = factory.makeBlockchainConfiguration(configurationData, partialContext, blockSigMaker, eContext, cryptoSystem)
-        return ContainerChain0BlockchainConfiguration(conf, appConfig, containerNodeConfig, storage)
+    override fun makeBlockchainConfiguration(
+            configurationData: Any,
+            partialContext: BlockchainContext,
+            blockSigMaker: SigMaker,
+            eContext: EContext,
+            cryptoSystem: CryptoSystem
+    ): ContainerChain0BlockchainConfiguration {
+        val config = factory.makeBlockchainConfiguration(configurationData, partialContext, blockSigMaker, eContext, cryptoSystem)
+        val dataSource = managedDataSourceProvider.getDataSource(config, appConfig, storage)
+        return ContainerChain0BlockchainConfiguration(config, dataSource)
     }
 }

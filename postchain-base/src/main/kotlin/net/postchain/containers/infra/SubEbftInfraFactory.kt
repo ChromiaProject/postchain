@@ -51,7 +51,10 @@ class SubEbftInfraFactory : InfrastructureFactory {
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider
     ): BlockchainProcessManager {
-        return SubNodeBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider)
+        return SubNodeBlockchainProcessManager(
+                postchainContext,
+                blockchainInfrastructure,
+                blockchainConfigurationProvider)
     }
 
 }

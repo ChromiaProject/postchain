@@ -32,6 +32,7 @@ open class TestManagedBlockchainProcessManager(
         postchainContext,
         blockchainInfrastructure,
         blockchainConfigProvider,
+        { _, _, _ -> testDataSource },
         bpmExtensions
 ) {
 
@@ -105,12 +106,12 @@ open class TestManagedBlockchainProcessManager(
      *           Example: if a new BC config starts at height 10, then we should put [atLeastHeight] to 9.
      */
     fun awaitStarted(nodeIndex: Int, chainId: Long, atLeastHeight: Long, expectedConfigHash: ByteArray? = null) {
-        awaitDebug("++++++ AWAIT node idx: " + nodeIndex + ", chain: " + chainId + ", height: " + atLeastHeight)
+        awaitDebug("++++++ AWAIT node idx: $nodeIndex, chain: $chainId, height: $atLeastHeight")
         while ((lastHeightStarted[chainId] ?: -2L) < atLeastHeight
                 || (expectedConfigHash != null && !expectedConfigHash.contentEquals(lastConfigStarted[chainId]))) {
             Thread.sleep(10)
         }
-        awaitDebug("++++++ WAIT OVER! node idx: " + nodeIndex + ", chain: " + chainId + ", height: " + atLeastHeight)
+        awaitDebug("++++++ WAIT OVER! node idx: $nodeIndex, chain: $chainId, height: $atLeastHeight")
     }
 
     override fun deleteBlockchainIfRemoved(chainId: Long, brid: BlockchainRid) {

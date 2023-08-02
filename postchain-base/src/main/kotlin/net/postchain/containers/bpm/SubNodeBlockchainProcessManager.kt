@@ -11,9 +11,9 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.BlockchainState
 import net.postchain.core.block.BlockTrace
-import net.postchain.gtv.Gtv
 import net.postchain.managed.BaseManagedNodeDataSource
 import net.postchain.managed.ManagedBlockchainProcessManager
+import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.network.mastersub.protocol.MsCommittedBlockMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 import net.postchain.network.mastersub.subnode.SubQueryHandler
@@ -25,19 +25,24 @@ class SubNodeBlockchainProcessManager(
 ) : ManagedBlockchainProcessManager(
         postchainContext,
         blockchainInfrastructure,
-        blockchainConfigProvider
+        blockchainConfigProvider,
+        { _, _, _ -> buildManagedDataSource(postchainContext) }
 ) {
 
     init {
-        val queryRunner = { name: String, args: Gtv ->
-            (connectionManager as SubConnectionManager).masterSubQueryManager.query(
-                    null,
-                    name,
-                    args
-            ).toCompletableFuture().get()
-        }
+        initManagedEnvironment(buildManagedDataSource(postchainContext))
+    }
 
-        initManagedEnvironment(BaseManagedNodeDataSource(queryRunner, postchainContext.appConfig))
+    companion object {
+        fun buildManagedDataSource(postchainContext: PostchainContext): ManagedNodeDataSource {
+            return BaseManagedNodeDataSource(
+                    { name, args ->
+                        (postchainContext.connectionManager as SubConnectionManager)
+                                .masterSubQueryManager.query(null, name, args)
+                                .toCompletableFuture().get()
+                    },
+                    postchainContext.appConfig)
+        }
     }
 
     override fun createAndRegisterBlockchainProcess(

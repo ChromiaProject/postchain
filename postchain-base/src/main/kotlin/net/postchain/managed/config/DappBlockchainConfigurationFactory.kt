@@ -13,12 +13,14 @@ open class DappBlockchainConfigurationFactory(
         val dataSource: ManagedNodeDataSource
 ) : BlockchainConfigurationFactory by factory {
 
-    override fun makeBlockchainConfiguration(configurationData: Any,
-                                             partialContext: BlockchainContext,
-                                             blockSigMaker: SigMaker,
-                                             eContext: EContext,
-                                             cryptoSystem: CryptoSystem): DappBlockchainConfiguration {
-        val conf = factory.makeBlockchainConfiguration(configurationData, partialContext, blockSigMaker, eContext, cryptoSystem)
-        return DappBlockchainConfiguration(conf, dataSource)
+    override fun makeBlockchainConfiguration(
+            configurationData: Any,
+            partialContext: BlockchainContext,
+            blockSigMaker: SigMaker,
+            eContext: EContext,
+            cryptoSystem: CryptoSystem
+    ): DappBlockchainConfiguration {
+        val config = factory.makeBlockchainConfiguration(configurationData, partialContext, blockSigMaker, eContext, cryptoSystem)
+        return DappBlockchainConfiguration(config, dataSource)
     }
 }

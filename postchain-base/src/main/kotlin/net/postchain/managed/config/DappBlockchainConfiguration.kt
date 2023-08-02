@@ -12,6 +12,7 @@ open class DappBlockchainConfiguration(
         private val configuration: GTXBlockchainConfiguration,
         dataSource: ManagedNodeDataSource
 ) : ManagedBlockchainConfiguration(configuration, dataSource) {
+
     override fun makeBlockBuilder(ctx: EContext, extraExtensions: List<BaseBlockBuilderExtension>): BlockBuilder {
         val height = DatabaseAccess.of(ctx).getLastBlockHeight(ctx) + 1
         val failedConfigToReport = dataSource.getFaultyBlockchainConfiguration(blockchainRid, height)

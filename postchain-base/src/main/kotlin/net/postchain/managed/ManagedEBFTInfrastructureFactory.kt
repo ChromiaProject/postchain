@@ -11,6 +11,8 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.Storage
 import net.postchain.ebft.BaseEBFTInfrastructureFactory
+import net.postchain.managed.config.ManagedDataSourceProvider
+import net.postchain.managed.query.GtxModuleQueryRunner
 
 open class ManagedEBFTInfrastructureFactory : BaseEBFTInfrastructureFactory() {
 
@@ -28,10 +30,16 @@ open class ManagedEBFTInfrastructureFactory : BaseEBFTInfrastructureFactory() {
             blockchainConfigurationProvider: BlockchainConfigurationProvider
     ): BlockchainProcessManager {
 
-        return ManagedBlockchainProcessManager(postchainContext,
+        return ManagedBlockchainProcessManager(
+                postchainContext,
                 blockchainInfrastructure,
                 blockchainConfigurationProvider,
+                getManagedDataSourceProvider(),
                 getProcessManagerExtensions(postchainContext)
         )
+    }
+
+    open fun getManagedDataSourceProvider() = ManagedDataSourceProvider { configuration, appConfig, storage ->
+        BaseManagedNodeDataSource(GtxModuleQueryRunner(configuration, appConfig, storage), appConfig)
     }
 }

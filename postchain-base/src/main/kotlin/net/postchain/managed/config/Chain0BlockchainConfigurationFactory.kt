@@ -11,16 +11,20 @@ import net.postchain.gtx.GTXBlockchainConfigurationFactory
 
 open class Chain0BlockchainConfigurationFactory(
         val factory: GTXBlockchainConfigurationFactory,
+        val managedDataSourceProvider: ManagedDataSourceProvider,
         val appConfig: AppConfig,
         val storage: Storage
 ) : BlockchainConfigurationFactory by factory {
 
-    override fun makeBlockchainConfiguration(configurationData: Any,
-                                             partialContext: BlockchainContext,
-                                             blockSigMaker: SigMaker,
-                                             eContext: EContext,
-                                             cryptoSystem: CryptoSystem): Chain0BlockchainConfiguration {
-        val configuration = factory.makeBlockchainConfiguration(configurationData, partialContext, blockSigMaker, eContext, cryptoSystem)
-        return Chain0BlockchainConfiguration(configuration, appConfig, storage)
+    override fun makeBlockchainConfiguration(
+            configurationData: Any,
+            partialContext: BlockchainContext,
+            blockSigMaker: SigMaker,
+            eContext: EContext,
+            cryptoSystem: CryptoSystem
+    ): Chain0BlockchainConfiguration {
+        val config = factory.makeBlockchainConfiguration(configurationData, partialContext, blockSigMaker, eContext, cryptoSystem)
+        val dataSource = managedDataSourceProvider.getDataSource(config, appConfig, storage)
+        return Chain0BlockchainConfiguration(config, dataSource)
     }
 }

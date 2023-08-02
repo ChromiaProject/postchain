@@ -5,6 +5,7 @@ package net.postchain.managed
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.*
+import net.postchain.base.configuration.KEY_CONFIGURATIONFACTORY
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
@@ -22,6 +23,7 @@ import net.postchain.gtx.GTXModuleAware
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.managed.config.ManagedDataSourceAware
+import net.postchain.managed.config.ManagedDataSourceProvider
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -60,6 +62,7 @@ open class ManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure,
         blockchainConfigProvider: BlockchainConfigurationProvider,
+        val managedDataSourceProvider: ManagedDataSourceProvider,
         bpmExtensions: List<BlockchainProcessManagerExtension> = listOf()
 ) : BaseBlockchainProcessManager(
         postchainContext,
@@ -98,14 +101,14 @@ open class ManagedBlockchainProcessManager(
                 try {
                     val factory = newInstanceOf<GTXBlockchainConfigurationFactory>(factoryName)
                     if (chainId == CHAIN0) {
-                        Chain0BlockchainConfigurationFactory(factory, appConfig, blockBuilderStorage)
+                        Chain0BlockchainConfigurationFactory(factory, managedDataSourceProvider, appConfig, blockBuilderStorage)
                     } else {
                         DappBlockchainConfigurationFactory(factory, dataSource)
                     }
                 } catch (e: Exception) {
                     throw UserMistake(
                             "[${nodeName()}]: Can't start blockchain chainId: $chainId " +
-                                    "due to configuration is wrong. Check /configurationfactory value: $factoryName. " +
+                                    "due to configuration is wrong. Check /$KEY_CONFIGURATIONFACTORY value: $factoryName. " +
                                     "Use ${GTXBlockchainConfigurationFactory::class.qualifiedName} (or subclass)", e
                     )
                 }

@@ -10,7 +10,10 @@ import net.postchain.containers.bpm.ContainerEnvironment
 import net.postchain.containers.bpm.ContainerManagedBlockchainProcessManager
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
+import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
+import net.postchain.managed.config.ManagedDataSourceProvider
+import net.postchain.managed.query.GtxModuleQueryRunner
 import net.postchain.network.mastersub.master.DefaultMasterConnectionManager
 
 open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
@@ -37,10 +40,15 @@ open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
                 postchainContext,
                 blockchainInfrastructure as MasterBlockchainInfra,
                 blockchainConfigurationProvider,
+                getManagedDataSourceProvider(),
                 getProcessManagerExtensions(postchainContext)
         )
         (blockchainInfrastructure as DefaultMasterBlockchainInfra).registerAfterSubnodeCommitListener(blockchainProcessManager)
 
         return blockchainProcessManager
+    }
+
+    override fun getManagedDataSourceProvider() = ManagedDataSourceProvider { configuration, appConfig, storage ->
+        BaseDirectoryDataSource(GtxModuleQueryRunner(configuration, appConfig, storage), appConfig)
     }
 }
