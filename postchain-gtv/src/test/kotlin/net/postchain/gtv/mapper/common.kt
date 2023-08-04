@@ -2,6 +2,7 @@ package net.postchain.gtv.mapper
 
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
+import java.math.BigInteger
 
 data class Simple(@Name("key") val value: Long)
 
@@ -10,6 +11,16 @@ data class BasicDict(@Name("dict") val simple: Simple)
 @Suppress("UNUSED")
 enum class SimpleEnum {
     A, B
+}
+
+enum class RellEnum {
+    A, B;
+    fun getValueForRell() = this.ordinal.toLong()
+}
+
+enum class RellEnumWithCustomValue(val customValue: Long) {
+    A(1), B(2);
+    fun getValueForRell() = BigInteger.valueOf(this.customValue)
 }
 
 data class DictWithList(

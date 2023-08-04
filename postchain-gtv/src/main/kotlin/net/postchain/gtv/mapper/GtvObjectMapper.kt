@@ -183,7 +183,11 @@ private fun classToGtv(obj: Any, other: (Any) -> Gtv = { GtvObjectMapper.toGtvAr
     return when {
         obj::class.java.isString() -> gtv(obj as String)
         obj::class.java.isLong() -> gtv(obj as Long)
-        obj::class.java.isEnum -> gtv(obj.toString())
+        obj::class.java.isEnum -> try {
+            gtv(obj::class.java.getMethod("getValueForRell").invoke(obj) as Long)
+        } catch (e: Exception) {
+            gtv(obj.toString())
+        }
         obj::class.java.isBoolean() -> gtv(obj as Boolean)
         obj::class.java.isBigInteger() -> gtv(obj as BigInteger)
         obj::class.java.isByteArray() -> gtv(obj as ByteArray)
