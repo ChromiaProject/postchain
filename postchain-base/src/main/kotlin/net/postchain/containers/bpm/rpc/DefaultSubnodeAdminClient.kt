@@ -10,7 +10,6 @@ import io.grpc.Status.fromThrowable
 import io.grpc.health.v1.HealthCheckRequest
 import io.grpc.health.v1.HealthCheckResponse
 import io.grpc.health.v1.HealthGrpc
-import io.grpc.protobuf.services.HealthStatusManager
 import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
@@ -119,7 +118,7 @@ class DefaultSubnodeAdminClient(
     override fun isSubnodeHealthy(): Boolean {
         return try {
             logger.debug { "isSubnodeHealthy -- doing health check" }
-            val request = HealthCheckRequest.newBuilder().setService(HealthStatusManager.SERVICE_NAME_ALL_SERVICES).build()
+            val request = HealthCheckRequest.newBuilder().setService("").build()
             val reply = healthcheckService?.check(request) ?: return false
             reply.status == HealthCheckResponse.ServingStatus.SERVING
         } catch (e: Exception) {

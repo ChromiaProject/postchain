@@ -104,6 +104,11 @@
             <artifactId>commons-collections4</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+
         <!-- REST -->
         <dependency>
             <groupId>org.http4k</groupId>
