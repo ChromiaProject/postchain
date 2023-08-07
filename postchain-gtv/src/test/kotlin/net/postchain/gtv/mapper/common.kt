@@ -26,4 +26,11 @@ data class Custom(private val v: String) : ToGtv {
 
 data class WithCustom(@Name("foo") val foo: String, @Name("bar") val bar: Custom)
 
+enum class CustomEnum: ToGtv {
+    FOO, BAR;
+    override fun toGtv(): Gtv = GtvFactory.gtv(ordinal.toLong())
+}
+
+data class WithCustomEnum(@Name("foo") val foo: String, @Name("bar") val bar: CustomEnum)
+
 data class UnsupportedConstructorParamType(@Name("foo") val foo: Int)

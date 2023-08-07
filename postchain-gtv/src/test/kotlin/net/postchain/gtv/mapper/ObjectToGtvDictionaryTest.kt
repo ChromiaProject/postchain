@@ -22,6 +22,11 @@ class ObjectToGtvDictionaryTest {
         assertThat(GtvObjectMapper.toGtvDictionary(WithCustom("FOO", Custom("BAR")))).isEqualTo(gtv(mapOf("foo" to gtv("FOO"), "bar" to gtv("<<<BAR>>>"))))
     }
 
+    @Test
+    fun toGtvEnum() {
+        assertThat(GtvObjectMapper.toGtvDictionary(WithCustomEnum("FOO", CustomEnum.BAR))).isEqualTo(gtv(mapOf("foo" to gtv("FOO"), "bar" to gtv(1L))))
+    }
+
     @ParameterizedTest(name = "Mapping from {1} to {2}")
     @MethodSource("acceptedTypes")
     fun mappingTest(input: Any, expected: GtvDictionary) {
