@@ -154,7 +154,8 @@ open class BaseBlockchainConfiguration(
                 effectiveBlockchainRID != blockchainRid,
                 blockStrategyConfig.maxBlockSize,
                 blockStrategyConfig.maxBlockTransactions,
-                configData.maxTxExecutionTime
+                configData.maxTxExecutionTime,
+                blockStrategyConfig.maxSpecialEndTransactionSize
         )
 
         return bb

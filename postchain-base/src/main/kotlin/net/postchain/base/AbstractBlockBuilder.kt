@@ -51,7 +51,7 @@ abstract class AbstractBlockBuilder(
     // ----------------------------------
     protected abstract val blockWitnessProvider: BlockWitnessProvider
     protected abstract fun computeMerkleRootHash(): ByteArray              // Computes the root hash for the Merkle tree of transactions currently in a block
-    protected abstract fun makeBlockHeader(): BlockHeader                  // Create block header from initial block data
+    protected abstract fun makeBlockHeader(timestamp: Long): BlockHeader                  // Create block header from initial block data
     protected abstract fun buildBlockchainDependencies(partialBlockHeader: BlockHeader?): BlockchainDependencies
 
     // ----------------------------------
@@ -81,15 +81,15 @@ abstract class AbstractBlockBuilder(
         }
         blockchainDependencies = buildBlockchainDependencies(partialBlockHeader)
         initialBlockData =
-            store.beginBlock(ectx, blockchainRID, blockchainDependencies!!.extractBlockHeightDependencyArray())
+                store.beginBlock(ectx, blockchainRID, blockchainDependencies!!.extractBlockHeightDependencyArray())
         logger.debug("buildBlock() -- height=${initialBlockData.height} prevBlockRID=${initialBlockData.prevBlockRID.toHex()} timestamp=${initialBlockData.timestamp} blockIID=${initialBlockData.blockIID}")
         bctx = BaseBlockEContext(
-            ectx,
-            initialBlockData.height,
-            initialBlockData.blockIID,
-            initialBlockData.timestamp,
-            blockchainDependencies!!.extractChainIdToHeightMap(),
-            this
+                ectx,
+                initialBlockData.height,
+                initialBlockData.blockIID,
+                initialBlockData.timestamp,
+                blockchainDependencies!!.extractChainIdToHeightMap(),
+                this
         )
         buildingNewBlock = partialBlockHeader == null // If we have a header this must be an old block we are loading
         nextTransactionNumber = store.getLastTransactionNumber(ectx) + 1
@@ -112,7 +112,7 @@ abstract class AbstractBlockBuilder(
         try {
             txctx = store.addTransaction(bctx, tx, nextTransactionNumber)
         } catch (e: Exception) {
-            throw UserMistake("Failed to save tx to database", e)
+            throw UserMistake("Failed to save tx to database: ${tx.getRID().toHex()}", e)
         }
         // In case of errors, tx.apply may either return false or throw UserMistake
 
@@ -147,8 +147,8 @@ abstract class AbstractBlockBuilder(
     /**
      * By finalizing the block we won't allow any more transactions to be added, and the block RID and timestamp are set
      */
-    override fun finalizeBlock(): BlockHeader {
-        val blockHeader = makeBlockHeader()
+    override fun finalizeBlock(timestamp: Long): BlockHeader {
+        val blockHeader = makeBlockHeader(timestamp)
         store.finalizeBlock(bctx, blockHeader)
         _blockData = BlockData(blockHeader, rawTransactions)
         finalized = true

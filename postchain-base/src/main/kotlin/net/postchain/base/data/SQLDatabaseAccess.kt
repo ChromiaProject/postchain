@@ -68,6 +68,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     protected fun tableName(chainId: Long, table: String): String = "\"c${chainId}.$table\""
 
+    protected fun functionName(chainId: Long, function: String): String = "\"c${chainId}.$function\""
+
     protected fun stripQuotes(string: String): String = string.replace("\"", "")
 
     // --- Create Table ---
@@ -98,6 +100,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdGetTableBlockchainReplicasPubKeyConstraint(): String
     protected abstract fun cmdGetTableConstraints(tableName: String): String
     protected abstract fun cmdGetAllBlockchainTables(chainId: Long): String
+    protected abstract fun cmdGetAllBlockchainFunctions(chainId: Long): String
 
     // Tables not part of the batch creation run
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
@@ -754,6 +757,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
+    override fun removeAllBlockchainSpecificFunctions(ctx: EContext) {
+        val allFunctions = queryRunner.query(ctx.conn, cmdGetAllBlockchainFunctions(ctx.chainID), ColumnListHandler<String>())
+        if (allFunctions.isNotEmpty()) {
+            val csvFunctions = allFunctions.joinToString(", ") { "\"$it\"" }
+            queryRunner.update(ctx.conn, "DROP FUNCTION $csvFunctions CASCADE")
+        }
+    }
+
     override fun removeBlockchainFromMustSyncUntil(ctx: EContext): Boolean {
         val sql = """DELETE FROM ${tableMustSyncUntil()} 
                 WHERE $FIELD_NAME_CHAIN_IID = ?"""
@@ -761,7 +772,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.update(ctx.conn, sql, ctx.chainID) != 0
     }
 
-    override fun getChainId(ctx: EContext, blockchainRid: BlockchainRid): Long? {
+    override fun getChainId(ctx: AppContext, blockchainRid: BlockchainRid): Long? {
         val sql = "SELECT chain_iid FROM ${tableBlockchains()} WHERE blockchain_rid = ?"
         return queryRunner.query(ctx.conn, sql, nullableLongRes, blockchainRid.data)
     }

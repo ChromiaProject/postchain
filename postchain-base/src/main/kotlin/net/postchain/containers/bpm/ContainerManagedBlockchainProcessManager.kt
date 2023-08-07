@@ -13,9 +13,6 @@ import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
 import net.postchain.containers.bpm.chain0.ContainerChain0BlockchainConfigurationFactory
-import net.postchain.containers.bpm.docker.DockerClientFactory
-import net.postchain.containers.bpm.docker.DockerTools.containerName
-import net.postchain.containers.bpm.docker.DockerTools.shortContainerId
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.bpm.job.ContainerHealthcheckHandler
 import net.postchain.containers.bpm.job.ContainerJobHandler
@@ -60,7 +57,7 @@ open class ContainerManagedBlockchainProcessManager(
     private val directoryDataSource: DirectoryDataSource by lazy { dataSource as DirectoryDataSource }
     private val chains: MutableMap<Long, Chain> = mutableMapOf() // chainId -> Chain
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
-    private val dockerClient: DockerClient = DockerClientFactory.create()
+    private val dockerClient: DockerClient = ContainerEnvironment.dockerClient
     private val postchainContainers = mutableMapOf<ContainerName, PostchainContainer>() // { ContainerName -> PsContainer }
     private val fileSystem = FileSystem.create(containerNodeConfig)
     private val containerHealthcheckHandler = ContainerHealthcheckHandler(dockerClient, fileSystem, ::containers, ::removeBlockchainProcess)
@@ -71,16 +68,6 @@ open class ContainerManagedBlockchainProcessManager(
 
     init {
         logger.info(if (runningInContainer) "Running in container" else "Running as native process")
-        try {
-            dockerClient.ping()
-        } catch (e: Exception) {
-            logger.error("Unable to access Docker daemon: $e")
-        }
-        try {
-            removeContainersIfExist()
-        } catch (e: Exception) {
-            logger.error("Unable to list/remove containers: $e")
-        }
         Runtime.getRuntime().addShutdownHook(
                 Thread {
                     logger.info("Shutting down master node")
@@ -130,9 +117,6 @@ open class ContainerManagedBlockchainProcessManager(
                 if (!tryAcquireChainLock(chainId)) return false
 
                 invokeAfterCommitHooks(chainId, blockHeight)
-
-                // Preloading blockchain configuration
-                preloadChain0Configuration()
 
                 rTrace("Sync", blockTrace)
                 val res = containerJobManager.withLock {
@@ -284,36 +268,6 @@ open class ContainerManagedBlockchainProcessManager(
 
     private fun getContainerIid(name: String): Int = blockBuilderStorage.withWriteConnection { ctx ->
         DatabaseAccess.of(ctx).getContainerIid(ctx, name) ?: DatabaseAccess.of(ctx).createContainer(ctx, name)
-    }
-
-    private fun removeContainersIfExist() {
-        val toStop = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).filter {
-            (it.labels() ?: emptyMap())[POSTCHAIN_MASTER_PUBKEY] == containerNodeConfig.masterPubkey
-        }
-
-        if (toStop.isNotEmpty()) {
-            logger.warn {
-                "Containers found to be removed (${toStop.size}): ${toStop.joinToString(transform = ::containerName)}"
-            }
-
-            toStop.forEach {
-                withLoggingContext(CONTAINER_NAME_TAG to containerName(it).drop(1)) {
-                    try {
-                        dockerClient.stopContainer(it.id(), 20)
-                        logger.info { "Container has been stopped: ${containerName(it)} / ${shortContainerId(it.id())}" }
-                    } catch (e: Exception) {
-                        logger.error("Can't stop container: " + it.id(), e)
-                    }
-
-                    try {
-                        dockerClient.removeContainer(it.id(), DockerClient.RemoveContainerParam.forceKill())
-                        logger.info { "Container has been removed: ${containerName(it)} / ${shortContainerId(it.id())}" }
-                    } catch (e: Exception) {
-                        logger.error("Can't remove container: " + it.id(), e)
-                    }
-                }
-            }
-        }
     }
 
     /**

@@ -10,6 +10,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
+import net.postchain.containers.bpm.ContainerEnvironment
 import net.postchain.core.BaseInfrastructureFactoryProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
@@ -56,7 +57,6 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 appConfig.debug
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
-
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)
         blockQueriesProvider.processManager = processManager
     }
@@ -93,7 +93,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
     }
 
     fun isBlockchainRunning(chainId: Long): Boolean {
-        return processManager.retrieveBlockchain(chainId) != null
+        return processManager.retrieveBlockchain(chainId)?.isProcessRunning() ?: false
     }
 
     override fun shutdown() {

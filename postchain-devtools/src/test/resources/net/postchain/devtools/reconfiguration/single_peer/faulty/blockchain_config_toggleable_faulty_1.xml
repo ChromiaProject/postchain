@@ -21,7 +21,7 @@
         * Single node GTX: SingleNodeGtxBlockchainConfigurationFactory
         * Normal Gtx: net.postchain.gtx.GTXBlockchainConfigurationFactory
         -->
-        <string>net.postchain.devtools.testinfra.TestBlockchainConfigurationFactory</string>
+        <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
     </entry>
     <entry key="signers">
         <array>
@@ -39,7 +39,7 @@
         <dict>
             <entry key="modules">
                 <array>
-                    <string>net.postchain.integrationtest.reconfiguration.DummyModule1</string>
+                    <string>net.postchain.integrationtest.reconfiguration.TogglableFaultyGtxModule</string>
                     <string>net.postchain.configurations.GTXTestModule</string>
                     <string>net.postchain.gtx.StandardOpsGTXModule</string>
                 </array>

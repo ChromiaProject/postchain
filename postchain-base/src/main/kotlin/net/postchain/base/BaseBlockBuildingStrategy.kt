@@ -2,6 +2,7 @@
 
 package net.postchain.base
 
+import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.concurrent.util.get
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuilder
@@ -15,7 +16,6 @@ class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyConfigu
                                 blockQueries: BlockQueries,
                                 private val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {
-
 
     private var lastBlockTime: Long
     private var firstTxTime = 0L
@@ -41,9 +41,8 @@ class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyConfigu
     }
 
     override fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean {
-        val abb = bb as AbstractBlockBuilder
-        // TODO: fix end special transaction case
-        return abb.transactions.size >= maxBlockTransactions
+        val baseBlockBuilder = bb as BaseBlockBuilder
+        return baseBlockBuilder.shouldStopBuildingBlock(maxBlockTransactions)
     }
 
     override fun blockFailed() {

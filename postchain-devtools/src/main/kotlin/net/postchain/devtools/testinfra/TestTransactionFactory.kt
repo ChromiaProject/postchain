@@ -26,7 +26,7 @@ class TestTransactionFactory : TransactionFactory {
 
         if (!result.getRawData().contentEquals(data)) {
             throw UserMistake("This is a test, and you must send TX data in a format so it can be interpreted " +
-                  "as an integer. You sent: ${data.toHex()} (and the format we expected was ${result.getRawData().toHex()})")
+                    "as an integer. You sent: ${data.toHex()} (and the format we expected was ${result.getRawData().toHex()})")
         }
 
         return result

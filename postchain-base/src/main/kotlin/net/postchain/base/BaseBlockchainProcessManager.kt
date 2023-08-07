@@ -23,6 +23,7 @@ import net.postchain.crypto.sha256Digest
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.devtools.NameHelper.peerName
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
@@ -165,8 +166,12 @@ open class BaseBlockchainProcessManager(
                         blockchainConfig.blockchainRid
                     } catch (e: Exception) {
                         try {
-                            if (hasBuiltInitialBlock(initialEContext)) {
-                                revertConfiguration(chainId, bTrace, initialEContext, blockHeight, rawConfigurationData)
+                            val eContext = if (initialEContext.conn.isClosed) blockBuilderStorage.openWriteConnection(chainId) else initialEContext
+                            val configHash = GtvToBlockchainRidFactory.calculateBlockchainRid(GtvDecoder.decodeGtv(rawConfigurationData), ::sha256Digest).data
+                            if (hasBuiltInitialBlock(eContext) && !hasBuiltBlockWithConfig(eContext, blockHeight, configHash)) {
+                                revertConfiguration(chainId, bTrace, eContext, blockHeight, rawConfigurationData)
+                            } else {
+                                blockBuilderStorage.closeWriteConnection(eContext, false)
                             }
                         } catch (e: Exception) {
                             logger.warn(e) { "Unable to revert configuration: $e" }
@@ -193,12 +198,14 @@ open class BaseBlockchainProcessManager(
                                     initialEContext: EContext) {
         startDebug("BlockchainConfiguration has been created", bTrace)
 
+        val beforeCommitHandler = buildBeforeCommitHandler(blockchainConfig)
         val afterCommitHandler = buildAfterCommitHandler(chainId, blockchainConfig)
         val restartNotifier = BlockchainRestartNotifier { loadNextPendingConfig ->
             startBlockchainAsync(chainId, bTrace, loadNextPendingConfig)
         }
         val engine = blockchainInfrastructure.makeBlockchainEngine(
                 blockchainConfig,
+                beforeCommitHandler,
                 afterCommitHandler,
                 blockBuilderStorage,
                 sharedStorage,
@@ -218,15 +225,28 @@ open class BaseBlockchainProcessManager(
         )
         logger.debug("BlockchainProcess has been launched")
 
-        logger.info(
-                "startBlockchain() - Blockchain has been started: ${blockchainProcesses[chainId]?.javaClass?.simpleName}," +
-                        " full blockchain RID: ${blockchainConfig.blockchainRid.toHex()}, signers: ${blockchainConfig.signers.map { it.toHex() }}"
-        ) // We need to print full BC RID so that users can see in INFO logs what it is.
+        logger.info {
+            // We need to print full BC RID so that users can see in INFO logs what it is.
+            val process = blockchainProcesses[chainId]
+            "startBlockchain() - Blockchain has been started: ${process?.javaClass?.simpleName}:${process?.getBlockchainState()}," +
+                    " full blockchain RID: ${blockchainConfig.blockchainRid.toHex()}, signers: ${blockchainConfig.signers.map { it.toHex() }}"
+        }
     }
 
     protected open fun getBlockchainState(chainId: Long, blockchainRid: BlockchainRid): BlockchainState = BlockchainState.RUNNING
 
     private fun hasBuiltInitialBlock(eContext: EContext) = DatabaseAccess.of(eContext).getLastBlockHeight(eContext) > -1L
+
+    private fun hasBuiltBlockWithConfig(eContext: EContext, blockHeight: Long, configHash: ByteArray): Boolean {
+        val db = DatabaseAccess.of(eContext)
+        val configIsSaved = db.configurationHashExists(eContext, configHash)
+        return if (!configIsSaved) {
+            false
+        } else {
+            val configHeight = db.findConfigurationHeightForBlock(eContext, blockHeight) ?: 0
+            blockHeight > configHeight
+        }
+    }
 
     private fun revertConfiguration(chainId: Long, bTrace: BlockTrace?, eContext: EContext, blockHeight: Long,
                                     failedConfig: ByteArray) {
@@ -359,6 +379,14 @@ open class BaseBlockchainProcessManager(
         chainIdToBrid.clear()
         bridToChainId.clear()
         logger.debug("Stopped BlockchainProcessManager")
+    }
+
+    /**
+     * Actions to be taken before committing a block.
+     * These will be performed in the same transaction as the block.
+     */
+    protected open fun buildBeforeCommitHandler(blockchainConfig: BlockchainConfiguration): BeforeCommitHandler {
+        return { _, _ -> }
     }
 
     /**

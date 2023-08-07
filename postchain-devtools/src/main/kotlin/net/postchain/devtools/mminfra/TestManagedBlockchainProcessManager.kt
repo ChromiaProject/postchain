@@ -8,6 +8,8 @@ import net.postchain.common.BlockchainRid
 import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfigurationProvider
+import net.postchain.core.BlockEContext
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.devtools.awaitDebug
@@ -114,5 +116,9 @@ open class TestManagedBlockchainProcessManager(
     override fun deleteBlockchainIfRemoved(chainId: Long, brid: BlockchainRid) {
         removedBlockchains[chainId] = true
         super.deleteBlockchainIfRemoved(chainId, brid)
+    }
+
+    override fun getDatasourceForCurrentBlock(configuration: BlockchainConfiguration, bctx: BlockEContext): ManagedNodeDataSource {
+        return testDataSource
     }
 }

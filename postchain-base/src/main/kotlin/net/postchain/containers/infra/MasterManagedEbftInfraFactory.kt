@@ -6,6 +6,7 @@ import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.api.DefaultMasterApiInfra
+import net.postchain.containers.bpm.ContainerEnvironment
 import net.postchain.containers.bpm.ContainerManagedBlockchainProcessManager
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
@@ -16,6 +17,7 @@ open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
 
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
+            ContainerEnvironment.init(appConfig)
             val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
             val connectionManager = DefaultMasterConnectionManager(appConfig, containerNodeConfig, postchainContext.blockQueriesProvider)

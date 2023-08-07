@@ -71,12 +71,15 @@ interface DatabaseAccess {
     fun createContainer(ctx: AppContext, name: String): Int
     fun getContainerIid(ctx: AppContext, name: String): Int?
 
+    @Deprecated("Use safe version instead", ReplaceWith("initializeApp(connection, expectedDbVersion, false)"))
+    fun initializeApp(connection: Connection, expectedDbVersion: Int) = initializeApp(connection, expectedDbVersion, false)
     fun initializeApp(connection: Connection, expectedDbVersion: Int, allowUpgrade: Boolean = false)
     fun initializeBlockchain(ctx: EContext, blockchainRid: BlockchainRid)
     fun removeBlockchain(ctx: EContext): Boolean
     fun removeAllBlockchainSpecificTables(ctx: EContext)
+    fun removeAllBlockchainSpecificFunctions(ctx: EContext)
     fun removeBlockchainFromMustSyncUntil(ctx: EContext): Boolean
-    fun getChainId(ctx: EContext, blockchainRid: BlockchainRid): Long?
+    fun getChainId(ctx: AppContext, blockchainRid: BlockchainRid): Long?
     fun getMaxChainId(ctx: EContext): Long?
     fun getMaxSystemChainId(ctx: EContext): Long?
 

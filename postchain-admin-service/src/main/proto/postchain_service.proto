@@ -120,9 +120,10 @@ message ExportBlockchainReply {
 
 message ImportBlockchainRequest {
   int64 chainId = 1;
-  string configurationsFile = 2;
-  string blocksFile = 3;
-  bool incremental = 4;
+  bytes blockchainRid = 2;
+  string configurationsFile = 3;
+  string blocksFile = 4;
+  bool incremental = 5;
 }
 
 message ImportBlockchainReply {

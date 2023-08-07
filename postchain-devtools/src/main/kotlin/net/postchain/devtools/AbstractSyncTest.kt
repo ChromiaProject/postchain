@@ -125,6 +125,13 @@ open class AbstractSyncTest : IntegrationTestSetup() {
     }
 
     /**
+     * Override this in your test to add config overrides directly on the [NodeSetup] (for node specific configs).
+     */
+    open fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
+
+    }
+
+    /**
      * @return the new [NodeSetup] with key pair from [PeerInfo]
      */
     private fun createNodeSetup(nodeIndex: Int, peerInfo: PeerInfo): NodeSetup {

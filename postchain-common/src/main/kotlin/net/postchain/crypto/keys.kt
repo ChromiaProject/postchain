@@ -7,6 +7,7 @@ import net.postchain.common.types.WrappedByteArray
 interface Key {
     val wData: WrappedByteArray
     val data get() = wData.data
+
     @Deprecated(message = "Use 'data' accessor instead", replaceWith = ReplaceWith("data"))
     val key get() = data
 
@@ -14,9 +15,9 @@ interface Key {
     fun toShortHex() = hex().take(8)
 }
 
-data class PubKey(override val wData: WrappedByteArray): Key {
+data class PubKey(override val wData: WrappedByteArray) : Key {
     init {
-        require(data.isNotEmpty()) { "Public key must mot be empty" }
+        require(data.isNotEmpty()) { "Public key must not be empty" }
     }
 
     constructor(data: ByteArray) : this(WrappedByteArray(data))
@@ -25,9 +26,9 @@ data class PubKey(override val wData: WrappedByteArray): Key {
     override fun toString() = hex()
 }
 
-data class PrivKey(override val wData: WrappedByteArray): Key {
+data class PrivKey(override val wData: WrappedByteArray) : Key {
     init {
-        require(data.isNotEmpty()) { "Private key must mot be empty" }
+        require(data.isNotEmpty()) { "Private key must not be empty" }
     }
 
     constructor(data: ByteArray) : this(WrappedByteArray(data))

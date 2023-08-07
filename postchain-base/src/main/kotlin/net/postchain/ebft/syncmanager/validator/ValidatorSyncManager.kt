@@ -59,11 +59,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val blockManager: BlockManager,
                            private val blockDatabase: BlockDatabase,
                            private val nodeStateTracker: NodeStateTracker,
-                           private val isProcessRunning: () -> Boolean,
+                           isProcessRunning: () -> Boolean,
                            startInFastSync: Boolean
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
-    private val revoltTracker = RevoltTracker(statusManager, getRevoltConfiguration())
+    private val revoltTracker = RevoltTracker(statusManager, getRevoltConfiguration(), workerContext.engine)
     private val statusSender = StatusSender(MAX_STATUS_INTERVAL, statusManager, workerContext.communicationManager)
     private val defaultTimeout = 1000
     private var currentTimeout: Int
@@ -215,12 +215,16 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private fun restartWithNewConfigIfPossible() {
         val chainId = workerContext.blockchainConfiguration.chainID
         val bcConfigProvider = workerContext.blockchainConfigurationProvider
-        withReadConnection(workerContext.engine.blockBuilderStorage, chainId) { ctx ->
-            if (workerContext.engine.hasBuiltFirstBlockAfterConfigUpdate()
-                    && bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, chainId, true)) {
-                logger.debug("New config found. Reloading.")
-                workerContext.restartNotifier.notifyRestart(true)
+        try {
+            withReadConnection(workerContext.engine.blockBuilderStorage, chainId) { ctx ->
+                if (workerContext.engine.hasBuiltFirstBlockAfterConfigUpdate()
+                        && bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, chainId, true)) {
+                    logger.debug("New config found. Reloading.")
+                    workerContext.restartNotifier.notifyRestart(true)
+                }
             }
+        } catch (e: Exception) {
+            logger.error("Couldn't check for config updates, ignoring and continuing", e)
         }
     }
 
