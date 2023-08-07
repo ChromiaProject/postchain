@@ -181,6 +181,7 @@ private fun <T : Any> getPrimaryConstructorParameters(obj: T): List<KParameter> 
 
 private fun classToGtv(obj: Any, other: (Any) -> Gtv = { GtvObjectMapper.toGtvArray(it) }): Gtv {
     return when {
+        obj is ToGtv -> obj.toGtv()
         obj::class.java.isString() -> gtv(obj as String)
         obj::class.java.isLong() -> gtv(obj as Long)
         obj::class.java.isEnum -> gtv(obj.toString())
@@ -192,7 +193,6 @@ private fun classToGtv(obj: Any, other: (Any) -> Gtv = { GtvObjectMapper.toGtvAr
         obj::class.java.isPubkey() -> gtv((obj as PubKey).data)
         obj::class.java.isBlockchainRid() -> gtv((obj as BlockchainRid))
         obj is Collection<*> -> gtv(obj.map { classToGtv(it!!, other) })
-        obj is ToGtv -> obj.toGtv()
         obj is Gtv -> obj
         else -> other(obj)
     }

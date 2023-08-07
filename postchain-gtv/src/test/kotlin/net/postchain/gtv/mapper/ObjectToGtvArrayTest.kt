@@ -27,6 +27,11 @@ class ObjectToGtvArrayTest {
     }
 
     @Test
+    fun toGtvEnum() {
+        assertThat(GtvObjectMapper.toGtvArray(WithCustomEnum("FOO", CustomEnum.BAR))).isEqualTo(gtv(listOf(gtv("FOO"), gtv(1L))))
+    }
+
+    @Test
     fun illegalAnnotations() {
         data class RawGtvClass(@RawGtv val gtv: Gtv)
         assertThrows<IllegalArgumentException> { GtvObjectMapper.toGtvArray(RawGtvClass(gtv(1))) }
