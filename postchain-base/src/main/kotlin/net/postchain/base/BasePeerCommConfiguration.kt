@@ -2,7 +2,7 @@
 
 package net.postchain.base
 
-import net.postchain.common.types.WrappedByteArray
+import net.postchain.config.app.AppConfig
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
@@ -18,20 +18,20 @@ open class BasePeerCommConfiguration(
     companion object {
         // Used in tests only
         fun build(peers: Array<PeerInfo>,
-                  cryptoSystem: CryptoSystem,
-                  privKey: ByteArray,
-                  pubKey: ByteArray
+                  appConfig: AppConfig
         ): BasePeerCommConfiguration {
-            return build(peers.toSet(), cryptoSystem, privKey, pubKey)
+            return build(peers.toSet(), appConfig)
         }
 
         fun build(peers: Collection<PeerInfo>,
-                  cryptoSystem: CryptoSystem,
-                  privKey: ByteArray,
-                  pubKey: ByteArray
+                  appConfig: AppConfig
         ): BasePeerCommConfiguration {
-            val nn = NetworkNodes.buildNetworkNodes(peers, WrappedByteArray(pubKey))
-            return BasePeerCommConfiguration(nn, cryptoSystem, privKey, pubKey)
+            val nn = NetworkNodes.buildNetworkNodes(peers, appConfig)
+            return BasePeerCommConfiguration(
+                    nn,
+                    appConfig.cryptoSystem,
+                    appConfig.privKeyByteArray,
+                    appConfig.pubKeyByteArray)
         }
     }
 

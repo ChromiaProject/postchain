@@ -8,12 +8,15 @@ import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.config.app.AppConfig
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 
 class DefaultPeerCommunicationManager1PeerIT {
 
@@ -26,8 +29,12 @@ class DefaultPeerCommunicationManager1PeerIT {
     private val peerInfo = peerInfoFromPublicKey(keyPair.pubKey.data)
 
     private fun startTestContext(peers: Array<PeerInfo>, pubKey: ByteArray): EbftIntegrationTestContext {
-        val peerConfiguration = BasePeerCommConfiguration.build(
-                peers, cryptoSystem, keyPair.privKey.data, pubKey)
+        val appConfig: AppConfig = mock {
+            on { cryptoSystem } doReturn cryptoSystem
+            on { privKeyByteArray } doReturn keyPair.privKey.data
+            on { pubKeyByteArray } doReturn pubKey
+        }
+        val peerConfiguration = BasePeerCommConfiguration.build(peers, appConfig)
 
         return EbftIntegrationTestContext(peerConfiguration, blockchainRid)
     }
@@ -51,9 +58,9 @@ class DefaultPeerCommunicationManager1PeerIT {
     fun singlePeer_launching_with_empty_peers_will_result_in_exception() {
         assertThrows<UserMistake> {
             startTestContext(arrayOf(), keyPair.pubKey.data)
-                .use {
-                    it.communicationManager.init()
-                }
+                    .use {
+                        it.communicationManager.init()
+                    }
         }
     }
 
@@ -61,9 +68,9 @@ class DefaultPeerCommunicationManager1PeerIT {
     fun singlePeer_launching_with_wrong_pubkey_will_result_in_exception() {
         assertThrows<UserMistake> {
             startTestContext(arrayOf(peerInfo), keyPair2.pubKey.data)
-                .use {
-                    it.communicationManager.init()
-                }
+                    .use {
+                        it.communicationManager.init()
+                    }
         }
     }
 }

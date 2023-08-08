@@ -21,9 +21,7 @@ class DefaultSubPeersCommConfigFactory : DefaultPeersCommConfigFactory() {
 
         return DefaultSubPeerCommConfig.build(
                 relevantPeerMap,
-                appConfig.cryptoSystem,
-                appConfig.privKeyByteArray,
-                appConfig.pubKeyByteArray,
+                appConfig,
                 blockchainConfig.signers
         )
     }

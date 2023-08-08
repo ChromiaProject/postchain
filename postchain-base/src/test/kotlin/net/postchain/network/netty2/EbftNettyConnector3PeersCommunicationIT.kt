@@ -8,6 +8,7 @@ import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
+import net.postchain.config.app.AppConfig
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.network.common.ConnectionDirection
@@ -22,6 +23,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 
@@ -49,18 +52,26 @@ class EbftNettyConnector3PeersCommunicationIT {
         peerInfo3 = peerInfoFromPublicKey(keyPair3.pubKey.data)
         val peers = arrayOf(peerInfo1, peerInfo2, peerInfo3)
 
+        val appConfig1: AppConfig = mock {
+            on { cryptoSystem } doReturn cryptoSystem
+            on { privKeyByteArray } doReturn keyPair1.privKey.data
+            on { pubKeyByteArray } doReturn keyPair1.pubKey.data
+        }
+        val appConfig2: AppConfig = mock {
+            on { cryptoSystem } doReturn cryptoSystem
+            on { privKeyByteArray } doReturn keyPair2.privKey.data
+            on { pubKeyByteArray } doReturn keyPair2.pubKey.data
+        }
+        val appConfig3: AppConfig = mock {
+            on { cryptoSystem } doReturn cryptoSystem
+            on { privKeyByteArray } doReturn keyPair3.privKey.data
+            on { pubKeyByteArray } doReturn keyPair3.pubKey.data
+        }
+
         // Creating
-        context1 = EbftTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, keyPair1.privKey.data, keyPair1.pubKey.data),
-                blockchainRid)
-
-        context2 = EbftTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, keyPair2.privKey.data, keyPair2.pubKey.data),
-                blockchainRid)
-
-        context3 = EbftTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, keyPair3.privKey.data, keyPair3.pubKey.data),
-                blockchainRid)
+        context1 = EbftTestContext(BasePeerCommConfiguration.build(peers, appConfig1), blockchainRid)
+        context2 = EbftTestContext(BasePeerCommConfiguration.build(peers, appConfig2), blockchainRid)
+        context3 = EbftTestContext(BasePeerCommConfiguration.build(peers, appConfig3), blockchainRid)
 
         // Initializing
         context1.init()
@@ -171,5 +182,4 @@ class EbftNettyConnector3PeersCommunicationIT {
                             .forEach { assertThat(it).isIn(*expected3) }
                 }
     }
-
 }
