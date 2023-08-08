@@ -150,7 +150,7 @@ object ContainerConfigFactory : KLogging() {
                 .hostConfig(hostConfig)
                 .exposedPorts(portBindings.keys)
                 .env(createNodeConfigEnv(appConfig, containerNodeConfig, container))
-                .labels(mapOf(POSTCHAIN_MASTER_PUBKEY to containerNodeConfig.masterPubkey))
+                .labels(containerNodeConfig.labels + (POSTCHAIN_MASTER_PUBKEY to containerNodeConfig.masterPubkey))
                 .build()
     }
 
