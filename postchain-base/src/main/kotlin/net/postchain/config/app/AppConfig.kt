@@ -141,6 +141,9 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
     val port: Int
         get() = config.getEnvOrIntProperty("POSTCHAIN_PORT", "messaging.port", DEFAULT_PORT)
 
+    val hasPort: Boolean
+        get() = hasEnvOrKey("POSTCHAIN_PORT", "messaging.port")
+
     val genesisPeer: PeerInfo?
         get() {
             val genesisPubkey = getEnvOrString("POSTCHAIN_GENESIS_PUBKEY", "genesis.pubkey") ?: return null

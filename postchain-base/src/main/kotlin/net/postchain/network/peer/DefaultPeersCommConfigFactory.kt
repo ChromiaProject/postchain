@@ -33,9 +33,7 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
 
         return BasePeerCommConfiguration.build(
                 relevantPeerMap.values,
-                appConfig.cryptoSystem,
-                appConfig.privKeyByteArray,
-                appConfig.pubKeyByteArray
+                appConfig
         )
     }
 
@@ -54,9 +52,7 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
 
         return BasePeerCommConfiguration.build(
                 relevantPeerMap.values,
-                appConfig.cryptoSystem,
-                appConfig.privKeyByteArray,
-                appConfig.pubKeyByteArray
+                appConfig
         )
     }
 

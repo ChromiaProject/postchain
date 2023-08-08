@@ -5,6 +5,7 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.types.WrappedByteArray
+import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
 
 /**
@@ -26,20 +27,22 @@ class NetworkNodes(
 
     private var nextTimestamp: Long = 0 // Increases once a day
 
-    companion object: KLogging() {
+    companion object : KLogging() {
         const val MAX_DAILY_REQUESTS = 1000 // TODO: What to put here?
         const val DAY_IN_MILLIS = 24 * 60 * 60 * 1000
 
-        fun buildNetworkNodes(peers: Collection<PeerInfo>, myKey: NodeRid): NetworkNodes {
+        fun buildNetworkNodes(peers: Collection<PeerInfo>, appConfig: AppConfig): NetworkNodes {
             if (peers.isEmpty()) {
                 throw UserMistake("No peers have been configured for the network. Cannot proceed.")
             }
+            val myKey: NodeRid = WrappedByteArray(appConfig.pubKeyByteArray)
             var me: PeerInfo? = null
             val peerMap = mutableMapOf<NodeRid, PeerInfo>()
             for (peer in peers) {
-                val peerId =  peer.peerId()
+                val peerId = peer.peerId()
                 if (peerId == myKey) {
-                    me = PeerInfo(peer.host, peer.port, myKey.data)
+                    val port = if (appConfig.hasPort) appConfig.port else peer.port
+                    me = PeerInfo(peer.host, port, myKey.data)
                 } else {
                     peerMap[peerId] = peer
                 }

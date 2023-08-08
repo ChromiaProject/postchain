@@ -8,6 +8,7 @@ import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
+import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.ebft.message.GetBlockAtHeight
@@ -17,6 +18,8 @@ import org.awaitility.Duration
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 
 class DefaultPeerCommunicationManager2PeersIT {
 
@@ -37,14 +40,24 @@ class DefaultPeerCommunicationManager2PeersIT {
         peerInfo1 = peerInfoFromPublicKey(keyPair1.pubKey.data)
         peerInfo2 = peerInfoFromPublicKey(keyPair2.pubKey.data)
         val peers = arrayOf(peerInfo1, peerInfo2)
+        val appConfig1: AppConfig = mock {
+            on { cryptoSystem } doReturn cryptoSystem
+            on { privKeyByteArray } doReturn keyPair1.privKey.data
+            on { pubKeyByteArray } doReturn keyPair1.pubKey.data
+        }
+        val appConfig2: AppConfig = mock {
+            on { cryptoSystem } doReturn cryptoSystem
+            on { privKeyByteArray } doReturn keyPair2.privKey.data
+            on { pubKeyByteArray } doReturn keyPair2.pubKey.data
+        }
 
         // Creating
         context1 = EbftIntegrationTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, keyPair1.privKey.data, keyPair1.pubKey.data),
+                BasePeerCommConfiguration.build(peers, appConfig1),
                 blockchainRid)
 
         context2 = EbftIntegrationTestContext(
-                BasePeerCommConfiguration.build(peers, cryptoSystem, keyPair2.privKey.data, keyPair2.pubKey.data),
+                BasePeerCommConfiguration.build(peers, appConfig2),
                 blockchainRid)
 
         // Initializing

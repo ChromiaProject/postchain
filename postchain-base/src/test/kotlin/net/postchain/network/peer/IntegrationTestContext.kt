@@ -4,15 +4,22 @@ package net.postchain.network.peer
 
 import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.PeerInfo
+import net.postchain.config.app.AppConfig
 import net.postchain.crypto.devtools.KeyPairHelper
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 
 class IntegrationTestContext(
         peerInfos: Array<PeerInfo>,
         myIndex: Int
 ) {
+    val appConfig1: AppConfig = mock {
+        on { cryptoSystem } doReturn mock()
+        on { privKeyByteArray } doReturn KeyPairHelper.privKey(myIndex)
+        on { pubKeyByteArray } doReturn KeyPairHelper.pubKey(myIndex)
+    }
     val peerCommunicationConfig = BasePeerCommConfiguration.build(
-            peerInfos, mock(), KeyPairHelper.privKey(myIndex), KeyPairHelper.pubKey(myIndex))
+            peerInfos, appConfig1)
 
     val connectionManager = DefaultPeerConnectionManager<Int>(
             mock(), mock())

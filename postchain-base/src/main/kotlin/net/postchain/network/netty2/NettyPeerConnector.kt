@@ -34,6 +34,7 @@ class NettyPeerConnector<PacketType>(
             }
 
             run(peerInfo.port)
+            logger.info { "Node started listening on messaging port ${peerInfo.port}" }
         }
     }
 

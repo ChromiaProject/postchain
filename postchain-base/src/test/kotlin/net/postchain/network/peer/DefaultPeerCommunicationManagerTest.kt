@@ -5,12 +5,12 @@ package net.postchain.network.peer
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isSameAs
-import org.mockito.kotlin.*
 import net.postchain.base.NetworkNodes
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
+import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
@@ -18,7 +18,13 @@ import net.postchain.network.util.peerInfoFromPublicKey
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import java.lang.IllegalArgumentException
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.spy
+import org.mockito.kotlin.verify
 
 class DefaultPeerCommunicationManagerTest {
 
@@ -72,8 +78,12 @@ class DefaultPeerCommunicationManagerTest {
     fun successful_construction_of_CommunicationManager_with_two_peers() {
         // Given
         val connectionManager: PeerConnectionManager = mock()
+        val appConfig: AppConfig = mock {
+            on { pubKeyByteArray } doReturn pubKey1
+        }
+        val nodes = NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), appConfig)
         val peerCommunicationConfig: PeerCommConfiguration = mock {
-            on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), NodeRid(pubKey1))
+            on { networkNodes } doReturn nodes
             on { resolvePeer(peerInfo1.pubKey) } doReturn peerInfo1
             on { resolvePeer(peerInfo2.pubKey) } doReturn peerInfo2
         }
@@ -102,17 +112,21 @@ class DefaultPeerCommunicationManagerTest {
     @Test
     fun sendPacket_will_result_in_exception_if_my_NodeRid_was_given() {
         // Given
+        val appConfig: AppConfig = mock {
+            on { pubKeyByteArray } doReturn pubKey2
+        }
+        val nodes = NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), appConfig)
         val peersConfig: PeerCommConfiguration = mock {
-            on { networkNodes } doReturn NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), NodeRid(pubKey2))
+            on { networkNodes } doReturn nodes
             on { pubKey } doReturn pubKey1
         }
 
         // When / Then exception
         assertThrows<IllegalArgumentException> {
             DefaultPeerCommunicationManager<Int>(mock(), peersConfig, CHAIN_ID, blockchainRid, mock(), mock())
-                .apply {
-                    sendPacket(0, NodeRid(pubKey1))
-                }
+                    .apply {
+                        sendPacket(0, NodeRid(pubKey1))
+                    }
         }
     }
 
@@ -121,8 +135,11 @@ class DefaultPeerCommunicationManagerTest {
         // Given
         val peerInfo1Mock: PeerInfo = spy(peerInfo1)
         val connectionManager: PeerConnectionManager = mock()
+        val appConfig: AppConfig = mock {
+            on { pubKeyByteArray } doReturn pubKey2
+        }
         val config = object : PeerCommConfigurationDummy() {
-            override val networkNodes = NetworkNodes.buildNetworkNodes(setOf(peerInfo1Mock, peerInfo2), NodeRid(pubKey2))
+            override val networkNodes = NetworkNodes.buildNetworkNodes(setOf(peerInfo1Mock, peerInfo2), appConfig)
             override val pubKey = pubKey2
         }
 
