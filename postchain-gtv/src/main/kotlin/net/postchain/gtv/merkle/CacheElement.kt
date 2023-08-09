@@ -4,7 +4,7 @@ package net.postchain.gtv.merkle
 
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.proof.MerkleHashSummary
-import java.util.*
+import java.util.Arrays
 
 
 data class CacheElement(val orgGtv: Gtv, val merkleHashSummary: MerkleHashSummary, var age: Long) {

@@ -7,7 +7,8 @@ import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.data.TreeHasher
 import net.postchain.core.EContext
-import java.util.*
+import java.util.NavigableMap
+import java.util.TreeMap
 
 class Page(
     val blockHeight: Long, val level: Int, val left: Long,

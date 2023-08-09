@@ -6,7 +6,7 @@ import mu.KLogging
 import net.postchain.common.toHex
 import net.postchain.crypto.Signature
 import net.postchain.getBFTRequiredSignatureCount
-import java.util.*
+import java.util.Arrays
 
 /**
  * StatusManager manages the status of the consensus protocol

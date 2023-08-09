@@ -5,7 +5,7 @@ package net.postchain.gtv.merkle.proof
 import net.postchain.common.data.Hash
 import net.postchain.gtv.merkle.MerkleBasics.HASH_PREFIX_NODE
 import net.postchain.gtv.merkle.MerkleBasics.UNKNOWN_SIZE_IN_BYTE
-import java.util.*
+import java.util.Arrays
 
 const val SERIALIZATION_HASH_LEAF_TYPE: Long = 100
 const val SERIALIZATION_VALUE_LEAF_TYPE: Long = 101
@@ -49,9 +49,9 @@ const val SERIALIZATION_NODE_TYPE: Long = 102
  *  In this case the proof of V1 and V2 will look like this:
  *  -------------
  *  x == hash(
- *          hash( hash1 + hash(V1)))
+ *          hash( hash1 + hash(V1))
  *          +
- *          hash( hash2 + hash(V2)))
+ *          hash( hash2 + hash(V2))
  *       )
  *  -------------
  *
@@ -95,7 +95,7 @@ open class ProofValueLeaf<T>(val content: T, val sizeInBytes: Int): MerkleProofE
  */
 data class ProofHashedLeaf(val merkleHash: Hash): MerkleProofElement {
 
-    // (Probably not needed but I implement equals to get rid of the warning)
+    // (Probably not needed, but I implement equals to get rid of the warning)
     override fun equals(other: Any?): Boolean {
         return if (other is ProofHashedLeaf) {
             Arrays.equals(this.merkleHash, other.merkleHash)

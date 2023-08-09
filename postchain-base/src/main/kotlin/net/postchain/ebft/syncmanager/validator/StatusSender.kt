@@ -6,7 +6,7 @@ import net.postchain.ebft.StatusManager
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.Status
 import net.postchain.network.CommunicationManager
-import java.util.*
+import java.util.Date
 
 class StatusSender(
         private val maxStatusInterval: Int,

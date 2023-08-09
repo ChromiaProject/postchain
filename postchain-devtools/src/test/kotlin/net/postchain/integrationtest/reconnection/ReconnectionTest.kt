@@ -12,7 +12,7 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.testinfra.TestTransaction
-import java.util.*
+import java.util.Arrays
 import java.util.concurrent.CompletionStage
 
 open class ReconnectionTest : ConfigFileBasedIntegrationTest() {

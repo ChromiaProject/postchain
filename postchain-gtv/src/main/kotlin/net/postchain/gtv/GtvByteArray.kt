@@ -5,7 +5,7 @@ package net.postchain.gtv
 import com.beanit.jasn1.ber.types.BerOctetString
 import net.postchain.common.toHex
 import net.postchain.gtv.gtvmessages.RawGtv
-import java.util.*
+import java.util.Arrays
 
 
 data class GtvByteArray(val bytearray: ByteArray) : GtvPrimitive() {

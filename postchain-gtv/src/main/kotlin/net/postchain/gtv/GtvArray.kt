@@ -3,8 +3,7 @@
 package net.postchain.gtv
 
 import net.postchain.gtv.gtvmessages.RawGtv
-import java.util.*
-
+import java.util.Arrays
 
 data class GtvArray(val array: Array<out Gtv>) : GtvCollection() {
 

@@ -16,7 +16,7 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtx.GtxBuilder
-import java.util.*
+import java.util.Arrays
 
 /**
  * TODO: Olle: this is currently used, via configuration. It will be replaced by the new Anchoring process.

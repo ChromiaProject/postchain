@@ -5,7 +5,7 @@ package net.postchain.gtx.data
 import net.postchain.common.BlockchainRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GtxBody
-import java.util.*
+import java.util.Arrays
 
 data class OpData(val opName: String, val args: Array<out Gtv>) {
 

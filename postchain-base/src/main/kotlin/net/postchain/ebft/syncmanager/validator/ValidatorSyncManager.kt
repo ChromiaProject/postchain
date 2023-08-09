@@ -47,7 +47,8 @@ import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.gtv.mapper.toObject
-import java.util.*
+import java.util.Arrays
+import java.util.Date
 import java.util.concurrent.CompletableFuture
 
 /**

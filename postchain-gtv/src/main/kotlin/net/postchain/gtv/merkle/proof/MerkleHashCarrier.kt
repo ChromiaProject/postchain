@@ -3,7 +3,7 @@
 package net.postchain.gtv.merkle.proof
 
 import net.postchain.common.data.Hash
-import java.util.*
+import java.util.Arrays
 
 /**
  * @property merkleHash is the calculated merkle hash

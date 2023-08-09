@@ -8,7 +8,7 @@ import net.postchain.core.EContext
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ScalarHandler
 import org.apache.commons.text.StringSubstitutor
-import java.util.*
+import java.util.Scanner
 
 // TODO: [POS-128]: Refactor SQL part of GTXModule
 object GTXSchemaManager {
