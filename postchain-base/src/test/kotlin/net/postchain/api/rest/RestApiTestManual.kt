@@ -14,7 +14,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 import org.hamcrest.core.IsEqual.equalTo
-import java.util.*
+import java.util.Random
 
 class RestApiTestManual {
     private val port = 58373

@@ -9,7 +9,8 @@ import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionQueue
-import java.util.*
+import java.util.LinkedList
+import java.util.Queue
 import java.util.concurrent.LinkedBlockingQueue
 
 class ComparableTransaction(val tx: Transaction) {

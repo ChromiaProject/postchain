@@ -6,7 +6,7 @@ import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockTrace
 import net.postchain.crypto.Signature
-import java.util.*
+import java.util.Arrays
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 

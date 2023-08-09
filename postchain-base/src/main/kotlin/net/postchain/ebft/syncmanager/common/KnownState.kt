@@ -1,14 +1,13 @@
 package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
-import java.util.*
 
 /**
  * Keeps notes on a single peer. Some rules:
  *
  * When a peer has been marked UNRESPONSIVE for a certain
  * amount of time ([params.resurrectDrainedTime] it will be given
- * a new chance to serve us blocks. Otherwise we might run out of
+ * a new chance to serve us blocks. Otherwise, we might run out of
  * peers to sync from over time.
  *
  * Peers that are marked BLACKLISTED, should never be given another chance
@@ -42,7 +41,7 @@ open class KnownState(val params: SyncParameters) {
     private var unresponsiveTime: Long = 0
 
     // Queue containing times in ms, when errors has occurred.
-    private val errors = ArrayDeque<Long>()
+    private val errors = java.util.ArrayDeque<Long>()
 
     private var timeOfLastError: Long = 0
 

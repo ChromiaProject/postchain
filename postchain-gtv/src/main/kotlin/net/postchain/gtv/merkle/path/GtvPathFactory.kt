@@ -2,8 +2,7 @@
 
 package net.postchain.gtv.merkle.path
 
-import java.util.*
-
+import java.util.LinkedList
 
 object GtvPathFactory {
 

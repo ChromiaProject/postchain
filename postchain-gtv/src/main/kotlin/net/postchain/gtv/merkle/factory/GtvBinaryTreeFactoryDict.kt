@@ -8,7 +8,7 @@ import net.postchain.gtv.GtvString
 import net.postchain.gtv.merkle.*
 import net.postchain.gtv.merkle.path.GtvPath
 import net.postchain.gtv.merkle.path.GtvPathSet
-import java.util.*
+import java.util.SortedSet
 
 object GtvBinaryTreeFactoryDict {
 

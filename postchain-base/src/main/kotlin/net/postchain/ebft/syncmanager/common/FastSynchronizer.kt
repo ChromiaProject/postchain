@@ -20,7 +20,7 @@ import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.message.*
 import net.postchain.ebft.message.Transaction
 import net.postchain.ebft.worker.WorkerContext
-import java.util.*
+import java.util.TreeMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import net.postchain.ebft.message.BlockData as MessageBlockData

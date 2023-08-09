@@ -15,8 +15,8 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import java.math.BigInteger
 import java.security.MessageDigest
-import java.util.*
 import org.junit.jupiter.api.Assertions.assertEquals
+import java.util.TreeMap
 
 class MerkleTest {
 
