@@ -12,7 +12,7 @@ import net.postchain.core.block.BlockQueries
 import kotlin.math.min
 import kotlin.math.pow
 
-class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyConfigurationData,
+open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyConfigurationData,
                                 blockQueries: BlockQueries,
                                 private val txQueue: TransactionQueue
 ) : BlockBuildingStrategy {
@@ -72,8 +72,10 @@ class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyConfigu
             return false
         }
 
-        return false
+        return extendedShouldBuildBlock()
     }
+
+    open fun extendedShouldBuildBlock() : Boolean = false
 
     fun getBackoffTime(): Long = min(2.0.pow(failedBlockCount).toLong() + minBackoffTime, maxBackoffTime)
 }
