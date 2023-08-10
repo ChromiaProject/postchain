@@ -5,7 +5,6 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.configuration.BlockchainConfigurationData
-import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -97,10 +96,9 @@ open class BaseBlockchainInfrastructure(
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier
     ): BaseBlockchainEngine {
-        val transactionQueue = BaseTransactionQueue(configuration.transactionQueueSize)
-
-        return BaseBlockchainEngine(configuration, blockBuilderStorage, sharedStorage, configuration.chainID, transactionQueue,
-                initialEContext, blockchainConfigurationProvider, restartNotifier, postchainContext.nodeDiagnosticContext, beforeCommitHandler, afterCommitHandler)
+        return BaseBlockchainEngine(configuration, blockBuilderStorage, sharedStorage, configuration.chainID,
+                initialEContext, blockchainConfigurationProvider, restartNotifier, postchainContext.nodeDiagnosticContext,
+                beforeCommitHandler, afterCommitHandler)
     }
 
     override fun makeBlockchainProcess(

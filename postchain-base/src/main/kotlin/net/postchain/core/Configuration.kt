@@ -43,6 +43,7 @@ interface BlockchainConfiguration {
     fun getTransactionFactory(): TransactionFactory
     fun makeBlockBuilder(ctx: EContext, extraExtensions: List<BaseBlockBuilderExtension> = listOf()): BlockBuilder
     fun makeBlockQueries(storage: Storage): BlockQueries
+    fun hasQuery(name: String): Boolean
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
     fun initializeModules(postchainContext: PostchainContext)
     fun shutdownModules()

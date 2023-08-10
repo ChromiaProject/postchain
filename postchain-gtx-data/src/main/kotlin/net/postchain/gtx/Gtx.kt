@@ -8,12 +8,13 @@ import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.mapper.ToGtv
 import net.postchain.gtv.merkle.MerkleHashCalculator
 
 class Gtx(
     val gtxBody: GtxBody,
     val signatures: List<ByteArray>
-) {
+) : ToGtv {
 
     constructor(gtxBody: GtxBody, signatures: Array<ByteArray>) : this(gtxBody, signatures.toList())
 
@@ -34,7 +35,7 @@ class Gtx(
      * 1. transaction data body [GtvByteArray]
      * 2. signatures [GtvArray]
      */
-    fun toGtv() = gtv(
+    override fun toGtv() = gtv(
         gtxBody.toGtv(),
         gtv(signatures.map { gtv(it) })
     )

@@ -186,6 +186,8 @@ open class BaseBlockchainConfiguration(
                 this, storage, blockStore, chainID, blockchainContext.nodeRID!!)
     }
 
+    override fun hasQuery(name: String): Boolean = false
+
     override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy =
             try {
                 blockBuildingStrategyConstructor.newInstance(blockStrategyConfig, blockQueries, txQueue)
