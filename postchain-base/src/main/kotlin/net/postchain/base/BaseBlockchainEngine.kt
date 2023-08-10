@@ -7,6 +7,7 @@ import io.micrometer.core.instrument.Timer
 import mu.KLogging
 import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.BaseManagedBlockBuilder
+import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.exception.ProgrammerMistake
@@ -24,6 +25,8 @@ import net.postchain.core.EContext
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.Storage
 import net.postchain.core.Transaction
+import net.postchain.core.TransactionPrioritizer
+import net.postchain.core.TransactionPriority
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
@@ -33,11 +36,13 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.ManagedBlockBuilder
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.metrics.BaseBlockchainEngineMetrics
 import java.lang.Long.max
 import java.util.stream.Collectors
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * An [BlockchainEngine] will only produce [BlockBuilder]s for a single chain.
@@ -50,7 +55,6 @@ open class BaseBlockchainEngine(
         final override val blockBuilderStorage: Storage,
         final override val sharedStorage: Storage,
         private val chainID: Long,
-        private val transactionQueue: TransactionQueue,
         initialEContext: EContext,
         private val blockchainConfigurationProvider: BlockchainConfigurationProvider,
         private val restartNotifier: BlockchainRestartNotifier,
@@ -63,6 +67,14 @@ open class BaseBlockchainEngine(
     companion object : KLogging()
 
     private val blockQueries: BlockQueries = blockchainConfiguration.makeBlockQueries(sharedStorage)
+    private val transactionQueue = BaseTransactionQueue(
+            blockchainConfiguration.transactionQueueSize,
+            10.seconds,
+            if (blockchainConfiguration.hasQuery(PRIORITIZE_QUERY_NAME))
+                BaseTransactionPrioritizer { name: String, args: Gtv -> blockQueries.query(name, args).toCompletableFuture().get() }
+            else
+                TransactionPrioritizer { _ -> TransactionPriority.DEFAULT }
+    )
     private val strategy: BlockBuildingStrategy = blockchainConfiguration.getBlockBuildingStrategy(blockQueries, transactionQueue)
     private val metrics = BaseBlockchainEngineMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid, transactionQueue)
 
@@ -113,6 +125,7 @@ open class BaseBlockchainEngine(
         if (!currentEContext.conn.isClosed) {
             blockBuilderStorage.closeWriteConnection(currentEContext, false)
         }
+        transactionQueue.close()
     }
 
     private fun makeBlockBuilder(): BaseManagedBlockBuilder {

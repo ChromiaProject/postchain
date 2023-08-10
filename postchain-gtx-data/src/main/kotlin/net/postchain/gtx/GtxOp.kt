@@ -5,9 +5,10 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvString
+import net.postchain.gtv.mapper.ToGtv
 import net.postchain.gtx.data.OpData
 
-class GtxOp(val opName: String, vararg val args: Gtv) {
+class GtxOp(val opName: String, vararg val args: Gtv) : ToGtv {
     private val opData = OpData(opName, args)
 
     /**
@@ -15,7 +16,7 @@ class GtxOp(val opName: String, vararg val args: Gtv) {
      * 1. Operation name [GtvString]
      * 2. array of arguments [GtvArray]
      */
-    fun toGtv() = gtv(gtv(opName), gtv(args.toList()))
+    override fun toGtv() = gtv(gtv(opName), gtv(args.toList()))
 
     fun asOpData() = opData
 

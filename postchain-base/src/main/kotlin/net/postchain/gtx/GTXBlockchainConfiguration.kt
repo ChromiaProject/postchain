@@ -69,6 +69,8 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
         }
     }
 
+    override fun hasQuery(name: String): Boolean = module.getQueries().contains(name)
+
     override fun initializeModules(postchainContext: PostchainContext) {
         if (module is PostchainContextAware) {
             module.initializeContext(this, postchainContext)

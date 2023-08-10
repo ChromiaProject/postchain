@@ -66,3 +66,14 @@ interface TransactionQueue {
     fun retryAllTakenTransactions()
 }
 
+data class TransactionPriority(
+        val priority: Int
+) {
+    companion object {
+        val DEFAULT = TransactionPriority(0)
+    }
+}
+
+fun interface TransactionPrioritizer {
+    fun prioritize(tx: Transaction): TransactionPriority
+}
