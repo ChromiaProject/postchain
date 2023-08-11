@@ -35,8 +35,11 @@ import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
+import net.postchain.metrics.ContainerMetrics
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 import org.mandas.docker.client.DockerClient
+import java.util.Collections
+import java.util.LinkedHashMap
 
 const val POSTCHAIN_MASTER_PUBKEY = "postchain-master-pubkey"
 
@@ -58,7 +61,7 @@ open class ContainerManagedBlockchainProcessManager(
     private val chains: MutableMap<Long, Chain> = mutableMapOf() // chainId -> Chain
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
     private val dockerClient: DockerClient = ContainerEnvironment.dockerClient
-    private val postchainContainers = mutableMapOf<ContainerName, PostchainContainer>() // { ContainerName -> PsContainer }
+    private val postchainContainers = Collections.synchronizedMap(LinkedHashMap<ContainerName, PostchainContainer>()) // { ContainerName -> PsContainer }
     private val fileSystem = FileSystem.create(containerNodeConfig)
     private val containerHealthcheckHandler = ContainerHealthcheckHandler(dockerClient, fileSystem, ::containers, ::removeBlockchainProcess)
     private val containerJobHandler = ContainerJobHandler(appConfig, nodeDiagnosticContext, dockerClient, fileSystem,
@@ -83,6 +86,7 @@ open class ContainerManagedBlockchainProcessManager(
                     logger.info("Stopping subnode containers done")
                 }
         )
+        ContainerMetrics(::numberOfSubnodes)
     }
 
     private fun containers(): MutableMap<ContainerName, PostchainContainer> = postchainContainers
@@ -278,4 +282,6 @@ open class ContainerManagedBlockchainProcessManager(
             it.afterCommitInSubnode(blockchainRid, blockRid, blockHeader = blockHeader, witnessData = witnessData)
         }
     }
+
+    private fun numberOfSubnodes(): Int = containers().size
 }

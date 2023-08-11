@@ -27,6 +27,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.metrics.BlockchainProcessManagerMetrics
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
@@ -73,6 +74,10 @@ open class BaseBlockchainProcessManager(
     // For DEBUG only
     var insideATest = false
     var blockDebug: BlockTrace? = null
+
+    init {
+        BlockchainProcessManagerMetrics(::numberOfBlockchains)
+    }
 
     companion object : KLogging()
 
@@ -337,6 +342,10 @@ open class BaseBlockchainProcessManager(
         }
     }
 
+    private fun numberOfBlockchains(): Int = synchronized(synchronizer) {
+        blockchainProcesses.size
+    }
+
     protected open fun deleteBlockchainIfRemoved(chainId: Long, brid: BlockchainRid) {
         val state = getBlockchainState(chainId, brid)
         if (state == BlockchainState.REMOVED) {
@@ -392,7 +401,7 @@ open class BaseBlockchainProcessManager(
     /**
      * Define what actions should be taken after block commit. In our case:
      * 1) trigger bp extensions,
-     * 2) checks for configuration changes, and then does a async reboot of the given chain.
+     * 2) checks for configuration changes, and then does an async reboot of the given chain.
      *
      * @param chainId - the chain we should build the [AfterCommitHandler] for
      * @return a newly created [AfterCommitHandler]. This method will be much more complex is
