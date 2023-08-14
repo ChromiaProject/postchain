@@ -2,6 +2,7 @@
 
 package net.postchain.api.rest.infra
 
+import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import net.postchain.api.rest.controller.DisabledDebugInfoQuery
@@ -22,8 +23,11 @@ open class BaseApiInfrastructure(
         private val postchainContext: PostchainContext
 ) : ApiInfrastructure {
 
+    companion object : KLogging()
+
     val restApi: RestApi? = with(restApiConfig) {
         if (port != -1) {
+            logger.info { "Starting REST API on port $port and path $basePath/" }
             RestApi(
                     port,
                     basePath,
