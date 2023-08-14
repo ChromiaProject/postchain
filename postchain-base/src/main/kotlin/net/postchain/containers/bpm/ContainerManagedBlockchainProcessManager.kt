@@ -86,8 +86,12 @@ open class ContainerManagedBlockchainProcessManager(
                     logger.info("Stopping subnode containers done")
                 }
         )
-        ContainerMetrics(::numberOfSubnodes)
+        ContainerMetrics(::numberOfSubnodes, ::numberOfContainers)
     }
+
+    private fun numberOfSubnodes(): Int = containers().size
+
+    private fun numberOfContainers(): Int = directoryDataSource.getContainersToRun()?.size ?: 0
 
     private fun containers(): MutableMap<ContainerName, PostchainContainer> = postchainContainers
 
@@ -282,6 +286,4 @@ open class ContainerManagedBlockchainProcessManager(
             it.afterCommitInSubnode(blockchainRid, blockRid, blockHeader = blockHeader, witnessData = witnessData)
         }
     }
-
-    private fun numberOfSubnodes(): Int = containers().size
 }
