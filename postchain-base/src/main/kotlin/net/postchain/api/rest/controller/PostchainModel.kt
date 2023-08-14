@@ -68,7 +68,7 @@ open class PostchainModel(
 
     override var live = true
 
-    override fun postTransaction(tx: ByteArray): Unit = throw NotSupported("NotSupported: Posting a transaction on a non-signer node is not supported.")
+    override fun postTransaction(tx: ByteArray): Unit = throw NotSupported("Posting a transaction on a non-signer node is not supported.")
 
     override fun getTransaction(txRID: TxRid): ByteArray? = blockQueries.getTransaction(txRID.bytes).get()
             .takeIf { it != null }?.getRawData()

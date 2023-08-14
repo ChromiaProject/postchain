@@ -499,6 +499,7 @@ class RestApi(
                 }
             })
             .then(ServerFilters.CatchLensFailure { request, lensFailure ->
+                logger.info { "Bad request: ${lensFailure.message}" }
                 Response(BAD_REQUEST).with(
                         errorBody.outbound(request) of ErrorBody(lensFailure.failures.joinToString("; "))
                 )
@@ -514,42 +515,42 @@ class RestApi(
     private fun onError(error: Exception, request: Request): Response {
         return when (error) {
             is NotFoundError -> {
-                logger.info { "NotFound: ${error.message}" }
+                logger.info { "Not found: ${error.message}" }
                 transformErrorResponseFromDiagnostics(request, NOT_FOUND, error)
             }
 
-            is LensFailure -> {
-                logger.info { "BadFormat: ${error.message}" }
-                errorResponse(request, BAD_REQUEST, error.message!!)
-            }
-
             is IllegalArgumentException -> {
-                logger.info { "IllegalArgument: ${error.message}" }
+                logger.info { "Illegal argument: ${error.message}" }
                 errorResponse(request, BAD_REQUEST, error.message!!)
             }
 
             is UserMistake -> {
-                logger.info { "UserMistake: ${error.message}" }
+                logger.info { "User mistake: ${error.message}" }
                 errorResponse(request, BAD_REQUEST, error.message!!)
             }
 
             is InvalidTnxException -> {
+                logger.info { "Invalid transaction: ${error.message}" }
                 errorResponse(request, BAD_REQUEST, error.message!!)
             }
 
             is DuplicateTnxException -> {
+                logger.info { "Duplicate transaction: ${error.message}" }
                 errorResponse(request, CONFLICT, error.message!!)
             }
 
             is NotSupported -> {
+                logger.info { "Not supported: ${error.message}" }
                 errorResponse(request, FORBIDDEN, error.message!!)
             }
 
             is UnavailableException -> {
+                logger.info { "Unavailable: ${error.message}" }
                 transformErrorResponseFromDiagnostics(request, SERVICE_UNAVAILABLE, error)
             }
 
             is PmEngineIsAlreadyClosed -> {
+                logger.info { "Engine is closed: ${error.message}" }
                 errorResponse(request, SERVICE_UNAVAILABLE, error.message!!)
             }
 
