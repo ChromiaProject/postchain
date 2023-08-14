@@ -14,6 +14,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvToJSON
 import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtx.GtxQuery
@@ -389,5 +390,25 @@ class RestApiQueryEndpointTest {
                 .then()
                 .statusCode(400)
                 .contentType(ContentType.BINARY)
+    }
+
+    @Test
+    fun `JSON response contains null values`() {
+        val queryName = "test_query"
+        val query = GtxQuery(queryName, gtv(mapOf(NON_STRICT_QUERY_ARGUMENT to gtv(true))))
+
+        val answerString = """{"a":"not-null","b":null}"""
+        val answer = gtv(mapOf("a" to gtv("not-null"), "b" to GtvNull))
+
+        whenever(model.query(query)).thenReturn(answer)
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/query/$blockchainRID?type=$queryName")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body(equalTo(answerString))
     }
 }

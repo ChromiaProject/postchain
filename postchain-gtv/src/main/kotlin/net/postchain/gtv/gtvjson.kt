@@ -70,11 +70,14 @@ class GtvAdapter : JsonDeserializer<Gtv>, JsonSerializer<Gtv> {
     }
 }
 
+fun make_gtv_gson_builder(): GsonBuilder {
+    return GsonBuilder()
+            .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter())
+            .serializeNulls()
+}
+
 fun make_gtv_gson(): Gson {
-    return GsonBuilder().
-            registerTypeAdapter(Gtv::class.java, GtvAdapter()).
-            serializeNulls().
-            create()!!
+    return make_gtv_gson_builder().create()!!
 }
 
 fun gtvToJSON(gtvData: Gtv, gson: Gson): String {

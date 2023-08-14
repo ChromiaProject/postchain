@@ -2,6 +2,7 @@ package net.postchain.api.rest
 
 import com.google.gson.JsonElement
 import com.google.gson.JsonNull
+import net.postchain.api.rest.json.GtvJsonFactory.auto as gtvJson
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.json.JsonFactory.auto
 import net.postchain.api.rest.json.JsonFactory.json
@@ -142,14 +143,7 @@ val binaryBody = Body.binary(ContentType.OCTET_STREAM, "binary").map(
             it.inputStream()
         }
 ).toLens()
-val gtvJsonBody = Body.json("GTV JSON").map(
-        {
-            gtvGson.fromJson(it, Gtv::class.java)
-        },
-        {
-            gtvGson.toJsonTree(it, Gtv::class.java)
-        }
-).toLens()
+val gtvJsonBody = Body.gtvJson<Gtv>().toLens()
 val batchQueriesBody = Body.json("queries").map {
     it.asJsonObject["queries"].asJsonArray.map { e -> gtvGson.fromJson(e, Gtv::class.java) }
 }.toLens()
