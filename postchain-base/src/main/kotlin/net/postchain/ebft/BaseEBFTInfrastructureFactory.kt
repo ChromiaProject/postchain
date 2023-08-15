@@ -51,8 +51,12 @@ open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider
     ): BlockchainProcessManager {
-        return BaseBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider, getProcessManagerExtensions(postchainContext))
+        return BaseBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider,
+                getProcessManagerExtensions(postchainContext, blockchainInfrastructure))
     }
+
+    protected open fun getProcessManagerExtensions(postchainContext: PostchainContext,
+                                                   blockchainInfrastructure: BlockchainInfrastructure): List<BlockchainProcessManagerExtension> = getProcessManagerExtensions(postchainContext)
 
     protected open fun getProcessManagerExtensions(postchainContext: PostchainContext): List<BlockchainProcessManagerExtension> = listOf()
 }

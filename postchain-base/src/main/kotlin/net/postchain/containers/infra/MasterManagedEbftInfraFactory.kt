@@ -37,7 +37,7 @@ open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
                 postchainContext,
                 blockchainInfrastructure as MasterBlockchainInfra,
                 blockchainConfigurationProvider,
-                getProcessManagerExtensions(postchainContext)
+                getProcessManagerExtensions(postchainContext, blockchainInfrastructure)
         )
         (blockchainInfrastructure as DefaultMasterBlockchainInfra).registerAfterSubnodeCommitListener(blockchainProcessManager)
 
