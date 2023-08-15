@@ -125,8 +125,11 @@ interface ManagedBlockBuilder : BlockBuilder {
  * Strategy configurations for how to create new blocks
  */
 interface BlockBuildingStrategy {
+    fun preemptiveBlockBuilding(): Boolean
     fun shouldBuildBlock(): Boolean
-    fun blockCommitted(blockData: BlockData)
+    fun mustWaitMinimumBuildBlockTime(): Long
+    fun mustWaitBeforeBuildBlock(): Boolean
     fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean
+    fun blockCommitted(blockData: BlockData)
     fun blockFailed()
 }

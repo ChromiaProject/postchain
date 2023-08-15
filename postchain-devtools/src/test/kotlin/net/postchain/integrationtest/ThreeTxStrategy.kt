@@ -4,17 +4,19 @@ package net.postchain.integrationtest
 
 import mu.KLogging
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
-import net.postchain.core.block.BlockBuildingStrategy
-import net.postchain.core.block.BlockQueries
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuilder
+import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockQueries
+import java.time.Clock
 import java.util.concurrent.LinkedBlockingQueue
 
 class ThreeTxStrategy(
-    val configData: BaseBlockBuildingStrategyConfigurationData,
-    blockQueries: BlockQueries,
-    private val txQueue: TransactionQueue
+        val configData: BaseBlockBuildingStrategyConfigurationData,
+        blockQueries: BlockQueries,
+        private val txQueue: TransactionQueue,
+        val clock: Clock
 ) : BlockBuildingStrategy {
 
     companion object : KLogging()
@@ -23,14 +25,18 @@ class ThreeTxStrategy(
     private var committedHeight = -1
     private val index = -1
 
+    override fun preemptiveBlockBuilding(): Boolean = false
+
     override fun shouldBuildBlock(): Boolean {
         logger.debug { "PNode $index shouldBuildBlock? ${txQueue.getTransactionQueueSize()}" }
         return txQueue.getTransactionQueueSize() >= 3
     }
 
-    override fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean {
-        return false
-    }
+    override fun mustWaitMinimumBuildBlockTime(): Long = 0
+
+    override fun mustWaitBeforeBuildBlock(): Boolean = false
+
+    override fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean = false
 
     override fun blockFailed() {}
 

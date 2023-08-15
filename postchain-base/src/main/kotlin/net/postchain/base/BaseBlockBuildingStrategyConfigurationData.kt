@@ -35,6 +35,9 @@ data class BaseBlockBuildingStrategyConfigurationData(
         @Name(KEY_BLOCKSTRATEGY_MAXSPECIALENDTRANSACTIONSIZE)
         @DefaultValue(defaultLong = 1024) // Bytes
         val maxSpecialEndTransactionSize: Long,
+        @Name(KEY_BLOCKSTRATEGY_PREEMPTIVEBLOCKBUILDING)
+        @DefaultValue(defaultBoolean = true)
+        val preemptiveBlockBuilding: Boolean,
 ) {
     companion object {
         @JvmStatic

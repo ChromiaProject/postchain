@@ -245,7 +245,7 @@ class BaseBlockManager(
                     // in the transaction queue. Or it will only build a block every 10 minutes.
                     // Be careful not to have a BlockBuildingStrategy that conflicts with the
                     // RevoltTracker of ValidatorSyncManager.
-                    if (!blockStrategy.shouldBuildBlock()) {
+                    if (!shouldBuildBlock()) {
                         return
                     }
                     if (logger.isTraceEnabled) {
@@ -277,6 +277,9 @@ class BaseBlockManager(
             }
         }
     }
+
+    private fun shouldBuildBlock() = !blockStrategy.mustWaitBeforeBuildBlock() &&
+            (blockStrategy.preemptiveBlockBuilding() || blockStrategy.shouldBuildBlock())
 
     override fun processBlockIntent(): BlockIntent {
         update()

@@ -317,10 +317,12 @@ open class BaseBlockchainEngine(
                     // tx is fine, consider stopping
                     if (strategy.shouldStopBuildingBlock(blockBuilder.blockBuilder)) {
                         logger.debug { "buildBlock() - Block limit is reached" }
+                        val mustWaitTime = mustWaitMinimumBuildBlockTime()
+                        if (mustWaitTime > 0) Thread.sleep(mustWaitTime)
                         break
                     }
                 }
-            } else { // tx == null
+            } else if (shouldBuildBlock()) { // tx == null
                 break
             }
         }
@@ -341,6 +343,10 @@ open class BaseBlockchainEngine(
 
         blockSample.stop(metrics.blocks)
     }
+
+    private fun shouldBuildBlock() = !strategy.preemptiveBlockBuilding() || strategy.shouldBuildBlock()
+
+    private fun mustWaitMinimumBuildBlockTime() = if (strategy.preemptiveBlockBuilding()) strategy.mustWaitMinimumBuildBlockTime() else 0
 
     private fun hasBuiltInitialBlock() = DatabaseAccess.of(currentEContext).getLastBlockHeight(currentEContext) > -1L
 
