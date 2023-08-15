@@ -42,6 +42,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import java.time.Clock
 
 open class BaseBlockchainConfiguration(
         val configData: BlockchainConfigurationData,
@@ -80,7 +81,8 @@ open class BaseBlockchainConfiguration(
             configData.blockStrategyName,
             BaseBlockBuildingStrategyConfigurationData::class.java,
             BlockQueries::class.java,
-            TransactionQueue::class.java
+            TransactionQueue::class.java,
+            Clock::class.java
     )
 
     private fun resolveNodeID(nodeID: Int, subjectID: ByteArray): Int {
@@ -190,7 +192,7 @@ open class BaseBlockchainConfiguration(
 
     override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy =
             try {
-                blockBuildingStrategyConstructor.newInstance(blockStrategyConfig, blockQueries, txQueue)
+                blockBuildingStrategyConstructor.newInstance(blockStrategyConfig, blockQueries, txQueue, Clock.systemUTC())
             } catch (e: java.lang.reflect.InvocationTargetException) {
                 throw ProgrammerMistake("The constructor of the block building strategy given was " +
                         "unable to finish. Class name given: ${configData.blockStrategyName}, Msg: ${e.message}")

@@ -11,6 +11,7 @@ import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockQueries
+import java.time.Clock
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -25,7 +26,8 @@ import kotlin.time.Duration
 class OnDemandBlockBuildingStrategy(
         val configData: BaseBlockBuildingStrategyConfigurationData,
         val blockQueries: BlockQueries,
-        val txQueue: TransactionQueue
+        val txQueue: TransactionQueue,
+        val clock: Clock
 ) : BlockBuildingStrategy {
 
     companion object : KLogging()
@@ -37,9 +39,15 @@ class OnDemandBlockBuildingStrategy(
     var committedHeight = blockQueries.getLastBlockHeight().get().toInt()
     val blocks = LinkedBlockingQueue<BlockData>()
 
+    override fun preemptiveBlockBuilding(): Boolean = false
+
     override fun shouldBuildBlock(): Boolean {
         return upToHeight > committedHeight
     }
+
+    override fun mustWaitMinimumBuildBlockTime(): Long = 0
+
+    override fun mustWaitBeforeBuildBlock(): Boolean = false
 
     fun buildBlocksUpTo(height: Long) {
         logger.trace { "buildBlocksUpTo() - height: $height" }

@@ -9,12 +9,14 @@ import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockQueries
+import java.time.Clock
 import kotlin.math.min
 import kotlin.math.pow
 
 open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyConfigurationData,
-                                blockQueries: BlockQueries,
-                                private val txQueue: TransactionQueue
+                                     blockQueries: BlockQueries,
+                                     private val txQueue: TransactionQueue,
+                                     private val clock: Clock
 ) : BlockBuildingStrategy {
 
     private var lastBlockTime: Long
@@ -29,6 +31,7 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
     private val minInterBlockInterval = configData.minInterBlockInterval
     private val minBackoffTime = configData.minBackoffTime
     private val maxBackoffTime = configData.maxBackoffTime
+    private val preemptiveBlockBuilding = configData.preemptiveBlockBuilding
 
     init {
         val height = blockQueries.getLastBlockHeight().get()
@@ -46,7 +49,7 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
     }
 
     override fun blockFailed() {
-        failedBlockTime = System.currentTimeMillis()
+        failedBlockTime = currentTimeMillis()
         failedBlockCount++
     }
 
@@ -57,12 +60,13 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
         failedBlockTime = 0
     }
 
-    override fun shouldBuildBlock(): Boolean {
-        val now = System.currentTimeMillis()
+    override fun preemptiveBlockBuilding(): Boolean = preemptiveBlockBuilding
 
-        if (failedBlockTime > 0 && now - failedBlockTime < getBackoffTime()) return false
+    override fun shouldBuildBlock(): Boolean {
+        val now = currentTimeMillis()
+
+        if (mustWaitMinimumBuildBlockTime() > 0) return false
         if (now - lastBlockTime > maxBlockTime) return true
-        if (now - lastBlockTime < minInterBlockInterval) return false
         if (firstTxTime > 0 && now - firstTxTime > maxTxDelay) return true
 
         val transactionQueueSize = txQueue.getTransactionQueueSize()
@@ -75,7 +79,19 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
         return extendedShouldBuildBlock()
     }
 
-    open fun extendedShouldBuildBlock() : Boolean = false
+    override fun mustWaitMinimumBuildBlockTime(): Long {
+        val now = currentTimeMillis()
+        return if (now - lastBlockTime < minInterBlockInterval) return minInterBlockInterval - (now - lastBlockTime) else 0
+    }
+
+    override fun mustWaitBeforeBuildBlock(): Boolean {
+        val now = currentTimeMillis()
+        return failedBlockTime > 0 && now - failedBlockTime < getBackoffTime()
+    }
+
+    private fun currentTimeMillis(): Long = clock.millis()
+
+    open fun extendedShouldBuildBlock(): Boolean = false
 
     fun getBackoffTime(): Long = min(2.0.pow(failedBlockCount).toLong() + minBackoffTime, maxBackoffTime)
 }

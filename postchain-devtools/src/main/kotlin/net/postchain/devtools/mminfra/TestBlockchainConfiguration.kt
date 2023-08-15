@@ -18,6 +18,7 @@ import net.postchain.devtools.OnDemandBlockBuildingStrategy
 import net.postchain.devtools.testinfra.TestTransactionFactory
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.config.ManagedDataSourceAware
+import java.time.Clock
 
 class TestBlockchainConfiguration(
         data: BlockchainConfigurationData,
@@ -31,7 +32,7 @@ class TestBlockchainConfiguration(
     }
 
     override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy {
-        return OnDemandBlockBuildingStrategy(blockStrategyConfig, blockQueries, txQueue)
+        return OnDemandBlockBuildingStrategy(blockStrategyConfig, blockQueries, txQueue, Clock.systemUTC())
     }
 
     override fun makeBlockBuilder(ctx: EContext, extraExtensions: List<BaseBlockBuilderExtension>): BlockBuilder {
