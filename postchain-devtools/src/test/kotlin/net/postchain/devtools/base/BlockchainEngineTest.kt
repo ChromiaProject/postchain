@@ -196,7 +196,7 @@ class BlockchainEngineTest : IntegrationTestSetup() {
     }
 
     private fun loadUnfinishedAndCommit(node: PostchainTestNode, blockData: BlockData) {
-        val (blockBuilder, exception) = node.getBlockchainInstance().blockchainEngine.loadUnfinishedBlock(blockData)
+        val (blockBuilder, exception) = node.getBlockchainInstance().blockchainEngine.loadUnfinishedBlock(blockData, false)
         if (exception != null) {
             throw exception
         } else {

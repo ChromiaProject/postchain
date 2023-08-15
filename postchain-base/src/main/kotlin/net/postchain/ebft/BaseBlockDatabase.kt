@@ -129,7 +129,7 @@ class BaseBlockDatabase(
             }
             addBlockLog("Begin")
             maybeRollback()
-            val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block)
+            val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block, true)
             if (exception != null) {
                 addBlockLog("Got error when loading: ${exception.message}")
                 throw exception
@@ -144,7 +144,7 @@ class BaseBlockDatabase(
     override fun loadUnfinishedBlock(block: BlockData): CompletionStage<Signature> {
         return runOpAsync("loadUnfinishedBlock ${block.header.blockRID.toHex()}") {
             maybeRollback()
-            val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block)
+            val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block, false)
             if (exception != null) {
                 throw exception
             } else {

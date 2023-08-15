@@ -128,7 +128,7 @@ open class BaseBlockchainEngine(
         transactionQueue.close()
     }
 
-    private fun makeBlockBuilder(): BaseManagedBlockBuilder {
+    private fun makeBlockBuilder(isSyncing: Boolean): BaseManagedBlockBuilder {
         if (closed) throw PmEngineIsAlreadyClosed("Engine is already closed")
         currentEContext = if (currentEContext.conn.isClosed) {
             blockBuilderStorage.openWriteConnection(chainID)
@@ -137,7 +137,7 @@ open class BaseBlockchainEngine(
         }
         val savepoint = currentEContext.conn.setSavepoint("blockBuilder${System.nanoTime()}")
 
-        return BaseManagedBlockBuilder(currentEContext, savepoint, blockBuilderStorage, blockchainConfiguration.makeBlockBuilder(currentEContext),
+        return BaseManagedBlockBuilder(currentEContext, savepoint, blockBuilderStorage, blockchainConfiguration.makeBlockBuilder(currentEContext, isSyncing),
                 {
                     val blockBuilder = it as AbstractBlockBuilder
                     beforeCommitHandler(blockBuilder.getBTrace(), blockBuilder.bctx)
@@ -158,11 +158,11 @@ open class BaseBlockchainEngine(
                 })
     }
 
-    override fun loadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?> {
+    override fun loadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
         return if (useParallelDecoding)
-            parallelLoadUnfinishedBlock(block)
+            parallelLoadUnfinishedBlock(block, isSyncing)
         else
-            sequentialLoadUnfinishedBlock(block)
+            sequentialLoadUnfinishedBlock(block, isSyncing)
     }
 
     private fun smartDecodeTransaction(txData: ByteArray): Transaction {
@@ -178,24 +178,25 @@ open class BaseBlockchainEngine(
         return tx
     }
 
-    private fun sequentialLoadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?> {
-        return loadUnfinishedBlockImpl(block) { txs ->
+    private fun sequentialLoadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
+        return loadUnfinishedBlockImpl(block, isSyncing) { txs ->
             txs.map { smartDecodeTransaction(it) }
         }
     }
 
-    private fun parallelLoadUnfinishedBlock(block: BlockData): Pair<ManagedBlockBuilder, Exception?> {
-        return loadUnfinishedBlockImpl(block) { txs ->
+    private fun parallelLoadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
+        return loadUnfinishedBlockImpl(block, isSyncing) { txs ->
             txs.parallelStream().map { smartDecodeTransaction(it) }.collect(Collectors.toList())
         }
     }
 
     private fun loadUnfinishedBlockImpl(
             block: BlockData,
+            isSyncing: Boolean,
             transactionsDecoder: (List<ByteArray>) -> List<Transaction>
     ): Pair<ManagedBlockBuilder, Exception?> {
         val grossStart = System.nanoTime()
-        val blockBuilder = makeBlockBuilder()
+        val blockBuilder = makeBlockBuilder(isSyncing)
         var exception: Exception? = null
 
         try {
@@ -235,7 +236,7 @@ open class BaseBlockchainEngine(
         buildLog("Begin")
         val grossStart = System.nanoTime()
 
-        val blockBuilder = makeBlockBuilder()
+        val blockBuilder = makeBlockBuilder(false)
         var exception: Exception? = null
 
         try {
