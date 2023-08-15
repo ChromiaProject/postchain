@@ -51,8 +51,14 @@ open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
             blockchainInfrastructure: BlockchainInfrastructure,
             blockchainConfigurationProvider: BlockchainConfigurationProvider
     ): BlockchainProcessManager {
-        return BaseBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider, getProcessManagerExtensions(postchainContext))
+        return BaseBlockchainProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigurationProvider,
+                getProcessManagerExtensions(postchainContext, blockchainInfrastructure))
     }
 
+    @Suppress("DEPRECATION")
+    protected open fun getProcessManagerExtensions(postchainContext: PostchainContext,
+                                                   blockchainInfrastructure: BlockchainInfrastructure): List<BlockchainProcessManagerExtension> = getProcessManagerExtensions(postchainContext)
+
+    @Deprecated(message = "Override getProcessManagerExtensions(PostchainContext, BlockchainInfrastructure) instead")
     protected open fun getProcessManagerExtensions(postchainContext: PostchainContext): List<BlockchainProcessManagerExtension> = listOf()
 }

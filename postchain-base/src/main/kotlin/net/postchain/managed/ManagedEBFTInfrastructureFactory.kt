@@ -31,7 +31,7 @@ open class ManagedEBFTInfrastructureFactory : BaseEBFTInfrastructureFactory() {
         return ManagedBlockchainProcessManager(postchainContext,
                 blockchainInfrastructure,
                 blockchainConfigurationProvider,
-                getProcessManagerExtensions(postchainContext)
+                getProcessManagerExtensions(postchainContext, blockchainInfrastructure)
         )
     }
 }
