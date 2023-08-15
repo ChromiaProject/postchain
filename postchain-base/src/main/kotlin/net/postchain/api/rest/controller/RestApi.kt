@@ -508,8 +508,7 @@ class RestApi(
             .asServer(Netty(listenPort,
                     if (gracefulShutdown) ServerConfig.StopMode.Graceful(Duration.ofSeconds(15)) else ServerConfig.StopMode.Immediate))
             .start().also {
-                logger.info { "Rest API listening on port ${it.port()} and were given $listenPort" }
-                logger.info { "Rest API attached on $basePath/" }
+                logger.info { "Rest API listening on port ${it.port()} and were given $listenPort, attached on $basePath/" }
             }
 
     private fun onError(error: Exception, request: Request): Response {
