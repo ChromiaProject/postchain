@@ -268,7 +268,7 @@ object ImporterExporter : KLogging() {
 
     private fun importBlock(ctx: EContext, blockchainConfiguration: BlockchainConfiguration, blockHeader: BaseBlockHeader,
                             rawTransactions: List<ByteArray>, blockWitness: BaseBlockWitness) {
-        val blockBuilder = blockchainConfiguration.makeBlockBuilder(ctx)
+        val blockBuilder = blockchainConfiguration.makeBlockBuilder(ctx, true)
         blockBuilder.begin(blockHeader)
         val transactions = rawTransactions.parallelStream().map { rawTransaction ->
             decodeTransaction(blockchainConfiguration, rawTransaction)

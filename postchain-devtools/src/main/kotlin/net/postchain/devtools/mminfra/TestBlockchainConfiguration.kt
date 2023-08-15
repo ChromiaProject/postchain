@@ -35,15 +35,15 @@ class TestBlockchainConfiguration(
         return OnDemandBlockBuildingStrategy(blockStrategyConfig, blockQueries, txQueue, Clock.systemUTC())
     }
 
-    override fun makeBlockBuilder(ctx: EContext, extraExtensions: List<BaseBlockBuilderExtension>): BlockBuilder {
+    override fun makeBlockBuilder(ctx: EContext, isSyncing: Boolean, extraExtensions: List<BaseBlockBuilderExtension>): BlockBuilder {
         val height = DatabaseAccess.of(ctx).getLastBlockHeight(ctx) + 1
         val failedConfigToReport = dataSource.getFaultyBlockchainConfiguration(blockchainRid, height)
                 ?: getFaultyConfigToReportAtHeight(ctx, height)
 
         return if (failedConfigToReport != null) {
-            super.makeBlockBuilder(ctx, extraExtensions + listOf(FailedConfigurationHashBlockBuilderExtension(failedConfigToReport)))
+            super.makeBlockBuilder(ctx, isSyncing, extraExtensions + listOf(FailedConfigurationHashBlockBuilderExtension(failedConfigToReport)))
         } else {
-            super.makeBlockBuilder(ctx, extraExtensions)
+            super.makeBlockBuilder(ctx, isSyncing, extraExtensions)
         }
     }
 

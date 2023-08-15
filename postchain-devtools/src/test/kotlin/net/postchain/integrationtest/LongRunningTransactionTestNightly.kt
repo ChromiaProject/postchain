@@ -3,6 +3,8 @@ package net.postchain.integrationtest
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
+import net.postchain.base.withReadWriteConnection
+import net.postchain.common.exception.TransactionFailed
 import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.wrap
@@ -10,6 +12,7 @@ import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.testinfra.DelayedTransaction
 import net.postchain.devtools.testinfra.TestTransaction
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class LongRunningTransactionTestNightly : IntegrationTestSetup() {
 
@@ -47,6 +50,30 @@ class LongRunningTransactionTestNightly : IntegrationTestSetup() {
                     .isEqualTo(TransactionStatus.REJECTED)
             assertThat(transactionQueue.getRejectionReason(delayedTx.getRID().wrap())?.message)
                     .isEqualTo("Transaction failed to execute within given time constraint: 10000 ms")
+        }
+    }
+
+    @Test
+    fun `Long running tx should not be rejected when syncing`() {
+        val (node) = createNodes(1, "/net/postchain/devtools/long_running/blockchain_config_max_execution_time_sync.xml")
+
+        val delayedTx = DelayedTransaction(0, 1500)
+        withReadWriteConnection(node.postchainContext.blockBuilderStorage, 1L) {
+            // not syncing, should respect timeout
+            val nonSyncBB = node.getBlockchainInstance().blockchainEngine.getConfiguration().makeBlockBuilder(it, false)
+            nonSyncBB.begin(null)
+            assertThrows<TransactionFailed> {
+                nonSyncBB.appendTransaction(delayedTx)
+            }
+            it.conn.rollback()
+
+            // syncing, ignoring timeout
+            val syncBB = node.getBlockchainInstance().blockchainEngine.getConfiguration().makeBlockBuilder(it, true)
+            syncBB.begin(null)
+            syncBB.appendTransaction(delayedTx)
+
+            syncBB.finalizeBlock()
+            assertThat(syncBB.getBlockData().transactions.first()).isContentEqualTo(delayedTx.getRawData())
         }
     }
 }
