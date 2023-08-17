@@ -24,9 +24,15 @@ annotation class Nullable
  * @param defaultByteArray Default value if target property is type [ByteArray]
  * @param defaultBoolean Default value if target property is type [Boolean]
  * @param defaultBigInteger Default value if target property is type [java.math.BigInteger]
+ * @param defaultDecimal Default value if target property is type [java.math.BigDecimal]
  */
 @Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.TYPE_PARAMETER)
-annotation class DefaultValue(val defaultLong: Long = 0, val defaultString: String = "", val defaultByteArray: ByteArray = [], val defaultBoolean: Boolean = false, val defaultBigInteger: String = "0")
+annotation class DefaultValue(val defaultLong: Long = 0,
+                              val defaultString: String = "",
+                              val defaultByteArray: ByteArray = [],
+                              val defaultBoolean: Boolean = false,
+                              val defaultBigInteger: String = "0",
+                              val defaultDecimal: String = "0.0")
 
 /**
  * Sets the path to this property if nested inside several [GtvDictionary].

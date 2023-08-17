@@ -12,6 +12,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.math.BigDecimal
 import java.math.BigInteger
 
 class ObjectToGtvArrayTest {
@@ -54,6 +55,7 @@ class ObjectToGtvArrayTest {
                 val byteArray: ByteArray = ByteArray(32),
                 val enum: SimpleEnum = SimpleEnum.A,
                 val bigInteger: BigInteger = BigInteger.ONE,
+                val bigDecimal: BigDecimal = BigDecimal("1.2"),
                 val wrappedByteArray: WrappedByteArray = WrappedByteArray(16),
                 val rowId: RowId = RowId(17),
                 val pubKey: PubKey = PubKey(ByteArray(33)),
@@ -69,6 +71,7 @@ class ObjectToGtvArrayTest {
                 gtv(ByteArray(32)),
                 gtv("A"),
                 gtv(BigInteger.ONE),
+                gtv("1.2"),
                 gtv(WrappedByteArray(16)),
                 gtv(RowId(17).id),
                 gtv(ByteArray(33)),
