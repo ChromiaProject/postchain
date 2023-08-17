@@ -27,10 +27,9 @@ import net.postchain.logging.CHAIN_IID_TAG
 class ReadOnlyBlockchainProcess(
         private val workerContext: WorkerContext,
         val blockQueries: BlockQueries,
-        private val blockchainState: BlockchainState,
-        forceReadOnly: Boolean
+        private val blockchainState: BlockchainState
 ) : AbstractBlockchainProcess(
-        "${if (blockchainState == BlockchainState.PAUSED || forceReadOnly) "readonly" else "replica"}-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine
+        "${if (blockchainState == BlockchainState.PAUSED) "paused-" else ""}replica-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine
 ) {
 
     companion object : KLogging()
@@ -67,31 +66,25 @@ class ReadOnlyBlockchainProcess(
 
     private var syncMethod = SyncMethod.NOT_SYNCING
 
-    private val isReadOnly = blockchainState == BlockchainState.PAUSED || forceReadOnly
-
     /**
      * For read only nodes we don't want to fast sync forever.
      * When the nodes are drained we move to slow sync instead.
      */
     override fun action() {
-        if (isReadOnly) {
-            Thread.sleep(1000)
-        } else {
-            withLoggingContext(loggingContext) {
-                if (params.slowSyncEnabled) {
-                    logger.debug { "Using slow sync for read only bc process" }
-                    syncMethod = SyncMethod.FAST_SYNC
-                    fastSynchronizer.syncUntilResponsiveNodesDrained()
-                    // Move to slow sync and proceed until shutdown
-                    syncMethod = SyncMethod.SLOW_SYNC
-                    slowSynchronizer.syncUntil()
-                    syncMethod = SyncMethod.NOT_SYNCING
-                } else {
-                    logger.debug { "Using fast sync for read only bc process" }
-                    syncMethod = SyncMethod.FAST_SYNC
-                    fastSynchronizer.syncUntil { !isProcessRunning() }
-                    syncMethod = SyncMethod.NOT_SYNCING
-                }
+        withLoggingContext(loggingContext) {
+            if (params.slowSyncEnabled) {
+                logger.debug { "Using slow sync for read only bc process" }
+                syncMethod = SyncMethod.FAST_SYNC
+                fastSynchronizer.syncUntilResponsiveNodesDrained()
+                // Move to slow sync and proceed until shutdown
+                syncMethod = SyncMethod.SLOW_SYNC
+                slowSynchronizer.syncUntil()
+                syncMethod = SyncMethod.NOT_SYNCING
+            } else {
+                logger.debug { "Using fast sync for read only bc process" }
+                syncMethod = SyncMethod.FAST_SYNC
+                fastSynchronizer.syncUntil { !isProcessRunning() }
+                syncMethod = SyncMethod.NOT_SYNCING
             }
         }
     }

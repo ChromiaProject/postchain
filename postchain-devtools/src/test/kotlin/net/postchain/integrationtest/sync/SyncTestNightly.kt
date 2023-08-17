@@ -1,7 +1,11 @@
 package net.postchain.integrationtest.sync
 
 import mu.KLogging
+import net.postchain.concurrent.util.get
 import net.postchain.devtools.AbstractSyncTest
+import net.postchain.ebft.worker.ForceReadOnlyBlockchainProcess
+import net.postchain.ebft.worker.ValidatorBlockchainProcess
+import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -61,6 +65,37 @@ class SyncTestNightly : AbstractSyncTest() {
         Awaitility.await().atMost(15, TimeUnit.SECONDS).until {
             buildBlock(listOf(nodes[0], nodes[1], nodes[3]), 0, 3)
             true
+        }
+    }
+
+    @Test
+    fun canSyncFromForcedReadOnlyNode() {
+        val nodeSetup = runNodes(4, 0)
+        buildBlock(0, 1)
+        // Shutdown the 4th node
+        nodes[3].shutdown()
+
+        // Build a block without 4th node and shutdown all nodes
+        val liveNodes = nodes.subList(0, 3)
+        buildBlock(liveNodes, 0, 2)
+        liveNodes.forEach { it.shutdown() }
+
+        // Restart 1st node as a force read only process
+        configOverrides.setProperty("readOnly", true)
+        val peerInfoMap0 = nodeSetup[0].configurationProvider!!.getConfiguration().peerInfoMap
+        startOldNode(0, peerInfoMap0, nodes[0].getBlockchainRid(0)!!)
+        assertThat(nodes[0].getBlockchainInstance(0)).isInstanceOf(ForceReadOnlyBlockchainProcess::class.java)
+
+        // Restart 4th node as validator
+        configOverrides.setProperty("readOnly", false)
+        val peerInfoMap3 = nodeSetup[3].configurationProvider!!.getConfiguration().peerInfoMap
+        startOldNode(3, peerInfoMap3, nodes[3].getBlockchainRid(0)!!)
+        assertThat(nodes[3].blockQueries(0).getLastBlockHeight().get()).isEqualTo(1)
+        assertThat(nodes[3].getBlockchainInstance(0)).isInstanceOf(ValidatorBlockchainProcess::class.java)
+
+        // Assert that 4th node can sync the second block from force read only node
+        Awaitility.await().atMost(5, TimeUnit.SECONDS).untilAsserted {
+            assertThat(nodes[3].blockQueries(0).getLastBlockHeight().get()).isEqualTo(2)
         }
     }
 }
