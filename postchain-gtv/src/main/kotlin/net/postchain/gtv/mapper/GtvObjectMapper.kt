@@ -15,6 +15,7 @@ import java.lang.reflect.Parameter
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.lang.reflect.WildcardType
+import java.math.BigDecimal
 import java.math.BigInteger
 import kotlin.reflect.KClass
 import kotlin.reflect.KParameter
@@ -54,6 +55,7 @@ inline fun <reified T : Any> Gtv.toList(transientMap: Map<String, Any> = mapOf()
  * Integer   -   BigInteger
  * Integer   -   Boolean
  * String    -   String
+ * String    -   BigDecimal
  * ByteArray -   ByteArray
  * Array     -   List
  * Dict      -   Class
@@ -187,6 +189,7 @@ private fun classToGtv(obj: Any, other: (Any) -> Gtv = { GtvObjectMapper.toGtvAr
         obj::class.java.isEnum -> gtv(obj.toString())
         obj::class.java.isBoolean() -> gtv(obj as Boolean)
         obj::class.java.isBigInteger() -> gtv(obj as BigInteger)
+        obj::class.java.isBigDecimal() -> gtv((obj as BigDecimal).toString())
         obj::class.java.isByteArray() -> gtv(obj as ByteArray)
         obj::class.java.isWrappedByteArray() -> gtv(obj as WrappedByteArray)
         obj::class.java.isRowId() -> gtv((obj as RowId).id)
@@ -241,6 +244,7 @@ private fun annotationToValue(gtv: Gtv, param: Parameter, transient: Map<String,
                     param.type.isString() -> default.defaultString
                     param.type.isBoolean() -> default.defaultBoolean
                     param.type.isBigInteger() -> BigInteger(default.defaultBigInteger)
+                    param.type.isBigDecimal() -> BigDecimal(default.defaultDecimal)
                     else -> default.defaultByteArray
                 }
             }
@@ -297,6 +301,7 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, 
         classType.isBlockchainRid() -> BlockchainRid(gtv.asByteArray())
         classType.isRowId() -> RowId(gtv.asInteger())
         classType.isBigInteger() -> gtv.asBigInteger()
+        classType.isBigDecimal() -> BigDecimal(gtv.asString())
 
         else -> {
             val companionObject = classType.kotlin.companionObjectInstance
@@ -321,7 +326,7 @@ fun getEnumValue(enumClassName: String, enumValue: String): Any {
 }
 
 private fun Class<*>.isPrimitiveType(): Boolean {
-    return this.isLong() || this.isString() || this.isByteArray() || this.isBigInteger() || this.isBoolean()
+    return this.isLong() || this.isString() || this.isByteArray() || this.isBigInteger() || this.isBigDecimal() || this.isBoolean()
 }
 
 private fun Class<*>.isLong(): Boolean {
@@ -350,6 +355,10 @@ private fun Class<*>.isRowId(): Boolean {
 
 private fun Class<*>.isBigInteger(): Boolean {
     return this == BigInteger::class.java || this == java.math.BigInteger::class.java
+}
+
+private fun Class<*>.isBigDecimal(): Boolean {
+    return this == BigDecimal::class.java || this == java.math.BigDecimal::class.java
 }
 
 private fun Class<*>.isBoolean(): Boolean {

@@ -18,6 +18,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.math.BigDecimal
 import java.math.BigInteger
 
 internal class GtvObjectMapperTest {
@@ -127,6 +128,14 @@ internal class GtvObjectMapperTest {
         data class SimpleBoolean(@Name("myBoolean") @DefaultValue(defaultBoolean = false) val myBoolean: Boolean)
         assertThat(gtv(mapOf("myBoolean" to gtv(1L))).toObject<SimpleBoolean>()).isEqualTo(SimpleBoolean(true))
         assertThat(gtv(mapOf()).toObject<SimpleBoolean>()).isEqualTo(SimpleBoolean(false))
+    }
+
+    @Test
+    fun decimalType() {
+        data class SimpleDecimal(@Name("myDecimal") @DefaultValue(defaultDecimal = "12.34") val myDecimal: BigDecimal)
+        assertThat(gtv(mapOf("myDecimal" to gtv("23.45"))).toObject<SimpleDecimal>())
+                .isEqualTo(SimpleDecimal(BigDecimal("23.45")))
+        assertThat(gtv(mapOf()).toObject<SimpleDecimal>()).isEqualTo(SimpleDecimal(BigDecimal("12.34")))
     }
 
     @Test
