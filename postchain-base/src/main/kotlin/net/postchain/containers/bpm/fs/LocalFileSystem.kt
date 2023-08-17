@@ -21,10 +21,22 @@ class LocalFileSystem(private val containerConfig: ContainerNodeConfig) : FileSy
                 return null
             }
             logger.info("Container dir has been created: $root")
+            containerConfig.subnodeUser?.let { subnodeUser ->
+                runCommand(arrayOf("chown", subnodeUser, root.toString()))?.let {
+                    logger.warn("Unable change owner of $root to $subnodeUser: $it")
+                    return null
+                }
+            }
         }
 
         val hostPgdata = hostPgdataOf(containerName)
         hostPgdata.toFile().mkdirs()
+        containerConfig.subnodeUser?.let { subnodeUser ->
+            runCommand(arrayOf("chown", subnodeUser, hostPgdata.toString()))?.let {
+                logger.warn("Unable change owner of $hostPgdata to $subnodeUser: $it")
+                return null
+            }
+        }
 
         return root
     }
