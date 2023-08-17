@@ -69,8 +69,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
                 true,
                 "manual",
                 "unused", // Doesn't matter, not used as of now
-                infra,
-                true
+                infra
         )
 
         this.systemSetup = systemSetup
