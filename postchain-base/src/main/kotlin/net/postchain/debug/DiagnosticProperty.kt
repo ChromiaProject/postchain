@@ -34,5 +34,6 @@ enum class DiagnosticProperty(val prettyName: String) {
 enum class DpNodeType(val prettyName: String) {
     NODE_TYPE_VALIDATOR("Validator"),
     NODE_TYPE_REPLICA("Replica"),
-    NODE_TYPE_HISTORIC_REPLICA("Historic Replica")
+    NODE_TYPE_HISTORIC_REPLICA("Historic Replica"),
+    NODE_TYPE_FORCE_READ_ONLY("Force read only")
 }

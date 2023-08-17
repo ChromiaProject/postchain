@@ -21,6 +21,7 @@ import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.NodeRid
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.worker.ForceReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
@@ -136,8 +137,10 @@ open class EBFTSynchronizationInfrastructure(
             HistoricBlockchainProcess(workerContext, historicBlockchainContext)
         } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY && blockchainState == BlockchainState.RUNNING && !forceReadOnly) {
             ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID))
+        } else if (!forceReadOnly) {
+            ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries(), blockchainState)
         } else {
-            ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries(), blockchainState, forceReadOnly)
+            ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
         }
     }
 
