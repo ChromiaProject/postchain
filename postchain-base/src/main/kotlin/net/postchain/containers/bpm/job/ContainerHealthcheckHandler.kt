@@ -2,6 +2,7 @@ package net.postchain.containers.bpm.job
 
 import mu.KLogging
 import mu.withLoggingContext
+import net.postchain.common.exception.UserMistake
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.ContainerName
 import net.postchain.containers.bpm.PostchainContainer
@@ -61,7 +62,13 @@ class ContainerHealthcheckHandler(
     private fun checkContainer(cname: ContainerName, containerIsRunning: Boolean, fixedContainers: MutableSet<ContainerName>) {
         val psContainer = postchainContainers()[cname]!!
         val currentResourceLimits = psContainer.resourceLimits
-        val chainsToTerminate = if (psContainer.updateResourceLimits()) {
+        val updatedResourceLimits = try {
+            psContainer.updateResourceLimits()
+        } catch (e: UserMistake) {
+            logger.warn { "Unable to fetch current container limits for container '${psContainer.containerName.directoryContainer}' from directory chain: ${e.message}" }
+            false
+        }
+        val chainsToTerminate = if (updatedResourceLimits) {
             logger.info { "$SCOPE -- Resource limits for container ${cname.name} have been changed from $currentResourceLimits to ${psContainer.resourceLimits} and will be restarted" }
             fixedContainers.add(cname)
             psContainer.reset()
