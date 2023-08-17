@@ -154,6 +154,7 @@ open class BaseBlockchainEngine(
                         closed = true
                     }
                     afterLog("End", it.getBTrace())
+                    nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).clear()
                     hasBuiltFirstBlockAfterConfigUpdate = true
                 })
     }
