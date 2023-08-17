@@ -1,5 +1,6 @@
 package net.postchain.containers.bpm.job
 
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.ContainerName
@@ -17,6 +18,7 @@ import org.mockito.kotlin.verify
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
+import org.mockito.kotlin.any
 
 class ContainerHealthcheckHandlerTest {
 
@@ -33,7 +35,7 @@ class ContainerHealthcheckHandlerTest {
     private val dockerClient: DockerClient = mock()
     private val fileSystem: FileSystem = mock()
     private val psContainers = mutableMapOf<ContainerName, PostchainContainer>()
-    private val cname = ContainerName.create(appConfig, "", CONTAINER_IID)
+    private val cname = ContainerName.create(appConfig, "directory-container", CONTAINER_IID)
     private val postchainContainers = { psContainers }
     private var removedBlockchainProcess: Pair<Long, PostchainContainer>? = null
     private var chainsRemoved = 0
@@ -63,8 +65,11 @@ class ContainerHealthcheckHandlerTest {
     @Test
     fun `container with updated resource limits should be restarted`() {
         // setup
+        `when`(postchainContainer.containerName).thenReturn(cname)
         `when`(postchainContainer.updateResourceLimits()).thenReturn(true)
         `when`(postchainContainer.getAllChains()).thenReturn(setOf(CHAIN_ID))
+        `when`(postchainContainer.isSubnodeHealthy()).thenReturn(true)
+        `when`(postchainContainer.checkResourceLimits(any())).thenReturn(true)
         mockContainerIsRunning()
         // execute
         sut.check(emptySet())
@@ -74,6 +79,40 @@ class ContainerHealthcheckHandlerTest {
         verify(dockerClient).removeContainer(anyString())
         assertEquals(removedBlockchainProcess!!.first, CHAIN_ID)
         assertEquals(removedBlockchainProcess!!.second, postchainContainer)
+    }
+
+    @Test
+    fun `container without updated resource limits should not be restarted`() {
+        // setup
+        `when`(postchainContainer.containerName).thenReturn(cname)
+        `when`(postchainContainer.updateResourceLimits()).thenReturn(false)
+        `when`(postchainContainer.getAllChains()).thenReturn(setOf(CHAIN_ID))
+        `when`(postchainContainer.isSubnodeHealthy()).thenReturn(true)
+        `when`(postchainContainer.checkResourceLimits(any())).thenReturn(true)
+        mockContainerIsRunning()
+        // execute
+        sut.check(emptySet())
+        // verify
+        verify(postchainContainer, never()).reset()
+        verify(dockerClient, never()).stopContainer(anyString(), anyInt())
+        verify(dockerClient, never()).removeContainer(anyString())
+    }
+
+    @Test
+    fun `failure to check for updated resource limits should be handled gracefully`() {
+        // setup
+        `when`(postchainContainer.containerName).thenReturn(cname)
+        `when`(postchainContainer.updateResourceLimits()).thenThrow(UserMistake("Unable to fetch container limits"))
+        `when`(postchainContainer.getAllChains()).thenReturn(setOf(CHAIN_ID))
+        `when`(postchainContainer.isSubnodeHealthy()).thenReturn(true)
+        `when`(postchainContainer.checkResourceLimits(any())).thenReturn(true)
+        mockContainerIsRunning()
+        // execute
+        sut.check(emptySet())
+        // verify
+        verify(postchainContainer, never()).reset()
+        verify(dockerClient, never()).stopContainer(anyString(), anyInt())
+        verify(dockerClient, never()).removeContainer(anyString())
     }
 
     @Test
