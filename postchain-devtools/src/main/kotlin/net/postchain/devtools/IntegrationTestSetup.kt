@@ -73,7 +73,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     override fun tearDown() {
         try {
             logger.info("Integration test -- TEARDOWN")
-            nodes.forEach { it.shutdown() }
+            nodes.parallelStream().forEach { it.shutdown() }
             nodes.clear()
             nodeMap.clear()
             logger.info("Closed nodes")
