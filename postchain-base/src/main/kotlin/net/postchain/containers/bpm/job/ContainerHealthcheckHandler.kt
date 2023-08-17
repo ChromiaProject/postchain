@@ -18,9 +18,7 @@ class ContainerHealthcheckHandler(
         private val removeBlockchainProcess: (Long, PostchainContainer) -> ContainerBlockchainProcess?
 ) {
 
-    companion object : KLogging() {
-        private const val SCOPE = "ContainerHealthcheckHandler"
-    }
+    companion object : KLogging()
 
     fun check(containersInProgress: Set<String>) {
         checkInternal(containersInProgress)
@@ -28,14 +26,14 @@ class ContainerHealthcheckHandler(
 
     private fun checkInternal(containersInProgress: Set<String>) {
         val start = System.currentTimeMillis()
-        logger.debug { "$SCOPE -- BEGIN" }
+        logger.debug { "BEGIN" }
 
         val containersToCheck = postchainContainers().keys
                 .associateBy { it.name }
                 .filter { it.key !in containersInProgress }
 
         logger.info {
-            "$SCOPE -- containersInProgress: $containersInProgress, containersToCheck: ${containersToCheck.keys}"
+            "containersInProgress: $containersInProgress, containersToCheck: ${containersToCheck.keys}"
         }
 
         val fixedContainers = mutableSetOf<ContainerName>()
@@ -50,13 +48,13 @@ class ContainerHealthcheckHandler(
         }
 
         if (fixedContainers.isEmpty()) {
-            logger.info { "$SCOPE -- Ok" }
+            logger.info { "Ok" }
         } else {
-            logger.info { "$SCOPE -- Fixed: $fixedContainers" }
+            logger.info { "Fixed: $fixedContainers" }
         }
 
         val elapsed = System.currentTimeMillis() - start
-        logger.debug { "$SCOPE -- END ($elapsed ms)" }
+        logger.debug { "END ($elapsed ms)" }
     }
 
     private fun checkContainer(cname: ContainerName, containerIsRunning: Boolean, fixedContainers: MutableSet<ContainerName>) {
@@ -69,30 +67,30 @@ class ContainerHealthcheckHandler(
             false
         }
         val chainsToTerminate = if (updatedResourceLimits) {
-            logger.info { "$SCOPE -- Resource limits for container ${cname.name} have been changed from $currentResourceLimits to ${psContainer.resourceLimits} and will be restarted" }
+            logger.info { "Resource limits for container ${cname.name} have been changed from $currentResourceLimits to ${psContainer.resourceLimits} and will be restarted" }
             fixedContainers.add(cname)
             psContainer.reset()
             if (containerIsRunning) dockerClient.stopContainer(cname.name, 10)
             dockerClient.removeContainer(cname.name)
             psContainer.getAllChains().toSet()
         } else if (!containerIsRunning) {
-            logger.warn { "$SCOPE -- Subnode container is not running and will be restarted: ${cname.name}" }
+            logger.warn { "Subnode container is not running and will be restarted: ${cname.name}" }
             fixedContainers.add(cname)
             psContainer.getAllChains().toSet()
         } else if (!psContainer.isSubnodeHealthy()) {
-            logger.warn { "$SCOPE -- Subnode container is unhealthy and will be restarted: ${cname.name}" }
+            logger.warn { "Subnode container is unhealthy and will be restarted: ${cname.name}" }
             fixedContainers.add(cname)
             dockerClient.stopContainer(cname.name, 10)
             psContainer.getAllChains().toSet()
         } else if (!psContainer.checkResourceLimits(fileSystem)) {
-            logger.warn { "$SCOPE -- Subnode container has reached resource limits and will be restarted: ${cname.name}" }
+            logger.warn { "Subnode container has reached resource limits and will be restarted: ${cname.name}" }
             fixedContainers.add(cname)
             psContainer.reset()
             if (containerIsRunning) dockerClient.stopContainer(cname.name, 10)
             dockerClient.removeContainer(cname.name)
             psContainer.getAllChains().toSet()
         } else {
-            logger.debug { "$SCOPE -- Subnode container is running and healthy: ${cname.name}" }
+            logger.debug { "Subnode container is running and healthy: ${cname.name}" }
             psContainer.getStoppedChains().toSet()
         }
 
@@ -100,7 +98,7 @@ class ContainerHealthcheckHandler(
             removeBlockchainProcess(it, psContainer)
         }
         if (chainsToTerminate.isNotEmpty()) {
-            logger.info { "$SCOPE -- Container chains have been terminated: $chainsToTerminate" }
+            logger.info { "Container chains have been terminated: $chainsToTerminate" }
         }
     }
 }
