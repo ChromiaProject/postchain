@@ -23,6 +23,7 @@ import net.postchain.ebft.syncmanager.validator.AppliedConfigSender
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.metrics.NodeStatusMetrics
 import java.lang.Thread.sleep
 import java.time.Duration
 
@@ -57,9 +58,10 @@ class ValidatorBlockchainProcess(
     init {
         val blockchainConfiguration = workerContext.blockchainConfiguration
         statusManager = BaseStatusManager(
-                blockchainConfiguration.signers.size,
+                blockchainConfiguration.signers,
                 blockchainConfiguration.blockchainContext.nodeID,
-                blockchainEngine.getBlockQueries().getLastBlockHeight().get() + 1
+                blockchainEngine.getBlockQueries().getLastBlockHeight().get() + 1,
+                NodeStatusMetrics()
         )
 
         blockDatabase = BaseBlockDatabase(
