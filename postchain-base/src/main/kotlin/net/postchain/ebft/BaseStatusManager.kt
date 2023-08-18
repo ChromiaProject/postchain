@@ -2,27 +2,36 @@
 
 package net.postchain.ebft
 
+import io.micrometer.core.instrument.Counter
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.common.toHex
+import net.postchain.core.NodeRid
 import net.postchain.crypto.Signature
 import net.postchain.getBFTRequiredSignatureCount
+import net.postchain.logging.REVOLTED_ON_NODE_TAG
+import net.postchain.logging.REVOLTING_NODE_TAG
+import net.postchain.metrics.NodeStatusMetrics
 import java.util.Arrays
 
 /**
  * StatusManager manages the status of the consensus protocol
  */
 class BaseStatusManager(
-        private val nodeCount: Int,
+        nodes: List<ByteArray>,
         private val myIndex: Int,
-        myNextHeight: Long
+        myNextHeight: Long,
+        private val nodeStatusMetrics: NodeStatusMetrics
 ) : StatusManager {
-
+    private val nodeCount = nodes.size
     override val nodeStatuses = Array(nodeCount) { NodeStatus() }
     override val commitSignatures: Array<Signature?> = arrayOfNulls(nodeCount)
     override val myStatus: NodeStatus
     var intent: BlockIntent = DoNothingIntent
     private val quorum = getBFTRequiredSignatureCount(nodeCount)
     private val nodeStatusesTimestamps = Array(nodeCount) { 0L }
+    val nodeReportedRevolt = Array(nodeCount) { false }
+    private val nodeRids = nodes.map { NodeRid(it) }
 
     companion object : KLogging()
 
@@ -71,6 +80,7 @@ class BaseStatusManager(
     override fun onStatusUpdate(nodeIndex: Int, status: NodeStatus) {
         nodeStatusesTimestamps[nodeIndex] = System.currentTimeMillis()
         val existingStatus = nodeStatuses[nodeIndex]
+        reportRevolt(nodeIndex, status)
         if (
         // A restarted peer will have its serial reset, but
         // this will not cause a problem because the serial is
@@ -84,6 +94,37 @@ class BaseStatusManager(
             recomputeStatus()
         }
     }
+
+    /**
+     * Log and increase metrics if node is revolting
+     */
+    fun reportRevolt(nodeIndex: Int, status: NodeStatus) {
+        if (status.revolting) {
+            // The height check is to ensure that we have the same configuration as the revolting node
+            // so that we have the same signers list when we look up the revolted node
+            if (!nodeReportedRevolt[nodeIndex] && status.height == myStatus.height) {
+                logRevolt(nodeIndex, status)
+                nodeReportedRevolt[nodeIndex] = true
+            }
+        } else nodeReportedRevolt[nodeIndex] = false
+    }
+
+    fun logRevolt(revoltingNodeIndex: Int, status: NodeStatus) {
+        val revoltingNode = nodeRids[revoltingNodeIndex]
+        val revoltedOnNodeIndex = calculateIndex(status.height, status.round)
+        val revoltedOnNode = nodeRids[revoltedOnNodeIndex]
+        withLoggingContext(REVOLTED_ON_NODE_TAG to revoltedOnNode.toString(), REVOLTING_NODE_TAG to revoltingNode.toString()) {
+            logger.info("Node $revoltingNode has revolted against $revoltedOnNode")
+        }
+        getRevoltCounter(revoltingNodeIndex, revoltedOnNodeIndex).increment()
+    }
+
+    private fun getRevoltCounter(nodeIndex: Int, revoltedOnNodeIndex: Int): Counter =
+            when (myIndex) {
+                nodeIndex -> nodeStatusMetrics.revoltsByNode
+                revoltedOnNodeIndex -> nodeStatusMetrics.revoltsOnNode
+                else -> nodeStatusMetrics.revoltsBetweenOthers
+            }
 
     /**
      * Advance height in [myStatus] as a response to committing a new block.
@@ -117,16 +158,14 @@ class BaseStatusManager(
      * @return success or failure
      */
     @Synchronized
-    override fun onHeightAdvance(height: Long): Boolean {
-        if (height == (myStatus.height + 1)) {
-            advanceHeight()
-            return true
-        } else {
-            logger.error("Height mismatch my height: ${myStatus.height} new height: $height")
-            return false
-        }
-
-    }
+    override fun onHeightAdvance(height: Long): Boolean =
+            if (height == (myStatus.height + 1)) {
+                advanceHeight()
+                true
+            } else {
+                logger.error("Height mismatch my height: ${myStatus.height} new height: $height")
+                false
+            }
 
     /**
      * Fast forward height
@@ -208,9 +247,9 @@ class BaseStatusManager(
      *
      * @return primary node index
      */
-    override fun primaryIndex(): Int {
-        return ((myStatus.height + myStatus.round) % nodeCount).toInt()
-    }
+    override fun primaryIndex(): Int = calculateIndex(myStatus.height, myStatus.round)
+
+    private fun calculateIndex(height: Long, round: Long): Int = ((height + round) % nodeCount).toInt()
 
     override fun isMyNodePrimary(): Boolean {
         return primaryIndex() == this.myIndex
@@ -264,6 +303,7 @@ class BaseStatusManager(
     override fun onStartRevolting() {
         myStatus.revolting = true
         myStatus.serial += 1
+        logRevolt(myIndex, myStatus)
         recomputeStatus()
     }
 

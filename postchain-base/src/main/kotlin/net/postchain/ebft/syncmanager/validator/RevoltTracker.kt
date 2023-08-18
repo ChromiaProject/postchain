@@ -21,7 +21,7 @@ open class RevoltTracker(
     private val initialHeight = statusManager.myStatus.height
     private var prevHeight = initialHeight
     private var prevRound = statusManager.myStatus.round
-    var deadLine = newDeadLine(0)
+    var deadline = newDeadline(0)
         private set
 
     companion object {
@@ -41,8 +41,8 @@ open class RevoltTracker(
                 current.height == prevHeight && current.round > prevRound) {
             prevHeight = current.height
             prevRound = current.round
-            deadLine = newDeadLine(current.round)
-        } else if (currentTimeMillis() > deadLine && !current.revolting) {
+            deadline = newDeadline(current.round)
+        } else if (currentTimeMillis() > deadline && !current.revolting) {
             this.statusManager.onStartRevolting()
         }
     }
@@ -52,7 +52,7 @@ open class RevoltTracker(
      *
      * @return the time at which the deadline is passed
      */
-    private fun newDeadLine(round: Long): Long {
+    private fun newDeadline(round: Long): Long {
         val baseTimeout = currentTimeMillis() + config.timeout
         return if (round >= maxDelayRound) {
             baseTimeout + config.exponentialDelayMax

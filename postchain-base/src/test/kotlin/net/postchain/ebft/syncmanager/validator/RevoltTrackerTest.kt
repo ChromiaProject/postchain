@@ -148,7 +148,7 @@ class RevoltTrackerTest {
         // execute
         sut.update()
         // verify
-        assertThat(sut.deadLine).isEqualTo(1540)
+        assertThat(sut.deadline).isEqualTo(1540)
         verify(statusManager, never()).onStartRevolting()
     }
 
@@ -162,7 +162,7 @@ class RevoltTrackerTest {
         // execute
         sut.update()
         // verify
-        assertThat(sut.deadLine).isEqualTo(deadLine)
+        assertThat(sut.deadline).isEqualTo(deadLine)
         verify(statusManager, never()).onStartRevolting()
     }
 
