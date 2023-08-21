@@ -149,4 +149,6 @@ class GTXTransaction(
         }
         return true
     }
+
+    override fun toString(): String = "GTXTransaction(RID=${myRID.toHex()})"
 }

@@ -4,11 +4,11 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNotNull
 import assertk.assertions.isSameAs
+import net.postchain.base.TransactionPrioritizer
 import net.postchain.base.TxPriorityStateV1
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.common.tx.EnqueueTransactionResult
-import net.postchain.common.wrap
 import net.postchain.configurations.GTXTestOp
 import net.postchain.configurations.GTX_TEST_OP_NAME
 import net.postchain.crypto.devtools.MockCryptoSystem
@@ -21,11 +21,20 @@ import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.math.BigDecimal
-import java.math.BigDecimal.ZERO
 import java.math.BigDecimal.ONE
 import java.math.BigDecimal.TEN
+import java.math.BigDecimal.ZERO
 import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import kotlin.time.Duration.Companion.INFINITE
+import kotlin.time.Duration.Companion.milliseconds
 
 private val tx1 = mockGtxTransaction(1)
 private val tx2 = mockGtxTransaction(2)
@@ -35,6 +44,9 @@ private val tx5 = mockGtxTransaction(5)
 private val tx6 = mockGtxTransaction(6)
 private val tx7 = mockGtxTransaction(7)
 private val tx8 = mockGtxTransaction(8)
+
+val account0 = "00".hexStringToWrappedByteArray()
+val account1 = "01".hexStringToWrappedByteArray()
 
 val TWO = BigDecimal(2)
 
@@ -74,7 +86,7 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `queue size is bounded`() {
-        sut = BaseTransactionQueue(3, Clock.systemUTC()) { _, _, _ -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, ONE) }
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, Clock.systemUTC()) { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) }
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
@@ -89,13 +101,13 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `transactions with lower priority are evicted`() {
-        sut = BaseTransactionQueue(3, Clock.systemUTC()) { tx, _, _ ->
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, Clock.systemUTC()) { tx, _, _ ->
             when (tx.myRID[0]) {
-                1.toByte() -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, ZERO)
-                2.toByte() -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, ONE)
-                3.toByte() -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, TWO)
-                4.toByte() -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, TEN)
-                else -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, ZERO)
+                1.toByte() -> TxPriorityStateV1(account0, 0, 0, ZERO)
+                2.toByte() -> TxPriorityStateV1(account0, 0, 0, ONE)
+                3.toByte() -> TxPriorityStateV1(account0, 0, 0, TWO)
+                4.toByte() -> TxPriorityStateV1(account0, 0, 0, TEN)
+                else -> TxPriorityStateV1(account0, 0, 0, ZERO)
             }
         }
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
@@ -112,7 +124,7 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `transactions with same priority are retrieved in insertion order`() {
-        sut = BaseTransactionQueue(10, Clock.systemUTC()) { _, _, _ -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, ZERO) }
+        sut = BaseTransactionQueue(10, INFINITE, INFINITE, Clock.systemUTC()) { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ZERO) }
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx3)).isEqualTo(EnqueueTransactionResult.OK)
@@ -123,13 +135,13 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `transactions with different priority are retrieved in priority order, and then insertion order`() {
-        sut = BaseTransactionQueue(10, Clock.systemUTC()) { tx, _, _ ->
+        sut = BaseTransactionQueue(10, INFINITE, INFINITE, Clock.systemUTC()) { tx, _, _ ->
             when (tx.myRID[0]) {
-                5.toByte() -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, ONE)
-                6.toByte() -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, ONE)
-                7.toByte() -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, TEN)
-                8.toByte() -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, TEN)
-                else -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, ZERO)
+                5.toByte() -> TxPriorityStateV1(account0, 0, 0, ONE)
+                6.toByte() -> TxPriorityStateV1(account0, 0, 0, ONE)
+                7.toByte() -> TxPriorityStateV1(account0, 0, 0, TEN)
+                8.toByte() -> TxPriorityStateV1(account0, 0, 0, TEN)
+                else -> TxPriorityStateV1(account0, 0, 0, ZERO)
             }
         }
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
@@ -150,7 +162,7 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `transactions can be removed`() {
-        sut = BaseTransactionQueue(10, Clock.systemUTC()) { _, _, _ -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, ZERO) }
+        sut = BaseTransactionQueue(10, INFINITE, INFINITE, Clock.systemUTC()) { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ZERO) }
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx3)).isEqualTo(EnqueueTransactionResult.OK)
@@ -163,27 +175,27 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `incorrect transaction is rejected`() {
-        sut = BaseTransactionQueue(10, Clock.systemUTC()) { _, _, _ -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, ZERO) }
+        sut = BaseTransactionQueue(10, INFINITE, INFINITE, Clock.systemUTC()) { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ZERO) }
         assertThat(sut.enqueue(incorrectTransaction())).isEqualTo(EnqueueTransactionResult.INVALID)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
     }
 
     @Test
     fun `too expensive transaction is rejected`() {
-        sut = BaseTransactionQueue(10, Clock.systemUTC()) { _, _, _ -> TxPriorityStateV1(ByteArray(0).wrap(), 1, 2, ZERO) }
+        sut = BaseTransactionQueue(10, INFINITE, INFINITE, Clock.systemUTC()) { _, _, _ -> TxPriorityStateV1(account0, 1, 2, ZERO) }
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.FULL)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
     }
 
     @Test
     fun `transaction with lowest priority from same account is evicted when queue is full`() {
-        sut = BaseTransactionQueue(3, Clock.systemUTC()) { tx, _, _ ->
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, Clock.systemUTC()) { tx, _, _ ->
             when (tx.myRID[0]) {
-                1.toByte() -> TxPriorityStateV1("00".hexStringToWrappedByteArray(), 2, 1, ZERO)
-                2.toByte() -> TxPriorityStateV1("01".hexStringToWrappedByteArray(), 2, 1, ONE)
-                3.toByte() -> TxPriorityStateV1("01".hexStringToWrappedByteArray(), 2, 1, TWO)
-                4.toByte() -> TxPriorityStateV1("01".hexStringToWrappedByteArray(), 2, 1, TEN)
-                else -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, ZERO)
+                1.toByte() -> TxPriorityStateV1(account0, 2, 1, ZERO)
+                2.toByte() -> TxPriorityStateV1(account1, 2, 1, ONE)
+                3.toByte() -> TxPriorityStateV1(account1, 2, 1, TWO)
+                4.toByte() -> TxPriorityStateV1(account1, 2, 1, TEN)
+                else -> TxPriorityStateV1(account0, 0, 0, ZERO)
             }
         }
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
@@ -199,13 +211,13 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `transaction with lowest priority is evicted when queue is full`() {
-        sut = BaseTransactionQueue(3, Clock.systemUTC()) { tx, _, _ ->
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, Clock.systemUTC()) { tx, _, _ ->
             when (tx.myRID[0]) {
-                1.toByte() -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, ZERO)
-                2.toByte() -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, ONE)
-                3.toByte() -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, TWO)
-                4.toByte() -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, TEN)
-                else -> TxPriorityStateV1(ByteArray(0).wrap(), 0, 0, ZERO)
+                1.toByte() -> TxPriorityStateV1(account0, 0, 0, ZERO)
+                2.toByte() -> TxPriorityStateV1(account0, 0, 0, ONE)
+                3.toByte() -> TxPriorityStateV1(account0, 0, 0, TWO)
+                4.toByte() -> TxPriorityStateV1(account0, 0, 0, TEN)
+                else -> TxPriorityStateV1(account0, 0, 0, ZERO)
             }
         }
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
@@ -217,5 +229,79 @@ class BaseTransactionQueueTest {
         assertThat(sut.takeTransaction()).isSameAs(tx3)
         assertThat(sut.takeTransaction()).isSameAs(tx2)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
+    }
+
+    @Test
+    fun `transactions can be reprioritized during recheck`() {
+        val now = Instant.now()
+        val clock: Clock = mock {
+            on { instant() } doReturn now
+        }
+        val prioritizer: TransactionPrioritizer = mock {
+            on { prioritize(any(), any(), any()) } doReturn
+                    TxPriorityStateV1(account0, 0, 0, ZERO)
+        }
+        sut = BaseTransactionQueue(10, INFINITE, 100.milliseconds, clock, prioritizer)
+        assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
+        assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
+        whenever(clock.instant()).doReturn(now + Duration.ofMillis(110))
+        assertThat(sut.enqueue(tx3)).isEqualTo(EnqueueTransactionResult.OK)
+
+        whenever(prioritizer.prioritize(eq(tx1), any(), any())) doReturn TxPriorityStateV1(account0, 0, 0, ZERO)
+        whenever(prioritizer.prioritize(eq(tx2), any(), any())) doReturn TxPriorityStateV1(account0, 0, 0, ONE)
+        whenever(prioritizer.prioritize(eq(tx3), any(), any())) doReturn TxPriorityStateV1(account0, 0, 0, ONE)
+        sut.recheckPriorities()
+        assertThat(sut.takeTransaction()).isSameAs(tx2)
+        assertThat(sut.takeTransaction()).isSameAs(tx1)
+        assertThat(sut.takeTransaction()).isSameAs(tx3)
+    }
+
+    @Test
+    fun `transaction can be evicted during recheck`() {
+        val now = Instant.now()
+        val clock: Clock = mock {
+            on { instant() } doReturn now
+        }
+        val prioritizer: TransactionPrioritizer = mock {
+            on { prioritize(eq(tx1), any(), any()) } doReturn TxPriorityStateV1(account1, accountPoints = 3, txCostPoints = 1, ZERO)
+            on { prioritize(eq(tx2), any(), any()) } doReturn TxPriorityStateV1(account1, accountPoints = 3, txCostPoints = 1, ONE)
+            on { prioritize(eq(tx3), any(), any()) } doReturn TxPriorityStateV1(account1, accountPoints = 3, txCostPoints = 1, TWO)
+        }
+        sut = BaseTransactionQueue(10, INFINITE, 100.milliseconds, clock, prioritizer)
+        assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
+        whenever(clock.instant()).doReturn(now + Duration.ofMillis(110))
+        assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
+        assertThat(sut.enqueue(tx3)).isEqualTo(EnqueueTransactionResult.OK)
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(3)
+
+        whenever(prioritizer.prioritize(eq(tx1), any(), any())) doReturn TxPriorityStateV1(account1, accountPoints = 2, txCostPoints = 1, ZERO)
+        sut.recheckPriorities()
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(2)
+        assertThat(sut.takeTransaction()).isSameAs(tx3)
+        assertThat(sut.takeTransaction()).isSameAs(tx2)
+    }
+
+    @Test
+    fun `all transactions for account can be evicted during recheck`() {
+        val now = Instant.now()
+        val clock: Clock = mock {
+            on { instant() } doReturn now
+        }
+        val prioritizer: TransactionPrioritizer = mock {
+            on { prioritize(eq(tx1), any(), any()) } doReturn TxPriorityStateV1(account1, accountPoints = 2, txCostPoints = 1, ONE)
+            on { prioritize(eq(tx2), any(), any()) } doReturn TxPriorityStateV1(account1, accountPoints = 2, txCostPoints = 1, TWO)
+            on { prioritize(eq(tx3), any(), any()) } doReturn TxPriorityStateV1(account0, accountPoints = 2, txCostPoints = 1, ZERO)
+        }
+        sut = BaseTransactionQueue(10, INFINITE, 100.milliseconds, clock, prioritizer)
+        assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
+        whenever(clock.instant()).doReturn(now + Duration.ofMillis(110))
+        assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
+        assertThat(sut.enqueue(tx3)).isEqualTo(EnqueueTransactionResult.OK)
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(3)
+
+        whenever(prioritizer.prioritize(eq(tx1), any(), any())) doReturn TxPriorityStateV1(account1, accountPoints = 0, txCostPoints = 1, ZERO)
+        sut.recheckPriorities()
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
+        assertThat(sut.takeTransaction()).isSameAs(tx3)
     }
 }

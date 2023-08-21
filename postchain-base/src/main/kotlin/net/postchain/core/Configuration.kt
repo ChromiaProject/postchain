@@ -18,6 +18,7 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
+import kotlin.time.Duration
 
 /**
  * [BlockchainConfiguration] describes an individual blockchain instance (within Postchain system).
@@ -36,6 +37,7 @@ interface BlockchainConfiguration {
     val syncInfrastructureName: DynamicClassName?
     val syncInfrastructureExtensionNames: List<DynamicClassName>
     val transactionQueueSize: Int
+    val transactionQueueRecheckInterval: Duration
 
     fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader
     fun decodeWitness(rawWitness: ByteArray): BlockWitness
