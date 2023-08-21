@@ -58,22 +58,10 @@ interface TransactionQueue {
     fun takeTransaction(): Transaction?
     fun enqueue(tx: Transaction): EnqueueTransactionResult
     fun findTransaction(txRID: WrappedByteArray): Transaction?
-    fun getTransactionStatus(txHash: ByteArray): TransactionStatus
+    fun getTransactionStatus(txRID: ByteArray): TransactionStatus
     fun getTransactionQueueSize(): Int
     fun removeAll(transactionsToRemove: Collection<Transaction>)
     fun rejectTransaction(tx: Transaction, reason: Exception?)
     fun getRejectionReason(txRID: WrappedByteArray): Exception?
     fun retryAllTakenTransactions()
-}
-
-data class TransactionPriority(
-        val priority: Int
-) {
-    companion object {
-        val DEFAULT = TransactionPriority(0)
-    }
-}
-
-fun interface TransactionPrioritizer {
-    fun prioritize(tx: Transaction): TransactionPriority
 }
