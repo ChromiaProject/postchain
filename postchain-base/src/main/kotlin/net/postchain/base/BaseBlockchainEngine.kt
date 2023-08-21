@@ -5,6 +5,7 @@ package net.postchain.base
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Timer
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.data.BaseTransactionQueue
@@ -37,6 +38,7 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
+import net.postchain.logging.BLOCK_RID_TAG
 import net.postchain.metrics.BaseBlockchainEngineMetrics
 import java.lang.Long.max
 import java.time.Clock
@@ -160,10 +162,24 @@ open class BaseBlockchainEngine(
     }
 
     override fun loadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
-        return if (useParallelDecoding)
-            parallelLoadUnfinishedBlock(block, isSyncing)
-        else
-            sequentialLoadUnfinishedBlock(block, isSyncing)
+        withLoggingContext(BLOCK_RID_TAG to block.header.blockRID.toHex()) {
+            return if (useParallelDecoding)
+                parallelLoadUnfinishedBlock(block, isSyncing)
+            else
+                sequentialLoadUnfinishedBlock(block, isSyncing)
+        }
+    }
+
+    private fun sequentialLoadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
+        return loadUnfinishedBlockImpl(block, isSyncing) { txs ->
+            txs.map { smartDecodeTransaction(it) }
+        }
+    }
+
+    private fun parallelLoadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
+        return loadUnfinishedBlockImpl(block, isSyncing) { txs ->
+            txs.parallelStream().map { smartDecodeTransaction(it) }.collect(Collectors.toList())
+        }
     }
 
     private fun smartDecodeTransaction(txData: ByteArray): Transaction {
@@ -177,18 +193,6 @@ open class BaseBlockchainEngine(
 
         tx.checkCorrectness()
         return tx
-    }
-
-    private fun sequentialLoadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
-        return loadUnfinishedBlockImpl(block, isSyncing) { txs ->
-            txs.map { smartDecodeTransaction(it) }
-        }
-    }
-
-    private fun parallelLoadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
-        return loadUnfinishedBlockImpl(block, isSyncing) { txs ->
-            txs.parallelStream().map { smartDecodeTransaction(it) }.collect(Collectors.toList())
-        }
     }
 
     private fun loadUnfinishedBlockImpl(
@@ -333,14 +337,16 @@ open class BaseBlockchainEngine(
         val blockHeader = blockBuilder.finalizeBlock()
         val grossEnd = System.nanoTime()
 
-        val prettyBlockHeader = prettyBlockHeader(
-                blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd
-        )
-        logger.info("Block is finalized: $prettyBlockHeader")
+        withLoggingContext(BLOCK_RID_TAG to blockHeader.blockRID.toHex()) {
+            val prettyBlockHeader = prettyBlockHeader(
+                    blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd
+            )
+            logger.info("Block is finalized: $prettyBlockHeader")
 
-        if (logger.isTraceEnabled) {
-            blockBuilder.setBTrace(getBlockTrace(blockHeader))
-            buildLog("End", blockBuilder.getBTrace())
+            if (logger.isTraceEnabled) {
+                blockBuilder.setBTrace(getBlockTrace(blockHeader))
+                buildLog("End", blockBuilder.getBTrace())
+            }
         }
 
         blockSample.stop(metrics.blocks)

@@ -9,7 +9,7 @@ Configuration:
     - name: logfile
       value: "ci"
     - name: logpattern
-      value: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} -%replace{%notEmpty{ [%notEmpty{bc-rid=%.-2X{blockchainRID}:%.4X{blockchainRID}}%notEmpty{, chain-id=%X{chainIID}}]:}}{\\[, }{[} %msg%n"
+      value: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} -%replace{%notEmpty{ [%notEmpty{bc-rid=%.-2X{blockchainRID}:%.4X{blockchainRID}}%notEmpty{, chain-id=%X{chainIID}}%notEmpty{, block-rid=%.-2X{blockRID}:%.4X{blockRID}}]:}}{\\[, }{[} %msg%n"
 
   Appenders:
     Console:
