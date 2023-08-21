@@ -25,8 +25,6 @@ import net.postchain.core.EContext
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.Storage
 import net.postchain.core.Transaction
-import net.postchain.core.TransactionPrioritizer
-import net.postchain.core.TransactionPriority
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
@@ -41,8 +39,8 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.metrics.BaseBlockchainEngineMetrics
 import java.lang.Long.max
+import java.time.Clock
 import java.util.stream.Collectors
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * An [BlockchainEngine] will only produce [BlockBuilder]s for a single chain.
@@ -69,11 +67,11 @@ open class BaseBlockchainEngine(
     private val blockQueries: BlockQueries = blockchainConfiguration.makeBlockQueries(sharedStorage)
     private val transactionQueue = BaseTransactionQueue(
             blockchainConfiguration.transactionQueueSize,
-            10.seconds,
+            Clock.systemUTC(),
             if (blockchainConfiguration.hasQuery(PRIORITIZE_QUERY_NAME))
                 BaseTransactionPrioritizer { name: String, args: Gtv -> blockQueries.query(name, args).toCompletableFuture().get() }
             else
-                TransactionPrioritizer { _ -> TransactionPriority.DEFAULT }
+                null
     )
     private val strategy: BlockBuildingStrategy = blockchainConfiguration.getBlockBuildingStrategy(blockQueries, transactionQueue)
     private val metrics = BaseBlockchainEngineMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid, transactionQueue)
