@@ -29,6 +29,9 @@ data class BlockchainConfigurationData(
         @Name(KEY_QUEUE_CAPACITY)
         @DefaultValue(defaultLong = 2500) // 5 seconds (if 500 tps)
         val txQueueSize: Long,
+        @Name(KEY_QUEUE_TX_RECHECK_INTERVAL)
+        @DefaultValue(defaultLong = 5 * 60 * 1000) // 5 minutes
+        val txQueueRecheckInterval: Long,
 
         @Name(KEY_BLOCKSTRATEGY_NAME)
         @Nested(KEY_BLOCKSTRATEGY)

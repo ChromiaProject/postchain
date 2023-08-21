@@ -3,6 +3,7 @@
 package net.postchain.base.data
 
 import com.google.common.collect.HashMultimap
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import net.postchain.base.TransactionPrioritizer
 import net.postchain.common.exception.UserMistake
@@ -21,7 +22,12 @@ import java.time.Instant
 import java.util.LinkedList
 import java.util.Queue
 import java.util.TreeSet
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.time.Duration
+import kotlin.time.toJavaDuration
 
 internal class WrappedTransaction(
         val tx: Transaction,
@@ -29,7 +35,8 @@ internal class WrappedTransaction(
         val txCostPoints: Long,
         val priority: BigDecimal,
         val seqNumber: Long,
-        val enter: Instant)
+        val enter: Instant,
+        val lastRecheck: Instant)
     : Comparable<WrappedTransaction> {
     override fun equals(other: Any?): Boolean {
         if (other is WrappedTransaction) {
@@ -56,6 +63,8 @@ const val MAX_REJECTED = 1000
  * Transaction queue for transactions received from peers
  */
 class BaseTransactionQueue(private val queueCapacity: Int,
+                           recheckThreadInterval: Duration,
+                           private val recheckTxInterval: Duration,
                            private val clock: Clock,
                            private val prioritizer: TransactionPrioritizer?) : TransactionQueue, Closeable {
 
@@ -70,6 +79,19 @@ class BaseTransactionQueue(private val queueCapacity: Int,
     private val rejects = object : LinkedHashMap<WrappedByteArray, Exception?>() {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<WrappedByteArray, java.lang.Exception?>?): Boolean {
             return size > MAX_REJECTED
+        }
+    }
+
+    @Volatile
+    private var executor: ScheduledExecutorService? = null
+
+    init {
+        if (prioritizer != null && recheckThreadInterval.isFinite()) {
+            executor = Executors.newSingleThreadScheduledExecutor(
+                    ThreadFactoryBuilder().setNameFormat("BaseTransactionQueue-recheckPriorities").setPriority(Thread.MIN_PRIORITY).build()).apply {
+                scheduleAtFixedRate(::recheckPriorities,
+                        recheckThreadInterval.inWholeMilliseconds, recheckThreadInterval.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+            }
         }
     }
 
@@ -124,7 +146,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
             val txCostPoints = transactionPriority?.txCostPoints ?: 0L
             val accountPoints = transactionPriority?.accountPoints ?: 0L
             val seqNumber = sequence.getAndIncrement()
-            val wrappedTx = WrappedTransaction(tx, accountId, txCostPoints, priority, seqNumber, txEnter)
+            val wrappedTx = WrappedTransaction(tx, accountId, txCostPoints, priority, seqNumber, txEnter, txEnter)
             synchronized(this) {
                 if (queueMap.contains(txRid)) {
                     logger.debug { "Tx $txRid is duplicate (second test)" }
@@ -146,7 +168,8 @@ class BaseTransactionQueue(private val queueCapacity: Int,
 
                     // 4. Account-based rate limiting
                     // If there are already transactions from the account_id currently in the queue
-                    val evictedTxs = accountId?.let { accountBasedRateLimiting(it, txCostPoints, accountPoints, txRid, priority) } ?: 0
+                    val evictedTxs = accountId?.let { accountBasedRateLimiting(it, accountPoints = accountPoints, newTxCostPoints = txCostPoints) }
+                            ?: 0
 
                     // 5. If no transactions were evicted at step 4, transaction with the lowest priority is evicted.
                     if (evictedTxs == 0) {
@@ -169,32 +192,6 @@ class BaseTransactionQueue(private val queueCapacity: Int,
             rejectTransaction(tx, e)
             return EnqueueTransactionResult.INVALID
         }
-    }
-
-    // We check if sum of tx_cost_points for all transactions including the new one. If it is above account_points
-    // we order transactions by priority and removes ones after the running sum exceeds account_points.
-    // If a new tx was removed, it is reported as rejected. Note: more than one transaction might be evicted.
-    private fun accountBasedRateLimiting(accountId: WrappedByteArray, txCostPoints: Long, accountPoints: Long, txRid: WrappedByteArray, priority: BigDecimal?): Int {
-        var evictedTxs = 0
-        val txsForAccount = accountTxs.get(accountId)
-        var pointsSum = txsForAccount.sumOf { it.txCostPoints } + txCostPoints
-        if (pointsSum > accountPoints) {
-            val prioritizedTxsForAccount = txsForAccount.toSortedSet { a, b -> a.priority.compareTo(b.priority) }
-            while (pointsSum > accountPoints) {
-                val lowestPrioTxForAccount = prioritizedTxsForAccount.first()
-                logger.debug {
-                    "Evicting transaction ${lowestPrioTxForAccount.tx.getRID().toHex()} since it has lower" +
-                            " priority ${lowestPrioTxForAccount.priority} than new transaction $txRid with priority $priority"
-                }
-                prioritizedTxsForAccount.remove(lowestPrioTxForAccount)
-                queue.remove(lowestPrioTxForAccount)
-                queueMap.remove(lowestPrioTxForAccount.tx.getRID().wrap())
-                rejects[lowestPrioTxForAccount.tx.getRID().wrap()] = UserMistake("Transaction evicted due to account prioritization")
-                evictedTxs++
-                pointsSum -= lowestPrioTxForAccount.txCostPoints
-            }
-        }
-        return evictedTxs
     }
 
     private fun enqueueTx(txRid: WrappedByteArray, wrappedTx: WrappedTransaction, accountId: WrappedByteArray?) {
@@ -223,7 +220,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
 
     @Synchronized
     override fun rejectTransaction(tx: Transaction, reason: Exception?) {
-        taken.remove(WrappedTransaction(tx, null, 0L, BigDecimal.ZERO, 0L, Instant.EPOCH))
+        taken.remove(WrappedTransaction(tx, null, 0L, BigDecimal.ZERO, 0L, Instant.EPOCH, Instant.EPOCH))
         rejects[WrappedByteArray(tx.getRID())] = reason
     }
 
@@ -233,7 +230,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
             val removedTx = queueMap.remove(WrappedByteArray(tx.getRID()))?.also { wt ->
                 wt.accountId?.let { accountTxs.remove(it, wt) }
                 queue.remove(wt)
-            } ?: WrappedTransaction(tx, null, 0L, BigDecimal.ZERO, 0L, Instant.EPOCH)
+            } ?: WrappedTransaction(tx, null, 0L, BigDecimal.ZERO, 0L, Instant.EPOCH, Instant.EPOCH)
             taken.remove(removedTx)
             txsToRetry.remove(removedTx)
         }
@@ -252,5 +249,55 @@ class BaseTransactionQueue(private val queueCapacity: Int,
         }
     }
 
-    override fun close() {}
+    internal fun recheckPriorities() {
+        if (prioritizer != null) {
+            logger.debug { "Rechecking transactions" }
+            queueMap.forEach { (txRid, wt) ->
+                val now = clock.instant()
+                if (now.isAfter(wt.lastRecheck + recheckTxInterval.toJavaDuration())) {
+                    logger.debug { "Rechecking tx $txRid" }
+                    val transactionPriority = prioritizer.prioritize(wt.tx as GTXTransaction, wt.enter, now)
+                    queue.remove(wt)
+                    queue.add(WrappedTransaction(wt.tx, wt.accountId, transactionPriority.txCostPoints, transactionPriority.priority, wt.seqNumber, wt.enter, now))
+                    accountBasedRateLimiting(
+                            transactionPriority.accountId,
+                            accountPoints = transactionPriority.accountPoints,
+                            newTxCostPoints = 0
+                    )
+                }
+            }
+        }
+    }
+
+    // We check if sum of tx_cost_points for all transactions including the new one. If it is above account_points
+    // we order transactions by priority and removes ones after the running sum exceeds account_points.
+    // If a new tx was removed, it is reported as rejected. Note: more than one transaction might be evicted.
+    private fun accountBasedRateLimiting(accountId: WrappedByteArray, accountPoints: Long, newTxCostPoints: Long): Int {
+        var evictedTxs = 0
+        val txsForAccount = accountTxs.get(accountId)
+        var pointsSum = txsForAccount.sumOf { it.txCostPoints } + newTxCostPoints
+        if (pointsSum > accountPoints) {
+            val prioritizedTxsForAccount = txsForAccount.toSortedSet { a, b -> a.priority.compareTo(b.priority) }
+            while (pointsSum > accountPoints) {
+                val lowestPrioTxForAccount = prioritizedTxsForAccount.first()
+                logger.debug {
+                    "Evicting transaction ${lowestPrioTxForAccount.tx.getRID().toHex()} since it has lowest" +
+                            " priority ${lowestPrioTxForAccount.priority} for account $accountId"
+                }
+                prioritizedTxsForAccount.remove(lowestPrioTxForAccount)
+                queue.remove(lowestPrioTxForAccount)
+                queueMap.remove(lowestPrioTxForAccount.tx.getRID().wrap())
+                rejects[lowestPrioTxForAccount.tx.getRID().wrap()] = UserMistake("Transaction evicted due to account prioritization")
+                evictedTxs++
+                pointsSum -= lowestPrioTxForAccount.txCostPoints
+            }
+        }
+        return evictedTxs
+    }
+
+    override fun close() {
+        executor?.shutdownNow()
+        executor?.awaitTermination(2, TimeUnit.SECONDS)
+        executor = null
+    }
 }

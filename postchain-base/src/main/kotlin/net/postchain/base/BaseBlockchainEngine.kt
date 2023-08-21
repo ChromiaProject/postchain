@@ -41,6 +41,7 @@ import net.postchain.metrics.BaseBlockchainEngineMetrics
 import java.lang.Long.max
 import java.time.Clock
 import java.util.stream.Collectors
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * An [BlockchainEngine] will only produce [BlockBuilder]s for a single chain.
@@ -67,6 +68,8 @@ open class BaseBlockchainEngine(
     private val blockQueries: BlockQueries = blockchainConfiguration.makeBlockQueries(sharedStorage)
     private val transactionQueue = BaseTransactionQueue(
             blockchainConfiguration.transactionQueueSize,
+            recheckThreadInterval = 1.minutes,
+            recheckTxInterval = blockchainConfiguration.transactionQueueRecheckInterval,
             Clock.systemUTC(),
             if (blockchainConfiguration.hasQuery(PRIORITIZE_QUERY_NAME))
                 BaseTransactionPrioritizer { name: String, args: Gtv -> blockQueries.query(name, args).toCompletableFuture().get() }

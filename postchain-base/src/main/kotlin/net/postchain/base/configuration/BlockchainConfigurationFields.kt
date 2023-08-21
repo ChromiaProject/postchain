@@ -13,6 +13,7 @@ const val KEY_BLOCKSTRATEGY_MAXSPECIALENDTRANSACTIONSIZE = "maxspecialendtransac
 const val KEY_BLOCKSTRATEGY_PREEMPTIVEBLOCKBUILDING = "preemptiveblockbuilding"
 
 const val KEY_QUEUE_CAPACITY = "txqueuecapacity"
+const val KEY_QUEUE_TX_RECHECK_INTERVAL = "txqueuerecheckinterval"
 
 const val KEY_CONFIGURATIONFACTORY = "configurationfactory"
 

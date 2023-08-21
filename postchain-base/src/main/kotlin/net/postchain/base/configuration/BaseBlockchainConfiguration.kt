@@ -43,6 +43,8 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import java.time.Clock
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 open class BaseBlockchainConfiguration(
         val configData: BlockchainConfigurationData,
@@ -76,6 +78,8 @@ open class BaseBlockchainConfiguration(
     final override val signers get() = configData.signers
     final override val transactionQueueSize: Int
         get() = configData.txQueueSize.toInt()
+    final override val transactionQueueRecheckInterval: Duration
+        get() = configData.txQueueRecheckInterval.milliseconds
 
     private val blockBuildingStrategyConstructor = constructorOf<BlockBuildingStrategy>(
             configData.blockStrategyName,
