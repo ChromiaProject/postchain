@@ -38,6 +38,9 @@ interface BlockchainEngine : Shutdownable {
     fun getBlockQueries(): BlockQueries
     fun getConfiguration(): BlockchainConfiguration
     fun hasBuiltFirstBlockAfterConfigUpdate(): Boolean
+
+    val chainID: Long
+    val blockchainRid: BlockchainRid
 }
 
 /**

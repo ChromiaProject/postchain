@@ -2,6 +2,8 @@
 
 package net.postchain.ebft
 
+import io.micrometer.core.instrument.Metrics
+import io.micrometer.core.instrument.Timer
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.common.exception.ProgrammerMistake
@@ -15,6 +17,8 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.ManagedBlockBuilder
 import net.postchain.core.block.MultiSigBlockWitnessBuilder
 import net.postchain.crypto.Signature
+import net.postchain.logging.BLOCK_RID_TAG
+import net.postchain.metrics.BaseBlocksDatabaseMetrics
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.LinkedBlockingQueue
@@ -50,6 +54,8 @@ class BaseBlockDatabase(
     private var blockBuilder: ManagedBlockBuilder? = null
     private var witnessBuilder: MultiSigBlockWitnessBuilder? = null
     private val queuedBlockCount = AtomicInteger(0)
+
+    private val metrics = BaseBlocksDatabaseMetrics(engine.chainID, engine.blockchainRid)
 
     companion object : KLogging()
 
@@ -117,26 +123,28 @@ class BaseBlockDatabase(
                           existingBTrace: BlockTrace?): CompletableFuture<Unit> {
         queuedBlockCount.incrementAndGet()
         return runOpAsync("addBlock ${block.header.blockRID.toHex()}") {
-            queuedBlockCount.decrementAndGet()
-            if (dependsOn != null) {
-                if (dependsOn.isCompletedExceptionally) {
-                    throw BDBAbortException(block)
+            withLoggingContext(BLOCK_RID_TAG to block.header.blockRID.toHex()) {
+                queuedBlockCount.decrementAndGet()
+                if (dependsOn != null) {
+                    if (dependsOn.isCompletedExceptionally) {
+                        throw BDBAbortException(block)
+                    }
+                    if (!dependsOn.isDone) {
+                        // If we get here the caller must have sent the incorrect future.
+                        throw ProgrammerMistake("Previous completion is unfinished ${dependsOn.isDone}")
+                    }
                 }
-                if (!dependsOn.isDone) {
-                    // If we get here the caller must have sent the incorrect future.
-                    throw ProgrammerMistake("Previous completion is unfinished ${dependsOn.isDone}")
+                addBlockLog("Begin")
+                maybeRollback()
+                val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block, true)
+                if (exception != null) {
+                    addBlockLog("Got error when loading: ${exception.message}")
+                    throw exception
+                } else {
+                    updateBTrace(existingBTrace, theBlockBuilder.getBTrace())
+                    theBlockBuilder.commit(block.witness) // No need to set BTrace, because we have it
+                    addBlockLog("Done commit", theBlockBuilder.getBTrace())
                 }
-            }
-            addBlockLog("Begin")
-            maybeRollback()
-            val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block, true)
-            if (exception != null) {
-                addBlockLog("Got error when loading: ${exception.message}")
-                throw exception
-            } else {
-                updateBTrace(existingBTrace, theBlockBuilder.getBTrace())
-                theBlockBuilder.commit(block.witness) // No need to set BTrace, because we have it
-                addBlockLog("Done commit", theBlockBuilder.getBTrace())
             }
         }
     }
@@ -144,13 +152,18 @@ class BaseBlockDatabase(
     override fun loadUnfinishedBlock(block: BlockData): CompletionStage<Signature> {
         return runOpAsync("loadUnfinishedBlock ${block.header.blockRID.toHex()}") {
             maybeRollback()
-            val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block, false)
-            if (exception != null) {
-                throw exception
-            } else {
-                blockBuilder = theBlockBuilder
-                witnessBuilder = blockBuilder!!.getBlockWitnessBuilder() as MultiSigBlockWitnessBuilder
-                witnessBuilder!!.getMySignature()
+            withLoggingContext(BLOCK_RID_TAG to block.header.blockRID.toHex()) {
+                val blockSample = Timer.start(Metrics.globalRegistry)
+                val (theBlockBuilder, exception) = engine.loadUnfinishedBlock(block, false)
+                if (exception != null) {
+                    throw exception
+                } else {
+                    blockBuilder = theBlockBuilder
+                    witnessBuilder = blockBuilder!!.getBlockWitnessBuilder() as MultiSigBlockWitnessBuilder
+                    logger.info("Signed block with RID ${block.header.blockRID.toHex()} at height ${theBlockBuilder.height}")
+                    blockSample.stop(metrics.signedBlocks)
+                    witnessBuilder!!.getMySignature()
+                }
             }
         }
     }

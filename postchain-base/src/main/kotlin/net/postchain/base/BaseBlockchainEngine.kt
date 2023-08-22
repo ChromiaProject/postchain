@@ -11,6 +11,7 @@ import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
@@ -57,7 +58,7 @@ open class BaseBlockchainEngine(
         private val blockchainConfiguration: BlockchainConfiguration,
         final override val blockBuilderStorage: Storage,
         final override val sharedStorage: Storage,
-        private val chainID: Long,
+        override val chainID: Long,
         initialEContext: EContext,
         private val blockchainConfigurationProvider: BlockchainConfigurationProvider,
         private val restartNotifier: BlockchainRestartNotifier,
@@ -123,6 +124,9 @@ open class BaseBlockchainEngine(
         return hasBuiltFirstBlockAfterConfigUpdate
     }
 
+    override val blockchainRid: BlockchainRid
+        get() = blockchainConfiguration.blockchainRid
+
     override fun shutdown() {
         closed = true
         blockchainConfiguration.shutdownModules()
@@ -164,12 +168,10 @@ open class BaseBlockchainEngine(
     }
 
     override fun loadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
-        withLoggingContext(BLOCK_RID_TAG to block.header.blockRID.toHex()) {
-            return if (useParallelDecoding)
-                parallelLoadUnfinishedBlock(block, isSyncing)
-            else
-                sequentialLoadUnfinishedBlock(block, isSyncing)
-        }
+        return if (useParallelDecoding)
+            parallelLoadUnfinishedBlock(block, isSyncing)
+        else
+            sequentialLoadUnfinishedBlock(block, isSyncing)
     }
 
     private fun sequentialLoadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
