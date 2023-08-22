@@ -1190,6 +1190,7 @@ components:
         - height
         - transactions
         - witness
+        - witnesses
         - timestamp
       properties:
         rid:
@@ -1217,6 +1218,11 @@ components:
                 $ref: "#/components/schemas/hex"
         witness:
           $ref: "#/components/schemas/hex"
+        witnesses:
+          type: array
+          description: Public key of nodes who are witnesses to this block
+          items:
+            $ref: "#/components/schemas/hex"
         timestamp:
           type: integer
           format: int64

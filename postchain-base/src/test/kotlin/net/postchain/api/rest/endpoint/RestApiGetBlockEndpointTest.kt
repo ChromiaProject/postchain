@@ -9,6 +9,7 @@ import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.json.JsonFactory
+import net.postchain.base.BaseBlockWitness
 import net.postchain.base.cryptoSystem
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -16,6 +17,7 @@ import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
+import net.postchain.crypto.Signature
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.mapper.GtvObjectMapper
@@ -34,13 +36,17 @@ class RestApiGetBlockEndpointTest {
     private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a1")
     private val blockchainRID2 = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
     private val gson = JsonFactory.makeJson()
+    private val witness = BaseBlockWitness.fromSignatures(arrayOf(
+            Signature("0320F0B9E7ECF1A1568C31644B04D37ADC05327F996B9F48220E301DC2FEE6F8FF".hexStringToByteArray(), ByteArray(0)),
+            Signature("0307C88BF37C528B14AF95E421749E72F6DA88790BCE74890BDF780D854D063C40".hexStringToByteArray(), ByteArray(0))
+    ))
     private val block = BlockDetail(
             "34ED10678AAE0414562340E8754A7CCD174B435B52C7F0A4E69470537AEE47E6".hexStringToByteArray(),
             "5AF85874B9CCAC197AA739585449668BE15650C534E08705F6D60A6993FE906D".hexStringToByteArray(),
             "023F9C7FBAFD92E53D7890A61B50B33EC0375FA424D60BD328AA2454408430C383".hexStringToByteArray(),
             0,
             listOf(),
-            "03D8844CFC0CE7BECD33CDF49A9881364695C944E266E06356CDA11C2305EAB83A".hexStringToByteArray(),
+            witness.getRawData(),
             0
     )
 
@@ -69,7 +75,7 @@ class RestApiGetBlockEndpointTest {
                         "some header".toByteArray(),
                         0,
                         listOf(),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849700),
                 BlockDetail(
                         "blockRid002".toByteArray(),
@@ -77,14 +83,14 @@ class RestApiGetBlockEndpointTest {
                         "some other header".toByteArray(),
                         1,
                         listOf(TxDetail("tx1".toByteArray(), "tx1".toByteArray(), "tx1".toByteArray())),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849760),
                 BlockDetail(
                         "blockRid003".toByteArray(),
                         "blockRid002".toByteArray(),
                         "yet another header".toByteArray(),
                         2, listOf(),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849880),
                 BlockDetail(
                         "blockRid004".toByteArray(),
@@ -96,7 +102,7 @@ class RestApiGetBlockEndpointTest {
                                 TxDetail("tx3".toByteArray(), "tx3".toByteArray(), "tx3".toByteArray()),
                                 TxDetail("tx4".toByteArray(), "tx4".toByteArray(), "tx4".toByteArray())
                         ),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849940)
         )
 
@@ -123,7 +129,7 @@ class RestApiGetBlockEndpointTest {
                         "yet another header".toByteArray(),
                         2,
                         listOf(),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849880),
                 BlockDetail(
                         "blockRid004".toByteArray(),
@@ -135,7 +141,7 @@ class RestApiGetBlockEndpointTest {
                                 TxDetail("hash3".toByteArray(), "tx3RID".toByteArray(), null),
                                 TxDetail("hash4".toByteArray(), "tx4RID".toByteArray(), null)
                         ),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849940)
         )
 
@@ -162,7 +168,7 @@ class RestApiGetBlockEndpointTest {
                         "yet another header".toByteArray(),
                         2,
                         listOf(),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849880),
                 BlockDetail(
                         "blockRid004".toByteArray(),
@@ -174,7 +180,7 @@ class RestApiGetBlockEndpointTest {
                                 TxDetail("hash3".toByteArray(), "tx3RID".toByteArray(), null),
                                 TxDetail("hash4".toByteArray(), "tx4RID".toByteArray(), null)
                         ),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849940)
         )
 
@@ -195,7 +201,7 @@ class RestApiGetBlockEndpointTest {
     @Test
     fun testGetBlocksWithoutParams() {
         val blocks = listOf(
-                BlockDetail("blockRid001".toByteArray(), blockchainRID2.data, "some header".toByteArray(), 0, listOf(), "signatures".toByteArray(), 1574849700),
+                BlockDetail("blockRid001".toByteArray(), blockchainRID2.data, "some header".toByteArray(), 0, listOf(), witness.getRawData(), 1574849700),
                 BlockDetail(
                         "blockRid002".toByteArray(),
                         "blockRid001".toByteArray(),
@@ -208,7 +214,7 @@ class RestApiGetBlockEndpointTest {
                                         "tx1".toByteArray()
                                 )
                         ),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849760
                 ),
                 BlockDetail(
@@ -217,7 +223,7 @@ class RestApiGetBlockEndpointTest {
                         "yet another header".toByteArray(),
                         2,
                         listOf(),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849880
                 ),
                 BlockDetail(
@@ -242,7 +248,7 @@ class RestApiGetBlockEndpointTest {
                                         "tx4".toByteArray()
                                 )
                         ),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849940
                 )
         )
