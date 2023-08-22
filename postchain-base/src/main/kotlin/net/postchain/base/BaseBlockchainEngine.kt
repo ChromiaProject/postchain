@@ -40,8 +40,10 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.logging.BLOCK_RID_TAG
 import net.postchain.metrics.BaseBlockchainEngineMetrics
+import net.postchain.metrics.DelayTimer
 import java.lang.Long.max
 import java.time.Clock
+import java.util.concurrent.TimeUnit
 import java.util.stream.Collectors
 import kotlin.time.Duration.Companion.minutes
 
@@ -220,7 +222,7 @@ open class BaseBlockchainEngine(
             val grossEnd = System.nanoTime()
 
             val prettyBlockHeader = prettyBlockHeader(
-                    block.header, block.transactions.size, 0, grossStart to grossEnd, netStart to netEnd
+                    block.header, block.transactions.size, 0, grossStart to grossEnd, netStart to netEnd, 0
             )
             logger.info("Loaded block: $prettyBlockHeader")
 
@@ -284,7 +286,7 @@ open class BaseBlockchainEngine(
     }
 
     private fun buildBlockInternal(blockBuilder: BaseManagedBlockBuilder, grossStart: Long) {
-        val blockSample = Timer.start(Metrics.globalRegistry)
+        val blockStart = System.nanoTime()
 
         blockBuilder.begin(null)
         val netStart = System.nanoTime()
@@ -292,10 +294,13 @@ open class BaseBlockchainEngine(
         var acceptedTxs = 0
         var rejectedTxs = 0
 
+        val delayTimer = DelayTimer()
+
         while (true) {
             logger.trace { "Checking transaction queue" }
             val tx = transactionQueue.takeTransaction()
             if (tx != null) {
+                delayTimer.stop()
                 logger.trace { "Appending transaction ${tx.getRID().toHex()}" }
                 val transactionSample = Timer.start(Metrics.globalRegistry)
                 if (tx.isSpecial()) {
@@ -324,12 +329,20 @@ open class BaseBlockchainEngine(
                     if (strategy.shouldStopBuildingBlock(blockBuilder.blockBuilder)) {
                         logger.debug { "buildBlock() - Block limit is reached" }
                         val mustWaitTime = mustWaitMinimumBuildBlockTime()
-                        if (mustWaitTime > 0) Thread.sleep(mustWaitTime)
+                        if (mustWaitTime > 0) {
+                            Thread.sleep(mustWaitTime)
+                            delayTimer.add(mustWaitTime * 1_000_000)
+                        }
                         break
                     }
                 }
-            } else if (shouldBuildBlock()) { // tx == null
-                break
+            } else {
+                if (shouldBuildBlock()) { // tx == null
+                    delayTimer.stop()
+                    break
+                } else {
+                    delayTimer.start()
+                }
             }
         }
 
@@ -339,7 +352,7 @@ open class BaseBlockchainEngine(
 
         withLoggingContext(BLOCK_RID_TAG to blockHeader.blockRID.toHex()) {
             val prettyBlockHeader = prettyBlockHeader(
-                    blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd
+                    blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd, delayTimer.totalDelayTime
             )
             logger.info("Block is finalized: $prettyBlockHeader")
 
@@ -349,7 +362,8 @@ open class BaseBlockchainEngine(
             }
         }
 
-        blockSample.stop(metrics.blocks)
+        val blockEndTime = System.nanoTime() - blockStart - delayTimer.totalDelayTime
+        metrics.blocks.record(blockEndTime, TimeUnit.NANOSECONDS)
     }
 
     private fun shouldBuildBlock() = !strategy.preemptiveBlockBuilding() || strategy.shouldBuildBlock()
@@ -382,11 +396,13 @@ open class BaseBlockchainEngine(
             acceptedTxs: Int,
             rejectedTxs: Int,
             gross: Pair<Long, Long>,
-            net: Pair<Long, Long>
+            net: Pair<Long, Long>,
+            delayTime: Long
     ): String {
-        val grossRate = (acceptedTxs * 1_000_000_000L) / max(gross.second - gross.first, 1)
-        val netRate = (acceptedTxs * 1_000_000_000L) / max(net.second - net.first, 1)
-        val grossTimeMs = (gross.second - gross.first) / 1_000_000
+        val grossRate = (acceptedTxs * 1_000_000_000L) / max(gross.second - gross.first - delayTime, 1)
+        val netRate = (acceptedTxs * 1_000_000_000L) / max(net.second - net.first - delayTime, 1)
+        val grossTimeMs = (gross.second - gross.first - delayTime) / 1_000_000
+        val delayTimeMs = delayTime / 1_000_000
 
         val gtvBlockHeader = GtvDecoder.decodeGtv(blockHeader.rawData)
         val blockHeaderData = BlockHeaderData.fromGtv(gtvBlockHeader as GtvArray)
@@ -394,6 +410,7 @@ open class BaseBlockchainEngine(
         return "$grossTimeMs ms" +
                 ", $netRate net tps" +
                 ", $grossRate gross tps" +
+                ", delay: $delayTimeMs ms" +
                 ", height: ${blockHeaderData.gtvHeight.asInteger()}" +
                 ", accepted txs: $acceptedTxs" +
                 ", rejected txs: $rejectedTxs" +
