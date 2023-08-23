@@ -11,6 +11,9 @@ import net.postchain.core.NodeRid
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
@@ -24,12 +27,16 @@ import kotlin.random.Random
 class DefaultPeersConnectionStrategy(
         val connectionManager: PeerConnectionManager,
         val me: NodeRid,
+        val clock: Clock
 ) : PeersConnectionStrategy {
 
     private val peerToDelayMap: MutableMap<NodeRid, ExponentialDelay> = mutableMapOf()
+    private val latestEstablishedConnections: MutableMap<NodeRid, Instant> = mutableMapOf()
     private val timerQueue = ScheduledThreadPoolExecutor(1)
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        val SUCCESSFUL_CONNECTION_THRESHOLD: Duration = Duration.ofSeconds(1)
+    }
 
     var backupConnTimeMin = 1000
     var backupConnTimeMax = 2000
@@ -57,6 +64,7 @@ class DefaultPeersConnectionStrategy(
                     val connectedPeers = connectionManager.getConnectedNodes(chainID)
                     for (wantedPeerId in peerIds) {
                         if (wantedPeerId !in connectedPeers) {
+                            latestEstablishedConnections.remove(wantedPeerId)
                             connectionManager.connectChainPeer(chainID, wantedPeerId)
                         }
                     }
@@ -83,6 +91,9 @@ class DefaultPeersConnectionStrategy(
             // lost connection
             return
         }
+
+        if (isLatestConnectionSuccessful(peerId)) peerToDelayMap.remove(peerId)
+
         val delay = peerToDelayMap.computeIfAbsent(peerId) {
             val delayCounterInitialMillis = Random.nextInt(reconnectTimeMin, reconnectTimeMax).toLong()
             ExponentialDelay(delayCounterMillis = delayCounterInitialMillis)
@@ -96,6 +107,7 @@ class DefaultPeersConnectionStrategy(
             ) {
                 logger.info { "${peerName(me)}/${chainID}: Reconnecting to peer = ${peerName(peerId)}" }
                 try {
+                    latestEstablishedConnections.remove(peerId)
                     connectionManager.connectChainPeer(chainID, peerId)
                 } catch (e: ProgrammerMistake) {
                     // This happens if the chain has been disconnected while we waited
@@ -103,6 +115,10 @@ class DefaultPeersConnectionStrategy(
             }
         }, delay.getDelayMillisAndIncrease(), TimeUnit.MILLISECONDS)
     }
+
+    fun isLatestConnectionSuccessful(peerId: NodeRid): Boolean = latestEstablishedConnections[peerId]?.let {
+        clock.instant().isAfter(it + SUCCESSFUL_CONNECTION_THRESHOLD)
+    } ?: false
 
     override fun duplicateConnectionDetected(
             chainID: Long,
@@ -117,7 +133,7 @@ class DefaultPeersConnectionStrategy(
     }
 
     override fun connectionEstablished(chainID: Long, isOutgoing: Boolean, peerId: NodeRid) {
-        peerToDelayMap.remove(peerId)
+        latestEstablishedConnections[peerId] = clock.instant()
     }
 
     override fun shutdown() {

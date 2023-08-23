@@ -16,6 +16,7 @@ import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
 import net.postchain.network.common.*
 import net.postchain.network.netty2.NettyPeerConnector
+import java.time.Clock
 
 /**
  * Default implementation for "peer" based networks (which EBFT is).
@@ -144,7 +145,7 @@ open class DefaultPeerConnectionManager<PacketType>(
         // blockchain started, but not for subsequent ones.
         if (connector == null) {
             myPeerInfo = chainPeersConfig.commConfiguration.myPeerInfo()
-            peersConnectionStrategy = DefaultPeersConnectionStrategy(this, myPeerInfo.peerId())
+            peersConnectionStrategy = DefaultPeersConnectionStrategy(this, myPeerInfo.peerId(), Clock.systemUTC())
 
             val packetDecoder = packetDecoderFactory.create(chainPeersConfig.commConfiguration)
             // We have already given away we are using Netty, so skipping the factory
