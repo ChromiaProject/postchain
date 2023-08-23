@@ -155,9 +155,6 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
             return PeerInfo(genesisHost, genesisPort, genesisPubkey.hexStringToByteArray())
         }
 
-    // PCU feature toggle
-    fun isPcuEnabled(): Boolean = getEnvOrBoolean("POSTCHAIN_PCU", "pcu", true)
-
     fun appliedConfigSendInterval(): Long = getEnvOrLong("POSTCHAIN_CONFIG_SEND_INTERVAL_MS", "applied-config-send-interval-ms", DEFAULT_APPLIED_CONFIG_SEND_INTERVAL_MS)
 
     /**

@@ -85,7 +85,7 @@ open class BaseBlockchainProcessManager(
      * Put the startup operation of chainId in the [executor]'s work queue.
      *
      * @param chainId is the chain to start.
-     * @param loadNextPendingConfig only relevant for PCU. See [net.postchain.managed.ManagedBlockchainConfigurationProvider.getConfigurationFromDataSource]
+     * @param loadNextPendingConfig see [net.postchain.managed.ManagedBlockchainConfigurationProvider.getConfigurationFromDataSource]
      */
     protected fun startBlockchainAsync(chainId: Long, bTrace: BlockTrace?, loadNextPendingConfig: Boolean = false) {
         if (!scheduledForStart.add(chainId)) {

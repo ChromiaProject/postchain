@@ -14,12 +14,10 @@ import net.postchain.managed.ManagedNodeDataSource
  *
  * (broken out to here from Kalle's code, thought it could be re-used)
  */
-class MockBlockchainConfigurationProvider(private val pcuEnabled: Boolean) :
+class MockBlockchainConfigurationProvider :
         ManagedBlockchainConfigurationProvider() {   // Using the abstract class means we are using "real" ICMF for test, see no reason not to.
 
     companion object : KLogging()
-
-    override fun isPcuEnabled() = pcuEnabled
 
     override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
