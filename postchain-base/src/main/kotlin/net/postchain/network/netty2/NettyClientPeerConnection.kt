@@ -23,6 +23,7 @@ class NettyClientPeerConnection<PacketType>(
     companion object : KLogging()
 
     private val nettyClient = NettyClient()
+    private var hasReceivedPing = false
     private var peerPacketHandler: PeerPacketHandler? = null
     private lateinit var context: ChannelHandlerContext
     private lateinit var onConnected: () -> Unit
@@ -57,10 +58,21 @@ class NettyClientPeerConnection<PacketType>(
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         handleSafely(peerInfo.peerId()) {
-            peerPacketHandler?.handle(
-                    Transport.unwrapMessage(msg as ByteBuf),
-                    peerInfo.peerId())
-            (msg as ByteBuf).release()
+            val message = Transport.unwrapMessage(msg as ByteBuf)
+            if (!isPing(message)) {
+                peerPacketHandler?.handle(
+                        message,
+                        peerInfo.peerId())
+            } else if (!hasReceivedPing) {
+                // Peer has ping capability
+                ctx?.let {
+                    // Notify peer that we also have ping capability
+                    sendPing(it)
+                    registerIdleStateHandler(it)
+                }
+                hasReceivedPing = true
+            }
+            msg.release()
         }
     }
 

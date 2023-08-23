@@ -24,6 +24,8 @@ class NettyServerPeerConnection<PacketType>(
     private var onConnectedHandler: ((PeerConnection) -> Unit)? = null
     private var onDisconnectedHandler: ((PeerConnection) -> Unit)? = null
 
+    private var hasReceivedPing = false
+
     companion object: KLogging()
 
     override fun accept(handler: PeerPacketHandler) {
@@ -61,16 +63,28 @@ class NettyServerPeerConnection<PacketType>(
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         handleSafely(peerConnectionDescriptor?.nodeId) {
             val message = Transport.unwrapMessage(msg as ByteBuf)
-            if (packetDecoder.isIdentPacket(message)) {
-                val identPacketInfo = packetDecoder.parseIdentPacket(message)
-                peerConnectionDescriptor = PeerConnectionDescriptorFactory.createFromIdentPacketInfo(identPacketInfo)
-                onConnectedHandler?.invoke(this)
-            } else {
-                if (peerConnectionDescriptor != null) {
-                    peerPacketHandler?.handle(message, peerConnectionDescriptor!!.nodeId)
-                }
+            if (!isPing(message)) {
+                handleMessage(message, ctx)
+            } else if (!hasReceivedPing) {
+                ctx?.let { registerIdleStateHandler(it) }
+                hasReceivedPing = true
             }
             msg.release()
+        }
+    }
+
+    private fun handleMessage(message: ByteArray, ctx: ChannelHandlerContext?) {
+        if (packetDecoder.isIdentPacket(message)) {
+            val identPacketInfo = packetDecoder.parseIdentPacket(message)
+            peerConnectionDescriptor = PeerConnectionDescriptorFactory.createFromIdentPacketInfo(identPacketInfo)
+
+            // Notify peer that we have ping capability
+            ctx?.let { sendPing(it) }
+            onConnectedHandler?.invoke(this)
+        } else {
+            if (peerConnectionDescriptor != null) {
+                peerPacketHandler?.handle(message, peerConnectionDescriptor!!.nodeId)
+            }
         }
     }
 
