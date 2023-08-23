@@ -147,7 +147,7 @@ class BaseBlockManager(
     private fun handleFailedConfigurationMismatch(blockHeader: BlockHeader) {
         val bcConfigProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
         val baseBlockHeader = blockHeader as? BaseBlockHeader
-        if (bcConfigProvider != null && baseBlockHeader != null && bcConfigProvider.isPcuEnabled()) {
+        if (bcConfigProvider != null && baseBlockHeader != null) {
             val height = baseBlockHeader.blockHeaderRec.getHeight()
             val bcConfig = workerContext.blockchainConfiguration
             val incomingBlockFailedConfigHash = baseBlockHeader.getFailedConfigHash()?.wrap()
@@ -182,7 +182,7 @@ class BaseBlockManager(
 
     private fun handleConfigurationMismatch(blockHeader: BlockHeader) {
         val bcConfigProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
-        if (bcConfigProvider != null && bcConfigProvider.isPcuEnabled()) {
+        if (bcConfigProvider != null) {
             val bcConfig = workerContext.blockchainConfiguration
             val incomingBlockConfigHash = blockHeader.getConfigHash()?.wrap()
 

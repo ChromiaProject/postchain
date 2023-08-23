@@ -37,7 +37,6 @@ open class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFacto
         }
     }
 
-    override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
-        return MockBlockchainConfigurationProvider(false)
-    }
+    override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider =
+            MockBlockchainConfigurationProvider()
 }

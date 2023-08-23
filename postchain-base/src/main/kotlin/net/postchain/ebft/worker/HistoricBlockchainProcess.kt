@@ -407,6 +407,6 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         }
     }
 
-    override fun isSigner() = false // TODO: [pcu]: false?
+    override fun isSigner() = false
     override fun getBlockchainState(): BlockchainState = BlockchainState.RUNNING
 }

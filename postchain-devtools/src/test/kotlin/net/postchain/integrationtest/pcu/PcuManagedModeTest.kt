@@ -7,7 +7,7 @@ import net.postchain.base.extension.getFailedConfigHash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.concurrent.util.get
 import net.postchain.devtools.ManagedModeTest
-import net.postchain.devtools.mminfra.pcu.TestPcuManagedEBFTInfrastructureFactory
+import net.postchain.devtools.mminfra.TestManagedEBFTInfrastructureFactory
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.gtv.GtvFactory.gtv
 import org.awaitility.Awaitility
@@ -20,13 +20,12 @@ class PcuManagedModeTest : ManagedModeTest() {
 
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
         super.addNodeConfigurationOverrides(nodeSetup)
-        nodeSetup.nodeSpecificConfigs.setProperty("infrastructure", TestPcuManagedEBFTInfrastructureFactory::class.qualifiedName)
-        nodeSetup.nodeSpecificConfigs.setProperty("pcu", true)
+        nodeSetup.nodeSpecificConfigs.setProperty("infrastructure", TestManagedEBFTInfrastructureFactory::class.qualifiedName)
     }
 
     @Test
     fun basicTest() {
-        startManagedSystem(3, 0, TestPcuManagedEBFTInfrastructureFactory::class.qualifiedName!!)
+        startManagedSystem(3, 0, TestManagedEBFTInfrastructureFactory::class.qualifiedName!!)
 
         val chainSigners = setOf(0, 1, 2)
         val chain = startNewBlockchain(chainSigners, setOf(), null)
@@ -71,7 +70,7 @@ class PcuManagedModeTest : ManagedModeTest() {
 
     @Test
     fun failedPendingConfig() {
-        startManagedSystem(3, 0, TestPcuManagedEBFTInfrastructureFactory::class.qualifiedName!!)
+        startManagedSystem(3, 0, TestManagedEBFTInfrastructureFactory::class.qualifiedName!!)
         val chainSigners = setOf(0, 1, 2)
         val chain = startNewBlockchain(chainSigners, setOf(), null)
         buildBlock(chain, 0)

@@ -160,7 +160,6 @@ object ContainerConfigFactory : KLogging() {
         add("POSTCHAIN_DEBUG=${restApiConfig.debug}")
 
         add("POSTCHAIN_INFRASTRUCTURE=${Infrastructure.EbftContainerSub.get()}")
-        add("POSTCHAIN_PCU=${appConfig.isPcuEnabled()}")
 
         val subnodeDatabaseUrl = appConfig.getEnvOrString("POSTCHAIN_SUBNODE_DATABASE_URL", ContainerNodeConfig.fullKey(ContainerNodeConfig.KEY_SUBNODE_DATABASE_URL))
                 ?: appConfig.databaseUrl
