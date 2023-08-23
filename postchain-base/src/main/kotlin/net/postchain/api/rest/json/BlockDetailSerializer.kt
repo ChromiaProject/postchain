@@ -3,6 +3,7 @@
 package net.postchain.api.rest.json
 
 import com.google.gson.*
+import net.postchain.base.BaseBlockWitness
 import net.postchain.common.toHex
 import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.make_gtv_gson
@@ -38,6 +39,11 @@ internal class BlockDetailSerializer : JsonSerializer<BlockDetail> {
         }
         json.add("transactions", transactions)
         json.add("witness", JsonPrimitive(src.witness.toHex()))
+        val witnesses = JsonArray()
+        BaseBlockWitness.fromBytes(src.witness).getSignatures().forEach {
+            witnesses.add(it.subjectID.toHex())
+        }
+        json.add("witnesses", witnesses)
         json.add("timestamp", JsonPrimitive(src.timestamp))
         
         return json

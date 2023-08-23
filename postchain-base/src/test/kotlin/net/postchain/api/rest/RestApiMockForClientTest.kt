@@ -8,6 +8,7 @@ import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
+import net.postchain.base.BaseBlockWitness
 import net.postchain.base.ConfirmationProof
 import net.postchain.base.cryptoSystem
 import net.postchain.common.BlockchainRid
@@ -20,6 +21,7 @@ import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
+import net.postchain.crypto.Signature
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
@@ -64,13 +66,17 @@ class RestApiMockForClientManual {
         val statusNotFound = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
         val statusWaiting = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
 
+        private val witness = BaseBlockWitness.fromSignatures(arrayOf(
+                Signature("0320F0B9E7ECF1A1568C31644B04D37ADC05327F996B9F48220E301DC2FEE6F8FF".hexStringToByteArray(), ByteArray(0)),
+                Signature("0307C88BF37C528B14AF95E421749E72F6DA88790BCE74890BDF780D854D063C40".hexStringToByteArray(), ByteArray(0))
+        ))
         val blocks = listOf(
                 BlockDetail(
                         "blockRid001".toByteArray(),
                         blockchainRid.data, "some header".toByteArray(),
                         0,
                         listOf(),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849700),
                 BlockDetail(
                         "blockRid002".toByteArray(),
@@ -78,7 +84,7 @@ class RestApiMockForClientManual {
                         "some other header".toByteArray(),
                         1,
                         listOf(TxDetail("tx1".toByteArray(), "tx1".toByteArray(), "tx1".toByteArray())),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849760),
                 BlockDetail(
                         "blockRid003".toByteArray(),
@@ -86,7 +92,7 @@ class RestApiMockForClientManual {
                         "yet another header".toByteArray(),
                         2,
                         listOf(),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849880),
                 BlockDetail(
                         "blockRid004".toByteArray(),
@@ -98,7 +104,7 @@ class RestApiMockForClientManual {
                                 TxDetail("tx3".toByteArray(), "tx3".toByteArray(), "tx3".toByteArray()),
                                 TxDetail("tx4".toByteArray(), "tx4".toByteArray(), "tx4".toByteArray())
                         ),
-                        "signatures".toByteArray(),
+                        witness.getRawData(),
                         1574849940)
         )
 

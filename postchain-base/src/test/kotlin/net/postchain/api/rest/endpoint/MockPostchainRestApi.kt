@@ -1,6 +1,7 @@
 package net.postchain.api.rest.endpoint
 
 import net.postchain.api.rest.json.JsonFactory
+import net.postchain.base.BaseBlockWitness
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.Gtv
@@ -34,7 +35,7 @@ object MockPostchainRestApi : HttpHandler, Closeable {
             "023F9C7FBAFD92E53D7890A61B50B33EC0375FA424D60BD328AA2454408430C383".hexStringToByteArray(),
             0,
             listOf(),
-            "03D8844CFC0CE7BECD33CDF49A9881364695C944E266E06356CDA11C2305EAB83A".hexStringToByteArray(),
+            BaseBlockWitness.fromSignatures(arrayOf()).getRawData(),
             0
     )
     val gtvQueryResponse = gtv("answer")
