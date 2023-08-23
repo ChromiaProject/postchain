@@ -6,12 +6,18 @@ import mu.KLogging
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.NodeRid
+import net.postchain.network.peer.DefaultPeersConnectionStrategy.Companion.SUCCESSFUL_CONNECTION_THRESHOLD
 import org.awaitility.Awaitility
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.*
 import java.lang.Thread.sleep
 import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
 
 class DefaultPeersConnectionStrategyTest {
 
@@ -44,8 +50,8 @@ class DefaultPeersConnectionStrategyTest {
         return strategy
     }
 
-    private fun sut(me: NodeRid): DefaultPeersConnectionStrategy {
-        val strategy = DefaultPeersConnectionStrategy(connMan, me)
+    private fun sut(me: NodeRid, clock: Clock = mock { on { instant() } doReturn Instant.now() }): DefaultPeersConnectionStrategy {
+        val strategy = DefaultPeersConnectionStrategy(connMan, me, clock)
         strategy.backupConnTimeMax = 102
         strategy.backupConnTimeMin = 100
         strategy.reconnectTimeMax = 92
@@ -114,5 +120,31 @@ class DefaultPeersConnectionStrategyTest {
         strategy.connectionLost(0, BlockchainRid.ZERO_RID, peer3, true)
         sleep(200)
         verify(connMan, times(0)).connectChainPeer(0, peer3)
+    }
+
+    @Test
+    fun testSuccessfulConnectionTimeout() {
+        val chainId = 0L
+        val now = Instant.now()
+        val clock: Clock = mock {
+            on { instant() } doReturnConsecutively listOf(
+                    now, // Used by connectionEstablished
+                    now,
+                    now + SUCCESSFUL_CONNECTION_THRESHOLD - Duration.ofMillis(500),
+                    now + SUCCESSFUL_CONNECTION_THRESHOLD + Duration.ofMillis(500)
+            )
+        }
+        val strategy = sut(peer1, clock)
+        strategy.connectionEstablished(chainId, true, peer2)
+        assertFalse(strategy.isLatestConnectionSuccessful(peer2))
+        assertFalse(strategy.isLatestConnectionSuccessful(peer2))
+        assertTrue(strategy.isLatestConnectionSuccessful(peer2))
+
+        // Assert that connection is not considered successful if we do not call connectionEstablished
+        strategy.connectionLost(chainId, BlockchainRid.ZERO_RID, peer2, true)
+        Awaitility.await().atMost(400, TimeUnit.MILLISECONDS).untilAsserted {
+            verify(connMan).connectChainPeer(0, peer2)
+        }
+        assertFalse(strategy.isLatestConnectionSuccessful(peer2))
     }
 }
