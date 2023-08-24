@@ -35,6 +35,9 @@ import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.ManagedBlockBuilder
+import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
@@ -234,7 +237,7 @@ open class BaseBlockchainEngine(
                 blockBuilder.rollback()
             } catch (ignore: Exception) {
             }
-            nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(e.message)
+            nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(EagerDiagnosticValue(e.message))
             exception = e
         }
 
@@ -268,7 +271,7 @@ open class BaseBlockchainEngine(
                 logger.warn(e) { "Unable to revert configuration: $e" }
             }
 
-            nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(e.message)
+            nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(EagerDiagnosticValue(e.message))
 
             exception = e
         }
@@ -357,6 +360,12 @@ open class BaseBlockchainEngine(
                     blockHeader, acceptedTxs, rejectedTxs, grossStart to grossEnd, netStart to netEnd, delayTimer.totalDelayTime
             )
             logger.info("Block is finalized: $prettyBlockHeader")
+            nodeDiagnosticContext.blockchainBlockStats(blockchainRid).add(DiagnosticData(
+                    DiagnosticProperty.BLOCK_RID withValue blockHeader.blockRID.toHex(),
+                    DiagnosticProperty.BLOCK_HEIGHT withValue blockBuilder.height,
+                    DiagnosticProperty.BLOCK_BUILDER withValue true,
+                    DiagnosticProperty.BLOCK_SIGNER withValue true,
+            ))
 
             if (logger.isTraceEnabled) {
                 blockBuilder.setBTrace(getBlockTrace(blockHeader))

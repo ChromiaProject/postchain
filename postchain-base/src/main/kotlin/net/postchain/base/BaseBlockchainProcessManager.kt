@@ -21,6 +21,7 @@ import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
 import net.postchain.crypto.sha256Digest
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.gtv.GtvDecoder
@@ -271,7 +272,7 @@ open class BaseBlockchainProcessManager(
     private fun addToErrorQueue(chainId: Long, e: Exception) {
         withReadConnection(sharedStorage, chainId) {
             DatabaseAccess.of(it).getBlockchainRid(it)?.let { brid ->
-                nodeDiagnosticContext.blockchainErrorQueue(brid).add(e.message)
+                nodeDiagnosticContext.blockchainErrorQueue(brid).add(EagerDiagnosticValue(e.message))
             }
         }
     }
@@ -359,7 +360,11 @@ open class BaseBlockchainProcessManager(
 
     protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
         val blockchainRid = chainIdToBrid[chainId]
-        nodeDiagnosticContext.removeBlockchainData(blockchainRid)
+        if (!restart) {
+            nodeDiagnosticContext.removeBlockchainData(blockchainRid)
+        } else {
+            blockchainRid?.let { nodeDiagnosticContext.blockchainErrorQueue(it).clear() }
+        }
         blockchainProcesses.remove(chainId)?.also {
             stopInfoDebug("Stopping of blockchain", bTrace)
             extensions.forEach { ext -> ext.disconnectProcess(it) }

@@ -15,6 +15,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.crypto.PrivKey
+import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.server.grpc.FindBlockchainRequest
 import net.postchain.server.grpc.InitNodeRequest
@@ -141,7 +142,7 @@ class DefaultSubnodeAdminClient(
             logger.debug { "startBlockchain(${chainId}) -- blockchain started ${response.message}" }
             true
         } catch (e: Exception) {
-            nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add("Can't start blockchain: ${e.message}")
+            nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add(EagerDiagnosticValue("Can't start blockchain: ${e.message}"))
             logger.error { "startBlockchain(${chainId}:${blockchainRid.toShortHex()}) -- can't start blockchain: ${e.message}" }
             false
         }

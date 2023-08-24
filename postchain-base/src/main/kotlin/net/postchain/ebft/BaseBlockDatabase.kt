@@ -17,6 +17,9 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.ManagedBlockBuilder
 import net.postchain.core.block.MultiSigBlockWitnessBuilder
 import net.postchain.crypto.Signature
+import net.postchain.debug.DiagnosticData
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.logging.BLOCK_RID_TAG
 import net.postchain.metrics.BaseBlocksDatabaseMetrics
 import java.util.concurrent.CompletableFuture
@@ -37,6 +40,7 @@ class BaseBlockDatabase(
         private val loggingContext: Map<String, String>,
         private val engine: BlockchainEngine,
         private val blockQueries: BlockQueries,
+        private val nodeDiagnosticContext: NodeDiagnosticContext,
         val nodeIndex: Int
 ) : BlockDatabase {
 
@@ -161,6 +165,12 @@ class BaseBlockDatabase(
                     blockBuilder = theBlockBuilder
                     witnessBuilder = blockBuilder!!.getBlockWitnessBuilder() as MultiSigBlockWitnessBuilder
                     logger.info("Signed block with RID ${block.header.blockRID.toHex()} at height ${theBlockBuilder.height}")
+                    nodeDiagnosticContext.blockchainBlockStats(engine.blockchainRid).add(DiagnosticData(
+                            DiagnosticProperty.BLOCK_RID withValue block.header.blockRID.toHex(),
+                            DiagnosticProperty.BLOCK_HEIGHT withValue theBlockBuilder.height,
+                            DiagnosticProperty.BLOCK_BUILDER withValue false,
+                            DiagnosticProperty.BLOCK_SIGNER withValue true,
+                    ))
                     blockSample.stop(metrics.signedBlocks)
                     witnessBuilder!!.getMySignature()
                 }

@@ -826,6 +826,7 @@ paths:
       tags:
         - node
       summary: Get node debug information
+      description: This endpoint does not have a stable API, and is subject to change without notice.
       responses:
         200:
           description: OK
@@ -1245,7 +1246,8 @@ components:
       required:
         - version
         - pub-key
-        - blockchain-infra
+        - infrastructure
+        - infrastructure-version
         - blockchain
       properties:
         version:
@@ -1254,40 +1256,102 @@ components:
           type: string
           pattern: "[0-9a-fA-F]"
           description: "Hex encoded public key"
-        blockchain-infra:
+        infrastructure:
+          type: string
+        infrastructure-version:
           type: string
         blockchain:
           type: array
           items:
             type: object
             required:
-              - BLOCKCHAIN_RID
-              - BLOCKCHAIN_NODE_TYPE
-              - BLOCKCHAIN_CURRENT_HEIGHT
-              - BLOCKCHAIN_NODE_PEERS
+              - brid
+              - node-type
+              - error
+              - height
+              - peers
+              - node-status
+              - node-peer-statuses
+              - block-statistics
             properties:
-              BLOCKCHAIN_RID:
+              brid:
                 $ref: "#/components/schemas/hash"
-              BLOCKCHAIN_NODE_TYPE:
+              node-type:
                 type: string
                 enum:
                   - "Validator"
                   - "Replica"
                   - "Historic Replica"
-              BLOCKCHAIN_CURRENT_HEIGHT:
+              error:
+                type: array
+                items:
+                  type: string
+              height:
                 type: integer
                 format: int64
-              BLOCKCHAIN_NODE_PEERS:
+              peers:
                 type: object
+              node-status:
+                $ref: "#/components/schemas/nodeStatus"
+              node-peer-statuses:
+                type: array
+                items:
+                  $ref: "#/components/schemas/nodeStatus"
+              block-statistics:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - rid
+                    - height
+                    - builder
+                    - signer
+                  properties:
+                    rid:
+                      type: string
+                    height:
+                      type: integer
+                      format: int64
+                    builder:
+                      type: boolean
+                    signer:
+                      type: boolean
       example:
-        version: "3.7.0"
-        pub-key: "0288BDC8ED1FDE8A5E58179E7B1F60EE0700557435E5D3DA89CFA9EE62B5640DD2"
-        blockchain-infra: "BaseBlockchainInfrastructure"
+        version: "3.12.0"
+        pub-key: "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
+        infrastructure: "net.postchain.ebft.BaseEBFTInfrastructureFactory"
+        infrastructure-version: "3.12.0"
         blockchain:
-          - BLOCKCHAIN_RID: "0398A1E7B0F87709AFD14CD1821EAAAFB41931A8097FFA2D83E5FE10DA7E4DD5"
-            BLOCKCHAIN_NODE_TYPE: "Validator"
-            BLOCKCHAIN_CURRENT_HEIGHT: 17
-            BLOCKCHAIN_NODE_PEERS: { }
+          - brid: "0398A1E7B0F87709AFD14CD1821EAAAFB41931A8097FFA2D83E5FE10DA7E4DD5"
+            node-type: "Validator"
+            error: []
+            height: 17
+            peers:
+              035676109C54B9A16D271ABEB4954316A40A32BCCE023AC14C8E26E958AA68FBA9: "s-c, /16.170.97.56:45262"
+              031793A971EC85A53A8819163DFE2658D4EF57090420B5FC5E1EFE8B6ABFEE404B": "s-c, /13.49.35.185:39324"
+            node-status:
+              pubKey: "0350FE40766BC0CE8D08B3F5B810E49A8352FDD458606BD5FAFE5ACDCDC8FF3F57"
+              type: "NODE_TYPE_VALIDATOR"
+              state: "WaitBlock"
+              height: 19404
+              serial: 174848298232
+              round: 0
+              revolting: false
+              error: "[]"
+            node-peer-statuses:
+              - pubKey: "035676109C54B9A16D271ABEB4954316A40A32BCCE023AC14C8E26E958AA68FBA9"
+                type: "NODE_TYPE_VALIDATOR"
+                state: "WaitBlock"
+                height: 19404
+                serial: 174848298203
+                round: 0
+                revolting: false
+                error: "null"
+            block-statistics:
+              - rid: "3A64FFC05560BE2608A50826C07EA7E3B84674C16D53AA129FB5217096D90ABF"
+                height: 322
+                builder: true
+                signer: true
     noDebug:
       type: object
       required:

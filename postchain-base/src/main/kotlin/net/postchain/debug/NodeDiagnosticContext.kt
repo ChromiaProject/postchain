@@ -7,8 +7,9 @@ interface NodeDiagnosticContext : MutableMap<DiagnosticProperty, DiagnosticValue
     fun format(): JsonElement
 
     fun hasBlockchainErrors(blockchainRid: BlockchainRid): Boolean
-    fun blockchainErrorQueue(blockchainRid: BlockchainRid): DiagnosticQueue<String>
+    fun blockchainErrorQueue(blockchainRid: BlockchainRid): DiagnosticQueue
     fun blockchainData(blockchainRid: BlockchainRid): DiagnosticData
     fun removeBlockchainData(blockchainRid: BlockchainRid?): DiagnosticData?
     fun clearBlockchainData()
+    fun blockchainBlockStats(blockchainRid: BlockchainRid): DiagnosticQueue
 }

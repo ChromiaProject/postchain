@@ -28,13 +28,15 @@ class JsonNodeDiagnosticContext(
         properties[DiagnosticProperty.BLOCKCHAIN] = LazyDiagnosticValueCollection { blockchainDiagnosticData.values }
     }
 
-    override fun blockchainErrorQueue(blockchainRid: BlockchainRid) = blockchainData(blockchainRid)[DiagnosticProperty.ERROR] as DiagnosticQueue<String>
+    override fun blockchainErrorQueue(blockchainRid: BlockchainRid) = blockchainData(blockchainRid)[DiagnosticProperty.ERROR] as DiagnosticQueue
+    override fun blockchainBlockStats(blockchainRid: BlockchainRid) = blockchainData(blockchainRid)[DiagnosticProperty.BLOCK_STATS] as DiagnosticQueue
     override fun hasBlockchainErrors(blockchainRid: BlockchainRid) = blockchainDiagnosticData.containsKey(blockchainRid) && blockchainErrorQueue(blockchainRid).isNotEmpty()
 
     override fun blockchainData(blockchainRid: BlockchainRid) = blockchainDiagnosticData.getOrPut(blockchainRid) {
         DiagnosticData(
                 DiagnosticProperty.BLOCKCHAIN_RID withValue blockchainRid.toHex(),
-                DiagnosticProperty.ERROR to DiagnosticQueue<String>(5)
+                DiagnosticProperty.ERROR to DiagnosticQueue(5),
+                DiagnosticProperty.BLOCK_STATS to DiagnosticQueue(100)
         )
     }
 

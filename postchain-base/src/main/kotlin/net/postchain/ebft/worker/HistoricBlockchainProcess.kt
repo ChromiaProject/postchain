@@ -62,7 +62,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
             BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex()
     )
     private val blockDatabase = BaseBlockDatabase(
-            loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), NODE_ID_READ_ONLY
+            loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeDiagnosticContext, NODE_ID_READ_ONLY
     )
     private val fastSynchronizer = FastSynchronizer(
             workerContext, blockDatabase,
