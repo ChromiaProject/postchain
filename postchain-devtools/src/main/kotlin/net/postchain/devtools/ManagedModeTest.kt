@@ -12,12 +12,14 @@ import net.postchain.base.configuration.KEY_HISTORIC_BRID
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withWriteConnection
+import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainState
 import net.postchain.core.Infrastructure
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.mminfra.MockManagedNodeDataSource
@@ -252,6 +254,12 @@ open class ManagedModeTest : AbstractSyncTest() {
     private fun createSigMaker(pubkey: ByteArray): SigMaker {
         val privkey = KeyPairHelper.privKey(pubkey)
         return cryptoSystem.buildSigMaker(KeyPair(pubkey, privkey))
+    }
+
+    fun locallyAddReplica(nodeId: Int, blockchainRid: BlockchainRid, replicaNodePubKey: PubKey) {
+        nodes[nodeId].postchainContext.blockBuilderStorage.withWriteConnection {
+            DatabaseAccess.of(it).addBlockchainReplica(it, blockchainRid, replicaNodePubKey)
+        }
     }
 }
 

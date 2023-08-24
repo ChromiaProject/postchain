@@ -3,6 +3,7 @@ package net.postchain.integrationtest.sync
 import net.postchain.common.hexStringToByteArray
 import net.postchain.concurrent.util.get
 import net.postchain.core.NodeRid
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.ManagedModeTest
 import net.postchain.devtools.currentHeight
@@ -97,10 +98,8 @@ class ForkTestNightly : ManagedModeTest() {
         val nodeDataSource = dataSources(c1)[0]!!
         nodeDataSource.delBlockchain(ChainUtil.ridOf(c1))
 
-        // Set node 1 as replica for c1 so that node 0 will use node 1 to cross-fetch blocks.
-        nodeDataSource.addExtraReplica(ChainUtil.ridOf(c1), NodeRid(KeyPairHelper.pubKey(1)))
-
         restartNodeClean(0, c0, -1)
+        locallyAddReplica(0, ChainUtil.ridOf(c1), PubKey(nodes[1].pubKey))
         val c2 = startNewBlockchain(setOf(0), setOf(), c1)
         awaitHeight(c2, 10)
         getChainNodes(c2).forEach {
