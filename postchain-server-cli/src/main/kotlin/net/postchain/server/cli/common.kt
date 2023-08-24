@@ -26,7 +26,7 @@ fun waitDb(retryTimes: Int, retryInterval: Long, appConfig: AppConfig) {
     tryCreateBasicDataSource(appConfig)?.let { return } ?: if (retryTimes > 0) {
         Thread.sleep(retryInterval)
         waitDb(retryTimes - 1, retryInterval, appConfig)
-    } else throw PrintMessage("Unable to connect to database")
+    } else throw PrintMessage("Unable to connect to database: ${appConfig.databaseUrl}")
 }
 
 private fun tryCreateBasicDataSource(appConfig: AppConfig): Connection? {
