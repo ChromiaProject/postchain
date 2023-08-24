@@ -1,6 +1,7 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
 import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.groups.single
@@ -9,6 +10,8 @@ import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.google.protobuf.ByteString
 import io.grpc.StatusRuntimeException
+import net.postchain.admin.cli.util.ChannelFactory
+import net.postchain.admin.cli.util.DEFAULT_CHANNEL_FACTORY
 import net.postchain.admin.cli.util.blockchainRidOption
 import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.chainIdOptionNullable
@@ -16,9 +19,10 @@ import net.postchain.admin.cli.util.toHex
 import net.postchain.common.BlockchainRid
 import net.postchain.server.grpc.ImportBlockchainRequest
 
-class ImportBlockchainCommand : CliktCommand(name = "import", help = "Import a blockchain from file") {
+class ImportBlockchainCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_FACTORY)
+    : CliktCommand(name = "import", help = "Import a blockchain from file") {
 
-    private val channel by blockingPostchainServiceChannelOption()
+    private val channel by blockingPostchainServiceChannelOption(channelFactory)
 
     private val chainRef by mutuallyExclusiveOptions(
             chainIdOptionNullable(),
@@ -54,7 +58,7 @@ class ImportBlockchainCommand : CliktCommand(name = "import", help = "Import a b
                 "No blocks to import to chain ${reply.blockchainRid.toByteArray().toHex()}"
             echo(message)
         } catch (e: StatusRuntimeException) {
-            echo("Failed with: ${e.message}")
+            throw PrintMessage("Failed with: ${e.message}", true)
         }
     }
 }
