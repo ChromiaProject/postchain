@@ -44,7 +44,7 @@ class ManagedNodeConfigurationProvider(
      * 2. The chain0 c0.node table
      *
      * If there are multiple peerInfos for a specific key, the peerInfo
-     * with highest timestamp takes presedence. A null timestamp is considered
+     * with the highest timestamp takes precedence. A null timestamp is considered
      * older than a non-null timestamp.
      *
      * The timestamp is taken directly from the respective table, c0.node_list
@@ -99,44 +99,6 @@ class ManagedNodeConfigurationProvider(
             return a
         }
         return a.toSet().union(b).toList()
-    }
-
-    override fun getSyncUntilHeight(): Map<Long, Long> {
-        //collect from local table: mapOf<chainID,height>
-        val localMap = super.getSyncUntilHeight()
-
-        //collect from chain0 table. Mapped to brid instead of chainID, since chainID does not exist here. It is local.
-        val bridToHeightMap = managedPeerSource?.getSyncUntilHeight() ?: mapOf()
-
-        //brid2Height => chainID2height
-        val bridToChainID = super.getChainIDs()
-        val c0Heights = mutableMapOf<Long, Long>()
-        for (x in bridToHeightMap) {
-            val chainIdKey = bridToChainID[x.key]
-            // We may be computing this when chain has been added to chain0 table but not yet to "blockchains" table
-            // this should not result in a NPE, ignore setting height until we have the chain in both tables
-            if (chainIdKey != null) {
-                c0Heights[chainIdKey] = x.value
-            }
-        }
-
-        // Primary source of height information is from local table, if not found there, use values from c0 tables.
-        val resMap = mutableMapOf<Long, Long>()
-        val allKeys = localMap.keys + c0Heights.keys
-        for (k in allKeys) {
-            resMap[k] = mergeLong(localMap[k], c0Heights[k])
-        }
-        return resMap
-    }
-
-    protected fun mergeLong(a: Long?, b: Long?): Long {
-        if (a == null) {
-            return b!!
-        }
-        if (b == null) {
-            return a
-        }
-        return maxOf(a, b)
     }
 
     fun getLocallyConfiguredBlockchainsToReplicate(appConfig: AppConfig): Set<BlockchainRid> {

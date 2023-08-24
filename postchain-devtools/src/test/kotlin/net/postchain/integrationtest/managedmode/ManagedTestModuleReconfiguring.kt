@@ -27,7 +27,6 @@ open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit
                 "nm_compute_blockchain_info_list" to ::queryComputeBlockchainInfoList,
                 "nm_get_blockchain_configuration" to ::queryGetConfiguration,
                 "nm_find_next_configuration_height" to ::queryFindNextConfigurationHeight,
-                "nm_get_blockchain_last_height_map" to ::dummyHandlerArray,
                 "nm_get_blockchain_replica_node_map" to ::dummyHandlerArray,
                 "nm_get_node_replica_map" to ::dummyHandlerArray,
                 "nm_api_version" to ::queryNMApiVersion

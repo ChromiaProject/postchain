@@ -126,7 +126,6 @@ interface InfrastructureFactory {
 enum class Infrastructure(vararg val key: String) {
     Ebft("ebft", "base-ebft", "base/ebft"),
     EbftManaged("ebft-managed", "net.postchain.managed.ManagedEBFTInfrastructureFactory"), // compatibility
-    EbftManagedChromia0("chromia0", "ebft-managed-chromia0", "net.postchain.managed.Chromia0InfrastructureFactory"), // compatibility
 
     // Container chains
     EbftManagedContainerMaster("ebft-managed-container-master"),

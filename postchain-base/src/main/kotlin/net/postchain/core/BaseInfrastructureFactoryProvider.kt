@@ -9,10 +9,8 @@ import net.postchain.containers.infra.SubEbftInfraFactory
 import net.postchain.core.Infrastructure.Ebft
 import net.postchain.core.Infrastructure.EbftContainerSub
 import net.postchain.core.Infrastructure.EbftManaged
-import net.postchain.core.Infrastructure.EbftManagedChromia0
 import net.postchain.core.Infrastructure.EbftManagedContainerMaster
 import net.postchain.ebft.BaseEBFTInfrastructureFactory
-import net.postchain.managed.Chromia0InfrastructureFactory
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
 
 /**
@@ -25,7 +23,6 @@ object BaseInfrastructureFactoryProvider : InfrastructureFactoryProvider {
             // Base
             in Ebft.key -> BaseEBFTInfrastructureFactory()
             in EbftManaged.key -> ManagedEBFTInfrastructureFactory()
-            in EbftManagedChromia0.key -> Chromia0InfrastructureFactory()
 
             // Container chains
             in EbftManagedContainerMaster.key -> MasterManagedEbftInfraFactory()
