@@ -19,6 +19,7 @@ interface PeersCommConfigFactory {
     fun create(
             appConfig: AppConfig,
             nodeConfig: NodeConfig,
+            chainId: Long,
             blockchainRid: BlockchainRid,
             peers: List<ByteArray>,
             historicBlockchainContext: HistoricBlockchainContext?

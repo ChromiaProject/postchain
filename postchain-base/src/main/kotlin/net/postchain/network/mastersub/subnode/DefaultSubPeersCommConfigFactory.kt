@@ -16,7 +16,7 @@ class DefaultSubPeersCommConfigFactory : DefaultPeersCommConfigFactory() {
             historicBlockchainContext: HistoricBlockchainContext?
     ): PeerCommConfiguration {
 
-        val relevantPeerMap = buildRelevantNodeInfoMap(appConfig, nodeConfig, blockchainConfig.blockchainRid, blockchainConfig.signers,
+        val relevantPeerMap = buildRelevantNodeInfoMap(appConfig, nodeConfig, blockchainConfig.chainID, blockchainConfig.blockchainRid, blockchainConfig.signers,
                 historicBlockchainContext)
 
         return DefaultSubPeerCommConfig.build(
