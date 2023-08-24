@@ -31,6 +31,7 @@ class ManagedNodeConfigurationProvider(
         return object : ManagedNodeConfig(appConfig) {
             override val peerInfoMap = getPeerInfoCollection().associateBy(PeerInfo::peerId)
             override val blockchainReplicaNodes = getBlockchainReplicaCollection()
+            override val locallyConfiguredBlockchainReplicaNodes = getLocallyConfiguredBlockchainReplicaCollection()
             override val locallyConfiguredBlockchainsToReplicate = getLocallyConfiguredBlockchainsToReplicate(appConfig)
             override val mustSyncUntilHeight = getSyncUntilHeight()
         }
@@ -66,6 +67,8 @@ class ManagedNodeConfigurationProvider(
 
         return peerInfoMap.values.toTypedArray()
     }
+
+    fun getLocallyConfiguredBlockchainReplicaCollection() = super.getBlockchainReplicaCollection()
 
     /**
      * This will collect BlockchainReplicas from two sources:

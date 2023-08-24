@@ -122,7 +122,7 @@ open class DefaultMasterCommunicationManager(
     private fun connectChainPeers(peers: List<ByteArray>) {
         logger.info("Connecting chain peers")
 
-        val peersCommConfig = peersCommConfigFactory.create(appConfig, nodeConfig, blockchainRid, peers, null)
+        val peersCommConfig = peersCommConfigFactory.create(appConfig, nodeConfig, chainId, blockchainRid, peers, null)
 
         val packetHandler = object : PeerPacketHandler {
             override fun handle(data: ByteArray, nodeId: NodeRid) {

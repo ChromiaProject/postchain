@@ -13,6 +13,7 @@ open class NodeConfig(val appConfig: AppConfig) : Config {
 
     open val peerInfoMap: Map<NodeRid, PeerInfo> = mapOf()
     open val blockchainReplicaNodes: Map<BlockchainRid, List<NodeRid>> = mapOf()
+    open val locallyConfiguredBlockchainReplicaNodes: Map<BlockchainRid, List<NodeRid>> = mapOf()
     open val blockchainAncestors: Map<BlockchainRid, Map<BlockchainRid, Set<NodeRid>>> = getAncestors()
     open val mustSyncUntilHeight: Map<Long, Long>? = mapOf() // chainID -> height
 

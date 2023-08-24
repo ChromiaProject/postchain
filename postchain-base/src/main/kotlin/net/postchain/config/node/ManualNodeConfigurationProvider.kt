@@ -17,9 +17,11 @@ open class ManualNodeConfigurationProvider(
 ) : NodeConfigurationProvider {
 
     override fun getConfiguration(): NodeConfig {
+        val blockchainReplicaCollection = getBlockchainReplicaCollection()
         return object : NodeConfig(appConfig) {
             override val peerInfoMap = getPeerInfoCollection().associateBy(PeerInfo::peerId)
-            override val blockchainReplicaNodes = getBlockchainReplicaCollection()
+            override val blockchainReplicaNodes = blockchainReplicaCollection
+            override val locallyConfiguredBlockchainReplicaNodes = blockchainReplicaCollection
             override val mustSyncUntilHeight = getSyncUntilHeight()
         }
     }
