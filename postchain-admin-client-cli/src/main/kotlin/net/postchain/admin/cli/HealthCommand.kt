@@ -1,15 +1,18 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.core.CliktError
+import com.github.ajalt.clikt.core.PrintMessage
 import io.grpc.StatusRuntimeException
 import io.grpc.health.v1.HealthCheckRequest
 import io.grpc.health.v1.HealthCheckResponse
+import net.postchain.admin.cli.util.ChannelFactory
+import net.postchain.admin.cli.util.DEFAULT_CHANNEL_FACTORY
 import net.postchain.admin.cli.util.blockingHealthServiceChannelOption
 
-class HealthCommand : CliktCommand(help = "Check server health") {
+class HealthCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_FACTORY)
+    : CliktCommand(help = "Check server health") {
 
-    private val channel by blockingHealthServiceChannelOption()
+    private val channel by blockingHealthServiceChannelOption(channelFactory)
 
     override fun run() {
         try {
@@ -19,10 +22,10 @@ class HealthCommand : CliktCommand(help = "Check server health") {
             if (reply.status == HealthCheckResponse.ServingStatus.SERVING) {
                 echo("Healthy")
             } else {
-                throw CliktError("Unhealthy: ${reply.status}")
+                echo("Unhealthy: ${reply.status}")
             }
         } catch (e: StatusRuntimeException) {
-            throw CliktError("Failed with: ${e.message}")
+            throw PrintMessage("Failed with: ${e.message}", true)
         }
     }
 }
