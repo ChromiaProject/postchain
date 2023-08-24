@@ -19,7 +19,7 @@ class StateNodeStatus(
         val error: String? = null
 )
 
-fun NodeStatus.toStateNodeStatus(pubKey: String, errorQueue: DiagnosticQueue<String>? = null): StateNodeStatus =
+fun NodeStatus.toStateNodeStatus(pubKey: String, errorQueue: DiagnosticQueue? = null): StateNodeStatus =
         StateNodeStatus(
                 pubKey = pubKey,
                 type = DpNodeType.NODE_TYPE_VALIDATOR.name,

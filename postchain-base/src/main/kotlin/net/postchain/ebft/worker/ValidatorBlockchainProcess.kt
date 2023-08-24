@@ -65,7 +65,7 @@ class ValidatorBlockchainProcess(
         )
 
         blockDatabase = BaseBlockDatabase(
-                loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), blockchainConfiguration.blockchainContext.nodeID)
+                loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeDiagnosticContext, blockchainConfiguration.blockchainContext.nodeID)
 
         blockManager = BaseBlockManager(
                 blockDatabase,

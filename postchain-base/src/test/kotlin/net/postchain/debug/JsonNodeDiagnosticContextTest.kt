@@ -76,14 +76,30 @@ class JsonNodeDiagnosticContextTest {
                 DiagnosticProperty.CONTAINER_NAME withLazyValue { "my-container" }
         )
 
-        val map = DiagnosticData(
+        val blockchain = DiagnosticData(
                 DiagnosticProperty.BLOCKCHAIN_RID withValue "AB12",
                 DiagnosticProperty.BLOCKCHAIN_LAST_HEIGHT withLazyValue { 1 }
         )
-
-        val blockchains = LazyDiagnosticValueCollection { mutableSetOf(map) }
-
+        val blockchains = LazyDiagnosticValueCollection { mutableSetOf(blockchain) }
         sut[DiagnosticProperty.BLOCKCHAIN] = blockchains
+
+        val errorQueue = DiagnosticQueue(5)
+        blockchain[DiagnosticProperty.ERROR] = errorQueue
+        errorQueue.add(EagerDiagnosticValue("one"))
+        errorQueue.add(EagerDiagnosticValue("two"))
+
+        val blockStats = DiagnosticQueue(5)
+        blockchain[DiagnosticProperty.BLOCK_STATS] = blockStats
+        blockStats.add(DiagnosticData(
+                DiagnosticProperty.BLOCK_RID withValue "1234",
+                DiagnosticProperty.BLOCK_HEIGHT withValue 17,
+                DiagnosticProperty.BLOCK_BUILDER withValue true,
+        ))
+        blockStats.add(DiagnosticData(
+                DiagnosticProperty.BLOCK_RID withValue "abcd",
+                DiagnosticProperty.BLOCK_HEIGHT withValue 4711,
+                DiagnosticProperty.BLOCK_BUILDER withValue false,
+        ))
 
         assertThat(JsonFactory.makePrettyJson().toJson(sut.format())).isEqualTo("""
             {
@@ -92,7 +108,23 @@ class JsonNodeDiagnosticContextTest {
               "blockchain": [
                 {
                   "brid": "AB12",
-                  "height": 1
+                  "height": 1,
+                  "error": [
+                    "one",
+                    "two"
+                  ],
+                  "block-statistics": [
+                    {
+                      "rid": "1234",
+                      "height": 17,
+                      "builder": true
+                    },
+                    {
+                      "rid": "abcd",
+                      "height": 4711,
+                      "builder": false
+                    }
+                  ]
                 }
               ]
             }

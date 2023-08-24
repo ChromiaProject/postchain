@@ -22,7 +22,14 @@ enum class DiagnosticProperty(val prettyName: String) {
     // Containers
     CONTAINER_NAME("container-name"),
     CONTAINER_ID("container-id"),
+
     ERROR("error"),
+
+    BLOCK_STATS("block-statistics"),
+    BLOCK_RID("rid"),
+    BLOCK_HEIGHT("height"),
+    BLOCK_BUILDER("builder"),
+    BLOCK_SIGNER("signer"),
 
     @Deprecated("POS-90")
     PEERS_TOPOLOGY("peers-topology");
