@@ -7,7 +7,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.containers.infra.ContainerNodeConfig
-import net.postchain.core.BlockRid
 import net.postchain.core.NodeRid
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
@@ -98,9 +97,7 @@ open class DefaultMasterCommunicationManager(
                             afterSubnodeCommitListeners.forEach {
                                 it.onAfterCommitInSubnode(
                                         BlockchainRid(message.blockchainRid),
-                                        BlockRid(message.blockRid),
-                                        blockHeader = message.blockHeader,
-                                        witnessData = message.witnessData
+                                        message.blockHeight
                                 )
                             }
                         }

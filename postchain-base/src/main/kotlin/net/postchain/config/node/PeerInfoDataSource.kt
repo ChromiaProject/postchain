@@ -9,5 +9,4 @@ import net.postchain.core.NodeRid
 interface PeerInfoDataSource {
     fun getPeerInfos(): Array<PeerInfo>
     fun getBlockchainReplicaNodeMap(): Map<BlockchainRid, List<NodeRid>>
-    fun getSyncUntilHeight(): Map<BlockchainRid, Long>
 }

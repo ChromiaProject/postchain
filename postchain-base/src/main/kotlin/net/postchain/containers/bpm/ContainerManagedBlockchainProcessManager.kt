@@ -20,7 +20,6 @@ import net.postchain.containers.bpm.job.DefaultContainerJobManager
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.containers.infra.MasterBlockchainInfra
 import net.postchain.core.AfterCommitHandler
-import net.postchain.core.BlockRid
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainConfigurationFactorySupplier
 import net.postchain.core.BlockchainProcess
@@ -281,9 +280,9 @@ open class ContainerManagedBlockchainProcessManager(
     /**
      * Called when subnode has committed a block
      */
-    override fun onAfterCommitInSubnode(blockchainRid: BlockchainRid, blockRid: BlockRid, blockHeader: ByteArray, witnessData: ByteArray) {
+    override fun onAfterCommitInSubnode(blockchainRid: BlockchainRid, blockHeight: Long) {
         extensions.filterIsInstance(ContainerBlockchainProcessManagerExtension::class.java).forEach {
-            it.afterCommitInSubnode(blockchainRid, blockRid, blockHeader = blockHeader, witnessData = witnessData)
+            it.afterCommitInSubnode(blockchainRid, blockHeight)
         }
     }
 }

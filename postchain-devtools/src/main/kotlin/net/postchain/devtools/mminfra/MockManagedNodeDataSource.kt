@@ -100,10 +100,6 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         return emptyArray()
     }
 
-    override fun getSyncUntilHeight(): Map<BlockchainRid, Long> {
-        return emptyMap()
-    }
-
     override fun getBlockchainReplicaNodeMap(): Map<BlockchainRid, List<NodeRid>> {
         if (!::nodes.isInitialized) return emptyMap()
         val result = mutableMapOf<BlockchainRid, List<NodeRid>>()

@@ -124,25 +124,19 @@ class MsConnectedPeersMessage(
  */
 class MsCommittedBlockMessage(
         val blockchainRid: ByteArray,
-        val blockRid: ByteArray,
-        val blockHeader: ByteArray,
-        val witnessData: ByteArray
+        val blockHeight: Long
 ) : MsMessage {
     override val type = CommittedBlock.ordinal
 
     constructor(payload: Gtv) : this(
             payload[0].asByteArray(),
-            payload[1].asByteArray(),
-            payload[2].asByteArray(),
-            payload[3].asByteArray()
+            payload[1].asInteger()
     )
 
     override fun getPayload(): Gtv {
         return gtv(
                 gtv(blockchainRid),
-                gtv(blockRid),
-                gtv(blockHeader),
-                gtv(witnessData),
+                gtv(blockHeight)
         )
     }
 }

@@ -1,8 +1,6 @@
 package net.postchain.containers.bpm
 
 import net.postchain.PostchainContext
-import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.withReadConnection
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainConfiguration
@@ -60,18 +58,11 @@ class SubNodeBlockchainProcessManager(
             if (blockchainProcess != null) {
                 try {
                     val blockchainRid = blockchainProcess.blockchainEngine.getConfiguration().blockchainRid
-                    val committedBlockMessage = withReadConnection(blockBuilderStorage, chainId) { eContext ->
-                        val db = DatabaseAccess.of(eContext)
-                        val blockRid = db.getBlockRID(eContext, height)!!
-                        val blockHeader = db.getBlockHeader(eContext, blockRid)
-                        val witnessData = db.getWitnessData(eContext, blockRid)
-                        MsCommittedBlockMessage(
-                                blockchainRid = blockchainRid.data,
-                                blockRid = blockRid,
-                                blockHeader = blockHeader,
-                                witnessData = witnessData
-                        )
-                    }
+                    val committedBlockMessage =
+                            MsCommittedBlockMessage(
+                                    blockchainRid = blockchainRid.data,
+                                    blockHeight = height
+                            )
                     (connectionManager as SubConnectionManager).sendMessageToMaster(chainId, committedBlockMessage)
                 } catch (e: Exception) {
                     logger.error(e) { "Error when sending committed block message: $e" }

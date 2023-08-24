@@ -119,25 +119,6 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         return if (res.isNull()) null else res.asByteArray()
     }
 
-    override fun getSyncUntilHeight(): Map<BlockchainRid, Long> {
-        return if (nmApiVersion >= 2) {
-            val blockchains = computeBlockchainInfoList()
-            val heights = query(
-                    "nm_get_blockchain_last_height_map",
-                    buildArgs("blockchain_rids" to gtv(
-                            *(blockchains.map { gtv(it.rid) }.toTypedArray())
-                    ))
-            ).asArray()
-
-            blockchains.mapIndexed { i, bcInfo ->
-                bcInfo.rid to if (i < heights.size) heights[i].asInteger() else -1
-            }.toMap()
-
-        } else {
-            mapOf()
-        }
-    }
-
     override fun getBlockchainReplicaNodeMap(): Map<BlockchainRid, List<NodeRid>> {
         val blockchains = computeBlockchainInfoList()
 

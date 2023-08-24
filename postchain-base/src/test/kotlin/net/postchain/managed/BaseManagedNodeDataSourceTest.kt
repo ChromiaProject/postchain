@@ -20,16 +20,14 @@ import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.managed.query.QueryRunner
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
-import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.spy
 import java.time.Instant
-import org.junit.jupiter.api.Assertions.assertEquals
 
 class BaseManagedNodeDataSourceTest {
 
@@ -75,25 +73,6 @@ class BaseManagedNodeDataSourceTest {
         }
         val sut = BaseManagedNodeDataSource(queryRunner, mock())
         assertEquals(expected, sut.findNextConfigurationHeight(ZERO_RID.data, 0L))
-    }
-
-    @ParameterizedTest
-    @MethodSource("syncUntilHeightTestData")
-    fun testGetSyncUntilHeight(bcInfos: List<BlockchainInfo>, gtvResult: Gtv, expected: Map<BlockchainRid, Long>) {
-        val appConfig: AppConfig = mock {
-            on { pubKeyByteArray } doReturn byteArrayOf(0)
-        }
-        val queryRunner: QueryRunner = mock {
-            on { query(eq("nm_get_blockchain_last_height_map"), any()) } doReturn gtvResult
-        }
-        val sut = spy(BaseManagedNodeDataSource(queryRunner, appConfig))
-        // Traditional kotlin stubbing block { } will call stubbed function, which results in NPE
-        Mockito.doReturn(4).`when`(sut).nmApiVersion
-        Mockito.doReturn(bcInfos).`when`(sut).computeBlockchainInfoList()
-
-        println(expected)
-        println(sut.getSyncUntilHeight())
-        assertEquals(expected, sut.getSyncUntilHeight())
     }
 
     @ParameterizedTest
@@ -195,46 +174,6 @@ class BaseManagedNodeDataSourceTest {
                     arrayOf(GtvNull, null),
                     arrayOf(gtv(10), 10L)
             )
-        }
-
-        @JvmStatic
-        fun syncUntilHeightTestData(): List<Array<Any>> {
-            val emptyParamSet = arrayOf(
-                    listOf<BlockchainInfo>(),
-                    GtvArray(emptyArray()),
-                    emptyMap<BlockchainRid, Long>()
-            )
-
-            val bc1Info = BlockchainInfo(ZERO_RID, true, BlockchainState.RUNNING)
-            val bc2Info = BlockchainInfo(BlockchainRid.buildRepeat(1), false, BlockchainState.RUNNING)
-            val goodParamSet = arrayOf(
-                    listOf(bc1Info, bc2Info),
-                    GtvArray(arrayOf(gtv(123), gtv(456))),
-                    mapOf(
-                            bc1Info.rid to 123L,
-                            bc2Info.rid to 456L
-                    )
-            )
-
-            val truncatedParamSet = arrayOf(
-                    listOf(bc1Info, bc2Info),
-                    GtvArray(arrayOf(gtv(123))),
-                    mapOf(
-                            bc1Info.rid to 123L,
-                            bc2Info.rid to -1L
-                    )
-            )
-
-            val extendedParamSet = arrayOf(
-                    listOf(bc1Info, bc2Info),
-                    GtvArray(arrayOf(gtv(123), gtv(456), gtv(789))),
-                    mapOf(
-                            bc1Info.rid to 123L,
-                            bc2Info.rid to 456L
-                    )
-            )
-
-            return listOf(emptyParamSet, goodParamSet, truncatedParamSet, extendedParamSet)
         }
 
         @JvmStatic
