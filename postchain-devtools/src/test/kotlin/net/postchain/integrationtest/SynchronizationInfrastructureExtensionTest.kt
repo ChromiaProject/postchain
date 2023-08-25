@@ -53,6 +53,7 @@ class SynchronizationInfrastructureExtensionTest : IntegrationTestSetup() {
     }
 }
 
+@Suppress("UNUSED_PARAMETER")
 class DummySynchronizationInfrastructureExtension(postchainContext: PostchainContext) : SynchronizationInfrastructureExtension {
 
     override fun shutdown() {}
@@ -66,6 +67,7 @@ class DummySynchronizationInfrastructureExtension(postchainContext: PostchainCon
     }
 }
 
+@Suppress("UNUSED_PARAMETER")
 class FaultyConnectingSynchronizationInfrastructureExtension(postchainContext: PostchainContext) : SynchronizationInfrastructureExtension {
     override fun shutdown() {}
     override fun connectProcess(process: BlockchainProcess) {
@@ -74,6 +76,7 @@ class FaultyConnectingSynchronizationInfrastructureExtension(postchainContext: P
     override fun disconnectProcess(process: BlockchainProcess) {}
 }
 
+@Suppress("UNUSED_PARAMETER")
 class FaultyDisconnectingSynchronizationInfrastructureExtension(postchainContext: PostchainContext) : SynchronizationInfrastructureExtension {
     override fun shutdown() {}
     override fun connectProcess(process: BlockchainProcess) {}

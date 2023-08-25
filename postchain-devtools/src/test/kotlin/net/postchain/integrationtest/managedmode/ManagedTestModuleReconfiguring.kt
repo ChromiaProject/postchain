@@ -46,6 +46,7 @@ open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit
         private val stage2 = 30 until 45
         private val stage3 = 45 until 60
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryGetPeerInfos(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_get_peer_infos" }
             return GtvArray(arrayOf(
@@ -53,11 +54,13 @@ open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit
             )
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryNMApiVersion(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_api_version" }
             return GtvInteger(4L)
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryComputeBlockchainInfoList(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_compute_blockchain_info_list" }
             return GtvArray(arrayOf(GtvDictionary.build(
@@ -68,6 +71,7 @@ open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit
             )))
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryGetConfiguration(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log {
                 "Query: nm_get_blockchain_configuration: " +
@@ -94,6 +98,7 @@ open class ManagedTestModuleReconfiguring(val stage: Int) : SimpleGTXModule<Unit
             }
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryFindNextConfigurationHeight(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_find_next_configuration_height" }
             return when (argHeight(args)) {

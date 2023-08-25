@@ -9,10 +9,12 @@ import org.apache.logging.log4j.core.Logger
 import org.apache.logging.log4j.core.LoggerContext
 import org.apache.logging.log4j.core.test.appender.ListAppender
 
+@Suppress("UNUSED_PARAMETER")
 internal fun dummyHandlerArray(target: Unit, eContext: EContext, args: Gtv): Gtv {
     return GtvArray(emptyArray())
 }
 
+@Suppress("UNUSED_PARAMETER")
 internal fun dummyHandlerArray(target: ManagedTestModuleTwoPeersConnect.Companion.Nodes, eContext: EContext, args: Gtv): Gtv {
     return GtvArray(emptyArray())
 }
