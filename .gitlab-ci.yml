@@ -30,7 +30,7 @@ include:
     when: always
     paths:
       - "**/*.log"
-      - $JACOCO_REPORT
+      - $JACOCO_REPORT_DIR/jacoco.xml
     reports:
       junit:
         - "*/target/surefire-reports/TEST-*.xml"
@@ -98,6 +98,9 @@ build:
       $MAVEN_CLI_OPTS
       --activate-profiles ci,docker
       verify
+  after_script:
+    - cat $JACOCO_REPORT_DIR/index.html | grep -o '<tfoot>.*</tfoot>' # print test coverage in ci log
+  coverage: '/Total.*>(\d+)\W%.*%/' # match aggregated JaCoCo coverage printed above from ci log
 
 report-test-coverage:
   stage: build
@@ -106,7 +109,7 @@ report-test-coverage:
     - mkdir -p target/site 
     - jacoco_paths=`find * -path "**/src/main/kotlin" -type d | sed -e 's@^@'"$CI_PROJECT_DIR"'/@'`
     # convert report from jacoco to cobertura, using relative project path
-    - python /opt/cover2cover.py $JACOCO_REPORT $jacoco_paths > target/site/cobertura.xml
+    - python /opt/cover2cover.py $JACOCO_REPORT_DIR/jacoco.xml $jacoco_paths > target/site/cobertura.xml
   needs: ["build"]
   dependencies:
     - build
@@ -163,7 +166,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
   DOCKER_DRIVER: overlay2
   DOCKER_CLI_EXPERIMENTAL: enabled
-  JACOCO_REPORT: postchain-coverage-report-aggregate/target/site/jacoco-aggregate/jacoco.xml
+  JACOCO_REPORT_DIR: postchain-coverage-report-aggregate/target/site/jacoco-aggregate
 
 # Cache downloaded dependencies and plugins between builds.
 # To keep cache across branches add 'key: "$CI_JOB_NAME"'
