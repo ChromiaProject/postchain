@@ -34,6 +34,7 @@ import net.postchain.api.rest.nodeStatusesBody
 import net.postchain.api.rest.nullBody
 import net.postchain.api.rest.prettyJsonBody
 import net.postchain.api.rest.proofBody
+import net.postchain.api.rest.queryQuery
 import net.postchain.api.rest.statusBody
 import net.postchain.api.rest.stringsBody
 import net.postchain.api.rest.textBody
@@ -236,12 +237,11 @@ class RestApi(
             versionBody of Version(REST_API_VERSION)
     )
 
-    @Suppress("UNUSED_PARAMETER")
     private fun getDebug(request: Request): Response {
         val debugInfo = models.values
                 .filterIsInstance(Model::class.java)
                 .firstOrNull()
-                ?.debugQuery(null)
+                ?.debugQuery(queryQuery(request))
                 ?: throw NotFoundError("There are no running chains")
         return Response(OK).with(prettyJsonBody of debugInfo)
     }

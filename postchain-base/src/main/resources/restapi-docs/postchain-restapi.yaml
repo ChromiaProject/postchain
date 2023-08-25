@@ -1272,7 +1272,6 @@ components:
               - peers
               - node-status
               - node-peer-statuses
-              - block-statistics
             properties:
               brid:
                 $ref: "#/components/schemas/hash"
@@ -1297,25 +1296,6 @@ components:
                 type: array
                 items:
                   $ref: "#/components/schemas/nodeStatus"
-              block-statistics:
-                type: array
-                items:
-                  type: object
-                  required:
-                    - rid
-                    - height
-                    - builder
-                    - signer
-                  properties:
-                    rid:
-                      type: string
-                    height:
-                      type: integer
-                      format: int64
-                    builder:
-                      type: boolean
-                    signer:
-                      type: boolean
       example:
         version: "3.12.0"
         pub-key: "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
@@ -1347,11 +1327,6 @@ components:
                 round: 0
                 revolting: false
                 error: "null"
-            block-statistics:
-              - rid: "3A64FFC05560BE2608A50826C07EA7E3B84674C16D53AA129FB5217096D90ABF"
-                height: 322
-                builder: true
-                signer: true
     noDebug:
       type: object
       required:
