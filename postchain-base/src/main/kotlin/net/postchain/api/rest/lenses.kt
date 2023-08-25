@@ -64,6 +64,7 @@ val heightQuery = Query.long().map {
         throw LensFailure(listOf(
                 Invalid(Meta(false, "query", ParamMeta.IntegerParam, "height", "Height must be -1 (current height) or a non-negative integer"))))
 }.defaulted("height", -1)
+val queryQuery = Query.string().optional("query")
 
 val gtvGson = make_gtv_gson()
 val prettyGson = JsonFactory.makePrettyJson()
