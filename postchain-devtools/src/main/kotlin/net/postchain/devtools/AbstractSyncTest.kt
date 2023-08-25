@@ -9,6 +9,7 @@ import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
+import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.AppContext
 import net.postchain.core.Infrastructure
 import net.postchain.core.NodeRid

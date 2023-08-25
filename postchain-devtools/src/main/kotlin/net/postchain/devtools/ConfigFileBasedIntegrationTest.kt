@@ -20,8 +20,6 @@ import org.apache.commons.configuration2.builder.FileBasedConfigurationBuilder
 import org.apache.commons.configuration2.builder.fluent.Parameters
 import org.apache.commons.configuration2.convert.DefaultListDelimiterHandler
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertArrayEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInfo
 import java.io.File
@@ -99,22 +97,6 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     protected fun enqueueTransactions(node: PostchainTestNode, vararg txs: Transaction) {
         val txQueue = node.getBlockchainInstance().blockchainEngine.getTransactionQueue()
         txs.forEach { txQueue.enqueue(it) }
-    }
-
-    protected fun verifyBlockchainTransactions(node: PostchainTestNode) {
-        val expectAtLeastHeight = expectedSuccessRids.keys.reduce { acc, l -> maxOf(l, acc) }
-        val lastHeight = getLastHeight(node)
-        assertTrue(lastHeight >= expectAtLeastHeight)
-        for (height in 0..lastHeight) {
-            val txRidsAtHeight = getTxRidsAtHeight(node, height)
-
-            val expectedRidsAtHeight = expectedSuccessRids[height]
-            if (expectedRidsAtHeight == null) {
-                assertArrayEquals(arrayOf(), txRidsAtHeight)
-            } else {
-                assertArrayEquals(expectedRidsAtHeight.toTypedArray(), txRidsAtHeight)
-            }
-        }
     }
 
     /**

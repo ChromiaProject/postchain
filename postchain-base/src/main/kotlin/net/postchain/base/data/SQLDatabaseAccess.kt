@@ -295,16 +295,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         if (txInfos.isEmpty()) return null
         val txInfo = txInfos.first()
 
-        val blockRID = txInfo["block_rid"] as ByteArray
-        val blockHeight = txInfo["block_height"] as Long
-        val blockHeader = txInfo["block_header_data"] as ByteArray
-        val blockWitness = txInfo["block_witness"] as ByteArray
-        val blockTimestamp = txInfo["timestamp"] as Long
-        val resultTxRID = txInfo["tx_rid"] as ByteArray
-        val txHash = txInfo["tx_hash"] as ByteArray
-        val txData = txInfo["tx_data"] as ByteArray
-        return TransactionInfoExt(
-                blockRID, blockHeight, blockHeader, blockWitness, blockTimestamp, resultTxRID, txHash, txData)
+        return buildTransactionInfoExt(txInfo)
     }
 
     override fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt> {
@@ -316,18 +307,20 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                     ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?;
         """.trimIndent()
         val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, beforeTime, limit)
-        return transactions.map { txInfo ->
-            val blockRID = txInfo["block_rid"] as ByteArray
-            val blockHeight = txInfo["block_height"] as Long
-            val blockHeader = txInfo["block_header_data"] as ByteArray
-            val blockWitness = txInfo["block_witness"] as ByteArray
-            val blockTimestamp = txInfo["timestamp"] as Long
-            val txRID = txInfo["tx_rid"] as ByteArray
-            val txHash = txInfo["tx_hash"] as ByteArray
-            val txData = txInfo["tx_data"] as ByteArray
-            TransactionInfoExt(
-                    blockRID, blockHeight, blockHeader, blockWitness, blockTimestamp, txRID, txHash, txData)
-        }
+        return transactions.map(::buildTransactionInfoExt)
+    }
+
+    private fun buildTransactionInfoExt(txInfo: MutableMap<String, Any>): TransactionInfoExt {
+        val blockRID = txInfo["block_rid"] as ByteArray
+        val blockHeight = txInfo["block_height"] as Long
+        val blockHeader = txInfo["block_header_data"] as ByteArray
+        val blockWitness = txInfo["block_witness"] as ByteArray
+        val blockTimestamp = txInfo["timestamp"] as Long
+        val resultTxRID = txInfo["tx_rid"] as ByteArray
+        val txHash = txInfo["tx_hash"] as ByteArray
+        val txData = txInfo["tx_data"] as ByteArray
+        return TransactionInfoExt(
+                blockRID, blockHeight, blockHeader, blockWitness, blockTimestamp, resultTxRID, txHash, txData)
     }
 
     override fun getLastTransactionNumber(ctx: EContext): Long {

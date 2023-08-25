@@ -7,11 +7,19 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import java.nio.file.Path
 import java.nio.file.Paths
 
-class LocalFileSystem(private val containerConfig: ContainerNodeConfig) : FileSystem {
+open class LocalFileSystem(protected val containerConfig: ContainerNodeConfig) : FileSystem {
 
     companion object : KLogging()
 
     override fun createContainerRoot(containerName: ContainerName, resourceLimits: ContainerResourceLimits): Path? {
+        val root = createRoot(containerName)
+
+        if (!createPgdata(containerName)) return null
+
+        return root
+    }
+
+    protected fun createRoot(containerName: ContainerName): Path? {
         val root = rootOf(containerName)
         if (root.toFile().exists()) {
             logger.info("Container dir exists: $root")
@@ -28,17 +36,20 @@ class LocalFileSystem(private val containerConfig: ContainerNodeConfig) : FileSy
                 }
             }
         }
+        return root
+    }
 
+
+    protected fun createPgdata(containerName: ContainerName): Boolean {
         val hostPgdata = hostPgdataOf(containerName)
         hostPgdata.toFile().mkdirs()
         containerConfig.subnodeUser?.let { subnodeUser ->
             runCommand(arrayOf("chown", subnodeUser, hostPgdata.toString()))?.let {
                 logger.warn("Unable change owner of $hostPgdata to $subnodeUser: $it")
-                return null
+                return false
             }
         }
-
-        return root
+        return true
     }
 
     override fun applyLimits(containerName: ContainerName, resourceLimits: ContainerResourceLimits) {}

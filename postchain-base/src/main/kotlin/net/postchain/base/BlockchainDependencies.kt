@@ -147,7 +147,7 @@ class BlockchainDependencies(
      */
     private fun getHeight(dep: BlockchainDependency): Long {
         if (dep.heightDependency != null) {
-            logger.debug("Have height for dependency: $dep")
+            logger.debug { "Have height for dependency: $dep" }
             return dep.heightDependency.height ?:
                throw ProgrammerMistake("If last block RID exists for dependency: $dep we must know height at this stage")
         } else {

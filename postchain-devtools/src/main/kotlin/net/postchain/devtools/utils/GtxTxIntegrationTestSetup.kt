@@ -175,7 +175,7 @@ open class GtxTxIntegrationTestSetup : IntegrationTestSetup() {
     }
 
     private fun enqueueTx(chain: Long, currentTxId: Int, txCache: TxCache, height: Int, blockIndex: Int, node: PostchainTestNode) {
-        logger.debug("++++ block-height: $height, block-index: $blockIndex, node: $node, chain: $chain")
+        logger.debug { "++++ block-height: $height, block-index: $blockIndex, node: $node, chain: $chain" }
         val tx = TestOneOpGtxTransaction(factoryMap[chain]!!, currentTxId).getGTXTransaction()
         txCache.addTx(tx, chain.toInt(), height, blockIndex)
         node.transactionQueue(chain).enqueue(tx)

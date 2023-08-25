@@ -31,7 +31,6 @@ import net.postchain.network.peer.DefaultPeerCommunicationManager
 import net.postchain.network.peer.DefaultPeersCommConfigFactory
 import net.postchain.network.peer.PeersCommConfigFactory
 
-@Suppress("JoinDeclarationAndAssignment")
 open class EBFTSynchronizationInfrastructure(
         protected val postchainContext: PostchainContext,
         val peersCommConfigFactory: PeersCommConfigFactory = DefaultPeersCommConfigFactory()
@@ -147,7 +146,7 @@ open class EBFTSynchronizationInfrastructure(
     /*
     Definition: cross-fetching is the process of downloading blocks from another blockchain
     over the peer-to-peer network. This is used when forking a chain when we don't have
-    the old chain locally and we haven't been able to sync using the new chain rid.
+    the old chain locally, and we haven't been able to sync using the new chain rid.
 
     Problem: in order to cross-fetch blocks, we'd like to get the old blockchain's
     configuration (to find nodes to connect to). But that's difficult. We don't always
