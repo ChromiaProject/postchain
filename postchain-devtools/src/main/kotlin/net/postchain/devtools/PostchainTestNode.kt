@@ -114,7 +114,7 @@ class PostchainTestNode(
                     CHAIN_IID_TAG to chainId.toString(),
                     BLOCKCHAIN_RID_TAG to brid.toHex()
             ) {
-                logger.debug("Set must_sync_until for chain: $brid, height: $height")
+                logger.debug { "Set must_sync_until for chain: $brid, height: $height" }
                 DatabaseAccess.of(eContext).setMustSyncUntil(eContext, brid, height)
             }
         }

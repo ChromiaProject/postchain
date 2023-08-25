@@ -1,3 +1,5 @@
+@file:Suppress("DuplicatedCode")
+
 package net.postchain.admin.cli.util
 
 // This is duplicated from postchain-common/src/main/kotlin/net/postchain/common/Utils.kt to avoid dependency on postchain-common

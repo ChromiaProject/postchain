@@ -87,7 +87,7 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
                 } else {
                     val hashCarrier: Hash = if (content is GtvPrimitive) {
                             // Not GtvNull -> Make it a hash
-                            if (logger.isTraceEnabled) { logger.debug("Hash the leaf with content: $content") }
+                            if (logger.isTraceEnabled) { logger.trace("Hash the leaf with content: $content") }
                             val hashCarrier = calculator.calculateLeafHash(content)
                             hashCarrier
                         } else {

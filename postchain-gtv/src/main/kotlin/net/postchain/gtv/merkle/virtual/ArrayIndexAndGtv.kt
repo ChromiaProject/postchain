@@ -9,7 +9,6 @@ import net.postchain.gtv.merkle.proof.MerkleProofElement
 /**
  * @property index is the
  * @property value is the [Gtv] value we want to keep in the
- * @property depth is how many steps from the
  */
 data class ArrayIndexAndGtv(var index: Int, val value: Gtv)
 

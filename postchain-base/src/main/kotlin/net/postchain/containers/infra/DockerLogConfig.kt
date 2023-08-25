@@ -1,6 +1,5 @@
 package net.postchain.containers.infra
 
-import mu.KLogging
 import net.postchain.common.config.Config
 import net.postchain.common.exception.UserMistake
 
@@ -9,7 +8,7 @@ data class DockerLogConfig(val driver: String = "", val opts: Map<String, String
         fun fromStrings(driver: String, opts: String): DockerLogConfig? {
             if (driver.isBlank()) return null
             val optsMap = if (opts.isNotBlank()) {
-                opts.split(";").mapNotNull { opt ->
+                opts.split(";").associate { opt ->
                     val keyVal = opt.trim().split("=")
                     if (keyVal.size == 2) {
                         val key = keyVal[0].trim()
@@ -22,7 +21,7 @@ data class DockerLogConfig(val driver: String = "", val opts: Map<String, String
                     } else {
                         throw UserMistake("Invalid docker log options. Given driver=$driver opts=$opts")
                     }
-                }.toMap()
+                }
             } else {
                 mapOf()
             }

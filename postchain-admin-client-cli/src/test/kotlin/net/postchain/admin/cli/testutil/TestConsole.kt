@@ -7,7 +7,7 @@ import org.junit.jupiter.api.extension.AfterEachCallback
 import org.junit.jupiter.api.extension.ExtensionContext
 import java.io.IOException
 
-open class TestConsole() : CliktConsole, AfterEachCallback {
+open class TestConsole : CliktConsole, AfterEachCallback {
     private val out = mutableListOf<Pair<String, Boolean>>()
 
     override fun promptForLine(prompt: String, hideInput: Boolean) = try {
