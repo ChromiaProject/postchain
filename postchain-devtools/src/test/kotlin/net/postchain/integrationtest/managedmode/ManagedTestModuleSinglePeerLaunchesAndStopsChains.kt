@@ -51,6 +51,7 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
 
         var chain101RecoveringCounter = 0
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryGetPeerInfos(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_get_peer_infos" }
             return GtvArray(arrayOf(
@@ -58,11 +59,13 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
             )
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryNMApiVersion(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_api_version" }
             return GtvInteger(4L)
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryComputeBlockchainInfoList(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_compute_blockchain_info_list" }
 
@@ -84,6 +87,7 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
             )
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryGetConfiguration(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log {
                 "Query: nm_get_blockchain_configuration: " +
@@ -131,6 +135,7 @@ open class ManagedTestModuleSinglePeerLaunchesAndStopsChains(val stage: Int) : S
             return GtvFactory.gtv(encodedGtvConfig)
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryFindNextConfigurationHeight(unit: Unit, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_find_next_configuration_height" }
 

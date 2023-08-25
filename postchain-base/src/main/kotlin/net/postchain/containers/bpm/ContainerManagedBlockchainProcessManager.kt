@@ -116,6 +116,7 @@ open class ContainerManagedBlockchainProcessManager(
             }
 
     override fun buildAfterCommitHandler(chainId: Long, blockchainConfig: BlockchainConfiguration): AfterCommitHandler {
+        @Suppress("UNUSED_PARAMETER")
         fun chain0AfterCommitHandler(blockTrace: BlockTrace?, blockHeight: Long, blockTimestamp: Long): Boolean {
             return try {
                 rTrace("Before", blockTrace)

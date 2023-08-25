@@ -135,7 +135,7 @@ object ImporterExporter : KLogging() {
      */
     fun importBlockchain(nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem, storage: Storage, chainId: Long,
                          configurationsFile: Path, blocksFile: Path, incremental: Boolean = false, logNBlocks: Int = 100): ImportResult {
-        val (blockchainRid, heights) = withReadWriteConnection(storage, chainId) { ctx ->
+        val (blockchainRid, _) = withReadWriteConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
 
             val existingChain = db.getBlockchainRid(ctx)

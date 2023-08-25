@@ -4,7 +4,6 @@ import net.postchain.containers.bpm.ContainerName
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.infra.ContainerNodeConfig
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -38,9 +37,9 @@ class Ext4FileSystemTest {
         // execute
         val result = sut.getCurrentLimitsInfo(containerName, resourceLimits)
         // verify
-        assertNotNull(result)
-        assertEquals(51L, result!!.spaceUsedMB)
-        assertEquals(16384L, result!!.spaceHardLimitMB)
+        checkNotNull(result)
+        assertEquals(51L, result.spaceUsedMB)
+        assertEquals(16384L, result.spaceHardLimitMB)
     }
 
     @Test

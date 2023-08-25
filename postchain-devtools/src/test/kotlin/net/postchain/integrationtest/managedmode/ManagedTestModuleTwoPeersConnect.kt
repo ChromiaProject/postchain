@@ -52,8 +52,10 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
         private val stage0 = -1 until 15
         private val stage1 = 15 until 30
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryApiVersion(node: Nodes, eContext: EContext, args: Gtv) = GtvFactory.gtv(1)
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryGetPeerInfos(node: Nodes, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_get_peer_infos" }
 
@@ -82,11 +84,13 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
             )
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryComputeBlockchainList(node: Nodes, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_compute_blockchain_list" }
             return GtvArray(arrayOf(gtvBlockchainRid(0L)))
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryGetConfiguration(node: Nodes, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_get_blockchain_configuration" }
 
@@ -103,6 +107,7 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
             return GtvFactory.gtv(encodedGtvConfig)
         }
 
+        @Suppress("UNUSED_PARAMETER")
         fun queryFindNextConfigurationHeight(node: Nodes, eContext: EContext, args: Gtv): Gtv {
             logger.log { "Query: nm_find_next_configuration_height" }
 

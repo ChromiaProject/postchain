@@ -12,6 +12,7 @@ import net.postchain.core.block.BlockQueries
 import java.time.Clock
 import java.util.concurrent.LinkedBlockingQueue
 
+@Suppress("UNUSED_PARAMETER")
 class ThreeTxStrategy(
         val configData: BaseBlockBuildingStrategyConfigurationData,
         blockQueries: BlockQueries,

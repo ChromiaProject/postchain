@@ -124,50 +124,9 @@ object SystemSetupFactory : KLogging() {
     }
 
     /**
-     * Builds a [SystemSetup] with "nrOfSigners" signers and "nrOfReplicas" replicas that runs managed mode.
-     *
-     * TODO: Olle: Use this from [AbstractSyncTest]
-     *
-     * @param nrOfSigners is how many signers we need
-     * @param nrOfReplicas is how many replicas we need
-     */
-    fun buildManagedSystemSetup(
-        nrOfSigners: Int,
-        nrOfReplicas: Int
-    ): SystemSetup {
-        val chainId = 0 // Currently we work with chain zero only
-
-        // 1. Get BCSetup for chain 0
-        val blockchainPreSetup =
-            BlockchainPreSetup.simpleBuild(chainId, (0 until nrOfSigners).map { NodeSeqNumber(it) })
-        val blockchainSetup = BlockchainSetup.buildFromGtv(chainId, blockchainPreSetup.toGtvConfig(mapOf()))
-
-        // 2. Get NodeSetup
-        val nodeSetups = mapOf<NodeSeqNumber, NodeSetup>()
-        //var i = 0
-        //= peerInfos.associate {  peerInfo ->
-        //    NodeSeqNumber(i) to createNodeSetup(i++, peerInfo)
-        // }
-
-        // 3. Combine (1) and (2) to get SystemSetup
-        val systemSetup = SystemSetup(
-            nodeSetups,
-            mapOf(chainId to blockchainSetup),
-            true,
-            "managed",
-            "unused", // Doesn't matter, not used as of now
-            "base/ebft",
-            true
-        )
-
-        return systemSetup
-
-    }
-
-    /**
      * @return all nodes we need to have in the system from the signer lists of the [BlockchainSetup]
      */
-    fun calculateAllNodesNeeded(blockchainConfList: List<BlockchainSetup>): List<NodeSeqNumber> {
+    private fun calculateAllNodesNeeded(blockchainConfList: List<BlockchainSetup>): List<NodeSeqNumber> {
         val retSet = mutableSetOf<NodeSeqNumber>()
 
         for (bc in blockchainConfList) {
@@ -183,7 +142,7 @@ object SystemSetupFactory : KLogging() {
      * @param nodeNr is the node we are talking about
      * @param blockchainMap is the dictionary of all chains in the system
      */
-    fun calculateWhatBlockchainsTheNodeShouldSign(
+    private fun calculateWhatBlockchainsTheNodeShouldSign(
             nodeNr: NodeSeqNumber,
             blockchainMap: Map<Int, BlockchainSetup>
     ): Set<Int> {
@@ -209,7 +168,7 @@ object SystemSetupFactory : KLogging() {
      * @param blockchainMap is the dictionary for all chains in our system
      * @return a set of all chain IDs we need to read (this is a SET since we don't want duplicates)
      */
-    fun calculateWhatBlockchainsTheNodeShouldRead(
+    private fun calculateWhatBlockchainsTheNodeShouldRead(
             startingBcs: Set<Int>,
             blockchainMap: Map<Int, BlockchainSetup>
     ): Set<Int> {
