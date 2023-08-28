@@ -30,7 +30,7 @@ include:
     when: always
     paths:
       - "**/*.log"
-      - $JACOCO_REPORT_DIR/jacoco.xml
+      - $JACOCO_REPORT_DIR/*
     reports:
       junit:
         - "*/target/surefire-reports/TEST-*.xml"
@@ -100,7 +100,7 @@ build:
       verify
   after_script:
     - cat $JACOCO_REPORT_DIR/index.html | grep -o '<tfoot>.*</tfoot>' # print test coverage in ci log
-  coverage: '/Total.*>(\d+)\W%.*%/' # match aggregated JaCoCo coverage printed above from ci log
+  coverage: '/Total.*?([0-9]{1,3})%/' # match aggregated JaCoCo coverage printed above from ci log
 
 report-test-coverage:
   stage: build
