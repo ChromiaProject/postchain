@@ -60,7 +60,11 @@ class ForkTestNightly : ManagedModeTest() {
         // c1 and c2 are in sync at height 10.
 
         addBlockchainConfiguration(c2, 12, setOf(0), setOf(1), null)
-        buildBlock(c1, 12)
+        buildBlockNoWait(getChainNodes(c1), c1, 12)
+        // Do a blocking wait on c2 since it will restart
+        awaitHeight(c2, 11)
+        // Verify that we have height 12 on c1
+        awaitHeight(c1, 12)
         // Unfortunately, we must wait a full cycle of "synclocally (quick), fetch (2s), cross-fetch (2s)"
         // to be sure we don't sync from c1 after height 11. This sucks.
         sleep(5000)
