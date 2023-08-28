@@ -96,7 +96,7 @@ build:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,docker
+      --activate-profiles ci,docker,coverage
       verify
   after_script:
     - cat $JACOCO_REPORT_DIR/index.html | grep -o '<tfoot>.*</tfoot>' # print test coverage in ci log
