@@ -350,6 +350,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
                     allAtHeight = false
                 }
             }
+            if (!allAtHeight) Thread.sleep(10)
         }
     }
 
