@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
@@ -31,13 +32,16 @@ class CommandAddBlockchain : CliktCommand(name = "add", help = "Add blockchain")
             val gtv = try {
                 GtvFileReader.readFile(blockchainConfigFile)
             } catch (e: Exception) {
-                println("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}")
-                return@withDbVersionMismatch
+                throw PrintMessage("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}", true)
             }
 
             val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
-            CliExecution.addBlockchain(appConfig, chainId, gtv, force, validate = validation)
-            println("Configuration has been added successfully")
+            try {
+                CliExecution.addBlockchain(appConfig, chainId, gtv, force, validate = validation)
+                echo("Blockchain has been added successfully")
+            } catch (e: Exception) {
+                throw PrintMessage("Can't add blockchain: ${e.message}", true)
+            }
         }
     }
 }

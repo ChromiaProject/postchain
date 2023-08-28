@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.SafeExecutor.runOnChain
 import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
@@ -26,11 +27,11 @@ class CommandCheckBlockchain : CliktCommand(name = "check", help = "Checks Block
             runOnChain(appConfig, chainId) {
                 try {
                     CliExecution.checkBlockchain(appConfig, chainId, blockchainRID.toHex())
-                    println("OK: blockchain with specified chainId and blockchainRid exists")
+                    echo("OK: blockchain with specified chainId and blockchainRid exists")
                 } catch (e: UserMistake) {
-                    println(e.message)
+                    throw PrintMessage(e.message ?: "User error")
                 } catch (e: Exception) {
-                    println("Can't check blockchain: ${e.message}")
+                    throw PrintMessage("Can't check blockchain: ${e.message}", true)
                 }
             }
         }

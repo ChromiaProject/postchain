@@ -26,11 +26,11 @@ class CommandPeerInfoRemove : CliktCommand(name = "remove", help = "Remove peer 
             }
 
             if (removed.isEmpty()) {
-                println("No peerinfo has been removed")
+                echo("No peer info has been removed")
             } else {
                 removed.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
                         .forEach {
-                            println("Peerinfo removed (${removed.size}):\n$it")
+                            echo("Peer info removed (${removed.size}):\n$it")
                         }
             }
         }

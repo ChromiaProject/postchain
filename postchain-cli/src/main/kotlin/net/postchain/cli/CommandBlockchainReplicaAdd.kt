@@ -29,8 +29,8 @@ class CommandBlockchainReplicaAdd : CliktCommand(name = "add", help = "Add info 
             }
 
             when {
-                added -> println("$commandName finished successfully")
-                else -> println("Blockchain replica already exists")
+                added -> echo("Blockchain replica added successfully")
+                else -> echo("Blockchain replica already exists")
             }
         }
     }

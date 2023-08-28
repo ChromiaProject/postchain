@@ -19,20 +19,20 @@ class CommandPeerInfoList : CliktCommand(name = "list", help = "List peer inform
 
     override fun run() {
         withDbVersionMismatch {
-            val peerInfos = peerinfoList(nodeConfigFile)
+            val peerInfos = peerInfoList(nodeConfigFile)
 
             if (peerInfos.isEmpty()) {
-                println("No peerinfo found")
+                echo("No peer info found")
             } else {
                 peerInfos.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
                         .forEach {
-                            println("Peerinfos (${peerInfos.size}):\n$it")
+                            echo("Peer infos (${peerInfos.size}):\n$it")
                         }
             }
         }
     }
 
-    private fun peerinfoList(nodeConfigFile: File?): Array<PeerInfo> {
+    private fun peerInfoList(nodeConfigFile: File?): Array<PeerInfo> {
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         return runStorageCommand(appConfig) { ctx: AppContext ->
             PeerApi.listPeers(ctx)

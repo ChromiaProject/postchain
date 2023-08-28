@@ -27,8 +27,8 @@ class CommandMustSyncUntil : CliktCommand(name = "must-sync-until", help = "Set 
             val added = CliExecution.setMustSyncUntil(appConfig, blockchainRid,
                     height)
             when {
-                added -> println("Command $commandName finished successfully")
-                else -> println("Command $commandName failed")
+                added -> echo("Successfully set must sync until $height")
+                else -> echo("Command $commandName failed")
             }
         }
     }

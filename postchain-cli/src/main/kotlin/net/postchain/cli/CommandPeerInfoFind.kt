@@ -14,7 +14,7 @@ import net.postchain.cli.util.portOption
 import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 
-class CommandPeerInfoFind : CliktCommand(name = "find", help = "Find peerinfo") {
+class CommandPeerInfoFind : CliktCommand(name = "find", help = "Find peer info") {
 
     private val nodeConfigFile by nodeConfigOption()
 
@@ -32,11 +32,11 @@ class CommandPeerInfoFind : CliktCommand(name = "find", help = "Find peerinfo") 
             }
 
             if (peerInfos.isEmpty()) {
-                println("No peerinfo found")
+                echo("No peer info found")
             } else {
                 peerInfos.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
                         .forEach {
-                            println("Peerinfos (${peerInfos.size}):\n$it")
+                            echo("Peer infos (${peerInfos.size}):\n$it")
                         }
             }
         }

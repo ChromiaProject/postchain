@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
@@ -33,14 +34,14 @@ class CommandRemoveConfiguration : CliktCommand(name = "remove-configuration", h
                     if (config != null) {
                         try {
                             BlockchainApi.removeConfiguration(ctx, height)
-                            println("Removed configuration at height $height")
+                            echo("Removed configuration at height $height")
                         } catch (e: UserMistake) {
-                            println(e.message)
+                            throw PrintMessage(e.message ?: "User error")
                         } catch (e: Exception) {
-                            println("Can't remove configuration at height $height due to: ${e.message}")
+                            throw PrintMessage("Can't remove configuration at height $height due to: ${e.message}", true)
                         }
                     } else {
-                        println("Can't find configuration at height: $height")
+                        echo("Can't find configuration at height: $height")
                     }
                 }
             }

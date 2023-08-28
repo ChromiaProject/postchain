@@ -22,7 +22,7 @@ class CommandListConfigurations : CliktCommand(name = "list-configurations", hel
             runOnChain(appConfig, chainId) {
                 echo("Height")
                 echo("------")
-                CliExecution.listConfigurations(appConfig, chainId).forEach(::println)
+                CliExecution.listConfigurations(appConfig, chainId).forEach(::echo)
             }
         }
     }
