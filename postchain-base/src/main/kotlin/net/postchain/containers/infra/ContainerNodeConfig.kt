@@ -71,7 +71,8 @@ data class ContainerNodeConfig(
         val prometheusPort: Int,
         val jmxBasePort: Int,
         val minSpaceQuotaBufferMB: Int,
-        val labels: Map<String, String>
+        val labels: Map<String, String>,
+        val log4jConfigurationFile: String?
 ) : Config {
     val subnodePorts = listOf(subnodeRestApiPort, subnodeAdminRpcPort)
 
@@ -105,6 +106,7 @@ data class ContainerNodeConfig(
         const val KEY_JMX_BASE_PORT = "jmx-base-port"
         const val KEY_MIN_SPACE_QUOTA_BUFFER_MB = "min-space-quota-buffer-mb"
         const val KEY_LABEL = "label"
+        const val KEY_LOG4J_CONFIGURATION_FILE = "log4j-configuration-file"
 
         fun fullKey(subKey: String) = "$KEY_CONTAINER_PREFIX.${subKey}"
 
@@ -166,7 +168,8 @@ data class ContainerNodeConfig(
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_PROMETHEUS_PORT", KEY_PROMETHEUS_PORT, -1),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_JMX_BASE_PORT", KEY_JMX_BASE_PORT, -1),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_MIN_SPACE_QUOTA_BUFFER_MB", KEY_MIN_SPACE_QUOTA_BUFFER_MB, 100),
-                        labels
+                        labels,
+                        getEnvOrStringProperty("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", KEY_LOG4J_CONFIGURATION_FILE),
                 )
             }
         }
