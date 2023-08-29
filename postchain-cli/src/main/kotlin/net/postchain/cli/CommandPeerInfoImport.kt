@@ -19,20 +19,20 @@ class CommandPeerInfoImport : CliktCommand(name = "import", help = "Import peer 
 
     override fun run() {
         withDbVersionMismatch {
-            val imported = peerinfoImport(nodeConfigFile)
+            val imported = peerInfoImport(nodeConfigFile)
 
             if (imported.isEmpty()) {
-                println("No peerinfo have been imported")
+                echo("No peer info have been imported")
             } else {
                 imported.mapIndexed(Templater.PeerInfoTemplater::renderPeerInfo)
                         .forEach {
-                            println("Peerinfo added (${imported.size}):\n$it")
+                            echo("Peer info added (${imported.size}):\n$it")
                         }
             }
         }
     }
 
-    private fun peerinfoImport(nodeConfigFile: File?): Array<PeerInfo> {
+    private fun peerInfoImport(nodeConfigFile: File?): Array<PeerInfo> {
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
         val nodeConfig = PropertiesNodeConfigurationProvider(appConfig).getConfiguration()
 

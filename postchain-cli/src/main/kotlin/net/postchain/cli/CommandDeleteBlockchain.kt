@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
@@ -25,11 +26,11 @@ class CommandDeleteBlockchain : CliktCommand(name = "delete", help = "Delete blo
                 runStorageCommand(appConfig, chainId) {
                     BlockchainApi.deleteBlockchain(it)
                 }
-                println("OK: Blockchain was deleted")
+                echo("OK: Blockchain was deleted")
             } catch (e: UserMistake) {
-                println(e.message)
+                throw PrintMessage(e.message ?: "User error")
             } catch (e: Exception) {
-                println("Can't delete blockchain: ${e.message}")
+                throw PrintMessage("Can't delete blockchain: ${e.message}", true)
             }
         }
     }

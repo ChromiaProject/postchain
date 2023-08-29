@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
 import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.groups.single
@@ -74,18 +75,15 @@ class CommandAddConfiguration : CliktCommand(
             val gtv = try {
                 GtvFileReader.readFile(blockchainConfigFile)
             } catch (e: Exception) {
-                println("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}")
-                return@withDbVersionMismatch
+                throw PrintMessage("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}", true)
             }
 
             runOnChain(appConfig, chainId) {
                 try {
                     CliExecution.addConfiguration(appConfig, gtv, chainId, height0, force, allowUnknownSigners, validation)
-                    println("Configuration has been added successfully")
-                } catch (e: CliException) {
-                    println(e.message)
+                    echo("Configuration has been added successfully")
                 } catch (e: Exception) {
-                    println("Can't add configuration: $e")
+                    throw PrintMessage("Can't add configuration: ${e.message}", true)
                 }
             }
         }

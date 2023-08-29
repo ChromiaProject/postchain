@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
@@ -23,15 +24,19 @@ class CommandPeerInfoAdd : CliktCommand(name = "add", help = "Add peer informati
 
     private val pubKey by requiredPubkeyOption()
 
-    private val force by forceOption().help("Force the addition of peerinfo which already exists with the same host:port")
+    private val force by forceOption().help("Force the addition of peer info which already exists with the same host:port")
 
     override fun run() {
         withDbVersionMismatch {
             val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
-            val added = CliExecution.peerinfoAdd(appConfig, host, port, pubKey, force)
-            when {
-                added -> println("Peerinfo has been added successfully")
-                else -> println("Peerinfo hasn't been added")
+            try {
+                val added = CliExecution.peerinfoAdd(appConfig, host, port, pubKey, force)
+                when {
+                    added -> echo("Peer info has been added successfully")
+                    else -> echo("Peer info has not been added")
+                }
+            } catch (e: Exception) {
+                throw PrintMessage("Can't add peer info: ${e.message}", true)
             }
         }
     }

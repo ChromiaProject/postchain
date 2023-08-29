@@ -112,7 +112,7 @@ object CliExecution {
                 AlreadyExistMode.ERROR -> {
                     val added = PeerApi.addPeer(ctx, pubKey, host, port, false)
                     if (!added) {
-                        throw CliException("Peerinfo with pubkey already exists. Using -f to force update")
+                        throw CliException("Peer info with pubkey $pubKey already exists. Use -f to force update")
                     }
                     true
                 }

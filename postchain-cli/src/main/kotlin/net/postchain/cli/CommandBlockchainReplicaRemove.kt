@@ -30,10 +30,10 @@ class CommandBlockchainReplicaRemove : CliktCommand(
             }
 
             if (removed.isEmpty()) {
-                println("No replica has been removed")
+                echo("No replica has been removed")
             } else {
                 removed.forEach {
-                    println("Replica $pubKey removed from brid (${removed.size}):\n$it")
+                    echo("Replica $pubKey removed from brid (${removed.size}):\n$it")
                 }
             }
         }
