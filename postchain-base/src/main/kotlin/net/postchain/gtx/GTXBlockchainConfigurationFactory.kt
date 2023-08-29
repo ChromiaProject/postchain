@@ -1,6 +1,7 @@
 package net.postchain.gtx
 
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfigurationFactory
@@ -53,19 +54,23 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
         }
     }
 
-    override fun makeBlockchainConfiguration(configurationData: Any,
-                                             partialContext: BlockchainContext,
-                                             blockSigMaker: SigMaker,
-                                             eContext: EContext,
-                                             cryptoSystem: CryptoSystem): GTXBlockchainConfiguration {
-        val cfData = configurationData as BlockchainConfigurationData
-        val effectiveBRID = cfData.historicBrid ?: partialContext.blockchainRID
+    override fun makeBlockchainConfiguration(
+            configurationData: Any,
+            partialContext: BlockchainContext,
+            blockSigMaker: SigMaker,
+            eContext: EContext,
+            cryptoSystem: CryptoSystem,
+            blockchainConfigurationOptions: BlockchainConfigurationOptions
+    ): GTXBlockchainConfiguration {
+        val bcConfigData = configurationData as BlockchainConfigurationData
+        val effectiveBRID = bcConfigData.historicBrid ?: partialContext.blockchainRID
         return GTXBlockchainConfiguration(
-                cfData,
+                bcConfigData,
                 cryptoSystem,
                 partialContext,
                 blockSigMaker,
-                createGtxModule(effectiveBRID, configurationData, eContext)
+                createGtxModule(effectiveBRID, configurationData, eContext),
+                blockchainConfigurationOptions
         )
     }
 

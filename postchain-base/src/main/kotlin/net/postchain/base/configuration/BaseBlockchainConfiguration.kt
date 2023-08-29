@@ -161,7 +161,8 @@ open class BaseBlockchainConfiguration(
                 blockStrategyConfig.maxBlockSize,
                 blockStrategyConfig.maxBlockTransactions,
                 if (isSyncing) 0 else configData.maxTxExecutionTime,
-                blockStrategyConfig.maxSpecialEndTransactionSize
+                blockStrategyConfig.maxSpecialEndTransactionSize,
+                isSuppressSpecialTransactionValidation()
         )
 
         return bb
@@ -210,4 +211,6 @@ open class BaseBlockchainConfiguration(
             if (configData.configConsensusStrategy == ConfigConsensusStrategy.HEADER_HASH) {
                 listOf(ConfigurationHashBlockBuilderExtension(configHash))
             } else listOf()
+
+    open fun isSuppressSpecialTransactionValidation(): Boolean = false
 }

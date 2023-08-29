@@ -5,6 +5,7 @@ package net.postchain.devtools.testinfra
 import mu.KLogging
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.core.BlockchainContext
 import net.postchain.core.TransactionFactory
 import net.postchain.crypto.CryptoSystem
@@ -17,8 +18,9 @@ open class TestBlockchainConfiguration(
         cryptoSystem: CryptoSystem,
         partialContext: BlockchainContext,
         blockSigMaker: SigMaker,
-        module: GTXModule
-) : GTXBlockchainConfiguration(configData, cryptoSystem, partialContext, blockSigMaker, module) {
+        module: GTXModule,
+        blockchainConfigurationOptions: BlockchainConfigurationOptions
+) : GTXBlockchainConfiguration(configData, cryptoSystem, partialContext, blockSigMaker, module, blockchainConfigurationOptions) {
 
     open val transactionFactory = TestTransactionFactory()
 

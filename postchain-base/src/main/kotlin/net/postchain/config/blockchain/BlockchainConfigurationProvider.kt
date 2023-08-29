@@ -2,6 +2,7 @@
 
 package net.postchain.config.blockchain
 
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
 
@@ -17,7 +18,7 @@ interface BlockchainConfigurationProvider {
     /**
      * @return the configuration we must use for the "active" block (=the block we are currently building)
      */
-    fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray?
+    fun getActiveBlockConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray?
 
     /**
      * @return true if the given chain will need a new configuration for the "active" block
@@ -50,4 +51,7 @@ interface BlockchainConfigurationProvider {
      * are currently building.
      */
     fun getActiveBlocksHeight(eContext: EContext, dba: DatabaseAccess): Long
+
+
+    fun getActiveBlockConfigurationOptions(eContext: EContext, chainId: Long): BlockchainConfigurationOptions
 }

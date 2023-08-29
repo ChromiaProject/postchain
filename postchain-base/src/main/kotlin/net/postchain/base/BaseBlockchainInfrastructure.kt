@@ -5,6 +5,7 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -75,6 +76,7 @@ open class BaseBlockchainInfrastructure(
             nodeId: Int,
             chainId: Long,
             bcConfigurationFactory: BlockchainConfigurationFactorySupplier,
+            blockchainConfigurationOptions: BlockchainConfigurationOptions
     ): BlockchainConfiguration {
         val blockConfData = BlockchainConfigurationData.fromRaw(rawConfigurationData)
 
@@ -83,7 +85,8 @@ open class BaseBlockchainInfrastructure(
 
         val factory = bcConfigurationFactory.supply(blockConfData.configurationFactory)
 
-        return factory.makeBlockchainConfiguration(blockConfData, partialContext, blockSigMaker, eContext, postchainContext.cryptoSystem)
+        return factory.makeBlockchainConfiguration(
+                blockConfData, partialContext, blockSigMaker, eContext, postchainContext.cryptoSystem, blockchainConfigurationOptions)
     }
 
     override fun makeBlockchainEngine(

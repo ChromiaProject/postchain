@@ -4,6 +4,7 @@ package net.postchain.gtx
 
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.ExecutionContext
@@ -50,7 +51,8 @@ class GTXBlockchainConfigurationTest {
                 cryptoSystem,
                 BaseBlockchainContext(1, blockchainRid, NODE_ID_AUTO, NodeRid.fromHex("").data),
                 cryptoSystem.buildSigMaker(keyPair),
-                gtxModule
+                gtxModule,
+                BlockchainConfigurationOptions.DEFAULT
         )
     }
 }
