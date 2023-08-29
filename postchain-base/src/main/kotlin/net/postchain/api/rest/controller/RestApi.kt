@@ -2,6 +2,7 @@
 
 package net.postchain.api.rest.controller
 
+import com.google.gson.JsonArray
 import io.micrometer.core.instrument.Metrics
 import mu.KLogging
 import mu.withLoggingContext
@@ -112,6 +113,8 @@ import java.io.Closeable
 import java.nio.ByteBuffer
 import java.time.Duration
 
+const val BLOCKCHAIN_RID = "blockchainRid"
+
 /**
  * Implements the REST API.
  */
@@ -123,7 +126,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 2
+        const val REST_API_VERSION = 3
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -156,10 +159,11 @@ class RestApi(
 
     private val blockchainRefFilter = Filter { next ->
         { request ->
-            val ref = request.path("blockchainRid")?.let { parseBlockchainRid(it) }
+            val ref = request.path(BLOCKCHAIN_RID)?.let { parseBlockchainRid(it) }
             if (ref != null) {
                 val blockchainRid = resolveBlockchain(ref)
                 val chainModel = chainModel(blockchainRid)
+                if (!chainModel.live) throw UnavailableException("Blockchain is unavailable")
                 withLoggingContext(
                         BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
                         CHAIN_IID_TAG to chainModel.chainIID.toString()) {
@@ -230,6 +234,8 @@ class RestApi(
 
             "/config/{blockchainRid}" bind GET to blockchain.then(::getBlockchainConfiguration),
             "/config/{blockchainRid}" bind POST to blockchain.then(::validateBlockchainConfiguration),
+
+            "/errors/{blockchainRid}" bind GET to ::getErrors,
     )
 
     @Suppress("UNUSED_PARAMETER")
@@ -454,6 +460,32 @@ class RestApi(
         return Response(OK).with(emptyBody.outbound(request) of Empty)
     }
 
+    private fun getErrors(request: Request): Response {
+        val ref = request.path(BLOCKCHAIN_RID)?.let { parseBlockchainRid(it) }
+        return if (ref != null) {
+            val blockchainRid = resolveBlockchain(ref)
+            val chainModel = chainModel(blockchainRid)
+            withLoggingContext(
+                    BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
+                    CHAIN_IID_TAG to chainModel.chainIID.toString()) {
+                when (chainModel) {
+                    is ExternalModel -> {
+                        logger.trace { "External REST API model found: $chainModel" }
+                        chainModel(request)
+                    }
+
+                    is Model -> {
+                        val errors = JsonArray()
+                        (checkDiagnosticError(blockchainRid) ?: listOf()).forEach { errors.add(it) }
+                        Response(OK).with(prettyJsonBody of errors)
+                    }
+                }
+            }
+        } else {
+            throw invalidBlockchainRid()
+        }
+    }
+
     val handler = routes(
             basePath bind app
     )
@@ -562,12 +594,13 @@ class RestApi(
 
     private fun transformErrorResponseFromDiagnostics(request: Request, status: Status, error: Exception): Response =
             modelKey(request)?.let { checkDiagnosticError(it.blockchainRid) }?.let { errorMessage ->
-                errorResponse(request, INTERNAL_SERVER_ERROR, errorMessage)
+                errorResponse(request, INTERNAL_SERVER_ERROR, errorMessage.toString())
             } ?: errorResponse(request, status, error.message ?: "Unknown error")
 
-    private fun checkDiagnosticError(blockchainRid: BlockchainRid): String? =
+    @Suppress("UNCHECKED_CAST")
+    private fun checkDiagnosticError(blockchainRid: BlockchainRid): List<String>? =
             if (nodeDiagnosticContext.hasBlockchainErrors(blockchainRid)) {
-                nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).value.toString()
+                nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).value as List<String>
             } else {
                 null
             }
@@ -577,8 +610,10 @@ class RestApi(
                     errorBody.outbound(request) of ErrorBody(errorMessage)
             )
 
-    private fun model(request: Request): Model = modelKey(request) ?: throw LensFailure(listOf(
-            Invalid(Meta(true, "path", ParamMeta.StringParam, "blockchainRid", "Invalid blockchainRID. Expected 64 hex digits [0-9a-fA-F]"))))
+    private fun model(request: Request): Model = modelKey(request) ?: throw invalidBlockchainRid()
+
+    private fun invalidBlockchainRid() = LensFailure(listOf(
+            Invalid(Meta(true, "path", ParamMeta.StringParam, BLOCKCHAIN_RID, "Invalid blockchainRID. Expected 64 hex digits [0-9a-fA-F]"))))
 
     private fun resolveBlockchain(ref: BlockchainRef): BlockchainRid = when (ref) {
         is BlockchainRidRef -> ref.rid
@@ -613,12 +648,8 @@ class RestApi(
             txAction(model, txRid)
                     ?: throw NotFoundError("Can't find tx with hash $txRid")
 
-    private fun chainModel(blockchainRid: BlockchainRid): ChainModel {
-        val chainModel = models[blockchainRid]
-                ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRid")
-        if (!chainModel.live) throw UnavailableException("Blockchain is unavailable")
-        return chainModel
-    }
+    private fun chainModel(blockchainRid: BlockchainRid): ChainModel = models[blockchainRid]
+            ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRid")
 
     /**
      * We allow two different syntax for finding the blockchain.
