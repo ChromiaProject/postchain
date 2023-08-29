@@ -27,6 +27,7 @@ interface FileSystem {
     companion object : KLogging() {
 
         const val ZFS_POOL_NAME = "psvol"
+        const val CONTAINER_LOG4J_PATH = "/opt/chromaway/postchain/log4j2.yml"
         const val CONTAINER_TARGET_PATH = "/opt/chromaway/postchain/target"
         const val CONTAINER_PGDATA_PATH = "/var/lib/postgresql/data/"
         const val PGDATA_DIR = "pgdata"

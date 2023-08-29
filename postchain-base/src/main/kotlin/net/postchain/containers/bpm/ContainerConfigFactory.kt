@@ -51,6 +51,14 @@ object ContainerConfigFactory : KLogging() {
             volumes.add(pgdataVol)
         }
 
+        if (containerNodeConfig.log4jConfigurationFile != null) {
+            val log4jConfigFile = HostConfig.Bind.builder()
+                    .from(containerNodeConfig.log4jConfigurationFile)
+                    .to(FileSystem.CONTAINER_LOG4J_PATH)
+                    .build()
+            volumes.add(log4jConfigFile)
+        }
+
         if (containerNodeConfig.subnodeUser != null) {
             volumes.add(HostConfig.Bind.builder().from("/etc/passwd").to("/etc/passwd").readOnly(true).build())
             volumes.add(HostConfig.Bind.builder().from("/etc/group").to("/etc/group").readOnly(true).build())
