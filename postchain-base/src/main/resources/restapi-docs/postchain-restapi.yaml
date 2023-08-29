@@ -1045,6 +1045,31 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /errors/{blockchainRid}:
+    get:
+      tags:
+        - error
+      summary: Fetch blockchain errors
+      description: Fetch any errors which have occurred in a blockchain
+      responses:
+        200:
+          description: Found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
   /version:
     get:
       tags:
