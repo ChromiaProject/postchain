@@ -14,7 +14,7 @@ import org.junit.jupiter.api.assertThrows
 class CollationIT {
     @Test
     fun testCollationTestPass() {
-        PostgreSQLContainer(DockerImageName.parse("postgres:14.7-alpine3.17")).apply {
+        PostgreSQLContainer(DockerImageName.parse("postgres:14.9-alpine3.18")).apply {
             withUsername("postchain")
             withPassword("postchain")
             start()
@@ -27,7 +27,7 @@ class CollationIT {
 
     @Test
     fun testCollationTestFail() {
-        PostgreSQLContainer(DockerImageName.parse("postgres:14.7")).apply {
+        PostgreSQLContainer(DockerImageName.parse("postgres:14.9")).apply {
             withUsername("postchain")
             withPassword("postchain")
             start()
