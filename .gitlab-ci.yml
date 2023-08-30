@@ -9,7 +9,6 @@ include:
       - templates/report-code-coverage.yml
 
 .setup:
-  extends: .upload-test-coverage-artifacts
   tags:
     - saas-linux-large-amd64
   before_script:
@@ -33,6 +32,7 @@ include:
     when: always
     paths:
       - "**/*.log"
+      - $JACOCO_REPORT_DIR/*
     reports:
       junit:
         - "*/target/surefire-reports/TEST-*.xml"
