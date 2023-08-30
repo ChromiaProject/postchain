@@ -67,7 +67,7 @@ class FastSyncKnownState(prms: SyncParameters) : KnownState(prms)  {
     }
 
     override fun resurrect(now: Long) {
-        isUnresponsive(now)
+        super.resurrect(now)
         isDrained(now)
     }
 }
