@@ -105,6 +105,10 @@ build:
 
 test-coverage-report:
   stage: code-coverage
+  except:
+    refs:
+      - dev
+      - tags
   dependencies:
     - build
 
