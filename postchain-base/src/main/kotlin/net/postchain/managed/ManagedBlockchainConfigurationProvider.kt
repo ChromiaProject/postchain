@@ -89,7 +89,11 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
     }
 
     override fun getActiveBlockConfigurationOptions(eContext: EContext, chainId: Long): BlockchainConfigurationOptions {
-        return dataSource.getBlockchainConfigurationOptions() ?: BlockchainConfigurationOptions.DEFAULT
+        val dba = DatabaseAccess.of(eContext)
+        val blockchainRid = getBlockchainRid(eContext, dba)
+        val activeHeight = getActiveBlocksHeight(eContext, dba)
+        return dataSource.getBlockchainConfigurationOptions(blockchainRid, activeHeight)
+                ?: BlockchainConfigurationOptions.DEFAULT
     }
 
     // --------- Private --------

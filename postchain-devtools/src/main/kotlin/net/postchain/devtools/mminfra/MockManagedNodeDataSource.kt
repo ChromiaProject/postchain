@@ -93,7 +93,7 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         return bridState[blockchainRid]!!
     }
 
-    override fun getBlockchainConfigurationOptions(): BlockchainConfigurationOptions? = null
+    override fun getBlockchainConfigurationOptions(blockchainRid: BlockchainRid, height: Long): BlockchainConfigurationOptions? = null
 
     override fun query(name: String, args: Gtv): Gtv {
         TODO("Not yet implemented")

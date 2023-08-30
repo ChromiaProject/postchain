@@ -150,13 +150,20 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         }
     }
 
-    override fun getBlockchainConfigurationOptions(): BlockchainConfigurationOptions? {
-        return if (nmApiVersion >= 99) {
+    override fun getBlockchainConfigurationOptions(blockchainRid: BlockchainRid, height: Long): BlockchainConfigurationOptions? {
+        return if (nmApiVersion >= 8) {
             val res = query(
                     "nm_get_blockchain_configuration_options",
-                    buildArgs("blockchain_rid" to gtv(byteArrayOf())))
-            res.asDict()["suppress_special_transaction_validation"]?.let {
-                BlockchainConfigurationOptions(it.asBoolean())
+                    buildArgs(
+                            "blockchain_rid" to gtv(blockchainRid.data),
+                            "height" to gtv(height))
+            )
+
+            when {
+                res.isNull() -> null
+                else -> res.asDict()["suppress_special_transaction_validation"]?.let {
+                    BlockchainConfigurationOptions(it.asBoolean())
+                }
             }
         } else {
             null
