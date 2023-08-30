@@ -103,7 +103,7 @@ build:
       --activate-profiles ci,docker,coverage
       verify
 
-report-test-coverage:
+test-coverage-report:
   stage: build
   needs:
     - build
