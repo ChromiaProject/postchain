@@ -1,10 +1,11 @@
 image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.1.3
 include:
   - project: "chromaway/core-infra/gitlab-automation"
-    ref: 1.1.0
+    ref: 1.1.3
     file:
       - templates/release.yml
       - templates/dependency-scanning.yml
+      - templates/report-code-coverage.yml
 
 .setup:
   tags:
@@ -30,6 +31,7 @@ include:
     when: always
     paths:
       - "**/*.log"
+      - $JACOCO_REPORT_DIR/*
     reports:
       junit:
         - "*/target/surefire-reports/TEST-*.xml"
@@ -85,7 +87,9 @@ gitlab-release:
     description: 'Release created using the release-cli.' # Consider setting `doc/release-notes/$CI_COMMIT_TAG.md`
 
 build:
-  extends: .setup
+  extends:
+    - .setup
+    - .visualise-test-coverage
   stage: build
   interruptible: true
   except:
@@ -95,8 +99,15 @@ build:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,docker
+      --activate-profiles ci,docker,coverage
       verify
+
+test-coverage-report:
+  stage: build
+  needs:
+    - build
+  dependencies:
+    - build
 
 nightly-tests:
   extends: .setup
@@ -145,6 +156,7 @@ variables:
   DOCKER_TLS_CERTDIR: ""
   DOCKER_DRIVER: overlay2
   DOCKER_CLI_EXPERIMENTAL: enabled
+  JACOCO_REPORT_DIR: postchain-coverage-report-aggregate/target/site/jacoco-aggregate
 
 # Cache downloaded dependencies and plugins between builds.
 # To keep cache across branches add 'key: "$CI_JOB_NAME"'
