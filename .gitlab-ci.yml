@@ -1,8 +1,7 @@
 image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.1.3
 include:
   - project: "chromaway/core-infra/gitlab-automation"
-    # ref: 1.1.0
-    ref: report-code-coverage-template
+    ref: 1.1.3
     file:
       - templates/release.yml
       - templates/dependency-scanning.yml
