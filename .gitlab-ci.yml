@@ -1,10 +1,12 @@
 image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.1.3
 include:
   - project: "chromaway/core-infra/gitlab-automation"
-    ref: 1.1.0
+    #ref: 1.1.0
+    ref: report-code-coverage-template
     file:
       - templates/release.yml
       - templates/dependency-scanning.yml
+      - templates/report-code-coverage.yml
 
 .setup:
   tags:
@@ -86,7 +88,9 @@ gitlab-release:
     description: 'Release created using the release-cli.' # Consider setting `doc/release-notes/$CI_COMMIT_TAG.md`
 
 build:
-  extends: .setup
+  extends:
+    - .setup
+    - .visualise-test-coverage
   stage: build
   interruptible: true
   except:
@@ -98,26 +102,11 @@ build:
       $MAVEN_CLI_OPTS
       --activate-profiles ci,docker,coverage
       verify
-  after_script:
-    - cat $JACOCO_REPORT_DIR/index.html | grep -o '<tfoot>.*</tfoot>' # print test coverage in ci log
-  coverage: '/Total.*?([0-9]{1,3})%/' # match aggregated JaCoCo coverage printed above from ci log
 
-report-test-coverage:
-  stage: build
-  image: registry.gitlab.com/haynes/jacoco2cobertura:1.0.7
-  script:
-    - mkdir -p target/site 
-    - jacoco_paths=`find * -path "**/src/main/kotlin" -type d | sed -e 's@^@'"$CI_PROJECT_DIR"'/@'`
-    # convert report from jacoco to cobertura, using relative project path
-    - python /opt/cover2cover.py $JACOCO_REPORT_DIR/jacoco.xml $jacoco_paths > target/site/cobertura.xml
-  needs: ["build"]
-  dependencies:
-    - build
-  artifacts:
-    reports:
-      coverage_report:
-        coverage_format: cobertura
-        path: target/site/cobertura.xml
+test-coverage:
+  extends: report-test-coverage
+  variables:
+    JOB_GENERATE_COVERAGE: build
 
 nightly-tests:
   extends: .setup
