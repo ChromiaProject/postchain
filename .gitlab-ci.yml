@@ -40,6 +40,7 @@ include:
 
 stages:
   - build
+  - code-coverage
   - nightly-tests
   - deploy
   - dependency-check
@@ -103,7 +104,7 @@ build:
       verify
 
 test-coverage-report:
-  stage: build
+  stage: code-coverage
   needs:
     - build
   dependencies:
