@@ -105,8 +105,11 @@ build:
 
 test-coverage:
   extends: report-test-coverage
-  variables:
-    JOB_GENERATE_COVERAGE: build
+  stage: build
+  needs:
+    - build
+  dependencies:
+    - build
 
 nightly-tests:
   extends: .setup
