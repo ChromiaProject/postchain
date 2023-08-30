@@ -154,6 +154,7 @@ open class KnownState(val params: SyncParameters) {
 
     open fun resurrect(now: Long) {
         isUnresponsive(now)
+        isBlacklisted(now)
     }
 
     override fun toString(): String {
