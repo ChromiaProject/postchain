@@ -18,7 +18,7 @@ include:
       --env PGDATA=/pgtmpfs
       --tmpfs=/pgtmpfs:size=1000m
       --publish 5432:5432
-      postgres:14.7-alpine3.17
+      postgres:14.9-alpine3.18
   # Necessary to be able to launch PostgreSQL in Docker manually. PostgreSQL is
   # launched in Docker manually (and not as a service, here) because then we can
   # use a tmpfs (in-memory disk) for the data, making it faster.
