@@ -7,8 +7,9 @@ import net.postchain.core.EContext
 class TestSnapshotPageStore(
     ctx: EContext,
     levelsPerPage: Int,
+    snapshotsToKeep: Int,
     ds: DigestSystem
-) : SnapshotPageStore(ctx, levelsPerPage, ds, "test") {
+) : SnapshotPageStore(ctx, levelsPerPage, snapshotsToKeep, ds, "test") {
 
     private val store = mutableMapOf<Long, Page>()
     private var iid: Long = 0
@@ -40,6 +41,16 @@ class TestSnapshotPageStore(
             }
         }
         return highestLevel
+    }
+
+    override fun pruneSnapshot(blockHeight: Long) {
+        val iter = store.iterator()
+        while (iter.hasNext()) {
+            val (_, v) = iter.next()
+            if (v.blockHeight <= blockHeight - snapshotsToKeep) {
+                iter.remove()
+            }
+        }
     }
 }
 

@@ -29,7 +29,7 @@ class MerkleTest {
     @BeforeEach
     fun setUp() {
         val ctx = mock<ExecutionContext>()
-        snapshot = TestSnapshotPageStore(ctx, 2, ds)
+        snapshot = TestSnapshotPageStore(ctx, 2, 0, ds)
         event = TestEventPageStore(ctx, 2, ds)
         leafHashes[0] = "044852b2a670ade5407e78fb2863c51de9fcb96542a07186fe3aeda6bb8a116d".hexStringToByteArray()
         leafHashes[1] = "c89efdaa54c0f20c7adf612882df0950f5a951637e0307cdcb4c672f298b8bc6".hexStringToByteArray()
@@ -53,6 +53,11 @@ class MerkleTest {
         val right  = ds.hash(EMPTY_HASH, EMPTY_HASH)
         val root = ds.hash(left, right)
         assertEquals(stateRootHash.toHex(), root.toHex())
+        val page = snapshot.readPage(1, 2, 0)
+        assertEquals(page!!.childHashes[0].toHex(), hash00.toHex())
+        snapshot.pruneSnapshot(1)
+        assertEquals(null, snapshot.readPage(1, 2, 0))
+
     }
 
     @Test

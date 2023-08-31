@@ -154,9 +154,14 @@ interface DatabaseAccess {
     fun insertState(ctx: EContext, prefix: String, height: Long, state_n: Long, data: ByteArray)
     fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): AccountState?
     fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, heightMustBeHigherThan: Long)
+    fun safePruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, snapshotHeight: Long, nextSnapshotHeight: Long)
     fun insertPage(ctx: EContext, name: String, page: Page)
     fun getPage(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page?
+    fun deletePages(ctx: EContext, name: String, pageIids: List<Long>): Boolean
+    fun getLeftIndex(ctx: EContext, name: String, pageIids: List<Long>): List<Long>
     fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int
+    fun getPrunablePages(ctx: EContext, name: String, snapshotHeight: Long, nextSnapshotHeight: Long): List<Long>
+    fun getPrunableSnapshotHeight(ctx: EContext, name: String, blockHeight: Long, snapshotsToKeep: Int=100): Pair<Long, Long>?
 
     // Peers
     fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo>
