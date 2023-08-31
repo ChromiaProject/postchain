@@ -1,6 +1,7 @@
 package net.postchain.devtools
 
 import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.devtools.utils.configuration.NodeConfigurationProviderGenerator
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import org.apache.commons.configuration2.Configuration
@@ -41,7 +42,7 @@ object TestNodeConfigProducer {
 
         commonSettings(baseConfig, testName, nodeSetup, systemSetup)
 
-        // For legacy we need to know the peers
+        // For legacy, we need to know the peers
         setPeerConfig(nodeSetup, systemSetup, baseConfig)
 
         return baseConfig
@@ -76,7 +77,7 @@ object TestNodeConfigProducer {
         return baseConfig
     }
 
-    fun commonSettings(
+    private fun commonSettings(
             baseConfig: PropertiesConfiguration,
             testName: String,
             nodeSetup: NodeSetup,
@@ -92,25 +93,26 @@ object TestNodeConfigProducer {
         setConfProvider(systemSetup.nodeConfProvider, baseConfig)
         setConfInfrastructure(systemSetup.confInfrastructure, baseConfig)
         setApiPort(nodeSetup, baseConfig, systemSetup.needRestApi)
+        baseConfig.setProperty("api.graceful-shutdown", false)
         setKeys(nodeSetup, baseConfig)
     }
 
-    fun setSyncTuningParams(systemSetup: SystemSetup, baseConfig: PropertiesConfiguration) {
+    private fun setSyncTuningParams(systemSetup: SystemSetup, baseConfig: PropertiesConfiguration) {
         baseConfig.setProperty("fastsync.exit_delay", if (systemSetup.nodeMap.size == 1) 0 else 1000)
     }
 
-    fun setConfProvider(str: String, baseConfig: PropertiesConfiguration) {
+    private fun setConfProvider(str: String, baseConfig: PropertiesConfiguration) {
         baseConfig.setProperty("configuration.provider.node", str)
     }
 
-    fun setConfInfrastructure(str: String, baseConfig: PropertiesConfiguration) {
+    private fun setConfInfrastructure(str: String, baseConfig: PropertiesConfiguration) {
         baseConfig.setProperty("infrastructure", str)
     }
 
     /**
      * Update the [PropertiesConfiguration] with node info provided by the [NodeSetup]
      */
-    fun setDbConfig(
+    private fun setDbConfig(
             testName: String, // For example this could be "multiple_chains_node"
             nodeConf: NodeSetup,
             baseConfig: PropertiesConfiguration
@@ -139,7 +141,7 @@ object TestNodeConfigProducer {
      * @param nodeSetup contains info about the nodes
      * @param baseConfig is the configuration object we will update
      */
-    fun setPeerConfig(
+    private fun setPeerConfig(
             nodeSetup: NodeSetup,
             systemSetup: SystemSetup,
             baseConfig: PropertiesConfiguration
@@ -155,9 +157,9 @@ object TestNodeConfigProducer {
     }
 
     /**
-     * Sets the API port, so it wont clash with other nodes.
+     * Sets the API port, so it won't clash with other nodes.
      */
-    fun setApiPort(
+    private fun setApiPort(
             nodeSetup: NodeSetup,
             baseConfig: PropertiesConfiguration,
             needRestApi: Boolean
@@ -172,7 +174,7 @@ object TestNodeConfigProducer {
     /**
      * Sets the pub and priv keys of the node
      */
-    fun setKeys(
+    private fun setKeys(
             nodeConf: NodeSetup,
             baseConfig: PropertiesConfiguration
     ) {

@@ -31,7 +31,8 @@ open class BaseApiInfrastructure(
             RestApi(
                     port,
                     basePath,
-                    nodeDiagnosticContext = nodeDiagnosticContext)
+                    nodeDiagnosticContext = nodeDiagnosticContext,
+                    gracefulShutdown = restApiConfig.gracefulShutdown)
         } else {
             null
         }
