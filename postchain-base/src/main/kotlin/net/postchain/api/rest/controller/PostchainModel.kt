@@ -11,7 +11,6 @@ import net.postchain.api.rest.BlockHeight
 import net.postchain.api.rest.TransactionsCount
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
-import net.postchain.base.BaseBlockQueries
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.ConfirmationProof
 import net.postchain.base.configuration.BlockchainConfigurationData
@@ -33,6 +32,7 @@ import net.postchain.core.Storage
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
+import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.SigMaker
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
@@ -54,7 +54,7 @@ import net.postchain.metrics.QUERIES_METRIC_NAME
 open class PostchainModel(
         final override val chainIID: Long,
         val txQueue: TransactionQueue,
-        val blockQueries: BaseBlockQueries,
+        val blockQueries: BlockQueries,
         private val debugInfoQuery: DebugInfoQuery,
         final override val blockchainRid: BlockchainRid,
         val storage: Storage,
@@ -70,41 +70,32 @@ open class PostchainModel(
 
     override fun postTransaction(tx: ByteArray): Unit = throw NotSupported("Posting a transaction on a non-signer node is not supported.")
 
-    override fun getTransaction(txRID: TxRid): ByteArray? = blockQueries.getTransaction(txRID.bytes).get()
-            .takeIf { it != null }?.getRawData()
+    override fun getTransaction(txRID: TxRid): ByteArray? = blockQueries.getTransactionRawData(txRID.bytes).get()
 
-    override fun getTransactionInfo(txRID: TxRid): TransactionInfoExt? {
-        return blockQueries.getTransactionInfo(txRID.bytes).get()
-    }
+    override fun getTransactionInfo(txRID: TxRid): TransactionInfoExt? = blockQueries.getTransactionInfo(txRID.bytes).get()
 
-    override fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt> {
-        return blockQueries.getTransactionsInfo(beforeTime, limit).get()
-    }
+    override fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt> =
+            blockQueries.getTransactionsInfo(beforeTime, limit).get()
 
-    override fun getLastTransactionNumber(): TransactionsCount {
-        return TransactionsCount(blockQueries.getLastTransactionNumber().get())
-    }
+    override fun getLastTransactionNumber(): TransactionsCount =
+            TransactionsCount(blockQueries.getLastTransactionNumber().get())
 
-    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> {
-        return blockQueries.getBlocks(beforeTime, limit, txHashesOnly).get()
-    }
+    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> =
+            blockQueries.getBlocks(beforeTime, limit, txHashesOnly).get()
 
-    override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> {
-        return blockQueries.getBlocksBeforeHeight(beforeHeight, limit, txHashesOnly).get()
-    }
+    override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> =
+            blockQueries.getBlocksBeforeHeight(beforeHeight, limit, txHashesOnly).get()
 
-    override fun getBlock(blockRID: BlockRid, txHashesOnly: Boolean): BlockDetail? {
-        return blockQueries.getBlock(blockRID.data, txHashesOnly).get()
-    }
+    override fun getBlock(blockRID: BlockRid, txHashesOnly: Boolean): BlockDetail? =
+            blockQueries.getBlock(blockRID.data, txHashesOnly).get()
 
     override fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail? {
         val blockRid = blockQueries.getBlockRid(height).get()
         return blockRid?.let { getBlock(BlockRid(it), txHashesOnly) }
     }
 
-    override fun getConfirmationProof(txRID: TxRid): ConfirmationProof? {
-        return blockQueries.getConfirmationProof(txRID.bytes).get()
-    }
+    override fun getConfirmationProof(txRID: TxRid): ConfirmationProof? =
+            blockQueries.getConfirmationProof(txRID.bytes).get()
 
     override fun getStatus(txRID: TxRid): ApiStatus {
         var status = txQueue.getTransactionStatus(txRID.bytes)
@@ -146,24 +137,18 @@ open class PostchainModel(
         }
     }
 
-    override fun nodeStatusQuery(): StateNodeStatus {
-        return diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS]?.value as? StateNodeStatus
-                ?: throw NotFoundError("NotFound")
-    }
+    override fun nodeStatusQuery(): StateNodeStatus =
+            diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS]?.value as? StateNodeStatus
+                    ?: throw NotFoundError("NotFound")
 
     @Suppress("UNCHECKED_CAST")
-    override fun nodePeersStatusQuery(): List<StateNodeStatus> {
-        return diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES]?.value as? List<StateNodeStatus>
-                ?: throw NotFoundError("NotFound")
-    }
+    override fun nodePeersStatusQuery(): List<StateNodeStatus> =
+            diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES]?.value as? List<StateNodeStatus>
+                    ?: throw NotFoundError("NotFound")
 
-    override fun debugQuery(subQuery: String?): JsonElement {
-        return debugInfoQuery.queryDebugInfo(subQuery)
-    }
+    override fun debugQuery(subQuery: String?): JsonElement = debugInfoQuery.queryDebugInfo(subQuery)
 
-    override fun getCurrentBlockHeight(): BlockHeight {
-        return BlockHeight(blockQueries.getLastBlockHeight().get() + 1)
-    }
+    override fun getCurrentBlockHeight(): BlockHeight = BlockHeight(blockQueries.getLastBlockHeight().get() + 1)
 
     override fun getBlockchainConfiguration(height: Long): ByteArray? = withReadConnection(storage, chainIID) { ctx ->
         val db = DatabaseAccess.of(ctx)
@@ -192,7 +177,5 @@ open class PostchainModel(
         }
     }
 
-    override fun toString(): String {
-        return "${this.javaClass.simpleName}(chainId=$chainIID)"
-    }
+    override fun toString(): String = "${this.javaClass.simpleName}(chainId=$chainIID)"
 }

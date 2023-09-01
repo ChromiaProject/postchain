@@ -187,10 +187,8 @@ open class BaseBlockchainConfiguration(
         }
     }
 
-    override fun makeBlockQueries(storage: Storage): BlockQueries {
-        return BaseBlockQueries(
-                this, storage, blockStore, chainID, blockchainContext.nodeRID!!)
-    }
+    override fun makeBlockQueries(storage: Storage): BlockQueries =
+            BaseBlockQueries(cryptoSystem, storage, blockStore, chainID, blockchainContext.nodeRID!!)
 
     override fun hasQuery(name: String): Boolean = false
 
