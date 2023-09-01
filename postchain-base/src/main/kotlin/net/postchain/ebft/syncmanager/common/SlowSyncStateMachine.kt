@@ -22,6 +22,7 @@ class SlowSyncStateMachine(
         var waitForNodeId: NodeRid? = null, // The node we expect to send us an answer
         var waitForHeight: Long? = null, // The height we are waiting for
         private var waitTime: Long? = null, // When did we last ask for a BlockRange
+        private var idleTime: Long = 0, // When did we start waiting to ask for a BlockRange
         var lastUncommittedBlockHeight: Long = -1L, // Remember: before we have any block the height is -1.
         var lastCommittedBlockHeight: Long = -1L // Only update this after the actual commit
 ) {
@@ -50,14 +51,17 @@ class SlowSyncStateMachine(
 
     /**
      * @param nowMs current time in millisecs
+     * @param currentSleepMs how long we should wait until sending a new request
      * @param sendRequest is the function we use to send request
      */
-    fun maybeGetBlockRange(nowMs: Long, sendRequest: (Long, SlowSyncStateMachine, NodeRid?) -> Unit) {
+    fun maybeGetBlockRange(nowMs: Long, currentSleepMs: Long, sendRequest: (Long, SlowSyncStateMachine, NodeRid?) -> Unit) {
         when (state) {
             SlowSyncStates.WAIT_FOR_ACTION -> {
-                val startingAtHeight = getStartHeight()
-                logger.debug { "maybeGetBlockRange() - not waiting for anything, so get height $startingAtHeight and above." }
-                sendRequest(nowMs, this, null) // We don't mind asking the old peer
+                if (nowMs > (idleTime + currentSleepMs)) {
+                    val startingAtHeight = getStartHeight()
+                    logger.debug { "maybeGetBlockRange() - done idling, so get height $startingAtHeight and above." }
+                    sendRequest(nowMs, this, null) // We don't mind asking the old peer
+                }
             }
 
             SlowSyncStates.WAIT_FOR_REPLY -> {
@@ -130,10 +134,11 @@ class SlowSyncStateMachine(
 
     fun isWaitingForBlocksToCommit() = lastCommittedBlockHeight < lastUncommittedBlockHeight
 
-    fun resetToWaitForAction() {
+    fun resetToWaitForAction(nowMs: Long) {
         state = SlowSyncStates.WAIT_FOR_ACTION
         waitForNodeId = null
         waitForHeight = null
+        idleTime = nowMs
     }
 
     fun hasUnacknowledgedFailedCommit() = hasFailedCommit
