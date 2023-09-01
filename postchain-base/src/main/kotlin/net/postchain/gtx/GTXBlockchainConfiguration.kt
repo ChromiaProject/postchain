@@ -5,7 +5,6 @@ package net.postchain.gtx
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuilderExtension
-import net.postchain.base.BaseBlockQueries
 import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
@@ -15,10 +14,8 @@ import net.postchain.core.TransactionFactory
 import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.special.GTXSpecialTxHandler
-import java.util.concurrent.CompletionStage
 
 open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
                                       cryptoSystem: CryptoSystem,
@@ -56,18 +53,8 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
         return specTxHandler // NOTE: not the same as "specialTransactionHandler" in Base
     }
 
-    override fun makeBlockQueries(storage: Storage): BlockQueries {
-        return object : BaseBlockQueries(this@GTXBlockchainConfiguration, storage, blockStore,
-                chainID, blockchainContext.nodeRID!!) {
-
-            override fun query(name: String, args: Gtv): CompletionStage<Gtv> {
-                return runOp {
-                    module.query(it, name, args)
-                }
-            }
-
-        }
-    }
+    override fun makeBlockQueries(storage: Storage): BlockQueries =
+            GTXBlockQueries(this@GTXBlockchainConfiguration, storage, blockStore, chainID, blockchainContext.nodeRID!!, module)
 
     override fun hasQuery(name: String): Boolean = module.getQueries().contains(name)
 

@@ -10,20 +10,20 @@ import net.postchain.api.rest.controller.DuplicateTnxException
 import net.postchain.api.rest.controller.InvalidTnxException
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.UnavailableException
-import net.postchain.base.BaseBlockQueries
 import net.postchain.common.BlockchainRid
 import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.concurrent.util.get
 import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionQueue
+import net.postchain.core.block.BlockQueries
 import net.postchain.debug.DiagnosticData
 
 class PostchainEBFTModel(
         chainIID: Long,
         txQueue: TransactionQueue,
         private val transactionFactory: TransactionFactory,
-        blockQueries: BaseBlockQueries,
+        blockQueries: BlockQueries,
         debugInfoQuery: DebugInfoQuery,
         blockchainRid: BlockchainRid,
         storage: Storage,

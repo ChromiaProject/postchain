@@ -5,7 +5,6 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
-import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.EContext
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.Storage
@@ -17,9 +16,11 @@ import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockStore
 import net.postchain.core.block.MultiSigBlockWitness
+import net.postchain.crypto.Digester
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.mapper.Name
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import java.sql.SQLException
 import java.util.concurrent.CompletableFuture
@@ -50,16 +51,16 @@ class ConfirmationProof(
  * A collection of methods for various blockchain-related queries. Each query is called with the wrapping method [runOp]
  * which will handle connections and logging.
  *
- * @param blockchainConfiguration Configuration data for the blockchain
+ * @param digester Digester
  * @param storage Connection manager
  * @param blockStore Blockchain storage facilitator
  * @param chainId Blockchain identifier
  * @param mySubjectId Public key related to the private key used for signing blocks
  */
 open class BaseBlockQueries(
-        private val blockchainConfiguration: BlockchainConfiguration,
+        private val digester: Digester,
         private val storage: Storage,
-        private val blockStore: BlockStore,
+        val blockStore: BlockStore,
         private val chainId: Long,
         private val mySubjectId: ByteArray
 ) : BlockQueries {
@@ -100,7 +101,7 @@ open class BaseBlockQueries(
     override fun getBlockSignature(blockRID: ByteArray): CompletionStage<Signature> {
         return runOp { ctx ->
             val witnessData = blockStore.getWitnessData(ctx, blockRID)
-            val witness = blockchainConfiguration.decodeWitness(witnessData) as MultiSigBlockWitness
+            val witness = decodeWitness(witnessData)
             val signature = witness.getSignatures().find { it.subjectID.contentEquals(mySubjectId) }
             signature ?: throw UserMistake("Trying to get a signature from a node that doesn't have one")
         }
@@ -134,12 +135,12 @@ open class BaseBlockQueries(
     }
 
     override fun getTransaction(txRID: ByteArray): CompletionStage<Transaction?> {
+        return CompletableFuture.failedFuture(UserMistake("getTransaction is not supported"))
+    }
+
+    override fun getTransactionRawData(txRID: ByteArray): CompletionStage<ByteArray?> {
         return runOp {
-            val txBytes = blockStore.getTxBytes(it, txRID)
-            if (txBytes == null)
-                null
-            else
-                blockchainConfiguration.getTransactionFactory().decodeTransaction(txBytes)
+            blockStore.getTxBytes(it, txRID)
         }
     }
 
@@ -199,11 +200,11 @@ open class BaseBlockQueries(
         return CompletableFuture.failedFuture(UserMistake("Queries are not supported"))
     }
 
-    fun getConfirmationProof(txRID: ByteArray): CompletionStage<ConfirmationProof?> {
+    override fun getConfirmationProof(txRID: ByteArray): CompletionStage<ConfirmationProof?> {
         return runOp {
             blockStore.getConfirmationProofMaterial(it, txRID)?.let { material ->
-                val decodedWitness = blockchainConfiguration.decodeWitness(material.witness)
-                val decodedBlockHeader = blockchainConfiguration.decodeBlockHeader(material.header) as BaseBlockHeader
+                val decodedWitness = decodeWitness(material.witness)
+                val decodedBlockHeader = decodeBlockHeader(material.header)
 
                 val result = decodedBlockHeader.merkleProofTree(material.txHash, material.txHashes)
                 val txIndex = result.first
@@ -222,7 +223,7 @@ open class BaseBlockQueries(
     override fun getBlockHeader(blockRID: ByteArray): CompletionStage<BlockHeader> {
         return runOp {
             val headerBytes = blockStore.getBlockHeader(it, blockRID)
-            blockchainConfiguration.decodeBlockHeader(headerBytes)
+            decodeBlockHeader(headerBytes)
         }
     }
 
@@ -245,11 +246,17 @@ open class BaseBlockQueries(
                 val headerBytes = blockStore.getBlockHeader(it, blockRID)
                 val witnessBytes = blockStore.getWitnessData(it, blockRID)
                 val txBytes = if (includeTransactions) blockStore.getBlockTransactions(it, blockRID) else listOf()
-                val header = blockchainConfiguration.decodeBlockHeader(headerBytes)
-                val witness = blockchainConfiguration.decodeWitness(witnessBytes)
+                val header = decodeBlockHeader(headerBytes)
+                val witness = decodeWitness(witnessBytes)
 
                 BlockDataWithWitness(header, txBytes, witness)
             }
         }
     }
+
+    protected open fun decodeBlockHeader(headerData: ByteArray): BaseBlockHeader =
+            BaseBlockHeader(headerData, GtvMerkleHashCalculator(digester))
+
+    protected open fun decodeWitness(witnessData: ByteArray): MultiSigBlockWitness =
+            BaseBlockWitness.fromBytes(witnessData)
 }

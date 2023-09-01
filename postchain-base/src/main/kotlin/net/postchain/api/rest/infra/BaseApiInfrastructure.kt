@@ -8,7 +8,6 @@ import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import net.postchain.api.rest.controller.DisabledDebugInfoQuery
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.RestApi
-import net.postchain.base.BaseBlockQueries
 import net.postchain.common.BlockchainRid
 import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainProcess
@@ -55,7 +54,7 @@ open class BaseApiInfrastructure(
                         engine.getConfiguration().chainID,
                         process.networkAwareTxQueue,
                         engine.getConfiguration().getTransactionFactory(),
-                        engine.getBlockQueries() as BaseBlockQueries, // TODO: [et]: Resolve type cast
+                        engine.getBlockQueries(),
                         debugInfoQuery,
                         blockchainRid,
                         engine.sharedStorage,
@@ -66,7 +65,7 @@ open class BaseApiInfrastructure(
                 apiModel = PostchainModel(
                         engine.getConfiguration().chainID,
                         engine.getTransactionQueue(),
-                        engine.getBlockQueries() as BaseBlockQueries,
+                        engine.getBlockQueries(),
                         debugInfoQuery,
                         blockchainRid,
                         engine.sharedStorage,
