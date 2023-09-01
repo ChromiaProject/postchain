@@ -24,6 +24,7 @@ import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.worker.WorkerContext
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import kotlin.math.min
 
 /**
  * Used by replicas only!
@@ -70,9 +71,9 @@ class SlowSynchronizer(
                 processMessages(sleepData)
                 val now = System.currentTimeMillis()
                 stateMachineLock.withLock {
-                    stateMachine.maybeGetBlockRange(now, ::sendRequest) // It's up to the state machine if we should send a new request
+                    stateMachine.maybeGetBlockRange(now, sleepData.currentSleepMs, ::sendRequest) // It's up to the state machine if we should send a new request
                 }
-                Thread.sleep(sleepData.currentSleepMs)
+                Thread.sleep(min(sleepData.currentSleepMs, 100))
             }
         } catch (e: BadDataException) {
             logger.error(e) { "Fatal error, shutting down blockchain for safety reasons. Needs manual investigation." }
@@ -157,7 +158,6 @@ class SlowSynchronizer(
      * @return number of processed blocks
      */
     private fun handleBlockRange(peerId: NodeRid, blocks: List<CompleteBlock>, startingAtHeight: Long): Int {
-
         if (stateMachine.state != SlowSyncStates.WAIT_FOR_REPLY) {
             peerStatuses.maybeBlacklist(peerId, "Slow Sync: We are not waiting for a block range. " +
                     " Why does $peerId send us this? $stateMachine ")
@@ -189,7 +189,7 @@ class SlowSynchronizer(
             if (stateMachine.hasUnacknowledgedFailedCommit()) {
                 logger.debug("Response is irrelevant since previous commit failed")
                 stateMachine.acknowledgeFailedCommit()
-                stateMachine.resetToWaitForAction()
+                stateMachine.resetToWaitForAction(System.currentTimeMillis())
                 return 0
             }
 
@@ -212,7 +212,7 @@ class SlowSynchronizer(
             if (processedBlocks != blocks.size) {
                 throw ProgrammerMistake("processedBlocks != blocks.size")
             }
-            stateMachine.resetToWaitForAction()
+            stateMachine.resetToWaitForAction(System.currentTimeMillis())
             return processedBlocks
         }
     }
