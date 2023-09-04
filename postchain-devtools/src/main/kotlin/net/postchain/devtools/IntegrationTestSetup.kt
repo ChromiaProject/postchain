@@ -16,8 +16,6 @@ import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import org.apache.commons.configuration2.MapConfiguration
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions.assertArrayEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.TestInfo
 import java.util.concurrent.TimeoutException
@@ -41,7 +39,6 @@ open class IntegrationTestSetup : AbstractIntegration() {
     // a listening node will update the PeerInfo port after
     // ServerSocket is created.
     private var peerInfos: Array<PeerInfo>? = null
-    private var expectedSuccessRids = mutableMapOf<Long, MutableList<ByteArray>>()
 
     companion object : KLogging()
 
@@ -120,22 +117,6 @@ open class IntegrationTestSetup : AbstractIntegration() {
         }
 
         return tx
-    }
-
-    protected fun verifyBlockchainTransactions(node: PostchainTestNode) {
-        val expectAtLeastHeight = expectedSuccessRids.keys.reduce { acc, l -> maxOf(l, acc) }
-        val lastHeight = getLastHeight(node)
-        assertTrue(lastHeight >= expectAtLeastHeight)
-        for (height in 0..lastHeight) {
-            val txRidsAtHeight = getTxRidsAtHeight(node, height)
-
-            val expectedRidsAtHeight = expectedSuccessRids[height]
-            if (expectedRidsAtHeight == null) {
-                assertArrayEquals(arrayOf(), txRidsAtHeight)
-            } else {
-                assertArrayEquals(expectedRidsAtHeight.toTypedArray(), txRidsAtHeight)
-            }
-        }
     }
 
     /**

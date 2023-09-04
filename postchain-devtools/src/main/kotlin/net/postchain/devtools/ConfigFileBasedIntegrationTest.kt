@@ -46,7 +46,6 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     // a listening node will update the PeerInfo port after
     // ServerSocket is created.
     private var peerInfos: Array<PeerInfo>? = null
-    private var expectedSuccessRids = mutableMapOf<Long, MutableList<ByteArray>>()
 
     private var txCounter = 0
 
