@@ -49,6 +49,10 @@ interface Transaction : Transactor {
     }
 }
 
+interface SignableTransaction : Transaction {
+    val signers: Array<ByteArray>
+}
+
 interface TransactionFactory {
     fun decodeTransaction(data: ByteArray): Transaction
     fun validateTransaction(data: ByteArray)

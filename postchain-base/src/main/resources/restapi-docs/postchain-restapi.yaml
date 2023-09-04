@@ -220,6 +220,12 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: signer
+          description: Return only transactions signed by public key
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/hex"
       responses:
         200:
           description: Found

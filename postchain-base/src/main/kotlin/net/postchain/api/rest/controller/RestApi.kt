@@ -39,6 +39,7 @@ import net.postchain.api.rest.nullBody
 import net.postchain.api.rest.prettyJsonBody
 import net.postchain.api.rest.proofBody
 import net.postchain.api.rest.queryQuery
+import net.postchain.api.rest.signerQuery
 import net.postchain.api.rest.statusBody
 import net.postchain.api.rest.stringsBody
 import net.postchain.api.rest.textBody
@@ -56,6 +57,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockDetail
+import net.postchain.crypto.PubKey
 import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
@@ -284,7 +286,12 @@ class RestApi(
         val limit = limitQuery(request)?.coerceIn(0, MAX_NUMBER_OF_TXS_PER_REQUEST)
                 ?: DEFAULT_ENTRY_RESULTS_REQUEST
         val beforeTime = beforeTimeQuery(request) ?: Long.MAX_VALUE
-        val txInfos = model.getTransactionsInfo(beforeTime, limit)
+        val signer = signerQuery(request)
+        val txInfos = if (signer != null) {
+            model.getTransactionsInfoBySigner(beforeTime, limit, PubKey(signer))
+        } else {
+            model.getTransactionsInfo(beforeTime, limit)
+        }
         return Response(OK).with(txInfosBody of txInfos)
     }
 

@@ -140,4 +140,14 @@ class RestApiGetTxInfoEndpointTest {
                 .contentType(ContentType.JSON)
                 .body(equalTo("[]"))
     }
+
+    @Test
+    fun testGetTransactionsWithInvalidSigner() {
+        restApi.attachModel(blockchainRID, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/transactions/$blockchainRID?signer=qrst")
+                .then()
+                .statusCode(400)
+    }
 }

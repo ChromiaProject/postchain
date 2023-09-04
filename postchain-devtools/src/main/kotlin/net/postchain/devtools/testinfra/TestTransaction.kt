@@ -3,16 +3,17 @@
 package net.postchain.devtools.testinfra
 
 import net.postchain.common.exception.TransactionIncorrect
+import net.postchain.core.SignableTransaction
 import net.postchain.core.TxEContext
-import net.postchain.core.Transaction
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 
 open class TestTransaction(
         val id: Int,
         val good: Boolean = true,
-        val correct: Boolean = true
-) : Transaction {
+        val correct: Boolean = true,
+        override val signers: Array<ByteArray> = emptyArray()
+) : SignableTransaction {
 
     override fun checkCorrectness() {
         if (!correct) throw TransactionIncorrect(getRID())

@@ -21,6 +21,7 @@ import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
@@ -191,6 +192,10 @@ class RestApiMockForClientManual {
                 }
             }
             return transactionsInfo.toList()
+        }
+
+        override fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey): List<TransactionInfoExt> {
+            TODO("Not yet implemented")
         }
 
         override fun getLastTransactionNumber(): TransactionsCount {

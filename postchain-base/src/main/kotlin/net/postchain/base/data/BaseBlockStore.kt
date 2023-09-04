@@ -21,6 +21,7 @@ import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockStore
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.InitialBlockData
+import net.postchain.crypto.PubKey
 
 /**
  * Provides database access to the location where the blockchain with related metadata and transactions
@@ -103,6 +104,10 @@ class BaseBlockStore : BlockStore {
 
     override fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt> {
         return DatabaseAccess.of(ctx).getTransactionsInfo(ctx, beforeTime, limit)
+    }
+
+    override fun getTransactionsInfoBySigner(ctx: EContext, beforeTime: Long, limit: Int, signer: PubKey): List<TransactionInfoExt> {
+        return DatabaseAccess.of(ctx).getTransactionsInfoBySigner(ctx, beforeTime, limit, signer)
     }
 
     override fun getLastTransactionNumber(ctx: EContext): Long {
