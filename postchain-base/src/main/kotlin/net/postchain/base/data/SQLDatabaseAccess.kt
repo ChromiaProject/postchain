@@ -22,6 +22,7 @@ import net.postchain.core.AppContext
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.NodeRid
+import net.postchain.core.SignableTransaction
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
@@ -55,6 +56,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     private fun tableFaultyConfiguration(ctx: EContext): String = tableFaultyConfiguration(ctx.chainID)
     internal fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableTransactions(chainId: Long): String = tableName(chainId, "transactions")
+    internal fun tableTransactionSigners(ctx: EContext): String = tableName(ctx, "sys.transaction_signers")
+    protected fun tableTransactionSigners(chainId: Long): String = tableName(chainId, "sys.transaction_signers")
+    protected fun indexTableTransactionSigners(chainId: Long): String = tableName(chainId, "c${chainId}_idx_sys_transaction_signers")
     internal fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
     private fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
     protected fun tablePages(ctx: EContext, name: String): String = tableName(ctx, "${name}_pages")
@@ -85,6 +89,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdUpdateTableTransactionsV8First(chainId: Long): String
     protected abstract fun cmdUpdateTableTransactionsV8Second(chainId: Long): String
     protected abstract fun cmdUpdateTableTransactionsV8Third(chainId: Long): String
+    protected abstract fun cmdCreateTableTransactionSigners(chainId: Long): String
+    protected abstract fun cmdCreateTableTransactionSignersIndex(chainId: Long): String
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
     protected abstract fun cmdCreateTablePage(ctx: EContext, name: String): String
@@ -166,7 +172,19 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdInsertTransactions(ctx), tx.getRID(), tx.getRawData(), tx.getHash(), ctx.blockIID, transactionNumber)
 
         val sql = "SELECT tx_iid FROM ${tableTransactions(ctx)} WHERE tx_rid = ?"
-        return queryRunner.query(ctx.conn, sql, longRes, tx.getRID())
+        val txIid = queryRunner.query(ctx.conn, sql, longRes, tx.getRID())
+
+        if (tx is SignableTransaction) {
+            insertTransactionSigners(ctx, tx, txIid)
+        }
+
+        return txIid
+    }
+
+    protected fun insertTransactionSigners(ctx: EContext, tx: SignableTransaction, txIid: Long) {
+        tx.signers.forEach {
+            queryRunner.update(ctx.conn, "INSERT INTO ${tableTransactionSigners(ctx)} (signer, tx_iid) VALUES (?, ?)", it, txIid)
+        }
     }
 
     override fun finalizeBlock(ctx: BlockEContext, header: BlockHeader) {
@@ -307,6 +325,19 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                     ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?;
         """.trimIndent()
         val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, beforeTime, limit)
+        return transactions.map(::buildTransactionInfoExt)
+    }
+
+    override fun getTransactionsInfoBySigner(ctx: EContext, beforeTime: Long, limit: Int, signer: PubKey): List<TransactionInfoExt> {
+        val sql = """
+            SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_rid, t.tx_hash, t.tx_data 
+                    FROM ${tableBlocks(ctx)} as b 
+                    JOIN ${tableTransactions(ctx)} as t ON (t.block_iid = b.block_iid) 
+                    WHERE t.tx_iid IN (SELECT tx_iid FROM ${tableTransactionSigners(ctx)} WHERE signer = ?) 
+                    AND b.timestamp < ? 
+                    ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?;
+        """.trimIndent()
+        val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, signer.data, beforeTime, limit)
         return transactions.map(::buildTransactionInfoExt)
     }
 
@@ -507,7 +538,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int, allowUpgrade: Boolean) {
-        if (expectedDbVersion !in 1..8) {
+        if (expectedDbVersion !in 1..9) {
             throw UserMistake("Unsupported DB version $expectedDbVersion")
         }
 
@@ -572,6 +603,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 version8(connection)
             }
 
+            if (version < 9 && expectedDbVersion >= 9) {
+                logger.info("Upgrading to version 9")
+                version9(connection)
+            }
+
             if (expectedDbVersion > version) {
                 queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
                 logger.info("Database version has been updated to version: $expectedDbVersion")
@@ -616,6 +652,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
             if (expectedDbVersion >= 8) {
                 version8(connection)
+            }
+
+            if (expectedDbVersion >= 9) {
+                version9(connection)
             }
         }
     }
@@ -688,6 +728,15 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 }
     }
 
+    private fun version9(connection: Connection) {
+        queryRunner.query(connection, "SELECT chain_iid FROM ${tableBlockchains()}", mapListHandler)
+                .map { it["chain_iid"] as Long }
+                .forEach { chainId ->
+                    queryRunner.update(connection, cmdCreateTableTransactionSigners(chainId))
+                    queryRunner.update(connection, cmdCreateTableTransactionSignersIndex(chainId))
+                }
+    }
+
     protected fun calcConfigurationHash(configurationData: ByteArray) = GtvToBlockchainRidFactory.calculateBlockchainRid(
             GtvDecoder.decodeGtv(configurationData), ::sha256Digest).data
 
@@ -708,6 +757,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdCreateTableTransactions(ctx))
         queryRunner.update(ctx.conn, cmdCreateTableConfigurations(ctx))
         queryRunner.update(ctx.conn, cmdCreateTableFaultyConfiguration(ctx.chainID))
+        queryRunner.update(ctx.conn, cmdCreateTableTransactionSigners(ctx.chainID))
+        queryRunner.update(ctx.conn, cmdCreateTableTransactionSignersIndex(ctx.chainID))
 
         val txIndex = "CREATE INDEX IF NOT EXISTS ${tableName(ctx, "transactions_block_iid_idx")} " +
                 "ON ${tableTransactions(ctx)}(block_iid)"

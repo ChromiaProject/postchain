@@ -1,6 +1,7 @@
 package net.postchain.base.data
 
 import assertk.assertThat
+import assertk.assertions.containsOnly
 import net.postchain.StorageBuilder
 import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.FaultyConfiguration
@@ -19,6 +20,7 @@ import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
+import org.apache.commons.dbutils.handlers.ArrayHandler
 import org.apache.commons.dbutils.handlers.ScalarHandler
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -418,6 +420,37 @@ class UpgradeDatabaseIT {
                         assertEquals(3, db.queryRunner.query(ctx.conn, "SELECT tx_number FROM ${db.tableTransactions(ctx)} WHERE tx_iid = 5 ", longRes))
                         assertEquals(3, db.getLastTransactionNumber(ctx))
                         true
+                    }
+                }
+    }
+
+    @Test
+    fun testUpgradeFromVersion8to9() {
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 8)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
+                        true
+                    }
+                }
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 9)
+                .use {
+                    withReadConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        val signer = PubKey("03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05")
+
+                        // Assert that we have a transaction signers table for chain id 0
+                        val blockIid = db.insertBlock(ctx, 0)
+                        val txIid = db.queryRunner.update(ctx.conn, """
+                            INSERT INTO ${db.tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid, tx_number)
+                            VALUES (?, ?, ?, ?, ?)
+                        """, ByteArray(32), ByteArray(32), ByteArray(32), blockIid, 0)
+
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactionSigners(ctx)} (signer, tx_iid) VALUES (?, ?)", signer.data, txIid)
+                        val signedTxs = db.queryRunner.query(ctx.conn, "SELECT tx_iid FROM ${db.tableTransactionSigners(ctx)} WHERE signer = ?", signer.data, ArrayHandler())
+                        assertThat(signedTxs).containsOnly(txIid.toLong())
                     }
                 }
     }

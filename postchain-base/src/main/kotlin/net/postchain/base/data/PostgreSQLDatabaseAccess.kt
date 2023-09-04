@@ -5,6 +5,7 @@ package net.postchain.base.data
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
+import net.postchain.core.SignableTransaction
 import net.postchain.core.Transaction
 import java.sql.Connection
 
@@ -142,6 +143,18 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 "ALTER COLUMN tx_number SET NOT NULL"
     }
 
+    override fun cmdCreateTableTransactionSigners(chainId: Long): String {
+        return "CREATE TABLE IF NOT EXISTS ${tableTransactionSigners(chainId)} (" +
+                "signer BYTEA NOT NULL " +
+                ", tx_iid BIGINT NOT NULL REFERENCES ${tableTransactions(chainId)}(tx_iid)" +
+                ")"
+    }
+
+    override fun cmdCreateTableTransactionSignersIndex(chainId: Long): String {
+        return "CREATE INDEX IF NOT EXISTS ${indexTableTransactionSigners((chainId))} " +
+                "ON ${tableTransactionSigners(chainId)}(signer)"
+    }
+
     override fun cmdCreateTableConfigurations(ctx: EContext): String {
         return "CREATE TABLE IF NOT EXISTS ${tableConfigurations(ctx)} (" +
                 "height BIGINT PRIMARY KEY" +
@@ -256,7 +269,13 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
         val sql = "INSERT INTO ${tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid, tx_number) " +
                 "VALUES (?, ?, ?, ?, ?) RETURNING tx_iid"
 
-        return queryRunner.query(ctx.conn, sql, longRes, tx.getRID(), tx.getRawData(), tx.getHash(), ctx.blockIID, transactionNumber)
+        val txIid = queryRunner.query(ctx.conn, sql, longRes, tx.getRID(), tx.getRawData(), tx.getHash(), ctx.blockIID, transactionNumber)
+
+        if (tx is SignableTransaction) {
+            insertTransactionSigners(ctx, tx, txIid)
+        }
+
+        return txIid
     }
 
     /**

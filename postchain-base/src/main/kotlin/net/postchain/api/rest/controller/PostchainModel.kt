@@ -33,6 +33,7 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockQueries
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.SigMaker
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
@@ -76,6 +77,9 @@ open class PostchainModel(
 
     override fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt> =
             blockQueries.getTransactionsInfo(beforeTime, limit).get()
+
+    override fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey): List<TransactionInfoExt> =
+            blockQueries.getTransactionsInfoBySigner(beforeTime, limit, signer).get()
 
     override fun getLastTransactionNumber(): TransactionsCount =
             TransactionsCount(blockQueries.getLastTransactionNumber().get())

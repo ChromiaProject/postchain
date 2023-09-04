@@ -12,6 +12,7 @@ import net.postchain.core.Shutdownable
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxEContext
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import java.util.concurrent.CompletionStage
@@ -48,6 +49,7 @@ interface BlockStore {
     fun getBlock(ctx: EContext, blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail?
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
     fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt>
+    fun getTransactionsInfoBySigner(ctx: EContext, beforeTime: Long, limit: Int, signer: PubKey): List<TransactionInfoExt>
     fun getLastTransactionNumber(ctx: EContext): Long
     fun getBlockHeader(ctx: EContext, blockRID: ByteArray): ByteArray
     fun getTxRIDsAtHeight(ctx: EContext, height: Long): Array<ByteArray>
@@ -78,6 +80,7 @@ interface BlockQueries : Shutdownable {
     fun getTransactionRawData(txRID: ByteArray): CompletionStage<ByteArray?>
     fun getTransactionInfo(txRID: ByteArray): CompletionStage<TransactionInfoExt?>
     fun getTransactionsInfo(beforeTime: Long, limit: Int): CompletionStage<List<TransactionInfoExt>>
+    fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey): CompletionStage<List<TransactionInfoExt>>
     fun getLastTransactionNumber(): CompletionStage<Long>
     fun query(name: String, args: Gtv): CompletionStage<Gtv>
     fun isTransactionConfirmed(txRID: ByteArray): CompletionStage<Boolean>

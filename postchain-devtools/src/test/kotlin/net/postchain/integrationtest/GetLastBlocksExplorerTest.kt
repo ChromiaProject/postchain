@@ -10,6 +10,7 @@ import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.Transaction
 import net.postchain.core.TxDetail
+import net.postchain.crypto.PubKey
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
 import net.postchain.devtools.assertChainStarted
@@ -22,6 +23,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class GetLastBlocksExplorerTest : IntegrationTestSetup() {
+
+    private val signer1 = "03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05".hexStringToByteArray()
+    private val signer2 = "03F9ABC05F7D7639AEC97B18784D5C83CA82D1EAF8F96DC31E77A83F21DDE67F95".hexStringToByteArray()
 
     @BeforeEach
     fun setup() {
@@ -38,9 +42,9 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
                     nodes.forEach { it.assertChainStarted() }
                 }
 
-        nodes[0].enqueueTxsAndAwaitBuiltBlock(DEFAULT_CHAIN_IID, 0, tx(0), tx(1))
-        nodes[0].enqueueTxsAndAwaitBuiltBlock(DEFAULT_CHAIN_IID, 1, tx(10), tx(11), tx(12))
-        nodes[0].enqueueTxsAndAwaitBuiltBlock(DEFAULT_CHAIN_IID, 2, tx(100), tx(101), tx(102))
+        nodes[0].enqueueTxsAndAwaitBuiltBlock(DEFAULT_CHAIN_IID, 0, tx(0, arrayOf(signer1)), tx(1, arrayOf(signer2)))
+        nodes[0].enqueueTxsAndAwaitBuiltBlock(DEFAULT_CHAIN_IID, 1, tx(10, arrayOf(signer1, signer2)), tx(11), tx(12))
+        nodes[0].enqueueTxsAndAwaitBuiltBlock(DEFAULT_CHAIN_IID, 2, tx(100, arrayOf(signer1)), tx(101), tx(102))
     }
 
     @Test
@@ -131,13 +135,27 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
         assertThat(tx).isNotNull()
     }
 
+    @Test
+    fun test_get_txs_by_signer() {
+        val signer1Txs = nodes[0].getRestApiModel().getTransactionsInfoBySigner(Long.MAX_VALUE, Int.MAX_VALUE, PubKey(signer1))
+        assertThat(signer1Txs.size).isEqualTo(3)
+
+        val signer2Txs = nodes[0].getRestApiModel().getTransactionsInfoBySigner(Long.MAX_VALUE, Int.MAX_VALUE, PubKey(signer2))
+        assertThat(signer2Txs.size).isEqualTo(2)
+
+        // Assert one common multi-sig tx
+        val commonTxs = signer1Txs.filter { signer1Tx -> signer2Txs.any { it.txRID.contentEquals(signer1Tx.txRID) } }
+        assertThat(commonTxs.size).isEqualTo(1)
+    }
+
+    @Test
     fun test_get_a_tx_does_not_exist() {
         val randomTxRID = "ce4ae9fbb66228a5dbaf89384217d1466df478753f3f3970af9cae8f485100f2".hexStringToByteArray()
         val tx = nodes[0].getRestApiModel().getTransactionInfo(TxRid((randomTxRID)))
         assertThat(tx).isNull()
     }
 
-    private fun tx(id: Int): TestTransaction = TestTransaction(id)
+    private fun tx(id: Int, signers: Array<ByteArray> = emptyArray()): TestTransaction = TestTransaction(id, signers = signers)
 
     private fun compareTx(actualTx: TxDetail, expectedTx: Transaction): Boolean {
         return (actualTx.data?.toHex() == expectedTx.getRawData().toHex())
