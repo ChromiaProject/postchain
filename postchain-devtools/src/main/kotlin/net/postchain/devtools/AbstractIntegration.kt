@@ -12,6 +12,7 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.gtvml.GtvMLParser
+import org.junit.jupiter.api.Assertions
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 
@@ -38,6 +39,8 @@ abstract class AbstractIntegration {
 
     val cryptoSystem = Secp256K1CryptoSystem()
     protected val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+
+    protected var expectedSuccessRids = mutableMapOf<Long, MutableList<ByteArray>>()
 
     /**
      * Put logic in here that should run after each test (the "@after" annotation will guarantee execution)
@@ -88,5 +91,21 @@ abstract class AbstractIntegration {
 
     protected fun getLastHeight(node: PostchainTestNode): Long {
         return node.getBlockchainInstance().blockchainEngine.getBlockQueries().getLastBlockHeight().get()
+    }
+
+    protected fun verifyBlockchainTransactions(node: PostchainTestNode) {
+        val expectAtLeastHeight = expectedSuccessRids.keys.reduce { acc, l -> maxOf(l, acc) }
+        val lastHeight = getLastHeight(node)
+        Assertions.assertTrue(lastHeight >= expectAtLeastHeight)
+        for (height in 0..lastHeight) {
+            val txRidsAtHeight = getTxRidsAtHeight(node, height)
+
+            val expectedRidsAtHeight = expectedSuccessRids[height]
+            if (expectedRidsAtHeight == null) {
+                Assertions.assertArrayEquals(arrayOf(), txRidsAtHeight)
+            } else {
+                Assertions.assertArrayEquals(expectedRidsAtHeight.toTypedArray(), txRidsAtHeight)
+            }
+        }
     }
 }
