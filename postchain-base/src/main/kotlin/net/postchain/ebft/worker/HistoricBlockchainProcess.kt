@@ -26,6 +26,7 @@ import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.rest.contract.StateNodeStatus
+import net.postchain.ebft.syncmanager.common.FastSyncPeerStatuses
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.KnownState
 import net.postchain.ebft.syncmanager.common.SyncMethod
@@ -33,6 +34,7 @@ import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import java.lang.Thread.sleep
+import java.time.Clock
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -64,9 +66,13 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     private val blockDatabase = BaseBlockDatabase(
             loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeDiagnosticContext, NODE_ID_READ_ONLY
     )
+    private val syncParams = SyncParameters.fromAppConfig(workerContext.appConfig)
     private val fastSynchronizer = FastSynchronizer(
-            workerContext, blockDatabase,
-            SyncParameters.fromAppConfig(workerContext.appConfig),
+            workerContext,
+            blockDatabase,
+            syncParams,
+            FastSyncPeerStatuses(syncParams),
+            Clock.systemUTC(),
             ::isProcessRunning
     )
 
@@ -136,7 +142,14 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                 netDebug("Try network sync using historic BRID since chainId $localChainID is new")
                 try {
                     val historicWorkerContext = historicBlockchainContext.contextCreator(brid)
-                    historicSynchronizer = FastSynchronizer(historicWorkerContext, blockDatabase, params, ::isProcessRunning)
+                    historicSynchronizer = FastSynchronizer(
+                            historicWorkerContext,
+                            blockDatabase,
+                            params,
+                            FastSyncPeerStatuses(params),
+                            Clock.systemUTC(),
+                            ::isProcessRunning
+                    )
                     isSyncingHistoric = true
                     historicSynchronizer!!.syncUntilResponsiveNodesDrained()
                     isSyncingHistoric = false

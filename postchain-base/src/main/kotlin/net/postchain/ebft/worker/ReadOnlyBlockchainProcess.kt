@@ -16,6 +16,7 @@ import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.rest.contract.StateNodeStatus
+import net.postchain.ebft.syncmanager.common.FastSyncPeerStatuses
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.KnownState
 import net.postchain.ebft.syncmanager.common.SlowSynchronizer
@@ -23,6 +24,7 @@ import net.postchain.ebft.syncmanager.common.SyncMethod
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
+import java.time.Clock
 
 class ReadOnlyBlockchainProcess(
         private val workerContext: WorkerContext,
@@ -51,6 +53,8 @@ class ReadOnlyBlockchainProcess(
             workerContext,
             blockDatabase,
             params,
+            FastSyncPeerStatuses(params),
+            Clock.systemUTC(),
             ::isProcessRunning
     )
 

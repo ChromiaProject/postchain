@@ -17,9 +17,11 @@ import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockTrace
+import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
+import net.postchain.crypto.SigMaker
 import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.worker.WorkerContext
@@ -30,8 +32,9 @@ import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import java.util.concurrent.CompletableFuture
 
 abstract class AbstractSynchronizer(
-        val workerContext: WorkerContext
-) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
+        val workerContext: WorkerContext,
+        val baseBlockWitnessProviderProvider: BaseBlockWitnessProviderProvider = defaultBaseBlockWitnessProviderProvider()
+) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker) {
 
     protected val blockchainConfiguration = workerContext.engine.getConfiguration()
     protected val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
@@ -59,7 +62,7 @@ abstract class AbstractSynchronizer(
         // the height, we'd have to rely on something else, for example
         // sending the height explicitly, but then we trust only that single
         // sender node to tell the truth.
-        // For now we rely on the height being part of the header.
+        // For now, we rely on the height being part of the header.
         if (header !is BaseBlockHeader) {
             throw ProgrammerMistake("Expected BaseBlockHeader")
         }
@@ -70,13 +73,13 @@ abstract class AbstractSynchronizer(
      * We do this check to avoid getting stuck when chain is waiting for a pending config where we are promoted to signer to be applied
      * In other cases config updates will be handled when adding blocks
      */
-    protected fun checkIfWeNeedToApplyPendingConfig(peer: NodeRid, appliedConfig: AppliedConfig): Boolean {
+    internal fun checkIfWeNeedToApplyPendingConfig(peer: NodeRid, appliedConfig: AppliedConfig): Boolean {
         val incomingConfigHash = appliedConfig.configHash
         val incomingHeight = appliedConfig.height
 
         if (blockchainConfiguration.chainID == 0L) return false
         val configProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
-        if (configProvider == null) return false
+                ?: return false
 
         withLoggingContext(CHAIN_IID_TAG to blockchainConfiguration.chainID.toString()) {
             if (blockQueries.getLastBlockHeight().get() + 1 != incomingHeight) return false
@@ -86,58 +89,53 @@ abstract class AbstractSynchronizer(
             logger.debug { "incomingHeight = $incomingHeight, incomingConfigHash = ${incomingConfigHash.wrap()}" }
 
             if (!currentConfigHash.contentEquals(incomingConfigHash)) {
-                val isIncomingConfigPending = withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
-                    configProvider.isConfigPending(
-                            ctx,
-                            blockchainConfiguration.blockchainRid,
-                            incomingHeight,
-                            incomingConfigHash
-                    )
-                }
-
-                if (!isIncomingConfigPending) return false
-
-                val pendingSigners = configProvider.getPendingConfigSigners(blockchainConfiguration.blockchainRid, incomingHeight, incomingConfigHash)
-                val myPubKey = PubKey(workerContext.appConfig.pubKeyByteArray)
-                val peerPubKey = PubKey(peer)
-                return if (pendingSigners.contains(myPubKey)) {
-                    val promotedNodesAmount = pendingSigners.subtract(blockchainConfiguration.signers.map { PubKey(it) }.toSet()).size
-                    val pendingBftRequiredSignatureCount = getBFTRequiredSignatureCount(pendingSigners.size)
-
-                    if (pendingSigners.size - promotedNodesAmount >= pendingBftRequiredSignatureCount) {
-                        logger.debug { "Incoming config is pending with us as signer but we don't have to apply it since we are not blocking production of blocks" }
-                        return false
-                    }
-
-                    if (!incomingConfigHash.contentEquals(pendingConfigPromotingUsAsSigner)) {
-                        pendingConfigPromotingUsAsSigner = incomingConfigHash
-                        relevantSignersThatHaveAppliedConfig.clear()
-                    }
-
-                    if (pendingSigners.contains(peerPubKey) && blockchainConfiguration.signers.any { it.contentEquals(peerPubKey.data) }) {
-                        relevantSignersThatHaveAppliedConfig.add(peerPubKey)
-                    }
-
-                    logger.debug { "Promoted nodes amount: $promotedNodesAmount, signers that have applied config: $relevantSignersThatHaveAppliedConfig" }
-                    // We don't care if other promoted nodes have applied the config or not, they can't build blocks with older config anyway
-                    if (relevantSignersThatHaveAppliedConfig.size + promotedNodesAmount >= pendingBftRequiredSignatureCount) {
-                        logger.debug { "Incoming config is pending with us as signer, will restart" }
-                        workerContext.restartNotifier.notifyRestart(true)
-                        true
-                    } else {
-                        logger.debug { "Incoming config is pending with us as signer, waiting for more nodes to apply it" }
-                        false
-                    }
-                } else {
-                    false
-                }
+                return handleNewConfig(configProvider, incomingHeight, incomingConfigHash, peer)
             } else {
                 return false
             }
         }
     }
 
-    protected fun handleAddBlockException(exception: Throwable, block: BlockDataWithWitness, bTrace: BlockTrace?, peerStatuses: AbstractPeerStatuses<*>, peerId: NodeRid) {
+    private fun handleNewConfig(configProvider: ManagedBlockchainConfigurationProvider, incomingHeight: Long, incomingConfigHash: ByteArray, peer: NodeRid): Boolean {
+        if (!isIncomingConfigPending(configProvider, incomingHeight, incomingConfigHash)) return false
+
+        val pendingSigners = configProvider.getPendingConfigSigners(blockchainConfiguration.blockchainRid, incomingHeight, incomingConfigHash)
+        val myPubKey = PubKey(workerContext.appConfig.pubKeyByteArray)
+        return if (pendingSigners.contains(myPubKey)) {
+            val promotedNodesAmount = pendingSigners.subtract(blockchainConfiguration.signers.map { PubKey(it) }.toSet()).size
+            val pendingBftRequiredSignatureCount = getBFTRequiredSignatureCount(pendingSigners.size)
+
+            if (pendingSigners.size - promotedNodesAmount >= pendingBftRequiredSignatureCount) {
+                logger.debug { "Incoming config is pending with us as signer but we don't have to apply it since we are not blocking production of blocks" }
+                return false
+            }
+
+            if (!incomingConfigHash.contentEquals(pendingConfigPromotingUsAsSigner)) {
+                pendingConfigPromotingUsAsSigner = incomingConfigHash
+                relevantSignersThatHaveAppliedConfig.clear()
+            }
+
+            val peerPubKey = PubKey(peer)
+            if (pendingSigners.contains(peerPubKey) && blockchainConfiguration.signers.any { it.contentEquals(peerPubKey.data) }) {
+                relevantSignersThatHaveAppliedConfig.add(peerPubKey)
+            }
+
+            logger.debug { "Promoted nodes amount: $promotedNodesAmount, signers that have applied config: $relevantSignersThatHaveAppliedConfig" }
+            // We don't care if other promoted nodes have applied the config or not, they can't build blocks with older config anyway
+            if (relevantSignersThatHaveAppliedConfig.size + promotedNodesAmount >= pendingBftRequiredSignatureCount) {
+                logger.debug { "Incoming config is pending with us as signer, will restart" }
+                workerContext.restartNotifier.notifyRestart(true)
+                true
+            } else {
+                logger.debug { "Incoming config is pending with us as signer, waiting for more nodes to apply it" }
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    internal fun handleAddBlockException(exception: Throwable, block: BlockDataWithWitness, bTrace: BlockTrace?, peerStatuses: AbstractPeerStatuses<*>, peerId: NodeRid) {
         val height = getHeight(block.header)
         when (exception) {
             is PmEngineIsAlreadyClosed, is BDBAbortException -> logger.debug { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
@@ -172,7 +170,6 @@ abstract class AbstractSynchronizer(
         }
 
         withLoggingContext(CHAIN_IID_TAG to blockchainConfiguration.chainID.toString()) {
-
             if (hasNewConfig) {
                 logger.warn { "Wrong config used. Chain will be restarted" }
                 workerContext.restartNotifier.notifyRestart(false)
@@ -188,21 +185,14 @@ abstract class AbstractSynchronizer(
         val bcConfigProvider = workerContext.blockchainConfigurationProvider
         val bcConfig = workerContext.blockchainConfiguration
         if (bcConfigProvider is ManagedBlockchainConfigurationProvider && configHash != null) {
-            val isIncomingConfigPending = withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
-                bcConfigProvider.isConfigPending(
-                        ctx,
-                        blockchainConfiguration.blockchainRid,
-                        getHeight(block.header),
-                        configHash
-                )
-            }
+            val isIncomingConfigPending = isIncomingConfigPending(bcConfigProvider, getHeight(block.header), configHash)
             if (isIncomingConfigPending) {
                 logger.debug { "Matching pending configuration detected, will validate block signature before reloading" }
                 val pendingSigners = bcConfigProvider.getPendingConfigSigners(bcConfig.blockchainRid, getHeight(block.header), configHash)
 
                 val cryptoSystem = workerContext.appConfig.cryptoSystem
                 val myKeyPair = KeyPair(PubKey(workerContext.appConfig.pubKeyByteArray), PrivKey(workerContext.appConfig.privKeyByteArray))
-                val validator = BaseBlockWitnessProvider(
+                val validator = baseBlockWitnessProviderProvider(
                         cryptoSystem,
                         cryptoSystem.buildSigMaker(myKeyPair),
                         pendingSigners.map { it.data }.toTypedArray()
@@ -221,4 +211,29 @@ abstract class AbstractSynchronizer(
         }
         return false
     }
+
+    private fun isIncomingConfigPending(configProvider: ManagedBlockchainConfigurationProvider, height: Long, configHash: ByteArray): Boolean =
+            withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
+                configProvider.isConfigPending(
+                        ctx,
+                        blockchainConfiguration.blockchainRid,
+                        height,
+                        configHash
+                )
+            }
 }
+
+typealias BaseBlockWitnessProviderProvider = (
+        cryptoSystem: CryptoSystem,
+        blockSigMaker: SigMaker,
+        subjects: Array<ByteArray>
+) -> BaseBlockWitnessProvider
+
+private fun defaultBaseBlockWitnessProviderProvider(): BaseBlockWitnessProviderProvider =
+        { cryptoSystem, blockSigMaker, subjects ->
+            BaseBlockWitnessProvider(
+                    cryptoSystem,
+                    blockSigMaker,
+                    subjects
+            )
+        }
