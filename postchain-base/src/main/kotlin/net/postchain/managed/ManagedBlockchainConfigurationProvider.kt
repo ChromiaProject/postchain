@@ -89,7 +89,19 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
     }
 
     override fun getActiveBlockConfigurationOptions(eContext: EContext, chainId: Long): BlockchainConfigurationOptions {
-        return dataSource.getBlockchainConfigurationOptions() ?: BlockchainConfigurationOptions.DEFAULT
+        return if (chainId == 0L) {
+            BlockchainConfigurationOptions.DEFAULT
+        } else {
+            if (::dataSource.isInitialized) {
+                val dba = DatabaseAccess.of(eContext)
+                val blockchainRid = getBlockchainRid(eContext, dba)
+                val activeHeight = getActiveBlocksHeight(eContext, dba)
+                dataSource.getBlockchainConfigurationOptions(blockchainRid, activeHeight)
+                        ?: BlockchainConfigurationOptions.DEFAULT
+            } else {
+                throw IllegalStateException("Using managed blockchain configuration provider before it's properly initialized")
+            }
+        }
     }
 
     // --------- Private --------
