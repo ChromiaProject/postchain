@@ -82,7 +82,8 @@ open class BaseBlockBuilder(
         val maxBlockSize: Long,
         val maxBlockTransactions: Long,
         maxTxExecutionTime: Long,
-        val maxSpecialEndTransactionSize: Long
+        val maxSpecialEndTransactionSize: Long,
+        val suppressSpecialTransactionValidation: Boolean
 ) : AbstractBlockBuilder(eContext, blockchainRID, store, txFactory, maxTxExecutionTime) {
 
     companion object : KLogging()
@@ -302,7 +303,7 @@ open class BaseBlockBuilder(
         val expectBeginTx = specialTxHandler.needsSpecialTransaction(Begin) && transactions.size == 0
         if (tx.isSpecial()) {
             if (expectBeginTx) {
-                if (!specialTxHandler.validateSpecialTransaction(Begin, tx, bctx)) {
+                if (!suppressSpecialTransactionValidation && !specialTxHandler.validateSpecialTransaction(Begin, tx, bctx)) {
                     throw BadBlockException("Special transaction validation failed: $Begin")
                 }
                 return // all is well, the first transaction is special and valid
@@ -311,7 +312,7 @@ open class BaseBlockBuilder(
             if (!needEndTx) {
                 throw BadBlockException("Found unexpected special transaction")
             }
-            if (!specialTxHandler.validateSpecialTransaction(End, tx, bctx)) {
+            if (!suppressSpecialTransactionValidation && !specialTxHandler.validateSpecialTransaction(End, tx, bctx)) {
                 throw BadBlockException("Special transaction validation failed: $End")
             }
             haveSpecialEndTransaction = true

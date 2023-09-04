@@ -3,6 +3,7 @@
 package net.postchain.config.blockchain
 
 import mu.KLogging
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
 
@@ -34,7 +35,7 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
         return activeHeight == configHeight
     }
 
-    override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray? {
+    override fun getActiveBlockConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val dba = DatabaseAccess.of(eContext)
@@ -60,4 +61,6 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
 
         return DatabaseAccess.of(eContext).getConfigurationData(eContext, historicBlockHeight)
     }
+
+    override fun getActiveBlockConfigurationOptions(eContext: EContext, chainId: Long) = BlockchainConfigurationOptions.DEFAULT
 }

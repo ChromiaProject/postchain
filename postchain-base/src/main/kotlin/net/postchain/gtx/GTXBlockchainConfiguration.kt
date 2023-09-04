@@ -8,6 +8,7 @@ import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.core.BlockchainContext
 import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
@@ -21,7 +22,8 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
                                       cryptoSystem: CryptoSystem,
                                       partialContext: BlockchainContext,
                                       blockSigMaker: SigMaker,
-                                      final override val module: GTXModule
+                                      final override val module: GTXModule,
+                                      val blockchainConfigurationOptions: BlockchainConfigurationOptions
 ) : BaseBlockchainConfiguration(configData, cryptoSystem, partialContext, blockSigMaker), GTXModuleAware {
 
     private val gtxConfig = configData.gtx?.toObject() ?: GtxConfigurationData.default
@@ -69,4 +71,6 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
         module.shutdown()
         super.shutdownModules()
     }
+
+    override fun isSuppressSpecialTransactionValidation() = blockchainConfigurationOptions.suppressSpecialTransactionValidation
 }

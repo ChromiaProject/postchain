@@ -57,7 +57,8 @@ class BaseBlockBuilderValidationTest {
             maxBlockSize = 26 * 1024 * 1024,
             maxBlockTransactions = 100,
             maxTxExecutionTime = 0,
-            maxSpecialEndTransactionSize = 1024)
+            maxSpecialEndTransactionSize = 1024,
+            suppressSpecialTransactionValidation = false)
 
     @Test
     fun validateBlockHeader_valid() {

@@ -1,5 +1,6 @@
 package net.postchain.containers.bpm.chain0
 
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.BlockchainConfigurationFactory
@@ -17,12 +18,16 @@ class ContainerChain0BlockchainConfigurationFactory(
         val storage: Storage
 ) : BlockchainConfigurationFactory by factory {
 
-    override fun makeBlockchainConfiguration(configurationData: Any,
-                                             partialContext: BlockchainContext,
-                                             blockSigMaker: SigMaker,
-                                             eContext: EContext,
-                                             cryptoSystem: CryptoSystem): ContainerChain0BlockchainConfiguration {
-        val conf = factory.makeBlockchainConfiguration(configurationData, partialContext, blockSigMaker, eContext, cryptoSystem)
+    override fun makeBlockchainConfiguration(
+            configurationData: Any,
+            partialContext: BlockchainContext,
+            blockSigMaker: SigMaker,
+            eContext: EContext,
+            cryptoSystem: CryptoSystem,
+            blockchainConfigurationOptions: BlockchainConfigurationOptions
+    ): ContainerChain0BlockchainConfiguration {
+        val conf = factory.makeBlockchainConfiguration(
+                configurationData, partialContext, blockSigMaker, eContext, cryptoSystem, blockchainConfigurationOptions)
         return ContainerChain0BlockchainConfiguration(conf, appConfig, containerNodeConfig, storage)
     }
 }
