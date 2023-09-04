@@ -17,7 +17,11 @@ import net.postchain.ebft.message.Signature
 import net.postchain.ebft.message.UnfinishedBlock
 import net.postchain.network.CommunicationManager
 
-abstract class Messaging(val blockQueries: BlockQueries, val communicationManager: CommunicationManager<EbftMessage>) {
+abstract class Messaging(
+        val blockQueries: BlockQueries,
+        val communicationManager: CommunicationManager<EbftMessage>,
+        private val blockPacker: BlockPacker
+) {
     companion object : KLogging()
 
     /**
@@ -65,7 +69,7 @@ abstract class Messaging(val blockQueries: BlockQueries, val communicationManage
         logger.trace { "GetBlockRange from peer $peerId , start at height $startAtHeight, myHeight is $myHeight" }
 
         val blocks = mutableListOf<CompleteBlock>()
-        val allBlocksFit = BlockPacker.packBlockRange(
+        val allBlocksFit = blockPacker.packBlockRange(
                 peerId,
                 startAtHeight,
                 myHeight,

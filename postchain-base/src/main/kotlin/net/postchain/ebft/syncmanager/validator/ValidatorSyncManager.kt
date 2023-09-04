@@ -40,13 +40,16 @@ import net.postchain.ebft.message.UnfinishedBlock
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockData
 import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockDataWithWitness
 import net.postchain.ebft.syncmanager.StatusLogInterval
+import net.postchain.ebft.syncmanager.common.BlockPacker
 import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
+import net.postchain.ebft.syncmanager.common.FastSyncPeerStatuses
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.gtv.mapper.toObject
+import java.time.Clock
 import java.util.Arrays
 import java.util.Date
 import java.util.concurrent.CompletableFuture
@@ -62,7 +65,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val nodeStateTracker: NodeStateTracker,
                            isProcessRunning: () -> Boolean,
                            startInFastSync: Boolean
-) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager) {
+) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker) {
     private val blockchainConfiguration = workerContext.engine.getConfiguration()
     private val revoltTracker = RevoltTracker(statusManager, getRevoltConfiguration(), workerContext.engine)
     private val statusSender = StatusSender(MAX_STATUS_INTERVAL, statusManager, workerContext.communicationManager)
@@ -87,7 +90,14 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         val params = SyncParameters.fromAppConfig(workerContext.appConfig) {
             it.mustSyncUntilHeight = nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
         }
-        fastSynchronizer = FastSynchronizer(workerContext, blockDatabase, params, isProcessRunning)
+        fastSynchronizer = FastSynchronizer(
+                workerContext,
+                blockDatabase,
+                params,
+                FastSyncPeerStatuses(params),
+                Clock.systemUTC(),
+                isProcessRunning
+        )
 
         // Init useFastSyncAlgorithm
         val lastHeight = blockQueries.getLastBlockHeight().get()

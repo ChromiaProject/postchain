@@ -8,11 +8,12 @@ import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
+import net.postchain.ebft.syncmanager.common.BlockPacker
 import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.network.CommunicationManager
 
 class ForceReadOnlyMessageProcessor(blockQueries: BlockQueries, communicationManager: CommunicationManager<EbftMessage>)
-    : Messaging(blockQueries, communicationManager) {
+    : Messaging(blockQueries, communicationManager, BlockPacker) {
 
     companion object : KLogging()
 
