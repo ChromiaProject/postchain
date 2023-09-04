@@ -2,8 +2,10 @@
 
 package net.postchain.api.rest.controller
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.google.gson.JsonArray
 import io.micrometer.core.instrument.Metrics
+import io.netty.channel.nio.NioEventLoopGroup
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.api.rest.BlockchainIidRef
@@ -22,6 +24,7 @@ import net.postchain.api.rest.blockRidPath
 import net.postchain.api.rest.blocksBody
 import net.postchain.api.rest.configurationInBody
 import net.postchain.api.rest.configurationOutBody
+import net.postchain.api.rest.controller.http4k.NettyWithCustomWorkerGroup
 import net.postchain.api.rest.emptyBody
 import net.postchain.api.rest.errorBody
 import net.postchain.api.rest.gtvJsonBody
@@ -106,7 +109,6 @@ import org.http4k.routing.bind
 import org.http4k.routing.path
 import org.http4k.routing.routes
 import org.http4k.routing.static
-import org.http4k.server.Netty
 import org.http4k.server.ServerConfig
 import org.http4k.server.asServer
 import java.io.Closeable
@@ -117,12 +119,16 @@ const val BLOCKCHAIN_RID = "blockchainRid"
 
 /**
  * Implements the REST API.
+ *
+ * @param requestConcurrency  number of incoming HTTP requests to handle concurrently,
+ *                            specify 0 for default value based on number of available processor cores
  */
 class RestApi(
         private val listenPort: Int,
         val basePath: String,
         private val nodeDiagnosticContext: NodeDiagnosticContext = JsonNodeDiagnosticContext(),
-        gracefulShutdown: Boolean = true
+        gracefulShutdown: Boolean = true,
+        requestConcurrency: Int = 0
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
@@ -537,8 +543,11 @@ class RestApi(
                 )
             })
             .then(handler)
-            .asServer(Netty(listenPort,
-                    if (gracefulShutdown) ServerConfig.StopMode.Graceful(Duration.ofSeconds(15)) else ServerConfig.StopMode.Immediate))
+            .asServer(NettyWithCustomWorkerGroup(
+                    listenPort,
+                    if (gracefulShutdown) ServerConfig.StopMode.Graceful(Duration.ofSeconds(5)) else ServerConfig.StopMode.Immediate,
+                    NioEventLoopGroup(requestConcurrency, ThreadFactoryBuilder().setNameFormat("REST-API-%d").build()))
+            )
             .start().also {
                 logger.info { "Rest API listening on port ${it.port()} and were given $listenPort, attached on $basePath/" }
             }

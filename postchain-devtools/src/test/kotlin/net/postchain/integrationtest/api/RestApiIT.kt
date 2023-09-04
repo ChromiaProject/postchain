@@ -3,12 +3,16 @@
 package net.postchain.integrationtest.api
 
 import assertk.assertThat
+import assertk.assertions.hasSize
+import assertk.assertions.isGreaterThan
 import assertk.isContentEqualTo
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
+import net.postchain.api.rest.controller.RestApi
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
@@ -30,13 +34,18 @@ import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBuilder
 import net.postchain.integrationtest.JsonTools
 import net.postchain.integrationtest.JsonTools.jsonAsMap
+import net.postchain.integrationtest.managedmode.getLoggerCaptor
 import org.awaitility.Awaitility
+import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.core.IsEqual
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.skyscreamer.jsonassert.JSONAssert
 import org.skyscreamer.jsonassert.JSONCompareMode
 import java.nio.file.Paths
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class RestApiIT : IntegrationTestSetup() {
 
@@ -367,6 +376,59 @@ class RestApiIT : IntegrationTestSetup() {
                 "/tx/${blockchainRIDBytes.toHex()}",
                 "{\"tx\": \"${tx.getRawData().toHex()}\"}",
                 409)
+    }
+
+    @Test
+    fun `REST API limit number of concurrent requests`() {
+        val nodeCount = 1
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
+        configOverrides.setProperty("api.request-concurrency", 2)
+        val sysSetup = doSystemSetup(nodeCount, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem)
+        val blocks = mutableListOf<List<TestOneOpGtxTransaction>>()
+        val blockCount = 1
+        val txPerBlockCount = 4
+
+        // create blocks
+        var currentId = 0
+        for (blockHeight in 0 until blockCount) {
+            val transactions = mutableListOf<TestOneOpGtxTransaction>()
+            for (txInBlock in 0 until txPerBlockCount) {
+                transactions.add(postGtxTransaction(factory, ++currentId, blockHeight, nodeCount, blockchainRIDBytes))
+            }
+            buildBlockAndCommit(nodes[0])
+            blocks.add(transactions)
+        }
+
+        // get transactions
+        val body = given().port(nodes[0].getRestApiHttpPort())
+                .get("/transactions/$blockchainRID")
+                .then()
+                .statusCode(200)
+                .extract().body().asString()
+        val txRids = (JsonParser.parseString(body) as JsonArray).asList().map { it.asJsonObject.get("txRID").asString }
+        assertThat(txRids).hasSize(4)
+
+        // fetch them in parallel
+        val appender = getLoggerCaptor(RestApi::class.java)
+        val threadPool = Executors.newFixedThreadPool(txRids.size, ThreadFactoryBuilder().setNameFormat("client-to-REST-API-%d").build())
+        val tasks = txRids.map { txRid ->
+            CompletableFuture.supplyAsync({
+                given().port(nodes[0].getRestApiHttpPort())
+                        .get("/transactions/$blockchainRID/$txRid")
+                        .then()
+                        .statusCode(200)
+                        .body("txRID", equalTo(txRid))
+                        .extract()
+            }, threadPool)
+        }
+        CompletableFuture.allOf(*tasks.toTypedArray()).get(10, TimeUnit.SECONDS)
+        val logs = appender.events
+        val startTimes = logs.filter { it.message.toString().contains("GET") }.map { it.timeMillis }
+        val endTimes = logs.filter { it.message.toString().contains("Response body:") }.map { it.timeMillis }
+        assertThat(startTimes.max()).isGreaterThan(endTimes.min())
     }
 
     /**
