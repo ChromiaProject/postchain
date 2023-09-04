@@ -7,7 +7,8 @@ data class RestApiConfig(
         val basePath: String,
         val port: Int,
         val debug: Boolean = false,
-        val gracefulShutdown: Boolean = true
+        val gracefulShutdown: Boolean = true,
+        val requestConcurrency: Int = 0
 ) : Config {
 
     init {
@@ -25,6 +26,7 @@ data class RestApiConfig(
                     config.getEnvOrInt("POSTCHAIN_API_PORT", "api.port", DEFAULT_REST_API_PORT),
                     config.debug,
                     config.getBoolean("api.graceful-shutdown", true),
+                    config.getEnvOrInt("POSTCHAIN_API_REQUEST_CONCURRENCY", "api.request-concurrency", config.databaseReadConcurrency)
             )
         }
     }
