@@ -182,11 +182,10 @@ object GenericBlockHeaderValidator {
                 ValidationResult(ValidationResult.Result.INVALID_ROOT_HASH, "header.blockHeaderRec.rootHash != computeMerkleRootHash()")
 
             !header.checkExtraData(extraData) ->
-                ValidationResult(ValidationResult.Result.INVALID_EXTRA_DATA, "header extra data is not match")
+                ValidationResult(ValidationResult.Result.INVALID_EXTRA_DATA, "header extra data do not match: ${header.extraData.keys} vs. ${extraData.keys}")
 
             else -> basicResult // = "OK"
         }
     }
-
 
 }
