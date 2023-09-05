@@ -310,6 +310,53 @@ class RestApiIT : IntegrationTestSetup() {
     }
 
     @Test
+    fun testValidateBlockchainConfigurationWithSigners() {
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
+        val sysSetup = doSystemSetup(1, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        val config = GtvEncoder.encodeGtv(GtvFileReader.readFile(Paths.get(javaClass.getResource(blockChainFile)!!.toURI()).toFile()))
+        given().port(nodes[0].getRestApiHttpPort())
+                .header("Accept", ContentType.BINARY)
+                .body(config)
+                .post("/config/$blockchainRID")
+                .then()
+                .statusCode(200)
+    }
+
+    @Test
+    fun testValidateBlockchainConfigurationWithNoSigners() {
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
+        val blockChainFileToValidate = "/net/postchain/devtools/api/blockchain_config_0.xml"
+        val sysSetup = doSystemSetup(1, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        val config = GtvEncoder.encodeGtv(GtvFileReader.readFile(Paths.get(javaClass.getResource(blockChainFileToValidate)!!.toURI()).toFile()))
+        given().port(nodes[0].getRestApiHttpPort())
+                .header("Accept", ContentType.BINARY)
+                .body(config)
+                .post("/config/$blockchainRID")
+                .then()
+                .statusCode(200)
+    }
+
+    @Test
+    fun testInvalidBlockchainConfiguration() {
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
+        val blockChainFileToValidate = "/net/postchain/devtools/api/blockchain_config_bad.xml"
+        val sysSetup = doSystemSetup(1, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        val config = GtvEncoder.encodeGtv(GtvFileReader.readFile(Paths.get(javaClass.getResource(blockChainFileToValidate)!!.toURI()).toFile()))
+        given().port(nodes[0].getRestApiHttpPort())
+                .header("Accept", ContentType.BINARY)
+                .body(config)
+                .post("/config/$blockchainRID")
+                .then()
+                .statusCode(400)
+    }
+
+    @Test
     fun `Get Transactions should return blocks and transactions in descending order`() {
         val nodeCount = 1
         val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
