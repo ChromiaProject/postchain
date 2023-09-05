@@ -301,7 +301,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
      * @param prefix is what the state will be used for, for example "eif" or "icmf"
      */
     override fun cmdPruneEvents(ctx: EContext, prefix: String): String {
-        return "DELETE FROM ${tableEventLeafs(ctx, prefix)} WHERE height <= ?"
+        return "DELETE FROM ${tableEventLeafs(ctx, prefix)} WHERE block_height <= ?"
     }
 
     /**
@@ -310,13 +310,11 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
      * 1. state_n is between left and right
      * 2. height is <= given minimum-height-to-keep
      *
-     * TODO: Haven't tried this, could be off by one in the between
-     *
      * @param ctx is the context
      * @param prefix is what the state will be used for, for example "eif"
      */
     override fun cmdPruneStates(ctx: EContext, prefix: String): String {
-        return "DELETE FROM ${tableStateLeafs(ctx, prefix)} WHERE (state_n BETWEEN ? and ?) AND height <= ?"
+        return "DELETE FROM ${tableStateLeafs(ctx, prefix)} WHERE (state_n BETWEEN ? and ?) AND block_height <= ?"
     }
 
     override fun getAllBlocksWithTransactions(ctx: EContext, fromHeight: Long, upToHeight: Long,

@@ -486,6 +486,28 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdPruneStates(ctx, prefix), left, right, heightMustBeHigherThan)
     }
 
+    /**
+     * Delete prunable account states that not be used anymore at given height
+     *
+     * @param ctx the context
+     * @param prefix the prefix
+     * @param left the left
+     * @param right the right
+     * @param nextSnapshotHeight the next snapshot height
+     */
+    override fun safePruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, nextSnapshotHeight: Long) {
+        if (left > right) {
+            throw ProgrammerMistake("Why is left value lower than right? $left < $right")
+        }
+        val sql = """
+            DELETE FROM ${tableStateLeafs(ctx, prefix)} 
+            WHERE block_height < ? AND state_n BETWEEN ? AND ? 
+            AND state_n in (SELECT state_n FROM ${tableStateLeafs(ctx, prefix)} 
+                            WHERE block_height = ? AND state_n BETWEEN ? AND ?)
+        """.trimIndent()
+        queryRunner.update(ctx.conn, sql, nextSnapshotHeight, left, right, nextSnapshotHeight, left, right)
+    }
+
     override fun insertPage(ctx: EContext, name: String, page: Page) {
         val childHashes = page.childHashes.fold(ByteArray(0)) { total, item -> total.plus(item) }
         queryRunner.update(ctx.conn, cmdInsertPage(ctx, name), page.blockHeight, page.level, page.left, childHashes)
@@ -1236,5 +1258,99 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             }
         }
         return false
+    }
+
+    /**
+     * Get next prunable snapshot height
+     *
+     * @param ctx is the context
+     * @param prefix is what the state will be used for, for example "eif" or "icmf"
+     * @param blockHeight is the block height
+     * @param snapshotsToKeep is the number of snapshots to keep
+     */
+    override fun getNextPrunableSnapshotHeight(ctx: EContext, name: String, blockHeight: Long, snapshotsToKeep: Int): Long? {
+        val sql ="""
+            SELECT distinct(block_height) from ${tablePages(ctx, name)}
+            WHERE block_height <= ?
+            ORDER BY block_height DESC
+            LIMIT ?
+            """.trimIndent()
+
+        ctx.conn.prepareStatement(sql).use { statement ->
+            statement.setLong(1, blockHeight)
+            statement.setInt(2, snapshotsToKeep + 1)
+            statement.executeQuery().use { resultSet ->
+                val list = buildList<Long> {
+                    while (resultSet.next()) {
+                        add(resultSet.getLong(1))
+                    }
+                }
+                if (list.size < snapshotsToKeep + 1) {
+                    return null
+                }
+                return list[snapshotsToKeep - 1]
+            }
+        }
+    }
+
+    /**
+     * Get prunable pages that are not needed anymore at the given height
+     *
+     * @param ctx is the context
+     * @param name is the name of the page
+     * @param nextSnapshotHeight is the next snapshot height
+     */
+    override fun getPrunablePages(ctx: EContext, name: String, nextSnapshotHeight: Long): List<Long> {
+        val sql = """
+            SELECT page_iid FROM ${tablePages(ctx, name)}
+            WHERE block_height < ? AND level = (SELECT level FROM ${tablePages(ctx, name)} WHERE block_height = ?) 
+            AND left_index = (SELECT left_index FROM ${tablePages(ctx, name)} WHERE block_height = ?)
+            """.trimIndent()
+        ctx.conn.prepareStatement(sql).use { statement ->
+            statement.setLong(1, nextSnapshotHeight)
+            statement.setLong(2, nextSnapshotHeight)
+            statement.setLong(3, nextSnapshotHeight)
+            statement.executeQuery().use { resultSet ->
+                return buildList<Long> {
+                    while (resultSet.next()) {
+                        add(resultSet.getLong(1))
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Delete prunable pages
+     *
+     * @param ctx is the context
+     * @param name is the name of the page
+     * @param pageIids is the list of page iids to delete
+     */
+    override fun deletePages(ctx: EContext, name: String, pageIids: List<Long>): Boolean {
+        val sql = "DELETE FROM ${tablePages(ctx, name)} WHERE page_iid in (${pageIids.joinToString(",")})"
+        ctx.conn.prepareStatement(sql).use { statement ->
+            return statement.executeUpdate() > 0
+        }
+    }
+
+    /**
+     * Get the left index of the given page iids
+     *
+     * @param ctx is the context
+     * @param name is the name of the page
+     * @param pageIids is the list of page iids
+     */
+    override fun getLeftIndex(ctx: EContext, name: String, pageIids: List<Long>): List<Long> {
+        val sql = "SELECT left_index FROM ${tablePages(ctx, name)} WHERE page_iid in (${pageIids.joinToString(",")})"
+        ctx.conn.prepareStatement(sql).use { statement ->
+            statement.executeQuery().use { resultSet ->
+                return buildList<Long> {
+                    while (resultSet.next()) {
+                        add(resultSet.getLong(1))
+                    }
+                }
+            }
+        }
     }
 }
