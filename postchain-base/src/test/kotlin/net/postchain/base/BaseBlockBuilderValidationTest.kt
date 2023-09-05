@@ -2,6 +2,10 @@
 
 package net.postchain.base
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import net.postchain.base.SpecialTransactionPosition.Begin
+import net.postchain.base.SpecialTransactionPosition.End
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.BaseBlockWitnessProvider
@@ -9,8 +13,12 @@ import net.postchain.base.data.BaseTransactionFactory
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
+import net.postchain.core.BadBlockException
+import net.postchain.core.Transaction
 import net.postchain.core.TxEContext
-import net.postchain.core.ValidationResult.Result.*
+import net.postchain.core.ValidationResult.Result.INVALID_ROOT_HASH
+import net.postchain.core.ValidationResult.Result.INVALID_TIMESTAMP
+import net.postchain.core.ValidationResult.Result.OK
 import net.postchain.core.block.InitialBlockData
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
@@ -18,10 +26,18 @@ import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.crypto.devtools.MockCryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
-import org.junit.jupiter.api.Test
-import org.mockito.kotlin.mock
-import java.sql.Connection
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import java.sql.Connection
 
 class BaseBlockBuilderValidationTest {
     // Mocks
@@ -112,4 +128,89 @@ class BaseBlockBuilderValidationTest {
         assertEquals(INVALID_ROOT_HASH, validation.result)
     }
 
+    @Test
+    fun `special tx validation is not skipped`() {
+        // setup
+        val sth: SpecialTransactionHandler = mock {
+            on { needsSpecialTransaction(eq(Begin)) } doReturn true
+            on { needsSpecialTransaction(eq(End)) } doReturn true
+            on { validateSpecialTransaction(eq(End), any(), any()) } doReturn false
+        }
+        // The second call has to be True to make End state reachable
+        doReturn(false).doReturn(true).whenever(sth).validateSpecialTransaction(eq(Begin), any(), any())
+
+        val bbb = buildBaseBlockBuilder(sth, suppressSpecialTransactionValidation = false)
+        bbb.bctx = bctx
+
+        // interaction
+        assertThrows<BadBlockException>("Special transaction validation failed: $Begin") {
+            bbb.appendTransaction(mock<Transaction> {
+                on { getRID() } doReturn byteArrayOf(1)
+                on { isSpecial() } doReturn true
+                on { getRawData() } doReturn byteArrayOf(0)
+                on { apply(any()) } doReturn true
+            })
+        }
+        // A valid Begin tx to reach an End state on the next step
+        bbb.appendTransaction(mock<Transaction> {
+            on { getRID() } doReturn byteArrayOf(2)
+            on { isSpecial() } doReturn true
+            on { getRawData() } doReturn byteArrayOf(0)
+            on { apply(any()) } doReturn true
+        })
+
+        assertThrows<BadBlockException>("Special transaction validation failed: $End") {
+            bbb.appendTransaction(mock<Transaction> {
+                on { getRID() } doReturn byteArrayOf(3)
+                on { isSpecial() } doReturn true
+                on { getRawData() } doReturn byteArrayOf()
+                on { apply(any()) } doReturn true
+            })
+        }
+
+        // verify
+        verify(sth, times(2)).validateSpecialTransaction(eq(Begin), any(), any())
+        verify(sth, times(1)).validateSpecialTransaction(eq(End), any(), any())
+        assertThat(bbb.transactions.size).isEqualTo(1)
+    }
+
+    @Test
+    fun `special tx validation is skipped`() {
+        // setup
+        val sth: SpecialTransactionHandler = mock {
+            on { needsSpecialTransaction(eq(Begin)) } doReturn true
+            on { needsSpecialTransaction(eq(End)) } doReturn true
+            on { validateSpecialTransaction(eq(Begin), any(), any()) } doReturn false
+            on { validateSpecialTransaction(eq(End), any(), any()) } doReturn false
+        }
+        val bbb = buildBaseBlockBuilder(sth, suppressSpecialTransactionValidation = true)
+        bbb.bctx = bctx
+
+        // interaction
+        bbb.appendTransaction(mock<Transaction> {
+            on { getRID() } doReturn byteArrayOf(1)
+            on { isSpecial() } doReturn true
+            on { getRawData() } doReturn byteArrayOf(0)
+            on { apply(any()) } doReturn true
+        })
+        bbb.appendTransaction(mock<Transaction> {
+            on { getRID() } doReturn byteArrayOf(2)
+            on { isSpecial() } doReturn true
+            on { getRawData() } doReturn byteArrayOf()
+            on { apply(any()) } doReturn true
+        })
+
+        // verify
+        verify(sth, never()).validateSpecialTransaction(eq(Begin), any(), any())
+        verify(sth, never()).validateSpecialTransaction(eq(End), any(), any())
+        assertThat(bbb.transactions.size).isEqualTo(2)
+    }
+
+    private fun buildBaseBlockBuilder(sth: SpecialTransactionHandler, suppressSpecialTransactionValidation: Boolean) =
+            BaseBlockBuilder(
+                    BlockchainRid.ZERO_RID, cryptoSystem, ctx, bbs, tf,
+                    sth,
+                    subjects, sigMaker, validator, listOf(), listOf(), false,
+                    26 * 1024 * 1024, 100, 0, 1024,
+                    suppressSpecialTransactionValidation)
 }

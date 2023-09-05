@@ -3,6 +3,7 @@
 package net.postchain.base.configuration
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
@@ -42,6 +43,9 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
+import java.lang.reflect.InvocationTargetException
 import java.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -162,7 +166,11 @@ open class BaseBlockchainConfiguration(
                 blockStrategyConfig.maxBlockTransactions,
                 if (isSyncing) 0 else configData.maxTxExecutionTime,
                 blockStrategyConfig.maxSpecialEndTransactionSize,
-                isSuppressSpecialTransactionValidation()
+                isSuppressSpecialTransactionValidation().also {
+                    withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainRid.toHex(), CHAIN_IID_TAG to chainID.toString()) {
+                        logger.debug { "suppressSpecialTransactionValidation: $it" }
+                    }
+                }
         )
 
         return bb
@@ -196,7 +204,7 @@ open class BaseBlockchainConfiguration(
     override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy =
             try {
                 blockBuildingStrategyConstructor.newInstance(blockStrategyConfig, blockQueries, txQueue, Clock.systemUTC())
-            } catch (e: java.lang.reflect.InvocationTargetException) {
+            } catch (e: InvocationTargetException) {
                 throw ProgrammerMistake("The constructor of the block building strategy given was " +
                         "unable to finish. Class name given: ${configData.blockStrategyName}, Msg: ${e.message}")
             }
