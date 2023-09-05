@@ -3,6 +3,7 @@
 package net.postchain.core
 
 import net.postchain.PostchainContext
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
@@ -54,6 +55,7 @@ interface BlockchainInfrastructure : SynchronizationInfrastructure {
             nodeId: Int,
             chainId: Long,
             bcConfigurationFactory: BlockchainConfigurationFactorySupplier,
+            blockchainConfigurationOptions: BlockchainConfigurationOptions
     ): BlockchainConfiguration
 
     fun makeBlockchainEngine(

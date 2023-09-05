@@ -6,6 +6,7 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.core.block.BlockBuilder
@@ -59,9 +60,12 @@ fun interface BlockchainConfigurationFactorySupplier {
 }
 
 interface BlockchainConfigurationFactory {
-    fun makeBlockchainConfiguration(configurationData: Any,
-                                    partialContext: BlockchainContext,
-                                    blockSigMaker: SigMaker,
-                                    eContext: EContext,
-                                    cryptoSystem: CryptoSystem = Secp256K1CryptoSystem()): BlockchainConfiguration
+    fun makeBlockchainConfiguration(
+            configurationData: Any,
+            partialContext: BlockchainContext,
+            blockSigMaker: SigMaker,
+            eContext: EContext,
+            cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
+            blockchainConfigurationOptions: BlockchainConfigurationOptions = BlockchainConfigurationOptions.DEFAULT
+    ): BlockchainConfiguration
 }

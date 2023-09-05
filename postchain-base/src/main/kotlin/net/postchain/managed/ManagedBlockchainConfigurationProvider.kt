@@ -3,6 +3,7 @@
 package net.postchain.managed
 
 import mu.KLogging
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
@@ -25,11 +26,11 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         this.dataSource = dataSource
     }
 
-    override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray? {
+    override fun getActiveBlockConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         return if (chainId == 0L) {
-            localProvider.getActiveBlocksConfiguration(eContext, chainId, loadNextPendingConfig)
+            localProvider.getActiveBlockConfiguration(eContext, chainId, loadNextPendingConfig)
         } else {
             logger.debug { "getConfiguration() - Fetching configuration from chain0 (for chain: $chainId)" }
             if (::dataSource.isInitialized) {
@@ -84,6 +85,22 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
             val dba = DatabaseAccess.of(eContext)
             val blockchainRid = getBlockchainRid(eContext, dba)
             return dataSource.getConfiguration(blockchainRid.data, historicBlockHeight)
+        }
+    }
+
+    override fun getActiveBlockConfigurationOptions(eContext: EContext, chainId: Long): BlockchainConfigurationOptions {
+        return if (chainId == 0L) {
+            BlockchainConfigurationOptions.DEFAULT
+        } else {
+            if (::dataSource.isInitialized) {
+                val dba = DatabaseAccess.of(eContext)
+                val blockchainRid = getBlockchainRid(eContext, dba)
+                val activeHeight = getActiveBlocksHeight(eContext, dba)
+                dataSource.getBlockchainConfigurationOptions(blockchainRid, activeHeight)
+                        ?: BlockchainConfigurationOptions.DEFAULT
+            } else {
+                throw IllegalStateException("Using managed blockchain configuration provider before it's properly initialized")
+            }
         }
     }
 

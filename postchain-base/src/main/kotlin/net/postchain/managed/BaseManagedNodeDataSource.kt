@@ -4,6 +4,7 @@ package net.postchain.managed
 
 import mu.KLogging
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
@@ -51,10 +52,12 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
                     "nm_compute_blockchain_info_list",
                     buildArgs("node_id" to gtv(appConfig.pubKeyByteArray))
             )
-            res.asArray().map { BlockchainInfo(
-                    BlockchainRid(it["rid"]!!.asByteArray()),
-                    it["system"]!!.asBoolean(),
-                    BlockchainState.valueOf(it["state"]?.asString() ?: BlockchainState.RUNNING.name)) }
+            res.asArray().map {
+                BlockchainInfo(
+                        BlockchainRid(it["rid"]!!.asByteArray()),
+                        it["system"]!!.asBoolean(),
+                        BlockchainState.valueOf(it["state"]?.asString() ?: BlockchainState.RUNNING.name))
+            }
         } else {
             // Fallback for legacy API versions
             computeBlockchainList().map { BlockchainInfo(BlockchainRid(it), false, BlockchainState.RUNNING) }
@@ -144,6 +147,26 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
             BlockchainState.valueOf(res.asString())
         } else {
             BlockchainState.RUNNING
+        }
+    }
+
+    override fun getBlockchainConfigurationOptions(blockchainRid: BlockchainRid, height: Long): BlockchainConfigurationOptions? {
+        return if (nmApiVersion >= 8) {
+            val res = query(
+                    "nm_get_blockchain_configuration_options",
+                    buildArgs(
+                            "blockchain_rid" to gtv(blockchainRid.data),
+                            "height" to gtv(height))
+            )
+
+            when {
+                res.isNull() -> null
+                else -> res.asDict()["suppress_special_transaction_validation"]?.let {
+                    BlockchainConfigurationOptions(it.asBoolean())
+                }
+            }
+        } else {
+            null
         }
     }
 }

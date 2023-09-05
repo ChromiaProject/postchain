@@ -151,11 +151,12 @@ open class BaseBlockchainProcessManager(
                     val initialEContext = blockBuilderStorage.openWriteConnection(chainId)
                     val blockHeight = blockchainConfigProvider.getActiveBlocksHeight(initialEContext, DatabaseAccess.of(initialEContext))
 
-                    val rawConfigurationData = blockchainConfigProvider.getActiveBlocksConfiguration(initialEContext, chainId, loadNextPendingConfig)
+                    val rawConfigurationData = blockchainConfigProvider.getActiveBlockConfiguration(initialEContext, chainId, loadNextPendingConfig)
                             ?: throw UserMistake("Can't start blockchain chainId: $chainId due to configuration is absent")
+                    val bcConfigOptions = blockchainConfigProvider.getActiveBlockConfigurationOptions(initialEContext, chainId)
                     try {
                         val blockchainConfig = blockchainInfrastructure.makeBlockchainConfiguration(
-                                rawConfigurationData, initialEContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory(chainId)
+                                rawConfigurationData, initialEContext, NODE_ID_AUTO, chainId, getBlockchainConfigurationFactory(chainId), bcConfigOptions
                         ).also {
                             DependenciesValidator.validateBlockchainRids(initialEContext, it.blockchainDependencies)
                             it.initializeModules(postchainContext)

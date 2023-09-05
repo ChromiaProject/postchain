@@ -19,7 +19,7 @@ class MockBlockchainConfigurationProvider :
 
     companion object : KLogging()
 
-    override fun getActiveBlocksConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray? {
+    override fun getActiveBlockConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         return getConfigurationFromDataSource(eContext, loadNextPendingConfig)

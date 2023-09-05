@@ -1,6 +1,7 @@
 package net.postchain.integrationtest.statemachine
 
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.core.BlockchainContext
 import net.postchain.core.TransactionFactory
 import net.postchain.crypto.CryptoSystem
@@ -13,8 +14,9 @@ class FailableTestBlockchainConfiguration(
         cryptoSystem: CryptoSystem,
         partialContext: BlockchainContext,
         blockSigMaker: SigMaker,
-        module: GTXModule
-) : TestBlockchainConfiguration(configData, cryptoSystem, partialContext, blockSigMaker, module) {
+        module: GTXModule,
+        blockchainConfigurationOptions: BlockchainConfigurationOptions
+) : TestBlockchainConfiguration(configData, cryptoSystem, partialContext, blockSigMaker, module, blockchainConfigurationOptions) {
 
     override fun getTransactionFactory(): TransactionFactory = FailedTestTransactionFactory()
 //    override fun getTransactionFactory(): TransactionFactory = NotFailedTestTransactionFactory()

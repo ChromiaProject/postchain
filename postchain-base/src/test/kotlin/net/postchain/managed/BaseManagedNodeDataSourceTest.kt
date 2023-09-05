@@ -3,6 +3,7 @@ package net.postchain.managed
 import assertk.assertThat
 import assertk.isContentEqualTo
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
@@ -110,7 +111,6 @@ class BaseManagedNodeDataSourceTest {
     fun testGetBlockchainState(gtvResult: Gtv, expected: BlockchainState) {
         val appConfig: AppConfig = mock {
             on { pubKeyByteArray } doReturn byteArrayOf(0)
-            on { cryptoSystem } doReturn Secp256K1CryptoSystem()
         }
         val queryRunner: QueryRunner = mock {
             on { query(eq("nm_api_version"), any()) } doReturn gtv(6)
@@ -118,6 +118,20 @@ class BaseManagedNodeDataSourceTest {
         }
         val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
         assertEquals(expected, sut.getBlockchainState(ZERO_RID))
+    }
+
+    @ParameterizedTest
+    @MethodSource("getBlockchainConfigurationOptions")
+    fun testGetBlockchainConfigurationOptions(gtvResult: Gtv, expected: BlockchainConfigurationOptions?) {
+        val appConfig: AppConfig = mock {
+            on { pubKeyByteArray } doReturn byteArrayOf(0)
+        }
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(8)
+            on { query(eq("nm_get_blockchain_configuration_options"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
+        assertEquals(expected, sut.getBlockchainConfigurationOptions(ZERO_RID, 0L))
     }
 
     companion object {
@@ -240,6 +254,21 @@ class BaseManagedNodeDataSourceTest {
             return listOf(
                     arrayOf(gtv("RUNNING"), BlockchainState.RUNNING),
                     arrayOf(gtv("PAUSED"), BlockchainState.PAUSED)
+            )
+        }
+
+        @JvmStatic
+        fun getBlockchainConfigurationOptions(): List<Array<Any?>> {
+            return listOf(
+                    arrayOf(GtvNull, null),
+                    arrayOf(
+                            gtv(mapOf("suppress_special_transaction_validation" to gtv(true))),
+                            BlockchainConfigurationOptions(true)
+                    ),
+                    arrayOf(
+                            gtv(mapOf("suppress_special_transaction_validation" to gtv(false))),
+                            BlockchainConfigurationOptions(false)
+                    )
             )
         }
     }

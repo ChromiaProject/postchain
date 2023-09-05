@@ -1,6 +1,7 @@
 package net.postchain.devtools.mminfra
 
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainConfiguration
@@ -91,6 +92,8 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     override fun getBlockchainState(blockchainRid: BlockchainRid): BlockchainState {
         return bridState[blockchainRid]!!
     }
+
+    override fun getBlockchainConfigurationOptions(blockchainRid: BlockchainRid, height: Long): BlockchainConfigurationOptions? = null
 
     override fun query(name: String, args: Gtv): Gtv {
         TODO("Not yet implemented")

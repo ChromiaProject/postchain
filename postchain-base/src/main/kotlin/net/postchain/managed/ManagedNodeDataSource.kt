@@ -2,6 +2,7 @@
 
 package net.postchain.managed
 
+import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.common.BlockchainRid
 import net.postchain.config.node.PeerInfoDataSource
 import net.postchain.core.BlockchainState
@@ -26,4 +27,6 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
     fun getFaultyBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): ByteArray?
 
     fun getBlockchainState(blockchainRid: BlockchainRid): BlockchainState
+
+    fun getBlockchainConfigurationOptions(blockchainRid: BlockchainRid, height: Long): BlockchainConfigurationOptions?
 }
