@@ -304,7 +304,7 @@ class UpgradeDatabaseIT {
         assertArrayEquals(arrayOf(peer), peers)
 
         // Matching pattern query
-        // (bytes 16 - 18, chosen b/c KeyPairHelper returns keys where only byte 16 is non-zero so it's more interesting)
+        // (bytes 16 - 18, chosen b/c KeyPairHelper returns keys where only byte 16 is non-zero, so it's more interesting)
         val matchingPattern = peer.pubKey.toHex().substring(32, 36)
         val peersByPattern = db.findPeerInfo(ctx, null, null, matchingPattern)
         assertArrayEquals(arrayOf(peer), peersByPattern)
@@ -449,15 +449,15 @@ class UpgradeDatabaseIT {
                         """, ByteArray(32), ByteArray(32), ByteArray(32), blockIid, 0)
 
                         db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactionSigners(ctx)} (signer, tx_iid) VALUES (?, ?)", signer.data, txIid)
-                        val signedTxs = db.queryRunner.query(ctx.conn, "SELECT tx_iid FROM ${db.tableTransactionSigners(ctx)} WHERE signer = ?", signer.data, ArrayHandler())
+                        val signedTxs = db.queryRunner.query(ctx.conn, "SELECT tx_iid FROM ${db.tableTransactionSigners(ctx)} WHERE signer = ?", ArrayHandler(), signer.data)
                         assertThat(signedTxs).containsOnly(txIid.toLong())
                     }
                 }
     }
 
-    private fun addTransaction(db: SQLDatabaseAccess, ctx: EContext, tx_base: Byte, block_iid: Long) {
+    private fun addTransaction(db: SQLDatabaseAccess, ctx: EContext, txBase: Byte, blockIid: Long) {
         db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid) " +
-                "VALUES (?, ?, ?, ?)", ByteArray(32) { tx_base }, ByteArray(32) { tx_base }, ByteArray(32) { tx_base }, block_iid)
+                "VALUES (?, ?, ?, ?)", ByteArray(32) { txBase }, ByteArray(32) { txBase }, ByteArray(32) { txBase }, blockIid)
     }
 
     private fun assertVersion3(storage: Storage) {
