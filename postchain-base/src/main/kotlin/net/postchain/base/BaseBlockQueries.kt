@@ -26,10 +26,6 @@ import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import java.sql.SQLException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.ThreadFactory
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Encapsulating a proof of a transaction hash in a block header
@@ -68,56 +64,48 @@ open class BaseBlockQueries(
 
     companion object : KLogging()
 
-    // Create a separate Executor service to make sure other tasks do not compete with BlockQueries
-    private val workerPool: ExecutorService = Executors.newFixedThreadPool(storage.readConcurrency, object : ThreadFactory {
-        private val counter = AtomicInteger(0)
-        override fun newThread(runnable: Runnable): Thread = Thread(null, runnable, "${counter.incrementAndGet()}-BlockQueries")
-    })
+    @Volatile
+    private var isShutdown: Boolean = false
 
-    /**
-     * Wrapper function for a supplied function with the goal of opening a new read-only connection, catching any exceptions
-     * on the query being run and logging them, and finally closing the connection
-     */
-    protected fun <T> runOp(operation: (EContext) -> T): CompletionStage<T> {
-        if (workerPool.isShutdown) return CompletableFuture.failedStage(PmEngineIsAlreadyClosed("Engine is closed"))
-        return CompletableFuture.supplyAsync({
-            val ctx = try {
-                storage.openReadConnection(chainId)
-            } catch (e: SQLException) {
-                if (workerPool.isShutdown) throw PmEngineIsAlreadyClosed("Engine is closed", e)
-                throw e
-            }
+    protected fun <T> runOp(operation: (EContext) -> T): CompletionStage<T> = runOpInternal(operation, true)
 
-            try {
-                operation(ctx)
-            } catch (e: Exception) {
-                logger.trace(e) { "An error occurred" }
-                throw e
-            } finally {
-                storage.closeReadConnection(ctx)
-            }
-        }, workerPool)
+    private fun <T> runOpRegardless(operation: (EContext) -> T): CompletionStage<T> = runOpInternal(operation, false)
+
+    private fun <T> runOpInternal(operation: (EContext) -> T, checkShutdown: Boolean): CompletionStage<T> {
+        if (checkShutdown && isShutdown) return CompletableFuture.failedStage(PmEngineIsAlreadyClosed("Engine is closed"))
+
+        val ctx = try {
+            storage.openReadConnection(chainId)
+        } catch (e: SQLException) {
+            if (isShutdown) throw PmEngineIsAlreadyClosed("Engine is closed", e)
+            throw e
+        }
+
+        val result = try {
+            operation(ctx)
+        } catch (e: Exception) {
+            logger.trace(e) { "An error occurred" }
+            throw e
+        } finally {
+            storage.closeReadConnection(ctx)
+        }
+
+        return CompletableFuture.completedStage(result)
     }
 
-    override fun getBlockSignature(blockRID: ByteArray): CompletionStage<Signature> {
-        return runOp { ctx ->
-            val witnessData = blockStore.getWitnessData(ctx, blockRID)
-            val witness = decodeWitness(witnessData)
-            val signature = witness.getSignatures().find { it.subjectID.contentEquals(mySubjectId) }
-            signature ?: throw UserMistake("Trying to get a signature from a node that doesn't have one")
-        }
+    override fun getBlockSignature(blockRID: ByteArray): CompletionStage<Signature> = runOpRegardless { ctx ->
+        val witnessData = blockStore.getWitnessData(ctx, blockRID)
+        val witness = decodeWitness(witnessData)
+        val signature = witness.getSignatures().find { it.subjectID.contentEquals(mySubjectId) }
+        signature ?: throw UserMistake("Trying to get a signature from a node that doesn't have one")
     }
 
-    override fun getLastBlockHeight(): CompletionStage<Long> {
-        return runOp {
-            blockStore.getLastBlockHeight(it)
-        }
+    override fun getLastBlockHeight(): CompletionStage<Long> = runOpRegardless {
+        blockStore.getLastBlockHeight(it)
     }
 
-    override fun getLastBlockTimestamp(): CompletionStage<Long> {
-        return runOp {
-            blockStore.getLastBlockTimestamp(it)
-        }
+    override fun getLastBlockTimestamp(): CompletionStage<Long> = runOpRegardless {
+        blockStore.getLastBlockTimestamp(it)
     }
 
     /**
@@ -126,112 +114,85 @@ open class BaseBlockQueries(
      * @param blockRID The block identifier
      * @throws ProgrammerMistake [blockRID] could not be found
      */
-    override fun getBlockTransactionRids(blockRID: ByteArray): CompletionStage<List<ByteArray>> {
-        return runOp {
-            // Shouldn't this be UserMistake?
-            val height = blockStore.getBlockHeightFromOwnBlockchain(it, blockRID)
-                    ?: throw ProgrammerMistake("BlockRID does not exist")
-            blockStore.getTxRIDsAtHeight(it, height).toList()
-        }
+    override fun getBlockTransactionRids(blockRID: ByteArray): CompletionStage<List<ByteArray>> = runOpRegardless {
+        // Shouldn't this be UserMistake?
+        val height = blockStore.getBlockHeightFromOwnBlockchain(it, blockRID)
+                ?: throw ProgrammerMistake("BlockRID does not exist")
+        blockStore.getTxRIDsAtHeight(it, height).toList()
     }
 
-    override fun getTransaction(txRID: ByteArray): CompletionStage<Transaction?> {
-        return CompletableFuture.failedFuture(UserMistake("getTransaction is not supported"))
+    override fun getTransaction(txRID: ByteArray): CompletionStage<Transaction?> =
+            CompletableFuture.failedStage(UserMistake("getTransaction is not supported"))
+
+    override fun getTransactionRawData(txRID: ByteArray): CompletionStage<ByteArray?> = runOpRegardless {
+        blockStore.getTxBytes(it, txRID)
     }
 
-    override fun getTransactionRawData(txRID: ByteArray): CompletionStage<ByteArray?> {
-        return runOp {
-            blockStore.getTxBytes(it, txRID)
-        }
+    override fun getTransactionInfo(txRID: ByteArray): CompletionStage<TransactionInfoExt?> = runOpRegardless {
+        blockStore.getTransactionInfo(it, txRID)
     }
 
-    override fun getTransactionInfo(txRID: ByteArray): CompletionStage<TransactionInfoExt?> {
-        return runOp {
-            blockStore.getTransactionInfo(it, txRID)
-        }
-    }
+    override fun getTransactionsInfo(beforeTime: Long, limit: Int): CompletionStage<List<TransactionInfoExt>> =
+            runOpRegardless {
+                blockStore.getTransactionsInfo(it, beforeTime, limit)
+            }
 
-    override fun getTransactionsInfo(beforeTime: Long, limit: Int): CompletionStage<List<TransactionInfoExt>> {
-        return runOp {
-            blockStore.getTransactionsInfo(it, beforeTime, limit)
-        }
-    }
-
-    override fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey): CompletionStage<List<TransactionInfoExt>> {
-        return runOp {
+    override fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey): CompletionStage<List<TransactionInfoExt>> =
+        runOpRegardless {
             blockStore.getTransactionsInfoBySigner(it, beforeTime, limit, signer)
         }
+
+    override fun getLastTransactionNumber(): CompletionStage<Long> = runOpRegardless {
+        blockStore.getLastTransactionNumber(it)
     }
 
-    override fun getLastTransactionNumber(): CompletionStage<Long> {
-        return runOp {
-            blockStore.getLastTransactionNumber(it)
-        }
-    }
-
-    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> {
-        return runOp {
-            blockStore.getBlocks(it, beforeTime, limit, txHashesOnly)
-        }
-    }
-
-    override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> {
-        return runOp {
-            blockStore.getBlocksBeforeHeight(it, beforeHeight, limit, txHashesOnly)
-        }
-    }
-
-    override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): CompletionStage<BlockDetail?> {
-        return runOp {
-            blockStore.getBlock(it, blockRID, txHashesOnly)
-        }
-    }
-
-    override fun getBlockRid(height: Long): CompletionStage<ByteArray?> {
-        return runOp {
-            blockStore.getBlockRID(it, height)
-        }
-    }
-
-    override fun isTransactionConfirmed(txRID: ByteArray): CompletionStage<Boolean> {
-        return runOp {
-            blockStore.isTransactionConfirmed(it, txRID)
-        }
-    }
-
-    override fun shutdown() {
-        workerPool.shutdown()
-    }
-
-    override fun query(name: String, args: Gtv): CompletionStage<Gtv> {
-        return CompletableFuture.failedFuture(UserMistake("Queries are not supported"))
-    }
-
-    override fun getConfirmationProof(txRID: ByteArray): CompletionStage<ConfirmationProof?> {
-        return runOp {
-            blockStore.getConfirmationProofMaterial(it, txRID)?.let { material ->
-                val decodedWitness = decodeWitness(material.witness)
-                val decodedBlockHeader = decodeBlockHeader(material.header)
-
-                val result = decodedBlockHeader.merkleProofTree(material.txHash, material.txHashes)
-                val txIndex = result.first
-                val merkleProofTree = result.second
-                ConfirmationProof(
-                        material.txHash.data,
-                        material.header,
-                        decodedWitness as BaseBlockWitness,
-                        merkleProofTree,
-                        txIndex
-                )
+    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> =
+            runOpRegardless {
+                blockStore.getBlocks(it, beforeTime, limit, txHashesOnly)
             }
+
+    override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> =
+            runOpRegardless {
+                blockStore.getBlocksBeforeHeight(it, beforeHeight, limit, txHashesOnly)
+            }
+
+    override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): CompletionStage<BlockDetail?> =
+            runOpRegardless {
+                blockStore.getBlock(it, blockRID, txHashesOnly)
+            }
+
+    override fun getBlockRid(height: Long): CompletionStage<ByteArray?> = runOpRegardless {
+        blockStore.getBlockRID(it, height)
+    }
+
+    override fun isTransactionConfirmed(txRID: ByteArray): CompletionStage<Boolean> = runOpRegardless {
+        blockStore.isTransactionConfirmed(it, txRID)
+    }
+
+    override fun query(name: String, args: Gtv): CompletionStage<Gtv> =
+            CompletableFuture.failedStage(UserMistake("Queries are not supported"))
+
+    override fun getConfirmationProof(txRID: ByteArray): CompletionStage<ConfirmationProof?> = runOpRegardless {
+        blockStore.getConfirmationProofMaterial(it, txRID)?.let { material ->
+            val decodedWitness = decodeWitness(material.witness)
+            val decodedBlockHeader = decodeBlockHeader(material.header)
+
+            val result = decodedBlockHeader.merkleProofTree(material.txHash, material.txHashes)
+            val txIndex = result.first
+            val merkleProofTree = result.second
+            ConfirmationProof(
+                    material.txHash.data,
+                    material.header,
+                    decodedWitness as BaseBlockWitness,
+                    merkleProofTree,
+                    txIndex
+            )
         }
     }
 
-    override fun getBlockHeader(blockRID: ByteArray): CompletionStage<BlockHeader> {
-        return runOp {
-            val headerBytes = blockStore.getBlockHeader(it, blockRID)
-            decodeBlockHeader(headerBytes)
-        }
+    override fun getBlockHeader(blockRID: ByteArray): CompletionStage<BlockHeader> = runOpRegardless {
+        val headerBytes = blockStore.getBlockHeader(it, blockRID)
+        decodeBlockHeader(headerBytes)
     }
 
     /**
@@ -244,21 +205,24 @@ open class BaseBlockQueries(
      * @throws UserMistake No block could be found at the specified height
      * @throws ProgrammerMistake Too many blocks (>1) found at the specified height
      */
-    override fun getBlockAtHeight(height: Long, includeTransactions: Boolean): CompletionStage<BlockDataWithWitness?> {
-        return runOp {
-            val blockRID = blockStore.getBlockRID(it, height)
-            if (blockRID == null) {
-                null
-            } else {
-                val headerBytes = blockStore.getBlockHeader(it, blockRID)
-                val witnessBytes = blockStore.getWitnessData(it, blockRID)
-                val txBytes = if (includeTransactions) blockStore.getBlockTransactions(it, blockRID) else listOf()
-                val header = decodeBlockHeader(headerBytes)
-                val witness = decodeWitness(witnessBytes)
+    override fun getBlockAtHeight(height: Long, includeTransactions: Boolean): CompletionStage<BlockDataWithWitness?> =
+            runOpRegardless {
+                val blockRID = blockStore.getBlockRID(it, height)
+                if (blockRID == null) {
+                    null
+                } else {
+                    val headerBytes = blockStore.getBlockHeader(it, blockRID)
+                    val witnessBytes = blockStore.getWitnessData(it, blockRID)
+                    val txBytes = if (includeTransactions) blockStore.getBlockTransactions(it, blockRID) else listOf()
+                    val header = decodeBlockHeader(headerBytes)
+                    val witness = decodeWitness(witnessBytes)
 
-                BlockDataWithWitness(header, txBytes, witness)
+                    BlockDataWithWitness(header, txBytes, witness)
+                }
             }
-        }
+
+    override fun shutdown() {
+        isShutdown = true
     }
 
     protected open fun decodeBlockHeader(headerData: ByteArray): BaseBlockHeader =

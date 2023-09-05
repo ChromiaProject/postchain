@@ -282,6 +282,23 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
+    fun `can get block even when chain is not live`() {
+        whenever(
+                model.getBlock(BlockRid(block.rid), true)
+        ).thenReturn(block)
+        whenever(model.live).thenReturn(false)
+
+        restApi.attachModel(blockchainRID, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/blocks/$blockchainRID/${block.rid.toHex()}")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body("rid", equalTo(block.rid.toHex()))
+    }
+
+    @Test
     fun `Block by RID endpoint can return GTV`() {
         whenever(
                 model.getBlock(BlockRid(block.rid), true)

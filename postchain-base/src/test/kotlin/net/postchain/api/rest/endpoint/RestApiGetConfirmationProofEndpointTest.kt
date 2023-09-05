@@ -74,7 +74,16 @@ class RestApiGetConfirmationProofEndpointTest {
      * To verify if the proof really looks as intended, see the test [BaseBlockHeaderMerkleProofTest].
      */
     @Test
-    fun test_getConfirmationProof_ok() {
+    fun `can get confirmation proof`() {
+        getConfirmationProofOk(true)
+    }
+
+    @Test
+    fun `can get confirmation proof even if chain is not live`() {
+        getConfirmationProofOk(false)
+    }
+
+    private fun getConfirmationProofOk(live: Boolean) {
         val expectedObject = ConfirmationProof(
                 txHashHex.hexStringToByteArray(),
                 byteArrayOf(0x0a, 0x0b, 0x0c),
@@ -88,6 +97,7 @@ class RestApiGetConfirmationProofEndpointTest {
 
         whenever(model.getConfirmationProof(TxRid(txHashHex.hexStringToByteArray())))
                 .doReturn(expectedObject)
+        whenever(model.live).thenReturn(live)
 
         restApi.attachModel(blockchainRID, model)
 

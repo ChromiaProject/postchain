@@ -65,7 +65,7 @@ class RestApiModelTest {
     }
 
     @Test
-    fun testGetTx_unavailable_model_503_received() {
+    fun testQuery_unavailable_model_503_received() {
         val unavailableModel: Model = mock {
             on { chainIID } doReturn 1L
             on { blockchainRid } doReturn blockchainRID1
@@ -75,7 +75,7 @@ class RestApiModelTest {
         restApi.attachModel(blockchainRID1, unavailableModel)
 
         given().basePath(basePath).port(restApi.actualPort())
-                .get("/tx/$blockchainRID1/$txRID")
+                .get("/query/$blockchainRID1/?type=my-query")
                 .then()
                 .statusCode(503)
     }
