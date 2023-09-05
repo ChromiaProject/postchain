@@ -1,6 +1,7 @@
 package net.postchain.base.data
 
 import assertk.assertThat
+import assertk.assertions.containsOnly
 import net.postchain.StorageBuilder
 import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.FaultyConfiguration
@@ -19,6 +20,7 @@ import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
+import org.apache.commons.dbutils.handlers.ArrayHandler
 import org.apache.commons.dbutils.handlers.ScalarHandler
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -302,7 +304,7 @@ class UpgradeDatabaseIT {
         assertArrayEquals(arrayOf(peer), peers)
 
         // Matching pattern query
-        // (bytes 16 - 18, chosen b/c KeyPairHelper returns keys where only byte 16 is non-zero so it's more interesting)
+        // (bytes 16 - 18, chosen b/c KeyPairHelper returns keys where only byte 16 is non-zero, so it's more interesting)
         val matchingPattern = peer.pubKey.toHex().substring(32, 36)
         val peersByPattern = db.findPeerInfo(ctx, null, null, matchingPattern)
         assertArrayEquals(arrayOf(peer), peersByPattern)
@@ -422,9 +424,40 @@ class UpgradeDatabaseIT {
                 }
     }
 
-    private fun addTransaction(db: SQLDatabaseAccess, ctx: EContext, tx_base: Byte, block_iid: Long) {
+    @Test
+    fun testUpgradeFromVersion8to9() {
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 8)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
+                        true
+                    }
+                }
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 9)
+                .use {
+                    withReadConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        val signer = PubKey("03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05")
+
+                        // Assert that we have a transaction signers table for chain id 0
+                        val blockIid = db.insertBlock(ctx, 0)
+                        val txIid = db.queryRunner.update(ctx.conn, """
+                            INSERT INTO ${db.tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid, tx_number)
+                            VALUES (?, ?, ?, ?, ?)
+                        """, ByteArray(32), ByteArray(32), ByteArray(32), blockIid, 0)
+
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactionSigners(ctx)} (signer, tx_iid) VALUES (?, ?)", signer.data, txIid)
+                        val signedTxs = db.queryRunner.query(ctx.conn, "SELECT tx_iid FROM ${db.tableTransactionSigners(ctx)} WHERE signer = ?", ArrayHandler(), signer.data)
+                        assertThat(signedTxs).containsOnly(txIid.toLong())
+                    }
+                }
+    }
+
+    private fun addTransaction(db: SQLDatabaseAccess, ctx: EContext, txBase: Byte, blockIid: Long) {
         db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid) " +
-                "VALUES (?, ?, ?, ?)", ByteArray(32) { tx_base }, ByteArray(32) { tx_base }, ByteArray(32) { tx_base }, block_iid)
+                "VALUES (?, ?, ?, ?)", ByteArray(32) { txBase }, ByteArray(32) { txBase }, ByteArray(32) { txBase }, blockIid)
     }
 
     private fun assertVersion3(storage: Storage) {

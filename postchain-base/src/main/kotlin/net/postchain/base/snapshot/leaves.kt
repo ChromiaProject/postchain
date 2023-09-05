@@ -33,7 +33,7 @@ class LeafStore {
      *
      * @param blockEContext is the context (including block height)
      * @param prefix is what the state will be used for, for example "eif"
-     * @param state_n // TODO
+     * @param state_n is account number in state merkle tree
      * @param data is the binary data
      */
     fun writeState(blockEContext: BlockEContext, prefix: String, state_n: Long, data: ByteArray) {

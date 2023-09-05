@@ -5,6 +5,7 @@ package net.postchain.base.data
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
+import net.postchain.core.SignableTransaction
 import net.postchain.core.Transaction
 import java.sql.Connection
 
@@ -142,6 +143,18 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 "ALTER COLUMN tx_number SET NOT NULL"
     }
 
+    override fun cmdCreateTableTransactionSigners(chainId: Long): String {
+        return "CREATE TABLE IF NOT EXISTS ${tableTransactionSigners(chainId)} (" +
+                "signer BYTEA NOT NULL " +
+                ", tx_iid BIGINT NOT NULL REFERENCES ${tableTransactions(chainId)}(tx_iid)" +
+                ")"
+    }
+
+    override fun cmdCreateTableTransactionSignersIndex(chainId: Long): String {
+        return "CREATE INDEX IF NOT EXISTS ${indexTableTransactionSigners((chainId))} " +
+                "ON ${tableTransactionSigners(chainId)}(signer)"
+    }
+
     override fun cmdCreateTableConfigurations(ctx: EContext): String {
         return "CREATE TABLE IF NOT EXISTS ${tableConfigurations(ctx)} (" +
                 "height BIGINT PRIMARY KEY" +
@@ -256,7 +269,13 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
         val sql = "INSERT INTO ${tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid, tx_number) " +
                 "VALUES (?, ?, ?, ?, ?) RETURNING tx_iid"
 
-        return queryRunner.query(ctx.conn, sql, longRes, tx.getRID(), tx.getRawData(), tx.getHash(), ctx.blockIID, transactionNumber)
+        val txIid = queryRunner.query(ctx.conn, sql, longRes, tx.getRID(), tx.getRawData(), tx.getHash(), ctx.blockIID, transactionNumber)
+
+        if (tx is SignableTransaction) {
+            insertTransactionSigners(ctx, tx, txIid)
+        }
+
+        return txIid
     }
 
     /**
@@ -282,7 +301,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
      * @param prefix is what the state will be used for, for example "eif" or "icmf"
      */
     override fun cmdPruneEvents(ctx: EContext, prefix: String): String {
-        return "DELETE FROM ${tableEventLeafs(ctx, prefix)} WHERE height <= ?"
+        return "DELETE FROM ${tableEventLeafs(ctx, prefix)} WHERE block_height <= ?"
     }
 
     /**
@@ -291,13 +310,11 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
      * 1. state_n is between left and right
      * 2. height is <= given minimum-height-to-keep
      *
-     * TODO: Haven't tried this, could be off by one in the between
-     *
      * @param ctx is the context
      * @param prefix is what the state will be used for, for example "eif"
      */
     override fun cmdPruneStates(ctx: EContext, prefix: String): String {
-        return "DELETE FROM ${tableStateLeafs(ctx, prefix)} WHERE (state_n BETWEEN ? and ?) AND height <= ?"
+        return "DELETE FROM ${tableStateLeafs(ctx, prefix)} WHERE (state_n BETWEEN ? and ?) AND block_height <= ?"
     }
 
     override fun getAllBlocksWithTransactions(ctx: EContext, fromHeight: Long, upToHeight: Long,

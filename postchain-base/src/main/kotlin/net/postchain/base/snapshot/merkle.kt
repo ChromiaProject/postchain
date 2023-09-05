@@ -11,8 +11,8 @@ import java.util.NavigableMap
 import java.util.TreeMap
 
 class Page(
-    val blockHeight: Long, val level: Int, val left: Long,
-    val childHashes: Array<Hash>
+        val blockHeight: Long, val level: Int, val left: Long,
+        val childHashes: Array<Hash>
 ) {
     fun getChildHash(relLevel: Int, treeHasher: TreeHasher, childIndex: Int): Hash {
         return if (relLevel == 0) childHashes[childIndex]
@@ -33,10 +33,10 @@ interface PageStore {
 
 // base page store can be used for query merkle proof
 open class BasePageStore(
-    val name: String,
-    val ctx: EContext,
-    val levelsPerPage: Int,
-    val ds: DigestSystem) : PageStore {
+        val name: String,
+        val ctx: EContext,
+        val levelsPerPage: Int,
+        val ds: DigestSystem) : PageStore {
 
     override fun writePage(page: Page) {
         val db = DatabaseAccess.of(ctx)
@@ -61,7 +61,7 @@ open class BasePageStore(
         for (level in 0..highest step levelsPerPage) {
             val leafsInPage = 1 shl (level + levelsPerPage)
             val left = leafPos - leafPos % leafsInPage
-            val leftInEntry = left/(1 shl level)
+            val leftInEntry = left / (1 shl level)
             // if page is not found (a.k.a null), continue move to handle next page
             val page = readPage(blockHeight, level, leftInEntry) ?: continue
             var relPos = ((leafPos - left) shr level).toInt() // relative position of entry on a level
@@ -77,10 +77,10 @@ open class BasePageStore(
 }
 
 open class EventPageStore(
-    ctx: EContext,
-    levelsPerPage: Int,
-    ds: DigestSystem,
-    tableNamePrefix: String
+        ctx: EContext,
+        levelsPerPage: Int,
+        ds: DigestSystem,
+        tableNamePrefix: String
 ) : BasePageStore("${tableNamePrefix}_event", ctx, levelsPerPage, ds) {
 
     fun writeEventTree(blockHeight: Long, leafHashes: List<Hash>): Hash {
@@ -115,15 +115,16 @@ open class EventPageStore(
 }
 
 open class SnapshotPageStore(
-    ctx: EContext,
-    levelsPerPage: Int,
-    ds: DigestSystem,
-    tableNamePrefix: String
+        ctx: EContext,
+        levelsPerPage: Int,
+        val snapshotsToKeep: Int,
+        ds: DigestSystem,
+        private val tableNamePrefix: String
 ) : BasePageStore("${tableNamePrefix}_snapshot", ctx, levelsPerPage, ds) {
 
     fun updateSnapshot(blockHeight: Long, leafHashes: NavigableMap<Long, Hash>): Hash {
         val entriesPerPage = 1 shl levelsPerPage
-        val prevHighestLevelPage = highestLevelPage(blockHeight-1)
+        val prevHighestLevelPage = highestLevelPage(blockHeight - 1)
 
         fun updateLevel(level: Int, entryHashes: NavigableMap<Long, Hash>): Hash {
             var current = 0L
@@ -145,7 +146,7 @@ open class SnapshotPageStore(
                         val lowerLevel = level shr 1
                         val mostLeft = level * left
                         for (i in 0 until entriesPerPage) {
-                            val childPage = readPage(blockHeight, lowerLevel, mostLeft+i)
+                            val childPage = readPage(blockHeight, lowerLevel, mostLeft + i)
                             if (childPage != null && pageElts[i] == null)
                                 pageElts[i] = childPage.getChildHash(lowerLevel, ds::hash, 0)
                         }
@@ -174,10 +175,21 @@ open class SnapshotPageStore(
         return updateLevel(0, leafHashes)
     }
 
-    // delete all pages with height at or below given
-    // except those which are used
-    fun pruneBelowHeight(blockHeight: Long, cleanLeafs: (height: Long) -> Unit) {
-        TODO("Not yet implemented")
+    /**
+     * Delete all pages of the snapshot that are older than the given block height
+     * except those which are still in used
+     */
+    open fun pruneSnapshot(blockHeight: Long) {
+        val db = DatabaseAccess.of(ctx)
+        val nextPrunableSnapshotHeight = db.getNextPrunableSnapshotHeight(ctx, name, blockHeight, snapshotsToKeep)
+                ?: return
+        val pageIids = db.getPrunablePages(ctx, name, nextPrunableSnapshotHeight)
+        val leftIndex = db.getLeftIndex(ctx, name, pageIids)
+        leftIndex.forEach {
+            db.safePruneAccountStates(ctx, tableNamePrefix,
+                    it + 1, it + (1 shl levelsPerPage), nextPrunableSnapshotHeight)
+        }
+        db.deletePages(ctx, name, pageIids)
     }
 }
 

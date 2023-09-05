@@ -17,6 +17,7 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockStore
 import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.crypto.Digester
+import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.mapper.Name
@@ -153,6 +154,12 @@ open class BaseBlockQueries(
     override fun getTransactionsInfo(beforeTime: Long, limit: Int): CompletionStage<List<TransactionInfoExt>> {
         return runOp {
             blockStore.getTransactionsInfo(it, beforeTime, limit)
+        }
+    }
+
+    override fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey): CompletionStage<List<TransactionInfoExt>> {
+        return runOp {
+            blockStore.getTransactionsInfoBySigner(it, beforeTime, limit, signer)
         }
     }
 

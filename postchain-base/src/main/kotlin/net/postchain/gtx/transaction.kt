@@ -6,7 +6,7 @@ import net.postchain.common.data.Hash
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
-import net.postchain.core.Transaction
+import net.postchain.core.SignableTransaction
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
 import net.postchain.crypto.CryptoSystem
@@ -30,13 +30,13 @@ class GTXTransaction(
         val _rawData: ByteArray?,
         val gtvData: Gtv,
         val gtxData: Gtx,
-        val signers: Array<ByteArray>,
+        override val signers: Array<ByteArray>,
         val signatures: Array<ByteArray>,
         val ops: Array<Transactor>,
         val myHash: Hash,
         val myRID: ByteArray,
         val cs: CryptoSystem
-) : Transaction {
+) : SignableTransaction {
 
     var cachedRawData: ByteArray? = null // We are not sure we have the rawData, and if ever need to calculate it it will be cache here.
     var isChecked: Boolean = false

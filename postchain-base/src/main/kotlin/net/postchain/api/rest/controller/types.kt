@@ -12,6 +12,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.block.BlockDetail
+import net.postchain.crypto.PubKey
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GtxQuery
@@ -36,6 +37,7 @@ interface Model : ChainModel {
     fun getTransaction(txRID: TxRid): ByteArray?
     fun getTransactionInfo(txRID: TxRid): TransactionInfoExt?
     fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt>
+    fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey): List<TransactionInfoExt>
     fun getLastTransactionNumber(): TransactionsCount
     fun getBlock(blockRID: BlockRid, txHashesOnly: Boolean): BlockDetail?
     fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail?

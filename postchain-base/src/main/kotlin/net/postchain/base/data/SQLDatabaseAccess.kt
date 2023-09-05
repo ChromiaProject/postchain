@@ -22,6 +22,7 @@ import net.postchain.core.AppContext
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.NodeRid
+import net.postchain.core.SignableTransaction
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TxDetail
@@ -55,6 +56,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     private fun tableFaultyConfiguration(ctx: EContext): String = tableFaultyConfiguration(ctx.chainID)
     internal fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableTransactions(chainId: Long): String = tableName(chainId, "transactions")
+    internal fun tableTransactionSigners(ctx: EContext): String = tableName(ctx, "sys.transaction_signers")
+    protected fun tableTransactionSigners(chainId: Long): String = tableName(chainId, "sys.transaction_signers")
+    protected fun indexTableTransactionSigners(chainId: Long): String = tableName(chainId, "c${chainId}_idx_sys_transaction_signers")
     internal fun tableBlocks(ctx: EContext): String = tableName(ctx, "blocks")
     private fun tableBlocks(chainId: Long): String = tableName(chainId, "blocks")
     protected fun tablePages(ctx: EContext, name: String): String = tableName(ctx, "${name}_pages")
@@ -85,6 +89,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdUpdateTableTransactionsV8First(chainId: Long): String
     protected abstract fun cmdUpdateTableTransactionsV8Second(chainId: Long): String
     protected abstract fun cmdUpdateTableTransactionsV8Third(chainId: Long): String
+    protected abstract fun cmdCreateTableTransactionSigners(chainId: Long): String
+    protected abstract fun cmdCreateTableTransactionSignersIndex(chainId: Long): String
     protected abstract fun cmdCreateTableBlocks(ctx: EContext): String
     protected abstract fun cmdInsertBlocks(ctx: EContext): String
     protected abstract fun cmdCreateTablePage(ctx: EContext, name: String): String
@@ -166,7 +172,19 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdInsertTransactions(ctx), tx.getRID(), tx.getRawData(), tx.getHash(), ctx.blockIID, transactionNumber)
 
         val sql = "SELECT tx_iid FROM ${tableTransactions(ctx)} WHERE tx_rid = ?"
-        return queryRunner.query(ctx.conn, sql, longRes, tx.getRID())
+        val txIid = queryRunner.query(ctx.conn, sql, longRes, tx.getRID())
+
+        if (tx is SignableTransaction) {
+            insertTransactionSigners(ctx, tx, txIid)
+        }
+
+        return txIid
+    }
+
+    protected fun insertTransactionSigners(ctx: EContext, tx: SignableTransaction, txIid: Long) {
+        tx.signers.forEach {
+            queryRunner.update(ctx.conn, "INSERT INTO ${tableTransactionSigners(ctx)} (signer, tx_iid) VALUES (?, ?)", it, txIid)
+        }
     }
 
     override fun finalizeBlock(ctx: BlockEContext, header: BlockHeader) {
@@ -307,6 +325,19 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                     ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?;
         """.trimIndent()
         val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, beforeTime, limit)
+        return transactions.map(::buildTransactionInfoExt)
+    }
+
+    override fun getTransactionsInfoBySigner(ctx: EContext, beforeTime: Long, limit: Int, signer: PubKey): List<TransactionInfoExt> {
+        val sql = """
+            SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_rid, t.tx_hash, t.tx_data 
+                    FROM ${tableBlocks(ctx)} as b 
+                    JOIN ${tableTransactions(ctx)} as t ON (t.block_iid = b.block_iid) 
+                    WHERE t.tx_iid IN (SELECT tx_iid FROM ${tableTransactionSigners(ctx)} WHERE signer = ?) 
+                    AND b.timestamp < ? 
+                    ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?;
+        """.trimIndent()
+        val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, signer.data, beforeTime, limit)
         return transactions.map(::buildTransactionInfoExt)
     }
 
@@ -455,6 +486,28 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdPruneStates(ctx, prefix), left, right, heightMustBeHigherThan)
     }
 
+    /**
+     * Delete prunable account states that not be used anymore at given height
+     *
+     * @param ctx the context
+     * @param prefix the prefix
+     * @param left the left
+     * @param right the right
+     * @param nextSnapshotHeight the next snapshot height
+     */
+    override fun safePruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, nextSnapshotHeight: Long) {
+        if (left > right) {
+            throw ProgrammerMistake("Why is left value lower than right? $left < $right")
+        }
+        val sql = """
+            DELETE FROM ${tableStateLeafs(ctx, prefix)} 
+            WHERE block_height < ? AND state_n BETWEEN ? AND ? 
+            AND state_n in (SELECT state_n FROM ${tableStateLeafs(ctx, prefix)} 
+                            WHERE block_height = ? AND state_n BETWEEN ? AND ?)
+        """.trimIndent()
+        queryRunner.update(ctx.conn, sql, nextSnapshotHeight, left, right, nextSnapshotHeight, left, right)
+    }
+
     override fun insertPage(ctx: EContext, name: String, page: Page) {
         val childHashes = page.childHashes.fold(ByteArray(0)) { total, item -> total.plus(item) }
         queryRunner.update(ctx.conn, cmdInsertPage(ctx, name), page.blockHeight, page.level, page.left, childHashes)
@@ -507,7 +560,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int, allowUpgrade: Boolean) {
-        if (expectedDbVersion !in 1..8) {
+        if (expectedDbVersion !in 1..9) {
             throw UserMistake("Unsupported DB version $expectedDbVersion")
         }
 
@@ -572,6 +625,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 version8(connection)
             }
 
+            if (version < 9 && expectedDbVersion >= 9) {
+                logger.info("Upgrading to version 9")
+                version9(connection)
+            }
+
             if (expectedDbVersion > version) {
                 queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
                 logger.info("Database version has been updated to version: $expectedDbVersion")
@@ -616,6 +674,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
             if (expectedDbVersion >= 8) {
                 version8(connection)
+            }
+
+            if (expectedDbVersion >= 9) {
+                version9(connection)
             }
         }
     }
@@ -688,6 +750,15 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 }
     }
 
+    private fun version9(connection: Connection) {
+        queryRunner.query(connection, "SELECT chain_iid FROM ${tableBlockchains()}", mapListHandler)
+                .map { it["chain_iid"] as Long }
+                .forEach { chainId ->
+                    queryRunner.update(connection, cmdCreateTableTransactionSigners(chainId))
+                    queryRunner.update(connection, cmdCreateTableTransactionSignersIndex(chainId))
+                }
+    }
+
     protected fun calcConfigurationHash(configurationData: ByteArray) = GtvToBlockchainRidFactory.calculateBlockchainRid(
             GtvDecoder.decodeGtv(configurationData), ::sha256Digest).data
 
@@ -708,6 +779,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdCreateTableTransactions(ctx))
         queryRunner.update(ctx.conn, cmdCreateTableConfigurations(ctx))
         queryRunner.update(ctx.conn, cmdCreateTableFaultyConfiguration(ctx.chainID))
+        queryRunner.update(ctx.conn, cmdCreateTableTransactionSigners(ctx.chainID))
+        queryRunner.update(ctx.conn, cmdCreateTableTransactionSignersIndex(ctx.chainID))
 
         val txIndex = "CREATE INDEX IF NOT EXISTS ${tableName(ctx, "transactions_block_iid_idx")} " +
                 "ON ${tableTransactions(ctx)}(block_iid)"
@@ -1185,5 +1258,99 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             }
         }
         return false
+    }
+
+    /**
+     * Get next prunable snapshot height
+     *
+     * @param ctx is the context
+     * @param prefix is what the state will be used for, for example "eif" or "icmf"
+     * @param blockHeight is the block height
+     * @param snapshotsToKeep is the number of snapshots to keep
+     */
+    override fun getNextPrunableSnapshotHeight(ctx: EContext, name: String, blockHeight: Long, snapshotsToKeep: Int): Long? {
+        val sql ="""
+            SELECT distinct(block_height) from ${tablePages(ctx, name)}
+            WHERE block_height <= ?
+            ORDER BY block_height DESC
+            LIMIT ?
+            """.trimIndent()
+
+        ctx.conn.prepareStatement(sql).use { statement ->
+            statement.setLong(1, blockHeight)
+            statement.setInt(2, snapshotsToKeep + 1)
+            statement.executeQuery().use { resultSet ->
+                val list = buildList<Long> {
+                    while (resultSet.next()) {
+                        add(resultSet.getLong(1))
+                    }
+                }
+                if (list.size < snapshotsToKeep + 1) {
+                    return null
+                }
+                return list[snapshotsToKeep - 1]
+            }
+        }
+    }
+
+    /**
+     * Get prunable pages that are not needed anymore at the given height
+     *
+     * @param ctx is the context
+     * @param name is the name of the page
+     * @param nextSnapshotHeight is the next snapshot height
+     */
+    override fun getPrunablePages(ctx: EContext, name: String, nextSnapshotHeight: Long): List<Long> {
+        val sql = """
+            SELECT page_iid FROM ${tablePages(ctx, name)}
+            WHERE block_height < ? AND level = (SELECT level FROM ${tablePages(ctx, name)} WHERE block_height = ?) 
+            AND left_index = (SELECT left_index FROM ${tablePages(ctx, name)} WHERE block_height = ?)
+            """.trimIndent()
+        ctx.conn.prepareStatement(sql).use { statement ->
+            statement.setLong(1, nextSnapshotHeight)
+            statement.setLong(2, nextSnapshotHeight)
+            statement.setLong(3, nextSnapshotHeight)
+            statement.executeQuery().use { resultSet ->
+                return buildList<Long> {
+                    while (resultSet.next()) {
+                        add(resultSet.getLong(1))
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Delete prunable pages
+     *
+     * @param ctx is the context
+     * @param name is the name of the page
+     * @param pageIids is the list of page iids to delete
+     */
+    override fun deletePages(ctx: EContext, name: String, pageIids: List<Long>): Boolean {
+        val sql = "DELETE FROM ${tablePages(ctx, name)} WHERE page_iid in (${pageIids.joinToString(",")})"
+        ctx.conn.prepareStatement(sql).use { statement ->
+            return statement.executeUpdate() > 0
+        }
+    }
+
+    /**
+     * Get the left index of the given page iids
+     *
+     * @param ctx is the context
+     * @param name is the name of the page
+     * @param pageIids is the list of page iids
+     */
+    override fun getLeftIndex(ctx: EContext, name: String, pageIids: List<Long>): List<Long> {
+        val sql = "SELECT left_index FROM ${tablePages(ctx, name)} WHERE page_iid in (${pageIids.joinToString(",")})"
+        ctx.conn.prepareStatement(sql).use { statement ->
+            statement.executeQuery().use { resultSet ->
+                return buildList<Long> {
+                    while (resultSet.next()) {
+                        add(resultSet.getLong(1))
+                    }
+                }
+            }
+        }
     }
 }
