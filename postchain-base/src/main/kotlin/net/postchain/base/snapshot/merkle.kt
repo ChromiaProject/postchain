@@ -177,16 +177,17 @@ open class SnapshotPageStore(
 
     /**
      * Delete all pages of the snapshot that are older than the given block height
+     * except those which are still in used
      */
     open fun pruneSnapshot(blockHeight: Long) {
         val db = DatabaseAccess.of(ctx)
-        val prunableSnapshotHeights = db.getPrunableSnapshotHeight(ctx, name, blockHeight, snapshotsToKeep)
+        val nextPrunableSnapshotHeight = db.getNextPrunableSnapshotHeight(ctx, name, blockHeight, snapshotsToKeep)
                 ?: return
-        val pageIids = db.getPrunablePages(ctx, name, prunableSnapshotHeights.first, prunableSnapshotHeights.second)
+        val pageIids = db.getPrunablePages(ctx, name, nextPrunableSnapshotHeight)
         val leftIndex = db.getLeftIndex(ctx, name, pageIids)
         leftIndex.forEach {
-            db.safePruneAccountStates(ctx, tableNamePrefix, it + 1, it + (1 shl levelsPerPage),
-                    prunableSnapshotHeights.first, prunableSnapshotHeights.second)
+            db.safePruneAccountStates(ctx, tableNamePrefix,
+                    it + 1, it + (1 shl levelsPerPage), nextPrunableSnapshotHeight)
         }
         db.deletePages(ctx, name, pageIids)
     }

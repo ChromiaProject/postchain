@@ -457,18 +457,24 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     /**
      * Delete prunable account states that not be used anymore at given height
+     *
+     * @param ctx the context
+     * @param prefix the prefix
+     * @param left the left
+     * @param right the right
+     * @param nextSnapshotHeight the next snapshot height
      */
-    override fun safePruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, snapshotHeight: Long, nextSnapshotHeight: Long) {
+    override fun safePruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, nextSnapshotHeight: Long) {
         if (left > right) {
             throw ProgrammerMistake("Why is left value lower than right? $left < $right")
         }
         val sql = """
             DELETE FROM ${tableStateLeafs(ctx, prefix)} 
-            WHERE block_height <= ? AND state_n BETWEEN ? AND ? 
+            WHERE block_height < ? AND state_n BETWEEN ? AND ? 
             AND state_n in (SELECT state_n FROM ${tableStateLeafs(ctx, prefix)} 
                             WHERE block_height = ? AND state_n BETWEEN ? AND ?)
         """.trimIndent()
-        queryRunner.update(ctx.conn, sql, snapshotHeight, left, right, nextSnapshotHeight, left, right)
+        queryRunner.update(ctx.conn, sql, nextSnapshotHeight, left, right, nextSnapshotHeight, left, right)
     }
 
     override fun insertPage(ctx: EContext, name: String, page: Page) {
@@ -1204,14 +1210,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     /**
-     * Get prunable snapshot height and the next snapshot height
+     * Get next prunable snapshot height
      *
      * @param ctx is the context
      * @param prefix is what the state will be used for, for example "eif" or "icmf"
      * @param blockHeight is the block height
      * @param snapshotsToKeep is the number of snapshots to keep
      */
-    override fun getPrunableSnapshotHeight(ctx: EContext, name: String, blockHeight: Long, snapshotsToKeep: Int): Pair<Long, Long>? {
+    override fun getNextPrunableSnapshotHeight(ctx: EContext, name: String, blockHeight: Long, snapshotsToKeep: Int): Long? {
         val sql ="""
             SELECT distinct(block_height) from ${tablePages(ctx, name)}
             WHERE block_height <= ?
@@ -1231,7 +1237,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 if (list.size < snapshotsToKeep + 1) {
                     return null
                 }
-                return Pair(list.last(), list[snapshotsToKeep - 1])
+                return list[snapshotsToKeep - 1]
             }
         }
     }
@@ -1241,17 +1247,16 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      *
      * @param ctx is the context
      * @param name is the name of the page
-     * @param snapshotHeight is the snapshot height
      * @param nextSnapshotHeight is the next snapshot height
      */
-    override fun getPrunablePages(ctx: EContext, name: String, snapshotHeight: Long, nextSnapshotHeight: Long): List<Long> {
+    override fun getPrunablePages(ctx: EContext, name: String, nextSnapshotHeight: Long): List<Long> {
         val sql = """
             SELECT page_iid FROM ${tablePages(ctx, name)}
-            WHERE block_height <= ? AND level = (SELECT level from ${tablePages(ctx, name)} WHERE block_height = ?) 
-            AND left_index = (SELECT left_index from ${tablePages(ctx, name)} WHERE block_height = ?)
+            WHERE block_height < ? AND level = (SELECT level FROM ${tablePages(ctx, name)} WHERE block_height = ?) 
+            AND left_index = (SELECT left_index FROM ${tablePages(ctx, name)} WHERE block_height = ?)
             """.trimIndent()
         ctx.conn.prepareStatement(sql).use { statement ->
-            statement.setLong(1, snapshotHeight)
+            statement.setLong(1, nextSnapshotHeight)
             statement.setLong(2, nextSnapshotHeight)
             statement.setLong(3, nextSnapshotHeight)
             statement.executeQuery().use { resultSet ->
