@@ -165,13 +165,13 @@ class RestApi(
 
     private val gtvGson = make_gtv_gson()
 
-    private val blockchainRefFilter = Filter { next ->
+    private fun blockchainRefFilter(failOnNonLive: Boolean) = Filter { next ->
         { request ->
             val ref = request.path(BLOCKCHAIN_RID)?.let { parseBlockchainRid(it) }
             if (ref != null) {
                 val blockchainRid = resolveBlockchain(ref)
                 val chainModel = chainModel(blockchainRid)
-                if (!chainModel.live) throw UnavailableException("Blockchain is unavailable")
+                if (failOnNonLive && !chainModel.live) throw UnavailableException("Blockchain is unavailable")
                 withLoggingContext(
                         BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
                         CHAIN_IID_TAG to chainModel.chainIID.toString()) {
@@ -206,7 +206,8 @@ class RestApi(
         }
     }
 
-    private val blockchain = blockchainRefFilter.then(blockchainMetricsFilter)
+    private val liveBlockchain = blockchainRefFilter(true).then(blockchainMetricsFilter)
+    private val blockchain = blockchainRefFilter(false).then(blockchainMetricsFilter)
 
     private val app = routes(
             "/" bind static(ResourceLoader.Classpath("/restapi-root")),
@@ -215,35 +216,36 @@ class RestApi(
             "/version" bind GET to ::getVersion,
             "/_debug" bind GET to ::getDebug,
 
-            "/tx/{blockchainRid}" bind POST to blockchain.then(::postTransaction),
+            "/tx/{blockchainRid}" bind POST to liveBlockchain.then(::postTransaction),
             "/tx/{blockchainRid}/{txRid}" bind GET to blockchain.then(::getTransaction),
             "/transactions/{blockchainRid}/count" bind GET to blockchain.then(::getTransactionsCount),
             "/transactions/{blockchainRid}/{txRid}" bind GET to blockchain.then(::getTransactionInfo),
             "/transactions/{blockchainRid}" bind GET to blockchain.then(::getTransactionsInfo),
             "/tx/{blockchainRid}/{txRid}/confirmationProof" bind GET to blockchain.then(::getConfirmationProof),
-            "/tx/{blockchainRid}/{txRid}/status" bind GET to blockchain.then(::getTransactionStatus),
+            "/tx/{blockchainRid}/{txRid}/status" bind GET to liveBlockchain.then(::getTransactionStatus),
 
             "/blocks/{blockchainRid}" bind GET to blockchain.then(::getBlocks),
             "/blocks/{blockchainRid}/{blockRid}" bind GET to blockchain.then(::getBlock),
             "/blocks/{blockchainRid}/height/{height}" bind GET to blockchain.then(::getBlockByHeight),
 
-            "/query/{blockchainRid}" bind GET to blockchain.then(::getQuery),
-            "/query/{blockchainRid}" bind POST to blockchain.then(::postQuery),
-            "/batch_query/{blockchainRid}" bind POST to blockchain.then(::batchQuery),
+            "/query/{blockchainRid}" bind GET to liveBlockchain.then(::getQuery),
+            "/query/{blockchainRid}" bind POST to liveBlockchain.then(::postQuery),
+            "/batch_query/{blockchainRid}" bind POST to liveBlockchain.then(::batchQuery),
             // Direct query. That should be used as example: <img src="http://node/dquery/brid?type=get_picture&id=4555" />
-            "/dquery/{blockchainRid}" bind GET to blockchain.then(::directQuery),
-            "/query_gtx/{blockchainRid}" bind POST to blockchain.then(::queryGtx),
-            "/query_gtv/{blockchainRid}" bind POST to blockchain.then(::queryGtv),
+            "/dquery/{blockchainRid}" bind GET to liveBlockchain.then(::directQuery),
+            "/query_gtx/{blockchainRid}" bind POST to liveBlockchain.then(::queryGtx),
+            "/query_gtv/{blockchainRid}" bind POST to liveBlockchain.then(::queryGtv),
 
-            "/node/{blockchainRid}/my_status" bind GET to blockchain.then(::getNodeStatus),
-            "/node/{blockchainRid}/statuses" bind GET to blockchain.then(::getNodeStatuses),
-            "/brid/{blockchainRid}" bind GET to blockchain.then(::getBlockchainRid),
+            "/node/{blockchainRid}/my_status" bind GET to liveBlockchain.then(::getNodeStatus),
+            "/node/{blockchainRid}/statuses" bind GET to liveBlockchain.then(::getNodeStatuses),
+            "/brid/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainRid),
+
             "/blockchain/{blockchainRid}/height" bind GET to blockchain.then(::getCurrentHeight),
 
-            "/config/{blockchainRid}" bind GET to blockchain.then(::getBlockchainConfiguration),
-            "/config/{blockchainRid}" bind POST to blockchain.then(::validateBlockchainConfiguration),
+            "/config/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainConfiguration),
+            "/config/{blockchainRid}" bind POST to liveBlockchain.then(::validateBlockchainConfiguration),
 
-            "/errors/{blockchainRid}" bind GET to ::getErrors,
+            "/errors/{blockchainRid}" bind GET to blockchain.then(::getErrors),
     )
 
     @Suppress("UNUSED_PARAMETER")
@@ -474,29 +476,10 @@ class RestApi(
     }
 
     private fun getErrors(request: Request): Response {
-        val ref = request.path(BLOCKCHAIN_RID)?.let { parseBlockchainRid(it) }
-        return if (ref != null) {
-            val blockchainRid = resolveBlockchain(ref)
-            val chainModel = chainModel(blockchainRid)
-            withLoggingContext(
-                    BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
-                    CHAIN_IID_TAG to chainModel.chainIID.toString()) {
-                when (chainModel) {
-                    is ExternalModel -> {
-                        logger.trace { "External REST API model found: $chainModel" }
-                        chainModel(request)
-                    }
-
-                    is Model -> {
-                        val errors = JsonArray()
-                        (checkDiagnosticError(blockchainRid) ?: listOf()).forEach { errors.add(it) }
-                        Response(OK).with(prettyJsonBody of errors)
-                    }
-                }
-            }
-        } else {
-            throw invalidBlockchainRid()
-        }
+        val model = model(request)
+        val errors = JsonArray()
+        (checkDiagnosticError(model.blockchainRid) ?: listOf()).forEach { errors.add(it) }
+        return Response(OK).with(prettyJsonBody of errors)
     }
 
     val handler = routes(

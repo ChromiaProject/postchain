@@ -94,6 +94,22 @@ class RestApiGetTxEndpointTest {
     }
 
     @Test
+    fun `can get transaction even when chain is not live`() {
+        whenever(model.getTransaction(TxRid(txHashHex.hexStringToByteArray())))
+                .thenReturn("1234".hexStringToByteArray())
+        whenever(model.live).thenReturn(false)
+
+        restApi.attachModel(blockchainRID, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/tx/$blockchainRID/$txHashHex")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body("tx", equalTo("1234"))
+    }
+
+    @Test
     fun test_getTx_when_not_found_then_404_received() {
         whenever(model.getTransaction(TxRid(txHashHex.hexStringToByteArray())))
                 .thenReturn(null)

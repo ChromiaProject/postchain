@@ -21,6 +21,7 @@ import net.postchain.configurations.GTXTestModule
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.IntegrationTestSetup
+import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.RestTools
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
 import net.postchain.devtools.utils.configuration.SystemSetup
@@ -30,11 +31,11 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvFileReader
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.GTXTransactionFactory
-import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBuilder
 import net.postchain.integrationtest.JsonTools
 import net.postchain.integrationtest.JsonTools.jsonAsMap
 import net.postchain.integrationtest.managedmode.getLoggerCaptor
+import net.postchain.integrationtest.reconfiguration.TogglableFaultyGtxModule
 import org.awaitility.Awaitility
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.core.IsEqual
@@ -204,7 +205,11 @@ class RestApiIT : IntegrationTestSetup() {
         val bcRid = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = bcRid.toHex()
 
-        val builder = createBuilder(bcRid, "rejectMe")
+        val builder = GtxBuilder(bcRid, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
+                .addOperation("gtx_test", gtv(1L), gtv("rejectMe"))
+                .finish()
+                .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))
+                .buildGtx()
 
         // post transaction
         testStatusPost(
@@ -355,6 +360,51 @@ class RestApiIT : IntegrationTestSetup() {
     }
 
     @Test
+    fun `can get blocks and transactions even if chain is not live`() {
+        val nodeCount = 1
+        TogglableFaultyGtxModule.shouldFail = false
+        val sysSetup = doSystemSetup(nodeCount, "/net/postchain/devtools/api/blockchain_config_faulty_1.xml")
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem)
+        val blocks = mutableListOf<List<TestOneOpGtxTransaction>>()
+        val blockCount = 3
+        val txPerBlockCount = 3
+
+        // create blocks
+        var currentId = 0
+        for (blockHeight in 0 until blockCount) {
+            val transactions = mutableListOf<TestOneOpGtxTransaction>()
+            for (txInBlock in 0 until txPerBlockCount) {
+                transactions.add(postGtxTransaction(factory, ++currentId, blockHeight, nodeCount, blockchainRIDBytes))
+            }
+            buildBlockAndCommit(nodes[0])
+            blocks.add(transactions)
+        }
+
+        TogglableFaultyGtxModule.shouldFail = true
+        val faultyConfig = readBlockchainConfig(
+                "/net/postchain/devtools/api/blockchain_config_faulty_2.xml"
+        )
+        nodes[0].addConfiguration(PostchainTestNode.DEFAULT_CHAIN_IID, 4, faultyConfig)
+        buildBlock(PostchainTestNode.DEFAULT_CHAIN_IID, 3)
+        buildBlockNoWait(nodes, PostchainTestNode.DEFAULT_CHAIN_IID, 4)
+        Thread.sleep(1000) // give it some time to fail
+
+        // get transactions
+        given().port(nodes[0].getRestApiHttpPort())
+                .get("/transactions/$blockchainRID")
+                .then()
+                .statusCode(200)
+
+        // get blocks
+        given().port(nodes[0].getRestApiHttpPort())
+                .get("/blocks/$blockchainRID")
+                .then()
+                .statusCode(200)
+    }
+
+    @Test
     fun testDuplicateTx() {
         val nodeCount = 4
         val sysSetup = doSystemSetup(nodeCount, "/net/postchain/devtools/api/blockchain_config.xml")
@@ -478,13 +528,5 @@ class RestApiIT : IntegrationTestSetup() {
                 .post(path)
                 .then()
                 .statusCode(expectedStatus)
-    }
-
-    private fun createBuilder(blockchainRid: BlockchainRid, value: String): Gtx {
-        return GtxBuilder(blockchainRid, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
-                .addOperation("gtx_test", gtv(1L), gtv(value))
-                .finish()
-                .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))
-                .buildGtx()
     }
 }
