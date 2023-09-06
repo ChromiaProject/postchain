@@ -28,7 +28,7 @@ import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import java.util.concurrent.CompletionStage
-import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.Semaphore
 
 /**
  * Manages intents and acts as a wrapper for [BlockDatabase] and [StatusManager]
@@ -40,7 +40,7 @@ class BaseBlockManager(
         private val workerContext: WorkerContext
 ) : BlockManager {
 
-    private var isOperationRunning = AtomicBoolean(false)
+    private val operationSemaphore = Semaphore(1)
 
     @Volatile
     private var intent: BlockIntent = DoNothingIntent
@@ -54,20 +54,29 @@ class BaseBlockManager(
     override var currentBlock: BlockData? = null
 
     private fun <RT> runDBOp(op: () -> CompletionStage<RT>, onSuccess: (RT) -> Unit, onFailure: (Throwable) -> Unit = {}) {
-        if (isOperationRunning.compareAndSet(false, true)) {
-            intent = DoNothingIntent
-            val loggingContext = mapOf(
-                    BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex(),
-                    CHAIN_IID_TAG to workerContext.blockchainConfiguration.chainID.toString()
-            )
-            withLoggingContext(loggingContext) {
-                op().whenCompleteUnwrapped(loggingContext) { res, throwable ->
-                    if (throwable == null) {
-                        onSuccessfulOperation(res, onSuccess)
-                    } else {
-                        onFailedOperation(throwable, onFailure)
+        if (operationSemaphore.tryAcquire()) {
+            try {
+                intent = DoNothingIntent
+                val loggingContext = mapOf(
+                        BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex(),
+                        CHAIN_IID_TAG to workerContext.blockchainConfiguration.chainID.toString()
+                )
+                withLoggingContext(loggingContext) {
+                    op().whenCompleteUnwrapped(loggingContext) { res, throwable ->
+                        try {
+                            if (throwable == null) {
+                                onSuccessfulOperation(res, onSuccess)
+                            } else {
+                                onFailedOperation(throwable, onFailure)
+                            }
+                        } finally {
+                            operationSemaphore.release()
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                operationSemaphore.release()
+                logger.error("Unable to start db operation, releasing semaphore", e)
             }
         }
     }
@@ -75,14 +84,12 @@ class BaseBlockManager(
     private fun onFailedOperation(throwable: Throwable, onFailure: (Throwable) -> Unit) {
         synchronized(statusManager) {
             onFailure(throwable)
-            isOperationRunning.set(false)
         }
     }
 
     private fun <RT> onSuccessfulOperation(res: RT, onSuccess: (RT) -> Unit) {
         synchronized(statusManager) {
             onSuccess(res)
-            isOperationRunning.set(false)
         }
     }
 
@@ -210,7 +217,9 @@ class BaseBlockManager(
 
     private fun update() {
         synchronized(statusManager) {
-            if (isOperationRunning.get()) return
+            if (!operationSemaphore.tryAcquire()) return
+            // We can release immediately because we are inside statusManager synchronized block
+            operationSemaphore.release()
             val blockIntent = statusManager.getBlockIntent()
             intent = DoNothingIntent
             when (blockIntent) {
@@ -287,6 +296,12 @@ class BaseBlockManager(
     }
 
     override fun getBlockIntent(): BlockIntent = intent
+
+    override fun waitForRunningOperationsToComplete() {
+        operationSemaphore.acquire()
+        // We can release immediately
+        operationSemaphore.release()
+    }
 
     private fun blockTimestamp(block: BlockData) = (block.header as BaseBlockHeader).timestamp
 
