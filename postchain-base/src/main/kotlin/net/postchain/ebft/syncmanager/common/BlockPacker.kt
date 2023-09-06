@@ -32,9 +32,10 @@ object BlockPacker: KLogging() {
     ): Boolean {
         var totByteSize = 0
         var blocksAdded = 0
+        logger.debug { "GetBlockRange from peer $peerId, starting at height $startAtHeight, myHeight is $myHeight" }
         while (blocksAdded < MAX_BLOCKS_IN_PACKAGE) {
             val height = startAtHeight + blocksAdded
-            logger.debug { "GetBlockRange from peer $peerId , height $height, myHeight is $myHeight" }
+            logger.debug { "GetBlockRange from peer $peerId, packing height $height" }
             val blockData = getBlockFromHeight(height)
             if (blockData == null) {
                 logger.debug { "GetBlockRange no more blocks in DB."}
