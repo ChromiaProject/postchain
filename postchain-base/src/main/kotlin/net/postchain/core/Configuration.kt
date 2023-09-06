@@ -15,7 +15,6 @@ import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockWitness
 import net.postchain.crypto.CryptoSystem
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
@@ -65,7 +64,7 @@ interface BlockchainConfigurationFactory {
             partialContext: BlockchainContext,
             blockSigMaker: SigMaker,
             eContext: EContext,
-            cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
+            cryptoSystem: CryptoSystem,
             blockchainConfigurationOptions: BlockchainConfigurationOptions = BlockchainConfigurationOptions.DEFAULT
     ): BlockchainConfiguration
 }

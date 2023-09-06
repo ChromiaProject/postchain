@@ -31,6 +31,8 @@ interface SigMaker {
  * */
 typealias Verifier = (ByteArray, Signature) -> Boolean
 
+typealias BasicVerifier = (ByteArray, ByteArray, ByteArray) -> Boolean
+
 /**
  * CryptoSystem implements necessary cryptographic functionalities.
  */

@@ -5,8 +5,9 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Secp256K1CryptoSystem
 import org.apache.commons.configuration2.Configuration
 
-fun Configuration.cryptoSystem() = getEnvOrStringProperty("POSTCHAIN_CRYPTO_SYSTEM", "crypto")?.let { newInstanceOf<CryptoSystem>(it) }
-        ?: Secp256K1CryptoSystem()
+fun Configuration.cryptoSystem() = newInstanceOf<CryptoSystem>(cryptoSystemClass())
+
+fun Configuration.cryptoSystemClass(): String = getEnvOrStringProperty("POSTCHAIN_CRYPTO_SYSTEM", "cryptosystem", Secp256K1CryptoSystem::class.qualifiedName!!)
 
 fun Configuration.getEnvOrStringProperty(env: String, property: String): String? =
         System.getenv(env) ?: getString(property)

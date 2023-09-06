@@ -4,15 +4,19 @@ package net.postchain.devtools
 
 import mu.KLogging
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.config.app.AppConfig
 import net.postchain.config.app.AppConfig.Companion.DEFAULT_PORT
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.Transaction
+import net.postchain.crypto.devtools.KeyPairCache
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
+import net.postchain.gtv.GtvFactory.gtv
 import org.apache.commons.configuration2.MapConfiguration
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterEach
@@ -133,16 +137,25 @@ open class IntegrationTestSetup : AbstractIntegration() {
             nodesCount: Int,
             blockchainConfigFilename: String,
             preWipeDatabase: Boolean = true,
-            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
+            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit },
+            keyPairCache: KeyPairCache = KeyPairHelper,
+            overrideSigners: List<ByteArray> = emptyList()
     ): Array<PostchainTestNode> {
 
         // 1. Build the BC Setup
-        val blockchainGtvConfig = readBlockchainConfig(blockchainConfigFilename)
+        val blockchainGtvConfig = readBlockchainConfig(blockchainConfigFilename).let {
+            if (overrideSigners.isNotEmpty()) {
+                val configMap = it.asDict().toMutableMap()
+                configMap[KEY_SIGNERS] = gtv(*overrideSigners.map(::gtv).toTypedArray())
+                gtv(configMap)
+            } else it
+        }
+
         val chainId = 1 // We only have one.
-        val blockchainSetup = BlockchainSetupFactory.buildFromGtv(chainId, blockchainGtvConfig)
+        val blockchainSetup = BlockchainSetupFactory.buildFromGtv(chainId, blockchainGtvConfig, keyPairCache)
 
         // 2. Build the system Setup
-        val sysSetup = SystemSetupFactory.buildSystemSetup(listOf(blockchainSetup))
+        val sysSetup = SystemSetupFactory.buildSystemSetup(listOf(blockchainSetup), keyPairCache)
 
         if (nodesCount != sysSetup.nodeMap.size) {
             throw IllegalArgumentException("The blockchain conf expected ${sysSetup.nodeMap.size} signers, but you expected: $nodesCount")

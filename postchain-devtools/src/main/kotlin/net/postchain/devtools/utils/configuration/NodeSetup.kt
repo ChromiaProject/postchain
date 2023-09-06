@@ -4,7 +4,7 @@ import mu.KLogging
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.crypto.devtools.KeyPairHelper
+import net.postchain.crypto.devtools.KeyPairCache
 import net.postchain.devtools.PostchainTestNode
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.PropertiesConfiguration
@@ -51,15 +51,16 @@ data class NodeSetup(
 
         fun buildSimple(nodeNr: NodeSeqNumber,
                         signerChains: Set<Int>,
-                        replicaChains: Set<Int>
+                        replicaChains: Set<Int>,
+                        keyPairCache: KeyPairCache
         ): NodeSetup {
 
             return NodeSetup(
                     nodeNr,
                     signerChains,
                     replicaChains,
-                    KeyPairHelper.pubKeyHex(nodeNr.nodeNumber),
-                    KeyPairHelper.privKeyHex(nodeNr.nodeNumber)
+                    keyPairCache.pubKeyHex(nodeNr.nodeNumber),
+                    keyPairCache.privKeyHex(nodeNr.nodeNumber)
             )
         }
     }

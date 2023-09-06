@@ -510,7 +510,7 @@ class FastSynchronizerTest {
      * verify with missing config.
      */
     @Test
-    fun `handleBlockHeader with missing config and failed to validate witness should blacklist peer `() {
+    fun `handleBlockHeader with missing config and failed to validate witness should blacklist peer`() {
         // setup
         val job = addJob(height, nodeRid)
         doThrow(RuntimeException("Failure")).whenever(blockWitnessProvider).validateWitness(isA(), isA())

@@ -2,6 +2,8 @@ package net.postchain.devtools.utils.configuration
 
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.common.BlockchainRid
+import net.postchain.crypto.devtools.KeyPairCache
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.gtv.Gtv
 
@@ -64,7 +66,7 @@ data class BlockchainSetup(
         /**
          * Will take a GTV configuration and return a setup
          */
-        fun buildFromGtv(chainId: Int, gtvConfig: Gtv): BlockchainSetup = BlockchainSetupFactory.buildFromGtv(chainId, gtvConfig)
+        fun buildFromGtv(chainId: Int, gtvConfig: Gtv, keyPairCache: KeyPairCache = KeyPairHelper): BlockchainSetup = BlockchainSetupFactory.buildFromGtv(chainId, gtvConfig, keyPairCache)
 
 
     }
