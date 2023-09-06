@@ -22,6 +22,7 @@ import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.worker.WorkerContext
+import java.time.Clock
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import kotlin.math.min
@@ -41,16 +42,21 @@ import kotlin.math.min
 class SlowSynchronizer(
         workerContext: WorkerContext,
         private val blockDatabase: BlockDatabase,
-        params: SyncParameters,
-        private val isProcessRunning: () -> Boolean
+        val params: SyncParameters,
+        val clock: Clock,
+        private val isProcessRunning: () -> Boolean,
+        slowSyncStateMachineProvider: (Int) -> SlowSyncStateMachine = { chainId -> SlowSyncStateMachine.buildWithChain(chainId, params) },
+        slowSyncPeerStatusesProvider: () -> SlowSyncPeerStatuses = { SlowSyncPeerStatuses(params) },
+        val slowSyncSleepDataProvider: () -> SlowSyncSleepData = { SlowSyncSleepData(params) },
+        reentrantLockProvider: () -> ReentrantLock = { ReentrantLock() }
 ) : AbstractSynchronizer(workerContext) {
 
-    private val stateMachine = SlowSyncStateMachine.buildWithChain(blockchainConfiguration.chainID.toInt(), params)
+    private val stateMachine = slowSyncStateMachineProvider(blockchainConfiguration.chainID.toInt())
 
-    private val stateMachineLock = ReentrantLock()
+    private val stateMachineLock = reentrantLockProvider()
     private val allBlocksCommitted = stateMachineLock.newCondition()
 
-    val peerStatuses = SlowSyncPeerStatuses(params) // Don't want to put this in [AbstractSynchronizer] b/c too much generics.
+    val peerStatuses = slowSyncPeerStatusesProvider() // Don't want to put this in [AbstractSynchronizer] b/c too much generics.
 
     companion object : KLogging()
 
@@ -65,13 +71,11 @@ class SlowSynchronizer(
             syncDebug("Start", blockHeight)
             stateMachine.lastCommittedBlockHeight = blockHeight
             stateMachine.lastUncommittedBlockHeight = blockHeight
-            val params = SyncParameters.fromAppConfig(workerContext.appConfig)
-            val sleepData = SlowSyncSleepData(params)
+            val sleepData = slowSyncSleepDataProvider()
             while (isProcessRunning()) {
                 processMessages(sleepData)
-                val now = System.currentTimeMillis()
                 stateMachineLock.withLock {
-                    stateMachine.maybeGetBlockRange(now, sleepData.currentSleepMs, ::sendRequest) // It's up to the state machine if we should send a new request
+                    stateMachine.maybeGetBlockRange(currentTimeMillis(), sleepData.currentSleepMs, ::sendRequest) // It's up to the state machine if we should send a new request
                 }
                 Thread.sleep(min(sleepData.currentSleepMs, 100))
             }
@@ -87,7 +91,7 @@ class SlowSynchronizer(
         }
     }
 
-    private fun sendRequest(now: Long, slowSyncStateMachine: SlowSyncStateMachine, lastPeer: NodeRid? = null) {
+    internal fun sendRequest(now: Long, slowSyncStateMachine: SlowSyncStateMachine, lastPeer: NodeRid? = null) {
         val startAtHeight = slowSyncStateMachine.getStartHeight()
         val excludedPeers = peerStatuses.exclNonSyncable(startAtHeight, now)
         val peers = configuredPeers.minus(excludedPeers)
@@ -115,7 +119,7 @@ class SlowSynchronizer(
      *
      * @return SleepData we should use to sleep
      */
-    private fun processMessages(sleepData: SlowSyncSleepData) {
+    internal fun processMessages(sleepData: SlowSyncSleepData) {
         for (packet in communicationManager.getPackets()) {
             val peerId = packet.first
             if (peerStatuses.isBlacklisted(peerId)) {
@@ -157,7 +161,7 @@ class SlowSynchronizer(
      *
      * @return number of processed blocks
      */
-    private fun handleBlockRange(peerId: NodeRid, blocks: List<CompleteBlock>, startingAtHeight: Long): Int {
+    internal fun handleBlockRange(peerId: NodeRid, blocks: List<CompleteBlock>, startingAtHeight: Long): Int {
         if (stateMachine.state != SlowSyncStates.WAIT_FOR_REPLY) {
             peerStatuses.maybeBlacklist(peerId, "Slow Sync: We are not waiting for a block range. " +
                     " Why does $peerId send us this? $stateMachine ")
@@ -189,7 +193,7 @@ class SlowSynchronizer(
             if (stateMachine.hasUnacknowledgedFailedCommit()) {
                 logger.debug("Response is irrelevant since previous commit failed")
                 stateMachine.acknowledgeFailedCommit()
-                stateMachine.resetToWaitForAction(System.currentTimeMillis())
+                stateMachine.resetToWaitForAction(currentTimeMillis())
                 return 0
             }
 
@@ -212,7 +216,7 @@ class SlowSynchronizer(
             if (processedBlocks != blocks.size) {
                 throw ProgrammerMistake("processedBlocks != blocks.size")
             }
-            stateMachine.resetToWaitForAction(System.currentTimeMillis())
+            stateMachine.resetToWaitForAction(currentTimeMillis())
             return processedBlocks
         }
     }
@@ -220,13 +224,12 @@ class SlowSynchronizer(
     /**
      * @return true if we could extract the header and it was considered valid.
      */
-    private fun handleBlockHeader(
+    internal fun handleBlockHeader(
             peerId: NodeRid,
             header: ByteArray,
             witness: ByteArray,
             requestedHeight: Long
     ): Pair<net.postchain.core.block.BlockHeader, BlockWitness>? {
-
         if (header.isEmpty()) {
             if (witness.isEmpty()) {
                 // Shouldn't happen if peer was working
@@ -237,24 +240,24 @@ class SlowSynchronizer(
             return null
         }
 
-        val h = blockchainConfiguration.decodeBlockHeader(header)
-        val peerLastHeight = getHeight(h)
+        val blockHeader = blockchainConfiguration.decodeBlockHeader(header)
+        val peerLastHeight = getHeight(blockHeader)
 
         if (peerLastHeight != requestedHeight) {
             // Could be a bug
-            peerStatuses.maybeBlacklist(peerId, "Slow Sync: Header height=$peerLastHeight, we espected height: $requestedHeight.")
+            peerStatuses.maybeBlacklist(peerId, "Slow Sync: Header height=$peerLastHeight, we expected height: $requestedHeight.")
             return null
         }
 
-        val w = blockchainConfiguration.decodeWitness(witness)
+        val blockWitness = blockchainConfiguration.decodeWitness(witness)
         // If config is mismatching we can't validate witness properly
         // We could potentially verify against signer list in new config, but we can't be sure that we have it yet
         // Anyway, worst case scenario we will simply attempt to load the block and fail
-        if (h.getConfigHash() == null || h.getConfigHash().contentEquals(blockchainConfiguration.configHash)) {
+        if (blockHeader.getConfigHash() == null || blockHeader.getConfigHash().contentEquals(blockchainConfiguration.configHash)) {
             val validator = blockchainConfiguration.getBlockHeaderValidator()
-            val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(h)
+            val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(blockHeader)
             try {
-                validator.validateWitness(w, witnessBuilder)
+                validator.validateWitness(blockWitness, witnessBuilder)
             } catch (e: Exception) {
                 peerStatuses.maybeBlacklist(peerId, "Slow Sync: Invalid header received (${e.message}). Height: $requestedHeight")
                 return null
@@ -262,10 +265,10 @@ class SlowSynchronizer(
         }
 
         logger.trace { "handleBlockHeader() -- Header for height $requestedHeight received" }
-        return h to w
+        return blockHeader to blockWitness
     }
 
-    private fun handleBlock(
+    internal fun handleBlock(
             peerId: NodeRid,
             header: net.postchain.core.block.BlockHeader,
             witness: BlockWitness,
@@ -295,7 +298,7 @@ class SlowSynchronizer(
      * NOTE:
      * If one block fails to commit, don't worry about the blocks coming after. This is handled in the BBD.addBlock().
      */
-    private fun commitBlock(peerId: NodeRid, bTrace: BlockTrace?, block: BlockDataWithWitness, height: Long) {
+    internal fun commitBlock(peerId: NodeRid, bTrace: BlockTrace?, block: BlockDataWithWitness, height: Long) {
         if (addBlockCompletionFuture?.isDone == true) {
             addBlockCompletionFuture = null // If it's done we don't need the future
         }
@@ -324,9 +327,7 @@ class SlowSynchronizer(
                 }
     }
 
-    // -------------
-    // Only logging below
-    // -------------
+    private fun currentTimeMillis() = clock.millis()
 
     private fun syncDebug(message: String, height: Long, e: Exception? = null) {
         logger.debug(e) { "syncUntil() -- $message, at height: $height" }

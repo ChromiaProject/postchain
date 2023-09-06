@@ -62,6 +62,7 @@ class ReadOnlyBlockchainProcess(
             workerContext,
             blockDatabase,
             params,
+            Clock.systemUTC(),
             ::isProcessRunning
     )
 
