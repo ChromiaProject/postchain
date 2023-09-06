@@ -16,7 +16,7 @@ import net.postchain.crypto.secp256k1_derivePubKey
  *
  * Note: Clearly this class should only be used for tests. In real code the keys should not be calculated from an index.
  */
-object KeyPairHelper {
+object KeyPairHelper : KeyPairCache {
 
     private val privKeys = mutableMapOf<Int, Pair<ByteArray, String>>()
     private val pubKeys = mutableMapOf<Int, Pair<ByteArray, String>>()
@@ -28,23 +28,23 @@ object KeyPairHelper {
         }
     }
 
-    fun privKey(pubKey: ByteArray): ByteArray {
+    override fun privKey(pubKey: ByteArray): ByteArray {
         return privKeys[pubKeyHexToIndex[pubKey.toHex()]]!!.first
     }
 
-    fun privKey(index: Int): ByteArray {
+    override fun privKey(index: Int): ByteArray {
         return getCachedPrivKey(index).first
     }
 
-    fun privKeyHex(index: Int): String {
+    override fun privKeyHex(index: Int): String {
         return getCachedPrivKey(index).second
     }
 
-    fun pubKey(index: Int): ByteArray {
+    override fun pubKey(index: Int): ByteArray {
         return getCachedPubKey(index).first
     }
 
-    fun pubKeyHex(index: Int): String {
+    override fun pubKeyHex(index: Int): String {
         return getCachedPubKey(index).second
     }
 
@@ -53,7 +53,7 @@ object KeyPairHelper {
     }
 
     // TODO: [olle] Is there any way to do the same smart calculation? No fun if we return "null" here
-    fun pubKeyFromByteArray(pubKeyHex: String): Int? {
+    override fun pubKeyFromByteArray(pubKeyHex: String): Int? {
         return pubKeyHexToIndex[pubKeyHex]
     }
 

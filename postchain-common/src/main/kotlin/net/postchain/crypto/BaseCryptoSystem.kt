@@ -27,13 +27,13 @@ abstract class BaseCryptoSystem : CryptoSystem {
     }
 
     override fun verifyDigest(digest: ByteArray, s: Signature): Boolean {
-        val verifyFn = deriveSignatureVerificationFromSubject(s.subjectID)
+        val verifyFn = deriveSignatureVerification(s.subjectID)
         return verifyFn(digest, s.subjectID, s.data)
     }
 
     override fun makeVerifier(): Verifier {
         return { data, signature: Signature ->
-            val verifyFn = deriveSignatureVerificationFromSubject(signature.subjectID)
+            val verifyFn = deriveSignatureVerification(signature.subjectID)
             verifyFn(digest(data), signature.subjectID, signature.data)
         }
     }
@@ -43,5 +43,9 @@ abstract class BaseCryptoSystem : CryptoSystem {
      *
      * @param subjectID The public key to derive what signature algorithm to use
      */
-    private fun deriveSignatureVerificationFromSubject(subjectID: ByteArray): (ByteArray, ByteArray, ByteArray) -> Boolean = ::secp256k1_verify
+    // TODO need to do something more clever here if we want to have more than two crypto systems
+    private fun deriveSignatureVerification(subjectID: ByteArray): BasicVerifier = deriveSignatureVerificationFromSubject(subjectID)
+            ?: ::secp256k1_verify
+
+    protected abstract fun deriveSignatureVerificationFromSubject(subjectID: ByteArray): BasicVerifier?
 }

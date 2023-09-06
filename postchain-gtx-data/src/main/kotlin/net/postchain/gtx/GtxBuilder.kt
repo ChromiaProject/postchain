@@ -5,7 +5,6 @@ import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.crypto.CryptoSystem
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
@@ -23,7 +22,7 @@ private const val TX_SIZE_OVERHEAD = 192
 open class GtxBuilder(
         private val blockchainRid: BlockchainRid,
         private val signers: List<ByteArray>,
-        private val cryptoSystem: CryptoSystem = Secp256K1CryptoSystem(),
+        private val cryptoSystem: CryptoSystem,
         val maxTxSize: Int = -1
 ) {
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)

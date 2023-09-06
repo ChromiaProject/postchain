@@ -6,6 +6,7 @@ import net.postchain.base.configuration.KEY_DEPENDENCIES
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
+import net.postchain.crypto.devtools.KeyPairCache
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -20,11 +21,12 @@ object BlockchainSetupFactory : KLogging() {
      *
      * @param chainIid usually the chainIid is derived from the file path, so we should know it by now.
      * @param blockchainConfigFilename is the file path
+     * @param keyPairCache cache to use for fetching node keypairs
      */
-    fun buildFromFile(chainIid: Int, blockchainConfigFilename: String): BlockchainSetup {
+    fun buildFromFile(chainIid: Int, blockchainConfigFilename: String, keyPairCache: KeyPairCache = KeyPairHelper): BlockchainSetup {
         val gtv = GtvMLParser.parseGtvML(
                 javaClass.getResource(blockchainConfigFilename).readText())
-        val res = buildFromGtv(chainIid, gtv)
+        val res = buildFromGtv(chainIid, gtv, keyPairCache)
         logger.debug("Translated Filename: $blockchainConfigFilename -> Setup with bc chainId: $chainIid, bc Rid: ${res.rid.toShortHex()}")
         return res
     }
@@ -41,8 +43,9 @@ object BlockchainSetupFactory : KLogging() {
      *
      * @param chainIid usually the chainIid is derived from the file path, so we should know it by now.
      * @param bcGtv is the configuration
+     * @param keyPairCache cache to use for fetching node keypairs
      */
-    fun buildFromGtv(chainIid: Int, bcGtv: Gtv): BlockchainSetup {
+    fun buildFromGtv(chainIid: Int, bcGtv: Gtv, keyPairCache: KeyPairCache = KeyPairHelper): BlockchainSetup {
 
         // 1. Get the signers
         val signers = mutableListOf<NodeSeqNumber>()
@@ -52,7 +55,7 @@ object BlockchainSetupFactory : KLogging() {
             val byteArray = pubkey.asByteArray()
             val nodeId = try {
                 // TODO [olle] this is not safe, sorry. Must have created these in the cache before this or it will explode
-                KeyPairHelper.pubKeyFromByteArray(byteArray.toHex())!!
+                keyPairCache.pubKeyFromByteArray(byteArray.toHex())!!
             } catch (npe: KotlinNullPointerException) {
                 throw IllegalStateException("We mush cache the node Pub key before we can find it: ${byteArray.toHex()}")
             }

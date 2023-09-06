@@ -27,6 +27,10 @@
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
+            <artifactId>postchain-dilithium</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
             <version>${project.version}</version>
             <scope>test</scope>
