@@ -14,6 +14,7 @@ import net.postchain.api.rest.model.TxRid
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.ConfirmationProof
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.base.withReadConnection
@@ -39,6 +40,8 @@ import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.UnknownQuery
@@ -164,7 +167,12 @@ open class PostchainModel(
     }
 
     override fun validateBlockchainConfiguration(configuration: Gtv) {
-        val blockConfData = configuration.toObject<BlockchainConfigurationData>()
+        val fixedConfiguration = if (configuration[KEY_SIGNERS] == null) {
+            GtvDictionary.build(configuration.asDict() + (KEY_SIGNERS to GtvArray(emptyArray())))
+        } else {
+            configuration
+        }
+        val blockConfData = fixedConfiguration.toObject<BlockchainConfigurationData>()
         withWriteConnection(storage, chainIID) { eContext ->
             val blockchainRid = DatabaseAccess.of(eContext).getBlockchainRid(eContext)!!
             val partialContext = BaseBlockchainContext(chainIID, blockchainRid, NODE_ID_AUTO, postchainContext.appConfig.pubKeyByteArray)
