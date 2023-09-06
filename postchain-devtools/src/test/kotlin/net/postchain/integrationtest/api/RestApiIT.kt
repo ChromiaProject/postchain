@@ -330,9 +330,25 @@ class RestApiIT : IntegrationTestSetup() {
     }
 
     @Test
-    fun testValidateBlockchainConfigurationWithNoSigners() {
+    fun testValidateBlockchainConfigurationWithEmptySigners() {
         val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
-        val blockChainFileToValidate = "/net/postchain/devtools/api/blockchain_config_0.xml"
+        val blockChainFileToValidate = "/net/postchain/devtools/api/blockchain_config_empty_signers.xml"
+        val sysSetup = doSystemSetup(1, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        val config = GtvEncoder.encodeGtv(GtvFileReader.readFile(Paths.get(javaClass.getResource(blockChainFileToValidate)!!.toURI()).toFile()))
+        given().port(nodes[0].getRestApiHttpPort())
+                .header("Content-Type", ContentType.BINARY)
+                .body(config)
+                .post("/config/$blockchainRID")
+                .then()
+                .statusCode(200)
+    }
+
+    @Test
+    fun testValidateBlockchainConfigurationWithoutSigners() {
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
+        val blockChainFileToValidate = "/net/postchain/devtools/api/blockchain_config_no_signers.xml"
         val sysSetup = doSystemSetup(1, blockChainFile)
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
