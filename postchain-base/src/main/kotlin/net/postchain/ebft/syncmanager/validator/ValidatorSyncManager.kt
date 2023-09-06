@@ -454,6 +454,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     fun update() {
         if (useFastSyncAlgorithm) {
             logger.debug("Using fast sync") // Doesn't happen very often
+            // Wait for any queued blocks to commit/fail before starting sync
+            blockManager.waitForRunningOperationsToComplete()
             fastSynchronizer.syncUntilResponsiveNodesDrained()
             // turn off fast sync, reset current block to null, and query for the last known state from db to prevent
             // possible race conditions

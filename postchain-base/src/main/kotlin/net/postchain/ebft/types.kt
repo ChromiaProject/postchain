@@ -140,6 +140,7 @@ interface BlockManager {
     fun onReceivedBlockAtHeight(block: BlockDataWithWitness, height: Long)
     fun processBlockIntent(): BlockIntent
     fun getBlockIntent(): BlockIntent
+    fun waitForRunningOperationsToComplete()
 }
 
 /**
