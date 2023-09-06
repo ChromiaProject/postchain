@@ -165,16 +165,9 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                 }
 
                                 is CompleteBlock -> {
-                                    try {
-                                        blockManager.onReceivedBlockAtHeight(
-                                                decodeBlockDataWithWitness(message, blockchainConfiguration),
-                                                message.height)
-                                    } catch (e: Exception) {
-                                        logger.error("Failed to add block to database. Resetting state...", e)
-                                        // reset state to last known from database
-                                        statusManager.fastForwardHeight(blockQueries.getLastBlockHeight().get())
-                                        blockManager.currentBlock = null
-                                    }
+                                    blockManager.onReceivedBlockAtHeight(
+                                            decodeBlockDataWithWitness(message, blockchainConfiguration),
+                                            message.height)
                                 }
 
                                 is UnfinishedBlock -> {
