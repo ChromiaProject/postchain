@@ -4,15 +4,15 @@ package net.postchain.config.app
 
 import net.postchain.base.PeerInfo
 import net.postchain.common.config.Config
+import net.postchain.common.config.cryptoSystem
+import net.postchain.common.config.cryptoSystemClass
 import net.postchain.common.config.getEnvOrBooleanProperty
 import net.postchain.common.config.getEnvOrIntProperty
 import net.postchain.common.config.getEnvOrLongProperty
 import net.postchain.common.config.getEnvOrStringProperty
 import net.postchain.common.hexStringToByteArray
-import net.postchain.common.reflection.newInstanceOf
 import net.postchain.core.Infrastructure
 import net.postchain.crypto.CryptoSystem
-import net.postchain.crypto.Secp256K1CryptoSystem
 import org.apache.commons.configuration2.BaseConfiguration
 import org.apache.commons.configuration2.Configuration
 import org.apache.commons.configuration2.PropertiesConfiguration
@@ -116,9 +116,9 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
         // "base/ebft" is the default
         get() = config.getEnvOrStringProperty("POSTCHAIN_INFRASTRUCTURE", "infrastructure", Infrastructure.Ebft.get())
 
-    val cryptoSystemClass: String = config.getEnvOrStringProperty("POSTCHAIN_CRYPTO_SYSTEM", "cryptosystem", Secp256K1CryptoSystem::class.qualifiedName!!)
+    val cryptoSystemClass: String = config.cryptoSystemClass()
 
-    val cryptoSystem: CryptoSystem = newInstanceOf(cryptoSystemClass)
+    val cryptoSystem: CryptoSystem = config.cryptoSystem()
 
     val readOnly: Boolean
         get() = config.getEnvOrBooleanProperty("POSTCHAIN_READ_ONLY", "readOnly", false)

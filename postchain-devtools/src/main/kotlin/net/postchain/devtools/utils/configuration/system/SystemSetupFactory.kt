@@ -2,6 +2,8 @@ package net.postchain.devtools.utils.configuration.system
 
 import mu.KLogging
 import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.crypto.devtools.KeyPairCache
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.*
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
 import net.postchain.devtools.utils.configuration.pre.SystemPreSetup
@@ -31,7 +33,8 @@ object SystemSetupFactory : KLogging() {
      * @return a [SystemSetup]
      */
     fun buildSystemSetup(
-            sysPreSetup: SystemPreSetup
+            sysPreSetup: SystemPreSetup,
+            keyPairCache: KeyPairCache = KeyPairHelper
     ): SystemSetup  {
         val blockchainConfList = mutableListOf<BlockchainSetup>()
         val currentBcDependencies = mutableMapOf<Int, BlockchainRelatedInfo>()
@@ -41,13 +44,13 @@ object SystemSetupFactory : KLogging() {
         while (notFinishedPreSetups.isNotEmpty()) {
             val nextToBuild = findNextBcToBuild(notFinishedPreSetups, currentBcDependencies.toMap())
             val gtv = sysPreSetup.bcPreSetups[nextToBuild]!!.toGtvConfig(currentBcDependencies)
-            val bcSetup = BlockchainSetupFactory.buildFromGtv(nextToBuild, gtv)
+            val bcSetup = BlockchainSetupFactory.buildFromGtv(nextToBuild, gtv, keyPairCache)
             currentBcDependencies[nextToBuild] = BlockchainRelatedInfo(bcSetup.rid, "chain_$nextToBuild", nextToBuild.toLong())
             notFinishedPreSetups.remove(nextToBuild)
             blockchainConfList.add(bcSetup)
         }
 
-        return buildSystemSetup(blockchainConfList)
+        return buildSystemSetup(blockchainConfList, keyPairCache)
     }
 
     /**
@@ -75,17 +78,18 @@ object SystemSetupFactory : KLogging() {
      * @return A [SystemSetup] including everything we need for the test.
      */
     fun buildSystemSetup(
-            blockchainConfFileMap: Map<Int, String>
+            blockchainConfFileMap: Map<Int, String>,
+            keyPairCache: KeyPairCache = KeyPairHelper
     ): SystemSetup {
         val bcSetups = mutableListOf<BlockchainSetup>()
 
         for (chainId in blockchainConfFileMap.keys) {
             val filename = blockchainConfFileMap[chainId]!!
-            val bcSetup = BlockchainSetupFactory.buildFromFile(chainId, filename)
+            val bcSetup = BlockchainSetupFactory.buildFromFile(chainId, filename, keyPairCache)
 
             bcSetups.add(bcSetup)
         }
-        return buildSystemSetup(bcSetups.toList())
+        return buildSystemSetup(bcSetups.toList(), keyPairCache)
     }
 
     /**
@@ -96,7 +100,8 @@ object SystemSetupFactory : KLogging() {
      * @return A [SystemSetup] including everything we need for the test.
      */
     fun buildSystemSetup(
-            blockchainConfList: List<BlockchainSetup>
+            blockchainConfList: List<BlockchainSetup>,
+            keyPairCache: KeyPairCache = KeyPairHelper
     ): SystemSetup {
         val tmpNodeMap = mutableMapOf<NodeSeqNumber, NodeSetup>()
         val tmpBlockchainMap = mutableMapOf<Int, BlockchainSetup>()
@@ -114,7 +119,7 @@ object SystemSetupFactory : KLogging() {
         for (nodeNr in nodeNrList) {
             val bcsToSign = calculateWhatBlockchainsTheNodeShouldSign(nodeNr, bcMap)
             val bcsToRead = calculateWhatBlockchainsTheNodeShouldRead(bcsToSign, bcMap)
-            tmpNodeMap[nodeNr] = NodeSetup.buildSimple(nodeNr, bcsToSign, bcsToRead)
+            tmpNodeMap[nodeNr] = NodeSetup.buildSimple(nodeNr, bcsToSign, bcsToRead, keyPairCache)
         }
 
         return SystemSetup(

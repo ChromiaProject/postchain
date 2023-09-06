@@ -19,6 +19,7 @@
         <module>postchain-admin-client-cli</module>
         <module>postchain-server</module>
         <module>postchain-server-cli</module>
+        <module>postchain-dilithium</module>
         <module>postchain-coverage-report-aggregate</module>
     </modules>
     <packaging>pom</packaging>
@@ -169,6 +170,11 @@
                 <artifactId>postchain-devtools</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain-dilithium</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!-- Logging -->
             <dependency>
@@ -308,6 +314,12 @@
                 <groupId>org.mandas</groupId>
                 <artifactId>docker-client</artifactId>
                 <version>7.0.3</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.bouncycastle</groupId>
+                        <artifactId>bcprov-jdk15on</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.glassfish.jersey.core</groupId>
@@ -344,11 +356,6 @@
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
                 <version>4.4.16</version>
-            </dependency>
-            <dependency>
-                <groupId>org.bouncycastle</groupId>
-                <artifactId>bcpkix-jdk18on</artifactId>
-                <version>1.72</version>
             </dependency>
 
             <dependency>
@@ -396,6 +403,11 @@
             <dependency>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
+                <version>1.75</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk18on</artifactId>
                 <version>1.75</version>
             </dependency>
             <dependency>
