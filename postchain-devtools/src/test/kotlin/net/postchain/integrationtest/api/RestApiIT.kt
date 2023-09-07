@@ -492,6 +492,22 @@ class RestApiIT : IntegrationTestSetup() {
     }
 
     @Test
+    fun `debug API`() {
+        val nodeCount = 1
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
+        val sysSetup = doSystemSetup(nodeCount, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        given().port(nodes[0].getDebugApiHttpPort())
+                .header("Accept", ContentType.JSON)
+                .get("/_debug")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body("blockchain[0].brid", equalTo(blockchainRID))
+    }
+
+    @Test
     fun `REST API limit number of concurrent requests`() {
         val nodeCount = 1
         val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"

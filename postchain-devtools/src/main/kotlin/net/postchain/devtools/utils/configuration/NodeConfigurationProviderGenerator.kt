@@ -77,7 +77,7 @@ object NodeConfigurationProviderGenerator {
             addConfiguration(baseConfig)
         }
 
-        val appConfig = AppConfig(compositeConfig)
+        val appConfig = AppConfig(compositeConfig, debug = true)
         val storage = StorageBuilder.buildStorage(appConfig)
 
         // Run the action, default won't do anything

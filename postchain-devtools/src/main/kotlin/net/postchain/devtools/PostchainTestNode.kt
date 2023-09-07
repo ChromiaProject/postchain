@@ -177,6 +177,11 @@ class PostchainTestNode(
                 .restApi?.actualPort() ?: 0
     }
 
+    fun getDebugApiHttpPort(): Int {
+        return ((blockchainInfrastructure as BaseBlockchainInfrastructure).apiInfrastructure as BaseApiInfrastructure)
+                .debugApi?.actualPort() ?: 0
+    }
+
     fun getBlockchainInstance(chainId: Long = DEFAULT_CHAIN_IID): BlockchainProcess {
         return processManager.retrieveBlockchain(chainId) as BlockchainProcess
     }

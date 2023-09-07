@@ -39,7 +39,6 @@ import net.postchain.api.rest.nullBody
 import net.postchain.api.rest.prettyGson
 import net.postchain.api.rest.prettyJsonBody
 import net.postchain.api.rest.proofBody
-import net.postchain.api.rest.queryQuery
 import net.postchain.api.rest.signerQuery
 import net.postchain.api.rest.statusBody
 import net.postchain.api.rest.stringsBody
@@ -216,7 +215,6 @@ class RestApi(
             "/apidocs" bind static(ResourceLoader.Classpath("/restapi-docs")),
 
             "/version" bind GET to ::getVersion,
-            "/_debug" bind GET to ::getDebug,
 
             "/tx/{blockchainRid}" bind POST to liveBlockchain.then(::postTransaction),
             "/tx/{blockchainRid}/{txRid}" bind GET to blockchain.then(::getTransaction),
@@ -254,15 +252,6 @@ class RestApi(
     private fun getVersion(request: Request): Response = Response(OK).with(
             versionBody of Version(REST_API_VERSION)
     )
-
-    private fun getDebug(request: Request): Response {
-        val debugInfo = models.values
-                .filterIsInstance(Model::class.java)
-                .firstOrNull()
-                ?.debugQuery(queryQuery(request))
-                ?: throw NotFoundError("There are no running chains")
-        return Response(OK).with(prettyJsonBody of debugInfo)
-    }
 
     private fun postTransaction(request: Request): Response {
         val model = model(request)
