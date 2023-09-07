@@ -36,6 +36,7 @@ import net.postchain.api.rest.model.TxRid
 import net.postchain.api.rest.nodeStatusBody
 import net.postchain.api.rest.nodeStatusesBody
 import net.postchain.api.rest.nullBody
+import net.postchain.api.rest.prettyGson
 import net.postchain.api.rest.prettyJsonBody
 import net.postchain.api.rest.proofBody
 import net.postchain.api.rest.queryQuery
@@ -58,6 +59,7 @@ import net.postchain.common.toHex
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockDetail
 import net.postchain.crypto.PubKey
+import net.postchain.debug.ErrorValue
 import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
@@ -478,7 +480,12 @@ class RestApi(
     private fun getErrors(request: Request): Response {
         val model = model(request)
         val errors = JsonArray()
-        (checkDiagnosticError(model.blockchainRid) ?: listOf()).forEach { errors.add(it) }
+        (checkDiagnosticError(model.blockchainRid) ?: listOf()).forEach {
+            when (it) {
+                is ErrorValue -> errors.add(prettyGson.toJsonTree(it))
+                else -> errors.add(it.toString())
+            }
+        }
         return Response(OK).with(prettyJsonBody of errors)
     }
 
@@ -596,10 +603,9 @@ class RestApi(
                 errorResponse(request, INTERNAL_SERVER_ERROR, errorMessage.toString())
             } ?: errorResponse(request, status, error.message ?: "Unknown error")
 
-    @Suppress("UNCHECKED_CAST")
-    private fun checkDiagnosticError(blockchainRid: BlockchainRid): List<String>? =
+    private fun checkDiagnosticError(blockchainRid: BlockchainRid): List<Any?>? =
             if (nodeDiagnosticContext.hasBlockchainErrors(blockchainRid)) {
-                nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).value as List<String>
+                nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).value
             } else {
                 null
             }
