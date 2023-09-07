@@ -37,7 +37,7 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.ManagedBlockBuilder
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.EagerDiagnosticValue
+import net.postchain.debug.ErrorDiagnosticValue
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
@@ -237,7 +237,13 @@ open class BaseBlockchainEngine(
                 blockBuilder.rollback()
             } catch (ignore: Exception) {
             }
-            nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(EagerDiagnosticValue(e.message))
+            nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(
+                    ErrorDiagnosticValue(
+                            e.message ?: "Failed to load unfinished block",
+                            System.currentTimeMillis(),
+                            blockBuilder.height
+                    )
+            )
             exception = e
         }
 
@@ -270,8 +276,12 @@ open class BaseBlockchainEngine(
             } catch (e: Exception) {
                 logger.warn(e) { "Unable to revert configuration: $e" }
             }
-
-            nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(EagerDiagnosticValue(e.message))
+            nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(
+                    ErrorDiagnosticValue(
+                            e.message ?: "Failed to build block",
+                            System.currentTimeMillis(),
+                            blockBuilder.height)
+            )
 
             exception = e
         }

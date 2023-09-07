@@ -14,6 +14,9 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
+import net.postchain.debug.ErrorDiagnosticValue
+import net.postchain.debug.JsonNodeDiagnosticContext
+import net.postchain.debug.NodeDiagnosticContext
 import org.hamcrest.CoreMatchers.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -27,6 +30,7 @@ class RestApiDebugEndpointTest {
     private val basePath = "/api/v1"
     private lateinit var restApi: RestApi
     private lateinit var model: Model
+    private lateinit var nodeDiagnosticContext: NodeDiagnosticContext
     private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
     private val prettyGson = JsonFactory.makePrettyJson()
     private val compactGson = JsonFactory.makeJson()
@@ -39,7 +43,9 @@ class RestApiDebugEndpointTest {
             on { live } doReturn true
         }
 
-        restApi = RestApi(0, basePath, gracefulShutdown = false)
+        nodeDiagnosticContext = JsonNodeDiagnosticContext()
+
+        restApi = RestApi(0, basePath, gracefulShutdown = false, nodeDiagnosticContext = nodeDiagnosticContext)
     }
 
     @AfterEach
@@ -85,5 +91,25 @@ class RestApiDebugEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON)
                 .body(equalTo(compactGson.toJson(response)))
+    }
+
+    @Test
+    fun someErrorsInDebug() {
+        nodeDiagnosticContext.blockchainErrorQueue(blockchainRID).add(ErrorDiagnosticValue("foo", 42L))
+        nodeDiagnosticContext.blockchainErrorQueue(blockchainRID).add(ErrorDiagnosticValue("bar", 42L, 10))
+
+        val response = nodeDiagnosticContext.format()
+        whenever(
+                model.debugQuery(null)
+        ).thenReturn(response)
+
+        restApi.attachModel(blockchainRID, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/_debug")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body(equalTo(prettyGson.toJson(response)))
     }
 }

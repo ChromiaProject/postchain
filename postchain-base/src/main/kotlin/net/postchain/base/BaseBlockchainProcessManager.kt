@@ -21,8 +21,8 @@ import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
 import net.postchain.crypto.sha256Digest
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.debug.LazyDiagnosticValue
+import net.postchain.debug.ErrorDiagnosticValue
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
@@ -273,7 +273,12 @@ open class BaseBlockchainProcessManager(
     private fun addToErrorQueue(chainId: Long, e: Exception) {
         withReadConnection(sharedStorage, chainId) {
             DatabaseAccess.of(it).getBlockchainRid(it)?.let { brid ->
-                nodeDiagnosticContext.blockchainErrorQueue(brid).add(EagerDiagnosticValue(e.message))
+                nodeDiagnosticContext.blockchainErrorQueue(brid).add(
+                        ErrorDiagnosticValue(
+                                e.message ?: "Failed to start blockchain for chainId: $chainId",
+                                System.currentTimeMillis()
+                        )
+                )
             }
         }
     }
