@@ -491,7 +491,7 @@ class FastSynchronizerTest {
     }
 
     @Test
-    fun `handleBlockHeader with peer height differ from job height should mark peer drained and restart job`() {
+    fun `handleBlockHeader with peer height lower than job height should mark peer drained and restart job`() {
         // setup
         val job = addJob(height + 1, nodeRid)
         doNothing().whenever(sut).restartJob(isA())
@@ -501,6 +501,16 @@ class FastSynchronizerTest {
         // verify
         verify(sut).restartJob(job)
         verify(peerStatuses).drained(nodeRid, height, currentTimeMillis)
+    }
+
+    @Test
+    fun `handleBlockHeader with peer height higher than job height should blacklist peer`() {
+        // setup
+        val job = addJob(height - 1, nodeRid)
+        // execute
+        assertThat(sut.handleBlockHeader(nodeRid, header, witness, height - 1)).isFalse()
+        // verify
+        verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Received a header at height $height but we asked for a lower height ${job.height}")
     }
 
     /**

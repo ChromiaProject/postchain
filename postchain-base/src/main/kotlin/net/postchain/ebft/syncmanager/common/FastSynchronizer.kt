@@ -461,15 +461,18 @@ class FastSynchronizer(
         }
 
         val blockHeader = blockchainConfiguration.decodeBlockHeader(header)
-        val peerLastHeight = getHeight(blockHeader)
+        val receivedHeaderHeight = getHeight(blockHeader)
 
-        if (peerLastHeight != job.height) {
-            headerDebug("Header height=$peerLastHeight, we asked for ${job.height}. Peer for $job must be drained")
+        if (receivedHeaderHeight < job.height) {
+            headerDebug("Header height=$receivedHeaderHeight, we asked for ${job.height}. Peer for $job must be drained")
             // The peer didn't have the block we wanted
             // Remember its height and try another peer
             val now = currentTimeMillis()
-            peerStatuses.drained(peerId, peerLastHeight, now)
+            peerStatuses.drained(peerId, receivedHeaderHeight, now)
             restartJob(job)
+            return false
+        } else if (receivedHeaderHeight > job.height) {
+            peerStatuses.maybeBlacklist(peerId, "Sync: Received a header at height $receivedHeaderHeight but we asked for a lower height ${job.height}")
             return false
         }
 
@@ -492,7 +495,7 @@ class FastSynchronizer(
         job.header = blockHeader
         job.witness = blockWitness
         logger.trace { "handleBlockHeader() -- ${"Header for $job received"}" }
-        peerStatuses.headerReceived(peerId, peerLastHeight)
+        peerStatuses.headerReceived(peerId, receivedHeaderHeight)
         return true
     }
 
