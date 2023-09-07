@@ -92,6 +92,9 @@ data class NodeSetup(
     fun getApiPortNumber() = getApiPortNumber(RestApiConfig.DEFAULT_REST_API_PORT)
     fun getApiPortNumber(portBase: Int) = sequenceNumber.nodeNumber + portBase // Must be different from "normal" port base
 
+    fun getDebugPortNumber() = getDebugPortNumber(RestApiConfig.DEFAULT_DEBUG_API_PORT)
+    fun getDebugPortNumber(portBase: Int) = sequenceNumber.nodeNumber + portBase // Must be different from "normal" port base
+
     /**
      * It can be pretty hard to figure out if a node needs to know about some other node,
      * but we have done most of the work already since we know all the BC's this node is holding.

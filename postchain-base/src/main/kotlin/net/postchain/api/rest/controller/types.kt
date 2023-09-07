@@ -2,7 +2,6 @@
 
 package net.postchain.api.rest.controller
 
-import com.google.gson.JsonElement
 import net.postchain.api.rest.BlockHeight
 import net.postchain.api.rest.TransactionsCount
 import net.postchain.api.rest.model.ApiStatus
@@ -48,7 +47,6 @@ interface Model : ChainModel {
     fun query(query: GtxQuery): Gtv
     fun nodeStatusQuery(): StateNodeStatus
     fun nodePeersStatusQuery(): List<StateNodeStatus>
-    fun debugQuery(subQuery: String?): JsonElement
     fun getCurrentBlockHeight(): BlockHeight
     fun getBlockchainConfiguration(height: Long = -1): ByteArray?
     fun validateBlockchainConfiguration(configuration: Gtv)

@@ -5,7 +5,6 @@ package net.postchain.ebft.rest.model
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Timer
 import net.postchain.PostchainContext
-import net.postchain.api.rest.controller.DebugInfoQuery
 import net.postchain.api.rest.controller.DuplicateTnxException
 import net.postchain.api.rest.controller.InvalidTnxException
 import net.postchain.api.rest.controller.PostchainModel
@@ -24,12 +23,11 @@ class PostchainEBFTModel(
         txQueue: TransactionQueue,
         private val transactionFactory: TransactionFactory,
         blockQueries: BlockQueries,
-        debugInfoQuery: DebugInfoQuery,
         blockchainRid: BlockchainRid,
         storage: Storage,
         postchainContext: PostchainContext,
         diagnosticData: DiagnosticData
-) : PostchainModel(chainIID, txQueue, blockQueries, debugInfoQuery, blockchainRid, storage, postchainContext, diagnosticData) {
+) : PostchainModel(chainIID, txQueue, blockQueries, blockchainRid, storage, postchainContext, diagnosticData) {
 
     override fun postTransaction(tx: ByteArray) {
         val sample = Timer.start(Metrics.globalRegistry)

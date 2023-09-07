@@ -2,7 +2,6 @@
 
 package net.postchain.api.rest.controller
 
-import com.google.gson.JsonElement
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Timer
 import mu.KLogging
@@ -59,7 +58,6 @@ open class PostchainModel(
         final override val chainIID: Long,
         val txQueue: TransactionQueue,
         val blockQueries: BlockQueries,
-        private val debugInfoQuery: DebugInfoQuery,
         final override val blockchainRid: BlockchainRid,
         val storage: Storage,
         val postchainContext: PostchainContext,
@@ -152,8 +150,6 @@ open class PostchainModel(
     override fun nodePeersStatusQuery(): List<StateNodeStatus> =
             diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES]?.value as? List<StateNodeStatus>
                     ?: throw NotFoundError("NotFound")
-
-    override fun debugQuery(subQuery: String?): JsonElement = debugInfoQuery.queryDebugInfo(subQuery)
 
     override fun getCurrentBlockHeight(): BlockHeight = BlockHeight(blockQueries.getLastBlockHeight().get() + 1)
 

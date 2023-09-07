@@ -166,8 +166,10 @@ object TestNodeConfigProducer {
     ) {
         if (needRestApi) {
             baseConfig.setProperty("api.port", nodeSetup.getApiPortNumber())
+            baseConfig.setProperty("debug.port", nodeSetup.getDebugPortNumber())
         } else {
             baseConfig.setProperty("api.port", -1) // -1 means "don't start"
+            baseConfig.setProperty("debug.port", -1) // -1 means "don't start"
         }
     }
 

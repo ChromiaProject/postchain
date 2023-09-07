@@ -2,7 +2,6 @@
 
 package net.postchain.api.rest
 
-import com.google.gson.JsonElement
 import mu.KLogging
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
@@ -200,10 +199,6 @@ class RestApiMockForClientManual {
 
         override fun getLastTransactionNumber(): TransactionsCount {
             TODO("Not yet implemented")
-        }
-
-        override fun debugQuery(subQuery: String?): JsonElement {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
 
         override fun getBlockchainConfiguration(height: Long): ByteArray? {

@@ -4,8 +4,8 @@ package net.postchain.api.rest.infra
 
 import mu.KLogging
 import net.postchain.PostchainContext
+import net.postchain.api.rest.controller.DebugApi
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
-import net.postchain.api.rest.controller.DisabledDebugInfoQuery
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.common.BlockchainRid
@@ -18,7 +18,7 @@ import net.postchain.ebft.worker.ValidatorBlockchainProcess
 open class BaseApiInfrastructure(
         restApiConfig: RestApiConfig,
         val nodeDiagnosticContext: NodeDiagnosticContext,
-        private val enableDebugApi: Boolean,
+        enableDebugApi: Boolean,
         private val postchainContext: PostchainContext
 ) : ApiInfrastructure {
 
@@ -27,15 +27,37 @@ open class BaseApiInfrastructure(
     val restApi: RestApi? = with(restApiConfig) {
         if (port != -1) {
             logger.info { "Starting REST API on port $port and path $basePath/" }
-            RestApi(
-                    port,
-                    basePath,
-                    nodeDiagnosticContext = nodeDiagnosticContext,
-                    gracefulShutdown = restApiConfig.gracefulShutdown,
-                    requestConcurrency = restApiConfig.requestConcurrency)
+            try {
+                RestApi(
+                        listenPort = port,
+                        basePath = basePath,
+                        nodeDiagnosticContext = nodeDiagnosticContext,
+                        gracefulShutdown = restApiConfig.gracefulShutdown,
+                        requestConcurrency = restApiConfig.requestConcurrency
+                )
+            } catch (e: Exception) {
+                logger.error("Unable to start REST API on port $port", e)
+                throw e
+            }
         } else {
             null
         }
+    }
+
+    val debugApi: DebugApi? = if (enableDebugApi && restApiConfig.debugPort != -1) {
+        logger.info { "Starting Debug API on port ${restApiConfig.debugPort}" }
+        try {
+            DebugApi(
+                    listenPort = restApiConfig.debugPort,
+                    debugInfoQuery = DefaultDebugInfoQuery(nodeDiagnosticContext),
+                    gracefulShutdown = restApiConfig.gracefulShutdown
+            )
+        } catch (e: Exception) {
+            logger.error("Unable to start Debug API on port ${restApiConfig.debugPort}", e)
+            throw e
+        }
+    } else {
+        null
     }
 
     override fun restartProcess(process: BlockchainProcess) {
@@ -47,7 +69,6 @@ open class BaseApiInfrastructure(
             val engine = process.blockchainEngine
             val apiModel: PostchainModel
 
-            val debugInfoQuery = if (enableDebugApi) DefaultDebugInfoQuery(nodeDiagnosticContext) else DisabledDebugInfoQuery()
             val blockchainRid = engine.getConfiguration().blockchainRid
             val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainRid)
             if (process is ValidatorBlockchainProcess) { // TODO: EBFT-specific code, but pretty harmless
@@ -56,7 +77,6 @@ open class BaseApiInfrastructure(
                         process.networkAwareTxQueue,
                         engine.getConfiguration().getTransactionFactory(),
                         engine.getBlockQueries(),
-                        debugInfoQuery,
                         blockchainRid,
                         engine.sharedStorage,
                         postchainContext,
@@ -67,7 +87,6 @@ open class BaseApiInfrastructure(
                         engine.getConfiguration().chainID,
                         engine.getTransactionQueue(),
                         engine.getBlockQueries(),
-                        debugInfoQuery,
                         blockchainRid,
                         engine.sharedStorage,
                         postchainContext,
@@ -85,6 +104,7 @@ open class BaseApiInfrastructure(
 
     override fun shutdown() {
         restApi?.close()
+        debugApi?.close()
     }
 
     private fun bridOf(process: BlockchainProcess): BlockchainRid {
