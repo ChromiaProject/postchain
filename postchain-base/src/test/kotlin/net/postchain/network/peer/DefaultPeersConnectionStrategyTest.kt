@@ -105,11 +105,17 @@ class DefaultPeersConnectionStrategyTest {
     }
 
     @Test
-    fun lostNonexisting() {
-        // This should actually work the same as if the peer was part of the network
-        // because the strategy doesn't know which nodes there are. It just reacts
-        // to events. It's up to the caller to discriminate among nodes.
-        connectionLost(peer1, setOf(peer2, peer3), peer4, false)
+    fun lostConnectionToUnknownPeer() {
+        // We don't care about reconnecting to an unknown peer
+        val chainId = 0L
+        val strategy = sut(peer1)
+        strategy.connectAll(chainId, BlockchainRid.ZERO_RID, setOf(peer2))
+        strategy.connectionEstablished(chainId, true, peer2)
+        // Unknown peer3 connects
+        strategy.connectionEstablished(chainId, false, peer3)
+        strategy.connectionLost(chainId, BlockchainRid.ZERO_RID, peer3, false)
+        sleep(200)
+        verify(connMan, never()).connectChainPeer(chainId, peer3)
     }
 
     @Test
@@ -135,6 +141,10 @@ class DefaultPeersConnectionStrategyTest {
             )
         }
         val strategy = sut(peer1, clock)
+        strategy.connectAll(chainId, BlockchainRid.ZERO_RID, setOf(peer2))
+        Awaitility.await().atMost(400, TimeUnit.MILLISECONDS).untilAsserted {
+            verify(connMan).connectChainPeer(0, peer2)
+        }
         strategy.connectionEstablished(chainId, true, peer2)
         assertFalse(strategy.isLatestConnectionSuccessful(peer2))
         assertFalse(strategy.isLatestConnectionSuccessful(peer2))
@@ -143,7 +153,7 @@ class DefaultPeersConnectionStrategyTest {
         // Assert that connection is not considered successful if we do not call connectionEstablished
         strategy.connectionLost(chainId, BlockchainRid.ZERO_RID, peer2, true)
         Awaitility.await().atMost(400, TimeUnit.MILLISECONDS).untilAsserted {
-            verify(connMan).connectChainPeer(0, peer2)
+            verify(connMan, times(2)).connectChainPeer(0, peer2)
         }
         assertFalse(strategy.isLatestConnectionSuccessful(peer2))
     }

@@ -14,6 +14,7 @@ import net.postchain.logging.CHAIN_IID_TAG
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 import kotlin.random.Random
@@ -31,8 +32,9 @@ class DefaultPeersConnectionStrategy(
 ) : PeersConnectionStrategy {
 
     private val peerToDelayMap: MutableMap<NodeRid, ExponentialDelay> = mutableMapOf()
-    private val latestEstablishedConnections: MutableMap<NodeRid, Instant> = mutableMapOf()
+    private val latestEstablishedConnections: MutableMap<NodeRid, Instant> = ConcurrentHashMap()
     private val timerQueue = ScheduledThreadPoolExecutor(1)
+    private val peersOfInterest = mutableSetOf<NodeRid>()
 
     companion object : KLogging() {
         val SUCCESSFUL_CONNECTION_THRESHOLD: Duration = Duration.ofSeconds(1)
@@ -49,6 +51,7 @@ class DefaultPeersConnectionStrategy(
     }
 
     override fun connectAll(chainID: Long, blockchainRid: BlockchainRid, peerIds: Set<NodeRid>) {
+        peersOfInterest.addAll(peerIds)
         for (peerId in peerIds) {
             if (shouldIConnect(peerId)) {
                 connectionManager.connectChainPeer(chainID, peerId)
@@ -86,6 +89,10 @@ class DefaultPeersConnectionStrategy(
      * for little gain over the simplistic approach chosen.
      */
     override fun connectionLost(chainID: Long, blockchainRid: BlockchainRid, peerId: NodeRid, isOutgoing: Boolean) {
+        if (!peersOfInterest.contains(peerId)) {
+            // We are not interested in having a connection to this peer, let them reconnect if necessary
+            return
+        }
         if (connectionManager.isPeerConnected(chainID, peerId)) {
             // There is another connection in use, we should ignore the
             // lost connection
