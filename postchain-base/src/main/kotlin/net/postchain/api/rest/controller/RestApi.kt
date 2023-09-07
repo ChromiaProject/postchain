@@ -215,6 +215,7 @@ class RestApi(
             "/apidocs" bind static(ResourceLoader.Classpath("/restapi-docs")),
 
             "/version" bind GET to ::getVersion,
+            "/_debug" bind static(ResourceLoader.Classpath("/restapi-root/_debug")),
 
             "/tx/{blockchainRid}" bind POST to liveBlockchain.then(::postTransaction),
             "/tx/{blockchainRid}/{txRid}" bind GET to blockchain.then(::getTransaction),
