@@ -26,6 +26,7 @@ data class ContainerNodeConfig(
         val network: String?,
         val subnodeHost: String,
         val subnodeRestApiPort: Int,
+        val subnodeDebugApiPort: Int,
         val subnodeAdminRpcPort: Int,
         val subnodeUser: String?,
         val sendMasterConnectedPeersPeriod: Long,
@@ -74,7 +75,7 @@ data class ContainerNodeConfig(
         val labels: Map<String, String>,
         val log4jConfigurationFile: String?
 ) : Config {
-    val subnodePorts = listOf(subnodeRestApiPort, subnodeAdminRpcPort)
+    val subnodePorts = listOf(subnodeRestApiPort, subnodeDebugApiPort, subnodeAdminRpcPort)
 
     companion object {
         const val DEFAULT_CONTAINER_ZFS_INIT_SCRIPT = "container-zfs-init-script.sh"
@@ -88,6 +89,7 @@ data class ContainerNodeConfig(
         const val KEY_NETWORK = "network"
         const val KEY_SUBNODE_HOST = "subnode-host"
         const val KEY_SUBNODE_REST_API_PORT = "rest-api-port"
+        const val KEY_SUBNODE_DEBUG_API_PORT = "debug-api-port"
         const val KEY_SUBNODE_ADMIN_RPC_PORT = "admin-rpc-port"
         const val KEY_SUBNODE_USER = "subnode-user"
         const val KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD = "send-master-connected-peers-period"
@@ -149,8 +151,9 @@ data class ContainerNodeConfig(
                         getEnvOrIntProperty("POSTCHAIN_MASTER_PORT", KEY_MASTER_PORT, 9860),
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_NETWORK", KEY_NETWORK),
                         subnodeHost,
-                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_REST_API_PORT", KEY_SUBNODE_REST_API_PORT, RestApiConfig.DEFAULT_REST_API_PORT),
-                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_ADMIN_RPC_PORT", KEY_SUBNODE_ADMIN_RPC_PORT, 50051),
+                        subnodeRestApiPort = getEnvOrIntProperty("POSTCHAIN_SUBNODE_REST_API_PORT", KEY_SUBNODE_REST_API_PORT, RestApiConfig.DEFAULT_REST_API_PORT),
+                        subnodeDebugApiPort = getEnvOrIntProperty("POSTCHAIN_SUBNODE_DEBUG_API_PORT", KEY_SUBNODE_DEBUG_API_PORT, RestApiConfig.DEFAULT_DEBUG_API_PORT),
+                        subnodeAdminRpcPort = getEnvOrIntProperty("POSTCHAIN_SUBNODE_ADMIN_RPC_PORT", KEY_SUBNODE_ADMIN_RPC_PORT, 50051),
                         subnodeUser,
                         getEnvOrLongProperty("POSTCHAIN_SEND_MASTER_CONNECTED_PEERS_PERIOD", KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD, 60_000L),
                         getEnvOrLongProperty("POSTCHAIN_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD", KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 60_000),
