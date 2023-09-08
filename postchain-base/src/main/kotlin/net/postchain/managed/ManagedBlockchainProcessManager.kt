@@ -22,6 +22,7 @@ import net.postchain.gtx.GTXModuleAware
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.managed.config.ManagedDataSourceAware
+import kotlin.concurrent.withLock
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -228,7 +229,7 @@ open class ManagedBlockchainProcessManager(
      * @param reloadChain0 is true if the chain zero must be restarted.
      */
     private fun startStopBlockchainsAsync(reloadChain0: Boolean, bTrace: BlockTrace?) {
-        synchronized(synchronizer) {
+        processLock.withLock {
             ssaTrace("Begin", bTrace)
             val toLaunch = retrieveBlockchainsToLaunch()
             val chainIdsToLaunch = toLaunch.map { it.chainId }.toSet()

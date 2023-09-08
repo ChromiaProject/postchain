@@ -21,8 +21,8 @@ import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
 import net.postchain.crypto.sha256Digest
 import net.postchain.debug.DiagnosticProperty
-import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.debug.ErrorDiagnosticValue
+import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
@@ -53,7 +53,7 @@ open class BaseBlockchainProcessManager(
         bpmExtensions: List<BlockchainProcessManagerExtension> = listOf()
 ) : BlockchainProcessManager {
 
-    override val synchronizer = Any()
+    val processLock = ReentrantLock()
 
     val appConfig = postchainContext.appConfig
     val connectionManager = postchainContext.connectionManager
@@ -141,7 +141,7 @@ open class BaseBlockchainProcessManager(
 
     private fun startBlockchainInternal(chainId: Long, bTrace: BlockTrace?, loadNextPendingConfig: Boolean): BlockchainRid {
         chainStartAndStopSynchronizers.getOrPut(chainId) { ReentrantLock() }.withLock {
-            val blockchainRid = synchronized(synchronizer) {
+            val blockchainRid = processLock.withLock {
                 startDebug("Begin by stopping blockchain", bTrace)
                 stopBlockchain(chainId, bTrace, true)
 
@@ -307,13 +307,13 @@ open class BaseBlockchainProcessManager(
     }
 
     override fun retrieveBlockchain(chainId: Long): BlockchainProcess? {
-        return synchronized(synchronizer) {
+        return processLock.withLock {
             blockchainProcesses[chainId]
         }
     }
 
     override fun retrieveBlockchain(blockchainRid: BlockchainRid): BlockchainProcess? {
-        return synchronized(synchronizer) {
+        return processLock.withLock {
             bridToChainId[blockchainRid]?.let { blockchainProcesses[it] }
         }
     }
@@ -325,7 +325,7 @@ open class BaseBlockchainProcessManager(
      */
     override fun stopBlockchain(chainId: Long, bTrace: BlockTrace?, restart: Boolean) {
         chainStartAndStopSynchronizers[chainId]?.withLock {
-            synchronized(synchronizer) {
+            processLock.withLock {
                 withLoggingContext(
                         CHAIN_IID_TAG to chainId.toString(),
                         BLOCKCHAIN_RID_TAG to chainIdToBrid[chainId]?.toHex()
@@ -349,7 +349,7 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    private fun numberOfBlockchains(): Int = synchronized(synchronizer) {
+    private fun numberOfBlockchains(): Int = processLock.withLock {
         blockchainProcesses.size
     }
 
