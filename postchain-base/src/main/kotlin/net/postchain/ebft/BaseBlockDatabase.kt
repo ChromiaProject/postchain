@@ -145,7 +145,7 @@ class BaseBlockDatabase(
                     addBlockLog("Got error when loading: ${exception.message}")
                     throw exception
                 } else {
-                    updateBTrace(existingBTrace, theBlockBuilder.getBTrace())
+                    theBlockBuilder.getBTrace()?.let { updateBTrace(existingBTrace, it) }
                     theBlockBuilder.commit(block.witness) // No need to set BTrace, because we have it
                     addBlockLog("Done commit", theBlockBuilder.getBTrace())
                 }
