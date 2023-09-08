@@ -22,6 +22,8 @@ import net.postchain.core.block.BlockWitnessBuilder
 import net.postchain.core.block.ManagedBlockBuilder
 import java.sql.SQLException
 import java.sql.Savepoint
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import kotlin.system.exitProcess
 
 /**
@@ -53,6 +55,8 @@ class BaseManagedBlockBuilder(
     private var closed = false
 
     private var blocTrace: BlockTrace? = null // Only for logging, remains "null" unless TRACE
+
+    private val storageLock = ReentrantLock()
 
     /**
      * Wrapper for block builder operations. Will close current working block for further modifications
@@ -148,7 +152,7 @@ class BaseManagedBlockBuilder(
         commitLog("Start")
         getOrBuildBlockTrace()
 
-        synchronized(storage) {
+        storageLock.withLock {
             if (!closed) {
                 commitLog("Got lock")
                 beforeCommit(blockBuilder)
@@ -168,7 +172,7 @@ class BaseManagedBlockBuilder(
 
     override fun rollback() {
         rollbackDebugLog("Start")
-        synchronized(storage) {
+        storageLock.withLock {
             if (!closed) {
                 rollbackLog("Got lock")
                 if (!eContext.conn.isClosed) {
