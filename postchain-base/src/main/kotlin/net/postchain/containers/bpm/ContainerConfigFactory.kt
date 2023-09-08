@@ -80,6 +80,11 @@ object ContainerConfigFactory : KLogging() {
         if (restApiConfig.port > -1) {
             portBindings[restApiPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
         }
+        // debug-api-port
+        val debugApiPort = "${containerNodeConfig.subnodeDebugApiPort}/tcp"
+        if (restApiConfig.debugPort > -1) {
+            portBindings[debugApiPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
+        }
         // admin-rpc-port
         val adminRpcPort = "${containerNodeConfig.subnodeAdminRpcPort}/tcp"
         portBindings[adminRpcPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
@@ -194,6 +199,13 @@ object ContainerConfigFactory : KLogging() {
             -1
         }
         add("POSTCHAIN_API_PORT=${restApiPort}")
+
+        val debugApiPort = if (restApiConfig.debugPort > -1) {
+            containerNodeConfig.subnodeDebugApiPort
+        } else {
+            -1
+        }
+        add("POSTCHAIN_DEBUG_PORT=${debugApiPort}")
 
         add("POSTCHAIN_MASTER_HOST=${containerNodeConfig.masterHost}")
         add("POSTCHAIN_MASTER_PORT=${containerNodeConfig.masterPort}")
