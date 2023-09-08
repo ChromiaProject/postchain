@@ -12,10 +12,6 @@ interface Shutdownable {
     //fun isShutdown() // TODO: Olle: shouldn't we have this too, so many are using a flag for this
 }
 
-interface Synchronizable {
-    val synchronizer: Any
-}
-
 /**
  * Blockchain engine used for building and adding new blocks.
  * (It is specialized on block creation and ignorant about other nodes etc, see [BlockchainProcess] for that)
@@ -73,7 +69,7 @@ interface RemoteBlockchainProcess {
 /**
  *  Manages a set of [BlockchainProcess]:es (see the implementations for detailed documentation)
  */
-interface BlockchainProcessManager : Shutdownable, Synchronizable {
+interface BlockchainProcessManager : Shutdownable {
     fun startBlockchain(chainId: Long, bTrace: BlockTrace?): BlockchainRid
     fun retrieveBlockchain(chainId: Long): BlockchainProcess?
     fun retrieveBlockchain(blockchainRid: BlockchainRid): BlockchainProcess?
