@@ -67,10 +67,11 @@ class SlowSynchronizer(
      */
     fun syncUntil() {
         try {
-            blockHeight = blockQueries.getLastBlockHeight().get()
-            syncDebug("Start", blockHeight)
-            stateMachine.lastCommittedBlockHeight = blockHeight
-            stateMachine.lastUncommittedBlockHeight = blockHeight
+            val currentBlockHeight = blockQueries.getLastBlockHeight().get()
+            blockHeight.set(currentBlockHeight)
+            logger.debug { syncDebug("Start", currentBlockHeight) }
+            stateMachine.lastCommittedBlockHeight = currentBlockHeight
+            stateMachine.lastUncommittedBlockHeight = currentBlockHeight
             val sleepData = slowSyncSleepDataProvider()
             while (isProcessRunning()) {
                 processMessages(sleepData)
@@ -85,9 +86,9 @@ class SlowSynchronizer(
         } catch (e: Exception) {
             logger.debug(e) { "syncUntil() -- ${"Exception"}" }
         } finally {
-            syncDebug("Await commits", blockHeight)
+            logger.debug { syncDebug("Await commits", blockHeight.get()) }
             peerStatuses.clear()
-            syncDebug("Exit slowsync", blockHeight)
+            logger.debug { syncDebug("Exit slowsync", blockHeight.get()) }
         }
     }
 
@@ -133,8 +134,8 @@ class SlowSynchronizer(
                 when (message) {
                     // We will answer any get call
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
-                    is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight)
-                    is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight) // A replica might ask us
+                    is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight.get())
+                    is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight.get()) // A replica might ask us
                     is GetBlockSignature -> sendBlockSignature(peerId, message.blockRID)
 
                     // But we only expect ranges and status to be sent to us
@@ -312,7 +313,7 @@ class SlowSynchronizer(
                             logger.debug { "commitBlock() - Block height: $height committed successfully." }
                             try {
                                 stateMachine.updateAfterSuccessfulCommit(height)
-                                blockHeight = height
+                                blockHeight.set(height)
                             } catch (t: Throwable) {
                                 logger.warn(t) { "Failed to update after successful commit" }
                             }
@@ -329,7 +330,5 @@ class SlowSynchronizer(
 
     private fun currentTimeMillis() = clock.millis()
 
-    private fun syncDebug(message: String, height: Long, e: Exception? = null) {
-        logger.debug(e) { "syncUntil() -- $message, at height: $height" }
-    }
+    private fun syncDebug(message: String, height: Long) = "syncUntil() -- $message, at height: $height"
 }

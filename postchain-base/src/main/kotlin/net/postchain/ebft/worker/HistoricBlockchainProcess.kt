@@ -165,8 +165,8 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     private fun getBlockFromStore(blockStore: BaseBlockStore, ctx: EContext, height: Long): BlockDataWithWitness? {
         val blockchainConfiguration = blockchainEngine.getConfiguration()
         val blockRID = blockStore.getBlockRID(ctx, height)
-        if (blockRID == null) {
-            return null
+        return if (blockRID == null) {
+            null
         } else {
             val headerBytes = blockStore.getBlockHeader(ctx, blockRID)
             val witnessBytes = blockStore.getWitnessData(ctx, blockRID)
@@ -176,7 +176,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
             val header = blockchainConfiguration.decodeBlockHeader(headerBytes)
             val witness = blockchainConfiguration.decodeWitness(witnessBytes)
 
-            return BlockDataWithWitness(header, txBytes, witness)
+            BlockDataWithWitness(header, txBytes, witness)
         }
     }
 
@@ -314,22 +314,9 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         }
     }
 
-    //copyBlocksNetwork()
-    private fun netTrace(str: String, heightToCopy: Long) {
-        if (logger.isTraceEnabled) {
-            logger.trace("copyBlocksNetwork() -- $str: $heightToCopy from blockchain ${historicBlockchainContext.historicBrid}")
-        }
-    }
-
     private fun netDebug(str: String) {
         if (logger.isDebugEnabled) {
             logger.debug("copyBlocksNetwork() -- $str from blockchain ${historicBlockchainContext.historicBrid}")
-        }
-    }
-
-    private fun netInfo(str: String, heightToCopy: Long) {
-        if (logger.isInfoEnabled) {
-            logger.info("copyBlocksNetwork() - $str: $heightToCopy from blockchain ${historicBlockchainContext.historicBrid}")
         }
     }
 
@@ -362,10 +349,6 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
         logger.error("copyBlocksLocally() - $str: $heightToCopy locally from blockchain ${historicBlockchainContext.historicBrid}", e)
     }
 
-    private fun copyErr(str: String, heightToCopy: Long, err: String) {
-        logger.error("copyBlocksLocally() - $str: $heightToCopy locally from blockchain ${historicBlockchainContext.historicBrid}, err: $err")
-    }
-
     private fun getCopyBTrace(heightToCopy: Long): BlockTrace? {
         return if (logger.isTraceEnabled) {
             logger.trace { "getCopyBTrace() - Creating block trace with height: $heightToCopy " }
@@ -392,7 +375,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
 
     private fun shutdownDebug(str: String) {
         if (logger.isDebugEnabled) {
-            logger.debug("shutdown() - $str, at height: ${this.fastSynchronizer.blockHeight}, the block that's causing the shutdown: $blockTrace")
+            logger.debug { "shutdown() - $str, at height: ${this.fastSynchronizer.blockHeight.get()}, the block that's causing the shutdown: $blockTrace" }
         }
     }
 
@@ -404,7 +387,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                     myPubKey,
                     DpNodeType.NODE_TYPE_HISTORIC_REPLICA.name,
                     syncMethod.name,
-                    blockchainEngine.getBlockQueries().getLastBlockHeight().get())
+                    currentBlockHeight())
         }
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES] = LazyDiagnosticValue {
             val peerStates: List<Pair<String, KnownState>> = when (syncMethod) {
@@ -422,4 +405,11 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
 
     override fun isSigner() = false
     override fun getBlockchainState(): BlockchainState = BlockchainState.RUNNING
+
+    override fun currentBlockHeight(): Long = when (syncMethod) {
+        SyncMethod.FAST_SYNC -> fastSynchronizer.blockHeight.get()
+        SyncMethod.NOT_SYNCING -> blockchainEngine.getBlockQueries().getLastBlockHeight().get()
+        SyncMethod.LOCAL_DB -> blockchainEngine.getBlockQueries().getLastBlockHeight().get()
+        SyncMethod.SLOW_SYNC -> throw IllegalStateException("HistoricBlockchainProcess does not use slow sync")
+    }
 }
