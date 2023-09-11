@@ -18,7 +18,6 @@ import net.postchain.ebft.worker.ValidatorBlockchainProcess
 open class BaseApiInfrastructure(
         restApiConfig: RestApiConfig,
         val nodeDiagnosticContext: NodeDiagnosticContext,
-        enableDebugApi: Boolean,
         private val postchainContext: PostchainContext
 ) : ApiInfrastructure {
 
@@ -44,7 +43,7 @@ open class BaseApiInfrastructure(
         }
     }
 
-    val debugApi: DebugApi? = if (enableDebugApi && restApiConfig.debugPort != -1) {
+    val debugApi: DebugApi? = if (restApiConfig.debugPort != -1) {
         logger.info { "Starting Debug API on port ${restApiConfig.debugPort}" }
         try {
             DebugApi(

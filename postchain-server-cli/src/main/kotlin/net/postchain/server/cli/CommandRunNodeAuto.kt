@@ -40,7 +40,6 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
      */
     private val configDirectory by option("-d", "--directory", help = "Configuration directory").default(".")
 
-    private val debug by debugOption()
     private val dumpPid by dumpPidOption()
 
     private val NODE_CONFIG_FILE = "node-config.properties"
@@ -48,10 +47,14 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
 
     private val lastHeights = mutableMapOf<Long, Long>() // { chainId -> height }
 
+    init {
+        deprecatedDebugOption()
+    }
+
     override fun run() {
         val chainsDir = Paths.get(configDirectory, BLOCKCHAIN_DIR).toFile()
         val nodeConfigFile = Paths.get(configDirectory, NODE_CONFIG_FILE).toFile()
-        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile, debug)
+        val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
 
         waitDb(50, 1000, appConfig)
         runStorageCommand(appConfig) {

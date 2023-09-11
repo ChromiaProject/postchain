@@ -28,25 +28,42 @@ import kotlin.time.toDuration
  * Wrapper to the generic [Configuration]
  * Adding some convenience fields, for example regarding database connection.
  */
-class AppConfig(private val config: Configuration, val debug: Boolean = false) : Config {
+class AppConfig(private val config: Configuration) : Config {
+
+    @Suppress("UNUSED_PARAMETER")
+    @Deprecated(message = "Use AppConfig(Configuration) instead",
+            replaceWith = ReplaceWith("AppConfig(config)"))
+    constructor(config: Configuration, debug: Boolean) : this(config)
 
     companion object {
 
         const val DEFAULT_PORT: Int = 9870
         const val DEFAULT_APPLIED_CONFIG_SEND_INTERVAL_MS: Long = 1_000
 
-        @Deprecated(message = "Use fromPropertiesFile(File, Boolean) instead",
-                replaceWith = ReplaceWith("fromPropertiesFile(File(configFile), debug))", imports = arrayOf("java.io.File")))
-        fun fromPropertiesFile(configFile: String, debug: Boolean = false): AppConfig = fromPropertiesFile(File(configFile), debug)
+        @Suppress("UNUSED_PARAMETER")
+        @Deprecated(message = "Use fromPropertiesFile(File) instead",
+                replaceWith = ReplaceWith("fromPropertiesFile(File(configFile))", imports = arrayOf("java.io.File")))
+        fun fromPropertiesFile(configFile: String, debug: Boolean = false): AppConfig = fromPropertiesFile(File(configFile))
 
+        @Suppress("UNUSED_PARAMETER")
+        @Deprecated(message = "Use fromPropertiesFileOrEnvironment(File, Map<String, Any>) instead",
+                replaceWith = ReplaceWith("fromPropertiesFileOrEnvironment(configFile, overrides)"))
         fun fromPropertiesFileOrEnvironment(configFile: File?, debug: Boolean = false, overrides: Map<String, Any> = mapOf()): AppConfig =
+                fromPropertiesFileOrEnvironment(configFile, overrides)
+
+        fun fromPropertiesFileOrEnvironment(configFile: File?, overrides: Map<String, Any> = mapOf()): AppConfig =
                 if (configFile != null) {
-                    fromPropertiesFile(configFile, debug, overrides)
+                    fromPropertiesFile(configFile, overrides)
                 } else {
-                    fromEnvironment(debug, overrides)
+                    fromEnvironment(overrides)
                 }
 
-        fun fromPropertiesFile(configFile: File, debug: Boolean = false, overrides: Map<String, Any> = mapOf()): AppConfig {
+        @Suppress("UNUSED_PARAMETER")
+        @Deprecated(message = "Use fromPropertiesFile(File, Map<String, Any>) instead",
+                replaceWith = ReplaceWith("fromPropertiesFile(File(configFile), overrides)", imports = arrayOf("java.io.File")))
+        fun fromPropertiesFile(configFile: File, debug: Boolean = false, overrides: Map<String, Any> = mapOf()): AppConfig = fromPropertiesFile(configFile, overrides)
+
+        fun fromPropertiesFile(configFile: File, overrides: Map<String, Any> = mapOf()): AppConfig {
             val params = Parameters().properties()
                     .setFile(configFile)
                     .setListDelimiterHandler(DefaultListDelimiterHandler(','))
@@ -58,12 +75,17 @@ class AppConfig(private val config: Configuration, val debug: Boolean = false) :
                         overrides.forEach { (k, v) -> setProperty(k, v) }
                     }
 
-            return AppConfig(configuration, debug)
+            return AppConfig(configuration)
         }
 
-        fun fromEnvironment(debug: Boolean, overrides: Map<String, Any> = mapOf()): AppConfig = AppConfig(
-                BaseConfiguration().apply { overrides.forEach { (k, v) -> setProperty(k, v) } },
-                debug
+        @Suppress("UNUSED_PARAMETER")
+        @Deprecated(message = "Use fromEnvironment(Map<String, Any>) instead",
+                replaceWith = ReplaceWith("fromEnvironment(overrides)"))
+        fun fromEnvironment(debug: Boolean, overrides: Map<String, Any> = mapOf()): AppConfig =
+                fromEnvironment(overrides)
+
+        fun fromEnvironment(overrides: Map<String, Any> = mapOf()): AppConfig = AppConfig(
+                BaseConfiguration().apply { overrides.forEach { (k, v) -> setProperty(k, v) } }
         )
     }
 

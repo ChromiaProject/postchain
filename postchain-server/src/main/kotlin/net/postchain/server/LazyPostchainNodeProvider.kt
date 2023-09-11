@@ -6,7 +6,7 @@ import net.postchain.common.exception.AlreadyExists
 import net.postchain.config.app.AppConfig
 import net.postchain.crypto.PrivKey
 
-open class LazyPostchainNodeProvider(val debug: Boolean) : NodeProvider {
+open class LazyPostchainNodeProvider : NodeProvider {
 
     companion object : KLogging()
 
@@ -22,7 +22,7 @@ open class LazyPostchainNodeProvider(val debug: Boolean) : NodeProvider {
 
     protected open fun createPostchainNode(privKey: PrivKey, wipeDb: Boolean) {
         postchainNode = PostchainNode(
-                AppConfig.fromEnvironment(debug, mapOf("messaging.privkey" to privKey.toString())),
+                AppConfig.fromEnvironment(mapOf("messaging.privkey" to privKey.toString())),
                 wipeDb
         )
     }

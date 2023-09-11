@@ -10,12 +10,10 @@ import net.postchain.debug.NodeDiagnosticContext
 class DefaultMasterApiInfra(
         restApiConfig: RestApiConfig,
         nodeDiagnosticContext: NodeDiagnosticContext,
-        enableDebugApi: Boolean,
         postchainContext: PostchainContext
 ) : BaseApiInfrastructure(
         restApiConfig,
         nodeDiagnosticContext,
-        enableDebugApi,
         postchainContext
 ), MasterApiInfra {
 
