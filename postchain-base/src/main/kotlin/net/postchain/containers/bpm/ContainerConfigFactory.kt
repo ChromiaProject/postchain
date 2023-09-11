@@ -170,8 +170,6 @@ object ContainerConfigFactory : KLogging() {
     private fun createNodeConfigEnv(appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer) = buildList {
         val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
 
-        add("POSTCHAIN_DEBUG=${restApiConfig.debug}")
-
         add("POSTCHAIN_INFRASTRUCTURE=${Infrastructure.EbftContainerSub.get()}")
 
         val subnodeDatabaseUrl = appConfig.getEnvOrString("POSTCHAIN_SUBNODE_DATABASE_URL", ContainerNodeConfig.fullKey(ContainerNodeConfig.KEY_SUBNODE_DATABASE_URL))

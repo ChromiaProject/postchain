@@ -5,7 +5,7 @@ import net.postchain.crypto.PrivKey
 import net.postchain.server.LazyPostchainNodeProvider
 import java.util.concurrent.atomic.AtomicBoolean
 
-class TestLazyPostchainNodeProvider(debug: Boolean, val nodeProvider: () -> PostchainNode) : LazyPostchainNodeProvider(debug) {
+class TestLazyPostchainNodeProvider(val nodeProvider: () -> PostchainNode) : LazyPostchainNodeProvider() {
 
     lateinit var privKey: PrivKey
     lateinit var wipeDb: AtomicBoolean // Atomic just to make it possible to have lateinit
