@@ -195,7 +195,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                 }
 
                                 is AppliedConfig -> {
-                                    if (statusManager.myStatus.revolting) {
+                                    if (statusManager.myStatus.revolting && statusManager.myStatus.state != NodeBlockState.Prepared) {
                                         processIncomingConfig(message.configHash, message.height)
                                     }
                                 }
@@ -487,7 +487,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 nodeStateTracker.nodeStatuses = statusManager.nodeStatuses
                 nodeStateTracker.blockHeight = statusManager.myStatus.height
 
-                if (statusManager.myStatus.revolting) {
+                if (statusManager.myStatus.revolting && statusManager.myStatus.state != NodeBlockState.Prepared) {
                     checkIfConfigReloadIsNeeded()
                 }
 
