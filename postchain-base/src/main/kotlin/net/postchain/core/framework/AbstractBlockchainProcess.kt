@@ -3,6 +3,7 @@ package net.postchain.core.framework
 import mu.NamedKLogging
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
+import net.postchain.metrics.AbstractBlockchainProcessMetrics
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
@@ -12,6 +13,8 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
 
     private val running = AtomicBoolean(false)
     internal lateinit var process: Thread
+
+    val metrics = AbstractBlockchainProcessMetrics(blockchainEngine.getConfiguration().chainID, blockchainEngine.getConfiguration().blockchainRid, this)
 
     override fun isProcessRunning() = running.get()
 
@@ -53,7 +56,10 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
         if (alreadyShutdown()) return
         logger.debug { "Shutting down process $processName" }
         process.join()
+        metrics.close()
     }
 
     private fun alreadyShutdown() = !::process.isInitialized || !process.isAlive
+
+    abstract fun currentBlockHeight(): Long
 }

@@ -43,7 +43,7 @@ class ValidatorBlockchainProcess(
     private val blockManager: BaseBlockManager
     val syncManager: ValidatorSyncManager
     val networkAwareTxQueue: NetworkAwareTxQueue
-    val nodeStateTracker = NodeStateTracker()
+    private val nodeStateTracker = NodeStateTracker()
     val statusManager: StatusManager
     private val appliedConfigSender = AppliedConfigSender(
             workerContext,
@@ -133,4 +133,6 @@ class ValidatorBlockchainProcess(
 
     override fun isSigner(): Boolean = !syncManager.isInFastSync()
     override fun getBlockchainState(): BlockchainState = BlockchainState.RUNNING
+
+    override fun currentBlockHeight(): Long = syncManager.currentBlockHeight() ?: blockchainEngine.getBlockQueries().getLastBlockHeight().get()
 }

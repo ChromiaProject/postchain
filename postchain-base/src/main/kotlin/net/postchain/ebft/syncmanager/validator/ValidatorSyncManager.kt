@@ -50,9 +50,9 @@ import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.gtv.mapper.toObject
 import java.time.Clock
-import java.util.Arrays
 import java.util.Date
 import java.util.concurrent.CompletableFuture
+import kotlin.math.floor
 
 /**
  * The ValidatorSyncManager handles communications with our peers.
@@ -74,6 +74,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private var processingIntent: BlockIntent
     private var processingIntentDeadline = 0L
     private var lastStatusLogged: Long
+
+    @Volatile
     private var useFastSyncAlgorithm: Boolean
     private val fastSynchronizer: FastSynchronizer
 
@@ -305,7 +307,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         }
         if (matchingIndexes.isEmpty()) return null
         if (matchingIndexes.size == 1) return matchingIndexes[0]
-        return matchingIndexes[Math.floor(Math.random() * matchingIndexes.size).toInt()]
+        return matchingIndexes[floor(Math.random() * matchingIndexes.size).toInt()]
     }
 
     /**
@@ -327,7 +329,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun fetchCommitSignatures(blockRID: ByteArray, nodes: Array<Int>) {
         val message = GetBlockSignature(blockRID)
-        logger.debug { "Fetching commit signature for block with RID ${blockRID.toHex()} from nodes ${Arrays.toString(nodes)}" }
+        logger.debug { "Fetching commit signature for block with RID ${blockRID.toHex()} from nodes ${nodes.contentToString()}" }
         communicationManager.sendPacket(message, nodes.map { validatorAtIndex(it) })
     }
 
@@ -522,4 +524,9 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             RevoltConfigurationData.default
         }
     }
+
+    fun currentBlockHeight(): Long? = if (isInFastSync())
+        fastSynchronizer.blockHeight.get()
+    else
+        nodeStateTracker.myStatus?.height?.let { it - 1 }
 }

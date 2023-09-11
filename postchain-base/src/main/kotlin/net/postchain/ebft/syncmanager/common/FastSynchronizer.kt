@@ -94,8 +94,8 @@ class FastSynchronizer(
     fun syncUntil(exitCondition: () -> Boolean) {
         var polledFinishedJob: Job? = null
         try {
-            blockHeight = blockQueries.getLastBlockHeight().get()
-            syncDebug("Start", blockHeight)
+            blockHeight.set(blockQueries.getLastBlockHeight().get())
+            logger.debug { syncDebug("Start", blockHeight.get()) }
             while (isProcessRunning() && !exitCondition()) {
                 refillJobs()
                 processMessages()
@@ -110,13 +110,13 @@ class FastSynchronizer(
         } catch (e: Exception) {
             logger.debug(e) { "syncUntil() -- ${"Exception"}" }
         } finally {
-            syncDebug("Await commits", blockHeight)
+            logger.debug { syncDebug("Await commits", blockHeight.get()) }
             processDoneJobs(polledFinishedJob)
             awaitCommits()
             jobs.clear()
             finishedJobs.clear()
             peerStatuses.clear()
-            syncDebug("Exit fastsync", blockHeight)
+            logger.debug { syncDebug("Exit fastsync", blockHeight.get()) }
         }
     }
 
@@ -152,24 +152,24 @@ class FastSynchronizer(
      */
     fun syncUntilResponsiveNodesDrained() {
         val timeout = currentTimeMillis() + params.exitDelay
-        if (logger.isDebugEnabled) {
-            logger.debug("syncUntilResponsiveNodesDrained() begin with exitDelay: ${params.exitDelay}")
-        }
+        logger.debug { "syncUntilResponsiveNodesDrained() begin with exitDelay: ${params.exitDelay}" }
         syncUntil {
             areResponsiveNodesDrained(timeout)
         }
     }
 
     internal fun areResponsiveNodesDrained(timeout: Long): Boolean {
-        val syncableCount = peerStatuses.getSyncableAndConnected(blockHeight + 1).intersect(configuredPeers).size
+        val currentBlockHeight = blockHeight.get()
+
+        val syncableCount = peerStatuses.getSyncableAndConnected(currentBlockHeight + 1).intersect(configuredPeers).size
 
         // Keep syncing until this becomes true, i.e. to exit we must have:
         val done = timeout < currentTimeMillis()      // 1. must have timeout
                 && syncableCount == 0                        // 2. must have no syncable nodes
-                && blockHeight >= params.mustSyncUntilHeight // 3. must BC height above the minimum specified height
+                && currentBlockHeight >= params.mustSyncUntilHeight // 3. must BC height above the minimum specified height
 
-        if (logger.isDebugEnabled && done) {
-            logger.debug("We are done syncing, height: $blockHeight, must sync until: ${params.mustSyncUntilHeight}.")
+        if (done) {
+            logger.debug { "We are done syncing, height: $currentBlockHeight, must sync until: ${params.mustSyncUntilHeight}." }
         }
         return done
     }
@@ -210,7 +210,7 @@ class FastSynchronizer(
             if (allowJobStart) {
                 startNextJob()
             }
-            blockHeight++
+            blockHeight.incrementAndGet()
             removeJob(job)
             // Keep track of last block's job, in case of a BadDataType.PREV_BLOCK_MISMATCH on next job
             // Discard bulky data we don't need
@@ -260,7 +260,7 @@ class FastSynchronizer(
             val lastHeight = blockQueries.getLastBlockHeight().get()
             if (lastHeight >= job.height) {
                 doneTrace("Add block failed for job $job because block already in db.")
-                blockHeight++ // as if this block was successful.
+                blockHeight.incrementAndGet() // as if this block was successful.
                 removeJob(job)
                 return
             }
@@ -350,7 +350,7 @@ class FastSynchronizer(
     }
 
     private fun startNextJob(): Boolean {
-        return startJob(blockHeight + jobs.size + 1)
+        return startJob(blockHeight.get() + jobs.size + 1)
     }
 
     private fun sendLegacyRequest(height: Long): NodeRid? {
@@ -633,8 +633,8 @@ class FastSynchronizer(
             try {
                 when (message) {
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
-                    is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight) // A replica might ask us
-                    is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight)
+                    is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight.get()) // A replica might ask us
+                    is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight.get())
                     is GetBlockSignature -> sendBlockSignature(peerId, message.blockRID)
                     is BlockHeaderMessage -> handleBlockHeader(peerId, message.header, message.witness, message.requestedHeight)
                     is UnfinishedBlock -> handleUnfinishedBlock(peerId, message.header, message.transactions)
@@ -655,9 +655,7 @@ class FastSynchronizer(
     // Only logging below
     // -------------
 
-    private fun syncDebug(message: String, height: Long, e: Exception? = null) {
-        logger.debug(e) { "syncUntil() -- $message, at height: $height" }
-    }
+    private fun syncDebug(message: String, height: Long) = "syncUntil() -- $message, at height: $height"
 
     // processDoneJob()
     private fun doneTrace(message: String, e: Exception? = null) {

@@ -138,6 +138,7 @@ open class BaseBlockchainEngine(
             blockBuilderStorage.closeWriteConnection(currentEContext, false)
         }
         transactionQueue.close()
+        metrics.close()
     }
 
     private fun makeBlockBuilder(isSyncing: Boolean): BaseManagedBlockBuilder {

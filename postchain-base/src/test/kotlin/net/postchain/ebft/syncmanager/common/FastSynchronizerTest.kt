@@ -145,7 +145,7 @@ class FastSynchronizerTest {
         sut.processDoneJob(job, false)
         // verify
         assertThat(sut.jobs[job.height]).isNull()
-        assertThat(sut.blockHeight).isEqualTo(lastBlockHeight + 1)
+        assertThat(sut.blockHeight.get()).isEqualTo(lastBlockHeight + 1)
     }
 
     @Test
@@ -158,7 +158,7 @@ class FastSynchronizerTest {
         // verify
         verify(sut).startJob(anyLong())
         assertThat(sut.jobs[job.height]).isNull()
-        assertThat(sut.blockHeight).isEqualTo(lastBlockHeight + 1)
+        assertThat(sut.blockHeight.get()).isEqualTo(lastBlockHeight + 1)
     }
 
     @Test
@@ -170,7 +170,7 @@ class FastSynchronizerTest {
         sut.processDoneJob(job)
         // verify
         assertThat(sut.jobs[job.height]).isNull()
-        assertThat(sut.blockHeight).isEqualTo(lastBlockHeight)
+        assertThat(sut.blockHeight.get()).isEqualTo(lastBlockHeight)
     }
 
     @Test
@@ -184,7 +184,7 @@ class FastSynchronizerTest {
         sut.processDoneJob(job)
         // verify
         assertThat(sut.jobs[job.height]).isNotNull()
-        assertThat(sut.blockHeight).isEqualTo(lastBlockHeight)
+        assertThat(sut.blockHeight.get()).isEqualTo(lastBlockHeight)
         assertThat(job.blockCommitting).isFalse()
         assertThat(job.addBlockException).isNull()
         verify(sut).commitJobsAsNecessary(any())
@@ -212,7 +212,7 @@ class FastSynchronizerTest {
         sut.processDoneJob(job)
         // verify
         assertThat(sut.jobs[job.height]).isNull()
-        assertThat(sut.blockHeight).isEqualTo(lastBlockHeight + 1)
+        assertThat(sut.blockHeight.get()).isEqualTo(lastBlockHeight + 1)
     }
 
     @Test

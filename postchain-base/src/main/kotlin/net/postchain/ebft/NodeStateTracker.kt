@@ -3,7 +3,10 @@
 package net.postchain.ebft
 
 class NodeStateTracker {
+    @Volatile
     var nodeStatuses: Array<NodeStatus>? = null
+    @Volatile
     var myStatus: NodeStatus? = null
+    @Volatile
     var blockHeight: Long = -1
 }

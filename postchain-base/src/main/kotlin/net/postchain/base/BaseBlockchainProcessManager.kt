@@ -28,6 +28,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.metrics.BlockchainProcessManagerMetrics
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
@@ -76,9 +77,7 @@ open class BaseBlockchainProcessManager(
     var insideATest = false
     var blockDebug: BlockTrace? = null
 
-    init {
-        BlockchainProcessManagerMetrics(::numberOfBlockchains)
-    }
+    private val metrics = BlockchainProcessManagerMetrics(this)
 
     companion object : KLogging()
 
@@ -349,7 +348,7 @@ open class BaseBlockchainProcessManager(
         }
     }
 
-    private fun numberOfBlockchains(): Int = processLock.withLock {
+    fun numberOfBlockchains(): Int = processLock.withLock {
         blockchainProcesses.size
     }
 
@@ -398,6 +397,7 @@ open class BaseBlockchainProcessManager(
         nodeDiagnosticContext.clearBlockchainData()
         chainIdToBrid.clear()
         bridToChainId.clear()
+        metrics.close()
         logger.debug("Stopped BlockchainProcessManager")
     }
 

@@ -66,9 +66,6 @@ class ReadOnlyBlockchainProcess(
             ::isProcessRunning
     )
 
-    var blockHeight: Long = blockQueries.getLastBlockHeight().get()
-        private set
-
     private var syncMethod = SyncMethod.NOT_SYNCING
 
     /**
@@ -105,7 +102,7 @@ class ReadOnlyBlockchainProcess(
         super.registerDiagnosticData(diagnosticData)
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_REPLICA.prettyName)
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS] = LazyDiagnosticValue {
-            StateNodeStatus(myPubKey, DpNodeType.NODE_TYPE_REPLICA.name, syncMethod.name, blockQueries.getLastBlockHeight().get())
+            StateNodeStatus(myPubKey, DpNodeType.NODE_TYPE_REPLICA.name, syncMethod.name, currentBlockHeight())
         }
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES] = LazyDiagnosticValue {
             val peerStates: List<Pair<String, KnownState>> = when (syncMethod) {
@@ -119,4 +116,11 @@ class ReadOnlyBlockchainProcess(
 
     override fun isSigner() = false
     override fun getBlockchainState(): BlockchainState = blockchainState
+
+    override fun currentBlockHeight(): Long = when (syncMethod) {
+        SyncMethod.FAST_SYNC -> fastSynchronizer.blockHeight.get()
+        SyncMethod.SLOW_SYNC -> slowSynchronizer.blockHeight.get()
+        SyncMethod.NOT_SYNCING -> blockQueries.getLastBlockHeight().get()
+        SyncMethod.LOCAL_DB -> blockQueries.getLastBlockHeight().get()
+    }
 }
