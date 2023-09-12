@@ -8,6 +8,8 @@ import net.postchain.ebft.EbftPacketDecoder
 import net.postchain.ebft.EbftPacketDecoderFactory
 import net.postchain.ebft.EbftPacketEncoder
 import net.postchain.ebft.EbftPacketEncoderFactory
+import net.postchain.ebft.message.ebftMessageToString
+import org.mockito.kotlin.mock
 import java.io.Closeable
 
 class EbftIntegrationTestContext(
@@ -28,7 +30,8 @@ class EbftIntegrationTestContext(
             chainId,
             blockchainRid,
             EbftPacketEncoder(config, blockchainRid),
-            EbftPacketDecoder(config)
+            EbftPacketDecoder(config),
+            ebftMessageToString(mock())
     )
 
     fun shutdown() {

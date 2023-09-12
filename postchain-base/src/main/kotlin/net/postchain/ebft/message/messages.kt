@@ -3,6 +3,8 @@
 package net.postchain.ebft.message
 
 import net.postchain.common.BlockchainRid
+import net.postchain.common.toHex
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.ebft.message.NullableGtv.gtvToNullableByteArray
 import net.postchain.ebft.message.NullableGtv.nullableByteArrayToGtv
@@ -198,7 +200,7 @@ class BlockRange(val startAtHeight: Long, val isFull: Boolean, val blocks: List<
 
             val gtvBlockArr = data[3]
             for (gtvThing in gtvBlockArr.asArray()) {
-                var blockGtv = gtvThing as GtvArray
+                val blockGtv = gtvThing as GtvArray
                 blocks.add(CompleteBlock.buildFromGtv(blockGtv, 0))
             }
 
@@ -243,3 +245,26 @@ fun completeBlockToGtv(data: BlockData, height: Long, witness: ByteArray): List<
     )
 }
 
+fun ebftMessageToString(blockchainConfig: BlockchainConfiguration): (EbftMessage) -> String =
+        { message ->
+            fun getBlockHeaderRid(header: ByteArray): String = blockchainConfig.decodeBlockHeader(header).blockRID.toHex()
+            when (message) {
+                is Transaction -> "Transaction(txRID=${blockchainConfig.getTransactionFactory().decodeTransaction(message.data).getRID().toHex()})"
+                is Signature -> "Signature"
+                is BlockSignature -> "BlockSignature(blockRid=${message.blockRID.toHex()})"
+                is GetBlockSignature -> "GetBlockSignature(blockRid=${message.blockRID.toHex()})"
+                is BlockData -> "BlockData(blockRid=${getBlockHeaderRid(message.header)})"
+                is CompleteBlock -> "CompleteBlock(blockRid=${getBlockHeaderRid(message.data.header)}, height=${message.height})"
+                is GetBlockAtHeight -> "GetBlockAtHeight(height=${message.height})"
+                is GetUnfinishedBlock -> "GetUnfinishedBlock(height=${message.blockRID.toHex()})"
+                is UnfinishedBlock -> "UnfinishedBlock(blockRid=${getBlockHeaderRid(message.header)})"
+                is Identification -> "Identification(pubkey=${message.pubKey.toHex()}, blockRid=${message.blockchainRID.toHex()}, timestamp=${message.timestamp})"
+                is Status -> "Status(blockRID=${message.blockRID?.toHex() ?: ""}, height=${message.height}, revolting=${message.revolting}, round=${message.round}, serial=${message.serial}, state=${message.state})"
+                is GetBlockHeaderAndBlock -> "GetBlockHeaderAndBlock(height=${message.height})"
+                is BlockHeader -> "BlockHeader(blockRID=${getBlockHeaderRid(message.header)}, requestedHeight=${message.requestedHeight})"
+                is GetBlockRange -> "GetBlockRange(startAtHeight=${message.startAtHeight})"
+                is BlockRange -> "BlockRange(startAtHeight=${message.startAtHeight}, isFull=${message.isFull}, noOfBlocks=${message.blocks.size})"
+                is AppliedConfig -> "AppliedConfig(configHash=${message.configHash.toHex()}, height=${message.height})"
+                else -> "Unknown message type ${message.javaClass.canonicalName}"
+            }
+        }

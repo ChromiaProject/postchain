@@ -21,6 +21,7 @@ import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.NodeRid
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.message.ebftMessageToString
 import net.postchain.ebft.worker.ForceReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
@@ -202,6 +203,7 @@ open class EBFTSynchronizationInfrastructure(
                 blockchainRid,
                 packetEncoder,
                 packetDecoder,
+                ebftMessageToString(blockchainConfig)
         ).apply { init() }
     }
 
