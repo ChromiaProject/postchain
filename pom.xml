@@ -258,7 +258,7 @@
             <dependency>
                 <groupId>org.http4k</groupId>
                 <artifactId>http4k-bom</artifactId>
-                <version>4.45.0.0</version>
+                <version>4.48.0.0</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -458,6 +458,11 @@
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-all</artifactId>
+                <version>${netty.version}</version>
+            </dependency>
+            <dependency> <!-- used by http4k-server-netty -->
+                <groupId>io.netty</groupId>
+                <artifactId>netty-codec-http2</artifactId>
                 <version>${netty.version}</version>
             </dependency>
             <dependency>
