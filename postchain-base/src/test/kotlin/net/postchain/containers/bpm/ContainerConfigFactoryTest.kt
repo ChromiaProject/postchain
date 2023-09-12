@@ -2,6 +2,7 @@ package net.postchain.containers.bpm
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import getLoggerCaptor
 import net.postchain.containers.infra.ContainerNodeConfig
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
@@ -44,8 +45,12 @@ class ContainerConfigFactoryTest {
             on { imageVersionTag } doReturn "3.13.2"
         }
 
+        val appender = getLoggerCaptor(ContainerConfigFactory::class.java)
         val actual = ContainerConfigFactory.getContainerImage(config)
         assertThat(actual).isEqualTo(subnodeImage)
+        assertThat(appender.events.first().message.toString()).isEqualTo(
+                "Container image version tag (3.13.1) is not equal to the environment image version tag (3.13.2)"
+        )
     }
 
     @Test

@@ -174,7 +174,9 @@ object ContainerConfigFactory : KLogging() {
                     when (val actualTag = config.containerImage.substringAfter(":", "")) {
                         "" -> config.containerImage.substringBefore(":") + ":" + expectedTag
                         else -> {
-                            if (expectedTag != actualTag) logger.warn { }
+                            if (expectedTag != actualTag) {
+                                logger.warn { "Container image version tag ($actualTag) is not equal to the environment image version tag ($expectedTag)" }
+                            }
                             config.containerImage
                         }
                     }
