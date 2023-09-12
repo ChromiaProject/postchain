@@ -10,6 +10,7 @@ import assertk.assertions.isNotEmpty
 import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
+import net.postchain.common.getLoggerCaptor
 import net.postchain.config.app.AppConfig
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.assertChainNotStarted
@@ -18,10 +19,10 @@ import net.postchain.devtools.getModules
 import org.apache.logging.log4j.Level
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
-import org.junit.jupiter.api.Disabled
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Disabled
+import org.junit.jupiter.api.Test
 
 class ManagedModeTestNightly : ConfigFileBasedIntegrationTest() {
 

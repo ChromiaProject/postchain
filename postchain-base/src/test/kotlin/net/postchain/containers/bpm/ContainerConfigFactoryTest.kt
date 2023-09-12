@@ -2,7 +2,7 @@ package net.postchain.containers.bpm
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import getLoggerCaptor
+import net.postchain.common.getLoggerCaptor
 import net.postchain.containers.infra.ContainerNodeConfig
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
