@@ -73,7 +73,8 @@ data class ContainerNodeConfig(
         val jmxBasePort: Int,
         val minSpaceQuotaBufferMB: Int,
         val labels: Map<String, String>,
-        val log4jConfigurationFile: String?
+        val log4jConfigurationFile: String?,
+        val imageVersionTag: String // hidden param, not for configuring manually
 ) : Config {
     val subnodePorts = listOf(subnodeRestApiPort, subnodeDebugApiPort, subnodeAdminRpcPort)
 
@@ -109,6 +110,7 @@ data class ContainerNodeConfig(
         const val KEY_MIN_SPACE_QUOTA_BUFFER_MB = "min-space-quota-buffer-mb"
         const val KEY_LABEL = "label"
         const val KEY_LOG4J_CONFIGURATION_FILE = "log4j-configuration-file"
+        const val KEY_IMAGE_VERSION_TAG = "IMAGE_VERSION_TAG" // hidden param, not for configuring manually
 
         fun fullKey(subKey: String) = "$KEY_CONTAINER_PREFIX.${subKey}"
 
@@ -173,6 +175,7 @@ data class ContainerNodeConfig(
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_MIN_SPACE_QUOTA_BUFFER_MB", KEY_MIN_SPACE_QUOTA_BUFFER_MB, 100),
                         labels,
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", KEY_LOG4J_CONFIGURATION_FILE),
+                        System.getenv(KEY_IMAGE_VERSION_TAG) ?: ""
                 )
             }
         }

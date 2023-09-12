@@ -159,13 +159,27 @@ object ContainerConfigFactory : KLogging() {
                 .apply {
                     containerNodeConfig.subnodeUser?.let { user(it) }
                 }
-                .image(containerNodeConfig.containerImage)
+                .image(getContainerImage(containerNodeConfig))
                 .hostConfig(hostConfig)
                 .exposedPorts(portBindings.keys)
                 .env(createNodeConfigEnv(appConfig, containerNodeConfig, container))
                 .labels(containerNodeConfig.labels + (POSTCHAIN_MASTER_PUBKEY to containerNodeConfig.masterPubkey))
                 .build()
     }
+
+    fun getContainerImage(config: ContainerNodeConfig): String =
+            when (val expectedTag = config.imageVersionTag) {
+                "" -> config.containerImage
+                else -> {
+                    when (val actualTag = config.containerImage.substringAfter(":", "")) {
+                        "" -> config.containerImage.substringBefore(":") + ":" + expectedTag
+                        else -> {
+                            if (expectedTag != actualTag) logger.warn { }
+                            config.containerImage
+                        }
+                    }
+                }
+            }
 
     private fun createNodeConfigEnv(appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer) = buildList {
         val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
