@@ -237,6 +237,7 @@ class BaseBlockManager(
                         blockTrace(blockIntent)
                         blockDB.commitBlock(statusManager.commitSignatures)
                     }, {
+                        logger.info("Committed block ${currentBlock!!.header.blockRID.toHex()}")
                         statusManager.onCommittedBlock(currentBlock!!.header.blockRID)
                         lastBlockTimestamp = blockTimestamp(currentBlock!!)
                         currentBlock = null

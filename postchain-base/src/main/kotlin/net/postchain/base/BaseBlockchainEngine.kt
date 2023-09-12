@@ -231,8 +231,6 @@ open class BaseBlockchainEngine(
                     block.header, block.transactions.size, 0, grossStart to grossEnd, netStart to netEnd, 0
             )
             logger.info("Loaded block: $prettyBlockHeader")
-
-            loadLog("End", blockBuilder.getBTrace())
         } catch (e: Exception) {
             try {
                 blockBuilder.rollback()
