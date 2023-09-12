@@ -15,6 +15,7 @@ import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
+import net.postchain.common.getLoggerCaptor
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
@@ -34,7 +35,6 @@ import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 import net.postchain.integrationtest.JsonTools
 import net.postchain.integrationtest.JsonTools.jsonAsMap
-import net.postchain.integrationtest.managedmode.getLoggerCaptor
 import net.postchain.integrationtest.reconfiguration.TogglableFaultyGtxModule
 import org.awaitility.Awaitility
 import org.hamcrest.CoreMatchers.equalTo
