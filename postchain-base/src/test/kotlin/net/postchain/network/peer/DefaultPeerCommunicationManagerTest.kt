@@ -29,9 +29,11 @@ import org.mockito.kotlin.verify
 class DefaultPeerCommunicationManagerTest {
 
     private val blockchainRid = BlockchainRid.buildRepeat(0x01)
+    private lateinit var myPeerInfo: PeerInfo
     private lateinit var peerInfo1: PeerInfo
     private lateinit var peerInfo2: PeerInfo
 
+    private val myPubKey = byteArrayOf(0x09)
     private val pubKey1 = byteArrayOf(0x01)
     private val pubKey2 = byteArrayOf(0x02)
 
@@ -41,6 +43,7 @@ class DefaultPeerCommunicationManagerTest {
 
     @BeforeEach
     fun setUp() {
+        myPeerInfo = peerInfoFromPublicKey(myPubKey)
         peerInfo1 = peerInfoFromPublicKey(pubKey1)
         peerInfo2 = peerInfoFromPublicKey(pubKey2)
     }
@@ -51,13 +54,14 @@ class DefaultPeerCommunicationManagerTest {
         val connectionManager: PeerConnectionManager = mock()
         val peerCommunicationConfig: PeerCommConfiguration = mock {
             on { networkNodes } doReturn NetworkNodes.buildNetworkNodesDummy()
+            on { myPeerInfo() } doReturn myPeerInfo
         }
         val packetEncoder: XPacketEncoder<Int> = mock()
         val packetDecoder: XPacketDecoder<Int> = mock()
 
         // When
         val communicationManager = DefaultPeerCommunicationManager(
-                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, packetEncoder, packetDecoder)
+                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, packetEncoder, packetDecoder, mock())
         communicationManager.init()
 
         // Then
@@ -86,13 +90,14 @@ class DefaultPeerCommunicationManagerTest {
             on { networkNodes } doReturn nodes
             on { resolvePeer(peerInfo1.pubKey) } doReturn peerInfo1
             on { resolvePeer(peerInfo2.pubKey) } doReturn peerInfo2
+            on { myPeerInfo() } doReturn myPeerInfo
         }
         val packetEncoder: XPacketEncoder<Int> = mock()
         val packetDecoder: XPacketDecoder<Int> = mock()
 
         // When
         val communicationManager = DefaultPeerCommunicationManager(
-                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, packetEncoder, packetDecoder)
+                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, packetEncoder, packetDecoder, mock())
         communicationManager.init()
 
         // Then
@@ -115,15 +120,16 @@ class DefaultPeerCommunicationManagerTest {
         val appConfig: AppConfig = mock {
             on { pubKeyByteArray } doReturn pubKey2
         }
-        val nodes = NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), appConfig)
+        val nodes = NetworkNodes.buildNetworkNodes(setOf(myPeerInfo, peerInfo1, peerInfo2), appConfig)
         val peersConfig: PeerCommConfiguration = mock {
             on { networkNodes } doReturn nodes
             on { pubKey } doReturn pubKey1
+            on { myPeerInfo() } doReturn myPeerInfo
         }
 
         // When / Then exception
         assertThrows<IllegalArgumentException> {
-            DefaultPeerCommunicationManager<Int>(mock(), peersConfig, CHAIN_ID, blockchainRid, mock(), mock())
+            DefaultPeerCommunicationManager<Int>(mock(), peersConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock())
                     .apply {
                         sendPacket(0, NodeRid(pubKey1))
                     }
@@ -139,13 +145,16 @@ class DefaultPeerCommunicationManagerTest {
             on { pubKeyByteArray } doReturn pubKey2
         }
         val config = object : PeerCommConfigurationDummy() {
-            override val networkNodes = NetworkNodes.buildNetworkNodes(setOf(peerInfo1Mock, peerInfo2), appConfig)
+            override val networkNodes = NetworkNodes.buildNetworkNodes(setOf(myPeerInfo, peerInfo1Mock, peerInfo2), appConfig)
             override val pubKey = pubKey2
+            override fun myPeerInfo(): PeerInfo {
+                return myPeerInfo
+            }
         }
 
         // When
         val communicationManager = DefaultPeerCommunicationManager<Int>(
-                connectionManager, config, CHAIN_ID, blockchainRid, mock(), mock()
+                connectionManager, config, CHAIN_ID, blockchainRid, mock(), mock(), mock()
         )
                 .apply {
                     init()
@@ -164,10 +173,13 @@ class DefaultPeerCommunicationManagerTest {
     fun broadcastPacket_sends_packet_successfully() {
         // Given
         val connectionManager: PeerConnectionManager = mock()
+        val peerCommunicationConfig: PeerCommConfiguration = mock {
+            on { myPeerInfo() } doReturn myPeerInfo
+        }
 
         // When
         val communicationManager = DefaultPeerCommunicationManager<Int>(
-                connectionManager, mock(), CHAIN_ID, blockchainRid, mock(), mock()
+                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock()
         )
                 .apply {
                     init()
@@ -184,10 +196,13 @@ class DefaultPeerCommunicationManagerTest {
     fun shutdown_successfully_disconnects_chain() {
         // Given
         val connectionManager: PeerConnectionManager = mock()
+        val peerCommunicationConfig: PeerCommConfiguration = mock {
+            on { myPeerInfo() } doReturn myPeerInfo
+        }
 
         // When
         val communicationManager = DefaultPeerCommunicationManager<Int>(
-                connectionManager, mock(), CHAIN_ID, blockchainRid, mock(), mock()
+                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock()
         )
                 .apply {
                     init()

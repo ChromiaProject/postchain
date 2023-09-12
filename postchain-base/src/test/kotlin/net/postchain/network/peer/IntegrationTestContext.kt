@@ -25,7 +25,7 @@ class IntegrationTestContext(
             mock(), mock())
 
     val communicationManager = DefaultPeerCommunicationManager<Int>(
-            connectionManager, peerCommunicationConfig, 1L, mock(), mock(), mock()
+            connectionManager, peerCommunicationConfig, 1L, mock(), mock(), mock(), mock()
     )
 
     fun shutdown() {
