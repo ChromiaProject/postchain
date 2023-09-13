@@ -110,7 +110,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
     }
 
     override fun getFaultyBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): ByteArray? {
-        if (nmApiVersion < 5) return null
+        if (nmApiVersion < 6) return null
 
         val res = query(
                 "nm_get_faulty_blockchain_configuration",
