@@ -117,6 +117,7 @@ import org.http4k.server.asServer
 import java.io.Closeable
 import java.nio.ByteBuffer
 import java.time.Duration
+import java.util.concurrent.Semaphore
 
 const val BLOCKCHAIN_RID = "blockchainRid"
 
@@ -125,13 +126,16 @@ const val BLOCKCHAIN_RID = "blockchainRid"
  *
  * @param requestConcurrency  number of incoming HTTP requests to handle concurrently,
  *                            specify 0 for default value based on number of available processor cores
+ * @param chainRequestConcurrency  number of incoming HTTP requests to handle concurrently per blockchain,
+ *                                 specify `-1` for no extra limit per chain
  */
 class RestApi(
         private val listenPort: Int,
         val basePath: String,
         private val nodeDiagnosticContext: NodeDiagnosticContext = JsonNodeDiagnosticContext(),
         gracefulShutdown: Boolean = true,
-        requestConcurrency: Int = 0
+        requestConcurrency: Int = 0,
+        private val chainRequestConcurrency: Int = -1
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
@@ -145,22 +149,22 @@ class RestApi(
         private val chainIidPattern = Regex("iid_([0-9]+)")
     }
 
-    private val models = mutableMapOf<BlockchainRid, ChainModel>()
+    private val models = mutableMapOf<BlockchainRid, Pair<ChainModel, Semaphore>>()
     private val bridByIID = mutableMapOf<Long, BlockchainRid>()
 
     override fun attachModel(blockchainRid: BlockchainRid, chainModel: ChainModel) {
-        models[blockchainRid] = chainModel
+        models[blockchainRid] = chainModel to Semaphore(if (chainRequestConcurrency < 0) Int.MAX_VALUE else chainRequestConcurrency)
         bridByIID[chainModel.chainIID] = blockchainRid
     }
 
     override fun detachModel(blockchainRid: BlockchainRid) {
         val model = models.remove(blockchainRid)
         if (model != null) {
-            bridByIID.remove(model.chainIID)
+            bridByIID.remove(model.first.chainIID)
         } else throw ProgrammerMistake("Blockchain $blockchainRid not attached")
     }
 
-    override fun retrieveModel(blockchainRid: BlockchainRid): ChainModel? = models[blockchainRid] as? Model
+    override fun retrieveModel(blockchainRid: BlockchainRid): ChainModel? = models[blockchainRid]?.first
 
     fun actualPort(): Int = server.port()
 
@@ -171,25 +175,35 @@ class RestApi(
             val ref = request.path(BLOCKCHAIN_RID)?.let { parseBlockchainRid(it) }
             if (ref != null) {
                 val blockchainRid = resolveBlockchain(ref)
-                val chainModel = chainModel(blockchainRid)
+                val (chainModel, semaphore) = chainModel(blockchainRid)
                 if (failOnNonLive && !chainModel.live) throw UnavailableException("Blockchain is unavailable")
                 withLoggingContext(
                         BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
                         CHAIN_IID_TAG to chainModel.chainIID.toString()) {
-                    when (chainModel) {
-                        is Model -> {
-                            logger.trace { "Local REST API model found: $chainModel" }
-                            next(request.with(modelKey of chainModel))
-                        }
+                    if (semaphore.tryAcquire()) {
+                        try {
+                            when (chainModel) {
+                                is Model -> {
+                                    logger.trace { "Local REST API model found: $chainModel" }
+                                    next(request.with(modelKey of chainModel))
+                                }
 
-                        is ExternalModel -> {
-                            logger.trace { "External REST API model found: $chainModel" }
-                            chainModel(request)
+                                is ExternalModel -> {
+                                    logger.trace { "External REST API model found: $chainModel" }
+                                    chainModel(request)
+                                }
+                            }
+                        } finally {
+                            semaphore.release()
                         }
+                    } else {
+                        Response(SERVICE_UNAVAILABLE).with(
+                                errorBody.outbound(request) of ErrorBody("Too many concurrent requests for blockchain $blockchainRid")
+                        )
                     }
                 }
             } else {
-                next(request)
+                throw invalidBlockchainRid()
             }
         }
     }
@@ -207,8 +221,33 @@ class RestApi(
         }
     }
 
-    private val liveBlockchain = blockchainRefFilter(true).then(blockchainMetricsFilter)
-    private val blockchain = blockchainRefFilter(false).then(blockchainMetricsFilter)
+    private val loggingFilter = Filter { next ->
+        { request ->
+            if (logger.isDebugEnabled) {
+                val requestInfo = "[${request.source?.address ?: "(unknown)"}] ${request.method} ${request.uri.path}"
+                // Assuming content-type is correctly set we will avoid logging binary request bodies
+                if (Header.CONTENT_TYPE(request)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
+                        && (request.body.length ?: 0) > 0) {
+                    logger.debug { "$requestInfo with body: ${String(request.body.payload.array())}" }
+                } else {
+                    val queryString = request.uri.query
+                    logger.debug("$requestInfo${if (queryString.isBlank()) "" else "?$queryString"}")
+                }
+            }
+            val response = next(request)
+            if (logger.isDebugEnabled) {
+                // Assuming content-type is correctly set we will avoid logging binary response bodies
+                if (Header.CONTENT_TYPE(response)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
+                        && (response.body.length ?: 0) > 0) {
+                    logger.debug("Response body: ${String(response.body.payload.array())}")
+                }
+            }
+            response
+        }
+    }
+
+    private val liveBlockchain = blockchainRefFilter(true).then(blockchainMetricsFilter).then(loggingFilter)
+    private val blockchain = blockchainRefFilter(false).then(blockchainMetricsFilter).then(loggingFilter)
 
     private val app = routes(
             "/" bind static(ResourceLoader.Classpath("/restapi-root")),
@@ -492,30 +531,6 @@ class RestApi(
             .then(ServerFilters.GZip())
             .then(Filter { next ->
                 { request ->
-                    if (logger.isDebugEnabled) {
-                        val requestInfo = "[${request.source?.address ?: "(unknown)"}] ${request.method} ${request.uri.path}"
-                        // Assuming content-type is correctly set we will avoid logging binary request bodies
-                        if (Header.CONTENT_TYPE(request)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
-                                && (request.body.length ?: 0) > 0) {
-                            logger.debug { "$requestInfo with body: ${String(request.body.payload.array())}" }
-                        } else {
-                            val queryString = request.uri.query
-                            logger.debug("$requestInfo${if (queryString.isBlank()) "" else "?$queryString"}")
-                        }
-                    }
-                    val response = next(request)
-                    if (logger.isDebugEnabled) {
-                        // Assuming content-type is correctly set we will avoid logging binary response bodies
-                        if (Header.CONTENT_TYPE(response)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
-                                && (response.body.length ?: 0) > 0) {
-                            logger.debug("Response body: ${String(response.body.payload.array())}")
-                        }
-                    }
-                    response
-                }
-            })
-            .then(Filter { next ->
-                { request ->
                     try {
                         next(request)
                     } catch (e: Exception) {
@@ -643,7 +658,7 @@ class RestApi(
             txAction(model, txRid)
                     ?: throw NotFoundError("Can't find tx with hash $txRid")
 
-    private fun chainModel(blockchainRid: BlockchainRid): ChainModel = models[blockchainRid]
+    private fun chainModel(blockchainRid: BlockchainRid): Pair<ChainModel, Semaphore> = models[blockchainRid]
             ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRid")
 
     /**

@@ -10,7 +10,7 @@ import assertk.assertions.isNotEmpty
 import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
-import net.postchain.common.getLoggerCaptor
+import net.postchain.common.createLogCaptor
 import net.postchain.config.app.AppConfig
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.assertChainNotStarted
@@ -106,7 +106,7 @@ class ManagedModeTestNightly : ConfigFileBasedIntegrationTest() {
         }
 
         // Asserting that chain 101 reconfigures to bad config at height 9L and stops
-        val appender = getLoggerCaptor(BaseBlockchainProcessManager::class.java)
+        val appender = createLogCaptor(BaseBlockchainProcessManager::class.java, "List")
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
             assertEquals(9L, getLastBlockHeight(node.appConfig, 101L))
             val logs = appender.events.filter { it.level == Level.ERROR }.map { it.message.toString() }
