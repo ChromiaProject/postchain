@@ -579,11 +579,6 @@
                     <groupId>org.jetbrains.kotlin</groupId>
                     <artifactId>kotlin-maven-plugin</artifactId>
                     <version>${kotlin.version}</version>
-                    <configuration>
-                        <args>
-                            <arg>-Werror</arg>
-                        </args>
-                    </configuration>
                     <executions>
                         <execution>
                             <id>compile</id>
@@ -826,6 +821,15 @@
             <id>ci</id>
             <build>
                 <plugins>
+                    <plugin>
+                        <groupId>org.jetbrains.kotlin</groupId>
+                        <artifactId>kotlin-maven-plugin</artifactId>
+                        <configuration>
+                            <args>
+                                <arg>-Werror</arg>
+                            </args>
+                        </configuration>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
