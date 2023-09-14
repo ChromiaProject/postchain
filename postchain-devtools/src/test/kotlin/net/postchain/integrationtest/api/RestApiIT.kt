@@ -36,12 +36,10 @@ import net.postchain.gtx.GtxBuilder
 import net.postchain.integrationtest.JsonTools
 import net.postchain.integrationtest.JsonTools.jsonAsMap
 import net.postchain.integrationtest.reconfiguration.TogglableFaultyGtxModule
-import org.apache.logging.log4j.core.test.appender.ListAppender
 import org.awaitility.Awaitility
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.core.IsEqual
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.skyscreamer.jsonassert.JSONAssert
 import org.skyscreamer.jsonassert.JSONCompareMode
@@ -51,14 +49,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 class RestApiIT : IntegrationTestSetup() {
-
-    companion object {
-        @JvmStatic
-        @BeforeAll
-        fun setupAll() {
-            createLogCaptor(RestApi::class.java, "List")
-        }
-    }
 
     private val gson = JsonTools.buildGson()
     private var txHashHex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -551,7 +541,7 @@ class RestApiIT : IntegrationTestSetup() {
         assertThat(txRids).hasSize(4)
 
         // fetch them in parallel
-        val appender = ListAppender.getListAppender("List")
+        val appender = createLogCaptor(RestApi::class.java, "List")
         appender.clear()
         val threadPool = Executors.newFixedThreadPool(txRids.size, ThreadFactoryBuilder().setNameFormat("client-to-REST-API-%d").build())
         val tasks = txRids.map { txRid ->
