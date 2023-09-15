@@ -565,7 +565,7 @@ class RestApiIT : IntegrationTestSetup() {
         val nodeCount = 1
         val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
         configOverrides.setProperty("api.request-concurrency", 4)
-        configOverrides.setProperty("database.readConcurrency", 2)
+        configOverrides.setProperty("api.chain-request-concurrency", 2)
         val sysSetup = doSystemSetup(nodeCount, blockChainFile)
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()

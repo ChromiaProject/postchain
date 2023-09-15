@@ -32,7 +32,7 @@ data class RestApiConfig(
                     config.getEnvOrInt("POSTCHAIN_DEBUG_PORT", "debug.port", DEFAULT_DEBUG_API_PORT),
                     config.getBoolean("api.graceful-shutdown", true),
                     config.getEnvOrInt("POSTCHAIN_API_REQUEST_CONCURRENCY", "api.request-concurrency", 0),
-                    config.databaseReadConcurrency
+                    config.getEnvOrInt("POSTCHAIN_API_CHAIN_REQUEST_CONCURRENCY", "api.chain-request-concurrency", -1)
             )
         }
     }
