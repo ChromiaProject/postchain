@@ -18,6 +18,7 @@ import net.postchain.devtools.OnDemandBlockBuildingStrategy
 import net.postchain.devtools.testinfra.TestTransactionFactory
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.config.ManagedDataSourceAware
+import net.postchain.managed.config.faulty.LocalFaultyConfigurationReportHelper
 import java.time.Clock
 
 class TestBlockchainConfiguration(
@@ -38,19 +39,12 @@ class TestBlockchainConfiguration(
     override fun makeBlockBuilder(ctx: EContext, isSyncing: Boolean, extraExtensions: List<BaseBlockBuilderExtension>): BlockBuilder {
         val height = DatabaseAccess.of(ctx).getLastBlockHeight(ctx) + 1
         val failedConfigToReport = dataSource.getFaultyBlockchainConfiguration(blockchainRid, height)
-                ?: getFaultyConfigToReportAtHeight(ctx, height)
+                ?: LocalFaultyConfigurationReportHelper.getFaultyConfigToReportAtHeight(ctx, dataSource, blockchainRid, height)
 
         return if (failedConfigToReport != null) {
             super.makeBlockBuilder(ctx, isSyncing, extraExtensions + listOf(FailedConfigurationHashBlockBuilderExtension(failedConfigToReport)))
         } else {
             super.makeBlockBuilder(ctx, isSyncing, extraExtensions)
         }
-    }
-
-    private fun getFaultyConfigToReportAtHeight(ctx: EContext, height: Long): ByteArray? {
-        val faultyConfiguration = DatabaseAccess.of(ctx).getFaultyConfiguration(ctx)
-        return if (faultyConfiguration != null && faultyConfiguration.reportAtHeight == height) {
-            faultyConfiguration.configHash.data
-        } else null
     }
 }

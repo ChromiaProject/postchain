@@ -7,6 +7,7 @@ import net.postchain.core.EContext
 import net.postchain.core.block.BlockBuilder
 import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.managed.ManagedNodeDataSource
+import net.postchain.managed.config.faulty.LocalFaultyConfigurationReportHelper
 
 open class DappBlockchainConfiguration(
         private val configuration: GTXBlockchainConfiguration,
@@ -15,19 +16,12 @@ open class DappBlockchainConfiguration(
     override fun makeBlockBuilder(ctx: EContext, isSyncing: Boolean, extraExtensions: List<BaseBlockBuilderExtension>): BlockBuilder {
         val height = DatabaseAccess.of(ctx).getLastBlockHeight(ctx) + 1
         val failedConfigToReport = dataSource.getFaultyBlockchainConfiguration(blockchainRid, height)
-                ?: getFaultyConfigToReportAtHeight(ctx, height)
+                ?: LocalFaultyConfigurationReportHelper.getFaultyConfigToReportAtHeight(ctx, dataSource, blockchainRid, height)
 
         return if (failedConfigToReport != null) {
             configuration.makeBlockBuilder(ctx, isSyncing, extraExtensions + listOf(FailedConfigurationHashBlockBuilderExtension(failedConfigToReport)))
         } else {
             configuration.makeBlockBuilder(ctx, isSyncing, extraExtensions)
         }
-    }
-
-    private fun getFaultyConfigToReportAtHeight(ctx: EContext, height: Long): ByteArray? {
-        val faultyConfiguration = DatabaseAccess.of(ctx).getFaultyConfiguration(ctx)
-        return if (faultyConfiguration != null && faultyConfiguration.reportAtHeight == height) {
-            faultyConfiguration.configHash.data
-        } else null
     }
 }
