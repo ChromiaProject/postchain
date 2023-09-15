@@ -45,6 +45,8 @@ class OnDemandBlockBuildingStrategy(
         return upToHeight > committedHeight
     }
 
+    override fun hasReachedTimeConstraintsForBlockBuilding(haveSeenTxs: Boolean): Boolean = false
+
     override fun mustWaitMinimumBuildBlockTime(): Long = 0
 
     override fun mustWaitBeforeBuildBlock(): Boolean = false
