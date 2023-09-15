@@ -8,12 +8,14 @@ import net.postchain.api.rest.controller.DebugApi
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.RestApi
+import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.common.BlockchainRid
 import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.rest.model.PostchainEBFTModel
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
+import java.time.Clock
 
 open class BaseApiInfrastructure(
         restApiConfig: RestApiConfig,
@@ -31,6 +33,7 @@ open class BaseApiInfrastructure(
                         listenPort = port,
                         basePath = basePath,
                         nodeDiagnosticContext = nodeDiagnosticContext,
+                        clock = Clock.systemUTC(),
                         gracefulShutdown = restApiConfig.gracefulShutdown,
                         requestConcurrency = restApiConfig.requestConcurrency,
                         chainRequestConcurrency = restApiConfig.chainRequestConcurrency
@@ -69,28 +72,34 @@ open class BaseApiInfrastructure(
             val engine = process.blockchainEngine
             val apiModel: PostchainModel
 
-            val blockchainRid = engine.getConfiguration().blockchainRid
+            val blockchainConfiguration = engine.getConfiguration()
+            val blockchainRid = blockchainConfiguration.blockchainRid
             val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainRid)
+            val queryCacheTtlSeconds =
+                    (blockchainConfiguration as? BaseBlockchainConfiguration)?.configData?.queryCacheTtlSeconds
+                            ?: 0
             if (process is ValidatorBlockchainProcess) { // TODO: EBFT-specific code, but pretty harmless
                 apiModel = PostchainEBFTModel(
-                        engine.getConfiguration().chainID,
+                        blockchainConfiguration.chainID,
                         process.networkAwareTxQueue,
-                        engine.getConfiguration().getTransactionFactory(),
+                        blockchainConfiguration.getTransactionFactory(),
                         engine.getBlockQueries(),
                         blockchainRid,
                         engine.sharedStorage,
                         postchainContext,
-                        diagnosticData
+                        diagnosticData,
+                        queryCacheTtlSeconds
                 )
             } else {
                 apiModel = PostchainModel(
-                        engine.getConfiguration().chainID,
+                        blockchainConfiguration.chainID,
                         engine.getTransactionQueue(),
                         engine.getBlockQueries(),
                         blockchainRid,
                         engine.sharedStorage,
                         postchainContext,
-                        diagnosticData
+                        diagnosticData,
+                        queryCacheTtlSeconds
                 )
             }
 

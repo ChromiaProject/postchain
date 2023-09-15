@@ -25,6 +25,7 @@ import net.postchain.api.rest.blocksBody
 import net.postchain.api.rest.configurationInBody
 import net.postchain.api.rest.configurationOutBody
 import net.postchain.api.rest.controller.http4k.NettyWithCustomWorkerGroup
+import net.postchain.api.rest.controller.http4k.expires
 import net.postchain.api.rest.emptyBody
 import net.postchain.api.rest.errorBody
 import net.postchain.api.rest.gtvJsonBody
@@ -90,11 +91,14 @@ import org.http4k.core.Status.Companion.INTERNAL_SERVER_ERROR
 import org.http4k.core.Status.Companion.NOT_FOUND
 import org.http4k.core.Status.Companion.OK
 import org.http4k.core.Status.Companion.SERVICE_UNAVAILABLE
+import org.http4k.core.maxAge
+import org.http4k.core.public
 import org.http4k.core.queries
 import org.http4k.core.then
 import org.http4k.core.toParametersMap
 import org.http4k.core.with
 import org.http4k.filter.AllowAll
+import org.http4k.filter.CachingFilters
 import org.http4k.filter.CorsPolicy
 import org.http4k.filter.MicrometerMetrics
 import org.http4k.filter.OriginPolicy
@@ -116,6 +120,7 @@ import org.http4k.server.ServerConfig
 import org.http4k.server.asServer
 import java.io.Closeable
 import java.nio.ByteBuffer
+import java.time.Clock
 import java.time.Duration
 import java.util.concurrent.Semaphore
 
@@ -133,13 +138,14 @@ class RestApi(
         private val listenPort: Int,
         val basePath: String,
         private val nodeDiagnosticContext: NodeDiagnosticContext = JsonNodeDiagnosticContext(),
+        private val clock: Clock,
         gracefulShutdown: Boolean = true,
         requestConcurrency: Int = 0,
         private val chainRequestConcurrency: Int = -1
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 3
+        const val REST_API_VERSION = 4
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -249,24 +255,27 @@ class RestApi(
     private val liveBlockchain = blockchainRefFilter(true).then(blockchainMetricsFilter).then(loggingFilter)
     private val blockchain = blockchainRefFilter(false).then(blockchainMetricsFilter).then(loggingFilter)
 
+    private val immutableResponse = CachingFilters.Response.MaxAge(clock, Duration.ofDays(365))
+    private val volatileResponse = CachingFilters.Response.NoCache()
+
     private val app = routes(
             "/" bind static(ResourceLoader.Classpath("/restapi-root")),
             "/apidocs" bind static(ResourceLoader.Classpath("/restapi-docs")),
-
-            "/version" bind GET to ::getVersion,
             "/_debug" bind static(ResourceLoader.Classpath("/restapi-root/_debug")),
 
-            "/tx/{blockchainRid}" bind POST to liveBlockchain.then(::postTransaction),
-            "/tx/{blockchainRid}/{txRid}" bind GET to blockchain.then(::getTransaction),
-            "/transactions/{blockchainRid}/count" bind GET to blockchain.then(::getTransactionsCount),
-            "/transactions/{blockchainRid}/{txRid}" bind GET to blockchain.then(::getTransactionInfo),
-            "/transactions/{blockchainRid}" bind GET to blockchain.then(::getTransactionsInfo),
-            "/tx/{blockchainRid}/{txRid}/confirmationProof" bind GET to blockchain.then(::getConfirmationProof),
-            "/tx/{blockchainRid}/{txRid}/status" bind GET to liveBlockchain.then(::getTransactionStatus),
+            "/version" bind GET to ::getVersion,
 
-            "/blocks/{blockchainRid}" bind GET to blockchain.then(::getBlocks),
-            "/blocks/{blockchainRid}/{blockRid}" bind GET to blockchain.then(::getBlock),
-            "/blocks/{blockchainRid}/height/{height}" bind GET to blockchain.then(::getBlockByHeight),
+            "/tx/{blockchainRid}" bind POST to liveBlockchain.then(::postTransaction),
+            "/tx/{blockchainRid}/{txRid}" bind GET to blockchain.then(immutableResponse).then(::getTransaction),
+            "/tx/{blockchainRid}/{txRid}/confirmationProof" bind GET to blockchain.then(immutableResponse).then(::getConfirmationProof),
+            "/tx/{blockchainRid}/{txRid}/status" bind GET to liveBlockchain.then(volatileResponse).then(::getTransactionStatus),
+            "/transactions/{blockchainRid}/count" bind GET to blockchain.then(volatileResponse).then(::getTransactionsCount),
+            "/transactions/{blockchainRid}/{txRid}" bind GET to blockchain.then(immutableResponse).then(::getTransactionInfo),
+            "/transactions/{blockchainRid}" bind GET to blockchain.then(volatileResponse).then(::getTransactionsInfo),
+
+            "/blocks/{blockchainRid}" bind GET to blockchain.then(volatileResponse).then(::getBlocks),
+            "/blocks/{blockchainRid}/{blockRid}" bind GET to blockchain.then(immutableResponse).then(::getBlock),
+            "/blocks/{blockchainRid}/height/{height}" bind GET to blockchain.then(immutableResponse).then(::getBlockByHeight),
 
             "/query/{blockchainRid}" bind GET to liveBlockchain.then(::getQuery),
             "/query/{blockchainRid}" bind POST to liveBlockchain.then(::postQuery),
@@ -274,18 +283,19 @@ class RestApi(
             // Direct query. That should be used as example: <img src="http://node/dquery/brid?type=get_picture&id=4555" />
             "/dquery/{blockchainRid}" bind GET to liveBlockchain.then(::directQuery),
             "/query_gtx/{blockchainRid}" bind POST to liveBlockchain.then(::queryGtx),
-            "/query_gtv/{blockchainRid}" bind POST to liveBlockchain.then(::queryGtv),
+            "/query_gtv/{blockchainRid}" bind GET to liveBlockchain.then(::getQueryGtv),
+            "/query_gtv/{blockchainRid}" bind POST to liveBlockchain.then(::postQueryGtv),
 
-            "/node/{blockchainRid}/my_status" bind GET to liveBlockchain.then(::getNodeStatus),
-            "/node/{blockchainRid}/statuses" bind GET to liveBlockchain.then(::getNodeStatuses),
+            "/node/{blockchainRid}/my_status" bind GET to liveBlockchain.then(volatileResponse).then(::getNodeStatus),
+            "/node/{blockchainRid}/statuses" bind GET to liveBlockchain.then(volatileResponse).then(::getNodeStatuses),
             "/brid/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainRid),
 
-            "/blockchain/{blockchainRid}/height" bind GET to blockchain.then(::getCurrentHeight),
+            "/blockchain/{blockchainRid}/height" bind GET to blockchain.then(volatileResponse).then(::getCurrentHeight),
 
             "/config/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainConfiguration),
             "/config/{blockchainRid}" bind POST to liveBlockchain.then(::validateBlockchainConfiguration),
 
-            "/errors/{blockchainRid}" bind GET to blockchain.then(::getErrors),
+            "/errors/{blockchainRid}" bind GET to blockchain.then(volatileResponse).then(::getErrors),
     )
 
     @Suppress("UNUSED_PARAMETER")
@@ -392,7 +402,8 @@ class RestApi(
         val model = model(request)
         val query = extractGetQuery(request.uri.queries().toParametersMap())
         val queryResult = model.query(query)
-        return Response(OK).with(gtvJsonBody of queryResult)
+        val response = Response(OK).with(gtvJsonBody of queryResult)
+        return getQueryResponse(model, response)
     }
 
     private fun postQuery(request: Request): Response {
@@ -424,7 +435,7 @@ class RestApi(
         // first element is content-type
         val contentType = array[0].asString()
         val content = array[1]
-        return when (content.type) {
+        val response = when (content.type) {
             GtvType.STRING -> Response(OK)
                     .with(Header.CONTENT_TYPE.of(ContentType(contentType)))
                     .body(content.asString())
@@ -435,6 +446,7 @@ class RestApi(
 
             else -> throw UserMistake("Unexpected content")
         }
+        return getQueryResponse(model, response)
     }
 
     private fun queryGtx(request: Request): Response {
@@ -451,7 +463,14 @@ class RestApi(
         return Response(OK).with(stringsBody of responses)
     }
 
-    private fun queryGtv(request: Request): Response {
+    private fun getQueryGtv(request: Request): Response {
+        val model = model(request)
+        val query = extractGetQuery(request.uri.queries().toParametersMap())
+        val queryResult = model.query(query)
+        return getQueryResponse(model, Response(OK).with(binaryBody of GtvEncoder.encodeGtv(queryResult)))
+    }
+
+    private fun postQueryGtv(request: Request): Response {
         val model = model(request)
         val query = binaryBody(request)
         val gtvQuery = try {
@@ -461,6 +480,13 @@ class RestApi(
         }
         val response = model.query(gtvQuery)
         return Response(OK).with(binaryBody of GtvEncoder.encodeGtv(response))
+    }
+
+    private fun getQueryResponse(model: Model, response: Response): Response = if (model.queryCacheTtlSeconds > 0) {
+        val ttl = Duration.ofSeconds(model.queryCacheTtlSeconds)
+        response.public().maxAge(ttl).expires(ttl, clock)
+    } else {
+        response
     }
 
     private fun getNodeStatus(request: Request): Response {
@@ -489,7 +515,12 @@ class RestApi(
         val height = heightQuery(request)
         val configuration = model.getBlockchainConfiguration(height)
                 ?: throw UserMistake("Failed to find configuration")
-        return Response(OK).with(configurationOutBody.outbound(request) of configuration)
+        val response = Response(OK).with(configurationOutBody.outbound(request) of configuration)
+        return if (height == -1L) {
+            volatileResponse.then { response }(request)
+        } else {
+            response
+        }
     }
 
     private fun validateBlockchainConfiguration(request: Request): Response {

@@ -61,7 +61,8 @@ open class PostchainModel(
         final override val blockchainRid: BlockchainRid,
         val storage: Storage,
         val postchainContext: PostchainContext,
-        private val diagnosticData: DiagnosticData
+        private val diagnosticData: DiagnosticData,
+        override val queryCacheTtlSeconds: Long
 ) : Model {
 
     companion object : KLogging()

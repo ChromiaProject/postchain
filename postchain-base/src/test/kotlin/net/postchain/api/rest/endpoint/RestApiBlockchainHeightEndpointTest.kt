@@ -13,6 +13,9 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 
 class RestApiBlockchainHeightEndpointTest {
 
@@ -30,7 +33,7 @@ class RestApiBlockchainHeightEndpointTest {
             on { live } doReturn true
         }
 
-        restApi = RestApi(0, basePath, gracefulShutdown = false)
+        restApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
     }
 
     @AfterEach

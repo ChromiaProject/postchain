@@ -26,8 +26,9 @@ class PostchainEBFTModel(
         blockchainRid: BlockchainRid,
         storage: Storage,
         postchainContext: PostchainContext,
-        diagnosticData: DiagnosticData
-) : PostchainModel(chainIID, txQueue, blockQueries, blockchainRid, storage, postchainContext, diagnosticData) {
+        diagnosticData: DiagnosticData,
+        queryCacheTtlSeconds: Long
+) : PostchainModel(chainIID, txQueue, blockQueries, blockchainRid, storage, postchainContext, diagnosticData, queryCacheTtlSeconds) {
 
     override fun postTransaction(tx: ByteArray) {
         val sample = Timer.start(Metrics.globalRegistry)
