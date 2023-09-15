@@ -31,6 +31,7 @@ interface ExternalModel : ChainModel, HttpHandler {
 
 interface Model : ChainModel {
     val blockchainRid: BlockchainRid
+    val queryCacheTtlSeconds: Long
     
     fun postTransaction(tx: ByteArray)
     fun getTransaction(txRID: TxRid): ByteArray?

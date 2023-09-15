@@ -57,7 +57,10 @@ data class BlockchainConfigurationData(
         val revoltConfigData: Gtv?,
         @Name(KEY_CONFIG_CONSENSUS_STRATEGY)
         @Nullable
-        private val configConsensusStrategyString: String?
+        private val configConsensusStrategyString: String?,
+        @Name(KEY_QUERY_CACHE_TTL_SECONDS)
+        @DefaultValue(defaultLong = 0)
+        val queryCacheTtlSeconds: Long?
 ) {
     val historicBrid = historicBridAsByteArray?.let { BlockchainRid(it) }
     val blockchainDependencies = blockchainDependenciesRaw?.let { BaseDependencyFactory.build(it) } ?: listOf()

@@ -30,6 +30,9 @@ import net.postchain.gtx.GtxQuery
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 
 class RestApiMockForClientManual {
     val listenPort = 49545
@@ -49,7 +52,7 @@ class RestApiMockForClientManual {
     @Test
     fun startMockRestApi() {
         val model = MockModel()
-        restApi = RestApi(listenPort, basePath, gracefulShutdown = false)
+        restApi = RestApi(listenPort, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
         restApi.attachModel(blockchainRID, model)
         logger.info("Ready to serve on port ${restApi.actualPort()}")
         Thread.sleep(600000) // Wait 10 minutes
@@ -60,6 +63,7 @@ class RestApiMockForClientManual {
             get() = 5L
         override var live = true
         override val blockchainRid: BlockchainRid = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a1")
+        override val queryCacheTtlSeconds: Long = 0
         val statusUnknown = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         val statusRejected = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
         val statusConfirmed = "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"

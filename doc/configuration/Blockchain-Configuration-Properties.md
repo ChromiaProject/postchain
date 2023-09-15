@@ -10,7 +10,8 @@ This is an attempt to provide a list of possible blockchain configuration (for `
 | `historic_brid` | Historical brid when forking a blockchain                                  | bytea         | |         |
 | `dependencies` | Blockchain dependencies in raw format                                      | gtv           | |         |
 | `max_transaction_execution_time` | Maximum execution time for a tx before it will be rejected, disabled if -1 | int           | | -1      |
-| `config_consensus_strategy` | Configuration consensus strategy                                           | string        | | |
+| `config_consensus_strategy` | Configuration consensus strategy                                           | string        | |         |
+| `query_cache_ttl_seconds` | How long a query response can be cached, in seconds. 0 means no caching.   | int           | | 0       |
 
 ## Block strategy
 Configuration under the key `blockstrategy`.
