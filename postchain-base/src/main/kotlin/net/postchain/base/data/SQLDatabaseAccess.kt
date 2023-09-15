@@ -1303,13 +1303,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     override fun getPrunablePages(ctx: EContext, name: String, nextSnapshotHeight: Long): List<Long> {
         val sql = """
             SELECT page_iid FROM ${tablePages(ctx, name)}
-            WHERE block_height < ? AND level = (SELECT level FROM ${tablePages(ctx, name)} WHERE block_height = ?) 
-            AND left_index = (SELECT left_index FROM ${tablePages(ctx, name)} WHERE block_height = ?)
+            WHERE block_height < ? AND (level, left_index) IN (SELECT level, left_index FROM ${tablePages(ctx, name)} WHERE block_height = ?)
             """.trimIndent()
         ctx.conn.prepareStatement(sql).use { statement ->
             statement.setLong(1, nextSnapshotHeight)
             statement.setLong(2, nextSnapshotHeight)
-            statement.setLong(3, nextSnapshotHeight)
             statement.executeQuery().use { resultSet ->
                 return buildList<Long> {
                     while (resultSet.next()) {
