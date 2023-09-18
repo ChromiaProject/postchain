@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertTimeout
 import java.time.Duration
 
-class FastRevoltTestNightly : IntegrationTestSetup() {
+class FastRevoltSlowIntegrationTest : IntegrationTestSetup() {
 
     @Test
     fun `Verify that disconnected nodes are revolted against when status timeout has passed`() {

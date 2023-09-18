@@ -41,7 +41,7 @@ include:
 stages:
   - build
   - code-coverage
-  - nightly-tests
+  - slow-integration-tests
   - deploy
   - dependency-check
   - release
@@ -58,7 +58,7 @@ deploy-snapshot:
     - SNAPSHOT_VERSION=$MAJOR.$((MINOR + 1)).0-SNAPSHOT
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,nightly
+      --activate-profiles ci,slow-it
       -Drevision=$SNAPSHOT_VERSION
       clean source:jar deploy
 
@@ -71,7 +71,7 @@ deploy:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,nightly
+      --activate-profiles ci,slow-it
       -Drevision=$CI_COMMIT_TAG
       clean source:jar deploy
 
@@ -112,9 +112,9 @@ test-coverage-report:
   dependencies:
     - build
 
-nightly-tests:
+slow-integration-tests:
   extends: .setup
-  stage: nightly-tests
+  stage: slow-integration-tests
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "dev"
       when: always
@@ -124,7 +124,7 @@ nightly-tests:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,nightly
+      --activate-profiles ci,slow-it
       clean verify
 
 dependency-check:

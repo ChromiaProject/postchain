@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
-class FullEbftWithReplicasTestNightly : FullEbftTestNightlyCore() {
+class FullEbftWithReplicasSlowIntegrationTest : FullEbftSlowIntegrationTestCore() {
 
    @Disabled // TODO: [et]: Fix this tests
     @ParameterizedTest(name = "[{index}] nodesCount: {0}, blocksCount: {1}, txPerBlock: {2}, replicasCount: {3}")

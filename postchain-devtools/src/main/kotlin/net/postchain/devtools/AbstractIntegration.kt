@@ -22,7 +22,7 @@ import java.util.concurrent.ScheduledExecutorService
  *
  * 1. Unit tests - A test without dependencies.
  * 2. Integration tests - Depends on the DB.
- * 3. Nightly test - Tests with a lot of data.
+ * 3. Slow integration tests - Tests with a lot of data.
  * 4. Manual test - Requires some manual work to run.
  *
  * Type 2-4 are often heavy, and should inherit this class to get help doing common tasks.

@@ -14,7 +14,7 @@ import net.postchain.devtools.testinfra.TestTransaction
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-class LongRunningTransactionTestNightly : IntegrationTestSetup() {
+class LongRunningTransactionSlowIntegrationTest : IntegrationTestSetup() {
 
     @Test
     fun `Long running tx should be accepted eventually`() {

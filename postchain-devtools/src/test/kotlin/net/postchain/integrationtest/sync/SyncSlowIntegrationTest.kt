@@ -12,7 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.concurrent.TimeUnit
 
-class SyncTestNightly : AbstractSyncTest() {
+class SyncSlowIntegrationTest : AbstractSyncTest() {
 
     companion object : KLogging() {
 
@@ -43,7 +43,7 @@ class SyncTestNightly : AbstractSyncTest() {
     @ParameterizedTest
     @MethodSource("testArguments")
     fun sync(signers: Int, replicas: Int, syncIndex: Set<Int>, stopIndex: Set<Int>, blocksToSync: Int) {
-        println("++ Sync Nightly, -------- Signs: $signers Repls: $replicas SyncIdx: ${syncIndex.size} StopIdx: ${stopIndex.size} blocks: $blocksToSync ------------------")
+        println("++ Sync -------- Signs: $signers Repls: $replicas SyncIdx: ${syncIndex.size} StopIdx: ${stopIndex.size} blocks: $blocksToSync ------------------")
         runSyncTest(signers, replicas, syncIndex, stopIndex, blocksToSync)
     }
 

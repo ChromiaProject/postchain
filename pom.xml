@@ -742,7 +742,7 @@
                 <configuration>
                     <excludes>
                         <exclude>**/*IT.java</exclude>
-                        <exclude>**/*Nightly.java</exclude>
+                        <exclude>**/*SlowIntegrationTest.java</exclude>
                     </excludes>
                     <properties>
                         <configurationParameters>
@@ -854,7 +854,7 @@
             </build>
         </profile>
         <profile>
-            <id>nightly</id>
+            <id>slow-it</id>
             <build>
                 <plugins>
                     <plugin>
@@ -863,7 +863,7 @@
                         <configuration>
                             <includes>
                                 <include>**/*IT.java</include>
-                                <include>**/*Nightly.java</include>
+                                <include>**/*SlowIntegrationTest.java</include>
                             </includes>
                         </configuration>
                         <executions>

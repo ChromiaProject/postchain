@@ -9,7 +9,7 @@ import net.postchain.devtools.testinfra.TestTransaction
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 
-open class FullEbftTestNightlyCore : ConfigFileBasedIntegrationTest() {
+open class FullEbftSlowIntegrationTestCore : ConfigFileBasedIntegrationTest() {
 
     companion object : KLogging()
 

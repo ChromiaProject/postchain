@@ -16,7 +16,7 @@ import org.awaitility.Duration.TEN_SECONDS
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 
-open class FullEbftMultipleChainsTestNightly : ConfigFileBasedIntegrationTest() {
+open class FullEbftMultipleChainsSlowIntegrationTest : ConfigFileBasedIntegrationTest() {
 
     companion object : KLogging()
 

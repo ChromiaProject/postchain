@@ -16,7 +16,7 @@ import java.lang.Thread.sleep
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 
-class ForkTestNightly : ManagedModeTest() {
+class ForkSlowIntegrationTest : ManagedModeTest() {
 
     // If you need a specific node to have a specific property, add it in here
     val extraNodeProperties = mutableMapOf<Int, Map<String, Any>>()
