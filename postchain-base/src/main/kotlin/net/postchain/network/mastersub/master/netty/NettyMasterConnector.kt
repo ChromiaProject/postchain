@@ -14,26 +14,18 @@ class NettyMasterConnector(
 
     companion object : KLogging()
 
-    private val server: NettyServer
-
-    init {
-        server = NettyServer().apply {
-            setCreateChannelHandler {
-                NettyMasterConnection().apply {
-                    onConnectedHandler = { descriptor, connection ->
-                        eventsReceiver.onSubConnected(descriptor, connection)
-                                ?.also { connection.accept(it) }
-                    }
-
-                    onDisconnectedHandler = { descriptor, connection ->
-                        eventsReceiver.onSubDisconnected(descriptor, connection)
-                    }
-                }
+    private val server = NettyServer({
+        NettyMasterConnection().apply {
+            onConnectedHandler = { descriptor, connection ->
+                eventsReceiver.onSubConnected(descriptor, connection)
+                        ?.also { connection.accept(it) }
             }
 
-            run(port)
+            onDisconnectedHandler = { descriptor, connection ->
+                eventsReceiver.onSubDisconnected(descriptor, connection)
+            }
         }
-    }
+    }, port)
 
     override fun shutdown() {
         server.shutdown()

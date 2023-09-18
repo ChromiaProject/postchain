@@ -15,22 +15,19 @@ import net.postchain.common.exception.UserMistake
 import java.net.BindException
 import java.util.concurrent.TimeUnit
 
-class NettyServer {
+class NettyServer(
+        createChannelHandler: () -> ChannelHandler,
+        port: Int
+) {
 
     companion object : KLogging()
 
-    private lateinit var server: ServerBootstrap
-    private lateinit var createChannelHandler: () -> ChannelHandler
-    private lateinit var eventLoopGroup: EventLoopGroup
+    private val eventLoopGroup: EventLoopGroup
 
-    fun setCreateChannelHandler(handlerFactory: () -> ChannelHandler) {
-        this.createChannelHandler = handlerFactory
-    }
-
-    fun run(port: Int) {
+    init {
         eventLoopGroup = NioEventLoopGroup(1, DefaultThreadFactory("NettyServer"))
 
-        server = ServerBootstrap()
+        val server = ServerBootstrap()
                 .group(eventLoopGroup)
                 .channel(NioServerSocketChannel::class.java)
 //                .option(ChannelOption.SO_BACKLOG, 10)
