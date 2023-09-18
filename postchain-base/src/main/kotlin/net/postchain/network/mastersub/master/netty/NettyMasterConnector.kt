@@ -8,14 +8,15 @@ import net.postchain.network.mastersub.master.MasterConnectorEvents
 import net.postchain.network.netty2.NettyServer
 
 class NettyMasterConnector(
-        private val eventsReceiver: MasterConnectorEvents
+        private val eventsReceiver: MasterConnectorEvents,
+        port: Int
 ) : MasterConnector {
 
     companion object : KLogging()
 
-    private lateinit var server: NettyServer
+    private val server: NettyServer
 
-    override fun init(port: Int) {
+    init {
         server = NettyServer().apply {
             setCreateChannelHandler {
                 NettyMasterConnection().apply {

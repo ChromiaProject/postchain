@@ -21,7 +21,7 @@ import net.postchain.network.mastersub.protocol.MsMessage
  */
 class DefaultMasterConnectionManager(
         val appConfig: AppConfig,
-        private val containerNodeConfig: ContainerNodeConfig,
+        containerNodeConfig: ContainerNodeConfig,
         private val blockQueriesProvider: BlockQueriesProvider
 ) : MasterConnectionManager, MasterConnectorEvents {
 
@@ -35,9 +35,7 @@ class DefaultMasterConnectionManager(
     private var isShutDown = false
 
     // Here we don't bother with factory
-    private val masterConnector = NettyMasterConnector(this).apply {
-        init(containerNodeConfig.masterPort)
-    }
+    private val masterConnector = NettyMasterConnector(this, containerNodeConfig.masterPort)
 
     private val chainsWithOneSubConnection = ChainsWithOneConnection<
             MsMessageHandler,
