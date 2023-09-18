@@ -25,7 +25,7 @@ class NettySubConnection(
 
     companion object : KLogging()
 
-    private lateinit var nettyClient: NettyClient
+    private var nettyClient: NettyClient? = null
     private lateinit var context: ChannelHandlerContext
     private var messageHandler: MsMessageHandler? = null
     private lateinit var onConnected: () -> Unit
@@ -78,7 +78,7 @@ class NettySubConnection(
     }
 
     override fun close() {
-        nettyClient.shutdownAsync()
+        nettyClient?.shutdownAsync()
     }
 
     override fun descriptor(): SubConnectionDescriptor {
