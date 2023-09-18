@@ -22,7 +22,7 @@ class NettyClientPeerConnection<PacketType>(
 
     companion object : KLogging()
 
-    private val nettyClient = NettyClient()
+    private lateinit var nettyClient: NettyClient
     private var hasReceivedPing = false
     private var peerPacketHandler: PeerPacketHandler? = null
     private lateinit var context: ChannelHandlerContext
@@ -33,9 +33,7 @@ class NettyClientPeerConnection<PacketType>(
         this.onConnected = onConnected
         this.onDisconnected = onDisconnected
 
-        nettyClient.apply {
-            setChannelHandler(this@NettyClientPeerConnection)
-            connect(peerAddress()).await().apply {
+        nettyClient = NettyClient(this@NettyClientPeerConnection, peerAddress()).also {it.channelFuture.await().apply {
                 if (!isSuccess) {
                     logger.info("Connection failed: ${cause().message}")
                     onDisconnected()

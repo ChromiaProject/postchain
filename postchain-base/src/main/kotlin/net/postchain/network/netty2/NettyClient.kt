@@ -16,20 +16,18 @@ import net.postchain.core.Shutdownable
 import java.net.SocketAddress
 import java.util.concurrent.TimeUnit
 
-class NettyClient : Shutdownable {
+class NettyClient(
+        channelHandler: ChannelHandler,
+        peerAddress: SocketAddress
+) : Shutdownable {
 
-    private lateinit var client: Bootstrap
-    private lateinit var channelHandler: ChannelHandler
-    private lateinit var eventLoopGroup: EventLoopGroup
+    private val eventLoopGroup: EventLoopGroup
+    val channelFuture: ChannelFuture
 
-    fun setChannelHandler(channelHandler: ChannelHandler) {
-        this.channelHandler = channelHandler
-    }
-
-    fun connect(peerAddress: SocketAddress): ChannelFuture {
+    init {
         eventLoopGroup = NioEventLoopGroup(1, DefaultThreadFactory("NettyClient"))
 
-        client = Bootstrap()
+        val client = Bootstrap()
                 .group(eventLoopGroup)
                 .channel(NioSocketChannel::class.java)
                 .option(ChannelOption.TCP_NODELAY, true)
@@ -45,7 +43,7 @@ class NettyClient : Shutdownable {
                     }
                 })
 
-        return client.connect(peerAddress)
+        channelFuture = client.connect(peerAddress)
     }
 
     override fun shutdown() {
