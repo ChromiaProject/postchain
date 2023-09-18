@@ -22,7 +22,7 @@ class NettyClientPeerConnection<PacketType>(
 
     companion object : KLogging()
 
-    private lateinit var nettyClient: NettyClient
+    private var nettyClient: NettyClient? = null
     private var hasReceivedPing = false
     private var peerPacketHandler: PeerPacketHandler? = null
     private lateinit var context: ChannelHandlerContext
@@ -89,7 +89,7 @@ class NettyClientPeerConnection<PacketType>(
     }
 
     override fun close() {
-        nettyClient.shutdownAsync()
+        nettyClient?.shutdownAsync()
     }
 
     override fun descriptor(): PeerConnectionDescriptor = descriptor
