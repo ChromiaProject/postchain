@@ -184,12 +184,14 @@ open class SnapshotPageStore(
         val nextPrunableSnapshotHeight = db.getNextPrunableSnapshotHeight(ctx, name, blockHeight, snapshotsToKeep)
                 ?: return
         val pageIids = db.getPrunablePages(ctx, name, nextPrunableSnapshotHeight)
-        val leftIndex = db.getLeftIndex(ctx, name, pageIids)
-        leftIndex.forEach {
-            db.safePruneAccountStates(ctx, tableNamePrefix,
-                    it + 1, it + (1 shl levelsPerPage), nextPrunableSnapshotHeight)
+        if (pageIids.isNotEmpty()) {
+            val leftIndex = db.getLeftIndex(ctx, name, pageIids)
+            leftIndex.forEach {
+                db.safePruneAccountStates(ctx, tableNamePrefix,
+                        it + 1, it + (1 shl levelsPerPage), nextPrunableSnapshotHeight)
+            }
+            db.deletePages(ctx, name, pageIids)
         }
-        db.deletePages(ctx, name, pageIids)
     }
 }
 
