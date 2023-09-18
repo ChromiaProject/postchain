@@ -18,7 +18,7 @@ class NettyPeerConnector<PacketType>(
 
     companion object : KLogging()
 
-    private lateinit var server: NettyServer
+    private var server: NettyServer? = null
 
     override fun init(peerInfo: PeerInfo, packetDecoder: XPacketDecoder<PacketType>) {
         server = NettyServer({
@@ -57,6 +57,6 @@ class NettyPeerConnector<PacketType>(
     }
 
     override fun shutdown() {
-        server.shutdown()
+        server?.shutdown()
     }
 }
