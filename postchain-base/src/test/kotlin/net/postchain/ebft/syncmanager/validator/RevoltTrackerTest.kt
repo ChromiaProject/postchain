@@ -30,7 +30,8 @@ class RevoltTrackerTest {
     }
     private val revoltConfig: RevoltConfigurationData = mock {
         on { timeout } doReturn 1000
-        on { exponentialDelayBase } doReturn 1000
+        on { getInitialDelay() } doReturn 1000
+        on { getDelayPowerBase() } doReturn 1.2
         on { exponentialDelayMax } doReturn 600_000
         on { fastRevoltStatusTimeout } doReturn -1
     }
