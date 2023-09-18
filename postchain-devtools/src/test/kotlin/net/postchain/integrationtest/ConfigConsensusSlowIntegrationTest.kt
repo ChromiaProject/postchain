@@ -13,7 +13,7 @@ import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Test
 
-class ConfigConsensusTestNightly : ConfigFileBasedIntegrationTest() {
+class ConfigConsensusSlowIntegrationTest : ConfigFileBasedIntegrationTest() {
     private val blockchainConfig1FileName = "/net/postchain/devtools/reconfiguration/four_peers/consensus/blockchain_config_1.xml"
     private val blockchainConfig2 = readBlockchainConfig(
             "/net/postchain/devtools/reconfiguration/four_peers/consensus/blockchain_config_2.xml")

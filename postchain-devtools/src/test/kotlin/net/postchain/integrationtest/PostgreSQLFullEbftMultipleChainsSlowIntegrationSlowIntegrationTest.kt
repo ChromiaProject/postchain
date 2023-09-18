@@ -2,12 +2,12 @@
 
 package net.postchain.integrationtest
 
-import net.postchain.integrationtest.multiple_chains.FullEbftMultipleChainsTestNightly
+import net.postchain.integrationtest.multiple_chains.FullEbftMultipleChainsSlowIntegrationTest
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
-class PostgreSQLFullEbftMultipleChainsTestNightly : FullEbftMultipleChainsTestNightly() {
+class PostgreSQLFullEbftMultipleChainsSlowIntegrationSlowIntegrationTest : FullEbftMultipleChainsSlowIntegrationTest() {
 
     @ParameterizedTest(name = "[{index}] nodesCount: 1, blocksCount: {0}, txPerBlock: {1}")
     @CsvSource(
@@ -21,11 +21,11 @@ class PostgreSQLFullEbftMultipleChainsTestNightly : FullEbftMultipleChainsTestNi
                 blocksCount,
                 txPerBlock,
                 arrayOf(
-                        "classpath:/net/postchain/multiple_chains/ebft_nightly/single_node/node0.properties"
+                        "classpath:/net/postchain/multiple_chains/ebft_slow_it/single_node/node0.properties"
                 ),
                 arrayOf(
-                        "/net/postchain/devtools/multiple_chains/ebft_nightly/single_node/blockchain_config_1.xml",
-                        "/net/postchain/devtools/multiple_chains/ebft_nightly/single_node/blockchain_config_2.xml"
+                        "/net/postchain/devtools/multiple_chains/ebft_slow_it/single_node/blockchain_config_1.xml",
+                        "/net/postchain/devtools/multiple_chains/ebft_slow_it/single_node/blockchain_config_2.xml"
                 ))
     }
 
@@ -42,12 +42,12 @@ class PostgreSQLFullEbftMultipleChainsTestNightly : FullEbftMultipleChainsTestNi
                 blocksCount,
                 txPerBlock,
                 arrayOf(
-                        "classpath:/net/postchain/multiple_chains/ebft_nightly/two_nodes/node0.properties",
-                        "classpath:/net/postchain/multiple_chains/ebft_nightly/two_nodes/node1.properties"
+                        "classpath:/net/postchain/multiple_chains/ebft_slow_it/two_nodes/node0.properties",
+                        "classpath:/net/postchain/multiple_chains/ebft_slow_it/two_nodes/node1.properties"
                 ),
                 arrayOf(
-                        "/net/postchain/devtools/multiple_chains/ebft_nightly/two_nodes/blockchain_config_1.xml",
-                        "/net/postchain/devtools/multiple_chains/ebft_nightly/two_nodes/blockchain_config_2.xml"
+                        "/net/postchain/devtools/multiple_chains/ebft_slow_it/two_nodes/blockchain_config_1.xml",
+                        "/net/postchain/devtools/multiple_chains/ebft_slow_it/two_nodes/blockchain_config_2.xml"
                 ))
     }
 
@@ -64,15 +64,15 @@ class PostgreSQLFullEbftMultipleChainsTestNightly : FullEbftMultipleChainsTestNi
                 blocksCount,
                 txPerBlock,
                 arrayOf(
-                        "classpath:/net/postchain/multiple_chains/ebft_nightly/five_nodes/node0.properties",
-                        "classpath:/net/postchain/multiple_chains/ebft_nightly/five_nodes/node1.properties",
-                        "classpath:/net/postchain/multiple_chains/ebft_nightly/five_nodes/node2.properties",
-                        "classpath:/net/postchain/multiple_chains/ebft_nightly/five_nodes/node3.properties",
-                        "classpath:/net/postchain/multiple_chains/ebft_nightly/five_nodes/node4.properties"
+                        "classpath:/net/postchain/multiple_chains/ebft_slow_it/five_nodes/node0.properties",
+                        "classpath:/net/postchain/multiple_chains/ebft_slow_it/five_nodes/node1.properties",
+                        "classpath:/net/postchain/multiple_chains/ebft_slow_it/five_nodes/node2.properties",
+                        "classpath:/net/postchain/multiple_chains/ebft_slow_it/five_nodes/node3.properties",
+                        "classpath:/net/postchain/multiple_chains/ebft_slow_it/five_nodes/node4.properties"
                 ),
                 arrayOf(
-                        "/net/postchain/devtools/multiple_chains/ebft_nightly/five_nodes/blockchain_config_1.xml",
-                        "/net/postchain/devtools/multiple_chains/ebft_nightly/five_nodes/blockchain_config_2.xml"
+                        "/net/postchain/devtools/multiple_chains/ebft_slow_it/five_nodes/blockchain_config_1.xml",
+                        "/net/postchain/devtools/multiple_chains/ebft_slow_it/five_nodes/blockchain_config_2.xml"
                 ))
     }
 

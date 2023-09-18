@@ -19,7 +19,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 import kotlin.system.measureNanoTime
 
-class GTXPerformanceTestNightly : IntegrationTestSetup() {
+class GTXPerformanceSlowIntegrationTest : IntegrationTestSetup() {
 
     companion object : KLogging()
 

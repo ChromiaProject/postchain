@@ -22,7 +22,7 @@ import org.skyscreamer.jsonassert.JSONCompareMode
 import java.util.concurrent.CountDownLatch
 import kotlin.concurrent.timer
 
-class FourPeersReconfigurationTestNightly : ReconfigurationTest() {
+class FourPeersReconfigurationSlowIntegrationTest : ReconfigurationTest() {
 
     @Test
     fun reconfigurationAtHeight_isSuccessful() {

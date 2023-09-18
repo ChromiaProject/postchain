@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
 /* One signer, two replica nodes. After one block, node 0 (signer is turned off).
  * Node 1 (a replica) is wiped. Need node 2 (the other replica) to be able to sync.
  */
-class ReplicaSyncTestNightly : AbstractSyncTest() {
+class ReplicaSyncSlowIntegrationTest : AbstractSyncTest() {
 
     private companion object : KLogging()
 

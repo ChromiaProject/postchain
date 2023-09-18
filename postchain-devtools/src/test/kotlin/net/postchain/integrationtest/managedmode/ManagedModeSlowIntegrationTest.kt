@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
-class ManagedModeTestNightly : ConfigFileBasedIntegrationTest() {
+class ManagedModeSlowIntegrationTest : ConfigFileBasedIntegrationTest() {
 
     @Test
     fun singlePeer_loadsBlockchain0Configuration_fromManagedDataSource_and_reconfigures() {

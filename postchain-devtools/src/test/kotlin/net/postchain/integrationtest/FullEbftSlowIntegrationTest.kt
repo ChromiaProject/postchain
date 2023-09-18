@@ -5,7 +5,7 @@ package net.postchain.integrationtest
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
-class FullEbftTestNightly : FullEbftTestNightlyCore() {
+class FullEbftSlowIntegrationTest : FullEbftSlowIntegrationTestCore() {
 
     @ParameterizedTest(name = "[{index}] nodesCount: {0}, blocksCount: {1}, txPerBlock: {2}")
     @CsvSource(

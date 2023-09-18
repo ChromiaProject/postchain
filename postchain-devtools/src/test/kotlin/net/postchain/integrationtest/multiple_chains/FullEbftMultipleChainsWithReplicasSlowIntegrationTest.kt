@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
 
-class FullEbftMultipleChainsWithReplicasTestNightly : ConfigFileBasedIntegrationTest() {
+class FullEbftMultipleChainsWithReplicasSlowIntegrationTest : ConfigFileBasedIntegrationTest() {
 
     companion object : KLogging()
 
@@ -36,16 +36,16 @@ class FullEbftMultipleChainsWithReplicasTestNightly : ConfigFileBasedIntegration
                 blockCount,
                 txPerBlock,
                 arrayOf(
-                        "classpath:/net/postchain/multiple_chains/ebft_nightly/five_nodes/node0.properties",
-                        "classpath:/net/postchain/multiple_chains/ebft_nightly/five_nodes/node1.properties",
-                        "classpath:/net/postchain/multiple_chains/ebft_nightly/five_nodes/node2.properties",
-                        "classpath:/net/postchain/multiple_chains/ebft_nightly/five_nodes/node3.properties",
-                        "classpath:/net/postchain/multiple_chains/ebft_nightly/five_nodes/node4.properties",
-                        "classpath:/net/postchain/multiple_chains/ebft_nightly/five_nodes/replica0.properties"
+                        "classpath:/net/postchain/multiple_chains/ebft_slow_it/five_nodes/node0.properties",
+                        "classpath:/net/postchain/multiple_chains/ebft_slow_it/five_nodes/node1.properties",
+                        "classpath:/net/postchain/multiple_chains/ebft_slow_it/five_nodes/node2.properties",
+                        "classpath:/net/postchain/multiple_chains/ebft_slow_it/five_nodes/node3.properties",
+                        "classpath:/net/postchain/multiple_chains/ebft_slow_it/five_nodes/node4.properties",
+                        "classpath:/net/postchain/multiple_chains/ebft_slow_it/five_nodes/replica0.properties"
                 ),
                 arrayOf(
-                        "/net/postchain/devtools/multiple_chains/ebft_nightly/five_nodes/blockchain_config_1.xml",
-                        "/net/postchain/devtools/multiple_chains/ebft_nightly/five_nodes/blockchain_config_2.xml"
+                        "/net/postchain/devtools/multiple_chains/ebft_slow_it/five_nodes/blockchain_config_1.xml",
+                        "/net/postchain/devtools/multiple_chains/ebft_slow_it/five_nodes/blockchain_config_2.xml"
                 ))
     }
 
