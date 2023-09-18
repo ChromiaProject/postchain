@@ -42,7 +42,10 @@ data class RevoltConfigurationData(
     fun getInitialDelay() = exponentialDelayBase ?: exponentialDelayInitial
 
     fun getDelayPowerBase() = try {
-        exponentialDelayPowerBase.toDouble()
+        val exponentialDelayPowerBase = exponentialDelayPowerBase.toDouble()
+        if (exponentialDelayPowerBase <= 1) {
+            throw UserMistake("Value '$exponentialDelayPowerBase' configured for $KEY_REVOLT_EXPONENTIAL_DELAY_POWER_BASE is not allowed, it must be greater than 1")
+        } else exponentialDelayPowerBase
     } catch (e: NumberFormatException) {
         throw UserMistake("Value '$exponentialDelayPowerBase' configured for $KEY_REVOLT_EXPONENTIAL_DELAY_POWER_BASE is not a valid number")
     }
