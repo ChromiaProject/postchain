@@ -351,7 +351,7 @@ open class BaseBlockchainEngine(
                     }
                 }
             } else {
-                if (shouldBuildBlock()) { // tx == null
+                if (shouldStopWaitingForTxs(acceptedTxs)) { // tx == null
                     delayTimer.stop()
                     break
                 } else {
@@ -386,7 +386,8 @@ open class BaseBlockchainEngine(
         metrics.blocks.record(blockEndTime, TimeUnit.NANOSECONDS)
     }
 
-    private fun shouldBuildBlock() = !strategy.preemptiveBlockBuilding() || strategy.shouldBuildBlock()
+    private fun shouldStopWaitingForTxs(acceptedTxs: Int) = !strategy.preemptiveBlockBuilding() ||
+            (strategy.mustWaitMinimumBuildBlockTime() == 0L && strategy.hasReachedTimeConstraintsForBlockBuilding(acceptedTxs > 0))
 
     private fun mustWaitMinimumBuildBlockTime() = if (strategy.preemptiveBlockBuilding()) strategy.mustWaitMinimumBuildBlockTime() else 0
 

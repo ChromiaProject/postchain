@@ -80,10 +80,10 @@ class BaseBlockBuildingStrategyTest {
     @Order(1)
     fun test_maxBlockTime_for_block0() {
         currentMillis.value = MIN_INTER_BLOCK_INTERVAL + 1
-        assertThat(sut.shouldBuildBlock()).isEqualTo(false)
+        assertThat(sut.hasReachedTimeConstraintsForBlockBuilding(false)).isEqualTo(false)
 
         currentMillis.value = MAX_BLOCK_TIME + 1
-        assertThat(sut.shouldBuildBlock()).isEqualTo(true)
+        assertThat(sut.hasReachedTimeConstraintsForBlockBuilding(false)).isEqualTo(true)
 
         // Commiting block0 now
         sut.blockCommitted(committedBlockData())
@@ -116,11 +116,11 @@ class BaseBlockBuildingStrategyTest {
         currentMillis.value = currentMillis.value + MIN_INTER_BLOCK_INTERVAL + 1
 
         // Testing 'maxtxdelay': 'minInterBlockInterval' is NOT passed yet
-        assertThat(sut.shouldBuildBlock()).isEqualTo(false) // 1 tx only
+        assertThat(sut.hasReachedTimeConstraintsForBlockBuilding(true)).isEqualTo(false) // 1 tx only
 
         // Testing 'maxtxdelay': 'maxtxdelay' already passed.
         currentMillis.value = currentMillis.value + MAX_TX_DELAY + 1
-        assertThat(sut.shouldBuildBlock()).isEqualTo(true)
+        assertThat(sut.hasReachedTimeConstraintsForBlockBuilding(true)).isEqualTo(true)
 
         // Commiting block2 now
         sut.blockCommitted(committedBlockData())

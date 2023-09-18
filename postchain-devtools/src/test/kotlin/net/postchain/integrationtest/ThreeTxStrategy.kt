@@ -33,6 +33,8 @@ class ThreeTxStrategy(
         return txQueue.getTransactionQueueSize() >= 3
     }
 
+    override fun hasReachedTimeConstraintsForBlockBuilding(haveSeenTxs: Boolean): Boolean = false
+
     override fun mustWaitMinimumBuildBlockTime(): Long = 0
 
     override fun mustWaitBeforeBuildBlock(): Boolean = false

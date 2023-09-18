@@ -18,9 +18,6 @@
             <entry key="name">
                 <string>net.postchain.base.BaseBlockBuildingStrategy</string>
             </entry>
-            <entry key="maxblocktime">
-                <int>500</int>
-            </entry>
         </dict>
     </entry>
     <entry key="configurationfactory">

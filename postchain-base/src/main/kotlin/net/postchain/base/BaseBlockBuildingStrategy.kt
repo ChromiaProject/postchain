@@ -63,20 +63,28 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
     override fun preemptiveBlockBuilding(): Boolean = preemptiveBlockBuilding
 
     override fun shouldBuildBlock(): Boolean {
-        val now = currentTimeMillis()
-
         if (mustWaitMinimumBuildBlockTime() > 0) return false
-        if (now - lastBlockTime > maxBlockTime) return true
-        if (firstTxTime > 0 && now - firstTxTime > maxTxDelay) return true
 
         val transactionQueueSize = txQueue.getTransactionQueueSize()
         if (transactionQueueSize >= maxBlockTransactions) return true
-        if (firstTxTime == 0L && transactionQueueSize > 0) {
+        return if (hasReachedTimeConstraintsForBlockBuilding(transactionQueueSize > 0)) {
+            true
+        } else {
+            extendedShouldBuildBlock()
+        }
+    }
+
+    override fun hasReachedTimeConstraintsForBlockBuilding(haveSeenTxs: Boolean): Boolean {
+        val now = currentTimeMillis()
+
+        if (now - lastBlockTime > maxBlockTime) return true
+        if (firstTxTime > 0 && now - firstTxTime > maxTxDelay) return true
+
+        if (firstTxTime == 0L && haveSeenTxs) {
             firstTxTime = now
-            return false
         }
 
-        return extendedShouldBuildBlock()
+        return false
     }
 
     override fun mustWaitMinimumBuildBlockTime(): Long {
