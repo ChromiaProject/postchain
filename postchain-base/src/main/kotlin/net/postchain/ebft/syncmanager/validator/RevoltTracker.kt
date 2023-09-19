@@ -5,14 +5,16 @@ package net.postchain.ebft.syncmanager.validator
 import net.postchain.core.BlockchainEngine
 import net.postchain.ebft.NodeStatus
 import net.postchain.ebft.StatusManager
+import java.time.Clock
 import kotlin.math.log
 import kotlin.math.pow
 
 
-open class RevoltTracker(
+class RevoltTracker(
         private val statusManager: StatusManager,
         private val config: RevoltConfigurationData,
-        engine: BlockchainEngine
+        engine: BlockchainEngine,
+        private val clock: Clock
 ) {
     private val initialDelay = config.getInitialDelay()
     private val exponentialDelayPowerBase = config.getDelayPowerBase()
@@ -79,5 +81,5 @@ open class RevoltTracker(
 
     private fun shouldBuildBlock(): Boolean = blockBuildingStrategy.shouldBuildBlock()
 
-    protected open fun currentTimeMillis() = System.currentTimeMillis()
+    private fun currentTimeMillis() = clock.millis()
 }

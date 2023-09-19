@@ -47,7 +47,7 @@ class BaseStatusManager(
         myStatus.serial = currentTimeMillis() - ZERO_SERIAL_TIME
     }
 
-    private fun currentTimeMillis(): Long = clock.millis()
+    private fun currentTimeMillis() = clock.millis()
 
     override fun getMyIndex() = myIndex
 
