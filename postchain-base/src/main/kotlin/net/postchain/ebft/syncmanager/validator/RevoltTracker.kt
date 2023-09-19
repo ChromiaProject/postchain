@@ -8,25 +8,24 @@ import net.postchain.ebft.StatusManager
 import kotlin.math.log
 import kotlin.math.pow
 
+
 open class RevoltTracker(
         private val statusManager: StatusManager,
         private val config: RevoltConfigurationData,
         engine: BlockchainEngine
 ) {
+    private val initialDelay = config.getInitialDelay()
+    private val exponentialDelayPowerBase = config.getDelayPowerBase()
     private val blockBuildingStrategy = engine.getBlockBuildingStrategy()
     private val maxDelayRound = log(
-            ((config.exponentialDelayMax + config.exponentialDelayBase) / config.exponentialDelayBase).toDouble(),
-            DELAY_POWER_BASE
+            ((config.exponentialDelayMax + initialDelay) / initialDelay).toDouble(),
+            exponentialDelayPowerBase
     ).toLong()
     private val initialHeight = statusManager.myStatus.height
     private var prevHeight = initialHeight
     private var prevRound = statusManager.myStatus.round
     var deadline = newDeadline(0)
         private set
-
-    companion object {
-        const val DELAY_POWER_BASE = 1.2
-    }
 
     /**
      * Starts a revolt if certain conditions are met.
@@ -57,7 +56,7 @@ open class RevoltTracker(
         return if (round >= maxDelayRound) {
             baseTimeout + config.exponentialDelayMax
         } else {
-            baseTimeout + (config.exponentialDelayBase * (DELAY_POWER_BASE.pow(round.toDouble()))).toLong() - config.exponentialDelayBase
+            baseTimeout + (initialDelay * (exponentialDelayPowerBase.pow(round.toDouble()))).toLong() - initialDelay
         }
     }
 

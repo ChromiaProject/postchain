@@ -43,9 +43,10 @@ Configuration under the key `gtx`.
 ## Revolt
 Configuration under the key `revolt`.
 
-| Name | Description | Type | Default |
-| ------ | ------ | ------ | ------ |
-| `timeout` | The default revolt timeout in milliseconds | int | 10 000 |
-| `exponential_delay_base` | Base of the exponential increase of the revolt timeout per round | int | 1000 |
-| `exponential_delay_max` | Maximum possible revolt timeout | int | 600 000 |
-| `fast_revolt_status_timeout` | Timeout since last received status message before considering a node disconnected and revolting immediately. -1 to disable this functionality | int | -1 |
+| Name                           | Description                                                                                                                                                   | Type   | Default |
+|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|--------|---------|
+| `timeout`                      | The default revolt timeout in milliseconds                                                                                                                    | int    | 10 000  |
+| `exponential_delay_initial`    | The initial delay of revolt timeout in milliseconds                                                                                                           | int    | 1000    |
+| `exponential_delay_power_base` | Power base of the exponential increase of the revolt timeout per round                                                                                        | string | 1.2     |
+| `exponential_delay_max`        | Maximum possible revolt timeout in milliseconds                                                                                                               | int    | 600 000 |
+| `fast_revolt_status_timeout`   | Timeout in milliseconds since last received status message before considering a node disconnected and revolting immediately. -1 to disable this functionality | int    | -1      |
