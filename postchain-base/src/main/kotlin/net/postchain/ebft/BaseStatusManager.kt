@@ -12,6 +12,7 @@ import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.logging.REVOLTED_ON_NODE_TAG
 import net.postchain.logging.REVOLTING_NODE_TAG
 import net.postchain.metrics.NodeStatusMetrics
+import java.time.Clock
 import java.util.Arrays
 
 /**
@@ -21,28 +22,32 @@ class BaseStatusManager(
         nodes: List<ByteArray>,
         private val myIndex: Int,
         myNextHeight: Long,
-        private val nodeStatusMetrics: NodeStatusMetrics
+        private val nodeStatusMetrics: NodeStatusMetrics,
+        private val clock: Clock
 ) : StatusManager {
     private val nodeCount = nodes.size
     override val nodeStatuses = Array(nodeCount) { NodeStatus() }
     override val commitSignatures: Array<Signature?> = arrayOfNulls(nodeCount)
-    override val myStatus: NodeStatus
+    override val myStatus: NodeStatus = nodeStatuses[myIndex]
     var intent: BlockIntent = DoNothingIntent
     private val quorum = getBFTRequiredSignatureCount(nodeCount)
     private val nodeStatusesTimestamps = Array(nodeCount) { 0L }
     val nodeReportedRevolt = Array(nodeCount) { false }
     private val nodeRids = nodes.map { NodeRid(it) }
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        const val ZERO_SERIAL_TIME = 1518000000000L
+    }
 
     init {
-        myStatus = nodeStatuses[myIndex]
         myStatus.height = myNextHeight
-        // make sure that after restart status updates are still considered fresh
+        // make sure that after restart status updates are still considered fresh,
         // this works fine as long as we have fewer than 1000 updates per second,
         // otherwise we are screwed
-        myStatus.serial = System.currentTimeMillis() - 1518000000000
+        myStatus.serial = currentTimeMillis() - ZERO_SERIAL_TIME
     }
+
+    private fun currentTimeMillis(): Long = clock.millis()
 
     override fun getMyIndex() = myIndex
 
@@ -61,7 +66,7 @@ class BaseStatusManager(
                 if (blockRID == null) {
                     if (ns.blockRID == null) count++
                 } else {
-                    if (ns.blockRID != null && Arrays.equals(ns.blockRID, blockRID))
+                    if (ns.blockRID != null && ns.blockRID.contentEquals(blockRID))
                         count++
                 }
             }
@@ -78,7 +83,7 @@ class BaseStatusManager(
      */
     @Synchronized
     override fun onStatusUpdate(nodeIndex: Int, status: NodeStatus) {
-        nodeStatusesTimestamps[nodeIndex] = System.currentTimeMillis()
+        nodeStatusesTimestamps[nodeIndex] = currentTimeMillis()
         val existingStatus = nodeStatuses[nodeIndex]
         reportRevolt(nodeIndex, status)
         if (
@@ -195,7 +200,7 @@ class BaseStatusManager(
      */
     @Synchronized
     override fun onCommittedBlock(blockRID: ByteArray) {
-        if (Arrays.equals(blockRID, myStatus.blockRID)) {
+        if (blockRID.contentEquals(myStatus.blockRID)) {
             advanceHeight()
         } else
             logger.error("Committed block with wrong RID")
@@ -360,8 +365,6 @@ class BaseStatusManager(
 
         /**
          * Used to reset our block status when we are in HaveBlock state
-         *
-         * @return return true if we have new intent
          */
         fun resetBlock() {
             myStatus.state = NodeBlockState.WaitBlock
@@ -372,9 +375,9 @@ class BaseStatusManager(
 
         /**
          * If we find that the node status are ahead of us
-         * we might want to synch.
+         * we might want to sync.
          */
-        fun potentiallyDoSynch(): FlowStatus {
+        fun potentiallyDoSync(): FlowStatus {
             var sameHeightCount = 0
             var higherHeightCount = 0
             for (ns in nodeStatuses) {
@@ -443,7 +446,7 @@ class BaseStatusManager(
 
         /**
          * Takes care of the [HaveBlock] (second) state
-         * Will move to state [Prepared] if if enough nodes have reached our BlockRID
+         * Will move to state [Prepared] if enough nodes have reached our BlockRID
          */
         fun handleHaveBlockState(): Boolean {
             val count = countNodes(NodeBlockState.HaveBlock, myStatus.height, myStatus.blockRID) +
@@ -470,9 +473,8 @@ class BaseStatusManager(
                 logger.debug { "setting CommitBlockIntent for idx: $myIndex " }
                 return true
             } else {
-                // otherwise we set intent to FetchCommitSignatureIntent with current blockRID and list of nodes which
+                // otherwise, we set intent to FetchCommitSignatureIntent with current blockRID and list of nodes which
                 // are already in prepared state but don't have commit signatures in our array
-
                 val unfetchedNodes = mutableListOf<Int>()
                 for ((i, nodeStatus) in nodeStatuses.withIndex()) {
                     val commitSignature = commitSignatures[i]
@@ -482,12 +484,12 @@ class BaseStatusManager(
                                 ((nodeStatus.height == myStatus.height)
                                         && (nodeStatus.state === NodeBlockState.Prepared)
                                         && nodeStatus.blockRID != null
-                                        && Arrays.equals(nodeStatus.blockRID, myStatus.blockRID))) {
+                                        && nodeStatus.blockRID.contentEquals(myStatus.blockRID))) {
                             unfetchedNodes.add(i)
                         }
                     }
                 }
-                if (!unfetchedNodes.isEmpty()) {
+                if (unfetchedNodes.isNotEmpty()) {
                     val newIntent = FetchCommitSignatureIntent(myStatus.blockRID as ByteArray, unfetchedNodes.toTypedArray())
                     if (newIntent == intent) {
                         return false
@@ -543,10 +545,10 @@ class BaseStatusManager(
         // We should make sure we have enough nodes who can participate in building a block.
         // (If we are in [Prepared] state we ignore this check, it has been done before we got here)
         if (myStatus.state != NodeBlockState.Prepared) {
-            when (potentiallyDoSynch()) {
+            when (potentiallyDoSync()) {
                 FlowStatus.Break -> return false
                 FlowStatus.Continue -> return true
-                FlowStatus.JustRunOn -> Unit// nothing, just go on
+                FlowStatus.JustRunOn -> Unit // nothing, just go on
             }
         }
 
@@ -555,7 +557,7 @@ class BaseStatusManager(
             when (potentiallyRevolt()) {
                 FlowStatus.Break -> return false
                 FlowStatus.Continue -> return true
-                FlowStatus.JustRunOn -> Unit// nothing, just go on
+                FlowStatus.JustRunOn -> Unit // nothing, just go on
             }
         }
 
