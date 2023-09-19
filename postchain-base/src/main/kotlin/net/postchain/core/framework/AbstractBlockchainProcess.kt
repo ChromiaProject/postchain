@@ -12,7 +12,7 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
     val logger = NamedKLogging(this::class.java.simpleName).logger
 
     private val running = AtomicBoolean(false)
-    internal lateinit var process: Thread
+    internal val process: Thread = thread(name = processName, start = false) { main() }
 
     val metrics = AbstractBlockchainProcessMetrics(blockchainEngine.getConfiguration().chainID, blockchainEngine.getConfiguration().blockchainRid, this)
 
@@ -20,7 +20,7 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
 
     final override fun start() {
         running.set(true)
-        process = thread(name = processName) { main() }
+        process.start()
     }
 
     private fun main() {
@@ -53,13 +53,11 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
 
     final override fun shutdown() {
         running.set(false)
-        if (alreadyShutdown()) return
+        if (!process.isAlive) return
         logger.debug { "Shutting down process $processName" }
         process.join()
         metrics.close()
     }
-
-    private fun alreadyShutdown() = !::process.isInitialized || !process.isAlive
 
     abstract fun currentBlockHeight(): Long
 }

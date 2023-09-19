@@ -25,7 +25,7 @@ class NettySubConnection(
 
     companion object : KLogging()
 
-    private val nettyClient = NettyClient()
+    private var nettyClient: NettyClient? = null
     private lateinit var context: ChannelHandlerContext
     private var messageHandler: MsMessageHandler? = null
     private lateinit var onConnected: () -> Unit
@@ -35,9 +35,7 @@ class NettySubConnection(
         this.onConnected = onConnected
         this.onDisconnected = onDisconnected
 
-        nettyClient.apply {
-            setChannelHandler(this@NettySubConnection)
-            connect(masterAddress()).await().apply {
+        nettyClient = NettyClient(this@NettySubConnection, masterAddress()).also {it.channelFuture.await().apply {
                 if (!isSuccess) {
                     logger.info("Connection failed: ${cause().message}")
                     onDisconnected()
@@ -80,7 +78,7 @@ class NettySubConnection(
     }
 
     override fun close() {
-        nettyClient.shutdownAsync()
+        nettyClient?.shutdownAsync()
     }
 
     override fun descriptor(): SubConnectionDescriptor {

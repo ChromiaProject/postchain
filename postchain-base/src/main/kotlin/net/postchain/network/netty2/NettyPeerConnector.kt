@@ -18,30 +18,26 @@ class NettyPeerConnector<PacketType>(
 
     companion object : KLogging()
 
-    private lateinit var server: NettyServer
+    private var server: NettyServer? = null
 
     override fun init(peerInfo: PeerInfo, packetDecoder: XPacketDecoder<PacketType>) {
-        server = NettyServer().apply {
-            setCreateChannelHandler {
-                NettyServerPeerConnection(packetDecoder)
-                        .onConnected { connection ->
-                            eventsReceiver.onNodeConnected(connection)
-                                    ?.also { connection.accept(it) }
-                        }
-                        .onDisconnected { connection ->
-                            eventsReceiver.onNodeDisconnected(connection)
-                        }
-            }
-
-            run(peerInfo.port)
-            logger.info { "Node started listening on messaging port ${peerInfo.port}" }
-        }
+        server = NettyServer({
+            NettyServerPeerConnection(packetDecoder)
+                    .onConnected { connection ->
+                        eventsReceiver.onNodeConnected(connection)
+                                ?.also { connection.accept(it) }
+                    }
+                    .onDisconnected { connection ->
+                        eventsReceiver.onNodeDisconnected(connection)
+                    }
+        }, peerInfo.port)
+        logger.info { "Node started listening on messaging port ${peerInfo.port}" }
     }
 
     override fun connectNode(
-        connectionDescriptor: PeerConnectionDescriptor,
-        peerInfo: PeerInfo,
-        packetEncoder: XPacketEncoder<PacketType>
+            connectionDescriptor: PeerConnectionDescriptor,
+            peerInfo: PeerInfo,
+            packetEncoder: XPacketEncoder<PacketType>
     ) {
         with(NettyClientPeerConnection(peerInfo, packetEncoder, connectionDescriptor)) {
             try {
@@ -61,6 +57,6 @@ class NettyPeerConnector<PacketType>(
     }
 
     override fun shutdown() {
-        server.shutdown()
+        server?.shutdown()
     }
 }
