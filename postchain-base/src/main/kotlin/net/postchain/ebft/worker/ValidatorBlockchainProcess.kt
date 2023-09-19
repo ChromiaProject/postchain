@@ -5,7 +5,9 @@ package net.postchain.ebft.worker
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.NetworkAwareTxQueue
+import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.concurrent.util.get
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainState
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticData
@@ -20,11 +22,15 @@ import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.StatusManager
 import net.postchain.ebft.rest.contract.toStateNodeStatus
 import net.postchain.ebft.syncmanager.validator.AppliedConfigSender
+import net.postchain.ebft.syncmanager.validator.RevoltConfigurationData
+import net.postchain.ebft.syncmanager.validator.RevoltTracker
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
+import net.postchain.gtv.mapper.toObject
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.metrics.NodeStatusMetrics
 import java.lang.Thread.sleep
+import java.time.Clock
 import java.time.Duration
 
 /**
@@ -61,7 +67,8 @@ class ValidatorBlockchainProcess(
                 blockchainConfiguration.signers,
                 blockchainConfiguration.blockchainContext.nodeID,
                 blockchainEngine.getBlockQueries().getLastBlockHeight().get() + 1,
-                NodeStatusMetrics()
+                NodeStatusMetrics(),
+                Clock.systemUTC()
         )
 
         blockDatabase = BaseBlockDatabase(
@@ -83,6 +90,7 @@ class ValidatorBlockchainProcess(
                 blockManager,
                 blockDatabase,
                 nodeStateTracker,
+                RevoltTracker(statusManager, getRevoltConfiguration(blockchainConfiguration), blockchainEngine),
                 ::isProcessRunning,
                 startWithFastSync
         )
@@ -135,4 +143,13 @@ class ValidatorBlockchainProcess(
     override fun getBlockchainState(): BlockchainState = BlockchainState.RUNNING
 
     override fun currentBlockHeight(): Long = syncManager.currentBlockHeight() ?: blockchainEngine.getBlockQueries().getLastBlockHeight().get()
+
+    private fun getRevoltConfiguration(blockchainConfiguration: BlockchainConfiguration): RevoltConfigurationData {
+        return if (blockchainConfiguration is BaseBlockchainConfiguration) {
+            blockchainConfiguration.configData.revoltConfigData?.toObject()
+                    ?: RevoltConfigurationData.default
+        } else {
+            RevoltConfigurationData.default
+        }
+    }
 }

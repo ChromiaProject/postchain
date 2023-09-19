@@ -4,7 +4,6 @@ package net.postchain.ebft.syncmanager.validator
 
 import mu.KLogging
 import mu.withLoggingContext
-import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.withReadConnection
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
@@ -48,7 +47,6 @@ import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
-import net.postchain.gtv.mapper.toObject
 import java.time.Clock
 import java.util.Date
 import java.util.concurrent.CompletableFuture
@@ -63,11 +61,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val blockManager: BlockManager,
                            private val blockDatabase: BlockDatabase,
                            private val nodeStateTracker: NodeStateTracker,
+                           private val revoltTracker: RevoltTracker,
                            isProcessRunning: () -> Boolean,
                            startInFastSync: Boolean
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker) {
-    private val blockchainConfiguration = workerContext.engine.getConfiguration()
-    private val revoltTracker = RevoltTracker(statusManager, getRevoltConfiguration(), workerContext.engine)
+    private val blockchainConfiguration = workerContext.blockchainConfiguration
     private val statusSender = StatusSender(MAX_STATUS_INTERVAL, statusManager, workerContext.communicationManager)
     private val defaultTimeout = 1000
     private var currentTimeout: Int
@@ -268,15 +266,15 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                         net.postchain.ebft.message.Signature(signature.subjectID, signature.data)),
                         validatorAtIndex(nodeIndex))
             }
-            return
-        }
-        val blockSignature = blockDatabase.getBlockSignature(blockRID)
-        blockSignature.whenCompleteUnwrapped(loggingContext) { response, error ->
-            if (error == null) {
-                val packet = BlockSignature(blockRID, net.postchain.ebft.message.Signature(response.subjectID, response.data))
-                communicationManager.sendPacket(packet, validatorAtIndex(nodeIndex))
-            } else {
-                logger.debug(error) { "Error sending BlockSignature" }
+        } else {
+            val blockSignature = blockDatabase.getBlockSignature(blockRID)
+            blockSignature.whenCompleteUnwrapped(loggingContext) { response, error ->
+                if (error == null) {
+                    val packet = BlockSignature(blockRID, net.postchain.ebft.message.Signature(response.subjectID, response.data))
+                    communicationManager.sendPacket(packet, validatorAtIndex(nodeIndex))
+                } else {
+                    logger.debug(error) { "Error sending BlockSignature" }
+                }
             }
         }
     }
@@ -514,15 +512,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
     fun isInFastSync(): Boolean {
         return useFastSyncAlgorithm
-    }
-
-    private fun getRevoltConfiguration(): RevoltConfigurationData {
-        return if (blockchainConfiguration is BaseBlockchainConfiguration) {
-            blockchainConfiguration.configData.revoltConfigData?.toObject()
-                    ?: RevoltConfigurationData.default
-        } else {
-            RevoltConfigurationData.default
-        }
     }
 
     fun currentBlockHeight(): Long? = if (isInFastSync())
