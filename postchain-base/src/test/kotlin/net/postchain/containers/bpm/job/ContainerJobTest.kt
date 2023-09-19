@@ -1,21 +1,24 @@
 package net.postchain.containers.bpm.job
 
 import net.postchain.containers.bpm.ContainerName
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import org.junit.jupiter.api.Assertions.assertEquals
+import java.time.Clock
 
 class ContainerJobTest {
 
     @Test
     fun verifyBackoffTimes() {
         val currentTime = 42L
+        val clock: Clock = mock {
+            on { millis() } doReturn currentTime
+        }
         val containerName = mock<ContainerName>()
         whenever(containerName.name).thenReturn("Name")
-        val job = object : ContainerJob(containerName) {
-            override fun currentTimeMillis() = currentTime
-        }
+        val job = ContainerJob(containerName, clock)
         assertEquals(0, job.failedStartCount)
         assertEquals(0, job.nextExecutionTime)
         job.postponeWithBackoff()

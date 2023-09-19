@@ -90,7 +90,7 @@ class ValidatorBlockchainProcess(
                 blockManager,
                 blockDatabase,
                 nodeStateTracker,
-                RevoltTracker(statusManager, getRevoltConfiguration(blockchainConfiguration), blockchainEngine),
+                RevoltTracker(statusManager, getRevoltConfiguration(blockchainConfiguration), blockchainEngine, Clock.systemUTC()),
                 ::isProcessRunning,
                 startWithFastSync
         )

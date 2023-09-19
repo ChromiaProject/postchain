@@ -97,7 +97,7 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
         return failedBlockTime > 0 && now - failedBlockTime < getBackoffTime()
     }
 
-    private fun currentTimeMillis(): Long = clock.millis()
+    private fun currentTimeMillis() = clock.millis()
 
     open fun extendedShouldBuildBlock(): Boolean = false
 

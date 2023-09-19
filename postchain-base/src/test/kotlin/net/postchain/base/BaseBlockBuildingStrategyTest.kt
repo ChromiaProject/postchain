@@ -3,6 +3,7 @@ package net.postchain.base
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
+import net.postchain.DynamicValueAnswer
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockQueries
@@ -13,9 +14,7 @@ import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
-import org.mockito.invocation.InvocationOnMock
 import org.mockito.kotlin.*
-import org.mockito.stubbing.Answer
 import java.time.Clock
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -70,10 +69,6 @@ class BaseBlockBuildingStrategyTest {
         }
 
         private val sut = BaseBlockBuildingStrategy(strategyData.toObject(), blockQueries, txQueue, clock)
-
-        class DynamicValueAnswer<T>(var value: T) : Answer<T> {
-            override fun answer(p0: InvocationOnMock?): T = value
-        }
     }
 
     @Test
