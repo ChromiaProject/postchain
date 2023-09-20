@@ -30,7 +30,6 @@ import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.metrics.NodeStatusMetrics
 import java.lang.Thread.sleep
-import java.time.Clock
 import java.time.Duration
 
 /**
@@ -67,8 +66,7 @@ class ValidatorBlockchainProcess(
                 blockchainConfiguration.signers,
                 blockchainConfiguration.blockchainContext.nodeID,
                 blockchainEngine.getBlockQueries().getLastBlockHeight().get() + 1,
-                NodeStatusMetrics(),
-                Clock.systemUTC()
+                NodeStatusMetrics()
         )
 
         blockDatabase = BaseBlockDatabase(
@@ -90,7 +88,7 @@ class ValidatorBlockchainProcess(
                 blockManager,
                 blockDatabase,
                 nodeStateTracker,
-                RevoltTracker(statusManager, getRevoltConfiguration(blockchainConfiguration), blockchainEngine, Clock.systemUTC()),
+                RevoltTracker(statusManager, getRevoltConfiguration(blockchainConfiguration), blockchainEngine),
                 ::isProcessRunning,
                 startWithFastSync
         )

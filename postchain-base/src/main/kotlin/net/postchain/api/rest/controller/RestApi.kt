@@ -138,7 +138,7 @@ class RestApi(
         private val listenPort: Int,
         val basePath: String,
         private val nodeDiagnosticContext: NodeDiagnosticContext = JsonNodeDiagnosticContext(),
-        private val clock: Clock,
+        private val clock: Clock = Clock.systemUTC(),
         gracefulShutdown: Boolean = true,
         requestConcurrency: Int = 0,
         private val chainRequestConcurrency: Int = -1

@@ -66,8 +66,8 @@ class FastSynchronizer(
         private val blockDatabase: BlockDatabase,
         val params: SyncParameters,
         val peerStatuses: FastSyncPeerStatuses,
-        val clock: Clock,
-        val isProcessRunning: () -> Boolean
+        val isProcessRunning: () -> Boolean,
+        val clock: Clock = Clock.systemUTC(),
 ) : AbstractSynchronizer(wrkrCntxt) {
 
     val jobs = TreeMap<Long, Job>()

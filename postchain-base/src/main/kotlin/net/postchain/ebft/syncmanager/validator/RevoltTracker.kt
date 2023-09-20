@@ -14,7 +14,7 @@ class RevoltTracker(
         private val statusManager: StatusManager,
         private val config: RevoltConfigurationData,
         engine: BlockchainEngine,
-        private val clock: Clock
+        private val clock: Clock = Clock.systemUTC()
 ) {
     private val initialDelay = config.getInitialDelay()
     private val exponentialDelayPowerBase = config.getDelayPowerBase()

@@ -24,7 +24,6 @@ import net.postchain.ebft.syncmanager.common.SyncMethod
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
-import java.time.Clock
 
 class ReadOnlyBlockchainProcess(
         private val workerContext: WorkerContext,
@@ -54,7 +53,6 @@ class ReadOnlyBlockchainProcess(
             blockDatabase,
             params,
             FastSyncPeerStatuses(params),
-            Clock.systemUTC(),
             ::isProcessRunning
     )
 
@@ -62,7 +60,6 @@ class ReadOnlyBlockchainProcess(
             workerContext,
             blockDatabase,
             params,
-            Clock.systemUTC(),
             ::isProcessRunning
     )
 
