@@ -46,7 +46,6 @@ import net.postchain.logging.BLOCK_RID_TAG
 import net.postchain.metrics.BaseBlockchainEngineMetrics
 import net.postchain.metrics.DelayTimer
 import java.lang.Long.max
-import java.time.Clock
 import java.util.concurrent.TimeUnit
 import java.util.stream.Collectors
 import kotlin.time.Duration.Companion.minutes
@@ -78,7 +77,6 @@ open class BaseBlockchainEngine(
             blockchainConfiguration.transactionQueueSize,
             recheckThreadInterval = 1.minutes,
             recheckTxInterval = blockchainConfiguration.transactionQueueRecheckInterval,
-            Clock.systemUTC(),
             if (blockchainConfiguration.hasQuery(PRIORITIZE_QUERY_NAME))
                 BaseTransactionPrioritizer { name: String, args: Gtv -> blockQueries.query(name, args).toCompletableFuture().get() }
             else

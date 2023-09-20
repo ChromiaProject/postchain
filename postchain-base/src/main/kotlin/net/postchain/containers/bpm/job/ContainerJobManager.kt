@@ -6,7 +6,6 @@ import net.postchain.containers.bpm.Chain
 import net.postchain.containers.bpm.ContainerName
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Shutdownable
-import java.time.Clock
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -138,7 +137,7 @@ internal class DefaultContainerJobManager(
     private fun jobOf(containerName: ContainerName): ContainerJob {
         lockJobs.withLock {
             return jobs.computeIfAbsent(containerName.name) {
-                ContainerJob(containerName, Clock.systemUTC())
+                ContainerJob(containerName)
             } as ContainerJob
         }
     }

@@ -34,7 +34,6 @@ import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import java.lang.Thread.sleep
-import java.time.Clock
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -72,7 +71,6 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
             blockDatabase,
             syncParams,
             FastSyncPeerStatuses(syncParams),
-            Clock.systemUTC(),
             ::isProcessRunning
     )
 
@@ -147,7 +145,6 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                             blockDatabase,
                             params,
                             FastSyncPeerStatuses(params),
-                            Clock.systemUTC(),
                             ::isProcessRunning
                     )
                     isSyncingHistoric = true

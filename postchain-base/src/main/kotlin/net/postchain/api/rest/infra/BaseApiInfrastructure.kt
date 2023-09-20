@@ -15,7 +15,6 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.rest.model.PostchainEBFTModel
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
-import java.time.Clock
 
 open class BaseApiInfrastructure(
         restApiConfig: RestApiConfig,
@@ -33,7 +32,6 @@ open class BaseApiInfrastructure(
                         listenPort = port,
                         basePath = basePath,
                         nodeDiagnosticContext = nodeDiagnosticContext,
-                        clock = Clock.systemUTC(),
                         gracefulShutdown = restApiConfig.gracefulShutdown,
                         requestConcurrency = restApiConfig.requestConcurrency,
                         chainRequestConcurrency = restApiConfig.chainRequestConcurrency

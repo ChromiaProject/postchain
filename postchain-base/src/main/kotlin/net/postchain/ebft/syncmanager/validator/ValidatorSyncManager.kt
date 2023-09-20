@@ -47,7 +47,6 @@ import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
-import java.time.Clock
 import java.util.Date
 import java.util.concurrent.CompletableFuture
 import kotlin.math.floor
@@ -95,7 +94,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 blockDatabase,
                 params,
                 FastSyncPeerStatuses(params),
-                Clock.systemUTC(),
                 isProcessRunning
         )
 

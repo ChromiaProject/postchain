@@ -28,7 +28,7 @@ import kotlin.random.Random
 class DefaultPeersConnectionStrategy(
         val connectionManager: PeerConnectionManager,
         val me: NodeRid,
-        val clock: Clock
+        val clock: Clock = Clock.systemUTC()
 ) : PeersConnectionStrategy {
 
     private val peerToDelayMap: MutableMap<NodeRid, ExponentialDelay> = mutableMapOf()

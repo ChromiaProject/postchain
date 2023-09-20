@@ -23,7 +23,7 @@ class BaseStatusManager(
         private val myIndex: Int,
         myNextHeight: Long,
         private val nodeStatusMetrics: NodeStatusMetrics,
-        private val clock: Clock
+        private val clock: Clock = Clock.systemUTC()
 ) : StatusManager {
     private val nodeCount = nodes.size
     override val nodeStatuses = Array(nodeCount) { NodeStatus() }

@@ -22,7 +22,7 @@ open class Job(val name: String)
  * Describes actions over chains that should be done for the container [containerName].
  * Actions are: stop chain, start chain.
  */
-class ContainerJob(val containerName: ContainerName, private val clock: Clock) : Job(containerName.name) {
+class ContainerJob(val containerName: ContainerName, private val clock: Clock = Clock.systemUTC()) : Job(containerName.name) {
 
     private val maxBackoffTime = 5.toDuration(DurationUnit.MINUTES)
     private val lock = ReentrantLock()

@@ -65,8 +65,8 @@ const val MAX_REJECTED = 1000
 class BaseTransactionQueue(private val queueCapacity: Int,
                            recheckThreadInterval: Duration,
                            private val recheckTxInterval: Duration,
-                           private val clock: Clock,
-                           private val prioritizer: TransactionPrioritizer?) : TransactionQueue, Closeable {
+                           private val prioritizer: TransactionPrioritizer?,
+                           private val clock: Clock = Clock.systemUTC()) : TransactionQueue, Closeable {
 
     companion object : KLogging()
 

@@ -133,7 +133,7 @@ class FastSynchronizerTest {
 
     @BeforeEach
     fun setup() {
-        sut = spy(FastSynchronizer(workerContext, blockDatabase, params, peerStatuses, clock) { isProcessRunning })
+        sut = spy(FastSynchronizer(workerContext, blockDatabase, params, peerStatuses, { isProcessRunning }, clock))
     }
 
     ///// processDoneJob /////
