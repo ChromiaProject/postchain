@@ -88,7 +88,7 @@ class ValidatorBlockchainProcess(
                 blockManager,
                 blockDatabase,
                 nodeStateTracker,
-                RevoltTracker(statusManager, getRevoltConfiguration(blockchainConfiguration), blockchainEngine),
+                RevoltTracker(statusManager, blockchainConfiguration.revoltConfiguration, blockchainEngine),
                 ::isProcessRunning,
                 startWithFastSync
         )
@@ -140,14 +140,15 @@ class ValidatorBlockchainProcess(
     override fun isSigner(): Boolean = !syncManager.isInFastSync()
     override fun getBlockchainState(): BlockchainState = BlockchainState.RUNNING
 
-    override fun currentBlockHeight(): Long = syncManager.currentBlockHeight() ?: blockchainEngine.getBlockQueries().getLastBlockHeight().get()
+    override fun currentBlockHeight(): Long = syncManager.currentBlockHeight()
+            ?: blockchainEngine.getBlockQueries().getLastBlockHeight().get()
+}
 
-    private fun getRevoltConfiguration(blockchainConfiguration: BlockchainConfiguration): RevoltConfigurationData {
-        return if (blockchainConfiguration is BaseBlockchainConfiguration) {
-            blockchainConfiguration.configData.revoltConfigData?.toObject()
+val BlockchainConfiguration.revoltConfiguration: RevoltConfigurationData
+    get() =
+        if (this is BaseBlockchainConfiguration) {
+            configData.revoltConfigData?.toObject()
                     ?: RevoltConfigurationData.default
         } else {
             RevoltConfigurationData.default
         }
-    }
-}

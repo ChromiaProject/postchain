@@ -261,14 +261,14 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             if (signature != null) {
                 communicationManager.sendPacket(BlockSignature(
                         blockRID,
-                        net.postchain.ebft.message.Signature(signature.subjectID, signature.data)),
+                        Signature(signature.subjectID, signature.data)),
                         validatorAtIndex(nodeIndex))
             }
         } else {
             val blockSignature = blockDatabase.getBlockSignature(blockRID)
             blockSignature.whenCompleteUnwrapped(loggingContext) { response, error ->
                 if (error == null) {
-                    val packet = BlockSignature(blockRID, net.postchain.ebft.message.Signature(response.subjectID, response.data))
+                    val packet = BlockSignature(blockRID, Signature(response.subjectID, response.data))
                     communicationManager.sendPacket(packet, validatorAtIndex(nodeIndex))
                 } else {
                     logger.debug(error) { "Error sending BlockSignature" }
