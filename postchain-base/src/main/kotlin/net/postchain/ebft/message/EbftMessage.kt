@@ -2,6 +2,7 @@ package net.postchain.ebft.message
 
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BadMessageException
+import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
@@ -16,10 +17,8 @@ abstract class EbftMessage(val topic: MessageTopic) {
                 MessageTopic.ID.value -> Identification(data[1].asByteArray(), BlockchainRid(data[2].asByteArray()), data[3].asInteger())
                 MessageTopic.STATUS.value -> Status.fromGtv(data)
                 MessageTopic.TX.value -> Transaction(data[1].asByteArray())
-                MessageTopic.SIG.value -> Signature(data[1].asByteArray(), data[2].asByteArray())
                 MessageTopic.BLOCKSIG.value -> BlockSignature(data[1].asByteArray(), Signature(data[2].asByteArray(), data[3].asByteArray()))
                 MessageTopic.GETBLOCKSIG.value -> GetBlockSignature(data[1].asByteArray())
-                MessageTopic.BLOCKDATA.value -> BlockData(data[1].asByteArray(), data[2].asArray().map { it.asByteArray() })
                 MessageTopic.COMPLETEBLOCK.value -> CompleteBlock.buildFromGtv(data, 1)
                 MessageTopic.GETBLOCKATHEIGHT.value -> GetBlockAtHeight(data[1].asInteger())
                 MessageTopic.GETUNFINISHEDBLOCK.value -> GetUnfinishedBlock(data[1].asByteArray())

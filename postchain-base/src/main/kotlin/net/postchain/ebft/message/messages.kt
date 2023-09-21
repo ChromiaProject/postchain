@@ -6,6 +6,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.block.BlockDataWithWitness
+import net.postchain.crypto.Signature
 import net.postchain.ebft.message.NullableGtv.gtvToNullableByteArray
 import net.postchain.ebft.message.NullableGtv.nullableByteArrayToGtv
 import net.postchain.gtv.Gtv
@@ -16,13 +17,6 @@ class Transaction(val data: ByteArray) : EbftMessage(MessageTopic.TX) {
 
     override fun toGtv(): Gtv {
         return gtv(topic.toGtv(), gtv(data))
-    }
-}
-
-class Signature(val subjectID: ByteArray, val data: ByteArray) : EbftMessage(MessageTopic.SIG) {
-
-    override fun toGtv(): Gtv {
-        return gtv(topic.toGtv(), gtv(subjectID), gtv(data))
     }
 }
 
@@ -41,13 +35,7 @@ class GetBlockSignature(val blockRID: ByteArray) : EbftMessage(MessageTopic.GETB
     }
 }
 
-class BlockData(val header: ByteArray, val transactions: List<ByteArray>) : EbftMessage(MessageTopic.BLOCKDATA) {
-
-    override fun toGtv(): Gtv {
-        return gtv(topic.toGtv(), gtv(header),
-                gtv(transactions.map { gtv(it) }))
-    }
-}
+class BlockData(val header: ByteArray, val transactions: List<ByteArray>)
 
 class CompleteBlock(val data: BlockData, val height: Long, val witness: ByteArray) : EbftMessage(MessageTopic.COMPLETEBLOCK) {
 
@@ -250,10 +238,8 @@ fun ebftMessageToString(blockchainConfig: BlockchainConfiguration): (EbftMessage
             fun getBlockHeaderRid(header: ByteArray): String = blockchainConfig.decodeBlockHeader(header).blockRID.toHex()
             when (message) {
                 is Transaction -> "Transaction(txRID=${blockchainConfig.getTransactionFactory().decodeTransaction(message.data).getRID().toHex()})"
-                is Signature -> "Signature"
                 is BlockSignature -> "BlockSignature(blockRid=${message.blockRID.toHex()})"
                 is GetBlockSignature -> "GetBlockSignature(blockRid=${message.blockRID.toHex()})"
-                is BlockData -> "BlockData(blockRid=${getBlockHeaderRid(message.header)})"
                 is CompleteBlock -> "CompleteBlock(blockRid=${getBlockHeaderRid(message.data.header)}, height=${message.height})"
                 is GetBlockAtHeight -> "GetBlockAtHeight(height=${message.height})"
                 is GetUnfinishedBlock -> "GetUnfinishedBlock(height=${message.blockRID.toHex()})"

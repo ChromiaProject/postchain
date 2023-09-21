@@ -4,6 +4,7 @@ package net.postchain.ebft.messages
 
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.crypto.Signature
 import net.postchain.ebft.message.BlockData
 import net.postchain.ebft.message.BlockRange
 import net.postchain.ebft.message.BlockSignature
@@ -11,7 +12,6 @@ import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockRange
-import net.postchain.ebft.message.Signature
 import net.postchain.ebft.message.Status
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Test

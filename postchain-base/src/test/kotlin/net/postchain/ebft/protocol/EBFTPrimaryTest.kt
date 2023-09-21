@@ -3,6 +3,7 @@ package net.postchain.ebft.protocol
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.core.block.BlockData
+import net.postchain.crypto.Signature
 import net.postchain.ebft.BuildBlockIntent
 import net.postchain.ebft.DoNothingIntent
 import net.postchain.ebft.FetchCommitSignatureIntent
@@ -116,8 +117,8 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
         doReturn(CompletableFuture.completedStage(Unit)).whenever(blockDatabase).commitBlock(isA())
         // incoming messages
         messagesToReceive(
-                nodeRid2 to BlockSignature(blockRid0, net.postchain.ebft.message.Signature(node2, ByteArray(0))),
-                nodeRid3 to BlockSignature(blockRid0, net.postchain.ebft.message.Signature(node3, ByteArray(0)))
+                nodeRid2 to BlockSignature(blockRid0, Signature(node2, ByteArray(0))),
+                nodeRid3 to BlockSignature(blockRid0, Signature(node3, ByteArray(0)))
         )
         // execute
         syncManager.update()
