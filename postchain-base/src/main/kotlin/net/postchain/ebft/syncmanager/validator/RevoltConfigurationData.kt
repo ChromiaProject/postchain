@@ -33,6 +33,9 @@ data class RevoltConfigurationData(
     @Name(KEY_REVOLT_FAST_REVOLT_STATUS_TIMEOUT)
     @DefaultValue(defaultLong = -1) // Default switched off
     val fastRevoltStatusTimeout: Long,
+    @Name(KEY_REVOLT_WHEN_SHOULD_BUILD_BLOCK)
+    @DefaultValue(defaultBoolean = false)
+    val revoltWhenShouldBuildBlock: Boolean
 ) {
     companion object : KLogging() {
         @JvmStatic

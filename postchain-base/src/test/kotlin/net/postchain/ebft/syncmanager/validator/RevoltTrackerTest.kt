@@ -37,6 +37,7 @@ class RevoltTrackerTest {
         on { getDelayPowerBase() } doReturn 1.2
         on { exponentialDelayMax } doReturn 600_000
         on { fastRevoltStatusTimeout } doReturn -1
+        on { revoltWhenShouldBuildBlock } doReturn true
     }
 
     private var currentMillis = DynamicValueAnswer(100L)
@@ -198,6 +199,16 @@ class RevoltTrackerTest {
     fun `If deadline has passed do revolt`() {
         // setup
         whenever(blockBuildingStrategy.shouldBuildBlock()).thenReturn(true)
+        currentMillis.value = 10000
+        // execute
+        sut.update()
+        // verify
+        verify(statusManager).onStartRevolting()
+    }
+
+    @Test
+    fun `Check that should build block is ignored if we have not configured to check it`() {
+        whenever(revoltConfig.revoltWhenShouldBuildBlock).thenReturn(false)
         currentMillis.value = 10000
         // execute
         sut.update()
