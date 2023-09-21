@@ -36,7 +36,7 @@ class RevoltTracker(
         val current = statusManager.myStatus
         if (fastRevolt(current)) return
 
-        if (!shouldBuildBlock()) return
+        if (config.revoltWhenShouldBuildBlock && !shouldBuildBlock()) return
 
         if (current.height > prevHeight ||
                 current.height == prevHeight && current.round > prevRound) {
