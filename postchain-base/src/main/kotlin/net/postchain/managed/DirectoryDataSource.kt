@@ -20,6 +20,8 @@ interface DirectoryDataSource : ManagedNodeDataSource {
      */
     fun getContainerForBlockchain(brid: BlockchainRid): String
 
+    fun getContainersForBlockchain(brid: BlockchainRid): List<String>
+
     /**
      * What is the resource limits for this container?
      */

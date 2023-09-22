@@ -63,13 +63,6 @@ class ContainerJob(val containerName: ContainerName, private val clock: Clock = 
         }
     }
 
-    fun restartChain(chain: Chain) {
-        lock.withLock {
-            internalChainsToStop.add(chain)
-            internalChainsToStart.add(chain)
-        }
-    }
-
     fun isEmpty(): Boolean {
         lock.withLock {
             return internalChainsToStop.isEmpty() && internalChainsToStart.isEmpty()

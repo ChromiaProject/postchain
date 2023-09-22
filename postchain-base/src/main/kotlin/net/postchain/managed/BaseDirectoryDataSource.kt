@@ -41,6 +41,17 @@ open class BaseDirectoryDataSource(
         }
     }
 
+    override fun getContainersForBlockchain(brid: BlockchainRid): List<String> {
+        return if (nmApiVersion >= 99) {
+            query(
+                    "nm_get_containers_for_blockchain",
+                    buildArgs("blockchain_rid" to gtv(brid.data))
+            ).asArray().map { it.asString() }
+        } else {
+            throw Exception("Directory1 v.{$nmApiVersion} doesn't support 'nm_get_containers_for_blockchain' query")
+        }
+    }
+
     // TODO: [et]: directory vs containerId?
     override fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits {
         val resourceLimits = query(

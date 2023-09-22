@@ -16,7 +16,6 @@ internal interface ContainerJobManager {
     fun <T> withLock(action: () -> T): T
     fun stopChain(chain: Chain)
     fun startChain(chain: Chain)
-    fun restartChain(chain: Chain)
 }
 
 internal class DefaultContainerJobManager(
@@ -53,27 +52,27 @@ internal class DefaultContainerJobManager(
     }
 
     override fun stopChain(chain: Chain) {
-        val job = jobOf(chain.containerName)
-        job.stopChain(chain)
-        if (job.isEmpty()) {
-            lockJobs.withLock {
-                jobs.remove(job.name)
+        chain.containers.forEach {
+            val job = jobOf(it)
+            job.stopChain(chain)
+            if (job.isEmpty()) {
+                lockJobs.withLock {
+                    jobs.remove(job.name)
+                }
             }
         }
     }
 
     override fun startChain(chain: Chain) {
-        val job = jobOf(chain.containerName)
-        job.startChain(chain)
-        if (job.isEmpty()) {
-            lockJobs.withLock {
-                jobs.remove(job.name)
+        chain.containers.forEach {
+            val job = jobOf(it)
+            job.startChain(chain)
+            if (job.isEmpty()) {
+                lockJobs.withLock {
+                    jobs.remove(job.name)
+                }
             }
         }
-    }
-
-    override fun restartChain(chain: Chain) {
-        jobOf(chain.containerName).restartChain(chain)
     }
 
     override fun shutdown() {
