@@ -2,6 +2,7 @@ package net.postchain.ebft.protocol
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import io.micrometer.core.instrument.Counter
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.NetworkNodes
 import net.postchain.base.PeerCommConfiguration
@@ -11,7 +12,9 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
+import net.postchain.core.EContext
 import net.postchain.core.NodeRid
+import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuildingStrategy
@@ -36,6 +39,7 @@ import net.postchain.metrics.NodeStatusMetrics
 import net.postchain.network.CommunicationManager
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.junit.jupiter.api.BeforeEach
+import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -74,7 +78,12 @@ abstract class EBFTProtocolBase {
     protected val blockDatabase: BlockDatabase = mock()
     protected val blockStrategy: BlockBuildingStrategy = mock()
     protected val nodeStateTracker: NodeStateTracker = mock()
-    protected val nodeStatusMetrics: NodeStatusMetrics = mock()
+    protected val counter: Counter = mock()
+    protected val nodeStatusMetrics: NodeStatusMetrics = mock {
+        on { revoltsByNode } doReturn counter
+        on { revoltsOnNode } doReturn counter
+        on { revoltsBetweenOthers } doReturn counter
+    }
     protected val appConfig = AppConfig(PropertiesConfiguration().apply {
     })
     protected val nodeConfig = NodeConfig(appConfig)
@@ -89,10 +98,17 @@ abstract class EBFTProtocolBase {
         on { getTransactionFactory() } doReturn transactionFactory
     }
     protected val transactionQueue: TransactionQueue = mock()
+    protected val eContext: EContext = mock {
+        on { chainID } doReturn 0
+    }
+    protected val storage: Storage = mock {
+        on { openReadConnection(anyLong()) } doReturn eContext
+    }
     protected val blockchainEngine: BlockchainEngine = mock {
         on { getBlockQueries() } doReturn blockQueries
         on { getConfiguration() } doReturn blockchainConfiguration
         on { getTransactionQueue() } doReturn transactionQueue
+        on { blockBuilderStorage } doReturn storage
     }
     protected val commManager: CommunicationManager<EbftMessage> = mock()
     protected val networkNodes: NetworkNodes = mock {
@@ -122,7 +138,7 @@ abstract class EBFTProtocolBase {
         doReturn(BaseStatusManager.ZERO_SERIAL_TIME).whenever(clock).millis()
         statusManager = BaseStatusManager(nodes, myNodeId, 0, nodeStatusMetrics, clock)
         blockManager = BaseBlockManager(blockDatabase, statusManager, blockStrategy, workerContext)
-        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, { true }, false)
+        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, { true }, false, clock)
         statusManager.recomputeStatus()
     }
 

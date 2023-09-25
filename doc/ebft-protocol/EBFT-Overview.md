@@ -4,6 +4,11 @@ The general idea is a more robust and easier to implement BFT. By sacrificing so
 of notifications, we make it both simpler and more robust. Pulling the complete state of nodes removes the need for
 retransmission of messages, which is highly complex and entails a lot of potential corner cases.
 
+## Minimum number of nodes for consensus
+
+3f + 1 is the minimum number of nodes that allow an asynchronous system to provide the safety and liveness
+properties when up to f nodes are faulty. (See [PBFT](https://pmg.csail.mit.edu/papers/osdi99.pdf))
+
 ## Basic structure
 
 - A node is characterized by its state, which indicates where it is in the consensus process. Consensus is based on
