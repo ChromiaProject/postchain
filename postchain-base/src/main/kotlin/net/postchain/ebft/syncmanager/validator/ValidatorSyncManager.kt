@@ -47,6 +47,7 @@ import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
+import java.time.Clock
 import java.util.Date
 import java.util.concurrent.CompletableFuture
 import kotlin.math.floor
@@ -62,10 +63,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val nodeStateTracker: NodeStateTracker,
                            private val revoltTracker: RevoltTracker,
                            isProcessRunning: () -> Boolean,
-                           startInFastSync: Boolean
+                           startInFastSync: Boolean,
+                           private val clock: Clock = Clock.systemUTC()
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker) {
     private val blockchainConfiguration = workerContext.blockchainConfiguration
-    private val statusSender = StatusSender(MAX_STATUS_INTERVAL, statusManager, workerContext.communicationManager)
+    private val statusSender = StatusSender(MAX_STATUS_INTERVAL, statusManager, workerContext.communicationManager, clock)
     private val defaultTimeout = 1000
     private var currentTimeout: Int
     private var processingIntent: BlockIntent
@@ -496,7 +498,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     }
 
     private fun checkIfConfigReloadIsNeeded() {
-        val now = System.currentTimeMillis()
+        val now = clock.millis()
 
         val liveSigners = statusManager.nodeStatuses.indices.count {
             it == statusManager.getMyIndex() || now - statusManager.getLatestStatusTimestamp(it) < STATUS_TIMEOUT
