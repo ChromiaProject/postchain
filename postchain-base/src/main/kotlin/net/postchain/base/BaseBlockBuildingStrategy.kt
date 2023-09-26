@@ -62,6 +62,8 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
 
     override fun preemptiveBlockBuilding(): Boolean = preemptiveBlockBuilding
 
+    override fun shouldBuildPreemptiveBlock(): Boolean = preemptiveBlockBuilding && (txQueue.getTransactionQueueSize() > 0)
+
     override fun shouldBuildBlock(): Boolean {
         if (mustWaitMinimumBuildBlockTime() > 0) return false
 

@@ -28,6 +28,8 @@ class ThreeTxStrategy(
 
     override fun preemptiveBlockBuilding(): Boolean = false
 
+    override fun shouldBuildPreemptiveBlock(): Boolean = false
+
     override fun shouldBuildBlock(): Boolean {
         logger.debug { "PNode $index shouldBuildBlock? ${txQueue.getTransactionQueueSize()}" }
         return txQueue.getTransactionQueueSize() >= 3

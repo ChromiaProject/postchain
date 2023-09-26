@@ -41,6 +41,8 @@ class OnDemandBlockBuildingStrategy(
 
     override fun preemptiveBlockBuilding(): Boolean = false
 
+    override fun shouldBuildPreemptiveBlock(): Boolean = false
+
     override fun shouldBuildBlock(): Boolean {
         return upToHeight > committedHeight
     }
