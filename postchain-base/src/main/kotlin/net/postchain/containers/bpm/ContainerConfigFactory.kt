@@ -196,6 +196,10 @@ object ContainerConfigFactory : KLogging() {
         add("POSTCHAIN_DB_USERNAME=${appConfig.databaseUsername}")
         add("POSTCHAIN_DB_PASSWORD=${appConfig.databasePassword}")
         add("POSTCHAIN_DB_READ_CONCURRENCY=${appConfig.databaseReadConcurrency}")
+        add("POSTCHAIN_DB_BLOCK_BUILDER_WRITE_CONCURRENCY=${appConfig.databaseBlockBuilderWriteConcurrency}")
+        add("POSTCHAIN_DB_SHARED_WRITE_CONCURRENCY=${appConfig.databaseSharedWriteConcurrency}")
+        add("POSTCHAIN_DB_BLOCK_BUILDER_MAX_WAIT_WRITE=${appConfig.databaseBlockBuilderMaxWaitWrite}")
+        add("POSTCHAIN_DB_SHARED_MAX_WAIT_WRITE=${appConfig.databaseSharedMaxWaitWrite}")
         add("POSTCHAIN_CRYPTO_SYSTEM=${appConfig.cryptoSystemClass}")
         // Do not add privKey. It is supplied through initialization via gRPC
         add("POSTCHAIN_PUBKEY=${appConfig.pubKey}")
