@@ -21,15 +21,6 @@ open class BaseDirectoryDataSource(
         return res.asArray().map { it.asString() }
     }
 
-    override fun getBlockchainsForContainer(containerId: String): List<BlockchainRid>? {
-        val res = query(
-                "nm_get_blockchains_for_container",
-                buildArgs("container_id" to gtv(containerId))
-        )
-
-        return res.asArray().map { BlockchainRid(it.asByteArray()) }
-    }
-
     override fun getContainerForBlockchain(brid: BlockchainRid): String {
         return if (nmApiVersion >= 3) {
             query(
