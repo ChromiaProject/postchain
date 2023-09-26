@@ -288,8 +288,10 @@ class BaseBlockManager(
         }
     }
 
+    // Only start building block when preemptiveBlockBuilding if we actually have any transactions to build
+    // to avoid holding a db connection unnecessarily.
     private fun shouldBuildBlock() = !blockStrategy.mustWaitBeforeBuildBlock() &&
-            (blockStrategy.preemptiveBlockBuilding() || blockStrategy.shouldBuildBlock())
+            (blockStrategy.shouldBuildPreemptiveBlock() || blockStrategy.shouldBuildBlock())
 
     override fun processBlockIntent(): BlockIntent {
         update()

@@ -132,6 +132,7 @@ interface ManagedBlockBuilder : BlockBuilder {
  */
 interface BlockBuildingStrategy {
     fun preemptiveBlockBuilding(): Boolean
+    fun shouldBuildPreemptiveBlock(): Boolean
     fun shouldBuildBlock(): Boolean
     fun hasReachedTimeConstraintsForBlockBuilding(haveSeenTxs: Boolean): Boolean
     fun mustWaitMinimumBuildBlockTime(): Long
