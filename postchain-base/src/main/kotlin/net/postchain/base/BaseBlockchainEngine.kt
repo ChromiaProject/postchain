@@ -354,6 +354,7 @@ open class BaseBlockchainEngine(
                     break
                 } else {
                     delayTimer.start()
+                    Thread.sleep(20)
                 }
             }
         }
