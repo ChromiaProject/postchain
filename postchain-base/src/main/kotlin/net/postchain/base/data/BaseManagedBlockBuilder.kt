@@ -177,6 +177,8 @@ class BaseManagedBlockBuilder(
                 rollbackLog("Got lock")
                 if (!eContext.conn.isClosed) {
                     eContext.conn.rollback(savepoint)
+                } else {
+                    logger.error("Unable to rollback since connection is already closed")
                 }
                 closed = true
             }
