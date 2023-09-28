@@ -27,6 +27,7 @@ import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.BlockIntent
+import net.postchain.ebft.BuildBlockIntent
 import net.postchain.ebft.NodeBlockState
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.message.EbftMessage
@@ -158,6 +159,19 @@ abstract class EBFTProtocolBase {
 
     protected fun messagesToReceive(vararg messages: Pair<NodeRid, EbftMessage>) {
         doReturn(messages.toList()).whenever(commManager).getPackets()
+    }
+
+    protected fun becomePrimary() {
+        statusManager.myStatus.apply {
+            blockRID = null
+            height = 1
+            serial = 3
+            revolting = false
+            round = 0
+            state = NodeBlockState.WaitBlock
+        }
+        statusManager.recomputeStatus()
+        verifyIntent(BuildBlockIntent)
     }
 
     private fun createBlockHeader(blockchainRid: BlockchainRid, blockIID: Long, chainId: Long, prevBlockRid: ByteArray, height: Long): BlockHeader {

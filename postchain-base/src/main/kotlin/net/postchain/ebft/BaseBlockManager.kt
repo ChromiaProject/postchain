@@ -5,6 +5,7 @@ package net.postchain.ebft
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.BaseBlockHeader
+import net.postchain.base.ForceStopBlockBuildingException
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.extension.getConfigHash
 import net.postchain.base.extension.getFailedConfigHash
@@ -44,6 +45,8 @@ class BaseBlockManager(
 
     @Volatile
     private var intent: BlockIntent = DoNothingIntent
+    @Volatile
+    private var previousBlockIntent: BlockIntent = DoNothingIntent
 
     // Will be set to non-null value after the first block-db operation.
     override var lastBlockTimestamp: Long? = null
@@ -221,6 +224,10 @@ class BaseBlockManager(
             // We can release immediately because we are inside statusManager synchronized block
             operationSemaphore.release()
             val blockIntent = statusManager.getBlockIntent()
+            if (previousBlockIntent == BuildBlockIntent && previousBlockIntent != blockIntent) {
+                blockStrategy.setForceStopBlockBuilding(true)
+            }
+            previousBlockIntent = blockIntent
             intent = DoNothingIntent
             when (blockIntent) {
 
@@ -248,6 +255,7 @@ class BaseBlockManager(
                 }
 
                 is BuildBlockIntent -> {
+                    blockStrategy.setForceStopBlockBuilding(false)
                     // It's our turn to build a block. But we need to consult the
                     // BlockBuildingStrategy in order to figure out if this is the
                     // right time. For example, the strategy may decide that
@@ -274,12 +282,16 @@ class BaseBlockManager(
                         }
                     }, { exception ->
                         val msg = "Can't build block at height ${statusManager.myStatus.height}: ${exception.message}"
-                        if (exception is PmEngineIsAlreadyClosed) {
+                        if (exception is ForceStopBlockBuildingException) {
                             logger.debug(msg)
                         } else {
-                            logger.error(msg, exception)
+                            if (exception is PmEngineIsAlreadyClosed) {
+                                logger.debug(msg)
+                            } else {
+                                logger.error(msg, exception)
+                            }
+                            blockStrategy.blockFailed()
                         }
-                        blockStrategy.blockFailed()
                     })
                 }
 

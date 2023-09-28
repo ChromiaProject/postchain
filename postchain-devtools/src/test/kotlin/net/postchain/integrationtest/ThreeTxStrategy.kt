@@ -11,6 +11,7 @@ import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockQueries
 import java.time.Clock
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.atomic.AtomicBoolean
 
 @Suppress("UNUSED_PARAMETER")
 class ThreeTxStrategy(
@@ -25,6 +26,7 @@ class ThreeTxStrategy(
     private val blocks = LinkedBlockingQueue<BlockData>()
     private var committedHeight = -1
     private val index = -1
+    private val forceStopBlockBuilding: AtomicBoolean = AtomicBoolean(false)
 
     override fun preemptiveBlockBuilding(): Boolean = false
 
@@ -33,6 +35,12 @@ class ThreeTxStrategy(
     override fun shouldBuildBlock(): Boolean {
         logger.debug { "PNode $index shouldBuildBlock? ${txQueue.getTransactionQueueSize()}" }
         return txQueue.getTransactionQueueSize() >= 3
+    }
+
+    override fun shouldForceStopBlockBuilding(): Boolean = forceStopBlockBuilding.get()
+
+    override fun setForceStopBlockBuilding(value: Boolean) {
+        forceStopBlockBuilding.set(value)
     }
 
     override fun hasReachedTimeConstraintsForBlockBuilding(haveSeenTxs: Boolean): Boolean = false

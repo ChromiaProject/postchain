@@ -8,6 +8,7 @@ import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.BaseManagedBlockBuilder
+import net.postchain.base.data.BaseManagedBlockBuilderProvider
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
@@ -39,7 +40,6 @@ import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.ErrorDiagnosticValue
 import net.postchain.debug.NodeDiagnosticContext
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.logging.BLOCK_RID_TAG
@@ -48,7 +48,6 @@ import net.postchain.metrics.DelayTimer
 import java.lang.Long.max
 import java.util.concurrent.TimeUnit
 import java.util.stream.Collectors
-import kotlin.time.Duration.Companion.minutes
 
 /**
  * An [BlockchainEngine] will only produce [BlockBuilder]s for a single chain.
@@ -68,22 +67,15 @@ open class BaseBlockchainEngine(
         private val beforeCommitHandler: BeforeCommitHandler,
         private val afterCommitHandler: AfterCommitHandler,
         private val useParallelDecoding: Boolean = true,
+        private val blockQueries: BlockQueries,
+        private val transactionQueue: BaseTransactionQueue,
+        private val metrics: BaseBlockchainEngineMetrics,
+        private val strategy: BlockBuildingStrategy,
+        private val baseManagedBlockBuilderProvider: BaseManagedBlockBuilderProvider = ::BaseManagedBlockBuilder,
+        private val nanoTime: () -> Long = { System.nanoTime() }
 ) : BlockchainEngine {
 
     companion object : KLogging()
-
-    private val blockQueries: BlockQueries = blockchainConfiguration.makeBlockQueries(sharedStorage)
-    private val transactionQueue = BaseTransactionQueue(
-            blockchainConfiguration.transactionQueueSize,
-            recheckThreadInterval = 1.minutes,
-            recheckTxInterval = blockchainConfiguration.transactionQueueRecheckInterval,
-            if (blockchainConfiguration.hasQuery(PRIORITIZE_QUERY_NAME))
-                BaseTransactionPrioritizer { name: String, args: Gtv -> blockQueries.query(name, args).toCompletableFuture().get() }
-            else
-                null
-    )
-    private val strategy: BlockBuildingStrategy = blockchainConfiguration.getBlockBuildingStrategy(blockQueries, transactionQueue)
-    private val metrics = BaseBlockchainEngineMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid, transactionQueue)
 
     private var closed = false
     private var currentEContext = initialEContext
@@ -146,9 +138,10 @@ open class BaseBlockchainEngine(
         } else {
             currentEContext
         }
-        val savepoint = currentEContext.conn.setSavepoint("blockBuilder${System.nanoTime()}")
+        val savepoint = currentEContext.conn.setSavepoint("blockBuilder${nanoTime()}")
 
-        return BaseManagedBlockBuilder(currentEContext, savepoint, blockBuilderStorage, blockchainConfiguration.makeBlockBuilder(currentEContext, isSyncing),
+        return baseManagedBlockBuilderProvider(currentEContext, savepoint, blockBuilderStorage,
+                blockchainConfiguration.makeBlockBuilder(currentEContext, isSyncing),
                 {
                     val blockBuilder = it as AbstractBlockBuilder
                     beforeCommitHandler(blockBuilder.getBTrace(), blockBuilder.bctx)
@@ -206,7 +199,7 @@ open class BaseBlockchainEngine(
             isSyncing: Boolean,
             transactionsDecoder: (List<ByteArray>) -> List<Transaction>
     ): Pair<ManagedBlockBuilder, Exception?> {
-        val grossStart = System.nanoTime()
+        val grossStart = nanoTime()
         val blockBuilder = makeBlockBuilder(isSyncing)
         var exception: Exception? = null
 
@@ -217,13 +210,13 @@ open class BaseBlockchainEngine(
             }
             blockBuilder.begin(block.header)
 
-            val netStart = System.nanoTime()
+            val netStart = nanoTime()
             val decodedTxs = transactionsDecoder(block.transactions)
             decodedTxs.forEach(blockBuilder::appendTransaction)
-            val netEnd = System.nanoTime()
+            val netEnd = nanoTime()
 
             blockBuilder.finalizeAndValidate(block.header)
-            val grossEnd = System.nanoTime()
+            val grossEnd = nanoTime()
 
             val prettyBlockHeader = prettyBlockHeader(
                     block.header, block.transactions.size, 0, grossStart to grossEnd, netStart to netEnd, 0
@@ -249,7 +242,7 @@ open class BaseBlockchainEngine(
 
     override fun buildBlock(): Pair<ManagedBlockBuilder, Exception?> {
         buildLog("Begin")
-        val grossStart = System.nanoTime()
+        val grossStart = nanoTime()
 
         val blockBuilder = makeBlockBuilder(false)
         var exception: Exception? = null
@@ -261,24 +254,26 @@ open class BaseBlockchainEngine(
                 blockBuilder.rollback()
             } catch (ignore: Exception) {
             }
-            try {
-                if (hasBuiltInitialBlock()) {
-                    if (!hasBuiltFirstBlockAfterConfigUpdate) {
-                        revertConfiguration(blockBuilder.height, blockchainConfiguration.configHash)
-                    } else {
-                        // See if we have a configuration update that potentially can fix our block building issues
-                        checkForNewConfiguration()
+            if (e !is ForceStopBlockBuildingException) {
+                try {
+                    if (hasBuiltInitialBlock()) {
+                        if (!hasBuiltFirstBlockAfterConfigUpdate) {
+                            revertConfiguration(blockBuilder.height, blockchainConfiguration.configHash)
+                        } else {
+                            // See if we have a configuration update that potentially can fix our block building issues
+                            checkForNewConfiguration()
+                        }
                     }
+                } catch (e: Exception) {
+                    logger.warn(e) { "Unable to revert configuration: $e" }
                 }
-            } catch (e: Exception) {
-                logger.warn(e) { "Unable to revert configuration: $e" }
+                nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(
+                        ErrorDiagnosticValue(
+                                e.message ?: "Failed to build block",
+                                System.currentTimeMillis(),
+                                blockBuilder.height)
+                )
             }
-            nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(
-                    ErrorDiagnosticValue(
-                            e.message ?: "Failed to build block",
-                            System.currentTimeMillis(),
-                            blockBuilder.height)
-            )
 
             exception = e
         }
@@ -298,10 +293,10 @@ open class BaseBlockchainEngine(
     }
 
     private fun buildBlockInternal(blockBuilder: BaseManagedBlockBuilder, grossStart: Long) {
-        val blockStart = System.nanoTime()
+        val blockStart = nanoTime()
 
         blockBuilder.begin(null)
-        val netStart = System.nanoTime()
+        val netStart = nanoTime()
 
         var acceptedTxs = 0
         var rejectedTxs = 0
@@ -309,6 +304,10 @@ open class BaseBlockchainEngine(
         val delayTimer = DelayTimer()
 
         while (true) {
+            if (strategy.shouldForceStopBlockBuilding()) {
+                logger.debug { "buildBlock() - Block building forcefully stopped" }
+                throw ForceStopBlockBuildingException()
+            }
             logger.trace { "Checking transaction queue" }
             val tx = transactionQueue.takeTransaction()
             if (tx != null) {
@@ -359,9 +358,9 @@ open class BaseBlockchainEngine(
             }
         }
 
-        val netEnd = System.nanoTime()
+        val netEnd = nanoTime()
         val blockHeader = blockBuilder.finalizeBlock()
-        val grossEnd = System.nanoTime()
+        val grossEnd = nanoTime()
 
         withLoggingContext(BLOCK_RID_TAG to blockHeader.blockRID.toHex()) {
             val prettyBlockHeader = prettyBlockHeader(
@@ -381,7 +380,7 @@ open class BaseBlockchainEngine(
             }
         }
 
-        val blockEndTime = System.nanoTime() - blockStart - delayTimer.totalDelayTime
+        val blockEndTime = nanoTime() - blockStart - delayTimer.totalDelayTime
         metrics.blocks.record(blockEndTime, TimeUnit.NANOSECONDS)
     }
 
