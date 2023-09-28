@@ -9,7 +9,6 @@ import java.time.Clock
 import kotlin.math.log
 import kotlin.math.pow
 
-
 class RevoltTracker(
         private val statusManager: StatusManager,
         private val config: RevoltConfigurationData,
@@ -33,10 +32,17 @@ class RevoltTracker(
      * Starts a revolt if certain conditions are met.
      */
     fun update() {
-        val current = statusManager.myStatus
-        if (fastRevolt(current)) return
+        if (shouldRevolt(statusManager.myStatus)) {
+            statusManager.onStartRevolting()
+        }
+    }
 
-        if (config.revoltWhenShouldBuildBlock && !shouldBuildBlock()) return
+    private fun shouldRevolt(current: NodeStatus): Boolean {
+        if (shouldDoFastRevolt(current)) {
+            return (!current.revolting)
+        }
+
+        if (config.revoltWhenShouldBuildBlock && !shouldBuildBlock()) return false
 
         if (current.height > prevHeight ||
                 current.height == prevHeight && current.round > prevRound) {
@@ -44,9 +50,22 @@ class RevoltTracker(
             prevRound = current.round
             deadline = newDeadline(current.round)
         } else if (currentTimeMillis() > deadline && !current.revolting) {
-            this.statusManager.onStartRevolting()
+            return true
         }
+        return false
     }
+
+    private fun shouldDoFastRevolt(current: NodeStatus): Boolean {
+        // Check if fast revolt is enabled
+        if (config.fastRevoltStatusTimeout < 0) return false
+
+        if (current.height == initialHeight || statusManager.isMyNodePrimary()) return false
+
+        val lastUpdateFromPrimary = statusManager.getLatestStatusTimestamp(statusManager.primaryIndex())
+        return currentTimeMillis() - lastUpdateFromPrimary > config.fastRevoltStatusTimeout
+    }
+
+    private fun shouldBuildBlock(): Boolean = blockBuildingStrategy.shouldBuildBlock()
 
     /**
      * Set new deadline for the revolt tracker with exponential delay for each round
@@ -61,25 +80,6 @@ class RevoltTracker(
             baseTimeout + (initialDelay * (exponentialDelayPowerBase.pow(round.toDouble()))).toLong() - initialDelay
         }
     }
-
-    private fun fastRevolt(current: NodeStatus): Boolean =
-            if (shouldDoFastRevolt(current)) {
-                if (!current.revolting) statusManager.onStartRevolting()
-                true
-            } else
-                false
-
-    private fun shouldDoFastRevolt(current: NodeStatus): Boolean {
-        // Check if fast revolt is enabled
-        if (config.fastRevoltStatusTimeout < 0) return false
-
-        if (current.height == initialHeight || statusManager.isMyNodePrimary()) return false
-
-        val lastUpdateFromPrimary = statusManager.getLatestStatusTimestamp(statusManager.primaryIndex())
-        return currentTimeMillis() - lastUpdateFromPrimary > config.fastRevoltStatusTimeout
-    }
-
-    private fun shouldBuildBlock(): Boolean = blockBuildingStrategy.shouldBuildBlock()
 
     private fun currentTimeMillis() = clock.millis()
 }
