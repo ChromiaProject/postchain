@@ -252,18 +252,25 @@ class BaseTransactionQueue(private val queueCapacity: Int,
     internal fun recheckPriorities() {
         if (prioritizer != null) {
             logger.debug { "Rechecking transactions" }
-            queueMap.forEach { (txRid, wt) ->
+            val queueMapSnapshot = synchronized(this) {
+                queueMap.toList()
+            }
+            queueMapSnapshot.forEach { (txRid, wt) ->
                 val now = clock.instant()
                 if (now.isAfter(wt.lastRecheck + recheckTxInterval.toJavaDuration())) {
                     logger.debug { "Rechecking tx $txRid" }
                     val transactionPriority = prioritizer.prioritize(wt.tx as GTXTransaction, wt.enter, now)
-                    queue.remove(wt)
-                    queue.add(WrappedTransaction(wt.tx, wt.accountId, transactionPriority.txCostPoints, transactionPriority.priority, wt.seqNumber, wt.enter, now))
-                    accountBasedRateLimiting(
-                            transactionPriority.accountId,
-                            accountPoints = transactionPriority.accountPoints,
-                            newTxCostPoints = 0
-                    )
+                    synchronized(this) {
+                        if (queueMap.contains(txRid)) {
+                            queue.remove(wt)
+                            queue.add(WrappedTransaction(wt.tx, wt.accountId, transactionPriority.txCostPoints, transactionPriority.priority, wt.seqNumber, wt.enter, now))
+                            accountBasedRateLimiting(
+                                    transactionPriority.accountId,
+                                    accountPoints = transactionPriority.accountPoints,
+                                    newTxCostPoints = 0
+                            )
+                        }
+                    }
                 }
             }
         }
