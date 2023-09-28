@@ -137,4 +137,33 @@ class EBFTRevoltTest : EBFTProtocolBase() {
         verifyIntent(BuildBlockIntent)
         verifyStatus(blockRID = null, height = 0, serial = 2, round = 1, revolting = false, state = WaitBlock)
     }
+
+    @Test
+    fun `Primary revolts against it self should force stop building block`() {
+        // setup
+        becomePrimary()
+        syncManager.update()
+        reset(commManager)
+
+        /**
+         * Input: We revolt and receive revolt [Status] from other non-primary nodes.
+         * Expected outcome: Change primary node, and force-stop any potential ongoing block building
+         * State: [WaitBlock] -> [WaitBlock]
+         * Intent: [BuildBlockIntent] -> [DoNothingIntent]
+         * Receive: Revolt from other nodes.
+         * Send: Broadcast [Status]
+         */
+        // incoming messages
+        messagesToReceive(
+                nodeRid2 to Status(null, 1, true, 0, 5, WaitBlock.ordinal),
+                nodeRid3 to Status(null, 1, true, 0, 5, WaitBlock.ordinal)
+        )
+        // execute
+        statusManager.onStartRevolting()
+        syncManager.update()
+        // verify
+        verify(blockStrategy).setForceStopBlockBuilding(true)
+        verifyIntent(DoNothingIntent)
+        verifyStatus(blockRID = null, height = 1, serial = 5, round = 1, revolting = false, state = WaitBlock)
+    }
 }

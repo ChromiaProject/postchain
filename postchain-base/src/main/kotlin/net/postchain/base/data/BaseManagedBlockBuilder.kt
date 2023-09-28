@@ -242,3 +242,11 @@ class BaseManagedBlockBuilder(
         }
     }
 }
+
+typealias BaseManagedBlockBuilderProvider = (
+        eContext: EContext,
+        savepoint: Savepoint,
+        storage: Storage,
+        blockBuilder: BlockBuilder,
+        beforeCommit: (BlockBuilder) -> Unit,
+        afterCommit: (BlockBuilder) -> Unit) -> BaseManagedBlockBuilder

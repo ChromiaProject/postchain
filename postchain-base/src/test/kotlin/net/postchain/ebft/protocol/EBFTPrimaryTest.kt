@@ -28,17 +28,8 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
 
     @Test
     fun `Test normal EBFT cycle as primary`() {
-        // Setup status to become primary node
-        statusManager.myStatus.apply {
-            blockRID = null
-            height = 1
-            serial = 3
-            revolting = false
-            round = 0
-            state = WaitBlock
-        }
-        statusManager.recomputeStatus()
-        verifyIntent(BuildBlockIntent)
+        // setup
+        becomePrimary()
 
         /**
          * Input: Block should be built.
@@ -56,6 +47,7 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
         // execute
         syncManager.update()
         // verify
+        verify(blockStrategy).setForceStopBlockBuilding(false)
         verifyIntent(DoNothingIntent)
         verifyStatus(blockRID = blockRid0, height = 1, serial = 4, round = 0, revolting = false, state = HaveBlock)
         reset(commManager)
