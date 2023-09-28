@@ -419,11 +419,13 @@ class BaseStatusManager(
         fun potentiallyRevolt(): FlowStatus {
             var nHighRound = 0
             var nRevolting = 0
+            val higherRounds = mutableListOf<Long>()
             for (ns in nodeStatuses) {
                 if (ns.height != myStatus.height) continue
                 if (ns.round == myStatus.round) {
                     if (ns.revolting) nRevolting++
                 } else if (ns.round > myStatus.round) {
+                    higherRounds.add(ns.round)
                     nHighRound++
                 }
             }
@@ -436,8 +438,13 @@ class BaseStatusManager(
                 }
 
                 myStatus.revolting = false
-                myStatus.round += 1
                 myStatus.serial += 1
+                myStatus.round = if (nHighRound >= this.quorum) {
+                    higherRounds.sortedDescending()[this.quorum - 1]
+                } else {
+                    myStatus.round + 1
+                }
+
                 return FlowStatus.Continue
             } else {
                 return FlowStatus.JustRunOn
