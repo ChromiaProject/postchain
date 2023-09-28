@@ -166,4 +166,57 @@ class EBFTRevoltTest : EBFTProtocolBase() {
         verifyIntent(DoNothingIntent)
         verifyStatus(blockRID = null, height = 1, serial = 5, round = 1, revolting = false, state = WaitBlock)
     }
+
+    @Test
+    fun `Revolt should pick lowest consensus round`() {
+        /**
+         * Input: We revolt and receive revolt [Status] from other nodes with higher rounds.
+         * Expected outcome: Round in status message should be equal to the lowest round from the consensus number
+         * of nodes with higher round.
+         * State: [WaitBlock] -> [WaitBlock]
+         * Intent: [DoNothingIntent] -> [BuildBlockIntent]
+         * Receive: Revolt from other nodes.
+         * Send: Broadcast [Status]
+         */
+        // setup
+        // incoming messages
+        messagesToReceive(
+                nodeRid0 to Status(null, 0, true, 4, 1, WaitBlock.ordinal),
+                nodeRid2 to Status(null, 0, true, 5, 1, WaitBlock.ordinal),
+                nodeRid3 to Status(null, 0, true, 6, 1, WaitBlock.ordinal)
+        )
+        syncManager.update()
+        reset(commManager)
+        // execute
+        statusManager.onStartRevolting()
+        syncManager.update()
+        // verify
+        verifyStatus(blockRID = null, height = 0, serial = 2, round = 4, revolting = false, state = WaitBlock)
+    }
+
+    @Test
+    fun `Revolt should pick next round if not enough higher rounds in consensus`() {
+        /**
+         * Input: We revolt and receive revolt [Status] from other nodes.
+         * Expected outcome: Round in status message should be equal to our start round + 1.
+         * State: [WaitBlock] -> [WaitBlock]
+         * Intent: [DoNothingIntent] -> [BuildBlockIntent]
+         * Receive: Revolt from other nodes.
+         * Send: Broadcast [Status]
+         */
+        // setup
+        // incoming messages
+        messagesToReceive(
+                nodeRid0 to Status(null, 0, true, 0, 1, WaitBlock.ordinal),
+                nodeRid2 to Status(null, 0, true, 5, 1, WaitBlock.ordinal),
+                nodeRid3 to Status(null, 0, true, 6, 1, WaitBlock.ordinal)
+        )
+        syncManager.update()
+        reset(commManager)
+        // execute
+        statusManager.onStartRevolting()
+        syncManager.update()
+        // verify
+        verifyStatus(blockRID = null, height = 0, serial = 2, round = 1, revolting = false, state = WaitBlock)
+    }
 }
