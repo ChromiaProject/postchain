@@ -26,6 +26,7 @@ import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.BLOCK_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import java.util.concurrent.CompletionStage
@@ -104,6 +105,9 @@ class BaseBlockManager(
                     blockTrace(theIntent)
                     blockDB.loadUnfinishedBlock(block)
                 }, { signature ->
+                    withLoggingContext(BLOCK_RID_TAG to block.header.blockRID.toHex()) {
+                        logger.info("Signed block ${block.header.blockRID.toHex()}")
+                    }
                     if (statusManager.onReceivedBlock(block.header.blockRID, signature)) {
                         currentBlock = block
                         lastBlockTimestamp = blockTimestamp(block)
@@ -131,6 +135,9 @@ class BaseBlockManager(
 
                     blockDB.addBlock(block, null, bTrace)
                 }, {
+                    withLoggingContext(BLOCK_RID_TAG to block.header.blockRID.toHex()) {
+                        logger.info("Committed block ${block.header.blockRID.toHex()}")
+                    }
                     if (statusManager.onHeightAdvance(height + 1)) {
                         currentBlock = null
                         lastBlockTimestamp = blockTimestamp(block)
@@ -244,7 +251,9 @@ class BaseBlockManager(
                         blockTrace(blockIntent)
                         blockDB.commitBlock(statusManager.commitSignatures)
                     }, {
-                        logger.info("Committed block ${currentBlock!!.header.blockRID.toHex()}")
+                        withLoggingContext(BLOCK_RID_TAG to currentBlock!!.header.blockRID.toHex()) {
+                            logger.info("Committed block ${currentBlock!!.header.blockRID.toHex()}")
+                        }
                         statusManager.onCommittedBlock(currentBlock!!.header.blockRID)
                         lastBlockTimestamp = blockTimestamp(currentBlock!!)
                         currentBlock = null
