@@ -694,6 +694,7 @@
                         <failBuildOnAnyVulnerability>true</failBuildOnAnyVulnerability>
                         <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
                         <suppressionFiles>
+                            <suppressionFile>common-dependencies-suppression.xml</suppressionFile>
                             <suppressionFile>dependencies-suppression.xml</suppressionFile>
                         </suppressionFiles>
                     </configuration>
