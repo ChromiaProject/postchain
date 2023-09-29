@@ -148,8 +148,8 @@ class BaseBlockDatabase(
                     theBlockBuilder.getBTrace()?.let { updateBTrace(existingBTrace, it) }
                     val blockSample = Timer.start(Metrics.globalRegistry)
                     theBlockBuilder.commit(block.witness) // No need to set BTrace, because we have it
-                    blockSample.stop(metrics.verifiedBlocks)
-                    metrics.verifiedTransactions.increment(block.transactions.size.toDouble())
+                    blockSample.stop(metrics.confirmedBlocks)
+                    metrics.confirmedTransactions.increment(block.transactions.size.toDouble())
                     addBlockLog("Done commit", theBlockBuilder.getBTrace())
                 }
             }
@@ -186,8 +186,8 @@ class BaseBlockDatabase(
             // TODO: process signatures
             val blockSample = Timer.start(Metrics.globalRegistry)
             blockBuilder!!.commit(witnessBuilder!!.getWitness())
-            blockSample.stop(metrics.verifiedBlocks)
-            metrics.verifiedTransactions.increment(blockBuilder!!.getBlockData().transactions.size.toDouble())
+            blockSample.stop(metrics.confirmedBlocks)
+            metrics.confirmedTransactions.increment(blockBuilder!!.getBlockData().transactions.size.toDouble())
             blockBuilder = null
             witnessBuilder = null
         }

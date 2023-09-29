@@ -14,14 +14,14 @@ class BaseBlocksDatabaseMetrics(chainIID: Long, blockchainRid: BlockchainRid) {
         .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toHex())
         .register(Metrics.globalRegistry)
 
-    val verifiedBlocks: Timer = Timer.builder("verifiedBlocks")
-        .description("Verified blocks")
+    val confirmedBlocks: Timer = Timer.builder("confirmedBlocks")
+        .description("Confirmed blocks")
         .tag(CHAIN_IID_TAG, chainIID.toString())
         .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toHex())
         .register(Metrics.globalRegistry)
 
-    val verifiedTransactions: Counter = Counter.builder("verifiedTransactions")
-        .description("Verified transactions")
+    val confirmedTransactions: Counter = Counter.builder("confirmedTransactions")
+        .description("Confirmed transactions")
         .tag(CHAIN_IID_TAG, chainIID.toString())
         .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toHex())
         .register(Metrics.globalRegistry)
