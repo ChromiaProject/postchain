@@ -146,7 +146,10 @@ class BaseBlockDatabase(
                     throw exception
                 } else {
                     theBlockBuilder.getBTrace()?.let { updateBTrace(existingBTrace, it) }
+                    val blockSample = Timer.start(Metrics.globalRegistry)
                     theBlockBuilder.commit(block.witness) // No need to set BTrace, because we have it
+                    blockSample.stop(metrics.verifiedBlocks)
+                    metrics.verifiedTransactions.increment(block.transactions.size.toDouble())
                     addBlockLog("Done commit", theBlockBuilder.getBTrace())
                 }
             }
@@ -181,7 +184,10 @@ class BaseBlockDatabase(
     override fun commitBlock(signatures: Array<Signature?>): CompletionStage<Unit> {
         return runOpAsync("commitBlock") {
             // TODO: process signatures
+            val blockSample = Timer.start(Metrics.globalRegistry)
             blockBuilder!!.commit(witnessBuilder!!.getWitness())
+            blockSample.stop(metrics.verifiedBlocks)
+            metrics.verifiedTransactions.increment(blockBuilder!!.getBlockData().transactions.size.toDouble())
             blockBuilder = null
             witnessBuilder = null
         }
