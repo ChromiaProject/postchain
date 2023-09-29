@@ -4,6 +4,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <parent>
+        <groupId>com.chromia</groupId>
+        <artifactId>chromia-parent</artifactId>
+        <version>0.1.0</version>
+    </parent>
+
     <groupId>net.postchain</groupId>
     <artifactId>postchain</artifactId>
     <version>${revision}</version>
@@ -29,8 +35,6 @@
     <properties>
         <revision>dev</revision>
         <doclint>none</doclint>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.build.outputTimestamp>10</project.build.outputTimestamp>
 
         <!-- Kotlin -->
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
@@ -38,13 +42,6 @@
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
 
-        <!-- Maven -->
-        <maven.source.plugin.version>3.0.1</maven.source.plugin.version>
-        <maven.surefire.plugin.version>3.1.2</maven.surefire.plugin.version>
-        <maven.failsafe.plugin.version>3.1.2</maven.failsafe.plugin.version>
-        <maven.compiler.plugin.version>3.11.0</maven.compiler.plugin.version>
-        <maven.assembly.plugin.version>3.2.0</maven.assembly.plugin.version>
-        <maven.shade.plugin.version>3.1.1</maven.shade.plugin.version>
         <skipSurefireTests>false</skipSurefireTests>
 
         <!-- Testing -->
@@ -80,6 +77,10 @@
     </properties>
 
     <repositories>
+        <repository>
+            <id>chromia-parent</id>
+            <url>https://gitlab.com/api/v4/projects/50818999/packages/maven</url>
+        </repository>
         <repository>
             <id>gitlab-maven</id>
             <url>https://gitlab.com/api/v4/projects/32294340/packages/maven</url>
@@ -609,7 +610,6 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>${maven.compiler.plugin.version}</version>
                     <executions>
                         <!-- Replacing default-compile as it is treated specially by maven -->
                         <execution>
@@ -638,28 +638,6 @@
                     </executions>
                 </plugin>
                 <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.3.0</version>
-                    <configuration>
-                        <archive>
-                            <manifest>
-                                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                            </manifest>
-                        </archive>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-dependency-plugin</artifactId>
-                    <version>3.2.0</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>exec-maven-plugin</artifactId>
-                    <version>3.1.0</version>
-                </plugin>
-                <plugin>
                     <groupId>org.xolstice.maven.plugins</groupId>
                     <artifactId>protobuf-maven-plugin</artifactId>
                     <version>0.6.1</version>
@@ -675,35 +653,6 @@
                     <artifactId>jaxb30-maven-plugin</artifactId>
                     <version>0.15.0</version>
                 </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>${maven.surefire.plugin.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-failsafe-plugin</artifactId>
-                    <version>${maven.failsafe.plugin.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.owasp</groupId>
-                    <artifactId>dependency-check-maven</artifactId>
-                    <version>8.3.1</version>
-                    <configuration>
-                        <prettyPrint>true</prettyPrint>
-                        <failBuildOnAnyVulnerability>true</failBuildOnAnyVulnerability>
-                        <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
-                        <suppressionFiles>
-                            <suppressionFile>common-dependencies-suppression.xml</suppressionFile>
-                            <suppressionFile>dependencies-suppression.xml</suppressionFile>
-                        </suppressionFiles>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>build-helper-maven-plugin</artifactId>
-                    <version>3.4.0</version>
-                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -715,7 +664,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.5.0</version>
                 <configuration>
                     <updatePomFile>true</updatePomFile>
                     <flattenMode>resolveCiFriendliesOnly</flattenMode>
@@ -778,7 +726,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>versions-maven-plugin</artifactId>
-                <version>2.13.0</version>
                 <configuration>
                     <allowMajorUpdates>false</allowMajorUpdates>
                     <allowSnapshots>false</allowSnapshots>
@@ -789,7 +736,6 @@
             <plugin>
                 <groupId>pl.project13.maven</groupId>
                 <artifactId>git-commit-id-plugin</artifactId>
-                <version>4.9.10</version>
                 <executions>
                     <execution>
                         <id>get-the-git-infos</id>
