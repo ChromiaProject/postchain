@@ -29,6 +29,7 @@ import net.postchain.gtv.mapper.toObject
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.metrics.NodeStatusMetrics
+import net.postchain.metrics.SyncMetrics
 import java.lang.Thread.sleep
 import java.time.Duration
 
@@ -89,6 +90,7 @@ class ValidatorBlockchainProcess(
                 blockDatabase,
                 nodeStateTracker,
                 RevoltTracker(statusManager, blockchainConfiguration.revoltConfiguration, blockchainEngine),
+                SyncMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid),
                 ::isProcessRunning,
                 startWithFastSync
         )

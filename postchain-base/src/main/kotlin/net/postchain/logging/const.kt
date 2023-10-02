@@ -12,6 +12,7 @@ const val BLOCK_RID_TAG = "blockRID"
 const val PEER_RECIPIENT_ID_TAG = "peerIdRecipient"
 const val PEER_SENDER_ID_TAG = "peerIdSender"
 const val MESSAGE_TYPE_TAG = "messageType"
+const val NODE_BLOCK_STATE_TAG = "nodeBlockState"
 
 const val SUCCESS_RESULT = "success"
 const val FAILURE_RESULT = "failure"
