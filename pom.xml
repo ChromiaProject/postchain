@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.chromia</groupId>
         <artifactId>chromia-parent</artifactId>
-        <version>0.1.0</version>
+        <version>0.1.2</version>
     </parent>
 
     <groupId>net.postchain</groupId>
@@ -652,6 +652,17 @@
                     <groupId>com.evolvedbinary.maven.jvnet</groupId>
                     <artifactId>jaxb30-maven-plugin</artifactId>
                     <version>0.15.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.owasp</groupId>
+                    <artifactId>dependency-check-maven</artifactId>
+                    <configuration>
+                        <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
+                        <suppressionFiles>
+                            <suppressionFile>https://gitlab.com/chromaway/chromia-parent/-/raw/dev/common-dependencies-suppression.xml?ref_type=heads</suppressionFile>
+                            <suppressionFile>dependencies-suppression.xml</suppressionFile>
+                        </suppressionFiles>
+                    </configuration>
                 </plugin>
             </plugins>
         </pluginManagement>
