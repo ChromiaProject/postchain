@@ -2,6 +2,7 @@
 
 package net.postchain.ebft.syncmanager.validator
 
+import io.micrometer.core.instrument.Counter
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.withReadConnection
@@ -47,6 +48,7 @@ import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
+import net.postchain.metrics.SyncMetrics
 import java.time.Clock
 import java.util.Date
 import java.util.concurrent.CompletableFuture
@@ -62,6 +64,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val blockDatabase: BlockDatabase,
                            private val nodeStateTracker: NodeStateTracker,
                            private val revoltTracker: RevoltTracker,
+                           private val syncMetrics: SyncMetrics,
                            isProcessRunning: () -> Boolean,
                            startInFastSync: Boolean,
                            private val clock: Clock = Clock.systemUTC()
@@ -435,10 +438,21 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     }
 
     private fun tryToSwitchToFastSync() {
+        val useFastSyncAlgorithmBefore = useFastSyncAlgorithm
         useFastSyncAlgorithm = EBFTNodesCondition(statusManager.nodeStatuses) { status ->
             status.height - statusManager.myStatus.height >= 3
         }.satisfied()
+        if (useFastSyncAlgorithm && useFastSyncAlgorithmBefore != useFastSyncAlgorithm) {
+            getValidatorFastSyncSwitchCounter().increment()
+        }
     }
+
+    private fun getValidatorFastSyncSwitchCounter(): Counter =
+            when (statusManager.myStatus.state) {
+                NodeBlockState.WaitBlock -> syncMetrics.validatorFastSyncSwitchWaitBlock
+                NodeBlockState.HaveBlock -> syncMetrics.validatorFastSyncSwitchHaveBlock
+                NodeBlockState.Prepared -> syncMetrics.validatorFastSyncSwitchPrepared
+            }
 
     /**
      * Process peer messages, how we should proceed with the current block, updating the revolt tracker and

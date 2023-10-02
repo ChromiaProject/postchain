@@ -37,6 +37,7 @@ import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.metrics.NodeStatusMetrics
+import net.postchain.metrics.SyncMetrics
 import net.postchain.network.CommunicationManager
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.junit.jupiter.api.BeforeEach
@@ -129,6 +130,7 @@ abstract class EBFTProtocolBase {
     protected val clock: Clock = mock()
     protected val revoltTracker: RevoltTracker = mock()
     protected val signature: Signature = mock()
+    protected val syncMetrics: SyncMetrics = mock()
 
     protected lateinit var statusManager: BaseStatusManager
     protected lateinit var blockManager: BaseBlockManager
@@ -139,7 +141,7 @@ abstract class EBFTProtocolBase {
         doReturn(BaseStatusManager.ZERO_SERIAL_TIME).whenever(clock).millis()
         statusManager = BaseStatusManager(nodes, myNodeId, 0, nodeStatusMetrics, clock)
         blockManager = BaseBlockManager(blockDatabase, statusManager, blockStrategy, workerContext)
-        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, { true }, false, clock)
+        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, syncMetrics, { true }, false, clock)
         statusManager.recomputeStatus()
     }
 
