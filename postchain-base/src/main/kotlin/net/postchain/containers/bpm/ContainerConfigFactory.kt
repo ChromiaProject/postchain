@@ -239,6 +239,8 @@ object ContainerConfigFactory : KLogging() {
 
         add("POSTCHAIN_PROMETHEUS_PORT=${containerNodeConfig.prometheusPort}")
 
+        add("POSTGRES_MAX_LOCKS_PER_TRANSACTION=${containerNodeConfig.postgresMaxLocksPerTransaction}")
+
         val javaToolOptions = createJavaToolOptions(containerNodeConfig, container)
         if (javaToolOptions.isNotEmpty()) {
             add("JAVA_TOOL_OPTIONS=${javaToolOptions.joinToString(" ")}")
