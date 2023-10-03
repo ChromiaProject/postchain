@@ -1,8 +1,11 @@
 package net.postchain.base.data
 
 import assertk.assertThat
+import assertk.assertions.isBetween
 import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import assertk.assertions.isSameAs
 import net.postchain.base.TransactionPrioritizer
 import net.postchain.base.TxPriorityStateV1
@@ -21,6 +24,7 @@ import net.postchain.gtx.GtxOp
 import net.postchain.gtx.data.ExtOpData
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
@@ -33,8 +37,13 @@ import java.math.BigDecimal.ZERO
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.TimeUnit
+import kotlin.concurrent.thread
+import kotlin.system.measureTimeMillis
 import kotlin.time.Duration.Companion.INFINITE
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 private val tx1 = mockGtxTransaction(1)
 private val tx2 = mockGtxTransaction(2)
@@ -96,6 +105,7 @@ class BaseTransactionQueueTest {
         assertThat(sut.takeTransaction()).isNotNull()
         assertThat(sut.takeTransaction()).isNotNull()
         assertThat(sut.takeTransaction()).isNotNull()
+        assertThat(sut.takeTransaction()).isNull()
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
     }
 
@@ -303,5 +313,41 @@ class BaseTransactionQueueTest {
         sut.recheckPriorities()
         assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
         assertThat(sut.takeTransaction()).isSameAs(tx3)
+    }
+
+    @Test
+    @Timeout(10, unit = TimeUnit.SECONDS)
+    fun `returns immediately if queue has transactions`() {
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) })
+        assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
+        assertThat(sut.takeTransaction(1.minutes)).isNotNull()
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
+    }
+
+    @Test
+    @Timeout(5, unit = TimeUnit.SECONDS)
+    fun `waits up to timeout if queue is empty`() {
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) })
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
+        val elapsed = measureTimeMillis {
+            assertThat(sut.takeTransaction(2.seconds)).isNull()
+        }
+        assertThat(elapsed).isGreaterThan(2 * 1000 - 10)
+    }
+
+    @Test
+    @Timeout(5, unit = TimeUnit.SECONDS)
+    fun `stops waiting if transaction enters queue`() {
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) })
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
+        thread {
+            Thread.sleep(1000)
+            assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
+        }
+        val elapsed = measureTimeMillis {
+            assertThat(sut.takeTransaction(2.seconds)).isNotNull()
+        }
+        assertThat(elapsed).isBetween(1000 - 10, 2 * 1000 + 10)
     }
 }

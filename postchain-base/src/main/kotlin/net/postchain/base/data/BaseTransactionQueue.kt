@@ -73,6 +73,8 @@ class BaseTransactionQueue(private val queueCapacity: Int,
     companion object : KLogging()
 
     private val lock = ReentrantLock()
+    private val nonEmpty = lock.newCondition()
+
     private val sequence = AtomicLong()
     private val queue = TreeSet<WrappedTransaction>()
     private val queueMap = HashMap<WrappedByteArray, WrappedTransaction>() // transaction by RID
@@ -99,6 +101,20 @@ class BaseTransactionQueue(private val queueCapacity: Int,
     }
 
     override fun takeTransaction(): Transaction? = lock.withLock {
+        dequeueTransaction()
+    }
+
+    override fun takeTransaction(timeout: Duration): Transaction? = lock.withLock {
+        var nanosRemaining: Long = timeout.inWholeNanoseconds
+        while (isEmpty()) {
+            if (nanosRemaining <= 0L)
+                return null
+            nanosRemaining = nonEmpty.awaitNanos(nanosRemaining)
+        }
+        dequeueTransaction()
+    }
+
+    private fun dequeueTransaction(): Transaction? {
         if (txsToRetry.isNotEmpty()) {
             return txsToRetry.poll().tx
         }
@@ -110,6 +126,8 @@ class BaseTransactionQueue(private val queueCapacity: Int,
             tx.tx
         } else null
     }
+
+    private fun isEmpty(): Boolean = txsToRetry.isEmpty() && queue.isEmpty()
 
     override fun findTransaction(txRID: WrappedByteArray): Transaction? = lock.withLock {
         queueMap[txRID]?.tx
@@ -203,6 +221,8 @@ class BaseTransactionQueue(private val queueCapacity: Int,
 
             // If this tx was previously rejected we should clear that status now and retry it
             rejects.remove(txRid)
+
+            nonEmpty.signal()
         } else {
             throw UserMistake("Unable to enqueue tx $txRid")
         }
@@ -248,6 +268,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
                 clear()
                 addAll(taken)
             }
+            nonEmpty.signal()
         }
     }
 
