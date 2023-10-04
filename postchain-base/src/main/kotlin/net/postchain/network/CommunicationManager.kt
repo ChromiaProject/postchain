@@ -3,6 +3,7 @@
 package net.postchain.network
 
 import net.postchain.core.NodeRid
+import net.postchain.network.common.LazyPacket
 
 interface CommunicationManager<PacketType> {
     fun init()
@@ -11,7 +12,13 @@ interface CommunicationManager<PacketType> {
     fun getPackets(): MutableList<Pair<NodeRid, PacketType>>
     fun sendPacket(packet: PacketType, recipient: NodeRid)
     fun sendPacket(packet: PacketType, recipients: List<NodeRid>)
-    fun broadcastPacket(packet: PacketType)
+
+    /**
+     * @param packet is the data to send
+     * @param oldPacket an old encoded packet to be used instead of encoding the packet
+     * @return the encoded and signed packet
+     */
+    fun broadcastPacket(packet: PacketType, oldPacket: LazyPacket? = null): LazyPacket
 
     /**
      * Sends the packet to a peer selected by random.

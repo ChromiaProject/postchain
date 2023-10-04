@@ -87,7 +87,7 @@ open class DefaultMasterCommunicationManager(
 
                         is MsDataMessage -> {
                             connectionManager.sendPacket(
-                                    { message.xPacket },
+                                    lazy { message.xPacket },
                                     chainId,
                                     NodeRid(message.destination)
                             )

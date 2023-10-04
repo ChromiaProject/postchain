@@ -20,6 +20,7 @@ import net.postchain.network.CommunicationManager
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
 import net.postchain.network.common.ConnectionManager
+import net.postchain.network.common.LazyPacket
 
 class DefaultPeerCommunicationManager<PacketType>(
         val connectionManager: ConnectionManager,
@@ -80,12 +81,12 @@ class DefaultPeerCommunicationManager<PacketType>(
                 logger.trace { "sendPacket(${peerName(recipient.toString())}, ${packetToString(packet)})" }
             }
         }
-        val encodingFunction = { packetEncoder.encodePacket(packet) }
+        val encodingFunction = lazy { packetEncoder.encodePacket(packet) }
         sendEncodedPacket(encodingFunction, recipient)
     }
 
     override fun sendPacket(packet: PacketType, recipients: List<NodeRid>) {
-        val lazyPacket by lazy { packetEncoder.encodePacket(packet) }
+        val lazyPacket = lazy { packetEncoder.encodePacket(packet) }
         recipients.forEach {
             if (logger.isTraceEnabled) {
                 withLoggingContext(
@@ -96,24 +97,25 @@ class DefaultPeerCommunicationManager<PacketType>(
                     logger.trace { "sendPacket(${peerName(it.toString())}, ${packetToString(packet)})" }
                 }
             }
-            sendEncodedPacket({ lazyPacket }, it)
+            sendEncodedPacket(lazyPacket, it)
         }
     }
 
-    override fun broadcastPacket(packet: PacketType) {
+    override fun broadcastPacket(packet: PacketType, oldPacket: LazyPacket?): LazyPacket {
         if (logger.isTraceEnabled) {
             withLoggingContext(
                     *baseLoggingContextWithSender,
                     MESSAGE_TYPE_TAG to packet!!::class.java.simpleName
             ) {
-                logger.trace { "broadcastPacket(${packetToString(packet)})" }
+                logger.trace { "broadcastPacket(${packetToString(packet)}, reusing=${oldPacket != null})" }
             }
         }
-        val lazyPacket by lazy { packetEncoder.encodePacket(packet) }
+        val lazyPacket: LazyPacket = oldPacket ?: lazy { packetEncoder.encodePacket(packet) }
         connectionManager.broadcastPacket(
-                { lazyPacket },
+                lazyPacket,
                 chainId
         )
+        return lazyPacket
     }
 
     override fun sendToRandomPeer(packet: PacketType, amongPeers: Set<NodeRid>): Pair<NodeRid?, Set<NodeRid>> {
@@ -147,7 +149,7 @@ class DefaultPeerCommunicationManager<PacketType>(
         connected = false
     }
 
-    private fun sendEncodedPacket(encodingFunction: () -> ByteArray, recipient: NodeRid) {
+    private fun sendEncodedPacket(encodingFunction: LazyPacket, recipient: NodeRid) {
         require(NodeRid(config.pubKey) != recipient) {
             "CommunicationManager.sendPacket(): sender can not be the recipient"
         }
