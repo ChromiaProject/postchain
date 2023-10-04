@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.chromia</groupId>
         <artifactId>chromia-parent</artifactId>
-        <version>0.1.2</version>
+        <version>0.1.3</version>
     </parent>
 
     <groupId>net.postchain</groupId>
@@ -653,17 +653,6 @@
                     <artifactId>jaxb30-maven-plugin</artifactId>
                     <version>0.15.0</version>
                 </plugin>
-                <plugin>
-                    <groupId>org.owasp</groupId>
-                    <artifactId>dependency-check-maven</artifactId>
-                    <configuration>
-                        <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
-                        <suppressionFiles>
-                            <suppressionFile>https://gitlab.com/chromaway/chromia-parent/-/raw/dev/common-dependencies-suppression.xml?ref_type=heads</suppressionFile>
-                            <suppressionFile>dependencies-suppression.xml</suppressionFile>
-                        </suppressionFiles>
-                    </configuration>
-                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -673,37 +662,9 @@
             </plugin>
 
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>flatten-maven-plugin</artifactId>
-                <configuration>
-                    <updatePomFile>true</updatePomFile>
-                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>flatten</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>flatten</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>flatten.clean</id>
-                        <phase>clean</phase>
-                        <goals>
-                            <goal>clean</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <excludes>
-                        <exclude>**/*IT.java</exclude>
-                        <exclude>**/*SlowIntegrationTest.java</exclude>
-                    </excludes>
                     <properties>
                         <configurationParameters>
                             junit.jupiter.execution.timeout.default=5m
@@ -716,9 +677,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <configuration>
-                    <includes>
-                        <include>**/*IT.java</include>
-                    </includes>
                     <properties>
                         <configurationParameters>
                             junit.jupiter.execution.timeout.default=5m
@@ -756,20 +714,6 @@
                         <phase>initialize</phase>
                     </execution>
                 </executions>
-                <configuration>
-                    <useNativeGit>true</useNativeGit> <!-- git worktree does not work with JGit implementation -->
-                    <includeOnlyProperties>
-                        <includeOnlyProperty>^git\.branch$</includeOnlyProperty>
-                        <includeOnlyProperty>^git\.build\.(time|version)$</includeOnlyProperty>
-                        <includeOnlyProperty>^git\.commit\.id\.(abbrev|full)$</includeOnlyProperty>
-                        <includeOnlyProperty>^git\.commit\.message\.(full|short)$</includeOnlyProperty>
-                        <includeOnlyProperty>^git\.commit\.time$</includeOnlyProperty>
-                        <includeOnlyProperty>^git\.dirty$</includeOnlyProperty>
-                    </includeOnlyProperties>
-                    <commitIdGenerationMode>full</commitIdGenerationMode>
-                    <dateFormatTimeZone>UTC</dateFormatTimeZone>
-                    <dateFormat>yyyy-MM-dd'T'HH:mm:ssX</dateFormat>
-                </configuration>
             </plugin>
         </plugins>
     </build>
