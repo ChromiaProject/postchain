@@ -26,6 +26,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import kotlin.time.Duration
 import kotlin.time.toJavaDuration
 
@@ -70,6 +72,9 @@ class BaseTransactionQueue(private val queueCapacity: Int,
 
     companion object : KLogging()
 
+    private val lock = ReentrantLock()
+    private val nonEmpty = lock.newCondition()
+
     private val sequence = AtomicLong()
     private val queue = TreeSet<WrappedTransaction>()
     private val queueMap = HashMap<WrappedByteArray, WrappedTransaction>() // transaction by RID
@@ -95,8 +100,21 @@ class BaseTransactionQueue(private val queueCapacity: Int,
         }
     }
 
-    @Synchronized
-    override fun takeTransaction(): Transaction? {
+    override fun takeTransaction(): Transaction? = lock.withLock {
+        dequeueTransaction()
+    }
+
+    override fun takeTransaction(timeout: Duration): Transaction? = lock.withLock {
+        var nanosRemaining: Long = timeout.inWholeNanoseconds
+        while (isEmpty()) {
+            if (nanosRemaining <= 0L)
+                return null
+            nanosRemaining = nonEmpty.awaitNanos(nanosRemaining)
+        }
+        dequeueTransaction()
+    }
+
+    private fun dequeueTransaction(): Transaction? {
         if (txsToRetry.isNotEmpty()) {
             return txsToRetry.poll().tx
         }
@@ -109,12 +127,13 @@ class BaseTransactionQueue(private val queueCapacity: Int,
         } else null
     }
 
-    @Synchronized
-    override fun findTransaction(txRID: WrappedByteArray): Transaction? =
-            queueMap[txRID]?.tx
+    private fun isEmpty(): Boolean = txsToRetry.isEmpty() && queue.isEmpty()
 
-    @Synchronized
-    override fun getTransactionQueueSize(): Int = queue.size
+    override fun findTransaction(txRID: WrappedByteArray): Transaction? = lock.withLock {
+        queueMap[txRID]?.tx
+    }
+
+    override fun getTransactionQueueSize(): Int = lock.withLock { queue.size }
 
     override fun enqueue(tx: Transaction): EnqueueTransactionResult {
         val txEnter = clock.instant()
@@ -123,7 +142,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
 
         val txRid = WrappedByteArray(tx.getRID())
 
-        synchronized(this) {
+        lock.withLock {
             if (queueMap.contains(txRid)) {
                 logger.debug { "Tx $txRid is duplicate (first test)" }
                 return EnqueueTransactionResult.DUPLICATE
@@ -147,7 +166,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
             val accountPoints = transactionPriority?.accountPoints ?: 0L
             val seqNumber = sequence.getAndIncrement()
             val wrappedTx = WrappedTransaction(tx, accountId, txCostPoints, priority, seqNumber, txEnter, txEnter)
-            synchronized(this) {
+            lock.withLock {
                 if (queueMap.contains(txRid)) {
                     logger.debug { "Tx $txRid is duplicate (second test)" }
                     return EnqueueTransactionResult.DUPLICATE
@@ -202,13 +221,14 @@ class BaseTransactionQueue(private val queueCapacity: Int,
 
             // If this tx was previously rejected we should clear that status now and retry it
             rejects.remove(txRid)
+
+            nonEmpty.signal()
         } else {
             throw UserMistake("Unable to enqueue tx $txRid")
         }
     }
 
-    @Synchronized
-    override fun getTransactionStatus(txRID: ByteArray): TransactionStatus {
+    override fun getTransactionStatus(txRID: ByteArray): TransactionStatus = lock.withLock {
         val rid = WrappedByteArray(txRID)
         return when {
             rid in queueMap -> TransactionStatus.WAITING
@@ -218,41 +238,44 @@ class BaseTransactionQueue(private val queueCapacity: Int,
         }
     }
 
-    @Synchronized
     override fun rejectTransaction(tx: Transaction, reason: Exception?) {
-        taken.remove(WrappedTransaction(tx, null, 0L, BigDecimal.ZERO, 0L, Instant.EPOCH, Instant.EPOCH))
-        rejects[WrappedByteArray(tx.getRID())] = reason
-    }
-
-    @Synchronized
-    override fun removeAll(transactionsToRemove: Collection<Transaction>) {
-        for (tx in transactionsToRemove) {
-            val removedTx = queueMap.remove(WrappedByteArray(tx.getRID()))?.also { wt ->
-                wt.accountId?.let { accountTxs.remove(it, wt) }
-                queue.remove(wt)
-            } ?: WrappedTransaction(tx, null, 0L, BigDecimal.ZERO, 0L, Instant.EPOCH, Instant.EPOCH)
-            taken.remove(removedTx)
-            txsToRetry.remove(removedTx)
+        lock.withLock {
+            taken.remove(WrappedTransaction(tx, null, 0L, BigDecimal.ZERO, 0L, Instant.EPOCH, Instant.EPOCH))
+            rejects[WrappedByteArray(tx.getRID())] = reason
         }
     }
 
-    @Synchronized
-    override fun getRejectionReason(txRID: WrappedByteArray): Exception? {
-        return rejects[txRID]
+    override fun removeAll(transactionsToRemove: Collection<Transaction>) {
+        lock.withLock {
+            for (tx in transactionsToRemove) {
+                val removedTx = queueMap.remove(WrappedByteArray(tx.getRID()))?.also { wt ->
+                    wt.accountId?.let { accountTxs.remove(it, wt) }
+                    queue.remove(wt)
+                } ?: WrappedTransaction(tx, null, 0L, BigDecimal.ZERO, 0L, Instant.EPOCH, Instant.EPOCH)
+                taken.remove(removedTx)
+                txsToRetry.remove(removedTx)
+            }
+        }
     }
 
-    @Synchronized
+    override fun getRejectionReason(txRID: WrappedByteArray): Exception? = lock.withLock {
+        rejects[txRID]
+    }
+
     override fun retryAllTakenTransactions() {
-        with(txsToRetry) {
-            clear()
-            addAll(taken)
+        lock.withLock {
+            with(txsToRetry) {
+                clear()
+                addAll(taken)
+            }
+            nonEmpty.signal()
         }
     }
 
     internal fun recheckPriorities() {
         if (prioritizer != null) {
             logger.debug { "Rechecking transactions" }
-            val queueMapSnapshot = synchronized(this) {
+            val queueMapSnapshot = lock.withLock {
                 queueMap.toList()
             }
             queueMapSnapshot.forEach { (txRid, wt) ->
@@ -260,7 +283,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
                 if (now.isAfter(wt.lastRecheck + recheckTxInterval.toJavaDuration())) {
                     logger.debug { "Rechecking tx $txRid" }
                     val transactionPriority = prioritizer.prioritize(wt.tx as GTXTransaction, wt.enter, now)
-                    synchronized(this) {
+                    lock.withLock {
                         if (queueMap.contains(txRid)) {
                             queue.remove(wt)
                             queue.add(WrappedTransaction(wt.tx, wt.accountId, transactionPriority.txCostPoints, transactionPriority.priority, wt.seqNumber, wt.enter, now))
