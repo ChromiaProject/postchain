@@ -16,10 +16,10 @@ interface XPacketEncoderFactory<PacketType> {
 }
 
 interface XPacketDecoder<PacketType> {
-    fun parseIdentPacket(bytes: ByteArray): IdentPacketInfo
-    fun decodePacket(pubKey: ByteArray, bytes: ByteArray): PacketType
-    fun decodePacket(bytes: ByteArray): PacketType?
-    fun isIdentPacket(bytes: ByteArray): Boolean
+    fun parseIdentPacket(rawMessage: ByteArray): IdentPacketInfo
+    fun decodePacket(pubKey: ByteArray, rawMessage: ByteArray): PacketType
+    fun decodePacket(rawMessage: ByteArray): PacketType?
+    fun isIdentPacket(rawMessage: ByteArray): Boolean
 }
 
 interface XPacketDecoderFactory<PacketType> {

@@ -2,15 +2,23 @@
 
 package net.postchain.ebft
 
+import mu.KLogging
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.NodeRid
+import net.postchain.crypto.Signature
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.Identification
 import net.postchain.ebft.message.SignedMessage
-import net.postchain.network.*
+import net.postchain.ebft.message.Status
+import net.postchain.network.IdentPacketInfo
+import net.postchain.network.XPacketDecoder
+import net.postchain.network.XPacketDecoderFactory
+import net.postchain.network.XPacketEncoder
+import net.postchain.network.XPacketEncoderFactory
+import org.jetbrains.annotations.TestOnly
 
 class EbftPacketEncoder(val config: PeerCommConfiguration, val blockchainRID: BlockchainRid) : XPacketEncoder<EbftMessage> {
 
@@ -22,7 +30,8 @@ class EbftPacketEncoder(val config: PeerCommConfiguration, val blockchainRID: Bl
     }
 
     override fun encodePacket(packet: EbftMessage): ByteArray {
-        return encodeAndSign(packet, config.sigMaker())
+        val signature = config.sigMaker().signMessage(packet.encoded)
+        return SignedMessage(packet, signature.subjectID, signature.data).encoded
     }
 }
 
@@ -35,9 +44,11 @@ class EbftPacketEncoderFactory : XPacketEncoderFactory<EbftMessage> {
 
 class EbftPacketDecoder(val config: PeerCommConfiguration) : XPacketDecoder<EbftMessage> {
 
-    override fun parseIdentPacket(bytes: ByteArray): IdentPacketInfo {
-        val signedMessage = decodeSignedMessage(bytes)
-        val message = decodeAndVerify(bytes, signedMessage.pubKey, config.verifier())
+    private val statusCache = EbftPacketCache()
+
+    override fun parseIdentPacket(rawMessage: ByteArray): IdentPacketInfo {
+        val signedMessage = decodeSignedMessage(rawMessage)
+        val message = verifySignedMessage(signedMessage, signedMessage.pubKey)
 
         if (message !is Identification) {
             throw UserMistake("Packet was not an Identification. Got ${message::class}")
@@ -50,17 +61,61 @@ class EbftPacketDecoder(val config: PeerCommConfiguration) : XPacketDecoder<Ebft
         return IdentPacketInfo(NodeRid(signedMessage.pubKey), message.blockchainRID, null)
     }
 
-    override fun decodePacket(pubKey: ByteArray, bytes: ByteArray): EbftMessage {
-        return decodeAndVerify(bytes, pubKey, config.verifier())
+    override fun decodePacket(pubKey: ByteArray, rawMessage: ByteArray): EbftMessage {
+        val signedMessage = decodeSignedMessage(rawMessage)
+        return (signedMessage.message as? Status)?.let {
+            statusCache.get(pubKey, rawMessage)
+                    ?: statusCache.put(pubKey, rawMessage, verifySignedMessage(signedMessage, pubKey))
+        } ?: verifySignedMessage(signedMessage, pubKey)
     }
 
-    override fun decodePacket(bytes: ByteArray): EbftMessage? {
-        return decodeAndVerify(bytes, config.verifier())
+    override fun isIdentPacket(rawMessage: ByteArray): Boolean {
+        return decodeSignedMessage(rawMessage).message is Identification
     }
 
-    // TODO: [et]: Improve the design
-    override fun isIdentPacket(bytes: ByteArray): Boolean {
-        return decodeWithoutVerification(bytes).message is Identification
+    @TestOnly
+    override fun decodePacket(rawMessage: ByteArray): EbftMessage? {
+        return decodeAndVerify(rawMessage)
+    }
+
+    private fun decodeSignedMessage(rawMessage: ByteArray): SignedMessage {
+        return SignedMessage.decode(rawMessage)
+    }
+
+    private fun verifySignedMessage(message: SignedMessage, pubKey: ByteArray): EbftMessage {
+        val verified = message.pubKey.contentEquals(pubKey)
+                && config.verifier()(message.message.encoded, Signature(message.pubKey, message.signature))
+        return if (verified) message.message else throw UserMistake("Verification failed")
+    }
+
+    private fun decodeAndVerify(rawMessage: ByteArray): EbftMessage? {
+        val message = SignedMessage.decode(rawMessage)
+        val verified = config.verifier()(message.message.encoded, Signature(message.pubKey, message.signature))
+        return if (verified) message.message else null
+    }
+}
+
+class EbftPacketCache {
+
+    private val cache = mutableMapOf<ByteArray, Pair<ByteArray, EbftMessage>>()
+
+    companion object : KLogging()
+
+    fun get(pubKey: ByteArray, rawMessage: ByteArray): EbftMessage? {
+        val message = cache[pubKey]?.takeIf { it.first.contentEquals(rawMessage) }?.second
+        if (logger.isTraceEnabled) {
+            if (message != null) {
+                logger.trace { "Cache HIT for pubKey ${pubKey.toHex()}" }
+            } else {
+                logger.trace { "Cache MISS for pubKey ${pubKey.toHex()}" }
+            }
+        }
+        return message
+    }
+
+    fun put(pubKey: ByteArray, rawMessage: ByteArray, message: EbftMessage): EbftMessage {
+        cache[pubKey] = rawMessage to message
+        return message
     }
 }
 

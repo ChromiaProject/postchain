@@ -25,12 +25,12 @@ class IntMockPacketDecoder(
 ) : XPacketDecoder<Int> {
 
     // FYI: [et]: This logic corresponds to the [EbftPacketConverter]'s one
-    override fun parseIdentPacket(bytes: ByteArray): IdentPacketInfo = IdentPacketInfo(NodeRid(bytes), BlockchainRid.ZERO_RID)
+    override fun parseIdentPacket(rawMessage: ByteArray): IdentPacketInfo = IdentPacketInfo(NodeRid(rawMessage), BlockchainRid.ZERO_RID)
 
-    override fun decodePacket(pubKey: ByteArray, bytes: ByteArray): Int = ByteBuffer.wrap(bytes).int
+    override fun decodePacket(pubKey: ByteArray, rawMessage: ByteArray): Int = ByteBuffer.wrap(rawMessage).int
 
-    override fun decodePacket(bytes: ByteArray): Int? = ByteBuffer.wrap(bytes).int
+    override fun decodePacket(rawMessage: ByteArray): Int? = ByteBuffer.wrap(rawMessage).int
 
-    override fun isIdentPacket(bytes: ByteArray): Boolean = peerInfos.any { it.pubKey.contentEquals(bytes) }
+    override fun isIdentPacket(rawMessage: ByteArray): Boolean = peerInfos.any { it.pubKey.contentEquals(rawMessage) }
 
 }
