@@ -76,15 +76,15 @@ class IntNettyConnector2PeersCommunicationIT {
                 byteArrayOf(1, 2, 3, 4),
                 byteArrayOf(10, 2, 3, 4),
                 byteArrayOf(100, 2, 3, 4))
-        connection1.firstValue.sendPacket { packets1[0] }
-        connection1.firstValue.sendPacket { packets1[1] }
-        connection1.firstValue.sendPacket { packets1[2] }
+        connection1.firstValue.sendPacket(lazy { packets1[0] })
+        connection1.firstValue.sendPacket(lazy { packets1[1] })
+        connection1.firstValue.sendPacket(lazy { packets1[2] })
         // * 2 -> 1
         val packets2 = arrayOf(
                 byteArrayOf(1, 2, 3, 4),
                 byteArrayOf(10, 20, 30, 40))
-        connection2.firstValue.sendPacket { packets2[0] }
-        connection2.firstValue.sendPacket { packets2[1] }
+        connection2.firstValue.sendPacket(lazy { packets2[0] })
+        connection2.firstValue.sendPacket(lazy { packets2[1] })
 
         // * asserting
         await().atMost(TEN_SECONDS)

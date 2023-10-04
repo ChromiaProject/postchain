@@ -121,8 +121,8 @@ class IntNettyConnector3PeersReconnectionIT {
         // Sending packets
         // * 1 -> 2 and 1 -> 3
         val packet1 = byteArrayOf(10, 2, 3, 4)
-        connection1.firstValue.sendPacket { packet1 }
-        connection1.secondValue.sendPacket { packet1 }
+        connection1.firstValue.sendPacket(lazy { packet1 })
+        connection1.secondValue.sendPacket(lazy { packet1 })
 
         // Asserting peer2 have received packet1
         await().atMost(FIVE_SECONDS)
@@ -175,14 +175,14 @@ class IntNettyConnector3PeersReconnectionIT {
         // Sending packets
         // * 1 -> 3
         val packet1_2 = byteArrayOf(10, 2, 3, 4)
-        connection1_2.thirdValue.sendPacket { packet1_2 }
+        connection1_2.thirdValue.sendPacket(lazy { packet1_2 })
         // * 2 -> 3
         val packet2_2 = byteArrayOf(1, 20, 3, 4)
-        connection2_2.thirdValue.sendPacket { packet2_2 }
+        connection2_2.thirdValue.sendPacket(lazy { packet2_2 })
         // * 3 -> 1 and 3 -> 2
         val packet3_2 = byteArrayOf(1, 2, 30, 4)
-        connection3_2.firstValue.sendPacket { packet3_2 }
-        connection3_2.secondValue.sendPacket { packet3_2 }
+        connection3_2.firstValue.sendPacket(lazy { packet3_2 })
+        connection3_2.secondValue.sendPacket(lazy { packet3_2 })
 
         // * asserting
         await().atMost(TEN_SECONDS)

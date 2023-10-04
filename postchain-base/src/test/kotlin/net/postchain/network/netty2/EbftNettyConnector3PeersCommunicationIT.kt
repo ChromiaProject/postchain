@@ -128,31 +128,31 @@ class EbftNettyConnector3PeersCommunicationIT {
         val packets1 = arrayOf(
                 GetBlockAtHeight(10),
                 GetBlockAtHeight(11))
-        connection1.firstValue.sendPacket { context1.encodePacket(packets1[0]) }
-        connection1.firstValue.sendPacket { context1.encodePacket(packets1[1]) }
+        connection1.firstValue.sendPacket(lazy { context1.encodePacket(packets1[0]) })
+        connection1.firstValue.sendPacket(lazy { context1.encodePacket(packets1[1]) })
         // * 1 -> 3
-        connection1.secondValue.sendPacket { context1.encodePacket(packets1[0]) }
-        connection1.secondValue.sendPacket { context1.encodePacket(packets1[1]) }
+        connection1.secondValue.sendPacket(lazy { context1.encodePacket(packets1[0]) })
+        connection1.secondValue.sendPacket(lazy { context1.encodePacket(packets1[1]) })
 
         // * 2 -> 1
         val packets2 = arrayOf(
                 GetBlockAtHeight(20),
                 GetBlockAtHeight(21))
-        connection2.firstValue.sendPacket { context2.encodePacket(packets2[0]) }
-        connection2.firstValue.sendPacket { context2.encodePacket(packets2[1]) }
+        connection2.firstValue.sendPacket(lazy { context2.encodePacket(packets2[0]) })
+        connection2.firstValue.sendPacket(lazy { context2.encodePacket(packets2[1]) })
         // * 2 -> 3
-        connection2.secondValue.sendPacket { context2.encodePacket(packets2[0]) }
-        connection2.secondValue.sendPacket { context2.encodePacket(packets2[1]) }
+        connection2.secondValue.sendPacket(lazy { context2.encodePacket(packets2[0]) })
+        connection2.secondValue.sendPacket(lazy { context2.encodePacket(packets2[1]) })
 
         // * 3 -> 1
         val packets3 = arrayOf(
                 GetBlockAtHeight(30),
                 GetBlockAtHeight(31))
-        connection3.firstValue.sendPacket { context3.encodePacket(packets3[0]) }
-        connection3.firstValue.sendPacket { context3.encodePacket(packets3[1]) }
+        connection3.firstValue.sendPacket(lazy { context3.encodePacket(packets3[0]) })
+        connection3.firstValue.sendPacket(lazy { context3.encodePacket(packets3[1]) })
         // * 3 -> 2
-        connection3.secondValue.sendPacket { context3.encodePacket(packets3[0]) }
-        connection3.secondValue.sendPacket { context3.encodePacket(packets3[1]) }
+        connection3.secondValue.sendPacket(lazy { context3.encodePacket(packets3[0]) })
+        connection3.secondValue.sendPacket(lazy { context3.encodePacket(packets3[1]) })
 
         // * asserting
         await().atMost(TEN_SECONDS)

@@ -103,16 +103,16 @@ class IntNettyConnector3PeersCommunicationIT {
         // Sending packets
         // * 1 -> 2 and 1 -> 3
         val packet1 = byteArrayOf(10, 2, 3, 4)
-        connection1.firstValue.sendPacket { packet1 }
-        connection1.secondValue.sendPacket { packet1 }
+        connection1.firstValue.sendPacket(lazy { packet1 })
+        connection1.secondValue.sendPacket(lazy { packet1 })
         // * 2 -> 1 and 2 -> 3
         val packet2 = byteArrayOf(1, 20, 3, 4)
-        connection2.firstValue.sendPacket { packet2 }
-        connection2.secondValue.sendPacket { packet2 }
+        connection2.firstValue.sendPacket(lazy { packet2 })
+        connection2.secondValue.sendPacket(lazy { packet2 })
         // * 3 -> 1 and 3 -> 2
         val packet3 = byteArrayOf(1, 2, 30, 4)
-        connection3.firstValue.sendPacket { packet3 }
-        connection3.secondValue.sendPacket { packet3 }
+        connection3.firstValue.sendPacket(lazy { packet3 })
+        connection3.secondValue.sendPacket(lazy { packet3 })
 
         // * asserting
         await().atMost(TEN_SECONDS)

@@ -33,7 +33,7 @@ class NettyServerPeerConnection<PacketType>(
     }
 
     override fun sendPacket(packet: LazyPacket) {
-        context.writeAndFlush(Transport.wrapMessage(packet()))
+        context.writeAndFlush(Transport.wrapMessage(packet.value))
     }
 
     override fun remoteAddress(): String {

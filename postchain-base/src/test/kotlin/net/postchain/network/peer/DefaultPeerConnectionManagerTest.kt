@@ -353,7 +353,7 @@ class DefaultPeerConnectionManagerTest {
     @Test
     fun sendPacket_will_result_in_exception_if_chain_is_not_connected() {
         assertThrows<ProgrammerMistake> {
-            emptyManager().sendPacket({ byteArrayOf() }, 1, peerInfo2.peerId())
+            emptyManager().sendPacket((lazy { byteArrayOf() }), 1, peerInfo2.peerId())
         }
     }
 
@@ -385,14 +385,14 @@ class DefaultPeerConnectionManagerTest {
             onNodeConnected(connection1)
             onNodeConnected(connection2)
 
-            sendPacket({ byteArrayOf(0x04, 0x02) }, 1L, peerInfo2.peerId())
+            sendPacket((lazy { byteArrayOf(0x04, 0x02) }), 1L, peerInfo2.peerId())
         }
 
         // Then / verify and assert
         verify(connection1, times(0)).sendPacket(any())
         argumentCaptor<LazyPacket>().apply {
             verify(connection2, times(1)).sendPacket(capture())
-            assertThat(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
+            assertThat(firstValue.value).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
 
         connectionManager.shutdown()
@@ -401,7 +401,7 @@ class DefaultPeerConnectionManagerTest {
     @Test
     fun broadcastPacket_will_result_in_exception_if_chain_is_not_connected() {
         assertThrows<ProgrammerMistake> {
-            emptyManager().broadcastPacket({ byteArrayOf() }, 1)
+            emptyManager().broadcastPacket(lazy { byteArrayOf() }, 1)
         }
     }
 
@@ -441,17 +441,17 @@ class DefaultPeerConnectionManagerTest {
             onNodeConnected(connection1)
             onNodeConnected(connection2)
 
-            broadcastPacket({ byteArrayOf(0x04, 0x02) }, 1L)
+            broadcastPacket(lazy { byteArrayOf(0x04, 0x02) }, 1L)
         }
 
         // Then / verify and assert
         argumentCaptor<LazyPacket>().apply {
             verify(connection1, times(1)).sendPacket(capture())
-            assertThat(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
+            assertThat(firstValue.value).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
         argumentCaptor<LazyPacket>().apply {
             verify(connection2, times(1)).sendPacket(capture())
-            assertThat(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
+            assertThat(firstValue.value).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
 
         connectionManager.shutdown()

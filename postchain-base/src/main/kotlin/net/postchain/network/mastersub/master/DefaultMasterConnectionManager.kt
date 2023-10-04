@@ -70,7 +70,7 @@ class DefaultMasterConnectionManager(
         return if (chain != null) {
             val conn = chain.getConnection()
             if (conn != null) {
-                conn.sendPacket { MsCodec.encode(message) }
+                conn.sendPacket(lazy { MsCodec.encode(message) })
                 logger.trace { "$prefix - end: message sent" }
             } else {
                 logger.debug { "$prefix - end: conn not found" }
@@ -105,7 +105,7 @@ class DefaultMasterConnectionManager(
 
             queryConnections[descriptor.containerIID] = connection
             logger.debug { "Connected query runner for container: ${descriptor.containerIID}" }
-            return MasterQueryHandler({ message -> connection.sendPacket { MsCodec.encode(message) } },
+            return MasterQueryHandler({ message -> connection.sendPacket(lazy { MsCodec.encode(message) }) },
                     masterSubQueryManager, dataSource, blockQueriesProvider)
         } else {
             val chain = chainsWithOneSubConnection.get(descriptor.blockchainRid)

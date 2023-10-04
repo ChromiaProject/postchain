@@ -63,7 +63,7 @@ class DefaultSubConnectionManager(
     override val masterSubQueryManager = MasterSubQueryManager { _, message ->
         val connection = queryConnection
         if (connection != null) {
-            connection.sendPacket { MsCodec.encode(message) }
+            connection.sendPacket(lazy { MsCodec.encode(message) })
             true
         } else false
     }
@@ -149,9 +149,9 @@ class DefaultSubConnectionManager(
             val message = MsDataMessage(
                     appConfig.pubKeyByteArray,
                     nodeRid.data,
-                    data()
+                    data.value
             )
-            chain.getConnection()!!.sendPacket { MsCodec.encode(message) }
+            chain.getConnection()!!.sendPacket(lazy { MsCodec.encode(message) })
         } else {
             logger.error("sendPacket() - Master is disconnected so cannot send packet")
         }
@@ -288,7 +288,7 @@ class DefaultSubConnectionManager(
     override fun sendMessageToMaster(chainId: Long, message: MsMessage): Boolean {
         val chain = chains.getOrThrow(chainId)
         return if (chain.isConnected()) {
-            chain.getConnection()!!.sendPacket { MsCodec.encode(message) }
+            chain.getConnection()!!.sendPacket(lazy { MsCodec.encode(message) })
             true
         } else {
             logger.error("Can't send packet b/c no connection to master node")

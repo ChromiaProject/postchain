@@ -42,6 +42,7 @@ import net.postchain.network.CommunicationManager
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.junit.jupiter.api.BeforeEach
 import org.mockito.ArgumentMatchers.anyLong
+import org.mockito.ArgumentMatchers.eq
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -147,7 +148,7 @@ abstract class EBFTProtocolBase {
 
     protected fun verifyStatus(blockRID: ByteArray?, height: Long, serial: Long, round: Long, revolting: Boolean, state: NodeBlockState) {
         argumentCaptor<Status> {
-            verify(commManager).broadcastPacket(capture())
+            verify(commManager).broadcastPacket(capture(), eq(null))
             assertThat(firstValue.blockRID).isEqualTo(blockRID)
             assertThat(firstValue.height).isEqualTo(height)
             assertThat(firstValue.serial).isEqualTo(serial)
