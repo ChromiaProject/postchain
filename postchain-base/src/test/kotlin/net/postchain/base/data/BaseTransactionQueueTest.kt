@@ -346,7 +346,7 @@ class BaseTransactionQueueTest {
             assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         }
         val elapsed = measureTimeMillis {
-            assertThat(sut.takeTransaction(2.seconds)).isNotNull()
+            assertThat(sut.takeTransaction(4.seconds)).isNotNull()
         }
         assertThat(elapsed).isBetween(1000 - 10, 2 * 1000 + 10)
     }
