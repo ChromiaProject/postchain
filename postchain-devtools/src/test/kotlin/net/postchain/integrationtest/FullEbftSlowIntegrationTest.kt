@@ -21,6 +21,9 @@ class FullEbftSlowIntegrationTest : FullEbftSlowIntegrationTestCore() {
         }
 
         configOverrides.setProperty("testpeerinfos", createPeerInfos(nodesCount))
+        // Modify max concurrent connections to stay under 100 when we run with 8 nodes
+        configOverrides.setProperty("database.blockBuilderWriteConcurrency", 2)
+        configOverrides.setProperty("database.readConcurrency", 6)
         createNodes(nodesCount, "/net/postchain/devtools/full_ebft/blockchain_config_$nodesCount.xml")
 
         runXNodesWithYTxPerBlockTest(blocksCount, txPerBlock)
