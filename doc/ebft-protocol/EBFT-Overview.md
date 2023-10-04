@@ -82,6 +82,12 @@ on a state change, or if __MAX_STATUS_INTERVAL__ (default 1 second) has passed s
 heartbeat. All other messages are sent as a response to __Status__ messages from other nodes and/or the current state
 of the node, or upon requests from other nodes.
 
+When a node updates its state in any way it will increment the status serial value. This way other nodes can determine
+if a status message they receive is just a resubmission or an actual state change. When the chain is started or
+restarted the node sets the serial to a value based on the current time in milliseconds, this way it ensures that other
+nodes will consider the first status it sends as fresh (the assumption is that we send less than 1000 status messages
+per second).
+
 ### Simplicity
 
 If the consensus behavior depends on a large amount of code, there is a large probability that the system will get
