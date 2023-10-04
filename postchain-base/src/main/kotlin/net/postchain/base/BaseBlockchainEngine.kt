@@ -45,9 +45,10 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.logging.BLOCK_RID_TAG
 import net.postchain.metrics.BaseBlockchainEngineMetrics
 import net.postchain.metrics.DelayTimer
-import java.lang.Long.max
 import java.util.concurrent.TimeUnit
 import java.util.stream.Collectors
+import kotlin.math.max
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * An [BlockchainEngine] will only produce [BlockBuilder]s for a single chain.
@@ -309,7 +310,7 @@ open class BaseBlockchainEngine(
                 throw ForceStopBlockBuildingException()
             }
             logger.trace { "Checking transaction queue" }
-            val tx = transactionQueue.takeTransaction()
+            val tx = transactionQueue.takeTransaction(max(20L, mustWaitMinimumBuildBlockTime()).milliseconds)
             if (tx != null) {
                 delayTimer.stop()
                 logger.trace { "Appending transaction ${tx.getRID().toHex()}" }
@@ -353,7 +354,6 @@ open class BaseBlockchainEngine(
                     break
                 } else {
                     delayTimer.start()
-                    Thread.sleep(20)
                 }
             }
         }
