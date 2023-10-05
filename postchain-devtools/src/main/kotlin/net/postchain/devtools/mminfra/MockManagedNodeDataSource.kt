@@ -116,6 +116,11 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         return result
     }
 
+    override fun getSignersInLatestConfiguration(blockchainRid: BlockchainRid): List<NodeRid> {
+        val (latestConfig, _) = bridToConfigs[blockchainRid]?.maxBy { it.key }?.value ?: return listOf()
+        return latestConfig.signers.map { NodeRid(it) }
+    }
+
     fun addExtraReplica(brid: BlockchainRid, replica: NodeRid) {
         extraReplicas.computeIfAbsent(brid) { mutableSetOf() }.add(replica)
     }

@@ -79,6 +79,7 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
     ): Map<NodeRid, PeerInfo> {
         val myNodeRid = NodeRid(appConfig.pubKeyByteArray)
         val signers0 = signers.map { NodeRid(it) }
+        val latestSigners = nodeConfig.getSignersInLatestConfiguration(blockchainRid, chainId)
 
         val blockchainReplicas = if (historicBlockchainContext != null) {
             (getBlockchainReplicaNodes(nodeConfig, historicBlockchainContext.historicBrid, chainId) ?: listOf()).union(
@@ -89,10 +90,11 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
 
         // We keep
         // 1. All BC's signers
-        // 2. All nodes that replicate the BC (if must sync until height is set, otherwise just locally configured replicas)
-        // 3. This node itself
+        // 2. All BC's signers in latest configuration
+        // 3. All nodes that replicate the BC (if must sync until height is set, otherwise just locally configured replicas)
+        // 4. This node itself
         return nodeConfig.peerInfoMap.filterKeys {
-            it in signers0 || it in blockchainReplicas || it == myNodeRid
+            it in signers0 || it in latestSigners || it in blockchainReplicas || it == myNodeRid
         }
     }
 

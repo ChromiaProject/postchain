@@ -34,6 +34,15 @@ class ManagedNodeConfigurationProvider(
             override val locallyConfiguredBlockchainReplicaNodes = getLocallyConfiguredBlockchainReplicaCollection()
             override val locallyConfiguredBlockchainsToReplicate = getLocallyConfiguredBlockchainsToReplicate(appConfig)
             override val mustSyncUntilHeight = getSyncUntilHeight()
+
+            override fun getSignersInLatestConfiguration(blockchainRid: BlockchainRid, chainId: Long): List<NodeRid> {
+                val peerDataSource = managedPeerSource
+                return if (chainId == 0L || peerDataSource == null) {
+                    listOf()
+                } else {
+                    peerDataSource.getSignersInLatestConfiguration(blockchainRid)
+                }
+            }
         }
     }
 
