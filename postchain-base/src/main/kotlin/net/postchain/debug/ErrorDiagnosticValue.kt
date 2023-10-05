@@ -1,7 +1,5 @@
 package net.postchain.debug
 
-import com.fasterxml.jackson.annotation.JsonProperty
-
 class ErrorDiagnosticValue(val message: String, val timestamp: Long, val height: Long? = null) : DiagnosticValue {
 
     private val errorValue = ErrorValue(message, timestamp, height)
@@ -31,11 +29,8 @@ class ErrorDiagnosticValue(val message: String, val timestamp: Long, val height:
 }
 
 data class ErrorValue(
-        @JsonProperty("message")
         val message: String,
-        @JsonProperty("timestamp")
         val timestamp: Long,
-        @JsonProperty("height")
         val height: Long?) {
     override fun toString(): String {
         return "(message=$message, timestamp=$timestamp, height=$height)"
