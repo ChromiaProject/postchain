@@ -47,8 +47,8 @@ class EventIT: SnapshotBaseIT() {
                     return
                 }
             }
-            val bctx = BaseBlockEContext(ctx, 0, 1, 10, mapOf(), dummyEventSink)
-            db.insertBlock(ctx, 1)
+            val blockIid = db.insertBlock(ctx, 1)
+            val bctx = BaseBlockEContext(ctx, 0, blockIid, 10, mapOf(), dummyEventSink)
             val signers = listOf(KeyPairHelper.pubKey(0))
             val sigMaker = cs.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0)))
             val factory = GTXTransactionFactory(BlockchainRid.ZERO_RID, StandardOpsGTXModule(), cs)
@@ -62,7 +62,7 @@ class EventIT: SnapshotBaseIT() {
 
             val blockHeight = 1L
             val leafs = arrayListOf<Hash>()
-            for (i in 1..129) {
+            for (i in 1..128) {
                 val data = BigInteger.valueOf(i.toLong()).toByteArray()
                 val hash = ds.digest(data)
                 db.insertEvent(txEContext, PREFIX, blockHeight, leafs.size.toLong(), hash, data)
@@ -75,7 +75,7 @@ class EventIT: SnapshotBaseIT() {
             }
 
             val root = event.writeEventTree(blockHeight, leafs)
-            arrayOf(0, 1, 36, 88, 12, 128).forEach {
+            arrayOf(0, 1, 36, 88, 126, 127).forEach {
                 val proofs = event.getMerkleProof(blockHeight, it.toLong())
                 val expected = getMerkleRoot(proofs, it, leafs[it])
                 assertEquals(expected.toHex(), root.toHex())

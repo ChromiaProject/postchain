@@ -208,4 +208,43 @@ class SnapshotIT: SnapshotBaseIT() {
             true
         }
     }
+
+    @Test
+    fun testSnapshot128() {
+        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
+        val chainId = 0L
+
+        withWriteConnection(storage, chainId) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
+            db.apply {
+                createPageTable(ctx, "${PREFIX}_snapshot")
+                createStateLeafTable(ctx, PREFIX)
+                createStateLeafTableIndex(ctx, PREFIX, 0)
+            }
+            val snapshot = SnapshotPageStore(ctx, levelsPerPage, snapshotsToKeep, ds, PREFIX)
+            val states = TreeMap<Long, Hash>()
+            for (i in 0..127) {
+                states[i.toLong()] = ds.digest(i.toBigInteger().toByteArray())
+            }
+            val blockHeight = 1L
+
+            states.forEach { (n, data) ->  db.insertState(ctx, PREFIX, blockHeight, n, data) }
+            states.forEach { (n, data) ->
+                val accountState = db.getAccountState(ctx, PREFIX, blockHeight, n)
+                assertNotNull(accountState)
+                assertTrue(accountState!!.data.contentEquals(data))
+            }
+
+            val stateRootHash = snapshot.updateSnapshot(blockHeight, states)
+            snapshot.pruneSnapshot(blockHeight)
+
+            arrayOf(0, 1, 36, 88, 126, 127).forEach {
+                val proofs = snapshot.getMerkleProof(blockHeight, it.toLong())
+                val expected = getMerkleRoot(proofs, it, states[it.toLong()]!!)
+                assertEquals(expected.toHex(), stateRootHash.toHex())
+            }
+            true
+        }
+    }
 }

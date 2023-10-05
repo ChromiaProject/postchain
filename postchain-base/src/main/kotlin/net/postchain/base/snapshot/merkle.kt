@@ -85,7 +85,6 @@ open class EventPageStore(
 
     fun writeEventTree(blockHeight: Long, leafHashes: List<Hash>): Hash {
         val entriesPerPage = 1 shl levelsPerPage
-        val prevHighestLevelPage = highestLevelPage(blockHeight)
 
         fun updateLevel(level: Int, entryHashes: List<Hash>): Hash {
             var current = 0
@@ -102,7 +101,7 @@ open class EventPageStore(
                 writePage(page)
                 current = left + entriesPerPage
             }
-            return if (upperEntry.size > 2 || prevHighestLevelPage > level)
+            return if (upperEntry.size > 1)
                 updateLevel(level + levelsPerPage, upperEntry)
             else {
                 upperEntry[0]
