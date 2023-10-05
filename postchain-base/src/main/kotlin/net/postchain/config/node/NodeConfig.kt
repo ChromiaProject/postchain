@@ -17,6 +17,8 @@ open class NodeConfig(val appConfig: AppConfig) : Config {
     open val blockchainAncestors: Map<BlockchainRid, Map<BlockchainRid, Set<NodeRid>>> = getAncestors()
     open val mustSyncUntilHeight: Map<Long, Long>? = mapOf() // chainID -> height
 
+    open fun getSignersInLatestConfiguration(blockchainRid: BlockchainRid, chainId: Long): List<NodeRid> = listOf()
+
     private fun getAncestors(): Map<BlockchainRid, Map<BlockchainRid, Set<NodeRid>>> {
         // blockchain_ancestors.<brid_X>=[<node_id_Y>:<brid_Z>]
         val allAncestors = appConfig.subset("blockchain_ancestors")

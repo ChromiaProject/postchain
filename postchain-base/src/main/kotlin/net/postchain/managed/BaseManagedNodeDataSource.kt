@@ -137,6 +137,15 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         }
     }
 
+    override fun getSignersInLatestConfiguration(blockchainRid: BlockchainRid): List<NodeRid> {
+        if (nmApiVersion < 9) return emptyList()
+
+        return query(
+                "nm_get_blockchain_signers_in_latest_configuration",
+                buildArgs("blockchain_rid" to gtv(blockchainRid))
+        ).asArray().map { NodeRid(it.asByteArray()) }
+    }
+
     fun buildArgs(vararg args: Pair<String, Gtv>): Gtv = gtv(*args)
 
     override fun getBlockchainState(blockchainRid: BlockchainRid): BlockchainState {
