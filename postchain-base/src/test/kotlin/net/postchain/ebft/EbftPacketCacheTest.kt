@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.message.MessageTopic
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
@@ -27,7 +28,7 @@ class EbftPacketCacheTest {
 
     @Test
     fun `empty cache should return null`() {
-        assertThat(sut.get(pubKey1, message1)).isNull()
+        assertThat(sut.get(pubKey1, message1, MessageTopic.STATUS)).isNull()
     }
 
     @Test
@@ -40,7 +41,7 @@ class EbftPacketCacheTest {
         // setup
         sut.put(pubKey1, message1, ebftMmessage1)
         // execute & verify
-        assertThat(sut.get(pubKey1, message1)).isEqualTo(ebftMmessage1)
+        assertThat(sut.get(pubKey1, message1, MessageTopic.STATUS)).isEqualTo(ebftMmessage1)
     }
 
     @Test
@@ -48,7 +49,7 @@ class EbftPacketCacheTest {
         // setup
         sut.put(pubKey1, message1, ebftMmessage1)
         // execute & verify
-        assertThat(sut.get(pubKey1, message2)).isNull()
+        assertThat(sut.get(pubKey1, message2, MessageTopic.STATUS)).isNull()
     }
 
     @Test
@@ -56,6 +57,6 @@ class EbftPacketCacheTest {
         // setup
         sut.put(pubKey1, message1, ebftMmessage1)
         // execute & verify
-        assertThat(sut.get(pubKey2, message1)).isNull()
+        assertThat(sut.get(pubKey2, message1, MessageTopic.STATUS)).isNull()
     }
 }

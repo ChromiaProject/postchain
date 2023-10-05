@@ -53,7 +53,8 @@ class ValidatorBlockchainProcess(
     val statusManager: StatusManager
     private val appliedConfigSender = AppliedConfigSender(
             workerContext,
-            Duration.ofMillis(workerContext.appConfig.appliedConfigSendInterval())
+            Duration.ofMillis(workerContext.appConfig.appliedConfigSendInterval()),
+            ::currentBlockHeight
     )
 
     private val loggingContext = mapOf(
@@ -100,6 +101,7 @@ class ValidatorBlockchainProcess(
                 workerContext.communicationManager)
 
         statusManager.recomputeStatus()
+        appliedConfigSender.start()
     }
 
     fun isInFastSyncMode() = syncManager.isInFastSync()
