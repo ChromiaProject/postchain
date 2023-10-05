@@ -179,19 +179,20 @@ class EBFTRevoltTest : EBFTProtocolBase() {
          * Send: Broadcast [Status]
          */
         // setup
+        statusManager.onStartRevolting()
+        syncManager.update()
+        verifyStatus(blockRID = null, height = 0, serial = 1, round = 0, revolting = true, state = WaitBlock)
+        reset(commManager)
         // incoming messages
         messagesToReceive(
                 nodeRid0 to Status(null, 0, true, 4, 1, WaitBlock.ordinal),
                 nodeRid2 to Status(null, 0, true, 5, 1, WaitBlock.ordinal),
                 nodeRid3 to Status(null, 0, true, 6, 1, WaitBlock.ordinal)
         )
-        syncManager.update()
-        reset(commManager)
         // execute
-        statusManager.onStartRevolting()
         syncManager.update()
         // verify
-        verifyStatus(blockRID = null, height = 0, serial = 2, round = 4, revolting = false, state = WaitBlock)
+        verifyStatus(blockRID = null, height = 0, serial = 3, round = 4, revolting = false, state = WaitBlock)
     }
 
     @Test

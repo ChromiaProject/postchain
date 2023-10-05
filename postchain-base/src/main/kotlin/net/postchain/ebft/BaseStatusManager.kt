@@ -320,10 +320,6 @@ class BaseStatusManager(
     @Synchronized
     override fun getBlockIntent(): BlockIntent = intent
 
-    fun setBlockIntent(newIntent: BlockIntent) {
-        intent = newIntent
-    }
-
     /**
      * Get local commit signature
      *
@@ -380,9 +376,16 @@ class BaseStatusManager(
         fun potentiallyDoSync(): FlowStatus {
             var sameHeightCount = 0
             var higherHeightCount = 0
+            val sameHeightHigherRounds = mutableListOf<Long>()
             for (ns in nodeStatuses) {
-                if (ns.height == myStatus.height) sameHeightCount++
-                else if (ns.height > myStatus.height) higherHeightCount++
+                if (ns.height == myStatus.height) {
+                    sameHeightCount++
+                    if (ns.round > myStatus.round) {
+                        sameHeightHigherRounds.add(ns.round)
+                    }
+                } else if (ns.height > myStatus.height) {
+                    higherHeightCount++
+                }
             }
             if (sameHeightCount < this.quorum) {
                 // cannot build a block
@@ -401,7 +404,7 @@ class BaseStatusManager(
                     }
 
                     if (myStatus.state == NodeBlockState.HaveBlock) {
-                        logger.warn("Resetting block in HaveBlock state")
+                        logger.warn("Resetting block in HaveBlock state due to height")
                         resetBlock()
                     }
 
@@ -409,6 +412,14 @@ class BaseStatusManager(
                     this.intent = FetchBlockAtHeightIntent(myStatus.height)
                     return FlowStatus.Continue
                 }
+            } else if (sameHeightHigherRounds.size >= this.quorum) {
+                myStatus.serial += 1
+                myStatus.round = sameHeightHigherRounds.sortedDescending()[this.quorum - 1]
+                if (myStatus.state == NodeBlockState.HaveBlock) {
+                    logger.info("Resetting block in HaveBlock state due to new round")
+                    resetBlock()
+                }
+                return FlowStatus.Continue
             }
             return FlowStatus.JustRunOn
         }
@@ -458,12 +469,12 @@ class BaseStatusManager(
         fun handleHaveBlockState(): Boolean {
             val count = countNodes(NodeBlockState.HaveBlock, myStatus.height, myStatus.blockRID) +
                     countNodes(NodeBlockState.Prepared, myStatus.height, myStatus.blockRID)
-            if (count >= this.quorum) {
+            return if (count >= this.quorum) {
                 myStatus.state = NodeBlockState.Prepared
                 myStatus.serial += 1
-                return true
+                true
             } else {
-                return false
+                false
             }
         }
 
@@ -498,18 +509,18 @@ class BaseStatusManager(
                 }
                 if (unfetchedNodes.isNotEmpty()) {
                     val newIntent = FetchCommitSignatureIntent(myStatus.blockRID as ByteArray, unfetchedNodes.toTypedArray())
-                    if (newIntent == intent) {
-                        return false
+                    return if (newIntent == intent) {
+                        false
                     } else {
                         intent = newIntent
-                        return true
+                        true
                     }
                 } else {
-                    if (intent == DoNothingIntent)
-                        return false
-                    else {
+                    return if (intent == DoNothingIntent) {
+                        false
+                    } else {
                         intent = DoNothingIntent
-                        return true
+                        true
                     }
                 }
             }
@@ -538,11 +549,11 @@ class BaseStatusManager(
                         return true
                     }
                 } else {
-                    if (intent == DoNothingIntent)
-                        return false
-                    else {
+                    return if (intent == DoNothingIntent) {
+                        false
+                    } else {
                         intent = DoNothingIntent
-                        return true
+                        true
                     }
                 }
             }
@@ -569,10 +580,10 @@ class BaseStatusManager(
         }
 
         // Handle the different states
-        when (myStatus.state) {
-            NodeBlockState.HaveBlock -> return handleHaveBlockState()
-            NodeBlockState.Prepared -> return handlePreparedState()
-            NodeBlockState.WaitBlock -> return handleWaitBlockState()
+        return when (myStatus.state) {
+            NodeBlockState.HaveBlock -> handleHaveBlockState()
+            NodeBlockState.Prepared -> handlePreparedState()
+            NodeBlockState.WaitBlock -> handleWaitBlockState()
         }
     }
 
