@@ -142,4 +142,106 @@ class EBFTSignerTest : EBFTProtocolBase() {
         verifyStatus(blockRID = null, height = 1, serial = 3, round = 0, revolting = false, state = WaitBlock)
         reset(commManager)
     }
+
+    @Test
+    fun `If consensus on same height but higher round, use lowest higher consensus round`() {
+        /**
+         * Input: We receive [Status] from other nodes with higher rounds.
+         * Expected outcome: Round in status message should be equal to the lowest round from the consensus number
+         * of nodes with higher round.
+         * State: [WaitBlock] -> [WaitBlock]
+         * Intent: [DoNothingIntent] -> [BuildBlockIntent]
+         * Receive: Revolt from other nodes.
+         * Send: Broadcast [Status]
+         */
+        // setup
+        assertThat(statusManager.myStatus.round).isEqualTo(0)
+        // incoming messages
+        messagesToReceive(
+                nodeRid0 to Status(null, 0, true, 4, 1, WaitBlock.ordinal),
+                nodeRid2 to Status(null, 0, true, 5, 1, WaitBlock.ordinal),
+                nodeRid3 to Status(null, 0, true, 6, 1, WaitBlock.ordinal)
+        )
+        // execute
+        syncManager.update()
+        // verify
+        assertThat(statusManager.myStatus.round).isEqualTo(4)
+        verifyStatus(blockRID = null, height = 0, serial = 1, round = 4, revolting = false, state = WaitBlock)
+    }
+
+    @Test
+    fun `If consensus on same height but higher round and in HaveBlock, use lowest higher consensus round and reset to WaitBlock`() {
+        /**
+         * Setup node to state [HaveBlock]
+         */
+        // setup
+        doReturn(CompletableFuture.completedStage(signature)).whenever(blockDatabase).loadUnfinishedBlock(isA())
+        doReturn(header0).whenever(blockchainConfiguration).decodeBlockHeader(header0.rawData)
+
+        // incoming messages
+        messagesToReceive(
+                nodeRid0 to Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal)
+        )
+        // execute
+        syncManager.update()
+        // verify
+        verifyStatus(blockRID = null, height = 0, serial = 0, round = 0, revolting = false, state = WaitBlock)
+        reset(commManager)
+
+        // incoming messages
+        messagesToReceive(
+                nodeRid0 to UnfinishedBlock(header0.rawData, emptyList())
+        )
+        // execute
+        syncManager.update()
+        // verify
+        verifyStatus(blockRID = blockRid0, height = 0, serial = 1, round = 0, revolting = false, state = HaveBlock)
+        reset(commManager)
+
+        /**
+         * Input: We are in [HaveBlock] and receive [Status] from other nodes with higher rounds.
+         * Expected outcome: Round in status message should be equal to the lowest round from the consensus number
+         * of nodes with higher round and node should be in [WaitBlock].
+         * State: [HaveBlock] -> [WaitBlock]
+         * Receive: Revolt from other nodes.
+         * Send: Broadcast [Status]
+         */
+        // setup
+        assertThat(statusManager.myStatus.round).isEqualTo(0)
+        // incoming messages
+        messagesToReceive(
+                nodeRid0 to Status(null, 0, true, 4, 1, WaitBlock.ordinal),
+                nodeRid2 to Status(null, 0, true, 5, 1, WaitBlock.ordinal),
+                nodeRid3 to Status(null, 0, true, 6, 1, WaitBlock.ordinal)
+        )
+        // execute
+        syncManager.update()
+        // verify
+        assertThat(statusManager.myStatus.round).isEqualTo(4)
+        verifyStatus(blockRID = null, height = 0, serial = 3, round = 4, revolting = false, state = WaitBlock)
+    }
+
+    @Test
+    fun `If not consensus on same height but higher round, do not update round`() {
+        /**
+         * Input: We receive [Status] from other nodes with higher rounds, but not enough to form consensus.
+         * Expected outcome: Round should not be updated
+         * State: [WaitBlock] -> [WaitBlock]
+         * Intent: [DoNothingIntent] -> [BuildBlockIntent]
+         * Receive: Revolt from other nodes.
+         * Send: Broadcast [Status]
+         */
+        // setup
+        assertThat(statusManager.myStatus.round).isEqualTo(0)
+        // incoming messages
+        messagesToReceive(
+                nodeRid2 to Status(null, 0, true, 5, 1, WaitBlock.ordinal),
+                nodeRid3 to Status(null, 0, true, 6, 1, WaitBlock.ordinal)
+        )
+        // execute
+        syncManager.update()
+        // verify
+        assertThat(statusManager.myStatus.round).isEqualTo(0)
+        verifyStatus(blockRID = null, height = 0, serial = 0, round = 0, revolting = false, state = WaitBlock)
+    }
 }
