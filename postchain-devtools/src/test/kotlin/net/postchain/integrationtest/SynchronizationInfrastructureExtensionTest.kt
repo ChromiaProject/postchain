@@ -2,16 +2,22 @@ package net.postchain.integrationtest
 
 import assertk.assertThat
 import assertk.assertions.isFalse
+import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
 import net.postchain.PostchainContext
+import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.withReadConnection
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.devtools.IntegrationTestSetup
+import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
+import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.util.concurrent.TimeUnit
 
 var connected = mutableMapOf<Long, Boolean>()
 
@@ -35,6 +41,40 @@ class SynchronizationInfrastructureExtensionTest : IntegrationTestSetup() {
         assertThrows<ProgrammerMistake> {
             createNodes(3, "/net/postchain/devtools/syncinfra_extensions/blockchain_config_bad_connect.xml")
         }
+    }
+
+    @Test
+    fun `Extension that throws exception when connecting process will roll back config update`() {
+        createNodes(3, "/net/postchain/devtools/syncinfra_extensions/blockchain_config.xml")
+
+        buildBlock(1L, 0)
+        assertThat(connected[1L]!!).isTrue()
+
+        val faultyExtensionConfig = readBlockchainConfig(
+                "/net/postchain/devtools/syncinfra_extensions/blockchain_config_bad_connect.xml"
+        )
+        nodes.forEach { node ->
+            node.addConfiguration(DEFAULT_CHAIN_IID, 2, faultyExtensionConfig)
+            withReadConnection(node.postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { ctx ->
+                val db = DatabaseAccess.of(ctx)
+                assertThat(db.getConfigurationData(ctx, 2)).isNotNull()
+            }
+        }
+
+        buildBlockNoWait(nodes, DEFAULT_CHAIN_IID, 2)
+
+        nodes.forEach { node ->
+            // Wait for faulty config to be reverted
+            await().atMost(10, TimeUnit.SECONDS).untilAsserted {
+                withReadConnection(node.postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { ctx ->
+                    val db = DatabaseAccess.of(ctx)
+                    assertThat(db.getConfigurationData(ctx, 2)).isNull()
+                }
+            }
+        }
+
+        // Now ensure that we can build blocks with the original config
+        buildBlock(DEFAULT_CHAIN_IID, 3)
     }
 
     @Test
