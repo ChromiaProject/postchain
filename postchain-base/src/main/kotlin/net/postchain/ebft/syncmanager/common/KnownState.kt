@@ -1,6 +1,7 @@
 package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
+import java.time.Clock
 
 /**
  * Keeps notes on a single peer. Some rules:
@@ -10,16 +11,16 @@ import mu.KLogging
  * a new chance to serve us blocks. Otherwise, we might run out of
  * peers to sync from over time.
  *
- * Peers that are marked BLACKLISTED, should never be given another chance
+ * Peers that are marked BLACKLISTED should never be given another chance
  * because they have been proven to provide bad data (deliberately or not).
  *
- * We use Status messages as indication that there are headers
+ * We use Status messages as an indication that there are headers
  * available at that Status' height-1 (The height in the Status
- * message indicates the height that they're working on, ie their committed
+ * message indicates the height that they're working on, i.e., their committed
  * height + 1). They also serve as a discovery mechanism, in which we become
  * aware of our neighborhood.
  */
-open class KnownState(val params: SyncParameters) {
+open class KnownState(val params: SyncParameters, val clock: Clock = Clock.systemUTC()) {
 
     companion object : KLogging()
 
@@ -40,26 +41,33 @@ open class KnownState(val params: SyncParameters) {
     private var confirmedModern = false
     private var unresponsiveTime: Long = 0
 
-    // Queue containing times in ms, when errors has occurred.
+    // Queue containing times in ms, when errors have occurred.
     private val errors = java.util.ArrayDeque<Long>()
 
     private var timeOfLastError: Long = 0
 
     private var disconnectedSince: Long = 0
 
-    fun isBlacklisted() = isBlacklisted(System.currentTimeMillis())
-    fun isBlacklisted(now: Long): Boolean {
+    private fun currentTimeMillis() = clock.millis()
+
+    fun updateAndCheckBlacklisted() = updateAndCheckBlacklisted(currentTimeMillis())
+
+    fun updateAndCheckBlacklisted(now: Long): Boolean {
         if (state == State.BLACKLISTED && (now > timeOfLastError + params.blacklistingTimeoutMs)) {
             // Alex suggested that peers should be given new chances often
             if (logger.isDebugEnabled) {
                 logger.debug("Peer timed out of blacklist")
             }
-            this.state = State.SYNCABLE
-            this.timeOfLastError = 0
-            this.errors.clear()
+            whitelist()
         }
 
         return state == State.BLACKLISTED
+    }
+
+    fun whitelist() {
+        this.state = State.SYNCABLE
+        this.timeOfLastError = 0
+        this.errors.clear()
     }
 
     fun isUnresponsive(now: Long): Boolean {
@@ -76,8 +84,12 @@ open class KnownState(val params: SyncParameters) {
 
 
     fun isMaybeLegacy() = !confirmedModern && maybeLegacy
+
     fun isConfirmedModern() = confirmedModern
+
     open fun isSyncable(h: Long) = state == State.SYNCABLE || state == State.DRAINED // We don't mind "drained"
+
+    fun isBlacklisted(): Boolean = state == State.BLACKLISTED
 
     /**
      * Note: this will get into conflict with connection manager, which also has a way of dealing with
@@ -154,7 +166,7 @@ open class KnownState(val params: SyncParameters) {
 
     open fun resurrect(now: Long) {
         isUnresponsive(now)
-        isBlacklisted(now)
+        updateAndCheckBlacklisted(now)
     }
 
     override fun toString(): String {

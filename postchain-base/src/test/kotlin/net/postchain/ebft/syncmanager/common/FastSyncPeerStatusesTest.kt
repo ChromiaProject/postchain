@@ -36,7 +36,7 @@ class FastSyncPeerStatusesTest {
     fun happy_exclude_non_syncable_every_node_is_ok() {
         before()
 
-        val nonSyncables: Set<NodeRid> = fsps.exclNonSyncable(currentHeight, now)
+        val nonSyncables: Set<NodeRid> = fsps.excludedNonSyncable(currentHeight, now)
 
         Assertions.assertEquals(0, nonSyncables.size)
     }
@@ -50,7 +50,7 @@ class FastSyncPeerStatusesTest {
 
         fsps.unresponsive(peer1, "Nooo!") // Unresponsive means "not syncable"
 
-        val nonSyncables: Set<NodeRid> = fsps.exclNonSyncable(currentHeight, now)
+        val nonSyncables: Set<NodeRid> = fsps.excludedNonSyncable(currentHeight, now)
 
         Assertions.assertEquals(1, nonSyncables.size)
         Assertions.assertTrue(nonSyncables.contains(peer1))
@@ -66,7 +66,7 @@ class FastSyncPeerStatusesTest {
         val drainedHeight = currentHeight + 1L // A drained node is still considered syncable if drained above our current height
         fsps.drained(peer2, drainedHeight, now)
 
-        val nonSyncables: Set<NodeRid> = fsps.exclNonSyncable(currentHeight, now + 1)
+        val nonSyncables: Set<NodeRid> = fsps.excludedNonSyncable(currentHeight, now + 1)
 
         Assertions.assertEquals(0, nonSyncables.size)
     }
@@ -81,7 +81,7 @@ class FastSyncPeerStatusesTest {
         val drainedHeight = currentHeight - 1L // Node is drained below our current height -> not syncable
         fsps.drained(peer2, drainedHeight, now)
 
-        val nonSyncables: Set<NodeRid> = fsps.exclNonSyncable(currentHeight, now + 1)
+        val nonSyncables: Set<NodeRid> = fsps.excludedNonSyncable(currentHeight, now + 1)
 
         Assertions.assertEquals(1, nonSyncables.size)
         Assertions.assertTrue(nonSyncables.contains(peer2))

@@ -16,7 +16,7 @@ class FastSyncPeerStatuses(val params: SyncParameters): AbstractPeerStatuses<Fas
 
     fun drained(peerId: NodeRid, height: Long, now: Long) {
         val status = stateOf(peerId)
-        if (status.isBlacklisted()) {
+        if (status.updateAndCheckBlacklisted()) {
             logger.warn("We tried to get block from a blacklisted node: ${NameHelper.peerName(peerId)}, was it recently blacklisted?")
             return
         }
@@ -30,7 +30,7 @@ class FastSyncPeerStatuses(val params: SyncParameters): AbstractPeerStatuses<Fas
 
     fun headerReceived(peerId: NodeRid, height: Long) {
         val status = stateOf(peerId)
-        if (status.isBlacklisted()) {
+        if (status.updateAndCheckBlacklisted()) {
             logger.warn("We got a header from a blacklisted node: ${NameHelper.peerName(peerId)}, was it recently blacklisted?")
             return
         }
@@ -39,7 +39,7 @@ class FastSyncPeerStatuses(val params: SyncParameters): AbstractPeerStatuses<Fas
 
     fun statusReceived(peerId: NodeRid, height: Long) {
         val status = stateOf(peerId)
-        if (status.isBlacklisted()) {
+        if (status.updateAndCheckBlacklisted()) {
             logger.warn("Got status from a blacklisted node: ${NameHelper.peerName(peerId)}, was it recently blacklisted?")
             return
         }
