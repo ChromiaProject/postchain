@@ -29,7 +29,7 @@ import kotlin.math.min
 
 /**
  * Used by replicas only!
- * Will consume blocks in the same pace as they are made, to avoid spamming the block producers too much.
+ * Will consume blocks at the same pace as they are made, to avoid spamming the block producers too much.
  *
  * To consume blocks fast, use [FastSynchronizer]
  *
@@ -94,9 +94,12 @@ class SlowSynchronizer(
 
     internal fun sendRequest(now: Long, slowSyncStateMachine: SlowSyncStateMachine, lastPeer: NodeRid? = null) {
         val startAtHeight = slowSyncStateMachine.getStartHeight()
-        val excludedPeers = peerStatuses.exclNonSyncable(startAtHeight, now)
-        val peers = configuredPeers.minus(excludedPeers)
-        if (peers.isEmpty()) return
+        val peers = configuredPeers.minus(peerStatuses.excludedNonSyncable(startAtHeight, now)).ifEmpty {
+            peerStatuses.reviveAllBlacklisted()
+            configuredPeers.minus(peerStatuses.excludedNonSyncable(startAtHeight, now)).ifEmpty {
+                return
+            }
+        }
 
         // Sometimes we prefer not to use the same peer as last time
         val usePeers = if (peers.size > 1 && lastPeer != null) {

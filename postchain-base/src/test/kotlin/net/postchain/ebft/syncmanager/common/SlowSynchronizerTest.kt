@@ -51,6 +51,7 @@ import org.mockito.kotlin.isA
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.spy
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.Clock
@@ -186,15 +187,16 @@ class SlowSynchronizerTest {
         }
 
         @Test
-        fun `with no valid peers should do nothing`() {
+        fun `with no valid peers should try to revive blacklisted`() {
             // setup
             peerIds.add(toExcludeNodeRid)
-            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).exclNonSyncable(4L, currentTimeMillis)
+            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).excludedNonSyncable(4L, currentTimeMillis)
             // execute
             sut.sendRequest(currentTimeMillis, stateMachine, null)
             // verify
             verify(stateMachine).getStartHeight()
-            verify(peerStatuses).exclNonSyncable(anyLong(), anyLong())
+            verify(peerStatuses).reviveAllBlacklisted()
+            verify(peerStatuses, times(2)).excludedNonSyncable(anyLong(), anyLong())
             verify(commManager, never()).sendToRandomPeer(isA(), anySet())
         }
 
@@ -203,7 +205,7 @@ class SlowSynchronizerTest {
             // setup
             peerIds.add(toExcludeNodeRid)
             peerIds.add(nodeRid)
-            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).exclNonSyncable(anyLong(), anyLong())
+            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
             doReturn(nodeRid to setOf(nodeRid)).whenever(commManager).sendToRandomPeer(isA(), anySet())
             doReturn(true).whenever(stateMachine).hasUnacknowledgedFailedCommit()
             // execute
@@ -219,7 +221,7 @@ class SlowSynchronizerTest {
             // setup
             peerIds.add(toExcludeNodeRid)
             peerIds.add(nodeRid)
-            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).exclNonSyncable(anyLong(), anyLong())
+            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
             doReturn(nodeRid to setOf(nodeRid)).whenever(commManager).sendToRandomPeer(isA(), anySet())
             doReturn(false).whenever(stateMachine).hasUnacknowledgedFailedCommit()
             // execute
@@ -235,7 +237,7 @@ class SlowSynchronizerTest {
             // setup
             peerIds.add(toExcludeNodeRid)
             peerIds.add(nodeRid)
-            doReturn(setOf<NodeRid>()).whenever(peerStatuses).exclNonSyncable(anyLong(), anyLong())
+            doReturn(setOf<NodeRid>()).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
             doReturn(null to setOf(nodeRid)).whenever(commManager).sendToRandomPeer(isA(), anySet())
             // execute
             sut.sendRequest(currentTimeMillis, stateMachine, nodeRid)

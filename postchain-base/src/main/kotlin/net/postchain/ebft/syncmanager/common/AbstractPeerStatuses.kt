@@ -33,7 +33,7 @@ abstract class AbstractPeerStatuses<StateType : KnownState> {
      * @param now is our current time (we want to send it to keep this pure = testable)
      * @return the nodes we SHOULDN'T sync
      */
-    fun exclNonSyncable(height: Long, now: Long): Set<NodeRid> {
+    fun excludedNonSyncable(height: Long, now: Long): Set<NodeRid> {
         resurrectPeers(now)
         val excluded = statuses.filter {
             val state = it.value
@@ -55,7 +55,7 @@ abstract class AbstractPeerStatuses<StateType : KnownState> {
      */
     fun unresponsive(peerId: NodeRid, desc: String) {
         val status = stateOf(peerId)
-        if (status.isBlacklisted()) {
+        if (status.updateAndCheckBlacklisted()) {
             return
         }
         status.unresponsive(desc, System.currentTimeMillis())
@@ -63,7 +63,7 @@ abstract class AbstractPeerStatuses<StateType : KnownState> {
 
     fun setMaybeLegacy(peerId: NodeRid, isLegacy: Boolean) {
         val status = stateOf(peerId)
-        if (status.isBlacklisted()) {
+        if (status.updateAndCheckBlacklisted()) {
             return
         }
         if (logger.isDebugEnabled) {
@@ -87,7 +87,7 @@ abstract class AbstractPeerStatuses<StateType : KnownState> {
     }
 
     /**
-     * Might blacklist this peer depending on number of failures.
+     * Might blacklist this peer depending on the number of failures.
      *
      * @param peerId is the peer that's behaving badly
      * @param desc is the text we will log, surrounding the circumstances.
@@ -105,7 +105,7 @@ abstract class AbstractPeerStatuses<StateType : KnownState> {
     }
 
     fun isBlacklisted(xPeerId: NodeRid): Boolean {
-        return stateOf(xPeerId).isBlacklisted()
+        return stateOf(xPeerId).updateAndCheckBlacklisted()
     }
 
     fun getSyncableAndConnected(height: Long): Set<NodeRid> {
@@ -126,5 +126,9 @@ abstract class AbstractPeerStatuses<StateType : KnownState> {
             logger.debug("clearing all fast sync peer statuses")
         }
         statuses.clear()
+    }
+
+    fun reviveAllBlacklisted() {
+        statuses.values.filter { it.isBlacklisted() }.forEach { it.whitelist() }
     }
 }

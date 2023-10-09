@@ -52,7 +52,7 @@ import net.postchain.ebft.message.BlockHeader as BlockHeaderMessage
  * Requests that times out: When a request to a peer has been outstanding for a
  * long time (fastSyncParams.jobTimeout), we must time out and stop using that
  * peer, at least temporarily. Otherwise, it will hold up the syncing process
- * every now and then when that peer has been (randomly) selected.
+ * occasionally when that peer has been (randomly) selected.
  *
  * We only use random known peers (from the peerCommConfiguration) to sync from.
  *
@@ -62,18 +62,18 @@ import net.postchain.ebft.message.BlockHeader as BlockHeaderMessage
  * should set [params.exitDelay] to 0.
  */
 class FastSynchronizer(
-        wrkrCntxt: WorkerContext,
+        workerContext: WorkerContext,
         private val blockDatabase: BlockDatabase,
         val params: SyncParameters,
         val peerStatuses: FastSyncPeerStatuses,
         val isProcessRunning: () -> Boolean,
         val clock: Clock = Clock.systemUTC(),
-) : AbstractSynchronizer(wrkrCntxt) {
+) : AbstractSynchronizer(workerContext) {
 
     val jobs = TreeMap<Long, Job>()
-    var lastJob: Job? = null
+    private var lastJob: Job? = null
 
-    // This is the communication mechanism from the async commitBlock callback to main loop
+    // This is the communication mechanism from the async commitBlock callback to the main loop
     val finishedJobs = LinkedBlockingQueue<Job>()
 
     companion object : KLogging()
@@ -101,7 +101,7 @@ class FastSynchronizer(
                 processMessages()
                 processDoneJobs(polledFinishedJob)
                 processStaleJobs()
-                // Would be nicer to be able to just peek here but there is no API for that
+                // Would be nicer to be able to just peek here, but there is no API for that
                 polledFinishedJob = finishedJobs.poll(params.loopInterval, TimeUnit.MILLISECONDS)
             }
         } catch (e: BadDataException) {
@@ -361,13 +361,19 @@ class FastSynchronizer(
 
     private fun sendRequest(height: Long): NodeRid? {
         val now = currentTimeMillis()
-        val excludedPeers = peerStatuses.exclNonSyncable(height, now)
-        val peers = configuredPeers.minus(excludedPeers)
+        val peers = configuredPeers.minus(peerStatuses.excludedNonSyncable(height, now)).ifEmpty {
+            if (params.mustSyncUntilHeight > -1) {
+                peerStatuses.reviveAllBlacklisted()
+                configuredPeers.minus(peerStatuses.excludedNonSyncable(height, now))
+            } else {
+                emptySet()
+            }
+        }
+        if (peers.isEmpty()) return null
         return sendMessageAndUpdateConnectionStatuses(GetBlockHeaderAndBlock(height), peers)
     }
 
     private fun sendMessageAndUpdateConnectionStatuses(message: EbftMessage, peers: Set<NodeRid>): NodeRid? {
-        if (peers.isEmpty()) return null
         val (selectedPeer, connectedPeers) = communicationManager.sendToRandomPeer(message, peers)
         peerStatuses.markConnected(connectedPeers)
         peerStatuses.markDisconnected(peers - connectedPeers)
@@ -421,12 +427,12 @@ class FastSynchronizer(
     internal fun handleBlockHeader(peerId: NodeRid, header: ByteArray, witness: ByteArray, requestedHeight: Long): Boolean {
         val job = jobs[requestedHeight]
 
-        // Didn't expect header for this height or from this peer
+        // Didn't expect header for this height or from this peer,
         // We might want to blacklist peers that sends unsolicited headers;
         // They might be adversarial and try to get us to restart jobs
         // as much as they can. But hard to distinguish this from
-        // legitimate glitches, for example that the peer has timed
-        // out in earlier job but just now comes back with the response.
+        // legitimate glitches, for example, that the peer has timed
+        // out in an earlier job but just now comes back with the response.
         if (job == null) {
             val dbg = debugJobString(job, requestedHeight, peerId)
             peerStatuses.maybeBlacklist(peerId, "Sync: Why do we receive a header for a block height not in our job list? $dbg")
@@ -465,8 +471,8 @@ class FastSynchronizer(
 
         if (receivedHeaderHeight < job.height) {
             headerDebug("Header height=$receivedHeaderHeight, we asked for ${job.height}. Peer for $job must be drained")
-            // The peer didn't have the block we wanted
-            // Remember its height and try another peer
+            // The peer didn't have the block we wanted.
+            // Remember its height and try another peer.
             val now = currentTimeMillis()
             peerStatuses.drained(peerId, receivedHeaderHeight, now)
             restartJob(job)
@@ -477,9 +483,9 @@ class FastSynchronizer(
         }
 
         val blockWitness = blockchainConfiguration.decodeWitness(witness)
-        // If config is mismatching we can't validate witness properly
-        // We could potentially verify against signer list in new config, but we can't be sure that we have it yet
-        // Anyway, worst case scenario we will simply attempt to load the block and fail
+        // If config is mismatching, we can't validate witness properly.
+        // We could potentially verify against the signer list in the new config, but we can't be sure that we have it yet.
+        // Anyway, in the worst case scenario, we will simply attempt to load the block and fail.
         if (blockHeader.getConfigHash() == null || blockHeader.getConfigHash().contentEquals(blockchainConfiguration.configHash)) {
             val validator = blockchainConfiguration.getBlockHeaderValidator()
             val witnessBuilder = validator.createWitnessBuilderWithoutOwnSignature(blockHeader)
