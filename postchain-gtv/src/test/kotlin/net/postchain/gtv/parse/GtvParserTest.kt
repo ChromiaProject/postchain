@@ -52,6 +52,7 @@ internal class GtvParserTest {
         fun wrongFormat() = arrayOf(
                 arrayOf("{a}"),
                 arrayOf("{a, b=1}"),
+                arrayOf("{pubkey=x\"03D4C71C2B63F6CE7F4C29D91F651FE9AA3E936CCAD8FA73633A4315CB2CDCACEB\";name=\"provider\";url=\"https://provider.com\"}")
         )
     }
 }

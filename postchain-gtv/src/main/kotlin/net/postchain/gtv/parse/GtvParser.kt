@@ -26,11 +26,7 @@ object GtvParser {
 
     private fun parseByteArray(arg: String): Gtv {
         val bytearray = arg.trim(Typography.quote)
-        return try {
-            gtv(bytearray.hexStringToByteArray())
-        } catch (e: IllegalArgumentException) {
-            gtv(bytearray.toByteArray())
-        }
+        return gtv(bytearray.hexStringToByteArray())
     }
 
     private fun parseDict(str: String) = gtv(splitArray(str).associate {
