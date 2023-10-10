@@ -30,16 +30,16 @@ internal class GtvParserTest {
 
     @Test
     fun testStringsContainingEscapedEquals() {
-        val escapedEquals = GtvParser.parse("{a=contains\\=equals}")
+        val escapedEquals = GtvParser.parse("""{a=contains\=equals}""")
         assertEquals(gtv("a" to gtv("contains=equals")), escapedEquals)
 
         // Multiple
-        val multipleEscapedEquals = GtvParser.parse("{a=contains\\=equals\\=twice}")
+        val multipleEscapedEquals = GtvParser.parse("""{a=contains\=equals\=twice}""")
         assertEquals(gtv("a" to gtv("contains=equals=twice")), multipleEscapedEquals)
 
         // Verify that I can still have a string value that contains "\="
-        val escapedEqualsWithPrecedingBackslash = GtvParser.parse("{a=contains\\\\=equals}")
-        assertEquals(gtv("a" to gtv("contains\\=equals")), escapedEqualsWithPrecedingBackslash)
+        val escapedEqualsWithPrecedingBackslash = GtvParser.parse("""{a=contains\\=equals}""")
+        assertEquals(gtv("a" to gtv("""contains\=equals""")), escapedEqualsWithPrecedingBackslash)
     }
 
     companion object {
@@ -70,7 +70,7 @@ internal class GtvParserTest {
                 // Contains un-escaped equal sign in string value
                 arrayOf("{name=provider;url=https://provider.com}"),
                 // Invalid byte array
-                arrayOf("{pubkey=x\"03D4C71C2B63F6CE7F4C29D91F651FE9AA3E936CCAD8FA73633A4315CB2CDCACEB\";name=\"provider\"}")
+                arrayOf("""{pubkey=x"03D4C71C2B63F6CE7F4C29D91F651FE9AA3E936CCAD8FA73633A4315CB2CDCACEB";name="provider"}""")
         )
     }
 }
