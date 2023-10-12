@@ -15,6 +15,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.managed.BlockchainInfo
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.PendingBlockchainConfiguration
+import net.postchain.managed.RemovedBlockchainInfo
 import java.util.TreeMap
 
 open class MockManagedNodeDataSource : ManagedNodeDataSource {
@@ -94,6 +95,8 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     }
 
     override fun getBlockchainConfigurationOptions(blockchainRid: BlockchainRid, height: Long): BlockchainConfigurationOptions? = null
+    
+    override fun findNextRemovedBlockchains(height: Long): List<RemovedBlockchainInfo> = emptyList()
 
     override fun query(name: String, args: Gtv): Gtv {
         TODO("Not yet implemented")
