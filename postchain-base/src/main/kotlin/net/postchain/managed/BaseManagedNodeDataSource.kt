@@ -178,4 +178,21 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
             null
         }
     }
+
+    override fun findNextRemovedBlockchains(height: Long): List<RemovedBlockchainInfo> {
+        return if (nmApiVersion >= 10) {
+            val res = query(
+                    "nm_find_next_removed_blockchains",
+                    buildArgs("height" to gtv(height))
+            )
+            res.asArray().map {
+                RemovedBlockchainInfo(
+                        BlockchainRid(it["rid"]!!.asByteArray()),
+                        it["height"]!!.asInteger()
+                )
+            }
+        } else {
+            emptyList()
+        }
+    }
 }

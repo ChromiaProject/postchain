@@ -8,3 +8,8 @@ data class BlockchainInfo(
         val system: Boolean,
         val state: BlockchainState
 )
+
+data class RemovedBlockchainInfo(
+        val rid: BlockchainRid,
+        val height: Long
+)

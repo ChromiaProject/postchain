@@ -121,7 +121,7 @@ class BaseManagedNodeDataSourceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("getBlockchainConfigurationOptions")
+    @MethodSource("getBlockchainConfigurationOptionsData")
     fun testGetBlockchainConfigurationOptions(gtvResult: Gtv, expected: BlockchainConfigurationOptions?) {
         val appConfig: AppConfig = mock {
             on { pubKeyByteArray } doReturn byteArrayOf(0)
@@ -132,6 +132,17 @@ class BaseManagedNodeDataSourceTest {
         }
         val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
         assertEquals(expected, sut.getBlockchainConfigurationOptions(ZERO_RID, 0L))
+    }
+
+    @ParameterizedTest
+    @MethodSource("findNextRemovedBlockchainsData")
+    fun testFindNextRemovedBlockchains(gtvResult: Gtv, expected: List<RemovedBlockchainInfo>?) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(10)
+            on { query(eq("nm_find_next_removed_blockchains"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock())
+        assertEquals(expected, sut.findNextRemovedBlockchains(0L))
     }
 
     companion object {
@@ -258,7 +269,7 @@ class BaseManagedNodeDataSourceTest {
         }
 
         @JvmStatic
-        fun getBlockchainConfigurationOptions(): List<Array<Any?>> {
+        fun getBlockchainConfigurationOptionsData(): List<Array<Any?>> {
             return listOf(
                     arrayOf(GtvNull, null),
                     arrayOf(
@@ -269,6 +280,26 @@ class BaseManagedNodeDataSourceTest {
                             gtv(mapOf("suppress_special_transaction_validation" to gtv(false))),
                             BlockchainConfigurationOptions(false)
                     )
+            )
+        }
+
+        @JvmStatic
+        fun findNextRemovedBlockchainsData(): List<Array<Any?>> {
+            val brid0 = ZERO_RID
+            val brid1 = BlockchainRid.buildRepeat(1)
+
+            val nonTrivialGtv = GtvArray(arrayOf(
+                    gtv(mapOf("rid" to gtv(brid0), "height" to gtv(10))),
+                    gtv(mapOf("rid" to gtv(brid1), "height" to gtv(20)))
+            ))
+            val nonTrivialExpected = listOf(
+                    RemovedBlockchainInfo(brid0, 10),
+                    RemovedBlockchainInfo(brid1, 20)
+            )
+
+            return listOf(
+                    arrayOf(GtvArray(emptyArray()), emptyList<RemovedBlockchainInfo>()),
+                    arrayOf(nonTrivialGtv, nonTrivialExpected)
             )
         }
     }
