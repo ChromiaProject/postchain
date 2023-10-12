@@ -287,7 +287,7 @@ open class ManagedBlockchainProcessManager(
         executor.execute {
             try {
                 withLoggingContext(CHAIN_IID_TAG to CHAIN0.toString()) {
-                    logger.error { "Removed blockchains at height ${removedChains.first().height}: ${removedChains.joinToString(", ") { it.rid.toHex() }}" }
+                    logger.debug { "Removed blockchains at height ${removedChains.first().height}: ${removedChains.joinToString(", ") { it.rid.toHex() }}" }
                 }
 
                 removedChains.forEach { chain ->
@@ -302,15 +302,15 @@ open class ManagedBlockchainProcessManager(
                             }
                     ) {
                         if (removedChainId != null) {
-                            logger.error { "Deleting blockchain" }
+                            logger.debug { "Deleting blockchain" }
                             val elapsed = measureTimeMillis {
                                 withReadWriteConnection(sharedStorage, removedChainId) {
                                     BlockchainApi.deleteBlockchain(it)
                                 }
                             }
-                            logger.error { "Blockchain deleted in $elapsed ms" }
+                            logger.debug { "Blockchain deleted in $elapsed ms" }
                         } else {
-                            logger.error { "Blockchain is already deleted" }
+                            logger.debug { "Blockchain is already deleted" }
                         }
                     }
                 }
