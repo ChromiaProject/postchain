@@ -54,6 +54,9 @@ class BlockchainStateTest : ManagedModeTest() {
         setBlockchainState(c1, BlockchainState.REMOVED, nodes.first().currentHeight(c0))
         val heightC1RemovedAt = mockDataSources[0]!!.bridState[ChainUtil.ridOf(c1)]!!.first
 
+        // building more c0 blocks
+        buildBlock(c0, 5)
+
         // Asserting that c1 is removed
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
             getChainNodes(c1).forEach {
@@ -64,9 +67,6 @@ class BlockchainStateTest : ManagedModeTest() {
                 assertThat(chainId1FromDb).isNull()
             }
         }
-
-        // building one more c0 block
-        buildBlock(c0)
 
         // Asserting that `ManagedBlockchainProcessManager.currentRemovedBlockchainHeight` equals height blockchain was removed at
         assertThat(

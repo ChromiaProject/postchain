@@ -5,7 +5,6 @@ package net.postchain.base
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
-import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
@@ -372,18 +371,6 @@ open class BaseBlockchainProcessManager(
 
     fun numberOfBlockchains(): Int = processLock.withLock {
         blockchainProcesses.size
-    }
-
-    // delete it ?
-    protected open fun deleteBlockchainIfRemoved(chainId: Long, brid: BlockchainRid) {
-        val state = getBlockchainState(chainId, brid)
-        if (state == BlockchainState.REMOVED) {
-            logger.info("Deleting blockchain")
-            withWriteConnection(blockBuilderStorage, chainId) {
-                BlockchainApi.deleteBlockchain(it)
-                true
-            }
-        }
     }
 
     protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
