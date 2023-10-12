@@ -47,7 +47,7 @@ internal class WrappedTransaction(
         return false
     }
 
-    override fun hashCode(): Int = tx.getRID().hashCode()
+    override fun hashCode(): Int = tx.getRID().contentHashCode()
 
     override fun compareTo(other: WrappedTransaction): Int {
         if (equals(other)) return 0
