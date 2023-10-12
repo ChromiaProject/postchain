@@ -356,7 +356,6 @@ open class BaseBlockchainProcessManager(
                             val brid = chainIdToBrid.remove(chainId)
                             if (brid != null) {
                                 bridToChainId.remove(brid)
-                                deleteBlockchainIfRemoved(chainId, brid)
                             } else {
                                 logger.error("No blockchain RID mapping for chainId: $chainId was found when stopping blockchain")
                             }
@@ -375,6 +374,7 @@ open class BaseBlockchainProcessManager(
         blockchainProcesses.size
     }
 
+    // delete it ?
     protected open fun deleteBlockchainIfRemoved(chainId: Long, brid: BlockchainRid) {
         val state = getBlockchainState(chainId, brid)
         if (state == BlockchainState.REMOVED) {

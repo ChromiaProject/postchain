@@ -3,7 +3,9 @@
 package net.postchain.managed
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.PostchainContext
+import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
@@ -19,10 +21,14 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GTXModuleAware
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.managed.config.ManagedDataSourceAware
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.withLock
+import kotlin.system.measureTimeMillis
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -71,6 +77,8 @@ open class ManagedBlockchainProcessManager(
 
     protected open lateinit var dataSource: ManagedNodeDataSource
     protected val CHAIN0 = 0L
+    protected val areBlockchainsPruning = AtomicBoolean(false)
+    protected var currentRemovedBlockchainHeight = 0L
 
     companion object : KLogging()
 
@@ -154,10 +162,11 @@ open class ManagedBlockchainProcessManager(
         @Suppress("UNUSED_PARAMETER")
         fun afterCommitHandlerChain0(bTrace: BlockTrace?, blockTimestamp: Long): Boolean {
             wrTrace("chain0 begin", bTrace)
-
             // Checking out for chain0 configuration changes
             val reloadChain0 = isConfigurationChanged(CHAIN0)
             startStopBlockchainsAsync(reloadChain0, bTrace)
+            // Pruning removed blockchains if exist
+            pruneRemovedBlockchains()
             return reloadChain0
         }
 
@@ -261,6 +270,56 @@ open class ManagedBlockchainProcessManager(
                         stopBlockchainAsync(it, bTrace)
                     }
             ssaTrace("End", bTrace)
+        }
+    }
+
+    private fun pruneRemovedBlockchains() {
+        if (!areBlockchainsPruning.compareAndSet(false, true)) return
+
+        val removedChains = dataSource.findNextRemovedBlockchains(currentRemovedBlockchainHeight)
+
+        // No removed chains, OR some of the removed chains have not yet been stopped. We'll be back on the next iteration.
+        if (removedChains.isEmpty() || removedChains.any { retrieveBlockchain(it.rid) != null }) {
+            areBlockchainsPruning.set(false)
+            return
+        }
+
+        executor.execute {
+            try {
+                withLoggingContext(CHAIN_IID_TAG to CHAIN0.toString()) {
+                    logger.error { "Removed blockchains at height ${removedChains.first().height}: ${removedChains.joinToString(", ") { it.rid.toHex() }}" }
+                }
+
+                removedChains.forEach { chain ->
+                    val removedChainId = withReadConnection(sharedStorage, 0) { ctx0 ->
+                        DatabaseAccess.of(ctx0).getChainId(ctx0, chain.rid)
+                    }
+
+                    withLoggingContext(
+                            buildMap {
+                                put(BLOCKCHAIN_RID_TAG, chain.rid.toString())
+                                if (removedChainId != null) put(CHAIN_IID_TAG, removedChainId.toString())
+                            }
+                    ) {
+                        if (removedChainId != null) {
+                            logger.error { "Deleting blockchain" }
+                            val elapsed = measureTimeMillis {
+                                withReadWriteConnection(sharedStorage, removedChainId) {
+                                    BlockchainApi.deleteBlockchain(it)
+                                }
+                            }
+                            logger.error { "Blockchain deleted in $elapsed ms" }
+                        } else {
+                            logger.error { "Blockchain is already deleted" }
+                        }
+                    }
+                }
+                currentRemovedBlockchainHeight = removedChains.first().height
+            } catch (e: Exception) {
+                logger.error(e) { e.message }
+            } finally {
+                areBlockchainsPruning.set(false)
+            }
         }
     }
 
