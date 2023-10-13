@@ -55,7 +55,7 @@ open class ManagedModeTest : AbstractSyncTest() {
     private companion object : KLogging()
 
     val c0 = 0L
-    val mockDataSources = mutableMapOf<Int, MockManagedNodeDataSource>()
+    val mockDataSources = mutableMapOf<Int, MockManagedNodeDataSource>() // nodeId -> dataSource
 
     fun dataSources(chainId: Long): Map<Int, MockManagedNodeDataSource> {
         val nodeIdsInChain = getChainNodeSetups(chainId).map { it.sequenceNumber.nodeNumber }
@@ -68,10 +68,10 @@ open class ManagedModeTest : AbstractSyncTest() {
         }
     }
 
-    fun setBlockchainState(chainId: Long, state: BlockchainState) {
+    fun setBlockchainState(chainId: Long, state: BlockchainState, chain0height: Long = 0L) {
         val brid = ChainUtil.ridOf(chainId)
         mockDataSources.values.forEach {
-            it.setBlockchainState(brid, state)
+            it.setBlockchainState(brid, state, chain0height)
         }
         buildBlock(0)
     }

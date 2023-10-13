@@ -15,6 +15,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.managed.BlockchainInfo
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.PendingBlockchainConfiguration
+import net.postchain.managed.RemovedBlockchainInfo
 import java.util.TreeMap
 
 open class MockManagedNodeDataSource : ManagedNodeDataSource {
@@ -22,7 +23,7 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     val bridToConfigs: MutableMap<BlockchainRid, MutableMap<Long, Pair<BlockchainConfiguration, ByteArray>>> = mutableMapOf()
     val pendingBridToConfigs: MutableMap<BlockchainRid, TreeMap<Long, MutableList<Pair<BlockchainConfiguration, ByteArray>>>> = mutableMapOf()
     val faultyConfigHashes: MutableMap<BlockchainRid, MutableMap<Long, ByteArray>> = mutableMapOf()
-    val bridState: MutableMap<BlockchainRid, BlockchainState> = mutableMapOf()
+    val bridState: MutableMap<BlockchainRid, Pair<Long, BlockchainState>> = mutableMapOf()
     private val extraReplicas = mutableMapOf<BlockchainRid, MutableSet<NodeRid>>()
     private lateinit var nodes: Map<NodeSeqNumber, NodeSetup>
     private lateinit var myNode: NodeSetup
@@ -41,12 +42,12 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
 
     override fun computeBlockchainInfoList(): List<BlockchainInfo> {
         return computeBlockchainList()
-                .filter { bridState[BlockchainRid(it)] != BlockchainState.REMOVED }
+                .filter { bridState[BlockchainRid(it)]?.second != BlockchainState.REMOVED }
                 .map {
                     BlockchainInfo(
                             BlockchainRid(it),
                             false,
-                            bridState[BlockchainRid(it)] ?: BlockchainState.RUNNING
+                            bridState[BlockchainRid(it)]?.second ?: BlockchainState.RUNNING
                     )
                 }
     }
@@ -85,15 +86,19 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         return faultyConfigHashes[blockchainRid]?.let { it[height] }
     }
 
-    fun setBlockchainState(blockchainRid: BlockchainRid, blockchainState: BlockchainState) {
-        bridState[blockchainRid] = blockchainState
+    fun setBlockchainState(blockchainRid: BlockchainRid, blockchainState: BlockchainState, chain0height: Long = 0L) {
+        bridState[blockchainRid] = chain0height to blockchainState
     }
 
     override fun getBlockchainState(blockchainRid: BlockchainRid): BlockchainState {
-        return bridState[blockchainRid]!!
+        return bridState[blockchainRid]!!.second
     }
 
     override fun getBlockchainConfigurationOptions(blockchainRid: BlockchainRid, height: Long): BlockchainConfigurationOptions? = null
+
+    override fun findNextRemovedBlockchains(height: Long): List<RemovedBlockchainInfo> =
+            bridState.filterValues { it.second == BlockchainState.REMOVED && it.first > height }
+                    .map { RemovedBlockchainInfo(it.key, it.value.first) }
 
     override fun query(name: String, args: Gtv): Gtv {
         TODO("Not yet implemented")

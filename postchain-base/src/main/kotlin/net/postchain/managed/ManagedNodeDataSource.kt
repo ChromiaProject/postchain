@@ -29,4 +29,6 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
     fun getBlockchainState(blockchainRid: BlockchainRid): BlockchainState
 
     fun getBlockchainConfigurationOptions(blockchainRid: BlockchainRid, height: Long): BlockchainConfigurationOptions?
+
+    fun findNextRemovedBlockchains(height: Long): List<RemovedBlockchainInfo>
 }

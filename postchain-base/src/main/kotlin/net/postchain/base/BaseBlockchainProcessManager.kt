@@ -5,7 +5,6 @@ package net.postchain.base
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
-import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
@@ -17,7 +16,20 @@ import net.postchain.common.toHex
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
-import net.postchain.core.*
+import net.postchain.core.AfterCommitHandler
+import net.postchain.core.BeforeCommitHandler
+import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainConfigurationFactorySupplier
+import net.postchain.core.BlockchainEngine
+import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.BlockchainProcess
+import net.postchain.core.BlockchainProcessManager
+import net.postchain.core.BlockchainProcessManagerExtension
+import net.postchain.core.BlockchainRestartNotifier
+import net.postchain.core.BlockchainState
+import net.postchain.core.DefaultBlockchainConfigurationFactory
+import net.postchain.core.EContext
+import net.postchain.core.NODE_ID_AUTO
 import net.postchain.core.block.BlockTrace
 import net.postchain.crypto.sha256Digest
 import net.postchain.debug.DiagnosticProperty
@@ -65,8 +77,9 @@ open class BaseBlockchainProcessManager(
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val bridToChainId = mutableMapOf<BlockchainRid, Long>()
     protected val extensions: List<BlockchainProcessManagerExtension> = bpmExtensions
-    protected val executor: ExecutorService = Executors.newSingleThreadScheduledExecutor()
+    protected val executor: ExecutorService = Executors.newSingleThreadExecutor()
     private val scheduledForStart = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
+    private val scheduledForStop = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
 
     /*
         These chain synchronizers should only be used when starting/stopping chains since we rely on them to figure out if a restart is in progress or not in the after commit handlers.
@@ -114,6 +127,11 @@ open class BaseBlockchainProcessManager(
      * @param chainId is the chain to stop.
      */
     protected fun stopBlockchainAsync(chainId: Long, bTrace: BlockTrace?) {
+        if (!scheduledForStop.add(chainId)) {
+            logger.info { "Chain $chainId is already scheduled for stop" }
+            return
+        }
+
         logger.info { "stopBlockchainAsync() - Enqueue async stopping of blockchain with chainId: $chainId" }
         executor.execute {
             withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
@@ -329,19 +347,22 @@ open class BaseBlockchainProcessManager(
                         CHAIN_IID_TAG to chainId.toString(),
                         BLOCKCHAIN_RID_TAG to chainIdToBrid[chainId]?.toHex()
                 ) {
-                    stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
-                    stopDebug("Blockchain process has been purged", bTrace)
+                    try {
+                        stopAndUnregisterBlockchainProcess(chainId, restart, bTrace)
+                        stopDebug("Blockchain process has been purged", bTrace)
 
-                    if (!restart) {
-                        val brid = chainIdToBrid.remove(chainId)
-                        if (brid != null) {
-                            bridToChainId.remove(brid)
-                            deleteBlockchainIfRemoved(chainId, brid)
-                        } else {
-                            logger.error("No blockchain RID mapping for chainId: $chainId was found when stopping blockchain")
+                        if (!restart) {
+                            val brid = chainIdToBrid.remove(chainId)
+                            if (brid != null) {
+                                bridToChainId.remove(brid)
+                            } else {
+                                logger.error("No blockchain RID mapping for chainId: $chainId was found when stopping blockchain")
+                            }
+
+                            chainStartAndStopSynchronizers.remove(chainId)
                         }
-
-                        chainStartAndStopSynchronizers.remove(chainId)
+                    } finally {
+                        scheduledForStop.remove(chainId)
                     }
                 }
             }
@@ -350,17 +371,6 @@ open class BaseBlockchainProcessManager(
 
     fun numberOfBlockchains(): Int = processLock.withLock {
         blockchainProcesses.size
-    }
-
-    protected open fun deleteBlockchainIfRemoved(chainId: Long, brid: BlockchainRid) {
-        val state = getBlockchainState(chainId, brid)
-        if (state == BlockchainState.REMOVED) {
-            logger.info("Deleting blockchain")
-            withWriteConnection(blockBuilderStorage, chainId) {
-                BlockchainApi.deleteBlockchain(it)
-                true
-            }
-        }
     }
 
     protected open fun stopAndUnregisterBlockchainProcess(chainId: Long, restart: Boolean, bTrace: BlockTrace?) {
