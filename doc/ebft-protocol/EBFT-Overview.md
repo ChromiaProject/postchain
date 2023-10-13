@@ -14,18 +14,16 @@ properties when up to f nodes are faulty. (See [PBFT](https://pmg.csail.mit.edu/
 - A node is characterized by its state, which indicates where it is in the consensus process. Consensus is based on
 PBFT, and involves three stages of communication between nodes. Nodes attempt to keep track of the status of other
 nodes at all times. The states are as follows:
-  - Pre-prepare: corresponds to the __HaveBlock__ state, in which a node has fetched the current block from the primary
-  and has checked that it is valid.
-  - Prepare: corresponds to the __Prepare__ state, in which a node has received status messages from 2f other nodes
-  indicating that they are in the __HaveBlock__ state, and that the block that they have is the same. This is verified
-  with a ‘RID’, a hash of the block header. Collision resistant hash functions make the possibility of two different
-  blocks bearing the same RID astronomically unlikely.
-  - Commit: corresponds to the __Commit__ state, in which a node has received status messages from 2f other nodes
-  indicating that they are in the __Prepare__ state, and that the block that they are working on is the same. At this
-  stage, nodes should send an intent to commit message which bears their signature and the current block RID. This
-  decouples the commit signatures (which must be recorded in the database) from the status messages, and also means
-  that nodes that are behind, and miss the short window in which 2f+1 nodes are in the prepare state, but have not yet
-  committed and reverted to __WaitBlock__ state, can provide their commit signatures in a more straightforward way.
+  - __WaitBlock__: Node is waiting for the primary to build a block.
+  - __HaveBlock__: Node has fetched the current block from the primary and has checked that it is valid.
+  - __Prepared__: Node has received status messages from 2f other nodes indicating that they are in the __HaveBlock__
+    state, and that the block that they have is the same. This is verified with a ‘RID’, a hash of the block header.
+    Collision resistant hash functions make the possibility of two different blocks bearing the same RID astronomically
+    unlikely. Once 2f other nodes have moved to __Prepared__ state (with the same block) the node will fetch and verify
+    commit signatures from those nodes and commit the block once it has done so. This decouples the commit signatures
+    (which must be recorded in the database) from the status messages, and also means that nodes that are behind, and
+    miss the short window in which 2f+1 nodes are in the __Prepared__ state, but have not yet committed and reverted to
+    __WaitBlock__ state, can provide their commit signatures in a more straightforward way.
 - The messages which are needed for this system are:
   - Status messages which are sent between nodes and include the round in which a node is participating (__round__),
   the RID of the current block (__RID__, can be null), the current height of the blockchain (__height__), and whether
