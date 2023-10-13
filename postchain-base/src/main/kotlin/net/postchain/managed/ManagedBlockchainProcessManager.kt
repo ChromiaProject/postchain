@@ -78,6 +78,8 @@ open class ManagedBlockchainProcessManager(
     protected open lateinit var dataSource: ManagedNodeDataSource
     protected val CHAIN0 = 0L
     protected val areBlockchainsPruning = AtomicBoolean(false)
+
+    @Volatile
     protected var currentRemovedBlockchainHeight = 0L
 
     companion object : KLogging()
