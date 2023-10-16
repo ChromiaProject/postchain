@@ -65,7 +65,7 @@ class ZfsFileSystem(private val containerConfig: ContainerNodeConfig) : FileSyst
             "${containerConfig.zfsPoolName}/${containerName.name}"
 
     private fun getQuotaBytes(resourceLimits: ContainerResourceLimits) =
-            resourceLimits.storageMb() * 1024 * 1024
+            (resourceLimits.storageMb() + if (resourceLimits.hasExtraStorage()) resourceLimits.extraStorageMb() else 0) * 1024 * 1024
 
     override fun rootOf(containerName: ContainerName): Path = hostRootOf(containerName)
 

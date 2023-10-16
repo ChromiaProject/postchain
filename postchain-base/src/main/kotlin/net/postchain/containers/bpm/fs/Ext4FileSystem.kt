@@ -11,7 +11,7 @@ class Ext4FileSystem(containerConfig: ContainerNodeConfig) : LocalFileSystem(con
     companion object : KLogging()
 
     override fun createContainerRoot(containerName: ContainerName, resourceLimits: ContainerResourceLimits): Path? {
-        val root =  createRoot(containerName)
+        val root = createRoot(containerName)
 
         runCommand(arrayOf(
                 "chattr",
@@ -29,7 +29,7 @@ class Ext4FileSystem(containerConfig: ContainerNodeConfig) : LocalFileSystem(con
 
     override fun applyLimits(containerName: ContainerName, resourceLimits: ContainerResourceLimits) {
         if (resourceLimits.hasStorage()) {
-            val quota = resourceLimits.storageMb()
+            val quota = resourceLimits.storageMb() + if (resourceLimits.hasExtraStorage()) resourceLimits.extraStorageMb() else 0
             logger.info("Setting storage quota: $quota MiB")
             runCommand(arrayOf(
                     "setquota",

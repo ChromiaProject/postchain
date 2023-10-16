@@ -39,6 +39,8 @@ data class ContainerResourceLimits(
      */
     fun hasStorage() = getOrDefault(STORAGE) > 0
     fun storageMb() = getOrDefault(STORAGE)
+    fun hasExtraStorage() = getOrDefault(EXTRA_STORAGE) > 0
+    fun extraStorageMb() = getOrDefault(EXTRA_STORAGE)
 
     /**
      * IO read/write limits in MiB/s

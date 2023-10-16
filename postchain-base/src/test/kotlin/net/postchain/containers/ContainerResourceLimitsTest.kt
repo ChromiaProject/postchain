@@ -2,6 +2,7 @@ package net.postchain.containers
 
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.resources.Cpu
+import net.postchain.containers.bpm.resources.ExtraStorage
 import net.postchain.containers.bpm.resources.IoRead
 import net.postchain.containers.bpm.resources.IoWrite
 import net.postchain.containers.bpm.resources.Ram
@@ -23,16 +24,18 @@ class ContainerResourceLimitsTest {
         assertFalse { sut.hasStorage() }
         assertFalse { sut.hasIoRead() }
         assertFalse { sut.hasIoWrite() }
+        assertFalse { sut.hasExtraStorage() }
     }
 
     @Test
     fun testZeroValues() {
-        val sut = ContainerResourceLimits(Cpu(0), Ram(0), Storage(0), IoRead(0), IoWrite(0))
+        val sut = ContainerResourceLimits(Cpu(0), Ram(0), Storage(0), IoRead(0), IoWrite(0), ExtraStorage(0))
         assertFalse { sut.hasCpu() }
         assertFalse { sut.hasRam() }
         assertFalse { sut.hasStorage() }
         assertFalse { sut.hasIoRead() }
         assertFalse { sut.hasIoWrite() }
+        assertFalse { sut.hasExtraStorage() }
     }
 
     @ParameterizedTest(name = "[{index}] cpu: {0}, expectedQuota: {1}")
@@ -61,6 +64,13 @@ class ContainerResourceLimitsTest {
         val sut = ContainerResourceLimits(Storage(123))
         assertTrue { sut.hasStorage() }
         assertEquals(123L, sut.storageMb())
+    }
+
+    @Test
+    fun testExtraStorage() {
+        val sut = ContainerResourceLimits(ExtraStorage(456))
+        assertTrue { sut.hasExtraStorage() }
+        assertEquals(456L, sut.extraStorageMb())
     }
 
     @Test
