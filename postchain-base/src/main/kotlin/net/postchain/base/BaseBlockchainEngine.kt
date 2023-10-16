@@ -328,11 +328,10 @@ open class BaseBlockchainEngine(
                     rejectedTxs++
                     transactionSample.stop(metrics.rejectedTransactions)
                     transactionQueue.rejectTransaction(tx, txException)
-                    val rejectedMsg = "Rejected Tx: ${tx.getRID().toHex()}, reason: ${txException.message}, cause: ${txException.cause}"
                     if (txException is UserMistake) {
-                        logger.info(rejectedMsg)
+                        logger.info("Failed to append transaction ${tx.getRID().toHex()} due to ${txException.message}${txException.cause?.let{ ", cause: $it" } ?: ""}")
                     } else {
-                        logger.warn(rejectedMsg)
+                        logger.error(txException) { "Failed to append transaction ${tx.getRID().toHex()} due to ${txException.message}" }
                     }
                 } else {
                     acceptedTxs++
