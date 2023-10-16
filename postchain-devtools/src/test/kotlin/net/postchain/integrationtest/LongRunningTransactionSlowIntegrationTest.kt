@@ -5,6 +5,7 @@ import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import net.postchain.base.withReadWriteConnection
 import net.postchain.common.exception.TransactionFailed
+import net.postchain.common.exception.TransactionTimeout
 import net.postchain.common.toHex
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.wrap
@@ -49,7 +50,7 @@ class LongRunningTransactionSlowIntegrationTest : IntegrationTestSetup() {
             assertThat(transactionQueue.getTransactionStatus(delayedTx.getRID()))
                     .isEqualTo(TransactionStatus.REJECTED)
             assertThat(transactionQueue.getRejectionReason(delayedTx.getRID().wrap())?.message)
-                    .isEqualTo("Transaction failed to execute within given time constraint: 10000 ms")
+                    .isEqualTo("Transaction ${delayedTx.getRID().toHex()} failed to execute within given time constraint: 10000 ms")
         }
     }
 
@@ -62,7 +63,7 @@ class LongRunningTransactionSlowIntegrationTest : IntegrationTestSetup() {
             // not syncing, should respect timeout
             val nonSyncBB = node.getBlockchainInstance().blockchainEngine.getConfiguration().makeBlockBuilder(it, false)
             nonSyncBB.begin(null)
-            assertThrows<TransactionFailed> {
+            assertThrows<TransactionTimeout> {
                 nonSyncBB.appendTransaction(delayedTx)
             }
             it.conn.rollback()
