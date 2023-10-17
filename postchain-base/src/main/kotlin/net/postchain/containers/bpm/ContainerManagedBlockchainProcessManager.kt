@@ -133,8 +133,6 @@ class ContainerManagedBlockchainProcessManager(
                     // Checking out for chain0 configuration changes
                     val reloadChain0 = isConfigurationChanged(CHAIN0)
                     stopStartBlockchains(reloadChain0)
-                    // Pruning removed blockchains if exist
-                    pruneRemovedBlockchains()
                     reloadChain0
                 }
 

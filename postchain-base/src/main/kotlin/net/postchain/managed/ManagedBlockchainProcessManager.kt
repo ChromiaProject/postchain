@@ -26,6 +26,7 @@ import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.managed.config.ManagedDataSourceAware
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.withLock
 import kotlin.system.measureTimeMillis
@@ -83,6 +84,11 @@ open class ManagedBlockchainProcessManager(
     protected var currentRemovedBlockchainHeight = 0L
 
     companion object : KLogging()
+
+    init {
+        executor.scheduleWithFixedDelay(
+                ::pruneRemovedBlockchains, appConfig.housekeepingIntervalMs, appConfig.housekeepingIntervalMs, TimeUnit.MILLISECONDS)
+    }
 
     protected open fun initManagedEnvironment(dataSource: ManagedNodeDataSource) {
         this.dataSource = dataSource
@@ -167,8 +173,6 @@ open class ManagedBlockchainProcessManager(
             // Checking out for chain0 configuration changes
             val reloadChain0 = isConfigurationChanged(CHAIN0)
             startStopBlockchainsAsync(reloadChain0, bTrace)
-            // Pruning removed blockchains if exist
-            pruneRemovedBlockchains()
             return reloadChain0
         }
 
@@ -278,50 +282,47 @@ open class ManagedBlockchainProcessManager(
     protected fun pruneRemovedBlockchains() {
         if (!areBlockchainsPruning.compareAndSet(false, true)) return
 
-        val removedChains = dataSource.findNextRemovedBlockchains(currentRemovedBlockchainHeight)
+        try {
+            val removedChains = dataSource.findNextRemovedBlockchains(currentRemovedBlockchainHeight)
 
-        // No removed chains, OR some of the removed chains have not yet been stopped. We'll be back on the next iteration.
-        if (removedChains.isEmpty() || !areChainsAvailableForPruning(removedChains)) {
-            areBlockchainsPruning.set(false)
-            return
-        }
-
-        executor.execute {
-            try {
-                withLoggingContext(CHAIN_IID_TAG to CHAIN0.toString()) {
-                    logger.debug { "Removed blockchains at height ${removedChains.first().height}: ${removedChains.joinToString(", ") { it.rid.toHex() }}" }
-                }
-
-                removedChains.forEach { chain ->
-                    val removedChainId = withReadConnection(sharedStorage, 0) { ctx0 ->
-                        DatabaseAccess.of(ctx0).getChainId(ctx0, chain.rid)
-                    }
-
-                    withLoggingContext(
-                            buildMap {
-                                put(BLOCKCHAIN_RID_TAG, chain.rid.toString())
-                                if (removedChainId != null) put(CHAIN_IID_TAG, removedChainId.toString())
-                            }
-                    ) {
-                        if (removedChainId != null) {
-                            logger.debug { "Deleting blockchain" }
-                            val elapsed = measureTimeMillis {
-                                withReadWriteConnection(sharedStorage, removedChainId) {
-                                    BlockchainApi.deleteBlockchain(it)
-                                }
-                            }
-                            logger.debug { "Blockchain deleted in $elapsed ms" }
-                        } else {
-                            logger.debug { "Blockchain is already deleted" }
-                        }
-                    }
-                }
-                currentRemovedBlockchainHeight = removedChains.first().height
-            } catch (e: Exception) {
-                logger.error(e) { e.message }
-            } finally {
-                areBlockchainsPruning.set(false)
+            // No removed chains, OR some of the removed chains have not yet been stopped. We'll be back on the next iteration.
+            if (removedChains.isEmpty() || !areChainsAvailableForPruning(removedChains)) {
+                return
             }
+
+            withLoggingContext(CHAIN_IID_TAG to CHAIN0.toString()) {
+                logger.debug { "Removed blockchains at height ${removedChains.first().height}: ${removedChains.joinToString(", ") { it.rid.toHex() }}" }
+            }
+
+            removedChains.forEach { chain ->
+                val removedChainId = withReadConnection(sharedStorage, 0) { ctx0 ->
+                    DatabaseAccess.of(ctx0).getChainId(ctx0, chain.rid)
+                }
+
+                withLoggingContext(
+                        buildMap {
+                            put(BLOCKCHAIN_RID_TAG, chain.rid.toString())
+                            if (removedChainId != null) put(CHAIN_IID_TAG, removedChainId.toString())
+                        }
+                ) {
+                    if (removedChainId != null) {
+                        logger.debug { "Deleting blockchain" }
+                        val elapsed = measureTimeMillis {
+                            withReadWriteConnection(sharedStorage, removedChainId) {
+                                BlockchainApi.deleteBlockchain(it)
+                            }
+                        }
+                        logger.debug { "Blockchain deleted in $elapsed ms" }
+                    } else {
+                        logger.debug { "Blockchain is already deleted" }
+                    }
+                }
+            }
+            currentRemovedBlockchainHeight = removedChains.first().height
+        } catch (e: Exception) {
+            logger.error(e) { e.message }
+        } finally {
+            areBlockchainsPruning.set(false)
         }
     }
 
