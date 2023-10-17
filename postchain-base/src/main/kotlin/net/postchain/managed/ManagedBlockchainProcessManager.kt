@@ -275,13 +275,13 @@ open class ManagedBlockchainProcessManager(
         }
     }
 
-    private fun pruneRemovedBlockchains() {
+    protected fun pruneRemovedBlockchains() {
         if (!areBlockchainsPruning.compareAndSet(false, true)) return
 
         val removedChains = dataSource.findNextRemovedBlockchains(currentRemovedBlockchainHeight)
 
         // No removed chains, OR some of the removed chains have not yet been stopped. We'll be back on the next iteration.
-        if (removedChains.isEmpty() || removedChains.any { retrieveBlockchain(it.rid) != null }) {
+        if (removedChains.isEmpty() || !areChainsAvailableForPruning(removedChains)) {
             areBlockchainsPruning.set(false)
             return
         }
@@ -322,6 +322,12 @@ open class ManagedBlockchainProcessManager(
             } finally {
                 areBlockchainsPruning.set(false)
             }
+        }
+    }
+
+    protected open fun areChainsAvailableForPruning(chains: List<RemovedBlockchainInfo>): Boolean {
+        return processLock.withLock {
+            chains.all { !bridToChainId.containsKey(it.rid) }
         }
     }
 

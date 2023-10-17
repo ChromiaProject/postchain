@@ -15,6 +15,7 @@ import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.network.mastersub.protocol.MsCommittedBlockMessage
 import net.postchain.network.mastersub.subnode.SubConnectionManager
 import net.postchain.network.mastersub.subnode.SubQueryHandler
+import java.util.concurrent.TimeUnit
 
 class SubNodeBlockchainProcessManager(
         postchainContext: PostchainContext,
@@ -36,6 +37,8 @@ class SubNodeBlockchainProcessManager(
         }
 
         initManagedEnvironment(BaseManagedNodeDataSource(queryRunner, postchainContext.appConfig))
+        executor.scheduleWithFixedDelay(
+                ::pruneRemovedBlockchains, 30_000, 30_000, TimeUnit.MILLISECONDS)
     }
 
     override fun createAndRegisterBlockchainProcess(

@@ -38,7 +38,6 @@ import net.postchain.metrics.ContainerMetrics
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 import org.mandas.docker.client.DockerClient
 import java.util.Collections
-import java.util.LinkedHashMap
 
 const val POSTCHAIN_MASTER_PUBKEY = "postchain-master-pubkey"
 
@@ -134,6 +133,8 @@ class ContainerManagedBlockchainProcessManager(
                     // Checking out for chain0 configuration changes
                     val reloadChain0 = isConfigurationChanged(CHAIN0)
                     stopStartBlockchains(reloadChain0)
+                    // Pruning removed blockchains if exist
+                    pruneRemovedBlockchains()
                     reloadChain0
                 }
 
