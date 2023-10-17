@@ -53,19 +53,64 @@ class ZfsFileSystem(private val containerConfig: ContainerNodeConfig) : FileSyst
 
     override fun applyLimits(containerName: ContainerName, resourceLimits: ContainerResourceLimits) {
         if (resourceLimits.hasStorage()) {
-            runCommand(arrayOf("zfs", "set", "quota=${getQuotaBytes(resourceLimits)}", getFs(containerName)))?.let {
+            runCommand(arrayOf("zfs", "set", "quota=${getQuotaBytes(resourceLimits)}", "reservation=${getQuotaBytes(resourceLimits)}", getFs(containerName)))?.let {
                 logger.warn("Unable to set ZFS quota: $it")
             }
         }
     }
 
-    override fun getCurrentLimitsInfo(containerName: ContainerName, resourceLimits: ContainerResourceLimits): ResourceLimitsInfo? = null
+    override fun getCurrentLimitsInfo(containerName: ContainerName, resourceLimits: ContainerResourceLimits): ResourceLimitsInfo? {
+        if (resourceLimits.hasStorage()) {
+            /*
+            Running:
+                $ sudo zfs get used,quota -Hp -o property,value /pool1/0350fe40-cities-1
+            will return something like this:
+                used	16163180032
+                quota	17179869184
+            where headers are hidden, but they are:
+                PROPERTY  VALUE
+             */
+            val poolFilesystem = getFs(containerName)
+            runCommandWithOutput(arrayOf(
+                    "zfs",
+                    "get",
+                    "used,quota",
+                    "-Hp",
+                    "-o",
+                    "property,value",
+                    poolFilesystem)).let {
+                if (it.exitValue != 0) {
+                    logger.warn("Unable to get used and quota values for fs $poolFilesystem: ${it.output}")
+                } else {
+                    logger.debug { "Result from get used and quota values for fs $poolFilesystem: ${it.output}" }
+                    var spaceUsed: Long? = null
+                    var spaceHardLimit: Long? = null
+                    for (line in it.output) {
+                        val columns = line.split("\t")
+                        if (columns[0] == "used") {
+                            spaceUsed = b2MiB(columns[1].toLong())
+                        }
+                        if (columns[0] == "quota") {
+                            spaceHardLimit = b2MiB(columns[1].toLong())
+                        }
+                    }
+                    if (spaceUsed != null && spaceHardLimit != null) {
+                        return ResourceLimitsInfo(spaceUsed, spaceHardLimit)
+                    }
+                    logger.warn("Failed to parse used and quota values for fs $poolFilesystem: ${it.output} from ${it.output}")
+                }
+            }
+        }
+        return null
+    }
 
-    private fun getFs(containerName: ContainerName) =
-            "${containerConfig.zfsPoolName}/${containerName.name}"
+    private fun getFs(containerName: ContainerName) = "${containerConfig.zfsPoolName}/${containerName.name}"
 
-    private fun getQuotaBytes(resourceLimits: ContainerResourceLimits) =
-            resourceLimits.storageMb() * 1024 * 1024
+    private fun getQuotaBytes(resourceLimits: ContainerResourceLimits) = miB2B(resourceLimits.storageMb())
+
+    private fun miB2B(value: Long) = value * 1024 * 1024
+
+    private fun b2MiB(value: Long) = value / 1024 / 1024
 
     override fun rootOf(containerName: ContainerName): Path = hostRootOf(containerName)
 

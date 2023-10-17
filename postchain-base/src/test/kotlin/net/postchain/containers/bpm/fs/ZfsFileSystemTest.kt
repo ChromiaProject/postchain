@@ -13,39 +13,44 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.spy
 import org.mockito.kotlin.whenever
 
-class Ext4FileSystemTest {
+class ZfsFileSystemTest {
 
-    private val realResult: List<String> = listOf(
-            "Project,SpaceStatus,FileStatus,SpaceUsed,SpaceSoftLimit,SpaceHardLimit,SpaceGrace,FileUsed,FileSoftLimit,FileHardLimit,FileGrace",
-            "#0,ok,ok,1M,0M,0M,,1k,0k,0k,",
-            "#1,ok,ok,51M,0M,16384M,,2k,0k,0k,")
-    private val containerConfig: ContainerNodeConfig = mock()
-    private val containerName: ContainerName = mock()
-    private val resourceLimits: ContainerResourceLimits = mock()
-    private lateinit var sut: Ext4FileSystem
+    private val realResult: List<String> = listOf("used\t16163180032", "quota\t17179869184")
+    private val contName = "c1"
+    private val zfsPool = "pool1"
+
+    private val containerConfig: ContainerNodeConfig = mock {
+        on { zfsPoolName } doReturn zfsPool
+    }
+    private val containerName: ContainerName = mock {
+        on { name } doReturn contName
+    }
+    private val resourceLimits: ContainerResourceLimits = mock {
+        on { hasStorage() } doReturn true
+    }
+    private lateinit var sut: ZfsFileSystem
 
     @BeforeEach
     fun beforeTest() {
-        sut = spy(Ext4FileSystem(containerConfig))
+        sut = spy(ZfsFileSystem(containerConfig))
         doReturn(FileSystem.CommandResult(0, realResult)).whenever(sut).runCommandWithOutput(anyArray())
-        whenever(containerName.containerIID).thenReturn(1)
-        whenever(resourceLimits.hasStorage()).thenReturn(true)
     }
 
     @Test
-    fun `getCurrentLimitsInfo with valid repquota command result should be parsed correctly`() {
+    fun `getCurrentLimitsInfo with valid list command result should be parsed correctly`() {
         // execute
         val result = sut.getCurrentLimitsInfo(containerName, resourceLimits)
         // verify
         checkNotNull(result)
-        assertEquals(51L, result.spaceUsedMB)
+        assertEquals(15414L, result.spaceUsedMB)
         assertEquals(16384L, result.spaceHardLimitMB)
     }
 
     @Test
     fun `getCurrentLimitsInfo with missing project should return null`() {
         // setup
-        whenever(containerName.containerIID).thenReturn(42)
+        whenever(containerName.name).thenReturn("foo")
+        doReturn(FileSystem.CommandResult(1, listOf("cannot open '/pool1/foo': No such file or directory"))).whenever(sut).runCommandWithOutput(anyArray())
         // execute & verify
         assertNull(sut.getCurrentLimitsInfo(containerName, resourceLimits))
     }
