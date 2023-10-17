@@ -176,6 +176,9 @@ class AppConfig(private val config: Configuration) : Config {
 
     fun appliedConfigSendInterval(): Long = getEnvOrLong("POSTCHAIN_CONFIG_SEND_INTERVAL_MS", "applied-config-send-interval-ms", DEFAULT_APPLIED_CONFIG_SEND_INTERVAL_MS)
 
+    val housekeepingIntervalMs
+        get() = config.getEnvOrLongProperty("POSTCHAIN_HOUSEKEEPING_INTERVAL_MS", "housekeeping_interval_ms", 30_000)
+
     /**
      * Wrappers for [Configuration] getters and other functionalities
      */

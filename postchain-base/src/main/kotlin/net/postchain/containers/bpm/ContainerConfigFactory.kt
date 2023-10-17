@@ -241,6 +241,8 @@ object ContainerConfigFactory : KLogging() {
 
         add("POSTGRES_MAX_LOCKS_PER_TRANSACTION=${containerNodeConfig.postgresMaxLocksPerTransaction}")
 
+        add("POSTCHAIN_HOUSEKEEPING_INTERVAL_MS=${appConfig.housekeepingIntervalMs}")
+
         val javaToolOptions = createJavaToolOptions(containerNodeConfig, container)
         if (javaToolOptions.isNotEmpty()) {
             add("JAVA_TOOL_OPTIONS=${javaToolOptions.joinToString(" ")}")

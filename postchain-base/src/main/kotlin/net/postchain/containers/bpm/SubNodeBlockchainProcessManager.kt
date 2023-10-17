@@ -38,7 +38,7 @@ class SubNodeBlockchainProcessManager(
 
         initManagedEnvironment(BaseManagedNodeDataSource(queryRunner, postchainContext.appConfig))
         executor.scheduleWithFixedDelay(
-                ::pruneRemovedBlockchains, 30_000, 30_000, TimeUnit.MILLISECONDS)
+                ::pruneRemovedBlockchains, postchainContext.appConfig.housekeepingIntervalMs, postchainContext.appConfig.housekeepingIntervalMs, TimeUnit.MILLISECONDS)
     }
 
     override fun createAndRegisterBlockchainProcess(
