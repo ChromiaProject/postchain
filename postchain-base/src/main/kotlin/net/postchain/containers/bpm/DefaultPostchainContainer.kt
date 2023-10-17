@@ -114,9 +114,9 @@ class DefaultPostchainContainer(
             readOnly.set(it.spaceUsedMB + containerNodeConfig.minSpaceQuotaBufferMB >= it.spaceHardLimitMB)
             if (readOnlyBeforeCheck != readOnly.get()) {
                 if (readOnly.get())
-                    logger.warn("Space used is too close to hard limit. Switching to read only mode. (used space: ${it.spaceUsedMB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceUsedMB}MB)")
+                    logger.warn("Space used is too close to hard limit. Switching to read only mode. (used space: ${it.spaceUsedMB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceHardLimitMB}MB)")
                 else
-                    logger.info("Space used is no longer too close to hard limit. (used space: ${it.spaceUsedMB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceUsedMB}MB)")
+                    logger.info("Space used is no longer too close to hard limit. (used space: ${it.spaceUsedMB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceHardLimitMB}MB)")
             }
         }
         return readOnlyBeforeCheck == readOnly.get()
