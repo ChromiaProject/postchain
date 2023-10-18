@@ -44,8 +44,8 @@ import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.metrics.BlockchainProcessManagerMetrics
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -77,7 +77,7 @@ open class BaseBlockchainProcessManager(
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val bridToChainId = mutableMapOf<BlockchainRid, Long>()
     protected val extensions: List<BlockchainProcessManagerExtension> = bpmExtensions
-    protected val executor: ExecutorService = Executors.newSingleThreadExecutor()
+    protected val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private val scheduledForStart = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
     private val scheduledForStop = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
 

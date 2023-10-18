@@ -38,7 +38,6 @@ import net.postchain.metrics.ContainerMetrics
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 import org.mandas.docker.client.DockerClient
 import java.util.Collections
-import java.util.LinkedHashMap
 
 const val POSTCHAIN_MASTER_PUBKEY = "postchain-master-pubkey"
 

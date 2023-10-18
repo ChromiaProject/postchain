@@ -1,46 +1,47 @@
 Below is an attempt to document all node properties that can be configured via `properties` files. Most properties can be set via environment variables. For a list of blockchain configuration properties see this [page](Blockchain-Configuration-Properties.md).
 
-| Name | Description | Type | Default | Environment Variable |
-| ------ | ------ | ------ | ------ | ------ |
-| `cryptosystem` | Class name of cryptosystem to use | String | "net.postchain.crypto.Secp256K1CryptoSystem" | `POSTCHAIN_CRYPTO_SYSTEM` |
-| `configuration.provider.node` | properties / manual / managed. | String | "properties" | `POSTCHAIN_NODE_CONFIG_PROVIDER` |
-| `database.driverclass` | Database driver class. | String | "org.postgresql.Driver" | `POSTCHAIN_DB_DRIVER`|
-| `database.url` | Database URL. | String | "" | `POSTCHAIN_DB_URL` |
-| `database.schema` | Database schema. | String | "" | `POSTCHAIN_DB_SCHEMA` |
-| `database.username` | Database username. | String | "" | `POSTCHAIN_DB_USERNAME` |
-| `database.password` | Database password. | String | "" | `POSTCHAIN_DB_PASSWORD` |
-| `database.readConcurrency` | Database read concurrency. | Int | 10 | `POSTCHAIN_DB_READ_CONCURRENCY` |
-| `database.blockBuilderWriteConcurrency` | Database block builder connection pool write concurrency. | Int | 8 | `POSTCHAIN_DB_BLOCK_BUILDER_WRITE_CONCURRENCY` |
-| `database.sharedWriteConcurrency` | Database shared connection pool write concurrency. | Int | 2 | `POSTCHAIN_DB_SHARED_WRITE_CONCURRENCY` |
-| `database.blockBuilderMaxWaitWrite` | Maximum wait time for a connection on the block builder connection pool (milliseconds). | Int | 100 | `POSTCHAIN_DB_BLOCK_BUILDER_MAX_WAIT_WRITE` |
-| `database.sharedMaxWaitWrite` | Maximum wait time for a connection on the shared connection pool (milliseconds). | Int | 10 000 | `POSTCHAIN_DB_SHARED_MAX_WAIT_WRITE` |
-| `database.suppressCollationCheck` | Ignore incorrect database collation configuration | Boolean | false | `POSTCHAIN_DB_SUPPRESS_COLLATION_CHECK` |
-| `exit-on-fatal-error` | Exit process upon fatal database error | Boolean | false | `POSTCHAIN_EXIT_ON_FATAL_ERROR` |
-| `infrastructure` | The infrastructure implementation to use. | String | "base/ebft" | `POSTCHAIN_INFRASTRUCTURE` |
-| `genesis.pubkey` | Public key of genesis node | String | | `POSTCHAIN_GENESIS_PUBKEY` |
-| `genesis.host` | Host address of genesis node | String | | `POSTCHAIN_GENESIS_HOST` |
-| `genesis.port` | Peer-to-peer port of genesis node | String | | `POSTCHAIN_GENESIS_PORT` |
-| `messaging.privkey` | Private key of the node | String | "" | `POSTCHAIN_PRIVKEY` |
-| `messaging.pubkey` | Public key of the node | String | "" | `POSTCHAIN_PUBKEY` |
-| `messaging.port` | Peer-to-peer port | Int | 9870 | `POSTCHAIN_PORT` |
-| `metrics.prometheus.port` | Port to expose Prometheus metrics on, or -1 to disable | Int | -1 | `POSTCHAIN_PROMETHEUS_PORT` |
-| `fastsync.resurrect_drained_time` | Time (ms) until a DRAINED node is set to SYNCABLE again. | Long | 10000 | `POSTCHAIN_FASTSYNC_RESURRECT_DRAINED_TIME` |
-| `fastsync.resurrect_unresponsive_time` | Time (ms) until a UNRESPONSIVE node is set to SYNCABLE again. | Long | 20000 | `POSTCHAIN_FASTSYNC_RESURRECT_UNRESPONSIVE_TIME` |
-| `fastsync.parallelism` | Number of parallel sync jobs. | Int | 10 | `POSTCHAIN_FASTSYNC_PARALLELISM` |
-| `fastsync.exit_delay` | Do not exit sync for at least this amount of time (ms). | Long | 60000 | `POSTCHAIN_FASTSYNC_EXIT_DELAY` |
-| `fastsync.job_timeout` | Sync job timeout (ms). | Long | 10000 | `POSTCHAIN_FASTSYNC_JOB_TIMEOUT` |
-| `fastsync.loop_interval` | Sleep time between each iteration of a sync job. | Long | 100 | `POSTCHAIN_FASTSYNC_LOOP_INTERVAL` |
-| `fastsync.must_sync_until_height` | Minimum height when sync might be considered done. | Long | -1 | `POSTCHAIN_FASTSYNC_MUST_SYNC_UNTIL_HEIGHT` |
-| `fastsync.max_errors_before_blacklisting` | Max errors before a peer is blacklisted. | Int | 10 | `POSTCHAIN_FASTSYNC_MAX_ERRORS_BEFORE_BLACKLISTING` |
-| `fastsync.disconnect_timeout` | Time before peer is considered disconnected (ms). | Long | 10000 | `POSTCHAIN_FASTSYNC_DISCONNECT_TIMEOUT` |
-| `fastsync.blacklisting_timeout` | Max time a node is blacklisted if no errors occur (ms). | Long | 60000 | `POSTCHAIN_FASTSYNC_BLACKLISTING_TIMEOUT` |
-| `fastsync.blacklisting_error_timeout` | Max time an error is considered when deciding if a node should be blacklisted (ms). | Long | 3600000 | `POSTCHAIN_FASTSYNC_BLACKLISTING_ERROR_TIMEOUT` |
-| `slowsync.enabled` | Is slowsync enabled. | Boolean | true | `POSTCHAIN_SLOWSYNC_ENABLED` |
-| `slowsync.max_sleep_time` | Maximum sleep time for slowsync (ms). | Long | 600000 | `POSTCHAIN_SLOWSYNC_MAX_SLEEP_TIME` |
-| `slowsync.min_sleep_time` | Minimum sleep time for slowsync (ms). | Long | 20 | `POSTCHAIN_SLOWSYNC_MIN_SLEEP_TIME` |
-| `slowsync.max_peer_wait_time` | A peer must answer before this, or we will give up (ms). | Long | 2000 | `POSTCHAIN_SLOWSYNC_MAX_PEER_WAIT_TIME` |
-| `applied-config-send-interval-ms` | Interval for signers to broadcast info about their currently applied config (milliseconds) | Long | 1000 | `POSTCHAIN_CONFIG_SEND_INTERVAL_MS` |
-| `blockchain_ancestors.<brid_X>` | List of blockchain ancestors [<node_id_Y>:<brid_Z>] | String | | |
+| Name | Description                                                                                | Type    | Default                                     | Environment Variable |
+| ------ |--------------------------------------------------------------------------------------------|---------|---------------------------------------------| ------ |
+| `cryptosystem` | Class name of cryptosystem to use                                                          | String  | "net.postchain.crypto.Secp256K1CryptoSystem" | `POSTCHAIN_CRYPTO_SYSTEM` |
+| `configuration.provider.node` | properties / manual / managed.                                                             | String  | "properties"                                | `POSTCHAIN_NODE_CONFIG_PROVIDER` |
+| `database.driverclass` | Database driver class.                                                                     | String  | "org.postgresql.Driver"                     | `POSTCHAIN_DB_DRIVER`|
+| `database.url` | Database URL.                                                                              | String  | ""                                          | `POSTCHAIN_DB_URL` |
+| `database.schema` | Database schema.                                                                           | String  | ""                                          | `POSTCHAIN_DB_SCHEMA` |
+| `database.username` | Database username.                                                                         | String  | ""                                          | `POSTCHAIN_DB_USERNAME` |
+| `database.password` | Database password.                                                                         | String  | ""                                          | `POSTCHAIN_DB_PASSWORD` |
+| `database.readConcurrency` | Database read concurrency.                                                                 | Int     | 10                                          | `POSTCHAIN_DB_READ_CONCURRENCY` |
+| `database.blockBuilderWriteConcurrency` | Database block builder connection pool write concurrency.                                  | Int     | 8                                           | `POSTCHAIN_DB_BLOCK_BUILDER_WRITE_CONCURRENCY` |
+| `database.sharedWriteConcurrency` | Database shared connection pool write concurrency.                                         | Int     | 2                                           | `POSTCHAIN_DB_SHARED_WRITE_CONCURRENCY` |
+| `database.blockBuilderMaxWaitWrite` | Maximum wait time for a connection on the block builder connection pool (milliseconds).    | Int     | 100                                         | `POSTCHAIN_DB_BLOCK_BUILDER_MAX_WAIT_WRITE` |
+| `database.sharedMaxWaitWrite` | Maximum wait time for a connection on the shared connection pool (milliseconds).           | Int     | 10 000                                      | `POSTCHAIN_DB_SHARED_MAX_WAIT_WRITE` |
+| `database.suppressCollationCheck` | Ignore incorrect database collation configuration                                          | Boolean | false                                       | `POSTCHAIN_DB_SUPPRESS_COLLATION_CHECK` |
+| `exit-on-fatal-error` | Exit process upon fatal database error                                                     | Boolean | false                                       | `POSTCHAIN_EXIT_ON_FATAL_ERROR` |
+| `infrastructure` | The infrastructure implementation to use.                                                  | String  | "base/ebft"                                 | `POSTCHAIN_INFRASTRUCTURE` |
+| `genesis.pubkey` | Public key of genesis node                                                                 | String  |                                             | `POSTCHAIN_GENESIS_PUBKEY` |
+| `genesis.host` | Host address of genesis node                                                               | String  |                                             | `POSTCHAIN_GENESIS_HOST` |
+| `genesis.port` | Peer-to-peer port of genesis node                                                          | String  |                                             | `POSTCHAIN_GENESIS_PORT` |
+| `messaging.privkey` | Private key of the node                                                                    | String  | ""                                          | `POSTCHAIN_PRIVKEY` |
+| `messaging.pubkey` | Public key of the node                                                                     | String  | ""                                          | `POSTCHAIN_PUBKEY` |
+| `messaging.port` | Peer-to-peer port                                                                          | Int     | 9870                                        | `POSTCHAIN_PORT` |
+| `metrics.prometheus.port` | Port to expose Prometheus metrics on, or -1 to disable                                     | Int     | -1                                          | `POSTCHAIN_PROMETHEUS_PORT` |
+| `fastsync.resurrect_drained_time` | Time (ms) until a DRAINED node is set to SYNCABLE again.                                   | Long    | 10000                                       | `POSTCHAIN_FASTSYNC_RESURRECT_DRAINED_TIME` |
+| `fastsync.resurrect_unresponsive_time` | Time (ms) until a UNRESPONSIVE node is set to SYNCABLE again.                              | Long    | 20000                                       | `POSTCHAIN_FASTSYNC_RESURRECT_UNRESPONSIVE_TIME` |
+| `fastsync.parallelism` | Number of parallel sync jobs.                                                              | Int     | 10                                          | `POSTCHAIN_FASTSYNC_PARALLELISM` |
+| `fastsync.exit_delay` | Do not exit sync for at least this amount of time (ms).                                    | Long    | 60000                                       | `POSTCHAIN_FASTSYNC_EXIT_DELAY` |
+| `fastsync.job_timeout` | Sync job timeout (ms).                                                                     | Long    | 10000                                       | `POSTCHAIN_FASTSYNC_JOB_TIMEOUT` |
+| `fastsync.loop_interval` | Sleep time between each iteration of a sync job.                                           | Long    | 100                                         | `POSTCHAIN_FASTSYNC_LOOP_INTERVAL` |
+| `fastsync.must_sync_until_height` | Minimum height when sync might be considered done.                                         | Long    | -1                                          | `POSTCHAIN_FASTSYNC_MUST_SYNC_UNTIL_HEIGHT` |
+| `fastsync.max_errors_before_blacklisting` | Max errors before a peer is blacklisted.                                                   | Int     | 10                                          | `POSTCHAIN_FASTSYNC_MAX_ERRORS_BEFORE_BLACKLISTING` |
+| `fastsync.disconnect_timeout` | Time before peer is considered disconnected (ms).                                          | Long    | 10000                                       | `POSTCHAIN_FASTSYNC_DISCONNECT_TIMEOUT` |
+| `fastsync.blacklisting_timeout` | Max time a node is blacklisted if no errors occur (ms).                                    | Long    | 60000                                       | `POSTCHAIN_FASTSYNC_BLACKLISTING_TIMEOUT` |
+| `fastsync.blacklisting_error_timeout` | Max time an error is considered when deciding if a node should be blacklisted (ms).        | Long    | 3600000                                     | `POSTCHAIN_FASTSYNC_BLACKLISTING_ERROR_TIMEOUT` |
+| `slowsync.enabled` | Is slowsync enabled.                                                                       | Boolean | true                                        | `POSTCHAIN_SLOWSYNC_ENABLED` |
+| `slowsync.max_sleep_time` | Maximum sleep time for slowsync (ms).                                                      | Long    | 600000                                      | `POSTCHAIN_SLOWSYNC_MAX_SLEEP_TIME` |
+| `slowsync.min_sleep_time` | Minimum sleep time for slowsync (ms).                                                      | Long    | 20                                          | `POSTCHAIN_SLOWSYNC_MIN_SLEEP_TIME` |
+| `slowsync.max_peer_wait_time` | A peer must answer before this, or we will give up (ms).                                   | Long    | 2000                                        | `POSTCHAIN_SLOWSYNC_MAX_PEER_WAIT_TIME` |
+| `applied-config-send-interval-ms` | Interval for signers to broadcast info about their currently applied config (milliseconds) | Long    | 1000                                        | `POSTCHAIN_CONFIG_SEND_INTERVAL_MS` |
+| `blockchain_ancestors.<brid_X>` | List of blockchain ancestors [<node_id_Y>:<brid_Z>]                                        | String  |                                             | |
+| `housekeeping_interval_ms` | Interval for housekeeping procedure to delete DB tables of removed blockchains (ms).         | Long    | 30000                                       | `POSTCHAIN_HOUSEKEEPING_INTERVAL_MS` |
 
 ### Peers
 
