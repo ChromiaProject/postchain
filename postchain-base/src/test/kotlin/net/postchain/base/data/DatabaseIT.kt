@@ -231,6 +231,39 @@ class DatabaseIT {
     }
 
     @Test
+    fun removeAllBlockchainTablesWithExclusion() {
+        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
+        val chainId = 0L
+        val excludeTables = listOf("configurations", "blocks", "transactions")
+        val queryRunner = QueryRunner()
+        val allBcTablesQuerySql = "SELECT tables.table_name FROM information_schema.tables AS tables" +
+                " WHERE tables.table_schema = current_schema() AND tables.table_name LIKE 'c${chainId}.%'"
+
+        withWriteConnection(storage, chainId) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
+            true
+        }
+
+        withReadConnection(storage, chainId) { ctx ->
+            val tables = queryRunner.query(ctx.conn, allBcTablesQuerySql, ColumnListHandler<String>())
+                    .filter { it.substringAfter(".") !in excludeTables }
+            assertTrue(tables.isNotEmpty())
+        }
+
+        withWriteConnection(storage, chainId) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            db.removeAllBlockchainSpecificTables(ctx, excludeTables)
+            true
+        }
+
+        withReadConnection(storage, chainId) { ctx ->
+            val tables = queryRunner.query(ctx.conn, allBcTablesQuerySql, ColumnListHandler<String>()).toSet()
+            assertEquals(excludeTables.map { "c0.$it" }.toSet(), tables)
+        }
+    }
+
+    @Test
     fun removeAllBlockchainSpecificFunctions() {
         val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         val chainId = 10L

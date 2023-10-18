@@ -811,8 +811,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.update(ctx.conn, sql, ctx.chainID) != 0
     }
 
-    override fun removeAllBlockchainSpecificTables(ctx: EContext) {
+    override fun removeAllBlockchainSpecificTables(ctx: EContext, excludeTables: List<String>) {
         val bcTables = queryRunner.query(ctx.conn, cmdGetAllBlockchainTables(ctx.chainID), ColumnListHandler<String>())
+                .filter { it.substringAfter(".") !in excludeTables }
         bcTables.forEach { tableName ->
             queryRunner.query(ctx.conn, cmdGetTableConstraints(tableName), ColumnListHandler<String>()).forEach { constraintName ->
                 queryRunner.update(ctx.conn, cmdDropTableConstraint(tableName, constraintName))
@@ -1269,7 +1270,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      * @param snapshotsToKeep is the number of snapshots to keep
      */
     override fun getNextPrunableSnapshotHeight(ctx: EContext, name: String, blockHeight: Long, snapshotsToKeep: Int): Long? {
-        val sql ="""
+        val sql = """
             SELECT distinct(block_height) from ${tablePages(ctx, name)}
             WHERE block_height <= ?
             ORDER BY block_height DESC

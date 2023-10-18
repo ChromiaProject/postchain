@@ -175,4 +175,10 @@ object BlockchainApi {
         db.removeAllBlockchainReplicas(ctx)
         db.removeBlockchain(ctx)
     }
+
+    fun archiveBlockchain(ctx: EContext) {
+        val db = DatabaseAccess.of(ctx)
+        db.removeAllBlockchainSpecificFunctions(ctx)
+        db.removeAllBlockchainSpecificTables(ctx, listOf("configurations", "blocks", "transactions"))
+    }
 }
