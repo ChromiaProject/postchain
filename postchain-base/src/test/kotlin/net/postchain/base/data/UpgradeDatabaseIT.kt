@@ -455,6 +455,30 @@ class UpgradeDatabaseIT {
                 }
     }
 
+    @Test
+    fun testUpgradeFromVersion9to10() {
+        val configHash = ByteArray(32)
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 9)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
+                        true
+                    }
+                }
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 10)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+
+                        db.addConfigurationHash(ctx, 0, configHash)
+                        assertTrue(db.configurationHashExists(ctx, configHash))
+                        true
+                    }
+                }
+    }
+
     private fun addTransaction(db: SQLDatabaseAccess, ctx: EContext, txBase: Byte, blockIid: Long) {
         db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactions(ctx)} (tx_rid, tx_data, tx_hash, block_iid) " +
                 "VALUES (?, ?, ?, ?)", ByteArray(32) { txBase }, ByteArray(32) { txBase }, ByteArray(32) { txBase }, blockIid)

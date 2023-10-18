@@ -78,9 +78,8 @@ open class BaseApiInfrastructure(
                             ?: 0
             if (process is ValidatorBlockchainProcess) { // TODO: EBFT-specific code, but pretty harmless
                 apiModel = PostchainEBFTModel(
-                        blockchainConfiguration.chainID,
+                        blockchainConfiguration,
                         process.networkAwareTxQueue,
-                        blockchainConfiguration.getTransactionFactory(),
                         engine.getBlockQueries(),
                         blockchainRid,
                         engine.sharedStorage,
@@ -90,7 +89,7 @@ open class BaseApiInfrastructure(
                 )
             } else {
                 apiModel = PostchainModel(
-                        blockchainConfiguration.chainID,
+                        blockchainConfiguration,
                         engine.getTransactionQueue(),
                         engine.getBlockQueries(),
                         blockchainRid,

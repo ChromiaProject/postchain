@@ -120,7 +120,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
             val failedConfigHash = dataSource.getFaultyBlockchainConfiguration(blockchainRid, activeHeight)?.wrap()
                     ?: dba.getFaultyConfiguration(eContext)?.configHash
             val pendingConfig = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight).find {
-                dba.getConfigurationData(eContext, it.configHash.data) == null
+                !dba.configurationHashExists(eContext, it.configHash.data)
             }
             (pendingConfig != null && pendingConfig.configHash != failedConfigHash).also {
                 logger.debug { "$logPrefix: new pending configuration detected for activeHeight: $activeHeight - $it" }
@@ -136,7 +136,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         return if (configs.isNotEmpty()) {
             logger.debug { "$logPrefix: ${configs.size} pending config(s) detected at height: $activeHeight" }
             val configToApply = configs.firstOrNull {
-                DatabaseAccess.of(eContext).getConfigurationData(eContext, it.configHash.data) == null
+                !DatabaseAccess.of(eContext).configurationHashExists(eContext, it.configHash.data)
             }
             if (configToApply != null) {
                 logger.debug { "$logPrefix: config ${configToApply.configHash} will be loaded. Signers: ${configToApply.signers}" }
@@ -185,11 +185,11 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
                     logger.debug { "$logPrefix: ${pendingConfigs.size} pending config(s) detected at height: $activeHeight" }
                     val configToApply = if (loadNextPendingConfig) {
                         pendingConfigs.firstOrNull {
-                            dba.getConfigurationData(eContext, it.configHash.data) == null
+                            !dba.configurationHashExists(eContext, it.configHash.data)
                         }
                     } else {
                         pendingConfigs.lastOrNull {
-                            dba.getConfigurationData(eContext, it.configHash.data) != null
+                            dba.configurationHashExists(eContext, it.configHash.data)
                         }
                     }
 

@@ -18,7 +18,6 @@ import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
-import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GTXModuleAware
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
@@ -140,7 +139,7 @@ open class ManagedBlockchainProcessManager(
 
         fun beforeCommitHandlerChainN(bTrace: BlockTrace?, bctx: BlockEContext) {
             logger.trace { "Running before commit handler -- block causing handler to run: $bTrace" }
-            saveConfigurationInDatabaseIfNotAlreadyExists(bctx, blockchainConfig)
+            saveConfigurationHashInDatabaseIfNotAlreadyExists(bctx, blockchainConfig)
         }
 
         fun wrappedBeforeCommitHandler(bTrace: BlockTrace?, bctx: BlockEContext) {
@@ -228,10 +227,10 @@ open class ManagedBlockchainProcessManager(
         return ::wrappedAfterCommitHandler
     }
 
-    private fun saveConfigurationInDatabaseIfNotAlreadyExists(bctx: BlockEContext, blockchainConfig: BlockchainConfiguration) {
+    private fun saveConfigurationHashInDatabaseIfNotAlreadyExists(bctx: BlockEContext, blockchainConfig: BlockchainConfiguration) {
         val db = DatabaseAccess.of(bctx)
-        if (db.getConfigurationData(bctx, blockchainConfig.configHash) == null) {
-            db.addConfigurationData(bctx, bctx.height, encodeGtv(blockchainConfig.rawConfig))
+        if (!db.configurationHashExists(bctx, blockchainConfig.configHash)) {
+            db.addConfigurationHash(bctx, bctx.height, blockchainConfig.configHash)
         }
     }
 

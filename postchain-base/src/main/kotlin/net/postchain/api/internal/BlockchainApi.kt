@@ -162,12 +162,11 @@ object BlockchainApi {
     fun getMustSyncUntilHeight(ctx: AppContext): Map<Long, Long> =
             DatabaseAccess.of(ctx).getMustSyncUntil(ctx)
 
+    fun getDependentChains(ctx: EContext): List<BlockchainRid> =
+            DatabaseAccess.of(ctx).getDependenciesOnBlockchain(ctx)
+
     fun deleteBlockchain(ctx: EContext) {
         val db = DatabaseAccess.of(ctx)
-
-        val dependentChains = db.getDependenciesOnBlockchain(ctx)
-        if (dependentChains.isNotEmpty())
-            throw UserMistake("Blockchain may not be deleted due to the following dependent chains: ${dependentChains.joinToString(", ")}")
 
         db.removeAllBlockchainSpecificFunctions(ctx)
         db.removeAllBlockchainSpecificTables(ctx)

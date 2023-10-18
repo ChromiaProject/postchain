@@ -13,6 +13,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.common.toHex
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.EContext
@@ -72,7 +73,15 @@ object ImporterExporter : KLogging() {
                 ) {
                     logger.info("Exporting blockchain...")
 
-                    exportConfigurations(configurationsFile, blockchainRid, db, ctx, fromHeight = fromHeight, upToHeight = upToHeight)
+                    val chainConfigurations = db.getAllConfigurations(ctx)
+                    val nonNullConfigurations = chainConfigurations.mapNotNull { (height, config) ->
+                        if (config == null) null else height to config
+                    }
+                    if (chainConfigurations.size != nonNullConfigurations.size) {
+                        logger.info("Exporting a managed blockchain, skipping configuration file generation...")
+                    } else {
+                        exportConfigurations(configurationsFile, blockchainRid, nonNullConfigurations, fromHeight = fromHeight, upToHeight = upToHeight)
+                    }
 
                     if (blocksFile != null) {
                         val (firstBlock, lastBlock, numBlocks) = exportBlocks(blocksFile, db, ctx, fromHeight, upToHeight, logNBlocks)
@@ -90,11 +99,11 @@ object ImporterExporter : KLogging() {
                 }
             }
 
-    private fun exportConfigurations(configurationsFile: Path, blockchainRid: BlockchainRid, db: DatabaseAccess, ctx: EContext, fromHeight: Long, upToHeight: Long) {
+    private fun exportConfigurations(configurationsFile: Path, blockchainRid: BlockchainRid, configurations: List<Pair<Long, WrappedByteArray>>, fromHeight: Long, upToHeight: Long) {
         BufferedOutputStream(FileOutputStream(configurationsFile.toFile())).use { output ->
             output.write(GtvEncoder.encodeGtv(GtvFactory.gtv(blockchainRid.data)))
 
-            for ((height, configurationData) in db.getAllConfigurations(ctx)) {
+            for ((height, configurationData) in configurations) {
                 if (height > upToHeight) break
                 if (height >= fromHeight) {
                     output.write(GtvEncoder.encodeGtv(GtvFactory.gtv(GtvFactory.gtv(height), GtvFactory.gtv(configurationData))))

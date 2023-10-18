@@ -97,6 +97,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     protected abstract fun cmdUpdateTableConfigurationsV4First(chainId: Long): String
     protected abstract fun cmdUpdateTableConfigurationsV4Second(chainId: Long): String
+    protected abstract fun cmdDropTableConfigurationDataNotNull(chainId: Long): String
 
     protected abstract fun cmdCreateTableFaultyConfiguration(chainId: Long): String
 
@@ -560,7 +561,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int, allowUpgrade: Boolean) {
-        if (expectedDbVersion !in 1..9) {
+        if (expectedDbVersion !in 1..10) {
             throw UserMistake("Unsupported DB version $expectedDbVersion")
         }
 
@@ -630,6 +631,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 version9(connection)
             }
 
+            if (version < 10 && expectedDbVersion >= 10) {
+                logger.info("Upgrading to version 10")
+                version10(connection)
+            }
+
             if (expectedDbVersion > version) {
                 queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
                 logger.info("Database version has been updated to version: $expectedDbVersion")
@@ -678,6 +684,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
             if (expectedDbVersion >= 9) {
                 version9(connection)
+            }
+
+            if (expectedDbVersion >= 10) {
+                version10(connection)
             }
         }
     }
@@ -759,6 +769,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 }
     }
 
+    private fun version10(connection: Connection) {
+        queryRunner.query(connection, "SELECT chain_iid FROM ${tableBlockchains()}", mapListHandler)
+                .map { it["chain_iid"] as Long }
+                .forEach { chainId ->
+                    queryRunner.update(connection, cmdDropTableConfigurationDataNotNull(chainId))
+                }
+    }
+
     protected fun calcConfigurationHash(configurationData: ByteArray) = GtvToBlockchainRidFactory.calculateBlockchainRid(
             GtvDecoder.decodeGtv(configurationData), ::sha256Digest).data
 
@@ -781,6 +799,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdCreateTableFaultyConfiguration(ctx.chainID))
         queryRunner.update(ctx.conn, cmdCreateTableTransactionSigners(ctx.chainID))
         queryRunner.update(ctx.conn, cmdCreateTableTransactionSignersIndex(ctx.chainID))
+        queryRunner.update(ctx.conn, cmdDropTableConfigurationDataNotNull(ctx.chainID))
 
         val txIndex = "CREATE INDEX IF NOT EXISTS ${tableName(ctx, "transactions_block_iid_idx")} " +
                 "ON ${tableTransactions(ctx)}(block_iid)"
@@ -968,18 +987,18 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.update(ctx.conn, "DELETE FROM ${tableConfigurations(ctx)} WHERE height = ?", height)
     }
 
-    override fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray>> {
+    override fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray?>> {
         return getAllConfigurations(ctx.conn, ctx.chainID)
     }
 
-    override fun getAllConfigurations(connection: Connection, chainId: Long): List<Pair<Long, WrappedByteArray>> {
+    override fun getAllConfigurations(connection: Connection, chainId: Long): List<Pair<Long, WrappedByteArray?>> {
         val sql = """
             SELECT height, configuration_data  
             FROM ${tableConfigurations(chainId)} 
             ORDER BY height
         """.trimIndent()
         return queryRunner.query(connection, sql, mapListHandler).map { configuration ->
-            (configuration["height"] as Long) to (configuration["configuration_data"] as ByteArray).wrap()
+            (configuration["height"] as Long) to (configuration["configuration_data"] as ByteArray?)?.wrap()
         }
     }
 
@@ -990,7 +1009,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 .map { it["chain_iid"] as Long to BlockchainRid(it["blockchain_rid"] as ByteArray) }
                 .forEach { (dependentChainId, dependentBrid) ->
                     if (dependentBrid != brid) {
-                        getAllConfigurations(ctx.conn, dependentChainId).forEach { (_, conf) ->
+                        getAllConfigurations(ctx.conn, dependentChainId).forEach { (height, conf) ->
+                            if (conf == null) {
+                                throw ProgrammerMistake("Configuration data at height $height is missing. Blockchain dependencies should be determined via chain0 in managed mode")
+                            }
                             BlockchainConfigurationData.fromRaw(conf.data).blockchainDependencies.forEach {
                                 if (it.blockchainRid == brid) dependentChains.add(dependentBrid)
                             }
@@ -1023,6 +1045,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     override fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray) {
         val hash = calcConfigurationHash(data)
         queryRunner.insert(ctx.conn, cmdInsertConfiguration(ctx), longRes, height, data, hash, data, hash)
+    }
+
+    override fun addConfigurationHash(ctx: EContext, height: Long, configHash: ByteArray) {
+        queryRunner.insert(ctx.conn, cmdInsertConfiguration(ctx), longRes, height, null, configHash, null, configHash)
     }
 
     override fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo> {
