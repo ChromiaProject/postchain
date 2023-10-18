@@ -12,23 +12,23 @@ import net.postchain.api.rest.controller.UnavailableException
 import net.postchain.common.BlockchainRid
 import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.concurrent.util.get
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.Storage
-import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockQueries
 import net.postchain.debug.DiagnosticData
 
 class PostchainEBFTModel(
-        chainIID: Long,
+        blockchainConfiguration: BlockchainConfiguration,
         txQueue: TransactionQueue,
-        private val transactionFactory: TransactionFactory,
         blockQueries: BlockQueries,
         blockchainRid: BlockchainRid,
         storage: Storage,
         postchainContext: PostchainContext,
         diagnosticData: DiagnosticData,
         queryCacheTtlSeconds: Long
-) : PostchainModel(chainIID, txQueue, blockQueries, blockchainRid, storage, postchainContext, diagnosticData, queryCacheTtlSeconds) {
+) : PostchainModel(blockchainConfiguration, txQueue, blockQueries, blockchainRid, storage, postchainContext, diagnosticData, queryCacheTtlSeconds) {
+    private val transactionFactory = blockchainConfiguration.getTransactionFactory()
 
     override fun postTransaction(tx: ByteArray) {
         val sample = Timer.start(Metrics.globalRegistry)

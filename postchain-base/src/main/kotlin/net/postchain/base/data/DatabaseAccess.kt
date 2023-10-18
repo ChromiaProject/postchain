@@ -129,8 +129,8 @@ interface DatabaseAccess {
     fun listConfigurationHashes(ctx: EContext): List<ByteArray>
     fun configurationHashExists(ctx: EContext, hash: ByteArray): Boolean
     fun removeConfiguration(ctx: EContext, height: Long): Int
-    fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray>>
-    fun getAllConfigurations(connection: Connection, chainId: Long): List<Pair<Long, WrappedByteArray>>
+    fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray?>>
+    fun getAllConfigurations(connection: Connection, chainId: Long): List<Pair<Long, WrappedByteArray?>>
     fun getDependenciesOnBlockchain(ctx: EContext): List<BlockchainRid>
 
     /** Get configuration data at exactly given height */
@@ -141,6 +141,7 @@ interface DatabaseAccess {
 
     fun getConfigurationData(ctx: EContext, hash: ByteArray): ByteArray?
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
+    fun addConfigurationHash(ctx: EContext, height: Long, configHash: ByteArray)
 
     fun getFaultyConfiguration(ctx: EContext): FaultyConfiguration?
     fun addFaultyConfiguration(ctx: EContext, faultyConfiguration: FaultyConfiguration)
