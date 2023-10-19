@@ -284,15 +284,17 @@ open class ManagedBlockchainProcessManager(
         try {
             val inactiveChains = dataSource.findNextInactiveBlockchains(currentInactiveBlockchainsHeight)
             withLoggingContext(CHAIN_IID_TAG to CHAIN0.toString()) {
-                val chainsToLog = inactiveChains.associate { it.rid.toHex() to (it.state to it.state) }
+                val chainsToLog = inactiveChains.associate { it.rid.toHex() to (it.state to it.height) }
                 logger.debug { "Inactive blockchains starting from height $currentInactiveBlockchainsHeight: $chainsToLog" }
 
                 // No inactive chains, OR some of the inactive chains have not yet been stopped. We'll be back on the next iteration.
-                if (inactiveChains.isEmpty() || !areChainsAvailableForPruning(inactiveChains)) {
-                    logger.debug { "Inactive blockchains are not available for pruning" }
-                    return
-                } else {
-                    logger.debug { "Inactive blockchains are available for pruning" }
+                when {
+                    inactiveChains.isEmpty() -> return
+                    !areChainsAvailableForPruning(inactiveChains) -> {
+                        logger.debug { "Inactive blockchains are not available for pruning" }
+                        return
+                    }
+                    else -> logger.debug { "Inactive blockchains are available for pruning" }
                 }
             }
 

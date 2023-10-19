@@ -14,6 +14,8 @@ import net.postchain.devtools.mminfra.TestManagedBlockchainProcessManager
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
+import org.apache.commons.dbutils.QueryRunner
+import org.apache.commons.dbutils.handlers.ColumnListHandler
 import org.awaitility.Awaitility.await
 import org.awaitility.Duration
 import org.junit.jupiter.api.Test
@@ -23,7 +25,10 @@ class BlockchainStateTest : ManagedModeTest() {
 
     @Test
     fun `Test switching blockchain state`() {
-        val c1 = basicSystem()
+        startManagedSystem(3, 0)
+        val c1 = startNewBlockchain(setOf(0, 1, 2), setOf(), null)
+        buildBlock(c1, 1)
+
         verifyState(c1, BlockchainState.RUNNING, ValidatorBlockchainProcess::class)
 
         setBlockchainState(c1, BlockchainState.PAUSED)
@@ -36,26 +41,34 @@ class BlockchainStateTest : ManagedModeTest() {
     }
 
     @Test
-    fun `Test deleting blockchain`() {
-        val c1 = basicSystem()
-        verifyState(c1, BlockchainState.RUNNING, ValidatorBlockchainProcess::class)
+    fun `Test deleting and archiving blockchain`() {
+        // Setup
+        configOverrides.setProperty("housekeeping_interval_ms", 5_000)
+        startManagedSystem(3, 0)
+        val c1 = startNewBlockchain(setOf(0, 1, 2), setOf(), null)
+        buildBlock(c1, 1)
+        val c2 = startNewBlockchain(setOf(0, 1, 2), setOf(), null)
+        buildBlock(c2, 1)
 
         // Asserting the initial state
+        verifyState(c1, BlockchainState.RUNNING, ValidatorBlockchainProcess::class)
+        verifyState(c2, BlockchainState.RUNNING, ValidatorBlockchainProcess::class)
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            getChainNodes(c1).forEach {
+            getChainNodes(c0).forEach {
                 assertThat(it.retrieveBlockchain(c1)).isNotNull()
-                assertThat(
-                        (it.processManager as TestManagedBlockchainProcessManager).getCurInactiveBcHeight()
-                ).isEqualTo(0L)
+                assertThat(it.retrieveBlockchain(c2)).isNotNull()
+                assertThat((it.processManager as TestManagedBlockchainProcessManager).getCurInactiveBcHeight())
+                        .isEqualTo(0L)
             }
         }
 
         // Removing c1 at a specific height
-        setBlockchainState(c1, BlockchainState.REMOVED, nodes.first().currentHeight(c0))
-        val heightC1RemovedAt = mockDataSources[0]!!.bridState[ChainUtil.ridOf(c1)]!!.first
+        val heightC1RemovedAt = nodes.first().currentHeight(c0) + 1
+        setBlockchainState(c1, BlockchainState.REMOVED, heightC1RemovedAt)
 
-        // building more c0 blocks
-        buildBlock(c0, 5)
+        // Archiving c1 at a specific height
+        val heightC2ArchivedAt = nodes.first().currentHeight(c0) + 1
+        setBlockchainState(c2, BlockchainState.ARCHIVED, heightC2ArchivedAt)
 
         // Asserting that c1 is removed
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
@@ -67,11 +80,27 @@ class BlockchainStateTest : ManagedModeTest() {
                 assertThat(chainId1FromDb).isNull()
             }
         }
-
         // Asserting that `ManagedBlockchainProcessManager.currentRemovedBlockchainHeight` equals height blockchain was removed at
-        assertThat(
-                (nodes.first().processManager as TestManagedBlockchainProcessManager).getCurInactiveBcHeight()
-        ).isEqualTo(heightC1RemovedAt)
+        assertThat((nodes.first().processManager as TestManagedBlockchainProcessManager).getCurInactiveBcHeight())
+                .isEqualTo(heightC1RemovedAt)
+
+        // Asserting that c2 is archived
+        val queryRunner = QueryRunner()
+        val selectBcTables = "SELECT tables.table_name FROM information_schema.tables AS tables" +
+                " WHERE tables.table_schema = current_schema() AND tables.table_name LIKE 'c$c2.%'"
+        await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            getChainNodes(c2).forEach {
+                assertThat(it.retrieveBlockchain(c2)).isNull()
+                val tables = withReadConnection(nodes.first().postchainContext.sharedStorage, c0) { ctx0 ->
+                    queryRunner.query(ctx0.conn, selectBcTables, ColumnListHandler<String>()).toSet()
+                }
+                assertThat(tables).isEqualTo(setOf("c$c2.configurations", "c$c2.blocks", "c$c2.transactions"))
+            }
+        }
+
+        // Asserting that `ManagedBlockchainProcessManager.currentInactiveBlockchainHeight` equals height blockchain was removed at
+        assertThat((nodes.first().processManager as TestManagedBlockchainProcessManager).getCurInactiveBcHeight())
+                .isEqualTo(heightC2ArchivedAt)
     }
 
     private fun <T : Any> verifyState(chainId: Long, state: BlockchainState, clazz: KClass<in T>) {
