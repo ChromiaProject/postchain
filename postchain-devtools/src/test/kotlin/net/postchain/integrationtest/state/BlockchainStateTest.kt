@@ -45,7 +45,7 @@ class BlockchainStateTest : ManagedModeTest() {
             getChainNodes(c1).forEach {
                 assertThat(it.retrieveBlockchain(c1)).isNotNull()
                 assertThat(
-                        (it.processManager as TestManagedBlockchainProcessManager).getCurRemovedBcHeight()
+                        (it.processManager as TestManagedBlockchainProcessManager).getCurInactiveBcHeight()
                 ).isEqualTo(0L)
             }
         }
@@ -70,7 +70,7 @@ class BlockchainStateTest : ManagedModeTest() {
 
         // Asserting that `ManagedBlockchainProcessManager.currentRemovedBlockchainHeight` equals height blockchain was removed at
         assertThat(
-                (nodes.first().processManager as TestManagedBlockchainProcessManager).getCurRemovedBcHeight()
+                (nodes.first().processManager as TestManagedBlockchainProcessManager).getCurInactiveBcHeight()
         ).isEqualTo(heightC1RemovedAt)
     }
 

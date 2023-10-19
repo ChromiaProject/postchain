@@ -80,7 +80,7 @@ open class ManagedBlockchainProcessManager(
     protected val areBlockchainsPruning = AtomicBoolean(false)
 
     @Volatile
-    protected var currentRemovedBlockchainHeight = 0L
+    protected var currentInactiveBlockchainsHeight = 0L
 
     companion object : KLogging()
 
@@ -282,42 +282,55 @@ open class ManagedBlockchainProcessManager(
         if (!areBlockchainsPruning.compareAndSet(false, true)) return
 
         try {
-            val removedChains = dataSource.findNextRemovedBlockchains(currentRemovedBlockchainHeight)
-
-            // No removed chains, OR some of the removed chains have not yet been stopped. We'll be back on the next iteration.
-            if (removedChains.isEmpty() || !areChainsAvailableForPruning(removedChains)) {
-                return
-            }
-
+            val inactiveChains = dataSource.findNextInactiveBlockchains(currentInactiveBlockchainsHeight)
             withLoggingContext(CHAIN_IID_TAG to CHAIN0.toString()) {
-                logger.debug { "Removed blockchains at height ${removedChains.first().height}: ${removedChains.joinToString(", ") { it.rid.toHex() }}" }
+                val chainsToLog = inactiveChains.associate { it.rid.toHex() to (it.state to it.state) }
+                logger.debug { "Inactive blockchains starting from height $currentInactiveBlockchainsHeight: $chainsToLog" }
+
+                // No inactive chains, OR some of the inactive chains have not yet been stopped. We'll be back on the next iteration.
+                if (inactiveChains.isEmpty() || !areChainsAvailableForPruning(inactiveChains)) {
+                    logger.debug { "Inactive blockchains are not available for pruning" }
+                    return
+                } else {
+                    logger.debug { "Inactive blockchains are available for pruning" }
+                }
             }
 
-            removedChains.forEach { chain ->
-                val removedChainId = withReadConnection(sharedStorage, 0) { ctx0 ->
+            inactiveChains.forEach { chain ->
+                val inactiveChainId = withReadConnection(sharedStorage, 0) { ctx0 ->
                     DatabaseAccess.of(ctx0).getChainId(ctx0, chain.rid)
                 }
 
                 withLoggingContext(
                         buildMap {
                             put(BLOCKCHAIN_RID_TAG, chain.rid.toString())
-                            if (removedChainId != null) put(CHAIN_IID_TAG, removedChainId.toString())
+                            if (inactiveChainId != null) put(CHAIN_IID_TAG, inactiveChainId.toString())
                         }
                 ) {
-                    if (removedChainId != null) {
-                        logger.debug { "Deleting blockchain" }
-                        val elapsed = measureTimeMillis {
-                            withReadWriteConnection(sharedStorage, removedChainId) {
-                                BlockchainApi.deleteBlockchain(it)
+                    if (inactiveChainId != null) {
+                        if (chain.state == BlockchainState.REMOVED) {
+                            logger.debug { "Deleting blockchain" }
+                            val elapsed = measureTimeMillis {
+                                withReadWriteConnection(sharedStorage, inactiveChainId) {
+                                    BlockchainApi.deleteBlockchain(it)
+                                }
                             }
+                            logger.debug { "Blockchain deleted in $elapsed ms" }
+                        } else if (chain.state == BlockchainState.ARCHIVED) {
+                            logger.debug { "Archiving blockchain" }
+                            val elapsed = measureTimeMillis {
+                                withReadWriteConnection(sharedStorage, inactiveChainId) {
+                                    BlockchainApi.archiveBlockchain(it)
+                                }
+                            }
+                            logger.debug { "Blockchain archived in $elapsed ms" }
                         }
-                        logger.debug { "Blockchain deleted in $elapsed ms" }
                     } else {
-                        logger.debug { "Blockchain is already deleted" }
+                        logger.debug { "Blockchain is already pruned" }
                     }
                 }
             }
-            currentRemovedBlockchainHeight = removedChains.first().height
+            currentInactiveBlockchainsHeight = inactiveChains.first().height
         } catch (e: Exception) {
             logger.error(e) { e.message }
         } finally {
@@ -325,7 +338,7 @@ open class ManagedBlockchainProcessManager(
         }
     }
 
-    protected open fun areChainsAvailableForPruning(chains: List<RemovedBlockchainInfo>): Boolean {
+    protected open fun areChainsAvailableForPruning(chains: List<InactiveBlockchainInfo>): Boolean {
         return processLock.withLock {
             chains.all { !bridToChainId.containsKey(it.rid) }
         }

@@ -135,14 +135,14 @@ class BaseManagedNodeDataSourceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("findNextRemovedBlockchainsData")
-    fun testFindNextRemovedBlockchains(gtvResult: Gtv, expected: List<RemovedBlockchainInfo>?) {
+    @MethodSource("findNextInactiveBlockchainsData")
+    fun testFindNextInactiveBlockchains(gtvResult: Gtv, expected: List<InactiveBlockchainInfo>?) {
         val queryRunner: QueryRunner = mock {
-            on { query(eq("nm_api_version"), any()) } doReturn gtv(10)
-            on { query(eq("nm_find_next_removed_blockchains"), any()) } doReturn gtvResult
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(11)
+            on { query(eq("nm_find_next_inactive_blockchains"), any()) } doReturn gtvResult
         }
         val sut = BaseManagedNodeDataSource(queryRunner, mock())
-        assertEquals(expected, sut.findNextRemovedBlockchains(0L))
+        assertEquals(expected, sut.findNextInactiveBlockchains(0L))
     }
 
     companion object {
@@ -284,21 +284,21 @@ class BaseManagedNodeDataSourceTest {
         }
 
         @JvmStatic
-        fun findNextRemovedBlockchainsData(): List<Array<Any?>> {
+        fun findNextInactiveBlockchainsData(): List<Array<Any?>> {
             val brid0 = ZERO_RID
             val brid1 = BlockchainRid.buildRepeat(1)
 
             val nonTrivialGtv = GtvArray(arrayOf(
-                    gtv(mapOf("rid" to gtv(brid0), "height" to gtv(10))),
-                    gtv(mapOf("rid" to gtv(brid1), "height" to gtv(20)))
+                    gtv(mapOf("rid" to gtv(brid0), "state" to gtv("REMOVED"), "height" to gtv(10))),
+                    gtv(mapOf("rid" to gtv(brid1), "state" to gtv("ARCHIVED"), "height" to gtv(20)))
             ))
             val nonTrivialExpected = listOf(
-                    RemovedBlockchainInfo(brid0, 10),
-                    RemovedBlockchainInfo(brid1, 20)
+                    InactiveBlockchainInfo(brid0, BlockchainState.REMOVED, 10),
+                    InactiveBlockchainInfo(brid1, BlockchainState.ARCHIVED, 20)
             )
 
             return listOf(
-                    arrayOf(GtvArray(emptyArray()), emptyList<RemovedBlockchainInfo>()),
+                    arrayOf(GtvArray(emptyArray()), emptyList<InactiveBlockchainInfo>()),
                     arrayOf(nonTrivialGtv, nonTrivialExpected)
             )
         }

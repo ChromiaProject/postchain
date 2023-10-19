@@ -15,7 +15,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.managed.BlockchainInfo
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.PendingBlockchainConfiguration
-import net.postchain.managed.RemovedBlockchainInfo
+import net.postchain.managed.InactiveBlockchainInfo
 import java.util.TreeMap
 
 open class MockManagedNodeDataSource : ManagedNodeDataSource {
@@ -96,9 +96,9 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
 
     override fun getBlockchainConfigurationOptions(blockchainRid: BlockchainRid, height: Long): BlockchainConfigurationOptions? = null
 
-    override fun findNextRemovedBlockchains(height: Long): List<RemovedBlockchainInfo> =
+    override fun findNextInactiveBlockchains(height: Long): List<InactiveBlockchainInfo> =
             bridState.filterValues { it.second == BlockchainState.REMOVED && it.first > height }
-                    .map { RemovedBlockchainInfo(it.key, it.value.first) }
+                    .map { InactiveBlockchainInfo(it.key, BlockchainState.REMOVED, it.value.first) }
 
     override fun query(name: String, args: Gtv): Gtv {
         TODO("Not yet implemented")

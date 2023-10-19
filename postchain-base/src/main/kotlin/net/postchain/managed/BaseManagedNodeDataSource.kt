@@ -179,17 +179,24 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         }
     }
 
-    override fun findNextRemovedBlockchains(height: Long): List<RemovedBlockchainInfo> {
-        return if (nmApiVersion >= 10) {
+    override fun findNextInactiveBlockchains(height: Long): List<InactiveBlockchainInfo> {
+        return if (nmApiVersion >= 11) {
             val res = query(
-                    "nm_find_next_removed_blockchains",
+                    "nm_find_next_inactive_blockchains",
                     buildArgs("height" to gtv(height))
             )
-            res.asArray().map {
-                RemovedBlockchainInfo(
-                        BlockchainRid(it["rid"]!!.asByteArray()),
-                        it["height"]!!.asInteger()
-                )
+
+            try {
+                res.asArray().map {
+                    InactiveBlockchainInfo(
+                            BlockchainRid(it["rid"]!!.asByteArray()),
+                            BlockchainState.valueOf(it["state"]!!.asString()),
+                            it["height"]!!.asInteger()
+                    )
+                }
+            } catch (e: Exception) {
+                logger.error(e) { "Can't parse nm_find_next_inactive_blockchains() query result" }
+                emptyList()
             }
         } else {
             emptyList()
