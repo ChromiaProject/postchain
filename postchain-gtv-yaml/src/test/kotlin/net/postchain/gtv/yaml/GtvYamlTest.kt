@@ -113,6 +113,33 @@ internal class GtvYamlTest {
         assertThat(actual.def2).isEqualTo("default2")
     }
 
+    @Test
+    fun allGtvTest() {
+        val expectedYaml = """
+            ---
+            ba: x"12"
+            bo: 1
+            gtv: 12
+            i: 1
+            l: 200000000000000000000000000000000
+            li:
+              - 1
+              - 2
+            ma:
+              k1: v1
+              k2: 5
+            s: foo
+            se:
+              - a
+              - b
+            wba: x"13"
+            
+        """.trimIndent()
+        val gtvData = GtvYaml().load<Gtv>(expectedYaml)
+        val actual = GtvYaml().dump(gtvData)
+        assertThat(actual).isEqualTo(expectedYaml)
+    }
+
     companion object {
         @JvmStatic
         fun allGtvTypes() = arrayOf(
