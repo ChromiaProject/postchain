@@ -62,11 +62,11 @@ class BlockchainStateTest : ManagedModeTest() {
             }
         }
 
-        // Removing c1 at a specific height
+        // 1. Removing c1 at a specific height
         val heightC1RemovedAt = nodes.first().currentHeight(c0) + 1
         setBlockchainState(c1, BlockchainState.REMOVED, heightC1RemovedAt)
 
-        // Archiving c1 at a specific height
+        // 2. Archiving c2 at a specific height
         val heightC2ArchivedAt = nodes.first().currentHeight(c0) + 1
         setBlockchainState(c2, BlockchainState.ARCHIVED, heightC2ArchivedAt)
 
@@ -80,7 +80,7 @@ class BlockchainStateTest : ManagedModeTest() {
                 assertThat(chainId1FromDb).isNull()
             }
         }
-        // Asserting that `ManagedBlockchainProcessManager.currentRemovedBlockchainHeight` equals height blockchain was removed at
+        // Asserting that `ManagedBlockchainProcessManager.currentInactiveBlockchainsHeight` equals height blockchain was removed at
         assertThat((nodes.first().processManager as TestManagedBlockchainProcessManager).getCurInactiveBcHeight())
                 .isEqualTo(heightC1RemovedAt)
 
@@ -97,10 +97,27 @@ class BlockchainStateTest : ManagedModeTest() {
                 assertThat(tables).isEqualTo(setOf("c$c2.configurations", "c$c2.blocks", "c$c2.transactions"))
             }
         }
-
-        // Asserting that `ManagedBlockchainProcessManager.currentInactiveBlockchainHeight` equals height blockchain was removed at
+        // Asserting that `ManagedBlockchainProcessManager.currentInactiveBlockchainsHeight` equals height blockchain was removed at
         assertThat((nodes.first().processManager as TestManagedBlockchainProcessManager).getCurInactiveBcHeight())
                 .isEqualTo(heightC2ArchivedAt)
+
+        // 3. Removing archived c2 at a specific height
+        val heightC2RemovedAt = nodes.first().currentHeight(c0) + 1
+        setBlockchainState(c2, BlockchainState.REMOVED, heightC2RemovedAt)
+
+        // Asserting that c2 is removed
+        await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            getChainNodes(c2).forEach {
+                assertThat(it.retrieveBlockchain(c2)).isNull()
+                val chainId2FromDb = withReadConnection(nodes.first().postchainContext.sharedStorage, c0) { ctx0 ->
+                    DatabaseAccess.of(ctx0).getChainId(ctx0, ChainUtil.ridOf(c2))
+                }
+                assertThat(chainId2FromDb).isNull()
+            }
+        }
+        // Asserting that `ManagedBlockchainProcessManager.currentInactiveBlockchainsHeight` equals height blockchain was removed at
+        assertThat((nodes.first().processManager as TestManagedBlockchainProcessManager).getCurInactiveBcHeight())
+                .isEqualTo(heightC2RemovedAt)
     }
 
     private fun <T : Any> verifyState(chainId: Long, state: BlockchainState, clazz: KClass<in T>) {
