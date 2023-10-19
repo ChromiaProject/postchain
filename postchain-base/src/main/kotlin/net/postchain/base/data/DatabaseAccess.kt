@@ -76,7 +76,7 @@ interface DatabaseAccess {
     fun initializeApp(connection: Connection, expectedDbVersion: Int, allowUpgrade: Boolean = false)
     fun initializeBlockchain(ctx: EContext, blockchainRid: BlockchainRid)
     fun removeBlockchain(ctx: EContext): Boolean
-    fun removeAllBlockchainSpecificTables(ctx: EContext)
+    fun removeAllBlockchainSpecificTables(ctx: EContext, excludeTables: List<String> = emptyList())
     fun removeAllBlockchainSpecificFunctions(ctx: EContext)
     fun removeBlockchainFromMustSyncUntil(ctx: EContext): Boolean
     fun getChainId(ctx: AppContext, blockchainRid: BlockchainRid): Long?
