@@ -52,7 +52,6 @@ import net.postchain.metrics.SyncMetrics
 import java.time.Clock
 import java.util.Date
 import java.util.concurrent.CompletableFuture
-import kotlin.math.floor
 
 /**
  * The ValidatorSyncManager handles communications with our peers.
@@ -306,9 +305,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         statusManager.nodeStatuses.forEachIndexed { index, status ->
             if (match(status)) matchingIndexes.add(index)
         }
-        if (matchingIndexes.isEmpty()) return null
-        if (matchingIndexes.size == 1) return matchingIndexes[0]
-        return matchingIndexes[floor(Math.random() * matchingIndexes.size).toInt()]
+        return matchingIndexes.randomOrNull()
     }
 
     /**
