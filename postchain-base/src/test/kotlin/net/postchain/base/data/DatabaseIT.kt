@@ -36,6 +36,9 @@ class DatabaseIT {
 
     private val appConfig: AppConfig = testDbConfig("database_it")
 
+    fun selectAllTablesSql(chainId: Long) = "SELECT tables.table_name FROM information_schema.tables AS tables" +
+            " WHERE tables.table_schema = current_schema() AND tables.table_name LIKE 'c$chainId.%'"
+
     @Test
     fun collation() {
         val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
@@ -204,8 +207,6 @@ class DatabaseIT {
         val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         val chainId = 0L
         val queryRunner = QueryRunner()
-        val allBcTablesQuerySql = "SELECT tables.table_name FROM information_schema.tables AS tables" +
-                " WHERE tables.table_schema = current_schema() AND tables.table_name LIKE 'c${chainId}.%'"
 
         withWriteConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
@@ -214,7 +215,7 @@ class DatabaseIT {
         }
 
         withReadConnection(storage, chainId) { ctx ->
-            val allTables = queryRunner.query(ctx.conn, allBcTablesQuerySql, ColumnListHandler<String>())
+            val allTables = queryRunner.query(ctx.conn, selectAllTablesSql(chainId), ColumnListHandler<String>())
             assertTrue(allTables.isNotEmpty())
         }
 
@@ -225,7 +226,7 @@ class DatabaseIT {
         }
 
         withReadConnection(storage, chainId) { ctx ->
-            val allTables = queryRunner.query(ctx.conn, allBcTablesQuerySql, ColumnListHandler<String>())
+            val allTables = queryRunner.query(ctx.conn, selectAllTablesSql(chainId), ColumnListHandler<String>())
             assertTrue(allTables.isEmpty())
         }
     }
@@ -236,8 +237,6 @@ class DatabaseIT {
         val chainId = 0L
         val excludeTables = listOf("configurations", "blocks", "transactions")
         val queryRunner = QueryRunner()
-        val allBcTablesQuerySql = "SELECT tables.table_name FROM information_schema.tables AS tables" +
-                " WHERE tables.table_schema = current_schema() AND tables.table_name LIKE 'c${chainId}.%'"
 
         withWriteConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
@@ -246,7 +245,7 @@ class DatabaseIT {
         }
 
         withReadConnection(storage, chainId) { ctx ->
-            val tables = queryRunner.query(ctx.conn, allBcTablesQuerySql, ColumnListHandler<String>())
+            val tables = queryRunner.query(ctx.conn, selectAllTablesSql(chainId), ColumnListHandler<String>())
                     .filter { it.substringAfter(".") !in excludeTables }
             assertTrue(tables.isNotEmpty())
         }
@@ -258,7 +257,7 @@ class DatabaseIT {
         }
 
         withReadConnection(storage, chainId) { ctx ->
-            val tables = queryRunner.query(ctx.conn, allBcTablesQuerySql, ColumnListHandler<String>()).toSet()
+            val tables = queryRunner.query(ctx.conn, selectAllTablesSql(chainId), ColumnListHandler<String>()).toSet()
             assertEquals(excludeTables.map { "c0.$it" }.toSet(), tables)
         }
     }
