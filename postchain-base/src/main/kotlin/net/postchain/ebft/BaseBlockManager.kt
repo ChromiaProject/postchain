@@ -66,17 +66,19 @@ class BaseBlockManager(
                         CHAIN_IID_TAG to workerContext.blockchainConfiguration.chainID.toString()
                 )
                 withLoggingContext(loggingContext) {
-                    op().whenCompleteUnwrapped(loggingContext) { res, throwable ->
+                    op().whenCompleteUnwrapped(loggingContext, onSuccess = { res ->
                         try {
-                            if (throwable == null) {
-                                onSuccessfulOperation(res, onSuccess)
-                            } else {
-                                onFailedOperation(throwable, onFailure)
-                            }
+                            onSuccessfulOperation(res, onSuccess)
                         } finally {
                             operationSemaphore.release()
                         }
-                    }
+                    }, onError = { error ->
+                        try {
+                            onFailedOperation(error, onFailure)
+                        } finally {
+                            operationSemaphore.release()
+                        }
+                    })
                 }
             } catch (e: Exception) {
                 operationSemaphore.release()

@@ -226,14 +226,12 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                         if (isProcessRunning() && readMoreBlocks.get()) {
                             pendingFuture = newBlockDatabase.addBlock(historicBlock, pendingFuture, bTrace)
                             val myHeightToCopy = heightToCopy
-                            pendingFuture.whenCompleteUnwrapped(loggingContext) { _: Any?, exception ->
-                                if (exception == null) {
-                                    copyTrace("Successfully added", bTrace, myHeightToCopy) // Now we should have the block RID in the debug
-                                } else {
-                                    copyErr("Failed to add", myHeightToCopy, exception)
-                                    readMoreBlocks.set(false)
-                                }
-                            }
+                            pendingFuture.whenCompleteUnwrapped(loggingContext, onSuccess = { _ ->
+                                copyTrace("Successfully added", bTrace, myHeightToCopy) // Now we should have the block RID in the debug
+                            }, onError = { exception ->
+                                copyErr("Failed to add", myHeightToCopy, exception)
+                                readMoreBlocks.set(false)
+                            })
                             copyLog("Got promise to add", heightToCopy)
                             heightToCopy += 1
                         }
