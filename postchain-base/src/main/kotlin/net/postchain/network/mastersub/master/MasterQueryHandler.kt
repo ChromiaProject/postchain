@@ -42,40 +42,36 @@ class MasterQueryHandler(
                 } else {
                     val blockQueries = blockQueriesProvider.getBlockQueries(message.targetBlockchainRid)
                     if (blockQueries != null) {
-                        blockQueries.query(message.name, message.args).whenCompleteUnwrapped { response, exception ->
-                            if (exception == null) {
-                                respondToQuery(MsQueryResponse(
-                                        message.requestId,
-                                        response
-                                ))
-                            } else {
-                                respondToQuery(MsQueryFailure(
-                                        message.requestId,
-                                        exception.toString()
-                                ))
-                            }
-                        }
+                        blockQueries.query(message.name, message.args).whenCompleteUnwrapped(onSuccess = { response ->
+                            respondToQuery(MsQueryResponse(
+                                    message.requestId,
+                                    response
+                            ))
+                        }, onError = { exception ->
+                            respondToQuery(MsQueryFailure(
+                                    message.requestId,
+                                    exception.toString()
+                            ))
+                        })
                     } else {
                         logger.trace { "Forwarding message to subnode with target blockchain-rid ${message.targetBlockchainRid} and request id ${message.requestId}" }
                         masterSubQueryManager.query(
                                 message.targetBlockchainRid,
                                 message.name,
                                 message.args
-                        ).whenCompleteUnwrapped { response, error ->
-                            if (error == null) {
-                                logger.trace { "Got response from subnode with target blockchain-rid ${message.targetBlockchainRid}and request id ${message.requestId}" }
-                                respondToQuery(MsQueryResponse(
-                                        message.requestId,
-                                        response
-                                ))
-                            } else {
-                                logger.trace { "Failed to forward request with target blockchain-rid ${message.targetBlockchainRid} and request id ${message.requestId} to subnode, error: ${error.message}" }
-                                respondToQuery(MsQueryFailure(
-                                        message.requestId,
-                                        error.toString()
-                                ))
-                            }
-                        }
+                        ).whenCompleteUnwrapped(onSuccess = { response ->
+                            logger.trace { "Got response from subnode with target blockchain-rid ${message.targetBlockchainRid}and request id ${message.requestId}" }
+                            respondToQuery(MsQueryResponse(
+                                    message.requestId,
+                                    response
+                            ))
+                        }, onError = { error ->
+                            logger.trace { "Failed to forward request with target blockchain-rid ${message.targetBlockchainRid} and request id ${message.requestId} to subnode, error: ${error.message}" }
+                            respondToQuery(MsQueryFailure(
+                                    message.requestId,
+                                    error.toString()
+                            ))
+                        })
                     }
                 }
             }
@@ -89,36 +85,32 @@ class MasterQueryHandler(
                         } else {
                             blockQueries.getBlock(it, true)
                         }
-                    }.whenCompleteUnwrapped { response, exception ->
-                        if (exception == null) {
-                            respondToQuery(MsBlockAtHeightResponse(
-                                    message.requestId,
-                                    response
-                            ))
-                        } else {
-                            respondToQuery(MsQueryFailure(
-                                    message.requestId,
-                                    exception.toString()
-                            ))
-                        }
-                    }
+                    }.whenCompleteUnwrapped(onSuccess = { response ->
+                        respondToQuery(MsBlockAtHeightResponse(
+                                message.requestId,
+                                response
+                        ))
+                    }, onError = { exception ->
+                        respondToQuery(MsQueryFailure(
+                                message.requestId,
+                                exception.toString()
+                        ))
+                    })
                 } else {
                     masterSubQueryManager.blockAtHeight(
                             message.targetBlockchainRid,
                             message.height
-                    ).whenCompleteUnwrapped { response, error ->
-                        if (error == null) {
-                            respondToQuery(MsBlockAtHeightResponse(
-                                    message.requestId,
-                                    response
-                            ))
-                        } else {
-                            respondToQuery(MsQueryFailure(
-                                    message.requestId,
-                                    error.toString()
-                            ))
-                        }
-                    }
+                    ).whenCompleteUnwrapped(onSuccess = { response ->
+                        respondToQuery(MsBlockAtHeightResponse(
+                                message.requestId,
+                                response
+                        ))
+                    }, onError = { error ->
+                        respondToQuery(MsQueryFailure(
+                                message.requestId,
+                                error.toString()
+                        ))
+                    })
                 }
             }
         }

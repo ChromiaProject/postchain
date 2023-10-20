@@ -270,14 +270,12 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             }
         } else {
             val blockSignature = blockDatabase.getBlockSignature(blockRID)
-            blockSignature.whenCompleteUnwrapped(loggingContext) { response, error ->
-                if (error == null) {
-                    val packet = BlockSignature(blockRID, Signature(response.subjectID, response.data))
-                    communicationManager.sendPacket(packet, validatorAtIndex(nodeIndex))
-                } else {
-                    logger.debug(error) { "Error sending BlockSignature" }
-                }
-            }
+            blockSignature.whenCompleteUnwrapped(loggingContext, onSuccess = { response ->
+                val packet = BlockSignature(blockRID, Signature(response.subjectID, response.data))
+                communicationManager.sendPacket(packet, validatorAtIndex(nodeIndex))
+            }, onError = { error ->
+                logger.debug(error) { "Error sending BlockSignature" }
+            })
         }
     }
 

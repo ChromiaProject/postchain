@@ -310,7 +310,7 @@ class SlowSynchronizer(
         // (this is usually slow and is therefore handled via a future).
         addBlockCompletionFuture = blockDatabase
                 .addBlock(block, addBlockCompletionFuture, bTrace)
-                .whenCompleteUnwrapped(loggingContext) { _: Any?, exception ->
+                .whenCompleteUnwrapped(loggingContext, always = { _, exception ->
                     stateMachineLock.withLock {
                         if (exception == null) {
                             logger.debug { "commitBlock() - Block height: $height committed successfully." }
@@ -328,7 +328,7 @@ class SlowSynchronizer(
                             allBlocksCommitted.signalAll()
                         }
                     }
-                }
+                })
     }
 
     private fun currentTimeMillis() = clock.millis()
