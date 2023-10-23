@@ -45,6 +45,7 @@ object NodeConfigurationProviderGenerator {
             configOverrides: MapConfiguration,
             nodeSetup: NodeSetup,
             systemSetup: SystemSetup,
+            preWipeDatabase: Boolean,
             setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
     ): NodeConfigurationProvider {
 
@@ -52,7 +53,7 @@ object NodeConfigurationProviderGenerator {
             "managed" -> TestNodeConfigProducer.createManagedNodeConfig(testName, nodeSetup, systemSetup, null)
             else -> TestNodeConfigProducer.createLegacyNodeConfig(testName, nodeSetup, systemSetup, null)
         }
-        return buildBase(baseConfig, configOverrides, nodeSetup, setupAction)
+        return buildBase(baseConfig, configOverrides, nodeSetup, preWipeDatabase, setupAction)
     }
 
     /**
@@ -69,6 +70,7 @@ object NodeConfigurationProviderGenerator {
         baseConfig: Configuration,
         configOverrides: MapConfiguration,
         nodeSetup: NodeSetup,
+        preWipeDatabase: Boolean,
         setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
     ): NodeConfigurationProvider {
         val compositeConfig = CompositeConfiguration().apply {
@@ -78,7 +80,7 @@ object NodeConfigurationProviderGenerator {
         }
 
         val appConfig = AppConfig(compositeConfig)
-        val storage = StorageBuilder.buildStorage(appConfig)
+        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = preWipeDatabase)
 
         // Run the action, default won't do anything
         setupAction(appConfig)

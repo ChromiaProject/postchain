@@ -180,7 +180,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
         this.systemSetup = sysSetup
 
         // 1. generate node config for all [NodeSetup]
-        createNodeConfProvidersAndAddToNodeSetup(sysSetup, configOverrides, setupAction)
+        createNodeConfProvidersAndAddToNodeSetup(sysSetup, configOverrides, preWipeDatabase, setupAction)
 
         // 2. start all nodes and all chains
         val testNodeMap = startAllTestNodesAndAllChains(sysSetup, preWipeDatabase)
@@ -248,6 +248,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected fun createNodeConfProvidersAndAddToNodeSetup(
             sysSetup: SystemSetup,
             confOverrides: MapConfiguration,
+            preWipeDatabase: Boolean,
             setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
     ) {
         val peerList = sysSetup.toPeerInfoList()
@@ -260,6 +261,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
                     confOverrides,
                     nodeSetup,
                     sysSetup,
+                    preWipeDatabase,
                     setupAction
             )
             nodeSetup.configurationProvider = nodeConfigProvider
@@ -283,6 +285,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected fun addConfigProviderToNodeSetups(
             systemSetup: SystemSetup,
             configOverrides: MapConfiguration,
+            preWipeDatabase: Boolean,
             setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
     ) {
         val testName = this::class.simpleName!!
@@ -293,6 +296,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
                     configOverrides,
                     nodeSetup,
                     systemSetup,
+                    preWipeDatabase,
                     setupAction)
             nodeSetup.configurationProvider = nodeConfProv // TODO: A bit ugly to mutate an existing instance like this. Ideas?
         }

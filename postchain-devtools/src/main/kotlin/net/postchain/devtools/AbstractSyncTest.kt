@@ -77,7 +77,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
 
         // 4. Add node config and fix DB
         nodeSetups.values.forEach { nodeSetup ->
-            configureSingleNodeSetup(nodeSetup)
+            configureSingleNodeSetup(nodeSetup, true)
             fixDbForSingleNodeSetup(nodeSetup, peerInfos, true, blockchainSetup.rid)
         }
 
@@ -107,7 +107,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
 
         // Start over
         val newSetup = createNodeSetup(nodeIndex, peers[nodeIndex])
-        configureSingleNodeSetup(newSetup)
+        configureSingleNodeSetup(newSetup, true)
         fixDbForSingleNodeSetup(newSetup, peers, true, brid)
         val blockchainSetup = systemSetup.blockchainMap[0]
         blockchainSetup!!.prepareBlockchainOnNode = { setup, node -> prepareBlockchainOnNode(setup, node) }
@@ -118,7 +118,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
     protected fun startOldNode(nodeIndex: Int, peerInfoMap: Map<NodeRid, PeerInfo>, brid: BlockchainRid) {
         val peers = peerInfoMap.values.toTypedArray()
         val newSetup = createNodeSetup(nodeIndex, peers[nodeIndex])
-        configureSingleNodeSetup(newSetup)
+        configureSingleNodeSetup(newSetup, false)
         fixDbForSingleNodeSetup(newSetup, peers, false, brid)
         val testNode = newSetup.toTestNodeAndStartAllChains(systemSetup, false)
         updateCache(newSetup, testNode)
@@ -149,7 +149,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
     /**
      * Create a [NodeConfigurationProvider] and add it to the [NodeSetup].
      */
-    private fun configureSingleNodeSetup(nodeSetup: NodeSetup) {
+    private fun configureSingleNodeSetup(nodeSetup: NodeSetup, preWipeDatabase: Boolean) {
 
         // 1. The node specific overrides will be stored in the [NodeSetup], so they can be used in step 2 when
         // the [NodeConfigurationProvider] is created.
@@ -160,7 +160,8 @@ open class AbstractSyncTest : IntegrationTestSetup() {
                 getTestName(),
                 this.configOverrides, // Don't think these test ever use this
                 nodeSetup,
-                systemSetup
+                systemSetup,
+                preWipeDatabase
         )
         nodeSetup.configurationProvider = nodeConfigProvider // New way of fetching the config
     }
