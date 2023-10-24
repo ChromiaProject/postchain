@@ -179,6 +179,11 @@ class AppConfig(private val config: Configuration) : Config {
     val housekeepingIntervalMs
         get() = config.getEnvOrLongProperty("POSTCHAIN_HOUSEKEEPING_INTERVAL_MS", "housekeeping_interval_ms", 30_000)
 
+    // -1: Disable tracking
+    val trackedEbftMessageMaxKeepTimeMs
+        get() = config.getEnvOrLongProperty("POSTCHAIN_TRACKED_EBFT_MESSAGE_MAX_KEEP_TIME_MS", "tracked_ebft_message_max_keep_time_ms", -1)
+
+
     /**
      * Wrappers for [Configuration] getters and other functionalities
      */

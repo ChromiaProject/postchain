@@ -243,6 +243,8 @@ object ContainerConfigFactory : KLogging() {
 
         add("POSTCHAIN_HOUSEKEEPING_INTERVAL_MS=${appConfig.housekeepingIntervalMs}")
 
+        add("POSTCHAIN_TRACKED_EBFT_MESSAGE_MAX_KEEP_TIME_MS=${appConfig.trackedEbftMessageMaxKeepTimeMs}")
+
         val javaToolOptions = createJavaToolOptions(containerNodeConfig, container)
         if (javaToolOptions.isNotEmpty()) {
             add("JAVA_TOOL_OPTIONS=${javaToolOptions.joinToString(" ")}")
