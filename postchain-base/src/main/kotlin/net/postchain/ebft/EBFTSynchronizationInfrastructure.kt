@@ -21,12 +21,14 @@ import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.NodeRid
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.message.MessageDurationTracker
 import net.postchain.ebft.message.ebftMessageToString
 import net.postchain.ebft.worker.ForceReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
+import net.postchain.metrics.MessageDurationTrackerMetricsFactory
 import net.postchain.network.CommunicationManager
 import net.postchain.network.peer.DefaultPeerCommunicationManager
 import net.postchain.network.peer.DefaultPeersCommConfigFactory
@@ -65,6 +67,12 @@ open class EBFTSynchronizationInfrastructure(
 
         val peerCommConfiguration = peersCommConfigFactory.create(postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
 
+        val messageDurationTracker = MessageDurationTracker(
+                postchainContext.appConfig,
+                MessageDurationTrackerMetricsFactory(blockchainConfig.chainID, blockchainConfig.blockchainRid, currentNodeConfig.appConfig.pubKey),
+                ebftMessageToString(blockchainConfig)
+        )
+
         val peers: Set<NodeRid> = peerCommConfiguration.networkNodes.getPeerIds()
         val signers: Set<NodeRid> = blockchainConfig.signers.map { NodeRid(it) }.toSet()
         val iAmASigner = signers.contains(peerCommConfiguration.networkNodes.myself.peerId())
@@ -91,7 +99,8 @@ open class EBFTSynchronizationInfrastructure(
                 currentNodeConfig,
                 restartNotifier,
                 blockchainConfigurationProvider,
-                postchainContext.nodeDiagnosticContext
+                postchainContext.nodeDiagnosticContext,
+                messageDurationTracker
         )
 
         /*
@@ -130,7 +139,8 @@ open class EBFTSynchronizationInfrastructure(
                         currentNodeConfig,
                         restartNotifier,
                         blockchainConfigurationProvider,
-                        postchainContext.nodeDiagnosticContext
+                        postchainContext.nodeDiagnosticContext,
+                        messageDurationTracker
                 )
 
             }

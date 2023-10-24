@@ -24,6 +24,7 @@ import net.postchain.ebft.message.BlockData
 import net.postchain.ebft.message.BlockRange
 import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.message.MessageDurationTracker
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
@@ -118,11 +119,13 @@ class SlowSynchronizerTest {
     private val peerCommConf: PeerCommConfiguration = mock {
         on { networkNodes } doReturn networkNodes
     }
+    private val messageDurationTracker: MessageDurationTracker = mock()
     private val workerContext: WorkerContext = mock {
         on { engine } doReturn blockchainEngine
         on { communicationManager } doReturn commManager
         on { peerCommConfiguration } doReturn peerCommConf
         on { blockchainConfiguration } doReturn blockchainConfiguration
+        on { messageDurationTracker } doReturn messageDurationTracker
     }
     private val blockDatabase: BlockDatabase = mock()
     private val params = SyncParameters()
@@ -214,6 +217,7 @@ class SlowSynchronizerTest {
             verify(stateMachine).acknowledgeFailedCommit()
             verify(stateMachine).updateToWaitForReply(nodeRid, startHeight, currentTimeMillis)
             verify(commManager).sendToRandomPeer(isA(), eq(setOf(nodeRid)))
+            verify(messageDurationTracker).send(eq(nodeRid), isA())
         }
 
         @Test
@@ -245,6 +249,7 @@ class SlowSynchronizerTest {
             verify(stateMachine, never()).acknowledgeFailedCommit()
             verify(stateMachine, never()).updateToWaitForReply(nodeRid, startHeight, currentTimeMillis)
             verify(commManager).sendToRandomPeer(isA(), eq(setOf(toExcludeNodeRid)))
+            verify(messageDurationTracker, never()).send(eq(nodeRid), isA())
         }
     }
 
@@ -341,12 +346,14 @@ class SlowSynchronizerTest {
             val completeBlock = CompleteBlock(blockData, height, witness)
             val blocks = listOf(completeBlock)
             val processedBlocks = 37
-            doReturn(listOf(nodeRid to BlockRange(startHeight, false, blocks))).whenever(commManager).getPackets()
+            val message = BlockRange(startHeight, false, blocks)
+            doReturn(listOf(nodeRid to message)).whenever(commManager).getPackets()
             doReturn(processedBlocks).whenever(sut).handleBlockRange(nodeRid, blocks, startHeight)
             // execute
             sut.processMessages(slowSyncSleepData)
             // verify
             verify(peerStatuses, never()).confirmModern(nodeRid)
+            verify(messageDurationTracker).receive(nodeRid, message)
             verify(sut).handleBlockRange(nodeRid, blocks, startHeight)
             verify(slowSyncSleepData).updateData(processedBlocks)
         }

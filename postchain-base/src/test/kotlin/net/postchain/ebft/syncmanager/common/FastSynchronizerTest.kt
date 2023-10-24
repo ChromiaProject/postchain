@@ -31,6 +31,7 @@ import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.BlockData
 import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.message.MessageDurationTracker
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
@@ -117,11 +118,13 @@ class FastSynchronizerTest {
     private val peerCommConf: PeerCommConfiguration = mock {
         on { networkNodes } doReturn networkNodes
     }
+    private val messageDurationTracker: MessageDurationTracker = mock()
     private val workerContext: WorkerContext = mock {
         on { engine } doReturn blockchainEngine
         on { communicationManager } doReturn commManager
         on { peerCommConfiguration } doReturn peerCommConf
         on { blockchainConfiguration } doReturn blockchainConfiguration
+        on { messageDurationTracker } doReturn messageDurationTracker
     }
     private val blockDatabase: BlockDatabase = mock()
     private val clock: Clock = mock {
@@ -424,12 +427,14 @@ class FastSynchronizerTest {
     @Test
     fun `BlockHeaderMessage should confirm modern node and call internal method`() {
         // setup
-        addMessage(net.postchain.ebft.message.BlockHeader(header, witness, height))
+        val message = net.postchain.ebft.message.BlockHeader(header, witness, height)
+        addMessage(message)
         doReturn(true).whenever(sut).handleBlockHeader(isA(), isA(), isA(), anyLong())
         doNothing().whenever(peerStatuses).confirmModern(isA())
         // execute
         sut.processMessages()
         // verify
+        verify(messageDurationTracker).receive(nodeRid, message)
         verify(peerStatuses).confirmModern(nodeRid)
         verify(sut).handleBlockHeader(nodeRid, header, witness, height)
     }
@@ -551,12 +556,13 @@ class FastSynchronizerTest {
     @Test
     fun `UnfinishedBlock should call internal method`() {
         // setup
-        addMessage(UnfinishedBlock(header, transactions))
-        doNothing().whenever(sut).handleUnfinishedBlock(isA(), isA(), anyList())
+        val message = UnfinishedBlock(header, transactions)
+        addMessage(message)
+        doNothing().whenever(sut).handleUnfinishedBlock(isA(), isA())
         // execute
         sut.processMessages()
         // verify
-        verify(sut).handleUnfinishedBlock(nodeRid, header, transactions)
+        verify(sut).handleUnfinishedBlock(nodeRid, message)
     }
 
     @Nested
@@ -568,14 +574,14 @@ class FastSynchronizerTest {
             doReturn(blockHeader).whenever(blockchainConfiguration).decodeBlockHeader(header)
             // execute & verify
             assertThrows<BadMessageException> {
-                sut.handleUnfinishedBlock(nodeRid, header, transactions)
+                sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
             }
         }
 
         @Test
         fun `with missing job should blacklist peer`() {
             // execute
-            sut.handleUnfinishedBlock(nodeRid, header, transactions)
+            sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
             // verify
             verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Why did we get an unfinished block of height: $height from peer: $nodeRid ? We didn't ask for it")
         }
@@ -586,7 +592,7 @@ class FastSynchronizerTest {
             val job = addJob(height, nodeRid)
             job.block = mock()
             // execute
-            sut.handleUnfinishedBlock(nodeRid, header, transactions)
+            sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
             // verify
             verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: We got this block height = $height already, why send it again?. $job")
         }
@@ -596,7 +602,7 @@ class FastSynchronizerTest {
             // setup
             val job = addJob(height, nodeRid)
             // execute
-            sut.handleUnfinishedBlock(otherNodeRid, header, transactions)
+            sut.handleUnfinishedBlock(otherNodeRid, UnfinishedBlock(header, transactions))
             // verify
             verify(peerStatuses).maybeBlacklist(otherNodeRid, "Sync: We didn't expect $otherNodeRid to send us an unfinished block (height = $height). We wanted ${job.peerId} to do it. $job")
         }
@@ -606,7 +612,7 @@ class FastSynchronizerTest {
             // setup
             val job = addJob(height, nodeRid)
             // execute
-            sut.handleUnfinishedBlock(nodeRid, header, transactions)
+            sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
             // verify
             verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: We don't have a header yet, why does $nodeRid send us an unfinished block (height = $height )? $job")
         }
@@ -617,7 +623,7 @@ class FastSynchronizerTest {
             val job = addJob(height, nodeRid)
             job.header = mock()
             // execute
-            sut.handleUnfinishedBlock(nodeRid, header, transactions)
+            sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
             // verify
             verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Peer: ${job.peerId} is sending us an unfinished block (height = $height) with a header that doesn't match the header we expected. $job")
         }
@@ -628,11 +634,13 @@ class FastSynchronizerTest {
             val job = addJob(height, nodeRid)
             job.witness = mock()
             job.header = baseBlockHeader
+            val message = UnfinishedBlock(header, transactions)
             doReturn(header).whenever(baseBlockHeader).rawData
             doNothing().whenever(sut).commitJobsAsNecessary(any())
             // execute
-            sut.handleUnfinishedBlock(nodeRid, header, transactions)
+            sut.handleUnfinishedBlock(nodeRid, message)
             // verify
+            verify(messageDurationTracker).receive(nodeRid, message, baseBlockHeader)
             assertThat(job.block).isNotNull()
             verify(sut).commitJobsAsNecessary(any())
         }
@@ -643,12 +651,14 @@ class FastSynchronizerTest {
         @Test
         fun `with new node should do nothing`() {
             // setup
-            addMessage(CompleteBlock(BlockData(header, transactions), height, witness))
+            val message = CompleteBlock(BlockData(header, transactions), height, witness)
+            addMessage(message)
             doReturn(false).whenever(peerStatuses).isMaybeLegacy(nodeRid)
             doReturn(false).whenever(sut).handleBlockHeader(isA(), isA(), isA(), anyLong())
             // execute
             sut.processMessages()
             // verify
+            verify(messageDurationTracker).receive(nodeRid, message)
             verify(peerStatuses).isMaybeLegacy(nodeRid)
             verify(sut, never()).handleBlockHeader(isA(), isA(), isA(), anyLong())
         }
@@ -664,7 +674,7 @@ class FastSynchronizerTest {
             // verify
             verify(peerStatuses).isMaybeLegacy(nodeRid)
             verify(sut).handleBlockHeader(nodeRid, header, witness, height)
-            verify(sut, never()).handleUnfinishedBlock(isA(), isA(), isA())
+            verify(sut, never()).handleUnfinishedBlock(isA(), isA(), isA(), isA())
         }
 
         @Test
@@ -673,13 +683,15 @@ class FastSynchronizerTest {
             addMessage(CompleteBlock(BlockData(header, transactions), height, witness))
             doReturn(true).whenever(peerStatuses).isMaybeLegacy(nodeRid)
             doReturn(true).whenever(sut).handleBlockHeader(isA(), isA(), isA(), anyLong())
-            doNothing().whenever(sut).handleUnfinishedBlock(isA(), isA(), anyList())
+            doNothing().whenever(sut).handleUnfinishedBlock(isA(), isA(), isA(), anyList())
+            val blockHeader: BaseBlockHeader = mock()
+            doReturn(blockHeader).whenever(blockchainConfiguration).decodeBlockHeader(header)
             // execute
             sut.processMessages()
             // verify
             verify(peerStatuses).isMaybeLegacy(nodeRid)
             verify(sut).handleBlockHeader(nodeRid, header, witness, height)
-            verify(sut).handleUnfinishedBlock(nodeRid, header, transactions)
+            verify(sut).handleUnfinishedBlock(nodeRid, header, blockHeader, transactions)
         }
     }
 
@@ -759,6 +771,7 @@ class FastSynchronizerTest {
             verify(peerStatuses).markConnected(connectedPeers)
             verify(peerStatuses).markDisconnected(setOf(peerToDisconnect))
             verify(peerStatuses).addPeer(selectedPeer)
+            verify(messageDurationTracker).send(eq(selectedPeer), isA())
             assertThat(sut.jobs[height]).isNotNull()
         }
 

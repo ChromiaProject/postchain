@@ -31,6 +31,7 @@ import net.postchain.ebft.BuildBlockIntent
 import net.postchain.ebft.NodeBlockState
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.message.MessageDurationTracker
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.syncmanager.validator.RevoltTracker
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
@@ -120,6 +121,7 @@ abstract class EBFTProtocolBase {
     protected val peerCommConf: PeerCommConfiguration = mock {
         on { networkNodes } doReturn networkNodes
     }
+    protected val messageDurationTracker: MessageDurationTracker = mock()
     protected val workerContext: WorkerContext = mock {
         on { appConfig } doReturn appConfig
         on { nodeConfig } doReturn nodeConfig
@@ -127,6 +129,7 @@ abstract class EBFTProtocolBase {
         on { communicationManager } doReturn commManager
         on { peerCommConfiguration } doReturn peerCommConf
         on { blockchainConfiguration } doReturn blockchainConfiguration
+        on { messageDurationTracker } doReturn messageDurationTracker
     }
     protected val clock: Clock = mock()
     protected val revoltTracker: RevoltTracker = mock()

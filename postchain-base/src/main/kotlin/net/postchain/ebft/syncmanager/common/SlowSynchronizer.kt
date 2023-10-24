@@ -52,6 +52,7 @@ class SlowSynchronizer(
 ) : AbstractSynchronizer(workerContext) {
 
     private val stateMachine = slowSyncStateMachineProvider(blockchainConfiguration.chainID.toInt())
+    private val messageDurationTracker = workerContext.messageDurationTracker
 
     private val stateMachineLock = reentrantLockProvider()
     private val allBlocksCommitted = stateMachineLock.newCondition()
@@ -107,9 +108,11 @@ class SlowSynchronizer(
         } else {
             peers
         }
-        val pickedPeerId = communicationManager.sendToRandomPeer(GetBlockRange(startAtHeight), usePeers).first
+        val message = GetBlockRange(startAtHeight)
+        val pickedPeerId = communicationManager.sendToRandomPeer(message, usePeers).first
 
         if (pickedPeerId != null) {
+            messageDurationTracker.send(pickedPeerId, message)
             if (stateMachine.hasUnacknowledgedFailedCommit()) stateMachine.acknowledgeFailedCommit()
             slowSyncStateMachine.updateToWaitForReply(pickedPeerId, startAtHeight, now)
         } else {
@@ -124,6 +127,7 @@ class SlowSynchronizer(
      * @return SleepData we should use to sleep
      */
     internal fun processMessages(sleepData: SlowSyncSleepData) {
+        messageDurationTracker.cleanup()
         for (packet in communicationManager.getPackets()) {
             val peerId = packet.first
             if (peerStatuses.isBlacklisted(peerId)) {
@@ -143,6 +147,7 @@ class SlowSynchronizer(
 
                     // But we only expect ranges and status to be sent to us
                     is BlockRange -> {
+                        messageDurationTracker.receive(peerId, message)
                         val processedBlocks = handleBlockRange(peerId, message.blocks, message.startAtHeight)
                         sleepData.updateData(processedBlocks)
                     }
