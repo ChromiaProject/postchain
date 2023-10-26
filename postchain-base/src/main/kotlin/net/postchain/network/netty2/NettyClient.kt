@@ -8,25 +8,20 @@ import io.netty.channel.ChannelHandler
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
 import io.netty.channel.EventLoopGroup
-import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
-import io.netty.util.concurrent.DefaultThreadFactory
 import net.postchain.core.Shutdownable
 import java.net.SocketAddress
-import java.util.concurrent.TimeUnit
 
 class NettyClient(
         channelHandler: ChannelHandler,
-        peerAddress: SocketAddress
+        peerAddress: SocketAddress,
+        eventLoopGroup: EventLoopGroup
 ) : Shutdownable {
 
-    private val eventLoopGroup: EventLoopGroup
     val channelFuture: ChannelFuture
 
     init {
-        eventLoopGroup = NioEventLoopGroup(1, DefaultThreadFactory("NettyClient"))
-
         val client = Bootstrap()
                 .group(eventLoopGroup)
                 .channel(NioSocketChannel::class.java)
@@ -47,10 +42,10 @@ class NettyClient(
     }
 
     override fun shutdown() {
-        eventLoopGroup.shutdownGracefully(0, 2000, TimeUnit.MILLISECONDS).sync()
+        channelFuture.channel().close().sync()
     }
 
     fun shutdownAsync() {
-        eventLoopGroup.shutdownGracefully(0, 2000, TimeUnit.MILLISECONDS)
+        channelFuture.channel().close()
     }
 }

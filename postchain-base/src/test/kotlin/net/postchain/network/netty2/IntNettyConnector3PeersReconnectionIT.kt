@@ -106,6 +106,7 @@ class IntNettyConnector3PeersReconnectionIT {
         stopContext(context3)
 
         val connectionCapture1 = argumentCaptor<PeerConnection>()
+        val connectionCapture2 = argumentCaptor<PeerConnection>()
         await().atMost(TEN_SECONDS)
                 .untilAsserted {
                     // Asserting peer3 is disconnected from peer1
@@ -114,8 +115,8 @@ class IntNettyConnector3PeersReconnectionIT {
                     assertThat(connectionCapture1.firstValue.descriptor().nodeId).isEqualTo(peerInfo3.peerId())
 
                     // Asserting peer3 is disconnected from peer2
-                    // never() -- because of peer2 is a server for peer3
-                    verify(context2.events, never()).onNodeDisconnected(any())
+                    verify(context2.events, times(1)).onNodeDisconnected(connectionCapture2.capture())
+                    assertThat(connectionCapture2.firstValue.descriptor().nodeId).isEqualTo(peerInfo3.peerId())
                 }
 
         // Sending packets

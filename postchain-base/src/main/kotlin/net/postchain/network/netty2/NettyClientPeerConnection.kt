@@ -4,6 +4,7 @@ package net.postchain.network.netty2
 
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
+import io.netty.channel.EventLoopGroup
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
@@ -17,7 +18,8 @@ import java.net.SocketAddress
 class NettyClientPeerConnection<PacketType>(
         private val peerInfo: PeerInfo,
         private val packetEncoder: XPacketEncoder<PacketType>,
-        private val descriptor: PeerConnectionDescriptor
+        private val descriptor: PeerConnectionDescriptor,
+        private val eventLoopGroup: EventLoopGroup
 ) : NettyPeerConnection() {
 
     companion object : KLogging()
@@ -33,9 +35,10 @@ class NettyClientPeerConnection<PacketType>(
         this.onConnected = onConnected
         this.onDisconnected = onDisconnected
 
-        nettyClient = NettyClient(this@NettyClientPeerConnection, peerAddress()).also {it.channelFuture.await().apply {
-                if (!isSuccess) {
-                    logger.info("Connection failed: ${cause().message}")
+        nettyClient = NettyClient(this@NettyClientPeerConnection, peerAddress(), eventLoopGroup).also {
+            it.channelFuture.addListener { future ->
+                if (!future.isSuccess) {
+                    logger.info("Connection failed: ${future.cause().message}")
                     onDisconnected()
                 }
             }

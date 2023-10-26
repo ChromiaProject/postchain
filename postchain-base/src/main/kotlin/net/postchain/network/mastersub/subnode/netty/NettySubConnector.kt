@@ -2,23 +2,28 @@
 
 package net.postchain.network.mastersub.subnode.netty
 
+import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.util.concurrent.DefaultThreadFactory
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.network.mastersub.subnode.SubConnectionDescriptor
 import net.postchain.network.mastersub.subnode.SubConnector
 import net.postchain.network.mastersub.subnode.SubConnectorEvents
+import java.util.concurrent.TimeUnit
 
 class NettySubConnector(
-        private val eventsReceiver: SubConnectorEvents
+        private val eventsReceiver: SubConnectorEvents,
 ) : SubConnector {
 
     companion object : KLogging()
+
+    private val eventLoopGroup = NioEventLoopGroup(1, DefaultThreadFactory("NettySubClient"))
 
     override fun connectMaster(
         masterNode: PeerInfo,
         connectionDescriptor: SubConnectionDescriptor
     ) {
-        val connection = NettySubConnection(masterNode, connectionDescriptor)
+        val connection = NettySubConnection(masterNode, connectionDescriptor, eventLoopGroup)
         try {
             connection.open(
                     onConnected = {
@@ -34,5 +39,13 @@ class NettySubConnector(
         }
     }
 
-    override fun shutdown() = Unit
+    override fun shutdown() {
+        logger.debug { "Shutting down Netty event group" }
+        try {
+            eventLoopGroup.shutdownGracefully(0, 2000, TimeUnit.MILLISECONDS).sync()
+            logger.debug { "Shutting down Netty event loop group done" }
+        } catch (t: Throwable) {
+            logger.debug("Shutting down Netty event loop group failed", t)
+        }
+    }
 }
