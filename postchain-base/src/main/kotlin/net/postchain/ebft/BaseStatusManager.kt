@@ -8,6 +8,7 @@ import mu.withLoggingContext
 import net.postchain.common.toHex
 import net.postchain.core.NodeRid
 import net.postchain.crypto.Signature
+import net.postchain.ebft.message.StateChangeTracker
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.logging.REVOLTED_ON_NODE_TAG
 import net.postchain.logging.REVOLTING_NODE_TAG
@@ -23,6 +24,7 @@ class BaseStatusManager(
         private val myIndex: Int,
         myNextHeight: Long,
         private val nodeStatusMetrics: NodeStatusMetrics,
+        private val stateChangeTracker: StateChangeTracker,
         private val clock: Clock = Clock.systemUTC()
 ) : StatusManager {
     private val nodeCount = nodes.size
@@ -96,6 +98,7 @@ class BaseStatusManager(
                 || ((status.height == existingStatus.height) && (status.round > existingStatus.round))
         ) {
             nodeStatuses[nodeIndex] = status
+            stateChangeTracker.statusChange(nodeRids[nodeIndex], status)
             recomputeStatus()
         }
     }
@@ -219,6 +222,7 @@ class BaseStatusManager(
         myStatus.state = NodeBlockState.HaveBlock
         commitSignatures[myIndex] = mySignature
         intent = DoNothingIntent
+        stateChangeTracker.myStatusChange(myStatus)
         recomputeStatus()
     }
 
@@ -472,6 +476,7 @@ class BaseStatusManager(
             return if (count >= this.quorum) {
                 myStatus.state = NodeBlockState.Prepared
                 myStatus.serial += 1
+                stateChangeTracker.myStatusChange(myStatus)
                 true
             } else {
                 false

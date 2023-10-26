@@ -20,6 +20,7 @@ import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.StatusManager
+import net.postchain.ebft.message.StateChangeTracker
 import net.postchain.ebft.rest.contract.toStateNodeStatus
 import net.postchain.ebft.syncmanager.validator.AppliedConfigSender
 import net.postchain.ebft.syncmanager.validator.RevoltConfigurationData
@@ -63,12 +64,15 @@ class ValidatorBlockchainProcess(
     )
 
     init {
+        val nodeStatusMetrics = NodeStatusMetrics(workerContext.blockchainConfiguration.chainID, workerContext.blockchainConfiguration.blockchainRid)
+        val stateChangeTracker = StateChangeTracker(workerContext.appConfig, nodeStatusMetrics)
         val blockchainConfiguration = workerContext.blockchainConfiguration
         statusManager = BaseStatusManager(
                 blockchainConfiguration.signers,
                 blockchainConfiguration.blockchainContext.nodeID,
                 blockchainEngine.getBlockQueries().getLastBlockHeight().get() + 1,
-                NodeStatusMetrics()
+                nodeStatusMetrics,
+                stateChangeTracker
         )
 
         blockDatabase = BaseBlockDatabase(

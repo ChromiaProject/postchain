@@ -14,8 +14,8 @@ import net.postchain.devtools.NameHelper.peerName
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.logging.MESSAGE_TYPE_TAG
-import net.postchain.logging.PEER_RECIPIENT_ID_TAG
-import net.postchain.logging.PEER_SENDER_ID_TAG
+import net.postchain.logging.TARGET_NODE_TAG
+import net.postchain.logging.SOURCE_NODE_TAG
 import net.postchain.network.CommunicationManager
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
@@ -41,7 +41,7 @@ class DefaultPeerCommunicationManager<PacketType>(
     )
     private val baseLoggingContextWithSender = arrayOf(
             *baseLoggingContext,
-            PEER_SENDER_ID_TAG to myPeerId,
+            SOURCE_NODE_TAG to myPeerId,
     )
 
     private var inboundPackets = mutableListOf<Pair<NodeRid, PacketType>>()
@@ -75,7 +75,7 @@ class DefaultPeerCommunicationManager<PacketType>(
         if (logger.isTraceEnabled) {
             withLoggingContext(
                     *baseLoggingContextWithSender,
-                    PEER_RECIPIENT_ID_TAG to recipient.toHex(),
+                    TARGET_NODE_TAG to recipient.toHex(),
                     MESSAGE_TYPE_TAG to packet!!::class.java.simpleName
             ) {
                 logger.trace { "sendPacket(${peerName(recipient.toString())}, ${packetToString(packet)})" }
@@ -91,7 +91,7 @@ class DefaultPeerCommunicationManager<PacketType>(
             if (logger.isTraceEnabled) {
                 withLoggingContext(
                         *baseLoggingContextWithSender,
-                        PEER_RECIPIENT_ID_TAG to it.toHex(),
+                        TARGET_NODE_TAG to it.toHex(),
                         MESSAGE_TYPE_TAG to packet!!::class.java.simpleName
                 ) {
                     logger.trace { "sendPacket(${peerName(it.toString())}, ${packetToString(packet)})" }
@@ -127,7 +127,7 @@ class DefaultPeerCommunicationManager<PacketType>(
         if (logger.isTraceEnabled) {
             withLoggingContext(
                     *baseLoggingContextWithSender,
-                    PEER_RECIPIENT_ID_TAG to peer.toHex(),
+                    TARGET_NODE_TAG to peer.toHex(),
                     MESSAGE_TYPE_TAG to packet!!::class.java.simpleName
             ) {
                 logger.trace { "sendToRandomPeer(${peerName(peer.toString())}, ${packetToString(packet)})" }
@@ -171,8 +171,8 @@ class DefaultPeerCommunicationManager<PacketType>(
                 if (logger.isTraceEnabled) {
                     withLoggingContext(
                             *baseLoggingContext,
-                            PEER_SENDER_ID_TAG to peerId.toHex(),
-                            PEER_RECIPIENT_ID_TAG to myPeerId,
+                            SOURCE_NODE_TAG to peerId.toHex(),
+                            TARGET_NODE_TAG to myPeerId,
                             MESSAGE_TYPE_TAG to decodedPacket!!::class.java.simpleName
                     ) {
                         logger.trace { "receivePacket(${peerId.toHex()}, ${packetToString(decodedPacket)})" }

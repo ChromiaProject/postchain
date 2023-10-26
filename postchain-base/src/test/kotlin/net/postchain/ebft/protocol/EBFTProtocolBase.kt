@@ -32,6 +32,7 @@ import net.postchain.ebft.NodeBlockState
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.MessageDurationTracker
+import net.postchain.ebft.message.StateChangeTracker
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.syncmanager.validator.RevoltTracker
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
@@ -88,6 +89,7 @@ abstract class EBFTProtocolBase {
         on { revoltsOnNode } doReturn counter
         on { revoltsBetweenOthers } doReturn counter
     }
+    protected val stateChangeTracker: StateChangeTracker = mock()
     protected val appConfig = AppConfig(PropertiesConfiguration().apply {
     })
     protected val nodeConfig = NodeConfig(appConfig)
@@ -143,7 +145,7 @@ abstract class EBFTProtocolBase {
     @BeforeEach
     fun setup() {
         doReturn(BaseStatusManager.ZERO_SERIAL_TIME).whenever(clock).millis()
-        statusManager = BaseStatusManager(nodes, myNodeId, 0, nodeStatusMetrics, clock)
+        statusManager = BaseStatusManager(nodes, myNodeId, 0, nodeStatusMetrics, stateChangeTracker, clock)
         blockManager = BaseBlockManager(blockDatabase, statusManager, blockStrategy, workerContext)
         syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, syncMetrics, { true }, false, clock)
         statusManager.recomputeStatus()

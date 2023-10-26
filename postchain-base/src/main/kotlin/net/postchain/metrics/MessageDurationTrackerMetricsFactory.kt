@@ -8,8 +8,8 @@ import net.postchain.ebft.message.EbftMessage
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.logging.MESSAGE_TYPE_TAG
-import net.postchain.logging.PEER_RECIPIENT_ID_TAG
-import net.postchain.logging.PEER_SENDER_ID_TAG
+import net.postchain.logging.TARGET_NODE_TAG
+import net.postchain.logging.SOURCE_NODE_TAG
 
 class MessageDurationTrackerMetricsFactory(chainIID: Long, blockchainRid: BlockchainRid, senderPeer: String) {
 
@@ -17,11 +17,11 @@ class MessageDurationTrackerMetricsFactory(chainIID: Long, blockchainRid: Blockc
             .description("EBFT message response time")
             .tag(CHAIN_IID_TAG, chainIID.toString())
             .tag(BLOCKCHAIN_RID_TAG, blockchainRid.toHex())
-            .tag(PEER_SENDER_ID_TAG, senderPeer)
+            .tag(SOURCE_NODE_TAG, senderPeer)
 
     fun createTimer(recipientPeer: NodeRid, receivedMessage: EbftMessage): Timer =
             ebftResponseTimeBuilder
-                    .tag(PEER_RECIPIENT_ID_TAG, recipientPeer.toHex())
+                    .tag(TARGET_NODE_TAG, recipientPeer.toHex())
                     .tag(MESSAGE_TYPE_TAG, receivedMessage::class.java.simpleName)
                     .register(Metrics.globalRegistry)
 }
