@@ -5,6 +5,7 @@ package net.postchain.network.mastersub.subnode.netty
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
+import io.netty.channel.EventLoopGroup
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.network.common.LazyPacket
@@ -20,7 +21,8 @@ import java.net.SocketAddress
 
 class NettySubConnection(
         private val masterNode: PeerInfo,
-        private val connectionDescriptor: SubConnectionDescriptor
+        private val connectionDescriptor: SubConnectionDescriptor,
+        private val eventLoopGroup: EventLoopGroup
 ) : ChannelInboundHandlerAdapter(), SubConnection {
 
     companion object : KLogging()
@@ -35,7 +37,8 @@ class NettySubConnection(
         this.onConnected = onConnected
         this.onDisconnected = onDisconnected
 
-        nettyClient = NettyClient(this@NettySubConnection, masterAddress()).also {it.channelFuture.await().apply {
+        nettyClient = NettyClient(this@NettySubConnection, masterAddress(), eventLoopGroup).also {
+            it.channelFuture.await().apply {
                 if (!isSuccess) {
                     logger.info("Connection failed: ${cause().message}")
                     onDisconnected()
