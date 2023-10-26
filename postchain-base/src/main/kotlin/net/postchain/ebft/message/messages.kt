@@ -242,7 +242,7 @@ fun ebftMessageToString(blockchainConfig: BlockchainConfiguration): (EbftMessage
                 is GetBlockSignature -> "GetBlockSignature(blockRid=${message.blockRID.toHex()})"
                 is CompleteBlock -> "CompleteBlock(blockRid=${getBlockHeaderRid(message.data.header)}, height=${message.height})"
                 is GetBlockAtHeight -> "GetBlockAtHeight(height=${message.height})"
-                is GetUnfinishedBlock -> "GetUnfinishedBlock(height=${message.blockRID.toHex()})"
+                is GetUnfinishedBlock -> "GetUnfinishedBlock(blockRid=${message.blockRID.toHex()})"
                 is UnfinishedBlock -> "UnfinishedBlock(blockRid=${getBlockHeaderRid(message.header)})"
                 is Identification -> "Identification(pubkey=${message.pubKey.toHex()}, blockRid=${message.blockchainRID.toHex()}, timestamp=${message.timestamp})"
                 is Status -> "Status(blockRID=${message.blockRID?.toHex() ?: ""}, height=${message.height}, revolting=${message.revolting}, round=${message.round}, serial=${message.serial}, state=${message.state})"
