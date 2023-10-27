@@ -318,9 +318,15 @@ class ForkSlowIntegrationTest : ManagedModeTest() {
      */
     @Test
     fun testAncestorsManyLevels() {
-        // ancestors for chain 5 are 3 and 4
-        extraNodeProperties[5] = mapOf(
-                "blockchain_ancestors.${ChainUtil.ridOf(5)}" to listOf(ancestor(4, 4)))
+        for (nodeIndex in 0..6) {
+            extraNodeProperties[nodeIndex] = buildMap {
+                // Modify max concurrent connections to stay under 100 when we run with 7 nodes
+                put("database.blockBuilderWriteConcurrency", 2)
+                put("database.readConcurrency", 6)
+                // ancestors for chain 5 are 3 and 4
+                if (nodeIndex == 5) put("blockchain_ancestors.${ChainUtil.ridOf(5)}", listOf(ancestor(4, 4)))
+            }
+        }
 
         startManagedSystem(7, 0)
 
