@@ -48,8 +48,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  * 3 Sync from remote-OB until drained or timeout
  * 4 Goto 1
  */
-class HistoricBlockchainProcess(val workerContext: WorkerContext,
-                                private val historicBlockchainContext: HistoricBlockchainContext
+class HistoricBlockchainProcess(
+        val workerContext: WorkerContext,
+        private val historicBlockchainContext: HistoricBlockchainContext
 ) : AbstractBlockchainProcess("historic-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine) {
 
     companion object : KLogging()
@@ -123,7 +124,8 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
             brid: BlockchainRid, // the BC we are trying to pull blocks from
             myBRID: BlockchainRid, // our BC
             blockDatabase: BlockDatabase,
-            params: SyncParameters) {
+            params: SyncParameters
+    ) {
 
         if (brid == myBRID) {
             netDebug("Try network sync using own BRID")
@@ -137,9 +139,9 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                 // we ONLY try syncing over network iff chain is not locally present
                 // Reason for this is a bit complicated:
                 // (Alex:) "BRID is in DB thus we avoid this" is very simple rule.
-                netDebug("Try network sync using historic BRID since chainId $localChainID is new")
+                netDebug("Try network sync using historic BRID since chainId not found in DB")
                 try {
-                    val historicWorkerContext = historicBlockchainContext.contextCreator(brid)
+                    val historicWorkerContext = historicBlockchainContext.getHistoricWorkerContext(brid)
                     historicSynchronizer = FastSynchronizer(
                             historicWorkerContext,
                             blockDatabase,
