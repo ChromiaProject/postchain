@@ -57,22 +57,16 @@ open class EBFTSynchronizationInfrastructure(
         val blockchainConfig = engine.getConfiguration()
         val currentNodeConfig = nodeConfig
 
+        // historic context
         val historicBrid = blockchainConfig.effectiveBlockchainRID
         val historicBlockchainContext = if (crossFetchingEnabled(blockchainConfig)) {
             HistoricBlockchainContext(
-                    historicBrid, currentNodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
-                    ?: emptyMap()
+                    historicBrid, currentNodeConfig.blockchainAncestors[blockchainConfig.blockchainRid] ?: emptyMap()
             )
         } else null
 
+        // peers
         val peerCommConfiguration = peersCommConfigFactory.create(postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
-
-        val messageDurationTracker = MessageDurationTracker(
-                postchainContext.appConfig,
-                MessageDurationTrackerMetricsFactory(blockchainConfig.chainID, blockchainConfig.blockchainRid, currentNodeConfig.appConfig.pubKey),
-                ebftMessageToString(blockchainConfig)
-        )
-
         val peers: Set<NodeRid> = peerCommConfiguration.networkNodes.getPeerIds()
         val signers: Set<NodeRid> = blockchainConfig.signers.map { NodeRid(it) }.toSet()
         val iAmASigner = signers.contains(peerCommConfiguration.networkNodes.myself.peerId())
@@ -90,67 +84,62 @@ open class EBFTSynchronizationInfrastructure(
         val forceReadOnly = postchainContext.appConfig.readOnly
         if (forceReadOnly) logger.warn("I am running in forced read only mode")
 
-        val workerContext = WorkerContext(
-                blockchainConfig,
-                engine,
-                buildXCommunicationManager(blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid),
-                peerCommConfiguration,
+        // worker context
+        val messageDurationTracker = MessageDurationTracker(
                 postchainContext.appConfig,
-                currentNodeConfig,
-                restartNotifier,
-                blockchainConfigurationProvider,
-                postchainContext.nodeDiagnosticContext,
-                messageDurationTracker
+                MessageDurationTrackerMetricsFactory(blockchainConfig.chainID, blockchainConfig.blockchainRid, currentNodeConfig.appConfig.pubKey),
+                ebftMessageToString(blockchainConfig)
         )
 
-        /*
-        Block building is prohibited on FB if its current configuration has a historicBrid set.
+        val buildWorkerContext = { brid: BlockchainRid, peerCommConfig: PeerCommConfiguration ->
+            WorkerContext(
+                    blockchainConfig,
+                    engine,
+                    buildXCommunicationManager(blockchainConfig, peerCommConfig, brid),
+                    peerCommConfig,
+                    postchainContext.appConfig,
+                    currentNodeConfig,
+                    restartNotifier,
+                    blockchainConfigurationProvider,
+                    postchainContext.nodeDiagnosticContext,
+                    messageDurationTracker
+            )
+        }
 
-        When starting a blockchain:
+        val workerContext = buildWorkerContext(blockchainConfig.blockchainRid, peerCommConfiguration)
 
-        If !hasHistoricBrid then do nothing special, proceed as we always did
-
-        Otherwise:
-
-        1 Sync from local-OB (if available) until drained
-        2 Sync from remote-OB until drained or timeout
-        3 Sync from FB until drained or timeout
-        4 Goto 2
-        */
-        return if (historicBlockchainContext != null && blockchainState == BlockchainState.RUNNING && !forceReadOnly) {
-
-            historicBlockchainContext.contextCreator = { brid ->
-                val historicPeerCommConfiguration = if (brid == historicBrid) {
-                    peersCommConfigFactory.create(
-                            postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
-                } else {
-                    // It's an ancestor brid for historicBrid
-                    peersCommConfigFactory.create(
-                            postchainContext.appConfig, currentNodeConfig, brid, historicBlockchainContext)
-                }
-                val histCommManager = buildXCommunicationManager(blockchainConfig, historicPeerCommConfiguration, brid)
-
-                WorkerContext(
-                        blockchainConfig,
-                        engine,
-                        histCommManager,
-                        historicPeerCommConfiguration,
-                        postchainContext.appConfig,
-                        currentNodeConfig,
-                        restartNotifier,
-                        blockchainConfigurationProvider,
-                        postchainContext.nodeDiagnosticContext,
-                        messageDurationTracker
-                )
-
+        historicBlockchainContext?.contextCreator = { brid, historicBcContext ->
+            val historicPeerCommConfig = if (brid == historicBrid) {
+                peersCommConfigFactory.create(
+                        postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBcContext)
+            } else {
+                // It's an ancestor brid for historicBrid
+                peersCommConfigFactory.create(
+                        postchainContext.appConfig, currentNodeConfig, brid, historicBcContext)
             }
-            HistoricBlockchainProcess(workerContext, historicBlockchainContext)
-        } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY && blockchainState == BlockchainState.RUNNING && !forceReadOnly) {
-            ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID))
-        } else if (!forceReadOnly) {
-            ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries(), blockchainState)
-        } else {
-            ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
+            buildWorkerContext(brid, historicPeerCommConfig)
+        }
+
+        /*
+            Block building is prohibited on FB if its current configuration has a historicBrid set.
+            When starting a blockchain:
+                If !hasHistoricBrid then do nothing special, proceed as we always did
+                Otherwise:
+                    1. Sync from local-OB (if available) until drained
+                    2. Sync from remote-OB until drained or timeout
+                    3. Sync from FB until drained or timeout
+                    4. Goto 2
+        */
+        return when {
+            forceReadOnly -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
+
+            historicBlockchainContext != null && blockchainState == BlockchainState.RUNNING ->
+                HistoricBlockchainProcess(workerContext, historicBlockchainContext)
+
+            blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY && blockchainState == BlockchainState.RUNNING ->
+                ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID))
+
+            else -> ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries(), blockchainState)
         }
     }
 
