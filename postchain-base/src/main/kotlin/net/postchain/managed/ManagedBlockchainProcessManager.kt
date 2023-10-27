@@ -279,6 +279,7 @@ open class ManagedBlockchainProcessManager(
     }
 
     protected fun pruneRemovedBlockchains() {
+        if (!::dataSource.isInitialized) return
         if (!areBlockchainsPruning.compareAndSet(false, true)) return
 
         try {
