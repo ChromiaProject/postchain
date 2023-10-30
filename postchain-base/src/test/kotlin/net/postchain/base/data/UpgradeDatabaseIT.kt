@@ -78,7 +78,7 @@ class UpgradeDatabaseIT {
     @Test
     fun testUpgradeDbVersionFrom1To2() {
         // Initial launch version 1
-        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 1)
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 1).close()
 
         // Upgrade to version 2
         StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 2)
@@ -117,7 +117,7 @@ class UpgradeDatabaseIT {
     @Test
     fun testUpgradeDbVersionFrom2To3() {
         // Initial launch version 2
-        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 2)
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 2).close()
 
         // Upgrade to version 3
         StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 3)
@@ -131,7 +131,7 @@ class UpgradeDatabaseIT {
     @Test
     fun testUpgradeDbVersionFrom1To3() {
         // Initial launch version 1
-        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 1)
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 1).close()
 
         // Upgrade to version 3
         StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 3)
@@ -384,7 +384,7 @@ class UpgradeDatabaseIT {
                 }
 
         assertThrows<UserMistake> {
-            StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 7)
+            StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 7).close()
         }
     }
 
@@ -518,21 +518,21 @@ class UpgradeDatabaseIT {
 
     @Test
     fun testError_When_DowngradeDbVersionFrom2To1() {
-        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 2)
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 2).close()
 
         Assertions.assertThrows(UserMistake::class.java) {
-            StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 1)
+            StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 1).close()
         }
     }
 
     @Test
     fun testUpgradingAllowance() {
         // Initial launch
-        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 2)
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 2).close()
 
         // Reopen without wiping
         assertThrows<UserMistake> {
-            StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 3, allowUpgrade = false)
+            StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 3, allowUpgrade = false).close()
         }
 
         // Reopen with wiping
