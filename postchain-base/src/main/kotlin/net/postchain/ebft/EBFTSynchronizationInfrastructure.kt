@@ -9,6 +9,7 @@ import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.wrap
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfig
@@ -55,13 +56,15 @@ open class EBFTSynchronizationInfrastructure(
             blockchainState: BlockchainState
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
+        val chainId = blockchainConfig.chainID
+        val blockchainRid = blockchainConfig.blockchainRid
         val currentNodeConfig = nodeConfig
 
         // historic context
         val historicBrid = blockchainConfig.effectiveBlockchainRID
         val historicBlockchainContext = if (crossFetchingEnabled(blockchainConfig)) {
             HistoricBlockchainContext(
-                    historicBrid, currentNodeConfig.blockchainAncestors[blockchainConfig.blockchainRid] ?: emptyMap()
+                    historicBrid, currentNodeConfig.blockchainAncestors[blockchainRid] ?: emptyMap()
             )
         } else null
 
@@ -87,7 +90,7 @@ open class EBFTSynchronizationInfrastructure(
         // worker context
         val messageDurationTracker = MessageDurationTracker(
                 postchainContext.appConfig,
-                MessageDurationTrackerMetricsFactory(blockchainConfig.chainID, blockchainConfig.blockchainRid, currentNodeConfig.appConfig.pubKey),
+                MessageDurationTrackerMetricsFactory(chainId, blockchainRid, currentNodeConfig.appConfig.pubKey),
                 ebftMessageToString(blockchainConfig)
         )
 
@@ -106,7 +109,7 @@ open class EBFTSynchronizationInfrastructure(
             )
         }
 
-        val workerContext = buildWorkerContext(blockchainConfig.blockchainRid, peerCommConfiguration)
+        val workerContext = buildWorkerContext(blockchainRid, peerCommConfiguration)
 
         historicBlockchainContext?.contextCreator = { brid, historicBcContext ->
             val historicPeerCommConfig = if (brid == historicBrid) {
@@ -133,13 +136,28 @@ open class EBFTSynchronizationInfrastructure(
         return when {
             forceReadOnly -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
 
-            historicBlockchainContext != null && blockchainState == BlockchainState.RUNNING ->
-                HistoricBlockchainProcess(workerContext, historicBlockchainContext)
+            blockchainState == BlockchainState.RUNNING -> {
+                when {
+                    historicBlockchainContext != null ->
+                        HistoricBlockchainProcess(workerContext, historicBlockchainContext)
 
-            blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY && blockchainState == BlockchainState.RUNNING ->
-                ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID))
+                    blockchainConfig.blockchainContext.nodeID == NODE_ID_READ_ONLY ->
+                        ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries(), blockchainState)
 
-            else -> ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries(), blockchainState)
+                    else ->
+                        ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(chainId))
+                }
+            }
+
+            blockchainState == BlockchainState.PAUSED -> {
+                ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries(), blockchainState)
+            }
+
+            blockchainState == BlockchainState.IMPORTING -> {
+                ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
+            }
+
+            else -> throw ProgrammerMistake("Unexpected blockchain state $blockchainState for blockchain $blockchainRid")
         }
     }
 
