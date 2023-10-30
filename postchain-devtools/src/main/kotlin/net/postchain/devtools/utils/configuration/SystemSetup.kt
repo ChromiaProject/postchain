@@ -31,7 +31,7 @@ import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
  * to it as an argument in the "toTestNodes()" function, it doesn't matter how the [NodeConfigurationProvider] was
  * created.
  * However, the main idea behind the "Setup" testing framework is to use "buildFromSetup()" in
- * [NodeConfigurationProviderGenerator] to simulate the node conf file, which means that you don't have to provide
+ * [AppConfigGenerator] to simulate the node conf file, which means that you don't have to provide
  * these files for your test (Node config files are easy to guess from the BC configs, so why provide them).
  *
  * @property nodeMap is a map from node seq number to [NodeSetup]. Represents all nodes in the system.
