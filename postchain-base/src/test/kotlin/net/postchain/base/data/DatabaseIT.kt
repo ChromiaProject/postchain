@@ -10,6 +10,8 @@ import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.cryptoSystem
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
+import net.postchain.base.withReadConnection
+import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.wrap
@@ -216,28 +218,28 @@ class DatabaseIT {
             queryRunner.execute(ctx.conn, """CREATE TABLE "$rowIdTable"( last_value bigint not null);""")
             queryRunner.execute(ctx.conn, """INSERT INTO "$rowIdTable"(last_value) VALUES (0);""")
             queryRunner.execute(ctx.conn, """
-            CREATE FUNCTION "$funcName"() RETURNS BIGINT AS
-            'UPDATE "$rowIdTable" SET last_value = last_value + 1 RETURNING last_value'
-            LANGUAGE SQL;
-        """.trimIndent())
+                CREATE FUNCTION "$funcName"() RETURNS BIGINT AS
+                'UPDATE "$rowIdTable" SET last_value = last_value + 1 RETURNING last_value'
+                LANGUAGE SQL;
+            """.trimIndent())
             queryRunner.execute(ctx.conn, """
-            CREATE FUNCTION "$funcName.0"() RETURNS BIGINT AS 'SELECT 0' LANGUAGE SQL;
-        """.trimIndent())
+                CREATE FUNCTION "$funcName.0"() RETURNS BIGINT AS 'SELECT 0' LANGUAGE SQL;
+            """.trimIndent())
 
             val allFunctionsQuery = """
-            SELECT routine_name FROM information_schema.routines
-            WHERE routine_schema = current_schema() AND routine_name LIKE 'c${chainId}.%'
-        """.trimIndent()
+                SELECT routine_name FROM information_schema.routines
+                WHERE routine_schema = current_schema() AND routine_name LIKE 'c${chainId}.%'
+            """.trimIndent()
 
-        // before
+            // before
             val allFunctions = queryRunner.query(ctx.conn, allFunctionsQuery, ColumnListHandler<String>())
             assertEquals(allFunctions, listOf("c10.make_rowid", "c10.make_rowid.0"))
 
-        // action
+            // action
             db.removeAllBlockchainSpecificFunctions(ctx)
             db.removeAllBlockchainSpecificFunctions(ctx) // deleting IF NOT EXISTS
 
-        // after
+            // after
             val allFunctions2 = queryRunner.query(ctx.conn, allFunctionsQuery, ColumnListHandler<String>())
             assertTrue(allFunctions2.isEmpty())
         }
@@ -324,6 +326,30 @@ class DatabaseIT {
             val deps = db.getDependenciesOnBlockchain(ctx)
             assertEquals(1, deps.size)
             assertEquals(BlockchainRid.buildRepeat(1), deps[0])
+        }
+    }
+
+    @Test
+    fun testReadConnectionTransactionIsolation() {
+        val chainId = 0L
+        StorageBuilder.buildStorage(appConfig).use { storage ->
+            withReadConnection(storage, chainId) { readCtx ->
+                val readAccess = DatabaseAccess.of(readCtx)
+                assertNull(readAccess.getBlockchainRid(readCtx))
+
+                withWriteConnection(storage, chainId) { ctx ->
+                    DatabaseAccess.of(ctx).initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
+                    true
+                }
+
+                // Chain init is committed but our read DB tx should not see it
+                assertNull(readAccess.getBlockchainRid(readCtx))
+            }
+
+            withReadConnection(storage, chainId) { readCtx ->
+                val readAccess = DatabaseAccess.of(readCtx)
+                assertEquals(BlockchainRid.ZERO_RID, readAccess.getBlockchainRid(readCtx))
+            }
         }
     }
 }
