@@ -164,8 +164,9 @@ open class BaseBlockchainProcessManager(
 
                 logger.info("Starting of blockchain")
 
+                var initialEContext: EContext? = null
                 try {
-                    val initialEContext = blockBuilderStorage.openWriteConnection(chainId)
+                    initialEContext = blockBuilderStorage.openWriteConnection(chainId)
                     val blockHeight = blockchainConfigProvider.getActiveBlocksHeight(initialEContext, DatabaseAccess.of(initialEContext))
 
                     val rawConfigurationData = blockchainConfigProvider.getActiveBlockConfiguration(initialEContext, chainId, loadNextPendingConfig)
@@ -189,8 +190,9 @@ open class BaseBlockchainProcessManager(
                         }
                         blockchainConfig.blockchainRid
                     } catch (e: Exception) {
+                        var eContext: EContext? = null
                         try {
-                            val eContext = if (initialEContext.conn.isClosed) blockBuilderStorage.openWriteConnection(chainId) else initialEContext
+                            eContext = if (initialEContext.conn.isClosed) blockBuilderStorage.openWriteConnection(chainId) else initialEContext
                             val configHash = GtvToBlockchainRidFactory.calculateBlockchainRid(GtvDecoder.decodeGtv(rawConfigurationData), ::sha256Digest).data
                             if (hasBuiltInitialBlock(eContext) && !hasBuiltBlockWithConfig(eContext, blockHeight, configHash)) {
                                 revertConfiguration(chainId, bTrace, eContext, blockHeight, rawConfigurationData)
@@ -198,13 +200,22 @@ open class BaseBlockchainProcessManager(
                                 blockBuilderStorage.closeWriteConnection(eContext, false)
                             }
                         } catch (e: Exception) {
+                            if (eContext != null && !eContext.conn.isClosed) {
+                                blockBuilderStorage.closeWriteConnection(eContext, false)
+                            }
                             logger.warn(e) { "Unable to revert configuration: $e" }
                         }
 
-                        addToErrorQueue(chainId, e)
-
                         throw e
                     }
+                } catch (e: Exception) {
+                    if (initialEContext != null && !initialEContext.conn.isClosed) {
+                        blockBuilderStorage.closeWriteConnection(initialEContext, false)
+                    }
+
+                    addToErrorQueue(chainId, e)
+
+                    throw e
                 } finally {
                     scheduledForStart.remove(chainId)
                 }
