@@ -6,6 +6,7 @@ import net.postchain.StorageBuilder
 import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.withReadConnection
+import net.postchain.base.withReadWriteConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
@@ -247,7 +248,7 @@ class UpgradeDatabaseIT {
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 5)
                 .use {
-                    withReadConnection(it, 0) { ctx ->
+                    withReadWriteConnection(it, 0) { ctx ->
                         val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
 
                         verifyBlockchainReplicasInVersion5(db, ctx, replicaBrid, PubKey(peer.pubKey))
@@ -437,7 +438,7 @@ class UpgradeDatabaseIT {
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 9)
                 .use {
-                    withReadConnection(it, 0) { ctx ->
+                    withReadWriteConnection(it, 0) { ctx ->
                         val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
                         val signer = PubKey("03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05")
 

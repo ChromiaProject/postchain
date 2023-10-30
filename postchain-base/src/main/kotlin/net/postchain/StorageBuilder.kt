@@ -8,6 +8,7 @@ import net.postchain.base.data.DatabaseAccessFactory
 import net.postchain.config.app.AppConfig
 import net.postchain.core.Storage
 import org.apache.commons.dbcp2.BasicDataSource
+import java.sql.Connection.TRANSACTION_REPEATABLE_READ
 import javax.sql.DataSource
 import kotlin.time.Duration
 
@@ -22,7 +23,8 @@ object StorageBuilder {
 
         // Read DataSource
         val readDataSource = createBasicDataSource(appConfig).apply {
-            defaultAutoCommit = true
+            defaultAutoCommit = false
+            defaultTransactionIsolation = TRANSACTION_REPEATABLE_READ
             maxTotal = appConfig.databaseReadConcurrency
             defaultReadOnly = true
         }
