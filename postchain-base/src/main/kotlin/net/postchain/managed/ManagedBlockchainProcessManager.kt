@@ -423,7 +423,7 @@ open class ManagedBlockchainProcessManager(
                     LocalBlockchainInfo(chainId, blockchainInfo.system, blockchainInfo.state)
                 }
 
-                if (localBlockchainInfo.chainId != CHAIN0 && localBlockchainInfo.state != BlockchainState.IMPORTING) {
+                if (localBlockchainInfo.chainId != CHAIN0) {
                     blockchains.add(localBlockchainInfo)
                 }
             }
