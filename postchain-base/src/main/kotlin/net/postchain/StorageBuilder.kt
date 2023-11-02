@@ -16,6 +16,11 @@ object StorageBuilder {
 
     private const val DB_VERSION = 10
 
+    /**
+     * This is to be used by dependent projects to determine current version
+     */
+    fun getCurrentDbVersion() = DB_VERSION
+
     fun buildStorage(appConfig: AppConfig, maxWaitWrite: Duration = Duration.ZERO, maxWriteTotal: Int = 2,
                      wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION, allowUpgrade: Boolean = true): Storage {
         val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
