@@ -12,8 +12,7 @@ import net.postchain.core.NodeRid
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
-import net.postchain.network.XPacketDecoderFactory
-import net.postchain.network.XPacketEncoderFactory
+import net.postchain.network.XPacketCodecFactory
 import net.postchain.network.common.ChainWithConnections
 import net.postchain.network.common.ChainsWithConnections
 import net.postchain.network.common.ConnectionDirection
@@ -56,8 +55,7 @@ import net.postchain.network.netty2.NettyPeerConnector
  * @property PacketType is the type of packets that can be handled
  */
 open class DefaultPeerConnectionManager<PacketType>(
-        private val packetEncoderFactory: XPacketEncoderFactory<PacketType>,
-        private val packetDecoderFactory: XPacketDecoderFactory<PacketType>
+        private val packetCodecFactory: XPacketCodecFactory<PacketType>
 ) : NetworkTopology, // Only "Peer" networks need this
         PeerConnectionManager,  // Methods specific to the "X" connection part
         NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
@@ -152,14 +150,10 @@ open class DefaultPeerConnectionManager<PacketType>(
             myPeerInfo = chainPeersConfig.commConfiguration.myPeerInfo()
             peersConnectionStrategy = DefaultPeersConnectionStrategy(this, myPeerInfo.peerId())
 
-            val packetEncoder = packetEncoderFactory.create(
-                    chainPeersConfig.commConfiguration,
-                    chainPeersConfig.blockchainRid
-            )
-            val packetDecoder = packetDecoderFactory.create(chainPeersConfig.commConfiguration)
+            val packetCodec = packetCodecFactory.create(chainPeersConfig.commConfiguration, chainPeersConfig.blockchainRid)
             // We have already given away we are using Netty, so skipping the factory
             connector = NettyPeerConnector<PacketType>(this).apply {
-                init(myPeerInfo, packetEncoder, packetDecoder)
+                init(myPeerInfo, packetCodec)
             }
         }
 
@@ -193,15 +187,8 @@ open class DefaultPeerConnectionManager<PacketType>(
             )
         }
 
-        val packetEncoder = packetEncoderFactory.create(
-                chainPeersConfig.commConfiguration,
-                chainPeersConfig.blockchainRid
-        )
-        val packetDecoder = packetDecoderFactory.create(
-                chainPeersConfig.commConfiguration
-        )
-
-        connector?.connectNode(descriptor, peerInfo, packetEncoder, packetDecoder)
+        val packetCodec = packetCodecFactory.create(chainPeersConfig.commConfiguration, chainPeersConfig.blockchainRid)
+        connector?.connectNode(descriptor, peerInfo, packetCodec)
     }
 
     @Synchronized

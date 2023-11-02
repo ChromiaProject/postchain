@@ -10,7 +10,6 @@ import net.postchain.common.toHex
 import net.postchain.core.NodeRid
 import net.postchain.crypto.Signature
 import net.postchain.ebft.message.AppliedConfig
-import net.postchain.ebft.message.EBFT_VERSION
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.EbftVersion
 import net.postchain.ebft.message.Identification
@@ -18,13 +17,20 @@ import net.postchain.ebft.message.MessageTopic
 import net.postchain.ebft.message.SignedMessage
 import net.postchain.ebft.message.Status
 import net.postchain.network.IdentPacketInfo
-import net.postchain.network.XPacketDecoder
-import net.postchain.network.XPacketDecoderFactory
-import net.postchain.network.XPacketEncoder
-import net.postchain.network.XPacketEncoderFactory
+import net.postchain.network.XPacketCodec
+import net.postchain.network.XPacketCodecFactory
 import org.jetbrains.annotations.TestOnly
 
-class EbftPacketEncoder(val config: PeerCommConfiguration, val blockchainRID: BlockchainRid) : XPacketEncoder<EbftMessage> {
+// Whenever an Ebft message is changed, in a non-backward compatible way,
+// bump the version and handle old versions accordingly
+const val EBFT_VERSION: Long = 1
+
+class EbftPacketCodec(val config: PeerCommConfiguration, val blockchainRID: BlockchainRid) : XPacketCodec<EbftMessage> {
+
+    private val statusCache = EbftPacketCache()
+    private val appliedConfigCache = EbftPacketCache()
+
+    override fun getPacketVersion(): Long = EBFT_VERSION
 
     override fun makeIdentPacket(forNode: NodeRid): ByteArray {
         val idMessage = Identification(forNode.data, blockchainRID, System.currentTimeMillis())
@@ -34,7 +40,7 @@ class EbftPacketEncoder(val config: PeerCommConfiguration, val blockchainRID: Bl
     }
 
     override fun makeVersionPacket(): ByteArray {
-        val versionMessage = EbftVersion(EBFT_VERSION)
+        val versionMessage = EbftVersion(getPacketVersion())
         val sigMaker = config.sigMaker()
         val signature = sigMaker.signMessage(versionMessage.encoded(1).value)
         return SignedMessage(versionMessage, config.pubKey, signature.data).encoded(1).value
@@ -44,19 +50,6 @@ class EbftPacketEncoder(val config: PeerCommConfiguration, val blockchainRID: Bl
         val signature = config.sigMaker().signMessage(packet.encoded(packetVersion).value)
         return SignedMessage(packet, signature.subjectID, signature.data).encoded(packetVersion).value
     }
-}
-
-class EbftPacketEncoderFactory : XPacketEncoderFactory<EbftMessage> {
-
-    override fun create(config: PeerCommConfiguration, blockchainRID: BlockchainRid): XPacketEncoder<EbftMessage> {
-        return EbftPacketEncoder(config, blockchainRID)
-    }
-}
-
-class EbftPacketDecoder(val config: PeerCommConfiguration) : XPacketDecoder<EbftMessage> {
-
-    private val statusCache = EbftPacketCache()
-    private val appliedConfigCache = EbftPacketCache()
 
     override fun parseIdentPacket(rawMessage: ByteArray): IdentPacketInfo {
         val signedMessage = decodeSignedMessage(rawMessage, 1)
@@ -123,6 +116,12 @@ class EbftPacketDecoder(val config: PeerCommConfiguration) : XPacketDecoder<Ebft
     }
 }
 
+class EbftPacketCodecFactory : XPacketCodecFactory<EbftMessage> {
+    override fun create(config: PeerCommConfiguration, blockchainRID: BlockchainRid): XPacketCodec<EbftMessage> {
+        return EbftPacketCodec(config, blockchainRID)
+    }
+}
+
 class EbftPacketCache {
 
     private val cache = mutableMapOf<ByteArray, Pair<ByteArray, EbftMessage>>()
@@ -144,12 +143,5 @@ class EbftPacketCache {
     fun put(pubKey: ByteArray, rawMessage: ByteArray, message: EbftMessage): EbftMessage {
         cache[pubKey] = rawMessage to message
         return message
-    }
-}
-
-class EbftPacketDecoderFactory : XPacketDecoderFactory<EbftMessage> {
-
-    override fun create(config: PeerCommConfiguration): XPacketDecoder<EbftMessage> {
-        return EbftPacketDecoder(config)
     }
 }

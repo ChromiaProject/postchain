@@ -20,7 +20,11 @@ import org.awaitility.kotlin.withPollDelay
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.*
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.never
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 
 /**
  * Based on [IntNettyConnector3PeersCommunicationIT]
@@ -57,7 +61,7 @@ class IntNettyConnector3PeersReconnectionIT {
     private fun startContext(peerInfo: PeerInfo): IntTestContext {
         return IntTestContext(peerInfo, arrayOf(peerInfo1, peerInfo2, peerInfo3))
                 .also {
-                    it.peer.init(peerInfo, it.packetEncoder, it.packetDecoder)
+                    it.peer.init(peerInfo, it.packetCodec)
                 }
     }
 
@@ -70,12 +74,12 @@ class IntNettyConnector3PeersReconnectionIT {
         // Connecting
         // * 1 -> 2
         val peerDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetEncoder, context1.packetDecoder)
+        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetCodec)
         // * 1 -> 3
         val peerDescriptor3 = PeerConnectionDescriptor(blockchainRid, peerInfo3.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor3, peerInfo3, context1.packetEncoder, context1.packetDecoder)
+        context1.peer.connectNode(peerDescriptor3, peerInfo3, context1.packetCodec)
         // * 3 -> 2
-        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetEncoder, context3.packetDecoder)
+        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetCodec)
 
         // Waiting for all connections to be established
         val connection1 = argumentCaptor<PeerConnection>()
@@ -153,9 +157,9 @@ class IntNettyConnector3PeersReconnectionIT {
         // Re-connecting
         // * 3 -> 1
         val peerDescriptor1 = PeerConnectionDescriptor(blockchainRid, peerInfo1.peerId(), ConnectionDirection.OUTGOING)
-        context3.peer.connectNode(peerDescriptor1, peerInfo1, context3.packetEncoder, context3.packetDecoder)
+        context3.peer.connectNode(peerDescriptor1, peerInfo1, context3.packetCodec)
         // * 3 -> 2
-        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetEncoder, context3.packetDecoder)
+        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetCodec)
 
         // Waiting for all connections to be established
         val connection1_2 = argumentCaptor<PeerConnection>()

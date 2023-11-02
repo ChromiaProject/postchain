@@ -11,7 +11,6 @@ import net.postchain.core.BadDataException
 import net.postchain.core.BadMessageException
 import net.postchain.core.NodeRid
 import net.postchain.devtools.NameHelper.peerName
-import net.postchain.ebft.message.EBFT_VERSION
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.logging.MESSAGE_TYPE_TAG
@@ -19,8 +18,7 @@ import net.postchain.logging.SOURCE_NODE_TAG
 import net.postchain.logging.TARGET_NODE_TAG
 import net.postchain.network.CommunicationManager
 import net.postchain.network.ReceivedPacket
-import net.postchain.network.XPacketDecoder
-import net.postchain.network.XPacketEncoder
+import net.postchain.network.XPacketCodec
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.common.LazyPacket
 
@@ -29,8 +27,7 @@ class DefaultPeerCommunicationManager<PacketType>(
         val config: PeerCommConfiguration,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
-        private val packetEncoder: XPacketEncoder<PacketType>,
-        private val packetDecoder: XPacketDecoder<PacketType>,
+        private val packetCodec: XPacketCodec<PacketType>,
         private val packetToString: (PacketType, Long) -> String
 ) : CommunicationManager<PacketType> {
 
@@ -84,7 +81,7 @@ class DefaultPeerCommunicationManager<PacketType>(
                 logger.trace { "sendPacket(${peerName(recipient.toString())}, ${packetToString(packet, packetVersion)}, $packetVersion)" }
             }
         }
-        val encodingFunction = lazy { packetEncoder.encodePacket(packet, packetVersion) }
+        val encodingFunction = lazy { packetCodec.encodePacket(packet, packetVersion) }
         sendEncodedPacket(encodingFunction, recipient)
     }
 
@@ -101,7 +98,7 @@ class DefaultPeerCommunicationManager<PacketType>(
                     logger.trace { "sendPacket(${peerName(it.toString())}, ${packetToString(packet, packetVersion)}, $packetVersion)" }
                 }
             }
-            val lazyPacket = encodedPackets.getOrPut(packetVersion) { lazy { packetEncoder.encodePacket(packet, packetVersion) } }
+            val lazyPacket = encodedPackets.getOrPut(packetVersion) { lazy { packetCodec.encodePacket(packet, packetVersion) } }
             sendEncodedPacket(lazyPacket, it)
         }
     }
@@ -112,7 +109,7 @@ class DefaultPeerCommunicationManager<PacketType>(
                     *baseLoggingContextWithSender,
                     MESSAGE_TYPE_TAG to packet!!::class.java.simpleName
             ) {
-                logger.trace { "broadcastPacket(${packetToString(packet, EBFT_VERSION)}, reusing=${oldPackets != null})" }
+                logger.trace { "broadcastPacket(${packetToString(packet, packetCodec.getPacketVersion())}, reusing=${oldPackets != null})" }
             }
         }
 
@@ -120,7 +117,7 @@ class DefaultPeerCommunicationManager<PacketType>(
         oldPackets?.let { encodedPackets.putAll(oldPackets) }
         val nodes = connectionManager.getConnectedNodes(chainId)
         nodes.forEach {
-            val lazyPacket = encodedPackets.getOrPut(getPeerPacketVersion(it)) { lazy { packetEncoder.encodePacket(packet, getPeerPacketVersion(it)) } }
+            val lazyPacket = encodedPackets.getOrPut(getPeerPacketVersion(it)) { lazy { packetCodec.encodePacket(packet, getPeerPacketVersion(it)) } }
             sendEncodedPacket(lazyPacket, it)
         }
         return encodedPackets
@@ -177,7 +174,7 @@ class DefaultPeerCommunicationManager<PacketType>(
              * use of parallel processing in different threads
              */
             val packetVersion = getPeerPacketVersion(peerId)
-            val decodedPacket = packetDecoder.decodePacket(peerId.data, packet, packetVersion)
+            val decodedPacket = packetCodec.decodePacket(peerId.data, packet, packetVersion)
             synchronized(this) {
                 if (logger.isTraceEnabled) {
                     withLoggingContext(

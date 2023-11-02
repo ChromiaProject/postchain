@@ -22,20 +22,14 @@ import net.postchain.network.peer.DefaultPeerConnectionManager
 
 open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
 
-    override fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider {
-        return NodeConfigurationProviderFactory.createProvider(appConfig, storage)
-    }
+    override fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider =
+            NodeConfigurationProviderFactory.createProvider(appConfig, storage)
 
-    override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager {
-        return DefaultPeerConnectionManager(
-                EbftPacketEncoderFactory(),
-                EbftPacketDecoderFactory()
-        )
-    }
+    override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager =
+            DefaultPeerConnectionManager(EbftPacketCodecFactory())
 
-    override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
-        return ManualBlockchainConfigurationProvider()
-    }
+    override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider =
+            ManualBlockchainConfigurationProvider()
 
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {

@@ -43,8 +43,8 @@ class IntNettyConnector2PeersCommunicationIT {
         context2 = IntTestContext(peerInfo2, arrayOf(peerInfo1, peerInfo2))
 
         // Initializing
-        context1.peer.init(peerInfo1, context1.packetEncoder, context1.packetDecoder)
-        context2.peer.init(peerInfo2, context2.packetEncoder, context2.packetDecoder)
+        context1.peer.init(peerInfo1, context1.packetCodec)
+        context2.peer.init(peerInfo2, context2.packetCodec)
     }
 
     @AfterEach
@@ -58,7 +58,7 @@ class IntNettyConnector2PeersCommunicationIT {
         // Connecting 1 -> 2
         val peerDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
         assertThat(peerDescriptor2.packetVersion).isEqualTo(1)
-        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetEncoder, context1.packetDecoder)
+        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetCodec)
 
         // Waiting for all connections to be established
         val connection1 = argumentCaptor<PeerConnection>()

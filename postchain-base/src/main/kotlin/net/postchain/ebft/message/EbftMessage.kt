@@ -9,10 +9,6 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.network.common.LazyPacket
 
-// Whenever an Ebft message is changed, in a non-backward compatible way,
-// bump the version and handle old versions accordingly
-const val EBFT_VERSION: Long = 1
-
 abstract class EbftMessage(val topic: MessageTopic) {
 
     companion object {

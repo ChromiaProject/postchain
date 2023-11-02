@@ -56,7 +56,7 @@ class IntNettyConnector3PeersCommunicationIT {
     private fun startContext(peerInfo: PeerInfo): IntTestContext {
         return IntTestContext(peerInfo, arrayOf(peerInfo1, peerInfo2, peerInfo3))
                 .also {
-                    it.peer.init(peerInfo, it.packetEncoder, it.packetDecoder)
+                    it.peer.init(peerInfo, it.packetCodec)
                 }
     }
 
@@ -69,12 +69,12 @@ class IntNettyConnector3PeersCommunicationIT {
         // Connecting
         // * 1 -> 2
         val peerDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetEncoder, context1.packetDecoder)
+        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetCodec)
         // * 1 -> 3
         val peerDescriptor3 = PeerConnectionDescriptor(blockchainRid, peerInfo3.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor3, peerInfo3, context1.packetEncoder, context1.packetDecoder)
+        context1.peer.connectNode(peerDescriptor3, peerInfo3, context1.packetCodec)
         // * 3 -> 2
-        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetEncoder, context3.packetDecoder)
+        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetCodec)
 
         // Waiting for all connections to be established
         val connection1 = argumentCaptor<PeerConnection>()
