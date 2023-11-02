@@ -17,7 +17,8 @@ class ForceReadOnlyMessageProcessor(blockQueries: BlockQueries, communicationMan
     companion object : KLogging()
 
     fun processMessages() {
-        for ((peerId, message) in communicationManager.getPackets()) {
+        // TODO: Handle version
+        for ((peerId, _, message) in communicationManager.getPackets()) {
             try {
                 when (message) {
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)

@@ -106,12 +106,12 @@ class DefaultPeerCommunicationManager2PeersIT {
                 .untilAsserted {
                     // Peer1
                     val actualPackets1 = context1.communicationManager.getPackets()
-                    actual1.addAll(actualPackets1.map { (it.second as GetBlockAtHeight).height })
+                    actual1.addAll(actualPackets1.map { (it.message as GetBlockAtHeight).height })
                     assertThat(actual1).containsExactly(20L, 21L, 22L)
 
                     // Peer2
                     val actualPackets2 = context2.communicationManager.getPackets()
-                    actual2.addAll(actualPackets2.map { (it.second as GetBlockAtHeight).height })
+                    actual2.addAll(actualPackets2.map { (it.message as GetBlockAtHeight).height })
                     assertThat(actual2).containsExactly(10L, 11L)
                 }
     }

@@ -651,12 +651,11 @@ class FastSynchronizer(
      */
     internal fun processMessages() {
         messageDurationTracker.cleanup()
-        for (packet in communicationManager.getPackets()) {
-            val peerId = packet.first
+        // TODO: Handle version
+        for ((peerId, _, message) in communicationManager.getPackets()) {
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue
             }
-            val message = packet.second
             if (message is GetBlockHeaderAndBlock || message is BlockHeaderMessage) {
                 peerStatuses.confirmModern(peerId)
             }

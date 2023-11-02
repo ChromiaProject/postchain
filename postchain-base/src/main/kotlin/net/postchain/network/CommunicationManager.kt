@@ -8,17 +8,16 @@ import net.postchain.network.common.LazyPacket
 interface CommunicationManager<PacketType> {
     fun init()
 
-    //fun peerMap(): Map<NodeRid, PeerInfo>
-    fun getPackets(): MutableList<Pair<NodeRid, PacketType>>
+    fun getPackets(): MutableList<ReceivedPacket<PacketType>>
     fun sendPacket(packet: PacketType, recipient: NodeRid)
     fun sendPacket(packet: PacketType, recipients: List<NodeRid>)
 
     /**
      * @param packet is the data to send
-     * @param oldPacket an old encoded packet to be used instead of encoding the packet
-     * @return the encoded and signed packet
+     * @param oldPackets map of old encoded packets to be used instead of encoding the packet
+     * @return the encoded and signed packets
      */
-    fun broadcastPacket(packet: PacketType, oldPacket: LazyPacket? = null): LazyPacket
+    fun broadcastPacket(packet: PacketType, oldPackets: Map<Long, LazyPacket>? = null): Map<Long, LazyPacket>
 
     /**
      * Sends the packet to a peer selected by random.
@@ -31,4 +30,8 @@ interface CommunicationManager<PacketType> {
      */
     fun sendToRandomPeer(packet: PacketType, amongPeers: Set<NodeRid>): Pair<NodeRid?, Set<NodeRid>>
     fun shutdown()
+
+    fun getPeerPacketVersion(peerId: NodeRid): Long
 }
+
+data class ReceivedPacket<PacketType>(val nodeRid: NodeRid, val version: Long, val message: PacketType)

@@ -7,10 +7,10 @@ import io.netty.util.concurrent.DefaultThreadFactory
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
-import net.postchain.network.common.NodeConnectorEvents
-import net.postchain.network.common.NodeConnector
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
+import net.postchain.network.common.NodeConnector
+import net.postchain.network.common.NodeConnectorEvents
 import net.postchain.network.peer.PeerConnectionDescriptor
 import net.postchain.network.peer.PeerPacketHandler
 import java.util.concurrent.TimeUnit
@@ -24,9 +24,13 @@ class NettyPeerConnector<PacketType>(
     private val eventLoopGroup = NioEventLoopGroup(DefaultThreadFactory("Netty"))
     private var server: NettyServer? = null
 
-    override fun init(peerInfo: PeerInfo, packetDecoder: XPacketDecoder<PacketType>) {
+    override fun init(
+            peerInfo: PeerInfo,
+            packetEncoder: XPacketEncoder<PacketType>,
+            packetDecoder: XPacketDecoder<PacketType>
+    ) {
         server = NettyServer({
-            NettyServerPeerConnection(packetDecoder)
+            NettyServerPeerConnection(packetEncoder, packetDecoder)
                     .onConnected { connection ->
                         eventsReceiver.onNodeConnected(connection)
                                 ?.also { connection.accept(it) }
@@ -41,9 +45,10 @@ class NettyPeerConnector<PacketType>(
     override fun connectNode(
             connectionDescriptor: PeerConnectionDescriptor,
             peerInfo: PeerInfo,
-            packetEncoder: XPacketEncoder<PacketType>
+            packetEncoder: XPacketEncoder<PacketType>,
+            packetDecoder: XPacketDecoder<PacketType>
     ) {
-        with(NettyClientPeerConnection(peerInfo, packetEncoder, connectionDescriptor, eventLoopGroup)) {
+        with(NettyClientPeerConnection(peerInfo, packetEncoder, packetDecoder, connectionDescriptor, eventLoopGroup)) {
             try {
                 open(
                         onConnected = {

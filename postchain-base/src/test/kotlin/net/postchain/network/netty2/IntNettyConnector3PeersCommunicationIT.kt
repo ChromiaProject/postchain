@@ -3,6 +3,7 @@
 package net.postchain.network.netty2
 
 import assertk.assertThat
+import assertk.assertions.isEqualTo
 import assertk.assertions.isIn
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
@@ -55,7 +56,7 @@ class IntNettyConnector3PeersCommunicationIT {
     private fun startContext(peerInfo: PeerInfo): IntTestContext {
         return IntTestContext(peerInfo, arrayOf(peerInfo1, peerInfo2, peerInfo3))
                 .also {
-                    it.peer.init(peerInfo, it.packetDecoder)
+                    it.peer.init(peerInfo, it.packetEncoder, it.packetDecoder)
                 }
     }
 
@@ -68,12 +69,12 @@ class IntNettyConnector3PeersCommunicationIT {
         // Connecting
         // * 1 -> 2
         val peerDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetEncoder)
+        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetEncoder, context1.packetDecoder)
         // * 1 -> 3
         val peerDescriptor3 = PeerConnectionDescriptor(blockchainRid, peerInfo3.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor3, peerInfo3, context1.packetEncoder)
+        context1.peer.connectNode(peerDescriptor3, peerInfo3, context1.packetEncoder, context1.packetDecoder)
         // * 3 -> 2
-        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetEncoder)
+        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetEncoder, context3.packetDecoder)
 
         // Waiting for all connections to be established
         val connection1 = argumentCaptor<PeerConnection>()
@@ -86,18 +87,24 @@ class IntNettyConnector3PeersCommunicationIT {
                     verify(context1.events, times(2)).onNodeConnected(connection1.capture())
                     assertThat(connection1.firstValue.descriptor().nodeId).isIn(*expected1)
                     assertThat(connection1.secondValue.descriptor().nodeId).isIn(*expected1)
+                    assertThat(connection1.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
+                    assertThat(connection1.secondValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     // 2
                     val expected2 = arrayOf(peerInfo1, peerInfo3).map(PeerInfo::peerId).toTypedArray()
                     verify(context2.events, times(2)).onNodeConnected(connection2.capture())
                     assertThat(connection2.firstValue.descriptor().nodeId).isIn(*expected2)
                     assertThat(connection2.secondValue.descriptor().nodeId).isIn(*expected2)
+                    assertThat(connection2.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
+                    assertThat(connection2.secondValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     // 3
                     val expected3 = arrayOf(peerInfo1, peerInfo2).map(PeerInfo::peerId).toTypedArray()
                     verify(context3.events, times(2)).onNodeConnected(connection3.capture())
                     assertThat(connection3.firstValue.descriptor().nodeId).isIn(*expected3)
                     assertThat(connection3.secondValue.descriptor().nodeId).isIn(*expected3)
+                    assertThat(connection3.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
+                    assertThat(connection3.secondValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
                 }
 
         // Sending packets

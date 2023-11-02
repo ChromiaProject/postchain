@@ -3,6 +3,7 @@
 package net.postchain.network.netty2
 
 import assertk.assertThat
+import assertk.assertions.isEqualTo
 import assertk.assertions.isIn
 import assertk.isContentEqualTo
 import net.postchain.base.PeerInfo
@@ -42,8 +43,8 @@ class IntNettyConnector2PeersCommunicationIT {
         context2 = IntTestContext(peerInfo2, arrayOf(peerInfo1, peerInfo2))
 
         // Initializing
-        context1.peer.init(peerInfo1, context1.packetDecoder)
-        context2.peer.init(peerInfo2, context2.packetDecoder)
+        context1.peer.init(peerInfo1, context1.packetEncoder, context1.packetDecoder)
+        context2.peer.init(peerInfo2, context2.packetEncoder, context2.packetDecoder)
     }
 
     @AfterEach
@@ -56,7 +57,8 @@ class IntNettyConnector2PeersCommunicationIT {
     fun testConnectAndCommunicate() {
         // Connecting 1 -> 2
         val peerDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetEncoder)
+        assertThat(peerDescriptor2.packetVersion).isEqualTo(1)
+        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetEncoder, context1.packetDecoder)
 
         // Waiting for all connections to be established
         val connection1 = argumentCaptor<PeerConnection>()
@@ -65,9 +67,11 @@ class IntNettyConnector2PeersCommunicationIT {
                 .untilAsserted {
                     verify(context1.events).onNodeConnected(connection1.capture())
                     assertThat(connection1.firstValue.descriptor().nodeId.data).isContentEqualTo(peerInfo2.pubKey)
+                    assertThat(connection1.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     verify(context2.events).onNodeConnected(connection2.capture())
                     assertThat(connection2.firstValue.descriptor().nodeId.data).isContentEqualTo(peerInfo1.pubKey)
+                    assertThat(connection2.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
                 }
 
         // Sending packets

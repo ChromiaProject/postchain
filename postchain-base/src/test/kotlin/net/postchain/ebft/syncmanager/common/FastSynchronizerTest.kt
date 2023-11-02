@@ -40,6 +40,7 @@ import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.UnfinishedBlock
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.network.CommunicationManager
+import net.postchain.network.ReceivedPacket
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -366,7 +367,7 @@ class FastSynchronizerTest {
         // setup
         val message1: GetBlockHeaderAndBlock = mock()
         val message2: GetBlockHeaderAndBlock = mock()
-        val packets = listOf<Pair<NodeRid, EbftMessage>>(nodeRid to message1, nodeRid to message2)
+        val packets = listOf(ReceivedPacket(nodeRid, 1, message1), ReceivedPacket(nodeRid, 1, message2))
         doReturn(packets).whenever(commManager).getPackets()
         doReturn(true).whenever(peerStatuses).isBlacklisted(nodeRid)
         // execute
@@ -989,7 +990,7 @@ class FastSynchronizerTest {
     }
 
     private fun addMessage(message: EbftMessage) {
-        val packets = listOf<Pair<NodeRid, EbftMessage>>(nodeRid to message)
+        val packets = listOf(ReceivedPacket(nodeRid, 1, message))
         doReturn(packets).whenever(commManager).getPackets()
         doReturn(false).whenever(peerStatuses).isBlacklisted(nodeRid)
     }

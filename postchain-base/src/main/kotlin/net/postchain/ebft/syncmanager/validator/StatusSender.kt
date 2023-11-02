@@ -16,9 +16,9 @@ class StatusSender(
         private val communicationManager: CommunicationManager<EbftMessage>,
         private val clock: Clock = Clock.systemUTC()
 ) {
-    var lastSerial: Long = -1
-    var lastSentTime: Long = Date(0L).time
-    var previousMessage: Pair<Status, LazyPacket>? = null
+    private var lastSerial: Long = -1
+    private var lastSentTime: Long = Date(0L).time
+    private var previousMessage: Pair<Status, Map<Long, LazyPacket>>? = null
 
     // Sends a status message to all peers when my status has changed or
     // after a timeout period.

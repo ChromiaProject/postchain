@@ -6,6 +6,7 @@ import net.postchain.base.BaseBlockHeader
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
 import net.postchain.metrics.MessageDurationTrackerMetricsFactory
+import net.postchain.network.CommunicationManager
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
@@ -13,8 +14,9 @@ import kotlin.time.toDuration
 
 class MessageDurationTracker(
         appConfig: AppConfig,
+        private val commManager: CommunicationManager<EbftMessage>,
         private val metricsFactory: MessageDurationTrackerMetricsFactory,
-        private val messageToString: (EbftMessage) -> String,
+        private val messageToString: (message: EbftMessage, version: Long) -> String,
         private val nanoTime: () -> Long = { System.nanoTime() }
 ) {
     private val disabled = appConfig.trackedEbftMessageMaxKeepTimeMs == -1L
@@ -35,11 +37,13 @@ class MessageDurationTracker(
         targets.forEach { send(it, sentMessage, now) }
     }
 
+    private fun getVersion(node: NodeRid): Long = commManager.getPeerPacketVersion(node)
+
     private fun send(target: NodeRid, sentMessage: EbftMessage, time: Long) {
         trackers.getOrPut(target) { mutableMapOf() }
                 .getOrPut(sentMessage.topic) { mutableListOf() }
                 .add(TrackedMessage(sentMessage, time))
-        logger.trace { "Start tracking message of type ${messageToString(sentMessage)} to ${target.toHex()}" }
+        logger.trace { "Start tracking message of type ${messageToString(sentMessage, getVersion(target))} to ${target.toHex()}" }
     }
 
     fun receive(source: NodeRid, receivedMessage: EbftMessage, data: Any? = null): Duration? {
@@ -56,7 +60,7 @@ class MessageDurationTracker(
         responseTime?.also {
             val timer = timers.getOrPut(source to receivedMessage) { metricsFactory.createTimer(source, receivedMessage) }
             timer.record(it.inWholeMilliseconds, TimeUnit.MILLISECONDS)
-            logger.trace { "Received response type ${messageToString(receivedMessage)} from ${source.toHex()} after ${responseTime.inWholeMilliseconds} ms" }
+            logger.trace { "Received response type ${messageToString(receivedMessage, getVersion(source))} from ${source.toHex()} after ${responseTime.inWholeMilliseconds} ms" }
         }
         return responseTime
     }

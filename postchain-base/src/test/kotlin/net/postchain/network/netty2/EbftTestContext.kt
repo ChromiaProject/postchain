@@ -24,15 +24,15 @@ class EbftTestContext(val config: PeerCommConfiguration, val blockchainRid: Bloc
 
     val peer = NettyPeerConnector<EbftMessage>(events)
 
-    fun init() = peer.init(config.myPeerInfo(), EbftPacketDecoder(config))
+    fun init() = peer.init(config.myPeerInfo(), EbftPacketEncoder(config, blockchainRid), EbftPacketDecoder(config))
 
     fun buildPacketEncoder(): EbftPacketEncoder = EbftPacketEncoder(config, blockchainRid)
 
     fun buildPacketDecoder(): EbftPacketDecoder = EbftPacketDecoder(config)
 
-    fun encodePacket(message: EbftMessage): ByteArray = buildPacketEncoder().encodePacket(message)
+    fun encodePacket(message: EbftMessage, version: Long): ByteArray = buildPacketEncoder().encodePacket(message, version)
 
-    fun decodePacket(bytes: ByteArray): EbftMessage = buildPacketDecoder().decodePacket(bytes)!!
+    fun decodePacket(bytes: ByteArray, version: Long): EbftMessage = buildPacketDecoder().decodePacket(bytes, version)!!
 
     fun shutdown() = peer.shutdown()
 }

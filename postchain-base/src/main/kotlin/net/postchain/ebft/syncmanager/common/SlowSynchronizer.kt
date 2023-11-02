@@ -128,12 +128,11 @@ class SlowSynchronizer(
      */
     internal fun processMessages(sleepData: SlowSyncSleepData) {
         messageDurationTracker.cleanup()
-        for (packet in communicationManager.getPackets()) {
-            val peerId = packet.first
+        for ((peerId, _, message) in communicationManager.getPackets()) {
+            // TODO: Handle version
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue
             }
-            val message = packet.second
             if (message is GetBlockHeaderAndBlock || message is BlockHeader) {
                 peerStatuses.confirmModern(peerId)
             }

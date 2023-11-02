@@ -8,7 +8,8 @@ import net.postchain.core.NodeRid
 
 interface XPacketEncoder<PacketType> {
     fun makeIdentPacket(forNode: NodeRid): ByteArray
-    fun encodePacket(packet: PacketType): ByteArray
+    fun makeVersionPacket(): ByteArray
+    fun encodePacket(packet: PacketType, packetVersion: Long): ByteArray
 }
 
 interface XPacketEncoderFactory<PacketType> {
@@ -17,9 +18,11 @@ interface XPacketEncoderFactory<PacketType> {
 
 interface XPacketDecoder<PacketType> {
     fun parseIdentPacket(rawMessage: ByteArray): IdentPacketInfo
-    fun decodePacket(pubKey: ByteArray, rawMessage: ByteArray): PacketType
-    fun decodePacket(rawMessage: ByteArray): PacketType?
+    fun parseVersionPacket(rawMessage: ByteArray): Long
+    fun decodePacket(pubKey: ByteArray, rawMessage: ByteArray, packetVersion: Long): PacketType
+    fun decodePacket(rawMessage: ByteArray, packetVersion: Long): PacketType?
     fun isIdentPacket(rawMessage: ByteArray): Boolean
+    fun isVersionPacket(rawMessage: ByteArray): Boolean
 }
 
 interface XPacketDecoderFactory<PacketType> {

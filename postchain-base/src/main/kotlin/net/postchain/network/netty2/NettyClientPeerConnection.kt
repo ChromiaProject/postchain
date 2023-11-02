@@ -8,6 +8,7 @@ import io.netty.channel.EventLoopGroup
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
+import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.peer.PeerConnectionDescriptor
@@ -17,15 +18,17 @@ import java.net.SocketAddress
 
 class NettyClientPeerConnection<PacketType>(
         private val peerInfo: PeerInfo,
-        private val packetEncoder: XPacketEncoder<PacketType>,
+        packetEncoder: XPacketEncoder<PacketType>,
+        packetDecoder: XPacketDecoder<PacketType>,
         private val descriptor: PeerConnectionDescriptor,
         private val eventLoopGroup: EventLoopGroup
-) : NettyPeerConnection() {
+) : NettyPeerConnection<PacketType>(packetEncoder, packetDecoder) {
 
     companion object : KLogging()
 
     private var nettyClient: NettyClient? = null
     private var hasReceivedPing = false
+    private var hasReceivedVersion = false
     private var peerPacketHandler: PeerPacketHandler? = null
     private lateinit var context: ChannelHandlerContext
     private lateinit var onConnected: () -> Unit
@@ -60,20 +63,39 @@ class NettyClientPeerConnection<PacketType>(
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         handleSafely(peerInfo.peerId()) {
             val message = Transport.unwrapMessage(msg as ByteBuf)
-            if (!isPing(message)) {
+            if (isPing(message)) {
+                handlePing(ctx)
+            } else if (isVersion(message)) {
+                handleVersion(message, ctx)
+            } else {
                 peerPacketHandler?.handle(
                         message,
                         peerInfo.peerId())
-            } else if (!hasReceivedPing) {
-                // Peer has ping capability
-                ctx?.let {
-                    // Notify peer that we also have ping capability
-                    sendPing(it)
-                    registerIdleStateHandler(it)
-                }
-                hasReceivedPing = true
             }
             msg.release()
+        }
+    }
+
+    private fun handleVersion(message: ByteArray, ctx: ChannelHandlerContext?) {
+        if (!hasReceivedVersion) {
+            ctx?.let {
+                sendVersion(it)
+            }
+            descriptor.packetVersion = packetDecoder.parseVersionPacket(message)
+            logger.info { "Got packet version ${descriptor.packetVersion} from ${descriptor.nodeId.toHex()}" }
+            hasReceivedVersion = true
+        }
+    }
+
+    private fun handlePing(ctx: ChannelHandlerContext?) {
+        // Peer has ping capability
+        if (!hasReceivedPing) {
+            ctx?.let {
+                // Notify peer that we also have ping capability
+                sendPing(it)
+                registerIdleStateHandler(it)
+            }
+            hasReceivedPing = true
         }
     }
 

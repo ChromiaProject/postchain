@@ -18,15 +18,20 @@ interface NodeConnector<PacketType, DescriptorType> {
     /**
      * Initiates the network implementation (ex: Netty) with connection life cycle logic
      */
-    fun init(peerInfo: PeerInfo, packetDecoder: XPacketDecoder<PacketType>)
+    fun init(
+            peerInfo: PeerInfo,
+            packetEncoder: XPacketEncoder<PacketType>,
+            packetDecoder: XPacketDecoder<PacketType>
+    )
 
     /**
      * Makes sure the network implementation (ex: Netty) connects to the given node
      */
     fun connectNode(
-        connectionDescriptor: DescriptorType,
-        peerInfo: PeerInfo,
-        packetEncoder: XPacketEncoder<PacketType>
+            connectionDescriptor: DescriptorType,
+            peerInfo: PeerInfo,
+            packetEncoder: XPacketEncoder<PacketType>,
+            packetDecoder: XPacketDecoder<PacketType>
     )
 
     /**

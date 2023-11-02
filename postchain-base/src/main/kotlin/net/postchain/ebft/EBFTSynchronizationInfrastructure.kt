@@ -88,17 +88,17 @@ open class EBFTSynchronizationInfrastructure(
         if (forceReadOnly) logger.warn("I am running in forced read only mode")
 
         // worker context
-        val messageDurationTracker = MessageDurationTracker(
-                postchainContext.appConfig,
-                MessageDurationTrackerMetricsFactory(chainId, blockchainRid, currentNodeConfig.appConfig.pubKey),
-                ebftMessageToString(blockchainConfig)
-        )
-
         val buildWorkerContext = { brid: BlockchainRid, peerCommConfig: PeerCommConfiguration ->
+            val communicationManager = buildXCommunicationManager(blockchainConfig, peerCommConfig, brid)
+            val messageDurationTracker = MessageDurationTracker(
+                    postchainContext.appConfig,
+                    communicationManager,
+                    MessageDurationTrackerMetricsFactory(chainId, brid, currentNodeConfig.appConfig.pubKey),
+                    ebftMessageToString(blockchainConfig))
             WorkerContext(
                     blockchainConfig,
                     engine,
-                    buildXCommunicationManager(blockchainConfig, peerCommConfig, brid),
+                    communicationManager,
                     peerCommConfig,
                     postchainContext.appConfig,
                     currentNodeConfig,

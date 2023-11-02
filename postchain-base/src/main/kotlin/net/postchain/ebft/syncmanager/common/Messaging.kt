@@ -71,6 +71,7 @@ abstract class Messaging(
         val blocks = mutableListOf<CompleteBlock>()
         val allBlocksFit = blockPacker.packBlockRange(
                 peerId,
+                communicationManager.getPeerPacketVersion(peerId),
                 startAtHeight,
                 myHeight,
                 ::simpleGetBlockAtHeight,

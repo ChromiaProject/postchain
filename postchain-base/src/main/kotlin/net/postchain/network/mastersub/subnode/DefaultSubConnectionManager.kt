@@ -171,6 +171,8 @@ class DefaultSubConnectionManager(
                 ?: emptyList()
     }
 
+    override fun getPacketVersion(chainId: Long, nodeRid: NodeRid): Long = 1
+
     @Synchronized
     override fun disconnectChain(chainId: Long) {
         logger.debug("Disconnecting master chain")

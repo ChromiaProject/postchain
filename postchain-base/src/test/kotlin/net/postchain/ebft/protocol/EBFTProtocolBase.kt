@@ -41,6 +41,7 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.metrics.NodeStatusMetrics
 import net.postchain.metrics.SyncMetrics
 import net.postchain.network.CommunicationManager
+import net.postchain.network.ReceivedPacket
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.junit.jupiter.api.BeforeEach
 import org.mockito.ArgumentMatchers.anyLong
@@ -165,7 +166,7 @@ abstract class EBFTProtocolBase {
 
     protected fun verifyIntent(intent: BlockIntent) = assertThat(statusManager.intent).isEqualTo(intent)
 
-    protected fun messagesToReceive(vararg messages: Pair<NodeRid, EbftMessage>) {
+    protected fun messagesToReceive(vararg messages: ReceivedPacket<EbftMessage>) {
         doReturn(messages.toList()).whenever(commManager).getPackets()
     }
 
