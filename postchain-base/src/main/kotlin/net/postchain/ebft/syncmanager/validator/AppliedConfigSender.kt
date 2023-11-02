@@ -21,7 +21,7 @@ class AppliedConfigSender(
 
     private val configHash = workerContext.blockchainConfiguration.configHash
     private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(ThreadFactoryBuilder().setNameFormat("AppliedConfigSender-c${workerContext.blockchainConfiguration.chainID}").build())
-    private var previousMessage: Pair<AppliedConfig, LazyPacket>? = null
+    private var previousMessage: Pair<AppliedConfig, Map<Long, LazyPacket>>? = null
 
     fun start() {
         executor.scheduleAtFixedRate(::sendAppliedConfig, 0, interval.toMillis(), TimeUnit.MILLISECONDS)

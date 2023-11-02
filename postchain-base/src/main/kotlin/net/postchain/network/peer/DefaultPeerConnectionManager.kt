@@ -14,7 +14,13 @@ import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.network.XPacketDecoderFactory
 import net.postchain.network.XPacketEncoderFactory
-import net.postchain.network.common.*
+import net.postchain.network.common.ChainWithConnections
+import net.postchain.network.common.ChainsWithConnections
+import net.postchain.network.common.ConnectionDirection
+import net.postchain.network.common.LazyPacket
+import net.postchain.network.common.NetworkTopology
+import net.postchain.network.common.NodeConnector
+import net.postchain.network.common.NodeConnectorEvents
 import net.postchain.network.netty2.NettyPeerConnector
 
 /**
@@ -146,10 +152,14 @@ open class DefaultPeerConnectionManager<PacketType>(
             myPeerInfo = chainPeersConfig.commConfiguration.myPeerInfo()
             peersConnectionStrategy = DefaultPeersConnectionStrategy(this, myPeerInfo.peerId())
 
+            val packetEncoder = packetEncoderFactory.create(
+                    chainPeersConfig.commConfiguration,
+                    chainPeersConfig.blockchainRid
+            )
             val packetDecoder = packetDecoderFactory.create(chainPeersConfig.commConfiguration)
             // We have already given away we are using Netty, so skipping the factory
             connector = NettyPeerConnector<PacketType>(this).apply {
-                init(myPeerInfo, packetDecoder)
+                init(myPeerInfo, packetEncoder, packetDecoder)
             }
         }
 
@@ -187,8 +197,11 @@ open class DefaultPeerConnectionManager<PacketType>(
                 chainPeersConfig.commConfiguration,
                 chainPeersConfig.blockchainRid
         )
+        val packetDecoder = packetDecoderFactory.create(
+                chainPeersConfig.commConfiguration
+        )
 
-        connector?.connectNode(descriptor, peerInfo, packetEncoder)
+        connector?.connectNode(descriptor, peerInfo, packetEncoder, packetDecoder)
     }
 
     @Synchronized
@@ -213,6 +226,10 @@ open class DefaultPeerConnectionManager<PacketType>(
     override fun sendPacket(data: LazyPacket, chainId: Long, nodeRid: NodeRid) {
         chainsWithConnections.getNodeConnection(chainId, nodeRid)?.sendPacket(data)
     }
+
+    @Synchronized
+    override fun getPacketVersion(chainId: Long, nodeRid: NodeRid): Long =
+            chainsWithConnections.getNodeConnection(chainId, nodeRid)?.descriptor()?.packetVersion ?: 1
 
     @Synchronized
     override fun broadcastPacket(data: LazyPacket, chainId: Long) {
@@ -425,6 +442,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                             return null
                         }
                     }
+
                     ConnectionDirection.OUTGOING -> {
                         logger.error(
                                 "getChainIdOnConnected() - We initiated this contact but lost the Chain ID"
@@ -450,6 +468,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                         connection.close()
                         return null
                     }
+
                     ConnectionDirection.OUTGOING -> {
                         logger.error("getChainOnConnected() - We initiated this contact but lost the Chain")
                         connection.close()
@@ -480,6 +499,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                         )
                         null
                     }
+
                     ConnectionDirection.OUTGOING -> {
                         // Should never happen
                         logger.error(

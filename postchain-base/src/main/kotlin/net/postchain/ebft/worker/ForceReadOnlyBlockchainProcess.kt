@@ -11,7 +11,6 @@ import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.ebft.syncmanager.readonly.ForceReadOnlyMessageProcessor
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
-import kotlin.collections.mapOf
 import kotlin.collections.set
 
 class ForceReadOnlyBlockchainProcess(

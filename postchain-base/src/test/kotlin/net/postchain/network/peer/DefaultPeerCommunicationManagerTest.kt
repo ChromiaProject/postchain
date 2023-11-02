@@ -37,6 +37,9 @@ class DefaultPeerCommunicationManagerTest {
     private val pubKey1 = byteArrayOf(0x01)
     private val pubKey2 = byteArrayOf(0x02)
 
+    private val nodeRid1 = NodeRid(pubKey1)
+    private val nodeRid2 = NodeRid(pubKey2)
+
     companion object {
         private val CHAIN_ID = 1L
     }
@@ -131,7 +134,7 @@ class DefaultPeerCommunicationManagerTest {
         assertThrows<IllegalArgumentException> {
             DefaultPeerCommunicationManager<Int>(mock(), peersConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock())
                     .apply {
-                        sendPacket(0, NodeRid(pubKey1))
+                        sendPacket(0, nodeRid1)
                     }
         }
     }
@@ -158,12 +161,11 @@ class DefaultPeerCommunicationManagerTest {
         )
                 .apply {
                     init()
-                    sendPacket(0, NodeRid(pubKey1))
+                    sendPacket(0, nodeRid1)
                 }
 
         // Then
         verify(connectionManager).sendPacket(any(), eq(CHAIN_ID), eq(peerInfo1.peerId()))
-        //verify(peerCommunicationConfig, times(1)).networkNodes
         verify(peerInfo1Mock).pubKey
 
         communicationManager.shutdown()
@@ -172,9 +174,13 @@ class DefaultPeerCommunicationManagerTest {
     @Test
     fun broadcastPacket_sends_packet_successfully() {
         // Given
-        val connectionManager: PeerConnectionManager = mock()
+        val connectionManager: PeerConnectionManager = mock {
+            on { getConnectedNodes(CHAIN_ID) } doReturn listOf(nodeRid1, nodeRid2)
+        }
+
         val peerCommunicationConfig: PeerCommConfiguration = mock {
             on { myPeerInfo() } doReturn myPeerInfo
+            on { pubKey } doReturn myPubKey
         }
 
         // When
@@ -187,7 +193,8 @@ class DefaultPeerCommunicationManagerTest {
                 }
 
         // Then
-        verify(connectionManager).broadcastPacket(any(), eq(CHAIN_ID))
+        verify(connectionManager).sendPacket(any(), eq(CHAIN_ID), eq(nodeRid1))
+        verify(connectionManager).sendPacket(any(), eq(CHAIN_ID), eq(nodeRid2))
 
         communicationManager.shutdown()
     }

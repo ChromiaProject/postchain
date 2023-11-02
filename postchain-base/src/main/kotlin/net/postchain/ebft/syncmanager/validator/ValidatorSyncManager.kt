@@ -119,8 +119,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun dispatchMessages() {
         messageDurationTracker.cleanup()
-        for (packet in communicationManager.getPackets()) {
-            val (xPeerId, message) = packet
+        for ((xPeerId, _, message) in communicationManager.getPackets()) {
+            //TODO: Handle version
             val nodeIndex = indexOfValidator(xPeerId)
             val isReadOnlyNode = nodeIndex == -1 // This must be a read-only node since not in the validator list
 

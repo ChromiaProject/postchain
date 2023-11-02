@@ -24,6 +24,7 @@ import net.postchain.ebft.message.MessageDurationTracker
 import net.postchain.ebft.message.UnfinishedBlock
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.metrics.MessageDurationTrackerMetricsFactory
+import net.postchain.network.CommunicationManager
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -51,6 +52,8 @@ class MessageDurationTrackerTest {
         on { createTimer(any(), any()) } doReturn timer
     }
 
+    private val commManager: CommunicationManager<EbftMessage> = mock()
+
     private var currentMs = 10L
 
     private lateinit var sut: MessageDurationTracker
@@ -74,7 +77,7 @@ class MessageDurationTrackerTest {
 
     @BeforeEach
     fun beforeEach() {
-        sut = MessageDurationTracker(appConfig, metricsFactory, { msg -> msg.javaClass.simpleName }, nanoProvider())
+        sut = MessageDurationTracker(appConfig, commManager, metricsFactory, { msg, _ -> msg.javaClass.simpleName }, nanoProvider())
     }
 
     @Test

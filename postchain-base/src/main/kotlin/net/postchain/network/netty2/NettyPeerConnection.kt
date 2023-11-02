@@ -7,11 +7,14 @@ import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import mu.KLogging
 import net.postchain.core.NodeRid
+import net.postchain.network.XPacketDecoder
+import net.postchain.network.XPacketEncoder
 import net.postchain.network.peer.PeerConnection
 
-abstract class NettyPeerConnection :
-    ChannelInboundHandlerAdapter(),
-    PeerConnection {
+abstract class NettyPeerConnection<PacketType>(
+        protected val packetEncoder: XPacketEncoder<PacketType>,
+        protected val packetDecoder: XPacketDecoder<PacketType>
+) : ChannelInboundHandlerAdapter(), PeerConnection {
 
     companion object : KLogging() {
         const val PING_SEND_INTERVAL = 30
@@ -19,6 +22,7 @@ abstract class NettyPeerConnection :
     }
 
     private val pingBytes = ByteArray(1) { 1 }
+    private var versionMessage: ByteArray? = null
 
     fun handleSafely(nodeId: NodeRid?, handler: () -> Unit) {
         try {
@@ -30,8 +34,24 @@ abstract class NettyPeerConnection :
 
     protected fun isPing(msg: ByteArray) = pingBytes.contentEquals(msg)
 
+    protected fun isVersion(msg: ByteArray): Boolean {
+        if (versionMessage == null) {
+            if (packetDecoder.isVersionPacket(msg)) {
+                versionMessage = msg
+                return true
+            }
+            return false
+        } else {
+            return versionMessage.contentEquals(msg)
+        }
+    }
+
     protected fun sendPing(ctx: ChannelHandlerContext) {
         ctx.writeAndFlush(Transport.wrapMessage(pingBytes))
+    }
+
+    protected fun sendVersion(ctx: ChannelHandlerContext) {
+        ctx.writeAndFlush(Transport.wrapMessage(packetEncoder.makeVersionPacket()))
     }
 
     protected fun registerIdleStateHandler(ctx: ChannelHandlerContext) {

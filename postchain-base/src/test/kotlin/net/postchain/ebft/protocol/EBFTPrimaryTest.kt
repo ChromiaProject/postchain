@@ -14,6 +14,7 @@ import net.postchain.ebft.NodeBlockState.WaitBlock
 import net.postchain.ebft.message.BlockSignature
 import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.Status
+import net.postchain.network.ReceivedPacket
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
@@ -62,8 +63,8 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
          */
         // incoming messages
         messagesToReceive(
-                nodeRid2 to Status(blockRid0, 1, false, 0, 4, HaveBlock.ordinal),
-                nodeRid3 to Status(blockRid0, 1, false, 0, 4, HaveBlock.ordinal)
+                ReceivedPacket(nodeRid2, 1, Status(blockRid0, 1, false, 0, 4, HaveBlock.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(blockRid0, 1, false, 0, 4, HaveBlock.ordinal))
         )
         // execute
         syncManager.update()
@@ -82,8 +83,8 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
          */
         // incoming messages
         messagesToReceive(
-                nodeRid2 to Status(blockRid0, 1, false, 0, 5, Prepared.ordinal),
-                nodeRid3 to Status(blockRid0, 1, false, 0, 5, Prepared.ordinal)
+                ReceivedPacket(nodeRid2, 1, Status(blockRid0, 1, false, 0, 5, Prepared.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(blockRid0, 1, false, 0, 5, Prepared.ordinal))
         )
         // execute
         syncManager.update()
@@ -109,8 +110,8 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
         doReturn(CompletableFuture.completedStage(Unit)).whenever(blockDatabase).commitBlock(isA())
         // incoming messages
         messagesToReceive(
-                nodeRid2 to BlockSignature(blockRid0, Signature(node2, ByteArray(0))),
-                nodeRid3 to BlockSignature(blockRid0, Signature(node3, ByteArray(0)))
+                ReceivedPacket(nodeRid2, 1, BlockSignature(blockRid0, Signature(node2, ByteArray(0)))),
+                ReceivedPacket(nodeRid3, 1, BlockSignature(blockRid0, Signature(node3, ByteArray(0))))
         )
         // execute
         syncManager.update()
@@ -129,8 +130,8 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
          */
         // incoming messages
         messagesToReceive(
-                nodeRid2 to Status(null, 2, false, 0, 6, WaitBlock.ordinal),
-                nodeRid3 to Status(null, 2, false, 0, 6, WaitBlock.ordinal)
+                ReceivedPacket(nodeRid2, 1, Status(null, 2, false, 0, 6, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 2, false, 0, 6, WaitBlock.ordinal))
         )
         // execute
         syncManager.update()

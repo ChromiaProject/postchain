@@ -57,7 +57,7 @@ class IntNettyConnector3PeersReconnectionIT {
     private fun startContext(peerInfo: PeerInfo): IntTestContext {
         return IntTestContext(peerInfo, arrayOf(peerInfo1, peerInfo2, peerInfo3))
                 .also {
-                    it.peer.init(peerInfo, it.packetDecoder)
+                    it.peer.init(peerInfo, it.packetEncoder, it.packetDecoder)
                 }
     }
 
@@ -70,12 +70,12 @@ class IntNettyConnector3PeersReconnectionIT {
         // Connecting
         // * 1 -> 2
         val peerDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetEncoder)
+        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetEncoder, context1.packetDecoder)
         // * 1 -> 3
         val peerDescriptor3 = PeerConnectionDescriptor(blockchainRid, peerInfo3.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor3, peerInfo3, context1.packetEncoder)
+        context1.peer.connectNode(peerDescriptor3, peerInfo3, context1.packetEncoder, context1.packetDecoder)
         // * 3 -> 2
-        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetEncoder)
+        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetEncoder, context3.packetDecoder)
 
         // Waiting for all connections to be established
         val connection1 = argumentCaptor<PeerConnection>()
@@ -88,18 +88,24 @@ class IntNettyConnector3PeersReconnectionIT {
                     verify(context1.events, times(2)).onNodeConnected(connection1.capture())
                     assertThat(connection1.firstValue.descriptor().nodeId).isIn(*expected1)
                     assertThat(connection1.secondValue.descriptor().nodeId).isIn(*expected1)
+                    assertThat(connection1.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
+                    assertThat(connection1.secondValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     // 2
                     val expected2 = arrayOf(peerInfo1, peerInfo3).map(PeerInfo::peerId).toTypedArray()
                     verify(context2.events, times(2)).onNodeConnected(connection2.capture())
                     assertThat(connection2.firstValue.descriptor().nodeId).isIn(*expected2)
                     assertThat(connection2.secondValue.descriptor().nodeId).isIn(*expected2)
+                    assertThat(connection2.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
+                    assertThat(connection2.secondValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     // 3
                     val expected3 = arrayOf(peerInfo1, peerInfo2).map(PeerInfo::peerId).toTypedArray()
                     verify(context3.events, times(2)).onNodeConnected(connection3.capture())
                     assertThat(connection3.firstValue.descriptor().nodeId).isIn(*expected3)
                     assertThat(connection3.secondValue.descriptor().nodeId).isIn(*expected3)
+                    assertThat(connection3.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
+                    assertThat(connection3.secondValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
                 }
 
         // Disconnecting: peer3 disconnects from peer1 and peer2
@@ -110,8 +116,7 @@ class IntNettyConnector3PeersReconnectionIT {
         await().atMost(TEN_SECONDS)
                 .untilAsserted {
                     // Asserting peer3 is disconnected from peer1
-                    verify(context1.events, times(1))
-                            .onNodeDisconnected(connectionCapture1.capture())
+                    verify(context1.events, times(1)).onNodeDisconnected(connectionCapture1.capture())
                     assertThat(connectionCapture1.firstValue.descriptor().nodeId).isEqualTo(peerInfo3.peerId())
 
                     // Asserting peer3 is disconnected from peer2
@@ -148,9 +153,9 @@ class IntNettyConnector3PeersReconnectionIT {
         // Re-connecting
         // * 3 -> 1
         val peerDescriptor1 = PeerConnectionDescriptor(blockchainRid, peerInfo1.peerId(), ConnectionDirection.OUTGOING)
-        context3.peer.connectNode(peerDescriptor1, peerInfo1, context3.packetEncoder)
+        context3.peer.connectNode(peerDescriptor1, peerInfo1, context3.packetEncoder, context3.packetDecoder)
         // * 3 -> 2
-        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetEncoder)
+        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetEncoder, context3.packetDecoder)
 
         // Waiting for all connections to be established
         val connection1_2 = argumentCaptor<PeerConnection>()
@@ -161,16 +166,20 @@ class IntNettyConnector3PeersReconnectionIT {
                     // 1
                     verify(context1.events, times(3)).onNodeConnected(connection1_2.capture())
                     assertThat(connection1_2.thirdValue.descriptor().nodeId).isEqualTo(peerInfo3.peerId())
+                    assertThat(connection1_2.thirdValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     // 2
                     verify(context2.events, times(3)).onNodeConnected(connection2_2.capture())
                     assertThat(connection2_2.thirdValue.descriptor().nodeId).isEqualTo(peerInfo3.peerId())
+                    assertThat(connection2_2.thirdValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     // 3
                     val expected3 = arrayOf(peerInfo1, peerInfo2).map(PeerInfo::peerId).toTypedArray()
                     verify(context3.events, times(2)).onNodeConnected(connection3_2.capture())
                     assertThat(connection3_2.firstValue.descriptor().nodeId).isIn(*expected3)
                     assertThat(connection3_2.secondValue.descriptor().nodeId).isIn(*expected3)
+                    assertThat(connection3_2.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
+                    assertThat(connection3_2.secondValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
                 }
 
         // Sending packets
