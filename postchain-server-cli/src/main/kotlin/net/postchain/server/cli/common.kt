@@ -30,7 +30,7 @@ fun waitDb(retryTimes: Int, retryInterval: Long, appConfig: AppConfig) {
 
 private fun tryCreateBasicDataSource(appConfig: AppConfig): Connection? {
     return try {
-        runStorageCommand(appConfig) { ctx ->
+        runStorageCommand(appConfig, allowUpgrade = true) { ctx ->
             if (!DatabaseAccess.of(ctx).isSchemaExists(ctx.conn, appConfig.databaseSchema)) throw PrintMessage("Database schema ${appConfig.databaseSchema} does not exist")
         }
 
