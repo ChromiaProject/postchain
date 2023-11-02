@@ -6,7 +6,6 @@ import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import mu.KLogging
-import net.postchain.core.NodeRid
 import net.postchain.network.XPacketDecoder
 import net.postchain.network.XPacketEncoder
 import net.postchain.network.peer.PeerConnection
@@ -23,14 +22,6 @@ abstract class NettyPeerConnection<PacketType>(
 
     private val pingBytes = ByteArray(1) { 1 }
     private var versionMessage: ByteArray? = null
-
-    fun handleSafely(nodeId: NodeRid?, handler: () -> Unit) {
-        try {
-            handler()
-        } catch (e: Exception) {
-            logger.error("Error when receiving message from peer $nodeId", e)
-        }
-    }
 
     protected fun isPing(msg: ByteArray) = pingBytes.contentEquals(msg)
 

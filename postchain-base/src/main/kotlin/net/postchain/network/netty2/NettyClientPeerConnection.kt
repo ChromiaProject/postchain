@@ -61,8 +61,8 @@ class NettyClientPeerConnection<PacketType>(
     }
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
-        handleSafely(peerInfo.peerId()) {
-            val message = Transport.unwrapMessage(msg as ByteBuf)
+        val message = Transport.unwrapMessage(msg as ByteBuf)
+        try {
             if (isPing(message)) {
                 handlePing(ctx)
             } else if (isVersion(message)) {
@@ -72,6 +72,9 @@ class NettyClientPeerConnection<PacketType>(
                         message,
                         peerInfo.peerId())
             }
+        } catch (e: Exception) {
+            logger.error("Error when receiving message from peer ${peerInfo.peerId()}", e)
+        } finally {
             msg.release()
         }
     }
