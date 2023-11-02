@@ -7,8 +7,7 @@ import io.netty.util.concurrent.DefaultThreadFactory
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
-import net.postchain.network.XPacketDecoder
-import net.postchain.network.XPacketEncoder
+import net.postchain.network.XPacketCodec
 import net.postchain.network.common.NodeConnector
 import net.postchain.network.common.NodeConnectorEvents
 import net.postchain.network.peer.PeerConnectionDescriptor
@@ -26,11 +25,10 @@ class NettyPeerConnector<PacketType>(
 
     override fun init(
             peerInfo: PeerInfo,
-            packetEncoder: XPacketEncoder<PacketType>,
-            packetDecoder: XPacketDecoder<PacketType>
+            packetCodec: XPacketCodec<PacketType>
     ) {
         server = NettyServer({
-            NettyServerPeerConnection(packetEncoder, packetDecoder)
+            NettyServerPeerConnection(packetCodec)
                     .onConnected { connection ->
                         eventsReceiver.onNodeConnected(connection)
                                 ?.also { connection.accept(it) }
@@ -45,10 +43,9 @@ class NettyPeerConnector<PacketType>(
     override fun connectNode(
             connectionDescriptor: PeerConnectionDescriptor,
             peerInfo: PeerInfo,
-            packetEncoder: XPacketEncoder<PacketType>,
-            packetDecoder: XPacketDecoder<PacketType>
+            packetCodec: XPacketCodec<PacketType>
     ) {
-        with(NettyClientPeerConnection(peerInfo, packetEncoder, packetDecoder, connectionDescriptor, eventLoopGroup)) {
+        with(NettyClientPeerConnection(peerInfo, packetCodec, connectionDescriptor, eventLoopGroup)) {
             try {
                 open(
                         onConnected = {

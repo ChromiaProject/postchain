@@ -22,8 +22,7 @@ import net.postchain.core.BlockchainState
 import net.postchain.core.InfrastructureFactory
 import net.postchain.core.Storage
 import net.postchain.core.SynchronizationInfrastructure
-import net.postchain.ebft.EbftPacketDecoderFactory
-import net.postchain.ebft.EbftPacketEncoderFactory
+import net.postchain.ebft.EbftPacketCodecFactory
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.peer.DefaultPeerConnectionManager
 
@@ -78,16 +77,13 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
         return ManualNodeConfigurationProvider(appConfig, storage)
     }
 
-    override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager {
-        return DefaultPeerConnectionManager(
-                EbftPacketEncoderFactory(),
-                EbftPacketDecoderFactory()
-        )
-    }
+    override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager =
+            DefaultPeerConnectionManager(EbftPacketCodecFactory())
 
-    override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
-        return ManualBlockchainConfigurationProvider()
-    }
+
+    override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider =
+            ManualBlockchainConfigurationProvider()
+
 
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {

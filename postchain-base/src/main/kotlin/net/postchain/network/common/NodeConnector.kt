@@ -3,8 +3,7 @@
 package net.postchain.network.common
 
 import net.postchain.base.PeerInfo
-import net.postchain.network.XPacketDecoder
-import net.postchain.network.XPacketEncoder
+import net.postchain.network.XPacketCodec
 
 /**
  * A "Node Connector" is wrapper around the underlying network library we use (for example: Netty).
@@ -20,8 +19,7 @@ interface NodeConnector<PacketType, DescriptorType> {
      */
     fun init(
             peerInfo: PeerInfo,
-            packetEncoder: XPacketEncoder<PacketType>,
-            packetDecoder: XPacketDecoder<PacketType>
+            packetCodec: XPacketCodec<PacketType>
     )
 
     /**
@@ -30,8 +28,7 @@ interface NodeConnector<PacketType, DescriptorType> {
     fun connectNode(
             connectionDescriptor: DescriptorType,
             peerInfo: PeerInfo,
-            packetEncoder: XPacketEncoder<PacketType>,
-            packetDecoder: XPacketDecoder<PacketType>
+            packetCodec: XPacketCodec<PacketType>
     )
 
     /**

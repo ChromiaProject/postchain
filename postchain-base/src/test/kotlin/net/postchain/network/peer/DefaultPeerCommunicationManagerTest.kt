@@ -12,8 +12,7 @@ import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
-import net.postchain.network.XPacketDecoder
-import net.postchain.network.XPacketEncoder
+import net.postchain.network.XPacketCodec
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -59,12 +58,11 @@ class DefaultPeerCommunicationManagerTest {
             on { networkNodes } doReturn NetworkNodes.buildNetworkNodesDummy()
             on { myPeerInfo() } doReturn myPeerInfo
         }
-        val packetEncoder: XPacketEncoder<Int> = mock()
-        val packetDecoder: XPacketDecoder<Int> = mock()
+        val packetCodec: XPacketCodec<Int> = mock()
 
         // When
         val communicationManager = DefaultPeerCommunicationManager(
-                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, packetEncoder, packetDecoder, mock())
+                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, packetCodec, mock())
         communicationManager.init()
 
         // Then
@@ -95,12 +93,11 @@ class DefaultPeerCommunicationManagerTest {
             on { resolvePeer(peerInfo2.pubKey) } doReturn peerInfo2
             on { myPeerInfo() } doReturn myPeerInfo
         }
-        val packetEncoder: XPacketEncoder<Int> = mock()
-        val packetDecoder: XPacketDecoder<Int> = mock()
+        val packetCodec: XPacketCodec<Int> = mock()
 
         // When
         val communicationManager = DefaultPeerCommunicationManager(
-                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, packetEncoder, packetDecoder, mock())
+                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, packetCodec, mock())
         communicationManager.init()
 
         // Then
@@ -132,7 +129,7 @@ class DefaultPeerCommunicationManagerTest {
 
         // When / Then exception
         assertThrows<IllegalArgumentException> {
-            DefaultPeerCommunicationManager<Int>(mock(), peersConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock())
+            DefaultPeerCommunicationManager<Int>(mock(), peersConfig, CHAIN_ID, blockchainRid, mock(), mock())
                     .apply {
                         sendPacket(0, nodeRid1)
                     }
@@ -157,7 +154,7 @@ class DefaultPeerCommunicationManagerTest {
 
         // When
         val communicationManager = DefaultPeerCommunicationManager<Int>(
-                connectionManager, config, CHAIN_ID, blockchainRid, mock(), mock(), mock()
+                connectionManager, config, CHAIN_ID, blockchainRid, mock(), mock()
         )
                 .apply {
                     init()
@@ -185,7 +182,7 @@ class DefaultPeerCommunicationManagerTest {
 
         // When
         val communicationManager = DefaultPeerCommunicationManager<Int>(
-                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock()
+                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, mock(), mock()
         )
                 .apply {
                     init()
@@ -209,7 +206,7 @@ class DefaultPeerCommunicationManagerTest {
 
         // When
         val communicationManager = DefaultPeerCommunicationManager<Int>(
-                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, mock(), mock(), mock()
+                connectionManager, peerCommunicationConfig, CHAIN_ID, blockchainRid, mock(), mock()
         )
                 .apply {
                     init()

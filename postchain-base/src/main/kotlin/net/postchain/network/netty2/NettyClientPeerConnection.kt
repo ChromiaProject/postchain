@@ -8,8 +8,7 @@ import io.netty.channel.EventLoopGroup
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
-import net.postchain.network.XPacketDecoder
-import net.postchain.network.XPacketEncoder
+import net.postchain.network.XPacketCodec
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.peer.PeerConnectionDescriptor
 import net.postchain.network.peer.PeerPacketHandler
@@ -18,11 +17,10 @@ import java.net.SocketAddress
 
 class NettyClientPeerConnection<PacketType>(
         private val peerInfo: PeerInfo,
-        packetEncoder: XPacketEncoder<PacketType>,
-        packetDecoder: XPacketDecoder<PacketType>,
+        packetCodec: XPacketCodec<PacketType>,
         private val descriptor: PeerConnectionDescriptor,
         private val eventLoopGroup: EventLoopGroup
-) : NettyPeerConnection<PacketType>(packetEncoder, packetDecoder) {
+) : NettyPeerConnection<PacketType>(packetCodec) {
 
     companion object : KLogging()
 
@@ -84,7 +82,7 @@ class NettyClientPeerConnection<PacketType>(
             ctx?.let {
                 sendVersion(it)
             }
-            descriptor.packetVersion = packetDecoder.parseVersionPacket(message)
+            descriptor.packetVersion = packetCodec.parseVersionPacket(message)
             logger.info { "Got packet version ${descriptor.packetVersion} from ${descriptor.nodeId.toHex()}" }
             hasReceivedVersion = true
         }
@@ -126,8 +124,5 @@ class NettyClientPeerConnection<PacketType>(
         return InetSocketAddress(peerInfo.host, peerInfo.port)
     }
 
-    private fun buildIdentPacket(): ByteBuf {
-        return Transport.wrapMessage(
-                packetEncoder.makeIdentPacket(peerInfo.getNodeRid()))
-    }
+    private fun buildIdentPacket(): ByteBuf = Transport.wrapMessage(packetCodec.makeIdentPacket(peerInfo.getNodeRid()))
 }

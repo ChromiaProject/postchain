@@ -210,16 +210,12 @@ open class EBFTSynchronizationInfrastructure(
             relevantPeerCommConfig: PeerCommConfiguration,
             blockchainRid: BlockchainRid
     ): CommunicationManager<EbftMessage> {
-        val packetEncoder = EbftPacketEncoder(relevantPeerCommConfig, blockchainRid)
-        val packetDecoder = EbftPacketDecoder(relevantPeerCommConfig)
-
         return DefaultPeerCommunicationManager(
                 connectionManager,
                 relevantPeerCommConfig,
                 blockchainConfig.chainID,
                 blockchainRid,
-                packetEncoder,
-                packetDecoder,
+                EbftPacketCodec(relevantPeerCommConfig, blockchainRid),
                 ebftMessageToString(blockchainConfig)
         ).apply { init() }
     }

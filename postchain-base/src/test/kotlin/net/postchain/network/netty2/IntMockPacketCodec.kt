@@ -6,16 +6,18 @@ import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.network.IdentPacketInfo
-import net.postchain.network.XPacketDecoder
-import net.postchain.network.XPacketEncoder
+import net.postchain.network.XPacketCodec
 import java.nio.ByteBuffer
 
 const val INT_PACKET_VERSION = 42L
 val INT_PACKET_VERSION_ARRAY = "$INT_PACKET_VERSION".toByteArray()
 
-class IntMockPacketEncoder(
-        private val ownerPeerInfo: PeerInfo
-) : XPacketEncoder<Int> {
+class IntMockPacketCodec(
+        private val ownerPeerInfo: PeerInfo,
+        private val peerInfos: Array<PeerInfo>
+) : XPacketCodec<Int> {
+
+    override fun getPacketVersion(): Long = INT_PACKET_VERSION
 
     // FYI: [et]: This logic corresponds to the [EbftPacketConverter]'s one (ignore [forPeer] here)
     override fun makeIdentPacket(forNode: NodeRid): ByteArray = ownerPeerInfo.pubKey
@@ -23,13 +25,7 @@ class IntMockPacketEncoder(
     override fun makeVersionPacket(): ByteArray = INT_PACKET_VERSION_ARRAY
 
     override fun encodePacket(packet: Int, packetVersion: Long): ByteArray = ByteBuffer.allocate(4).putInt(packet).array()
-}
 
-class IntMockPacketDecoder(
-        private val peerInfos: Array<PeerInfo>
-) : XPacketDecoder<Int> {
-
-    // FYI: [et]: This logic corresponds to the [EbftPacketConverter]'s one
     override fun parseIdentPacket(rawMessage: ByteArray): IdentPacketInfo = IdentPacketInfo(NodeRid(rawMessage), BlockchainRid.ZERO_RID)
 
     override fun parseVersionPacket(rawMessage: ByteArray): Long = rawMessage.decodeToString().toLong()

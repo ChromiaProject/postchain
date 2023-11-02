@@ -6,8 +6,7 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.network.XPacketDecoder
-import net.postchain.network.XPacketEncoder
+import net.postchain.network.XPacketCodec
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.peer.PeerConnection
 import net.postchain.network.peer.PeerConnectionDescriptor
@@ -15,9 +14,8 @@ import net.postchain.network.peer.PeerConnectionDescriptorFactory
 import net.postchain.network.peer.PeerPacketHandler
 
 class NettyServerPeerConnection<PacketType>(
-        packetEncoder: XPacketEncoder<PacketType>,
-        packetDecoder: XPacketDecoder<PacketType>,
-) : NettyPeerConnection<PacketType>(packetEncoder, packetDecoder) {
+        packetCodec: XPacketCodec<PacketType>
+) : NettyPeerConnection<PacketType>(packetCodec) {
 
     private lateinit var context: ChannelHandlerContext
     private var peerPacketHandler: PeerPacketHandler? = null
@@ -82,7 +80,7 @@ class NettyServerPeerConnection<PacketType>(
 
     private fun handleVersion(message: ByteArray) {
         if (!hasReceivedVersion) {
-            descriptor().packetVersion = packetDecoder.parseVersionPacket(message)
+            descriptor().packetVersion = packetCodec.parseVersionPacket(message)
             logger.info { "Got packet version ${descriptor().packetVersion} from ${descriptor().nodeId.toHex()}" }
             hasReceivedVersion = true
         }
@@ -96,8 +94,8 @@ class NettyServerPeerConnection<PacketType>(
     }
 
     private fun handleMessage(message: ByteArray, ctx: ChannelHandlerContext?) {
-        if (packetDecoder.isIdentPacket(message)) {
-            val identPacketInfo = packetDecoder.parseIdentPacket(message)
+        if (packetCodec.isIdentPacket(message)) {
+            val identPacketInfo = packetCodec.parseIdentPacket(message)
             peerConnectionDescriptor = PeerConnectionDescriptorFactory.createFromIdentPacketInfo(identPacketInfo)
 
             // Notify peer that we have ping capability

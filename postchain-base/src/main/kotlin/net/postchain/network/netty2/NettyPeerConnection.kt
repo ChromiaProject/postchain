@@ -6,13 +6,11 @@ import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import mu.KLogging
-import net.postchain.network.XPacketDecoder
-import net.postchain.network.XPacketEncoder
+import net.postchain.network.XPacketCodec
 import net.postchain.network.peer.PeerConnection
 
 abstract class NettyPeerConnection<PacketType>(
-        protected val packetEncoder: XPacketEncoder<PacketType>,
-        protected val packetDecoder: XPacketDecoder<PacketType>
+        protected val packetCodec: XPacketCodec<PacketType>
 ) : ChannelInboundHandlerAdapter(), PeerConnection {
 
     companion object : KLogging() {
@@ -27,7 +25,7 @@ abstract class NettyPeerConnection<PacketType>(
 
     protected fun isVersion(msg: ByteArray): Boolean {
         if (versionMessage == null) {
-            if (packetDecoder.isVersionPacket(msg)) {
+            if (packetCodec.isVersionPacket(msg)) {
                 versionMessage = msg
                 return true
             }
@@ -42,7 +40,7 @@ abstract class NettyPeerConnection<PacketType>(
     }
 
     protected fun sendVersion(ctx: ChannelHandlerContext) {
-        ctx.writeAndFlush(Transport.wrapMessage(packetEncoder.makeVersionPacket()))
+        ctx.writeAndFlush(Transport.wrapMessage(packetCodec.makeVersionPacket()))
     }
 
     protected fun registerIdleStateHandler(ctx: ChannelHandlerContext) {
