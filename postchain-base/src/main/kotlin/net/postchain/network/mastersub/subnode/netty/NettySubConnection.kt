@@ -61,9 +61,12 @@ class NettySubConnection(
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         val bytes = Transport.unwrapMessage(msg as ByteBuf)
-        val message = MsCodec.decode(bytes)
-        messageHandler?.onMessage(message)
-        msg.release()
+        try {
+            val message = MsCodec.decode(bytes)
+            messageHandler?.onMessage(message)
+        } finally {
+            msg.release()
+        }
     }
 
     override fun accept(handler: MsMessageHandler) {
