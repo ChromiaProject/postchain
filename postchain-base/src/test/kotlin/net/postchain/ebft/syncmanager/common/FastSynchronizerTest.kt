@@ -699,7 +699,7 @@ class FastSynchronizerTest {
     @Test
     fun `Status should trigger status received`() {
         // setup
-        addMessage(Status(blockRID.data, height, false, 0, 0, 0))
+        addMessage(Status(blockRID.data, height, false, 0, 0, 0, null))
         doNothing().whenever(peerStatuses).statusReceived(isA(), anyLong())
         // execute
         sut.processMessages()

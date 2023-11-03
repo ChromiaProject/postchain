@@ -651,7 +651,6 @@ class FastSynchronizer(
      */
     internal fun processMessages() {
         messageDurationTracker.cleanup()
-        // TODO: Handle version
         for ((peerId, _, message) in communicationManager.getPackets()) {
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue

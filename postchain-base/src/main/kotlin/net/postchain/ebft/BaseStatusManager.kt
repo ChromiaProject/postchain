@@ -14,7 +14,6 @@ import net.postchain.logging.REVOLTED_ON_NODE_TAG
 import net.postchain.logging.REVOLTING_NODE_TAG
 import net.postchain.metrics.NodeStatusMetrics
 import java.time.Clock
-import java.util.Arrays
 
 /**
  * StatusManager manages the status of the consensus protocol
@@ -99,6 +98,8 @@ class BaseStatusManager(
         ) {
             nodeStatuses[nodeIndex] = status
             stateChangeTracker.statusChange(nodeRids[nodeIndex], status)
+            status.signature?.let { commitSignatures[nodeIndex] = it }
+
             recomputeStatus()
         }
     }
@@ -145,6 +146,7 @@ class BaseStatusManager(
             round = 0
             revolting = false
             state = NodeBlockState.WaitBlock
+            signature = null
         }
         resetCommitSignatures()
         intent = DoNothingIntent
@@ -220,6 +222,7 @@ class BaseStatusManager(
         myStatus.blockRID = blockRID
         myStatus.serial += 1
         myStatus.state = NodeBlockState.HaveBlock
+        myStatus.signature = mySignature
         commitSignatures[myIndex] = mySignature
         intent = DoNothingIntent
         stateChangeTracker.myStatusChange(myStatus)
@@ -297,7 +300,7 @@ class BaseStatusManager(
     @Synchronized
     override fun onCommitSignature(nodeIndex: Int, blockRID: ByteArray, signature: Signature) {
         if (myStatus.state == NodeBlockState.Prepared
-                && Arrays.equals(blockRID, myStatus.blockRID)) {
+                && blockRID.contentEquals(myStatus.blockRID)) {
             this.commitSignatures[nodeIndex] = signature
             recomputeStatus()
         } else {
@@ -340,6 +343,8 @@ class BaseStatusManager(
         return nodeStatusesTimestamps[nodeIndex]
     }
 
+    override fun shouldApplySignature(state: NodeBlockState): Boolean = state == NodeBlockState.Prepared
+
     /**
      * Recompute status until no more updates occur.
      */
@@ -370,6 +375,7 @@ class BaseStatusManager(
             myStatus.state = NodeBlockState.WaitBlock
             myStatus.blockRID = null
             myStatus.serial += 1
+            myStatus.signature = null
             resetCommitSignatures()
         }
 

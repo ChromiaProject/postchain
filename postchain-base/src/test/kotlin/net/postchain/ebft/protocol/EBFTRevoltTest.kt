@@ -47,8 +47,8 @@ class EBFTRevoltTest : EBFTProtocolBase() {
         verifyIntent(DoNothingIntent)
         // incoming messages
         messagesToReceive(
-                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal)),
-                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal))
+                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal, null)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal, null))
         )
         // execute
         statusManager.onStartRevolting()
@@ -72,7 +72,7 @@ class EBFTRevoltTest : EBFTProtocolBase() {
         verifyIntent(DoNothingIntent)
         // incoming messages
         messagesToReceive(
-                ReceivedPacket(nodeRid0, 1, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal))
+                ReceivedPacket(nodeRid0, 1, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal, null))
         )
         // execute
         syncManager.update()
@@ -131,8 +131,8 @@ class EBFTRevoltTest : EBFTProtocolBase() {
          */
         // incoming messages
         messagesToReceive(
-                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal)),
-                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal))
+                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal, null)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal, null))
         )
         syncManager.update()
         verifyIntent(BuildBlockIntent)
@@ -156,8 +156,8 @@ class EBFTRevoltTest : EBFTProtocolBase() {
          */
         // incoming messages
         messagesToReceive(
-                ReceivedPacket(nodeRid2, 1, Status(null, 1, true, 0, 5, WaitBlock.ordinal)),
-                ReceivedPacket(nodeRid3, 1, Status(null, 1, true, 0, 5, WaitBlock.ordinal))
+                ReceivedPacket(nodeRid2, 1, Status(null, 1, true, 0, 5, WaitBlock.ordinal, null)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 1, true, 0, 5, WaitBlock.ordinal, null))
         )
         // execute
         statusManager.onStartRevolting()
@@ -186,9 +186,9 @@ class EBFTRevoltTest : EBFTProtocolBase() {
         reset(commManager)
         // incoming messages
         messagesToReceive(
-                ReceivedPacket(nodeRid0, 1, Status(null, 0, true, 4, 1, WaitBlock.ordinal)),
-                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal)),
-                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal))
+                ReceivedPacket(nodeRid0, 1, Status(null, 0, true, 4, 1, WaitBlock.ordinal, null)),
+                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal, null)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal, null))
         )
         // execute
         syncManager.update()
@@ -209,9 +209,9 @@ class EBFTRevoltTest : EBFTProtocolBase() {
         // setup
         // incoming messages
         messagesToReceive(
-                ReceivedPacket(nodeRid0, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal)),
-                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal)),
-                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal))
+                ReceivedPacket(nodeRid0, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal, null)),
+                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal, null)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal, null))
         )
         syncManager.update()
         reset(commManager)

@@ -46,6 +46,7 @@ import org.apache.commons.configuration2.PropertiesConfiguration
 import org.junit.jupiter.api.BeforeEach
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.ArgumentMatchers.eq
+import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -81,7 +82,10 @@ abstract class EBFTProtocolBase {
     protected val header0 = createBlockHeader(blockchainRid, 2L, 0, prevBlockRid, 1)
     protected val blockRid0 = header0.blockRID
 
-    protected val blockDatabase: BlockDatabase = mock()
+    protected val blockDatabase: BlockDatabase = mock {
+        on { applyAndVerifyBlockSignature(any()) } doReturn true
+    }
+
     protected val blockStrategy: BlockBuildingStrategy = mock()
     protected val nodeStateTracker: NodeStateTracker = mock()
     protected val counter: Counter = mock()
@@ -152,7 +156,7 @@ abstract class EBFTProtocolBase {
         statusManager.recomputeStatus()
     }
 
-    protected fun verifyStatus(blockRID: ByteArray?, height: Long, serial: Long, round: Long, revolting: Boolean, state: NodeBlockState) {
+    protected fun verifyStatus(blockRID: ByteArray?, height: Long, serial: Long, round: Long, revolting: Boolean, state: NodeBlockState, signature: Signature? = null) {
         argumentCaptor<Status> {
             verify(commManager).broadcastPacket(capture(), eq(null))
             assertThat(firstValue.blockRID).isEqualTo(blockRID)
@@ -161,6 +165,7 @@ abstract class EBFTProtocolBase {
             assertThat(firstValue.round).isEqualTo(round)
             assertThat(firstValue.revolting).isEqualTo(revolting)
             assertThat(firstValue.state).isEqualTo(state.ordinal)
+            assertThat(firstValue.signature).isEqualTo(signature)
         }
     }
 

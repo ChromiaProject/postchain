@@ -70,7 +70,7 @@ class MessagesTest {
         val serial = 123456L
         val state = 123
 
-        val status = Status(blockRID, height, revolting, round, serial, state)
+        val status = Status(blockRID, height, revolting, round, serial, state, null)
         val encoded = status.encoded(version).value
         val expected = EbftMessage.decodeAs<Status>(encoded, version)
 
@@ -80,6 +80,7 @@ class MessagesTest {
         assertEquals(status.round, expected.round)
         assertEquals(status.serial, expected.serial)
         assertEquals(status.state, expected.state)
+        assertEquals(status.signature, expected.signature)
     }
 
     @Test
