@@ -102,29 +102,58 @@ class Status(
         val revolting: Boolean,
         val round: Long,
         val serial: Long,
-        val state: Int
+        val state: Int,
+        val signature: Signature?
 ) : EbftMessage(MessageTopic.STATUS) {
 
     companion object {
-        fun fromGtv(gtv: GtvArray): Status = Status(
-                gtvToNullableByteArray(gtv[1]),
-                gtv[2].asInteger(),
-                gtv[3].asBoolean(),
-                gtv[4].asInteger(),
-                gtv[5].asInteger(),
-                gtv[6].asInteger().toInt()
-        )
+        fun fromGtv(gtv: GtvArray, version: Long): Status {
+            val signature = when {
+                version >= 2 -> {
+                    val sigSubjectID = gtvToNullableByteArray(gtv[7])
+                    val sigData = gtvToNullableByteArray(gtv[8])
+                    if (sigSubjectID != null && sigData != null) Signature(sigSubjectID, sigData) else null
+                }
+
+                else ->
+                    null
+            }
+            return Status(
+                    gtvToNullableByteArray(gtv[1]),
+                    gtv[2].asInteger(),
+                    gtv[3].asBoolean(),
+                    gtv[4].asInteger(),
+                    gtv[5].asInteger(),
+                    gtv[6].asInteger().toInt(),
+                    signature
+            )
+        }
     }
 
-    override fun toGtv(ebftVersion: Long): Gtv = gtv(
-            topic.toGtv(),
-            nullableByteArrayToGtv(blockRID),
-            gtv(height),
-            gtv(revolting),
-            gtv(round),
-            gtv(serial),
-            gtv(state.toLong())
-    )
+    override fun toGtv(ebftVersion: Long): Gtv =
+            when {
+                ebftVersion >= 2 -> gtv(
+                        topic.toGtv(),
+                        nullableByteArrayToGtv(blockRID),
+                        gtv(height),
+                        gtv(revolting),
+                        gtv(round),
+                        gtv(serial),
+                        gtv(state.toLong()),
+                        nullableByteArrayToGtv(signature?.subjectID),
+                        nullableByteArrayToGtv(signature?.data)
+                )
+
+                else -> gtv(
+                        topic.toGtv(),
+                        nullableByteArrayToGtv(blockRID),
+                        gtv(height),
+                        gtv(revolting),
+                        gtv(round),
+                        gtv(serial),
+                        gtv(state.toLong())
+                )
+            }
 }
 
 /**
@@ -247,8 +276,7 @@ fun completeBlockToGtv(data: BlockData, height: Long, witness: ByteArray): List<
 }
 
 fun ebftMessageToString(blockchainConfig: BlockchainConfiguration): (EbftMessage, ebftVersion: Long) -> String =
-        { message, _ ->
-            // TODO: Handle version
+        { message, version ->
             fun getBlockHeaderRid(header: ByteArray): String = blockchainConfig.decodeBlockHeader(header).blockRID.toHex()
             when (message) {
                 is Transaction -> "Transaction(txRID=${blockchainConfig.getTransactionFactory().decodeTransaction(message.data).getRID().toHex()})"
@@ -259,7 +287,11 @@ fun ebftMessageToString(blockchainConfig: BlockchainConfiguration): (EbftMessage
                 is GetUnfinishedBlock -> "GetUnfinishedBlock(blockRid=${message.blockRID.toHex()})"
                 is UnfinishedBlock -> "UnfinishedBlock(blockRid=${getBlockHeaderRid(message.header)})"
                 is Identification -> "Identification(pubkey=${message.pubKey.toHex()}, blockRid=${message.blockchainRID.toHex()}, timestamp=${message.timestamp})"
-                is Status -> "Status(blockRID=${message.blockRID?.toHex() ?: ""}, height=${message.height}, revolting=${message.revolting}, round=${message.round}, serial=${message.serial}, state=${message.state})"
+                is Status -> when {
+                    version >= 2 -> "Status(blockRID=${message.blockRID?.toHex() ?: ""}, height=${message.height}, revolting=${message.revolting}, round=${message.round}, serial=${message.serial}, state=${message.state}, signature=${message.signature})"
+                    else -> "Status(blockRID=${message.blockRID?.toHex() ?: ""}, height=${message.height}, revolting=${message.revolting}, round=${message.round}, serial=${message.serial}, state=${message.state})"
+                }
+
                 is GetBlockHeaderAndBlock -> "GetBlockHeaderAndBlock(height=${message.height})"
                 is BlockHeader -> "BlockHeader(blockRID=${getBlockHeaderRid(message.header)}, requestedHeight=${message.requestedHeight})"
                 is GetBlockRange -> "GetBlockRange(startAtHeight=${message.startAtHeight})"

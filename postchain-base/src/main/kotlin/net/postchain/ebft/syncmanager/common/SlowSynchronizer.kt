@@ -129,7 +129,6 @@ class SlowSynchronizer(
     internal fun processMessages(sleepData: SlowSyncSleepData) {
         messageDurationTracker.cleanup()
         for ((peerId, _, message) in communicationManager.getPackets()) {
-            // TODO: Handle version
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue
             }

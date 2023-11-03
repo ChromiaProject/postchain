@@ -35,7 +35,8 @@ class StatusSender(
                     myStatus.revolting,
                     myStatus.round,
                     myStatus.serial,
-                    myStatus.state.ordinal
+                    myStatus.state.ordinal,
+                    myStatus.signature
             )
 
             previousMessage = previousMessage?.takeIf { !isNewSerial }?.apply { communicationManager.broadcastPacket(statusMessage, this.second) }

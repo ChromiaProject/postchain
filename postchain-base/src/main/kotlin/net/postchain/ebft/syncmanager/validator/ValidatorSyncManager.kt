@@ -120,11 +120,10 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private fun dispatchMessages() {
         messageDurationTracker.cleanup()
         for ((xPeerId, _, message) in communicationManager.getPackets()) {
-            //TODO: Handle version
             val nodeIndex = indexOfValidator(xPeerId)
             val isReadOnlyNode = nodeIndex == -1 // This must be a read-only node since not in the validator list
 
-            logger.trace { "Received message type ${message.javaClass.simpleName} from node $nodeIndex" }
+            logger.trace { "Received message type ${message.javaClass.simpleName} from node $xPeerId ($nodeIndex)" }
 
             try {
                 when (message) {
@@ -147,6 +146,10 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                                 revolting = message.revolting
                                                 round = message.round
                                                 state = NodeBlockState.values()[message.state]
+                                                if (shouldSetSignature(state, message)) {
+                                                    logger.trace { "Got signature from Status for ${blockRID?.toHex()} from $xPeerId" }
+                                                    signature = message.signature
+                                                }
                                             }.also {
                                                 statusManager.onStatusUpdate(nodeIndex, it)
                                             }
@@ -162,7 +165,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                         logger.debug("Received signature not needed")
                                     } else if (!smBlockRID.contentEquals(message.blockRID)) {
                                         logger.info("Receive signature for a different block")
-                                    } else if (this.blockDatabase.verifyBlockSignature(signature)) {
+                                    } else if (this.blockDatabase.applyAndVerifyBlockSignature(signature)) {
                                         this.statusManager.onCommitSignature(nodeIndex, message.blockRID, signature)
                                     } else {
                                         logger.warn { "BlockSignature from peer: $xPeerId is invalid for block with with RID: ${smBlockRID.toHex()}" }
@@ -216,6 +219,13 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             }
         }
     }
+
+    private fun shouldSetSignature(state: NodeBlockState, message: Status) =
+            (statusManager.shouldApplySignature(state)
+                    && message.signature != null
+                    && message.blockRID != null
+                    && message.blockRID.contentEquals(statusManager.myStatus.blockRID)
+                    && blockDatabase.applyAndVerifyBlockSignature(message.signature))
 
     private fun processIncomingConfig(incomingConfigHash: ByteArray, incomingHeight: Long) {
         val bcConfig = workerContext.blockchainConfiguration

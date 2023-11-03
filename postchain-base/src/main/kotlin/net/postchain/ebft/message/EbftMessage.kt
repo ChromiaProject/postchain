@@ -12,12 +12,11 @@ import net.postchain.network.common.LazyPacket
 abstract class EbftMessage(val topic: MessageTopic) {
 
     companion object {
-        fun decode(bytes: ByteArray, @Suppress("UNUSED_PARAMETER") ebftVersion: Long): EbftMessage {
-            // TODO: Use the version and inject it and parse messages correctly
+        fun decode(bytes: ByteArray, version: Long): EbftMessage {
             val data = GtvDecoder.decodeGtv(bytes) as GtvArray
             return when (val topic = data[0].asInteger().toInt()) {
                 MessageTopic.ID.value -> Identification(data[1].asByteArray(), BlockchainRid(data[2].asByteArray()), data[3].asInteger())
-                MessageTopic.STATUS.value -> Status.fromGtv(data)
+                MessageTopic.STATUS.value -> Status.fromGtv(data, version)
                 MessageTopic.TX.value -> Transaction(data[1].asByteArray())
                 MessageTopic.BLOCKSIG.value -> BlockSignature(data[1].asByteArray(), Signature(data[2].asByteArray(), data[3].asByteArray()))
                 MessageTopic.GETBLOCKSIG.value -> GetBlockSignature(data[1].asByteArray())

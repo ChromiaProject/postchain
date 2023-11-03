@@ -209,7 +209,7 @@ class BaseBlockDatabase(
         }
     }
 
-    override fun verifyBlockSignature(s: Signature): Boolean {
+    override fun applyAndVerifyBlockSignature(s: Signature): Boolean {
         return if (witnessBuilder != null) {
             try {
                 witnessBuilder!!.applySignature(s)
