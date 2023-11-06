@@ -46,6 +46,7 @@ class BaseBlockManager(
 
     @Volatile
     private var intent: BlockIntent = DoNothingIntent
+
     @Volatile
     private var previousBlockIntent: BlockIntent = DoNothingIntent
 
@@ -205,24 +206,26 @@ class BaseBlockManager(
             val bcConfig = workerContext.blockchainConfiguration
             val incomingBlockConfigHash = blockHeader.getConfigHash()?.wrap()
 
-            withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
-                val isMyConfigPending = bcConfigProvider.isConfigPending(
+            val isMyConfigPending = withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
+                bcConfigProvider.isConfigPending(
                         ctx, bcConfig.blockchainRid, statusManager.myStatus.height, bcConfig.configHash
                 )
+            }
 
-                val lastBlockHeight = statusManager.myStatus.height - 1
-                val lastBlockConfigHash = blockDB.getBlockAtHeight(lastBlockHeight, false).get()
-                        ?.header?.getConfigHash()?.wrap()
+            val lastBlockHeight = statusManager.myStatus.height - 1
+            val lastBlockConfigHash = blockDB.getBlockAtHeight(lastBlockHeight, false).get()
+                    ?.header?.getConfigHash()?.wrap()
 
-                if (isMyConfigPending && incomingBlockConfigHash == lastBlockConfigHash) {
-                    // early adopter
-                    logger.info("Wrong config used. Chain will be restarted")
-                    workerContext.restartNotifier.notifyRestart(false)
-                } else if (bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, true)) {
-                    // late adopter
-                    logger.info("Wrong config used. Chain will be restarted")
-                    workerContext.restartNotifier.notifyRestart(true)
-                }
+            if (isMyConfigPending && incomingBlockConfigHash == lastBlockConfigHash) {
+                // early adopter
+                logger.info("Wrong config used. Chain will be restarted")
+                workerContext.restartNotifier.notifyRestart(false)
+            } else if (withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
+                        bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, true)
+                    }) {
+                // late adopter
+                logger.info("Wrong config used. Chain will be restarted")
+                workerContext.restartNotifier.notifyRestart(true)
             }
         }
     }
