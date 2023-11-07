@@ -1,6 +1,7 @@
 package net.postchain.ebft.syncmanager.validator
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.core.Shutdownable
 import net.postchain.ebft.message.AppliedConfig
@@ -20,12 +21,19 @@ class AppliedConfigSender(
         private val currentHeightProvider: () -> Long
 ) : Shutdownable {
 
+    var isStarted = false
+        private set
+
     private val configHash = workerContext.blockchainConfiguration.configHash
     private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(ThreadFactoryBuilder().setNameFormat("AppliedConfigSender-c${workerContext.blockchainConfiguration.chainID}").build())
     private var previousMessage: Pair<AppliedConfig, Map<Long, LazyPacket>>? = null
 
+    companion object : KLogging()
+
     fun start() {
         executor.scheduleAtFixedRate(::sendAppliedConfig, 0, interval.toMillis(), TimeUnit.MILLISECONDS)
+        logger.info { "AppliedConfigSender started" }
+        isStarted = true
     }
 
     private fun sendAppliedConfig() {
