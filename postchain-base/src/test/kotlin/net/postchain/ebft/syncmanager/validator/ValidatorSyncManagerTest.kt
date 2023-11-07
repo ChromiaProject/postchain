@@ -1,5 +1,8 @@
 package net.postchain.ebft.syncmanager.validator
 
+import assertk.assertThat
+import assertk.assertions.isFalse
+import assertk.assertions.isTrue
 import net.postchain.base.NetworkNodes
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.BlockchainRid
@@ -54,6 +57,11 @@ class ValidatorSyncManagerTest {
     private val chainId = 42L
     private val signers = mutableListOf(node0, node1)
     private val peerIds = mutableSetOf(nodeRid0, nodeRid1)
+    private var ensureAppliedConfigSenderCalled = false
+    private val ensureAppliedConfigSender: () -> Boolean = {
+        ensureAppliedConfigSenderCalled = true
+        true
+    }
 
     private val messageDurationTracker: MessageDurationTracker = mock()
     private val communicationManager: CommunicationManager<EbftMessage> = mock()
@@ -100,19 +108,45 @@ class ValidatorSyncManagerTest {
 
     @BeforeEach
     fun beforeEach() {
+        ensureAppliedConfigSenderCalled = false
         sut = spy(ValidatorSyncManager(workerContext, loggingContext, statusManager, blockManager, blockDatabase,
-                nodeStateTracker, revoltTracker, syncMetrics, { isProcessRunning }, false, clock))
+                nodeStateTracker, revoltTracker, syncMetrics, { isProcessRunning }, false, ensureAppliedConfigSender, clock))
     }
 
     @Nested
     inner class dispatchMessages {
+
+        @Test
+        fun `with version 1 should ensure AppliedConfigSender`() {
+            // setup
+            doNothing().whenever(sut).tryToSwitchToFastSync()
+            assertThat(ensureAppliedConfigSenderCalled).isFalse()
+            addMessage(nodeRid1, 1, Status(blockchainRid.data, height, false, 0, 0, 0, null, null))
+            // execute
+            sut.dispatchMessages()
+            // verify
+            assertThat(ensureAppliedConfigSenderCalled).isTrue()
+        }
+
+        @Test
+        fun `with version 2 should not ensure AppliedConfigSender`() {
+            // setup
+            doNothing().whenever(sut).tryToSwitchToFastSync()
+            assertThat(ensureAppliedConfigSenderCalled).isFalse()
+            addMessage(nodeRid1, 2, Status(blockchainRid.data, height, false, 0, 0, 0, null, null))
+            // execute
+            sut.dispatchMessages()
+            // verify
+            assertThat(ensureAppliedConfigSenderCalled).isFalse()
+        }
+
         @Test
         fun `with Status with config hash and we are revolting should process incoming config`() {
             // setup
             val nodeStatus = NodeStatus(height, 0).apply { revolting = true }
             doReturn(nodeStatus).whenever(statusManager).myStatus
             val configHash: ByteArray = "configHash".toByteArray()
-            addMessage(nodeRid1, Status(blockchainRid.data, height, false, 0, 0, 0, null, configHash))
+            addMessage(nodeRid1, 2, Status(blockchainRid.data, height, false, 0, 0, 0, null, configHash))
             doNothing().whenever(sut).processIncomingConfig(isA(), anyLong())
             doNothing().whenever(sut).tryToSwitchToFastSync()
             // execute
@@ -129,7 +163,7 @@ class ValidatorSyncManagerTest {
             val nodeStatus = NodeStatus(height, 0).apply { revolting = true }
             doReturn(nodeStatus).whenever(statusManager).myStatus
             val configHash: ByteArray = "configHash".toByteArray()
-            addMessage(nodeRid1, AppliedConfig(configHash, height))
+            addMessage(nodeRid1, 1, AppliedConfig(configHash, height))
             doNothing().whenever(sut).processIncomingConfig(isA(), anyLong())
             // execute
             sut.dispatchMessages()
@@ -138,8 +172,8 @@ class ValidatorSyncManagerTest {
         }
     }
 
-    private fun addMessage(from: NodeRid, message: EbftMessage) {
-        val packets = listOf(ReceivedPacket(from, 1, message))
+    private fun addMessage(from: NodeRid, version: Long, message: EbftMessage) {
+        val packets = listOf(ReceivedPacket(from, version, message))
         doReturn(packets).whenever(communicationManager).getPackets()
     }
 }

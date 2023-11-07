@@ -152,7 +152,7 @@ abstract class EBFTProtocolBase {
         doReturn(BaseStatusManager.ZERO_SERIAL_TIME).whenever(clock).millis()
         statusManager = BaseStatusManager(nodes, myNodeId, 0, nodeStatusMetrics, stateChangeTracker, clock)
         blockManager = BaseBlockManager(blockDatabase, statusManager, blockStrategy, workerContext)
-        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, syncMetrics, { true }, false, clock)
+        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, syncMetrics, { true }, false, { true }, clock)
         statusManager.recomputeStatus()
     }
 

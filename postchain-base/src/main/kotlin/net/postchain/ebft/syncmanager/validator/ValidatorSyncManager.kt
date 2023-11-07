@@ -66,6 +66,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val syncMetrics: SyncMetrics,
                            isProcessRunning: () -> Boolean,
                            startInFastSync: Boolean,
+                           private val ensureAppliedConfigSenderStarted: () -> Boolean,
                            private val clock: Clock = Clock.systemUTC()
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker) {
     private val blockchainConfiguration = workerContext.blockchainConfiguration
@@ -76,6 +77,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private var processingIntentDeadline = 0L
     private var lastStatusLogged: Long
     private val messageDurationTracker = workerContext.messageDurationTracker
+    private var appliedConfigSenderEnsured = false
 
     @Volatile
     private var useFastSyncAlgorithm: Boolean
@@ -119,7 +121,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     internal fun dispatchMessages() {
         messageDurationTracker.cleanup()
-        for ((xPeerId, _, message) in communicationManager.getPackets()) {
+        for ((xPeerId, version, message) in communicationManager.getPackets()) {
+            ensureAppliedConfigSender(version)
             val nodeIndex = indexOfValidator(xPeerId)
             val isReadOnlyNode = nodeIndex == -1 // This must be a read-only node since not in the validator list
 
@@ -214,6 +217,12 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             } catch (e: Exception) {
                 logger.error("Couldn't handle message $message. Ignoring and continuing", e)
             }
+        }
+    }
+
+    private fun ensureAppliedConfigSender(version: Long) {
+        if (version < 2 && !appliedConfigSenderEnsured) {
+            appliedConfigSenderEnsured = ensureAppliedConfigSenderStarted()
         }
     }
 
