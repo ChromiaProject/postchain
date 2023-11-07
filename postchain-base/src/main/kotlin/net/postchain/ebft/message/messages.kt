@@ -15,14 +15,14 @@ import net.postchain.gtv.GtvFactory.gtv
 
 class Transaction(val data: ByteArray) : EbftMessage(MessageTopic.TX) {
 
-    override fun toGtv(ebftVersion: Long): Gtv {
+    override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv(), gtv(data))
     }
 }
 
 class BlockSignature(val blockRID: ByteArray, val sig: Signature) : EbftMessage(MessageTopic.BLOCKSIG) {
 
-    override fun toGtv(ebftVersion: Long): Gtv {
+    override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv(), gtv(blockRID),
                 gtv(sig.subjectID), gtv(sig.data))
     }
@@ -30,7 +30,7 @@ class BlockSignature(val blockRID: ByteArray, val sig: Signature) : EbftMessage(
 
 class GetBlockSignature(val blockRID: ByteArray) : EbftMessage(MessageTopic.GETBLOCKSIG) {
 
-    override fun toGtv(ebftVersion: Long): Gtv {
+    override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv(), gtv(blockRID))
     }
 }
@@ -61,7 +61,7 @@ class CompleteBlock(val data: BlockData, val height: Long, val witness: ByteArra
         }
     }
 
-    override fun toGtv(ebftVersion: Long): Gtv {
+    override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv(),
                 gtv(data.header), gtv(data.transactions.map { gtv(it) }),
                 gtv(height), gtv(witness))
@@ -70,28 +70,28 @@ class CompleteBlock(val data: BlockData, val height: Long, val witness: ByteArra
 
 class GetBlockAtHeight(val height: Long) : EbftMessage(MessageTopic.GETBLOCKATHEIGHT) {
 
-    override fun toGtv(ebftVersion: Long): Gtv {
+    override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv(), gtv(height))
     }
 }
 
 class GetUnfinishedBlock(val blockRID: ByteArray) : EbftMessage(MessageTopic.GETUNFINISHEDBLOCK) {
 
-    override fun toGtv(ebftVersion: Long): Gtv {
+    override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv(), gtv(blockRID))
     }
 }
 
 class UnfinishedBlock(val header: ByteArray, val transactions: List<ByteArray>) : EbftMessage(MessageTopic.UNFINISHEDBLOCK) {
 
-    override fun toGtv(ebftVersion: Long): Gtv {
+    override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv(), gtv(header), gtv(transactions.map { gtv(it) }))
     }
 }
 
 class Identification(val pubKey: ByteArray, val blockchainRID: BlockchainRid, val timestamp: Long) : EbftMessage(MessageTopic.ID) {
 
-    override fun toGtv(ebftVersion: Long): Gtv {
+    override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv(), gtv(pubKey), gtv(blockchainRID), gtv(timestamp))
     }
 }
@@ -103,20 +103,22 @@ class Status(
         val round: Long,
         val serial: Long,
         val state: Int,
-        val signature: Signature?
+        val signature: Signature? = null,
+        val configHash: ByteArray? = null
 ) : EbftMessage(MessageTopic.STATUS) {
 
     companion object {
         fun fromGtv(gtv: GtvArray, version: Long): Status {
-            val signature = when {
+            var signature: Signature? = null
+            var configHash: ByteArray? = null
+            when {
                 version >= 2 -> {
                     val sigSubjectID = gtvToNullableByteArray(gtv[7])
                     val sigData = gtvToNullableByteArray(gtv[8])
-                    if (sigSubjectID != null && sigData != null) Signature(sigSubjectID, sigData) else null
-                }
+                    signature = if (sigSubjectID != null && sigData != null) Signature(sigSubjectID, sigData) else null
 
-                else ->
-                    null
+                    configHash = gtvToNullableByteArray(gtv[9])
+                }
             }
             return Status(
                     gtvToNullableByteArray(gtv[1]),
@@ -125,14 +127,15 @@ class Status(
                     gtv[4].asInteger(),
                     gtv[5].asInteger(),
                     gtv[6].asInteger().toInt(),
-                    signature
+                    signature,
+                    configHash
             )
         }
     }
 
-    override fun toGtv(ebftVersion: Long): Gtv =
+    override fun toGtv(version: Long): Gtv =
             when {
-                ebftVersion >= 2 -> gtv(
+                version >= 2 -> gtv(
                         topic.toGtv(),
                         nullableByteArrayToGtv(blockRID),
                         gtv(height),
@@ -141,7 +144,8 @@ class Status(
                         gtv(serial),
                         gtv(state.toLong()),
                         nullableByteArrayToGtv(signature?.subjectID),
-                        nullableByteArrayToGtv(signature?.data)
+                        nullableByteArrayToGtv(signature?.data),
+                        nullableByteArrayToGtv(configHash)
                 )
 
                 else -> gtv(
@@ -165,7 +169,7 @@ class Status(
  * If the peer doesn't have that block, it will reply with the BlockHeader of its tip
  */
 class GetBlockHeaderAndBlock(val height: Long) : EbftMessage(MessageTopic.GETBLOCKHEADERANDBLOCK) {
-    override fun toGtv(ebftVersion: Long): Gtv {
+    override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv(), gtv(height))
     }
 }
@@ -177,7 +181,7 @@ class GetBlockHeaderAndBlock(val height: Long) : EbftMessage(MessageTopic.GETBLO
  */
 class BlockHeader(val header: ByteArray, val witness: ByteArray, val requestedHeight: Long)
     : EbftMessage(MessageTopic.BLOCKHEADER) {
-    override fun toGtv(ebftVersion: Long): Gtv {
+    override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv(), gtv(header), gtv(witness), gtv(requestedHeight))
     }
 }
@@ -190,7 +194,7 @@ class BlockHeader(val header: ByteArray, val witness: ByteArray, val requestedHe
  */
 class GetBlockRange(val startAtHeight: Long) : EbftMessage(MessageTopic.GETBLOCKRANGE) {
 
-    override fun toGtv(ebftVersion: Long): Gtv {
+    override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv(), gtv(startAtHeight))
     }
 
@@ -225,7 +229,7 @@ class BlockRange(val startAtHeight: Long, val isFull: Boolean, val blocks: List<
         }
     }
 
-    override fun toGtv(ebftVersion: Long): Gtv {
+    override fun toGtv(version: Long): Gtv {
         val gtvBlockList = mutableListOf<Gtv>()
         for (block in blocks) {
             val gtvBlock = gtv(completeBlockToGtv(block.data, block.height, block.witness))
@@ -244,7 +248,7 @@ class BlockRange(val startAtHeight: Long, val isFull: Boolean, val blocks: List<
  */
 class AppliedConfig(val configHash: ByteArray, val height: Long) : EbftMessage(MessageTopic.APPLIEDCONFIG) {
 
-    override fun toGtv(ebftVersion: Long): Gtv {
+    override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv(), gtv(configHash), gtv(height))
     }
 
@@ -255,10 +259,10 @@ class AppliedConfig(val configHash: ByteArray, val height: Long) : EbftMessage(M
  *
  * @property version is the version supported
  */
-class EbftVersion(val version: Long) : EbftMessage(MessageTopic.EBFTVERSION) {
+class EbftVersion(val ebftVersion: Long) : EbftMessage(MessageTopic.EBFTVERSION) {
 
-    override fun toGtv(ebftVersion: Long): Gtv {
-        return gtv(topic.toGtv(), gtv(version))
+    override fun toGtv(version: Long): Gtv {
+        return gtv(topic.toGtv(), gtv(ebftVersion))
     }
 
 }
@@ -288,8 +292,23 @@ fun ebftMessageToString(blockchainConfig: BlockchainConfiguration): (EbftMessage
                 is UnfinishedBlock -> "UnfinishedBlock(blockRid=${getBlockHeaderRid(message.header)})"
                 is Identification -> "Identification(pubkey=${message.pubKey.toHex()}, blockRid=${message.blockchainRID.toHex()}, timestamp=${message.timestamp})"
                 is Status -> when {
-                    version >= 2 -> "Status(blockRID=${message.blockRID?.toHex() ?: ""}, height=${message.height}, revolting=${message.revolting}, round=${message.round}, serial=${message.serial}, state=${message.state}, signature=${message.signature})"
-                    else -> "Status(blockRID=${message.blockRID?.toHex() ?: ""}, height=${message.height}, revolting=${message.revolting}, round=${message.round}, serial=${message.serial}, state=${message.state})"
+                    version >= 2 -> "Status(blockRID=${message.blockRID?.toHex() ?: ""}" +
+                            ", height=${message.height}" +
+                            ", revolting=${message.revolting}" +
+                            ", round=${message.round}" +
+                            ", serial=${message.serial}" +
+                            ", state=${message.state}" +
+                            ", signature=${message.signature}" +
+                            ", configHash=${message.configHash?.toHex()}" +
+                            ")"
+
+                    else -> "Status(blockRID=${message.blockRID?.toHex() ?: ""}" +
+                            ", height=${message.height}" +
+                            ", revolting=${message.revolting}" +
+                            ", round=${message.round}" +
+                            ", serial=${message.serial}" +
+                            ", state=${message.state}" +
+                            ")"
                 }
 
                 is GetBlockHeaderAndBlock -> "GetBlockHeaderAndBlock(height=${message.height})"
@@ -297,7 +316,7 @@ fun ebftMessageToString(blockchainConfig: BlockchainConfiguration): (EbftMessage
                 is GetBlockRange -> "GetBlockRange(startAtHeight=${message.startAtHeight})"
                 is BlockRange -> "BlockRange(startAtHeight=${message.startAtHeight}, isFull=${message.isFull}, noOfBlocks=${message.blocks.size})"
                 is AppliedConfig -> "AppliedConfig(configHash=${message.configHash.toHex()}, height=${message.height})"
-                is EbftVersion -> "EbftVersion(version=${message.version})"
+                is EbftVersion -> "EbftVersion(version=${message.ebftVersion})"
                 else -> "Unknown message type ${message.javaClass.canonicalName}"
             }
         }

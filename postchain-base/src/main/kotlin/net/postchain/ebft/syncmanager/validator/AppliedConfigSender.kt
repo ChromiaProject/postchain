@@ -7,6 +7,7 @@ import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.network.PacketVersionFilter
 import net.postchain.network.common.LazyPacket
 import java.time.Duration
 import java.util.concurrent.Executors
@@ -35,10 +36,17 @@ class AppliedConfigSender(
             val nextHeight = currentHeightProvider() + 1
             val appliedConfigMessage = AppliedConfig(configHash, nextHeight)
 
-            previousMessage = previousMessage?.takeIf { it.first.height == nextHeight }?.apply { workerContext.communicationManager.broadcastPacket(appliedConfigMessage, this.second) }
-                    ?: (appliedConfigMessage to workerContext.communicationManager.broadcastPacket(appliedConfigMessage))
+            previousMessage = previousMessage
+                    ?.takeIf { it.first.height == nextHeight }
+                    ?.apply {
+                        workerContext.communicationManager.broadcastPacket(appliedConfigMessage, this.second, versionFilter())
+                    }
+                    ?: (appliedConfigMessage to workerContext.communicationManager.broadcastPacket(appliedConfigMessage, null, versionFilter()))
         }
     }
+
+    // From version 2, the config hash is included in the Status message instead.
+    private fun versionFilter(): PacketVersionFilter = { it < 2 }
 
     override fun shutdown() {
         executor.shutdownNow()

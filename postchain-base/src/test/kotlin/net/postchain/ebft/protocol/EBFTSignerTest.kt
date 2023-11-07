@@ -87,7 +87,7 @@ class EBFTSignerTest : EBFTProtocolBase() {
          */
         // incoming messages
         messagesToReceive(
-                ReceivedPacket(nodeRid2, 1, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal, null))
+                ReceivedPacket(nodeRid2, 1, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal))
         )
         // execute
         syncManager.update()
@@ -108,7 +108,7 @@ class EBFTSignerTest : EBFTProtocolBase() {
         // incoming messages
         messagesToReceive(
                 ReceivedPacket(nodeRid0, 2, Status(blockRid0, 0, false, 0, 2, Prepared.ordinal, Signature(node0, ByteArray(0)))),
-                ReceivedPacket(nodeRid2, 1, Status(blockRid0, 0, false, 0, 2, Prepared.ordinal, null))
+                ReceivedPacket(nodeRid2, 1, Status(blockRid0, 0, false, 0, 2, Prepared.ordinal))
         )
         // execute
         syncManager.update()
@@ -159,9 +159,9 @@ class EBFTSignerTest : EBFTProtocolBase() {
         assertThat(statusManager.myStatus.round).isEqualTo(0)
         // incoming messages
         messagesToReceive(
-                ReceivedPacket(nodeRid0, 1, Status(null, 0, true, 4, 1, WaitBlock.ordinal, null)),
-                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal, null)),
-                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal, null))
+                ReceivedPacket(nodeRid0, 1, Status(null, 0, true, 4, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal))
         )
         // execute
         syncManager.update()
@@ -181,7 +181,7 @@ class EBFTSignerTest : EBFTProtocolBase() {
 
         // incoming messages
         messagesToReceive(
-                ReceivedPacket(nodeRid0, 1, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal, null))
+                ReceivedPacket(nodeRid0, 1, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal))
         )
         // execute
         syncManager.update()
@@ -211,9 +211,9 @@ class EBFTSignerTest : EBFTProtocolBase() {
         assertThat(statusManager.myStatus.round).isEqualTo(0)
         // incoming messages
         messagesToReceive(
-                ReceivedPacket(nodeRid0, 1, Status(null, 0, true, 4, 1, WaitBlock.ordinal, null)),
-                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal, null)),
-                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal, null))
+                ReceivedPacket(nodeRid0, 1, Status(null, 0, true, 4, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal))
         )
         // execute
         syncManager.update()
@@ -236,8 +236,8 @@ class EBFTSignerTest : EBFTProtocolBase() {
         assertThat(statusManager.myStatus.round).isEqualTo(0)
         // incoming messages
         messagesToReceive(
-                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal, null)),
-                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal, null))
+                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal))
         )
         // execute
         syncManager.update()

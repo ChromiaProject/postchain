@@ -70,7 +70,7 @@ class MessagesTest {
         val serial = 123456L
         val state = 123
 
-        val status = Status(blockRID, height, revolting, round, serial, state, null)
+        val status = Status(blockRID, height, revolting, round, serial, state)
         val encoded = status.encoded(version).value
         val expected = EbftMessage.decodeAs<Status>(encoded, version)
 

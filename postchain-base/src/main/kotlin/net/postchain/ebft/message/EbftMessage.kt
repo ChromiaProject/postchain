@@ -39,9 +39,9 @@ abstract class EbftMessage(val topic: MessageTopic) {
         }
     }
 
-    fun encoded(ebftVersion: Long): LazyPacket = lazy { GtvEncoder.encodeGtv(toGtv(ebftVersion)) }
+    fun encoded(version: Long): LazyPacket = lazy { GtvEncoder.encodeGtv(toGtv(version)) }
 
-    abstract fun toGtv(ebftVersion: Long): Gtv
+    abstract fun toGtv(version: Long): Gtv
 
     override fun toString(): String {
         return this::class.simpleName!!

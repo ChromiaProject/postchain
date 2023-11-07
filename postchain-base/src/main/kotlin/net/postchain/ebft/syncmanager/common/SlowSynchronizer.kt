@@ -21,6 +21,7 @@ import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
+import net.postchain.ebft.message.Status
 import net.postchain.ebft.worker.WorkerContext
 import java.time.Clock
 import java.util.concurrent.locks.ReentrantLock
@@ -150,10 +151,8 @@ class SlowSynchronizer(
                         sleepData.updateData(processedBlocks)
                     }
 
-                    is AppliedConfig -> {
-                        if (checkIfWeNeedToApplyPendingConfig(peerId, message)) return
-                    }
-
+                    is Status -> if (message.configHash != null && checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
+                    is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
                     else -> logger.debug { "Unhandled type $message from peer $peerId" }
                 }
             } catch (e: Exception) {
