@@ -31,7 +31,6 @@ import net.postchain.core.block.BlockWitnessBuilder
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.SigMaker
-import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.gtv.Gtv
@@ -172,10 +171,9 @@ class AbstractSynchronizerTest {
     @Test
     fun `check pending config  with chain is 0 should return false`() {
         // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, height)
         doReturn(0L).whenever(blockchainConfiguration).chainID
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, height)).isFalse()
         // verify
         verify(workerContext, never()).blockchainConfigurationProvider
     }
@@ -183,21 +181,18 @@ class AbstractSynchronizerTest {
     @Test
     fun `check pending config  with blockchain configuration provider is not managed should return false`() {
         // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, height)
         val manualBlockchainConfigurationProvider: ManualBlockchainConfigurationProvider = mock()
         doReturn(manualBlockchainConfigurationProvider).whenever(workerContext).blockchainConfigurationProvider
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, height)).isFalse()
         // verify
         verify(workerContext, atLeastOnce()).blockchainConfigurationProvider
     }
 
     @Test
     fun `check pending config with applied config height is not next height should return false`() {
-        // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, height)
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, height)).isFalse()
         // verify
         verify(blockQueries, times(2)).getLastBlockHeight()
         verify(blockchainConfiguration, never()).configHash
@@ -205,10 +200,8 @@ class AbstractSynchronizerTest {
 
     @Test
     fun `check pending config with not new config should return false`() {
-        // setup
-        val appliedConfig = AppliedConfig(configHash, incomingHeight)
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, configHash, incomingHeight)).isFalse()
         // verify
         verify(storage, never()).openReadConnection(chainId)
     }
@@ -216,10 +209,9 @@ class AbstractSynchronizerTest {
     @Test
     fun `check pending config with config is not pending should return false`() {
         // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, incomingHeight)
         doReturn(false).whenever(blockchainConfigurationProvider).isConfigPending(isA(), isA(), anyLong(), isA())
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, incomingHeight)).isFalse()
         // verify
         verify(blockchainConfigurationProvider).isConfigPending(eContext, blockRID, incomingHeight, incomingConfigHash)
         verify(storage).openReadConnection(chainId)
@@ -229,11 +221,10 @@ class AbstractSynchronizerTest {
     @Test
     fun `check pending config with my pubKey is not part of signers should return false`() {
         // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, incomingHeight)
         val pendingSigners = listOf(pubKey1, pubKey2)
         doReturn(pendingSigners).whenever(blockchainConfigurationProvider).getPendingConfigSigners(isA(), anyLong(), isA())
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, incomingHeight)).isFalse()
         // verify
         verify(blockchainConfigurationProvider).getPendingConfigSigners(blockRID, incomingHeight, incomingConfigHash)
     }
@@ -241,21 +232,18 @@ class AbstractSynchronizerTest {
     @Test
     fun `check pending config with us as pending signer but do not need to apply it should return false`() {
         // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, incomingHeight)
         val pendingSigners = listOf(pubKey2, myPubKey)
         doReturn(pendingSigners).whenever(blockchainConfigurationProvider).getPendingConfigSigners(isA(), anyLong(), isA())
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, incomingHeight)).isFalse()
         // verify
         verify(blockchainConfigurationProvider).getPendingConfigSigners(blockRID, incomingHeight, incomingConfigHash)
     }
 
     @Test
     fun `check pending config with us as signer but need to wait for others should return false`() {
-        // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, incomingHeight)
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, incomingHeight)).isFalse()
         // verify
         verify(restartNotifier, never()).notifyRestart(true)
     }
@@ -263,11 +251,10 @@ class AbstractSynchronizerTest {
     @Test
     fun `check pending config with enough signatures should trigger restart and return true`() {
         // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, incomingHeight)
         currentSigners.remove(pubKey2.data)
         pendingSigners.add(PubKey(nodeHex))
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isTrue()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, incomingHeight)).isTrue()
         // verify
         verify(restartNotifier).notifyRestart(true)
     }

@@ -156,9 +156,9 @@ abstract class EBFTProtocolBase {
         statusManager.recomputeStatus()
     }
 
-    protected fun verifyStatus(blockRID: ByteArray?, height: Long, serial: Long, round: Long, revolting: Boolean, state: NodeBlockState, signature: Signature? = null) {
+    protected fun verifyStatus(blockRID: ByteArray?, height: Long, serial: Long, round: Long, revolting: Boolean, state: NodeBlockState, signature: Signature? = null, configHash: ByteArray? = null) {
         argumentCaptor<Status> {
-            verify(commManager).broadcastPacket(capture(), eq(null))
+            verify(commManager).broadcastPacket(capture(), eq(null), eq(null))
             assertThat(firstValue.blockRID).isEqualTo(blockRID)
             assertThat(firstValue.height).isEqualTo(height)
             assertThat(firstValue.serial).isEqualTo(serial)
@@ -166,6 +166,7 @@ abstract class EBFTProtocolBase {
             assertThat(firstValue.revolting).isEqualTo(revolting)
             assertThat(firstValue.state).isEqualTo(state.ordinal)
             assertThat(firstValue.signature).isEqualTo(signature)
+            assertThat(firstValue.configHash).isEqualTo(configHash)
         }
     }
 

@@ -29,6 +29,7 @@ import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.MessageDurationTracker
+import net.postchain.ebft.message.Status
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.gtv.Gtv
 import net.postchain.network.CommunicationManager
@@ -328,17 +329,31 @@ class SlowSynchronizerTest {
         }
 
         @Test
+        fun `with message Status and config hash should verify and apply config`() {
+            // setup
+            val configHash = "configHash".toByteArray()
+            val message = Status(blockRID.data, height, false, 0, 0, 0, null, configHash)
+            doReturn(listOf(ReceivedPacket(nodeRid, 1, message))).whenever(commManager).getPackets()
+            doReturn(true).whenever(sut).checkIfWeNeedToApplyPendingConfig(isA(), isA(), isA())
+            // execute
+            sut.processMessages(slowSyncSleepData)
+            // verify
+            verify(peerStatuses, never()).confirmModern(nodeRid)
+            verify(sut).checkIfWeNeedToApplyPendingConfig(nodeRid, configHash, height)
+        }
+
+        @Test
         fun `with message AppliedConfig should call internal method`() {
             // setup
             val configHash = "configHash".toByteArray()
             val message = AppliedConfig(configHash, height)
             doReturn(listOf(ReceivedPacket(nodeRid, 1, message))).whenever(commManager).getPackets()
-            doReturn(true).whenever(sut).checkIfWeNeedToApplyPendingConfig(isA(), isA())
+            doReturn(true).whenever(sut).checkIfWeNeedToApplyPendingConfig(isA(), isA(), isA())
             // execute
             sut.processMessages(slowSyncSleepData)
             // verify
             verify(peerStatuses, never()).confirmModern(nodeRid)
-            verify(sut).checkIfWeNeedToApplyPendingConfig(nodeRid, message)
+            verify(sut).checkIfWeNeedToApplyPendingConfig(nodeRid, configHash, height)
         }
 
         @Test

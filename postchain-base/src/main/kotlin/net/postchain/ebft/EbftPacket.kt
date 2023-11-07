@@ -23,7 +23,7 @@ import org.jetbrains.annotations.TestOnly
 
 // Whenever an Ebft message is changed, in a non-backward compatible way,
 // bump the version and handle old versions accordingly
-const val EBFT_VERSION: Long = 1
+const val EBFT_VERSION: Long = 2
 
 class EbftPacketCodec(val config: PeerCommConfiguration, val blockchainRID: BlockchainRid) : XPacketCodec<EbftMessage> {
 
@@ -72,7 +72,7 @@ class EbftPacketCodec(val config: PeerCommConfiguration, val blockchainRID: Bloc
         if (message !is EbftVersion) {
             throw UserMistake("Packet was not an EbftVersion. Got ${message::class}")
         }
-        return message.version
+        return message.ebftVersion
     }
 
     override fun decodePacket(pubKey: ByteArray, rawMessage: ByteArray, packetVersion: Long): EbftMessage {

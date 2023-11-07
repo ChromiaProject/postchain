@@ -69,7 +69,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val clock: Clock = Clock.systemUTC()
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker) {
     private val blockchainConfiguration = workerContext.blockchainConfiguration
-    private val statusSender = StatusSender(MAX_STATUS_INTERVAL, statusManager, workerContext.communicationManager, clock)
+    private val statusSender = StatusSender(MAX_STATUS_INTERVAL, workerContext, statusManager, clock)
     private val defaultTimeout = 1000
     private var currentTimeout: Int
     private var processingIntent: BlockIntent
@@ -117,7 +117,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     /**
      * Handle incoming messages
      */
-    private fun dispatchMessages() {
+    internal fun dispatchMessages() {
         messageDurationTracker.cleanup()
         for ((xPeerId, _, message) in communicationManager.getPackets()) {
             val nodeIndex = indexOfValidator(xPeerId)
@@ -151,6 +151,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                                     signature = message.signature
                                                 }
                                             }.also {
+                                                applyConfig(message.configHash, message.height)
                                                 statusManager.onStatusUpdate(nodeIndex, it)
                                             }
 
@@ -203,11 +204,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                     //  are still responding to our old requests. For this case this is harmless.
                                 }
 
-                                is AppliedConfig -> {
-                                    if (statusManager.myStatus.revolting) {
-                                        processIncomingConfig(message.configHash, message.height)
-                                    }
-                                }
+                                is AppliedConfig -> applyConfig(message.configHash, message.height)
 
                                 else -> throw ProgrammerMistake("Unhandled type ${message::class}")
                             }
@@ -220,6 +217,14 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         }
     }
 
+    private fun applyConfig(configHash: ByteArray?, height: Long) {
+        configHash?.apply {
+            if (statusManager.myStatus.revolting) {
+                processIncomingConfig(this, height)
+            }
+        }
+    }
+
     private fun shouldSetSignature(state: NodeBlockState, message: Status) =
             (statusManager.shouldApplySignature(state)
                     && message.signature != null
@@ -227,7 +232,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                     && message.blockRID.contentEquals(statusManager.myStatus.blockRID)
                     && blockDatabase.applyAndVerifyBlockSignature(message.signature))
 
-    private fun processIncomingConfig(incomingConfigHash: ByteArray, incomingHeight: Long) {
+    internal fun processIncomingConfig(incomingConfigHash: ByteArray, incomingHeight: Long) {
         val bcConfig = workerContext.blockchainConfiguration
         if (incomingHeight == statusManager.myStatus.height && !incomingConfigHash.contentEquals(bcConfig.configHash)) {
             restartWithNewConfigIfPossible()
@@ -456,7 +461,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         }
     }
 
-    private fun tryToSwitchToFastSync() {
+    internal fun tryToSwitchToFastSync() {
         val useFastSyncAlgorithmBefore = useFastSyncAlgorithm
         useFastSyncAlgorithm = EBFTNodesCondition(statusManager.nodeStatuses) { status ->
             status.height - statusManager.myStatus.height >= 3

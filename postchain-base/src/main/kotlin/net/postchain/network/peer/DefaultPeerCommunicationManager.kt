@@ -17,6 +17,7 @@ import net.postchain.logging.MESSAGE_TYPE_TAG
 import net.postchain.logging.SOURCE_NODE_TAG
 import net.postchain.logging.TARGET_NODE_TAG
 import net.postchain.network.CommunicationManager
+import net.postchain.network.PacketVersionFilter
 import net.postchain.network.ReceivedPacket
 import net.postchain.network.XPacketCodec
 import net.postchain.network.common.ConnectionManager
@@ -103,7 +104,11 @@ class DefaultPeerCommunicationManager<PacketType>(
         }
     }
 
-    override fun broadcastPacket(packet: PacketType, oldPackets: Map<Long, LazyPacket>?): Map<Long, LazyPacket> {
+    override fun broadcastPacket(
+            packet: PacketType,
+            oldPackets: Map<Long, LazyPacket>?,
+            allowedVersionsFilter: PacketVersionFilter?
+    ): Map<Long, LazyPacket> {
         if (logger.isTraceEnabled) {
             withLoggingContext(
                     *baseLoggingContextWithSender,
@@ -117,8 +122,13 @@ class DefaultPeerCommunicationManager<PacketType>(
         oldPackets?.let { encodedPackets.putAll(oldPackets) }
         val nodes = connectionManager.getConnectedNodes(chainId)
         nodes.forEach {
-            val lazyPacket = encodedPackets.getOrPut(getPeerPacketVersion(it)) { lazy { packetCodec.encodePacket(packet, getPeerPacketVersion(it)) } }
-            sendEncodedPacket(lazyPacket, it)
+            val peerPacketVersion = getPeerPacketVersion(it)
+            if (allowedVersionsFilter == null || allowedVersionsFilter(peerPacketVersion)) {
+                val lazyPacket = encodedPackets.getOrPut(peerPacketVersion) { lazy { packetCodec.encodePacket(packet, peerPacketVersion) } }
+                sendEncodedPacket(lazyPacket, it)
+            } else {
+                logger.trace { "Will not broadcast packet ${packetToString(packet, packetCodec.getPacketVersion())} to peer $it due to peer packet version $peerPacketVersion" }
+            }
         }
         return encodedPackets
     }
