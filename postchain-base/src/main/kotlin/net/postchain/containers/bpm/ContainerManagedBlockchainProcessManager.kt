@@ -264,7 +264,7 @@ class ContainerManagedBlockchainProcessManager(
     private fun getChain(chainId: Long): Chain {
         return chains.computeIfAbsent(chainId) {
             val brid = getBridByChainId(chainId)
-            val container = directoryDataSource.getContainerForBlockchain(brid)
+            val container = directoryDataSource.getContainerForBlockchainOnTheNode(brid)
             val containerIid = getContainerIid(container)
             val containerName = ContainerName.create(appConfig, container, containerIid)
             Chain(containerName, chainId, brid)

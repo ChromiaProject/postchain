@@ -7,7 +7,6 @@ import mu.withLoggingContext
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainState
 import net.postchain.core.NODE_ID_READ_ONLY
-import net.postchain.core.block.BlockQueries
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
@@ -27,10 +26,10 @@ import net.postchain.logging.CHAIN_IID_TAG
 
 class ReadOnlyBlockchainProcess(
         private val workerContext: WorkerContext,
-        val blockQueries: BlockQueries,
         private val blockchainState: BlockchainState
 ) : AbstractBlockchainProcess(
-        "${if (blockchainState == BlockchainState.PAUSED) "paused-" else ""}replica-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine
+        "${if (blockchainState == BlockchainState.PAUSED) "paused-" else ""}replica-c${workerContext.blockchainConfiguration.chainID}",
+        workerContext.engine
 ) {
 
     companion object : KLogging()
@@ -117,7 +116,7 @@ class ReadOnlyBlockchainProcess(
     override fun currentBlockHeight(): Long = when (syncMethod) {
         SyncMethod.FAST_SYNC -> fastSynchronizer.blockHeight.get()
         SyncMethod.SLOW_SYNC -> slowSynchronizer.blockHeight.get()
-        SyncMethod.NOT_SYNCING -> blockQueries.getLastBlockHeight().get()
-        SyncMethod.LOCAL_DB -> blockQueries.getLastBlockHeight().get()
+        SyncMethod.NOT_SYNCING -> blockchainEngine.getBlockQueries().getLastBlockHeight().get()
+        SyncMethod.LOCAL_DB -> blockchainEngine.getBlockQueries().getLastBlockHeight().get()
     }
 }

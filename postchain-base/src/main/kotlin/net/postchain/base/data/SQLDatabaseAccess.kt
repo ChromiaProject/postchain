@@ -858,6 +858,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.update(ctx.conn, sql, ctx.chainID) != 0
     }
 
+    override fun getBlockchainTables(ctx: EContext): List<String> {
+        return queryRunner.query(ctx.conn, cmdGetAllBlockchainTables(ctx.chainID), ColumnListHandler())
+    }
+
     override fun getChainId(ctx: AppContext, blockchainRid: BlockchainRid): Long? {
         val sql = "SELECT chain_iid FROM ${tableBlockchains()} WHERE blockchain_rid = ?"
         return queryRunner.query(ctx.conn, sql, nullableLongRes, blockchainRid.data)

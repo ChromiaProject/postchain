@@ -11,9 +11,17 @@ interface DirectoryDataSource : ManagedNodeDataSource {
     fun getContainersToRun(): List<String>?
 
     /**
-     * TODO: [POS-164]: Provide a KDoc
+     * Returns container blockchain is running in.
+     * NM API Version: 3
      */
     fun getContainerForBlockchain(brid: BlockchainRid): String
+
+    /**
+     * Returns a destination container for node for moving/unarchiving blockchains.
+     * Otherwise, returns getContainerForBlockchain() result.
+     * NM API Version: 12
+     */
+    fun getContainerForBlockchainOnTheNode(brid: BlockchainRid): String
 
     /**
      * What is the resource limits for this container?

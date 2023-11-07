@@ -30,7 +30,18 @@ open class BaseDirectoryDataSource(
                     buildArgs("blockchain_rid" to gtv(brid.data))
             ).asString()
         } else {
-            throw Exception("Directory1 v.{$nmApiVersion} doesn't support 'nm_get_container_for_blockchain' query")
+            throw Exception("Directory1 v.$nmApiVersion doesn't support 'nm_get_container_for_blockchain' query")
+        }
+    }
+
+    override fun getContainerForBlockchainOnTheNode(brid: BlockchainRid): String {
+        return if (nmApiVersion >= 12) {
+            query(
+                    "nm_get_container_for_blockchain_on_node",
+                    buildArgs("pubkey" to gtv(appConfig.pubKeyByteArray), "blockchain_rid" to gtv(brid.data))
+            ).asString()
+        } else {
+            getContainerForBlockchain(brid)
         }
     }
 
