@@ -4,7 +4,7 @@ import org.bitcoinj.crypto.HDKeyDerivation
 import org.bitcoinj.crypto.MnemonicCode
 
 class DeterministicKeygen {
-    val mnemonicInstance = MnemonicCode.INSTANCE
+    private val mnemonicInstance = MnemonicCode.INSTANCE
 
     fun createKeyPairWithMnemonic(): Pair<KeyPair, String> {
         val entropy = Secp256K1CryptoSystem().generatePrivKey().data

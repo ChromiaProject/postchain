@@ -26,6 +26,11 @@
             <artifactId>kotlin-logging-jvm</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.bitcoinj</groupId>
+            <artifactId>bitcoinj-core</artifactId>
+        </dependency>
+
         <!-- Apache Commons -->
         <dependency>
             <groupId>org.apache.commons</groupId>
