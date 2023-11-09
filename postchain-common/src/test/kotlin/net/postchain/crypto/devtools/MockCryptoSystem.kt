@@ -41,11 +41,11 @@ class MockCryptoSystem : CryptoSystem {
         return PubKey(secp256k1_derivePubKey(privKey.data))
     }
 
-    override fun createDeterministicKeyPair(): Pair<KeyPair, String> {
+    override fun generateKeyPairWithMnemonic(): Pair<KeyPair, String> {
         TODO("Not yet implemented")
     }
 
-    override fun createDeterministicKeyPair(mnemonic: String): Pair<KeyPair, String> {
+    override fun recoverKeyPairFromMnemonic(mnemonic: String): Pair<KeyPair, String> {
         TODO("Not yet implemented")
     }
 

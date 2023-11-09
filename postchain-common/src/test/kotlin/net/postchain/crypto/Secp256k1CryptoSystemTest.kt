@@ -62,7 +62,7 @@ class Secp256k1CryptoSystemTest {
 
     @Test
     fun `generates correct keypair and mnemonic size`() {
-        val (keyPair, mnemonic) = sut.createDeterministicKeyPair()
+        val (keyPair, mnemonic) = sut.generateKeyPairWithMnemonic()
 
         Assertions.assertEquals(mnemonic.split(" ").size, 24)
         Assertions.assertEquals(keyPair.pubKey.data.size, 33)
@@ -72,7 +72,7 @@ class Secp256k1CryptoSystemTest {
     @Test
     fun `generates correct key from a given 24 word mnemonic`() {
         val mnemonicInput = "picnic shove leader great protect table leg witness walk night cable caution about produce engage armor first burden olive violin cube gentle bulk train"
-        val (keyPair, mnemonic) = sut.createDeterministicKeyPair(mnemonicInput)
+        val (keyPair, mnemonic) = sut.recoverKeyPairFromMnemonic(mnemonicInput)
 
         Assertions.assertEquals(mnemonicInput, mnemonic)
         Assertions.assertEquals(keyPair.pubKey.data.size, 33)
@@ -84,7 +84,7 @@ class Secp256k1CryptoSystemTest {
     @Test
     fun `generates correct key from a given 12 word mnemonic`() {
         val mnemonicInput = "picnic shove leader great protect table leg witness walk night cable caution"
-        val (keyPair, mnemonic) = sut.createDeterministicKeyPair(mnemonicInput)
+        val (keyPair, mnemonic) = sut.recoverKeyPairFromMnemonic(mnemonicInput)
 
         Assertions.assertEquals(mnemonicInput, mnemonic)
         Assertions.assertEquals(keyPair.pubKey.data.size, 33)
@@ -97,15 +97,15 @@ class Secp256k1CryptoSystemTest {
     fun `should throw if mnemonic length is not 12 or 24` () {
         val thirteenLongMnemonic = "picnic shove leader great protect table leg witness walk night cable caution thirteen"
         val twentyFiveLongMnemonic = "picnic shove leader great protect table leg witness walk night cable caution about produce engage armor first burden olive violin cube gentle bulk train twenty-five"
-        assertThrows<IllegalArgumentException> { sut.createDeterministicKeyPair(thirteenLongMnemonic) }
-        assertThrows<IllegalArgumentException> { sut.createDeterministicKeyPair(twentyFiveLongMnemonic) }
+        assertThrows<IllegalArgumentException> { sut.recoverKeyPairFromMnemonic(thirteenLongMnemonic) }
+        assertThrows<IllegalArgumentException> { sut.recoverKeyPairFromMnemonic(twentyFiveLongMnemonic) }
     }
 
     @Test
     fun `we can sign with BIP39 generated keys`() {
         val sut = Secp256K1CryptoSystem()
         for (i in 0..39) {
-            val (keyPair, _) = sut.createDeterministicKeyPair()
+            val (keyPair, _) = sut.generateKeyPairWithMnemonic()
             val sigMaker = sut.buildSigMaker(keyPair)
             val data = "Hello".toByteArray()
             val signature = sigMaker.signMessage(data) // TODO: POS-04_sig ???

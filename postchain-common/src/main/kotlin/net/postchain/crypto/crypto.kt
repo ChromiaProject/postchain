@@ -55,9 +55,9 @@ interface CryptoSystem : Digester {
 
     fun derivePubKey(privKey: PrivKey): PubKey
 
-    fun createDeterministicKeyPair():Pair<KeyPair, String>
+    fun generateKeyPairWithMnemonic():Pair<KeyPair, String>
 
-    fun createDeterministicKeyPair(mnemonic: String):Pair<KeyPair, String>
+    fun recoverKeyPairFromMnemonic(mnemonic: String):Pair<KeyPair, String>
 }
 
 fun interface Digester {
