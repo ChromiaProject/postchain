@@ -62,6 +62,14 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
         return PubKey(decodedPublicKey.encoded)
     }
 
+    override fun generateKeyPairWithMnemonic(): Pair<KeyPair, String> {
+        TODO("Not yet implemented")
+    }
+
+    override fun recoverKeyPairFromMnemonic(mnemonic: String): Pair<KeyPair, String> {
+        TODO("Not yet implemented")
+    }
+
     // 0x30 indicates that content is ASN1 encoded, it is also not a valid start for an ECDSA key
     override fun deriveSignatureVerificationFromSubject(subjectID: ByteArray): BasicVerifier? =
             if (subjectID[0].toInt() == 0x30) {
