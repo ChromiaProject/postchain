@@ -4,6 +4,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <parent>
+        <groupId>com.chromia</groupId>
+        <artifactId>chromia-parent</artifactId>
+        <version>0.1.3</version>
+    </parent>
+
     <groupId>net.postchain</groupId>
     <artifactId>postchain</artifactId>
     <version>${revision}</version>
@@ -29,8 +35,6 @@
     <properties>
         <revision>dev</revision>
         <doclint>none</doclint>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.build.outputTimestamp>10</project.build.outputTimestamp>
 
         <!-- Kotlin -->
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
@@ -38,13 +42,6 @@
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
 
-        <!-- Maven -->
-        <maven.source.plugin.version>3.0.1</maven.source.plugin.version>
-        <maven.surefire.plugin.version>3.1.2</maven.surefire.plugin.version>
-        <maven.failsafe.plugin.version>3.1.2</maven.failsafe.plugin.version>
-        <maven.compiler.plugin.version>3.11.0</maven.compiler.plugin.version>
-        <maven.assembly.plugin.version>3.2.0</maven.assembly.plugin.version>
-        <maven.shade.plugin.version>3.1.1</maven.shade.plugin.version>
         <skipSurefireTests>false</skipSurefireTests>
 
         <!-- Testing -->
@@ -62,7 +59,7 @@
         <log4j2.version>2.20.0</log4j2.version>
 
         <!-- 3rd party -->
-        <netty.version>4.1.97.Final</netty.version>
+        <netty.version>4.1.100.Final</netty.version>
         <jasn.version>1.11.3</jasn.version>
         <json.version>20170516</json.version>
         <jaxb.version>4.0.1</jaxb.version>
@@ -80,6 +77,10 @@
     </properties>
 
     <repositories>
+        <repository>
+            <id>chromia-parent</id>
+            <url>https://gitlab.com/api/v4/projects/50818999/packages/maven</url>
+        </repository>
         <repository>
             <id>gitlab-maven</id>
             <url>https://gitlab.com/api/v4/projects/32294340/packages/maven</url>
@@ -258,7 +259,7 @@
             <dependency>
                 <groupId>org.http4k</groupId>
                 <artifactId>http4k-bom</artifactId>
-                <version>4.45.0.0</version>
+                <version>4.48.0.0</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
@@ -460,6 +461,11 @@
                 <artifactId>netty-all</artifactId>
                 <version>${netty.version}</version>
             </dependency>
+            <dependency> <!-- used by http4k-server-netty -->
+                <groupId>io.netty</groupId>
+                <artifactId>netty-codec-http2</artifactId>
+                <version>${netty.version}</version>
+            </dependency>
             <dependency>
                 <groupId>io.netty</groupId>
                 <artifactId>netty-transport-native-epoll</artifactId>
@@ -569,11 +575,6 @@
                     <groupId>org.jetbrains.kotlin</groupId>
                     <artifactId>kotlin-maven-plugin</artifactId>
                     <version>${kotlin.version}</version>
-                    <configuration>
-                        <args>
-                            <arg>-Werror</arg>
-                        </args>
-                    </configuration>
                     <executions>
                         <execution>
                             <id>compile</id>
@@ -604,7 +605,6 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>${maven.compiler.plugin.version}</version>
                     <executions>
                         <!-- Replacing default-compile as it is treated specially by maven -->
                         <execution>
@@ -633,28 +633,6 @@
                     </executions>
                 </plugin>
                 <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-jar-plugin</artifactId>
-                    <version>3.3.0</version>
-                    <configuration>
-                        <archive>
-                            <manifest>
-                                <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-                            </manifest>
-                        </archive>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-dependency-plugin</artifactId>
-                    <version>3.2.0</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>exec-maven-plugin</artifactId>
-                    <version>3.1.0</version>
-                </plugin>
-                <plugin>
                     <groupId>org.xolstice.maven.plugins</groupId>
                     <artifactId>protobuf-maven-plugin</artifactId>
                     <version>0.6.1</version>
@@ -670,34 +648,6 @@
                     <artifactId>jaxb30-maven-plugin</artifactId>
                     <version>0.15.0</version>
                 </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <version>${maven.surefire.plugin.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-failsafe-plugin</artifactId>
-                    <version>${maven.failsafe.plugin.version}</version>
-                </plugin>
-                <plugin>
-                    <groupId>org.owasp</groupId>
-                    <artifactId>dependency-check-maven</artifactId>
-                    <version>8.3.1</version>
-                    <configuration>
-                        <prettyPrint>true</prettyPrint>
-                        <failBuildOnAnyVulnerability>true</failBuildOnAnyVulnerability>
-                        <assemblyAnalyzerEnabled>false</assemblyAnalyzerEnabled>
-                        <suppressionFiles>
-                            <suppressionFile>dependencies-suppression.xml</suppressionFile>
-                        </suppressionFiles>
-                    </configuration>
-                </plugin>
-                <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>build-helper-maven-plugin</artifactId>
-                    <version>3.4.0</version>
-                </plugin>
             </plugins>
         </pluginManagement>
         <plugins>
@@ -707,38 +657,9 @@
             </plugin>
 
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>flatten-maven-plugin</artifactId>
-                <version>1.5.0</version>
-                <configuration>
-                    <updatePomFile>true</updatePomFile>
-                    <flattenMode>resolveCiFriendliesOnly</flattenMode>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>flatten</id>
-                        <phase>process-resources</phase>
-                        <goals>
-                            <goal>flatten</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>flatten.clean</id>
-                        <phase>clean</phase>
-                        <goals>
-                            <goal>clean</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <excludes>
-                        <exclude>**/*IT.java</exclude>
-                        <exclude>**/*Nightly.java</exclude>
-                    </excludes>
                     <properties>
                         <configurationParameters>
                             junit.jupiter.execution.timeout.default=5m
@@ -751,9 +672,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <configuration>
-                    <includes>
-                        <include>**/*IT.java</include>
-                    </includes>
                     <properties>
                         <configurationParameters>
                             junit.jupiter.execution.timeout.default=5m
@@ -772,7 +690,6 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>versions-maven-plugin</artifactId>
-                <version>2.13.0</version>
                 <configuration>
                     <allowMajorUpdates>false</allowMajorUpdates>
                     <allowSnapshots>false</allowSnapshots>
@@ -783,7 +700,6 @@
             <plugin>
                 <groupId>pl.project13.maven</groupId>
                 <artifactId>git-commit-id-plugin</artifactId>
-                <version>4.9.10</version>
                 <executions>
                     <execution>
                         <id>get-the-git-infos</id>
@@ -793,20 +709,6 @@
                         <phase>initialize</phase>
                     </execution>
                 </executions>
-                <configuration>
-                    <useNativeGit>true</useNativeGit> <!-- git worktree does not work with JGit implementation -->
-                    <includeOnlyProperties>
-                        <includeOnlyProperty>^git\.branch$</includeOnlyProperty>
-                        <includeOnlyProperty>^git\.build\.(time|version)$</includeOnlyProperty>
-                        <includeOnlyProperty>^git\.commit\.id\.(abbrev|full)$</includeOnlyProperty>
-                        <includeOnlyProperty>^git\.commit\.message\.(full|short)$</includeOnlyProperty>
-                        <includeOnlyProperty>^git\.commit\.time$</includeOnlyProperty>
-                        <includeOnlyProperty>^git\.dirty$</includeOnlyProperty>
-                    </includeOnlyProperties>
-                    <commitIdGenerationMode>full</commitIdGenerationMode>
-                    <dateFormatTimeZone>UTC</dateFormatTimeZone>
-                    <dateFormat>yyyy-MM-dd'T'HH:mm:ssX</dateFormat>
-                </configuration>
             </plugin>
         </plugins>
     </build>
@@ -816,6 +718,15 @@
             <id>ci</id>
             <build>
                 <plugins>
+                    <plugin>
+                        <groupId>org.jetbrains.kotlin</groupId>
+                        <artifactId>kotlin-maven-plugin</artifactId>
+                        <configuration>
+                            <args>
+                                <arg>-Werror</arg>
+                            </args>
+                        </configuration>
+                    </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-surefire-plugin</artifactId>
@@ -840,7 +751,7 @@
             </build>
         </profile>
         <profile>
-            <id>nightly</id>
+            <id>slow-it</id>
             <build>
                 <plugins>
                     <plugin>
@@ -849,7 +760,7 @@
                         <configuration>
                             <includes>
                                 <include>**/*IT.java</include>
-                                <include>**/*Nightly.java</include>
+                                <include>**/*SlowIntegrationTest.java</include>
                             </includes>
                         </configuration>
                         <executions>

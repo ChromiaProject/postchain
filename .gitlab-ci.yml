@@ -1,10 +1,10 @@
 image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.1.3
 include:
   - project: "chromaway/core-infra/gitlab-automation"
-    ref: 1.1.4
+    ref: 1.1.6
     file:
       - templates/release.yml
-      - templates/dependency-scanning.yml
+      - templates/maven-dependency-scanning.yml
       - templates/report-code-coverage.yml
 
 .setup:
@@ -41,7 +41,7 @@ include:
 stages:
   - build
   - code-coverage
-  - nightly-tests
+  - slow-integration-tests
   - deploy
   - dependency-check
   - release
@@ -58,9 +58,9 @@ deploy-snapshot:
     - SNAPSHOT_VERSION=$MAJOR.$((MINOR + 1)).0-SNAPSHOT
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,nightly
+      --activate-profiles ci,slow-it
       -Drevision=$SNAPSHOT_VERSION
-      clean deploy
+      clean source:jar deploy
 
 # Triggered by that a semver tag was pushed
 deploy:
@@ -71,9 +71,9 @@ deploy:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,nightly
+      --activate-profiles ci,slow-it
       -Drevision=$CI_COMMIT_TAG
-      clean deploy
+      clean source:jar deploy
 
 gitlab-release:
   stage: release
@@ -112,9 +112,9 @@ test-coverage-report:
   dependencies:
     - build
 
-nightly-tests:
+slow-integration-tests:
   extends: .setup
-  stage: nightly-tests
+  stage: slow-integration-tests
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == "dev"
       when: always
@@ -124,24 +124,13 @@ nightly-tests:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,nightly
+      --activate-profiles ci,slow-it
       clean verify
 
 dependency-check:
   extends: .maven-dependency-check
   stage: dependency-check
   interruptible: true
-  only:
-    variables:
-      - $RUN_DEPENDENCY_CHECK == "true"
-
-container-scanning:
-  variables:
-    REGISTRY: registry.gitlab.com/chromaway/postchain
-  parallel:
-    matrix:
-      - IMAGE: [ postchain-cli, postchain-admin-client ]
-        VERSION: [ 3.10.1, 3.11.0-SNAPSHOT ]
   only:
     variables:
       - $RUN_DEPENDENCY_CHECK == "true"
@@ -153,7 +142,7 @@ variables:
   # As of Maven 3.3.0 instead of this you may define these options in `.mvn/maven.config` so the same config is used
   # when running from the command line.
   # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
-  MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true -s .gitlab-settings.xml"
+  MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -s .gitlab-settings.xml"
   POSTCHAIN_DB_URL: jdbc:postgresql://docker/postchain
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""

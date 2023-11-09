@@ -3,34 +3,28 @@
 package net.postchain.network.netty2
 
 import io.netty.bootstrap.ServerBootstrap
+import io.netty.channel.ChannelFuture
 import io.netty.channel.ChannelHandler
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.EventLoopGroup
-import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
-import io.netty.util.concurrent.DefaultThreadFactory
 import mu.KLogging
 import net.postchain.common.exception.UserMistake
 import java.net.BindException
-import java.util.concurrent.TimeUnit
 
-class NettyServer {
+class NettyServer(
+        createChannelHandler: () -> ChannelHandler,
+        port: Int,
+        eventLoopGroup: EventLoopGroup
+) {
+
+    private var channelFuture: ChannelFuture
 
     companion object : KLogging()
 
-    private lateinit var server: ServerBootstrap
-    private lateinit var createChannelHandler: () -> ChannelHandler
-    private lateinit var eventLoopGroup: EventLoopGroup
-
-    fun setCreateChannelHandler(handlerFactory: () -> ChannelHandler) {
-        this.createChannelHandler = handlerFactory
-    }
-
-    fun run(port: Int) {
-        eventLoopGroup = NioEventLoopGroup(1, DefaultThreadFactory("NettyServer"))
-
-        server = ServerBootstrap()
+    init {
+        val server = ServerBootstrap()
                 .group(eventLoopGroup)
                 .channel(NioServerSocketChannel::class.java)
 //                .option(ChannelOption.SO_BACKLOG, 10)
@@ -48,19 +42,13 @@ class NettyServer {
                 })
 
         try {
-            server.bind(port).sync()
+            channelFuture = server.bind(port).sync()
         } catch (e: BindException) {
             throw UserMistake("Unable to bind to port ${port}: ${e.message}")
         }
     }
 
     fun shutdown() {
-        logger.debug{ "Shutting down NettyServer" }
-        try {
-            eventLoopGroup.shutdownGracefully(0, 2000, TimeUnit.MILLISECONDS).sync()
-            logger.debug{ "Shutting down NettyServer done" }
-        } catch (t: Throwable) {
-            logger.debug("Shutting down NettyServer failed", t)
-        }
+        channelFuture.channel().close().sync()
     }
 }

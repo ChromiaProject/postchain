@@ -10,6 +10,7 @@ import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockQueries
 import java.time.Clock
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.min
 import kotlin.math.pow
 
@@ -32,6 +33,8 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
     private val minBackoffTime = configData.minBackoffTime
     private val maxBackoffTime = configData.maxBackoffTime
     private val preemptiveBlockBuilding = configData.preemptiveBlockBuilding
+
+    private val forceStopBlockBuilding: AtomicBoolean = AtomicBoolean(false)
 
     init {
         val height = blockQueries.getLastBlockHeight().get()
@@ -62,21 +65,37 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
 
     override fun preemptiveBlockBuilding(): Boolean = preemptiveBlockBuilding
 
-    override fun shouldBuildBlock(): Boolean {
-        val now = currentTimeMillis()
+    override fun shouldBuildPreemptiveBlock(): Boolean = preemptiveBlockBuilding && (txQueue.getTransactionQueueSize() > 0)
 
+    override fun shouldBuildBlock(): Boolean {
         if (mustWaitMinimumBuildBlockTime() > 0) return false
-        if (now - lastBlockTime > maxBlockTime) return true
-        if (firstTxTime > 0 && now - firstTxTime > maxTxDelay) return true
 
         val transactionQueueSize = txQueue.getTransactionQueueSize()
         if (transactionQueueSize >= maxBlockTransactions) return true
-        if (firstTxTime == 0L && transactionQueueSize > 0) {
+        return if (hasReachedTimeConstraintsForBlockBuilding(transactionQueueSize > 0)) {
+            true
+        } else {
+            extendedShouldBuildBlock()
+        }
+    }
+
+    override fun shouldForceStopBlockBuilding(): Boolean = forceStopBlockBuilding.get()
+
+    override fun setForceStopBlockBuilding(value: Boolean) {
+        forceStopBlockBuilding.set(value)
+    }
+
+    override fun hasReachedTimeConstraintsForBlockBuilding(haveSeenTxs: Boolean): Boolean {
+        val now = currentTimeMillis()
+
+        if (now - lastBlockTime > maxBlockTime) return true
+        if (firstTxTime > 0 && now - firstTxTime > maxTxDelay) return true
+
+        if (firstTxTime == 0L && haveSeenTxs) {
             firstTxTime = now
-            return false
         }
 
-        return extendedShouldBuildBlock()
+        return false
     }
 
     override fun mustWaitMinimumBuildBlockTime(): Long {
@@ -89,7 +108,7 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
         return failedBlockTime > 0 && now - failedBlockTime < getBackoffTime()
     }
 
-    private fun currentTimeMillis(): Long = clock.millis()
+    private fun currentTimeMillis() = clock.millis()
 
     open fun extendedShouldBuildBlock(): Boolean = false
 

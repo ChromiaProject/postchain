@@ -3,6 +3,7 @@
 package net.postchain.network.netty2
 
 import assertk.assertThat
+import assertk.assertions.isEqualTo
 import assertk.assertions.isIn
 import assertk.isContentEqualTo
 import net.postchain.base.PeerInfo
@@ -42,8 +43,8 @@ class IntNettyConnector2PeersCommunicationIT {
         context2 = IntTestContext(peerInfo2, arrayOf(peerInfo1, peerInfo2))
 
         // Initializing
-        context1.peer.init(peerInfo1, context1.packetDecoder)
-        context2.peer.init(peerInfo2, context2.packetDecoder)
+        context1.peer.init(peerInfo1, context1.packetCodec)
+        context2.peer.init(peerInfo2, context2.packetCodec)
     }
 
     @AfterEach
@@ -56,7 +57,8 @@ class IntNettyConnector2PeersCommunicationIT {
     fun testConnectAndCommunicate() {
         // Connecting 1 -> 2
         val peerDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetEncoder)
+        assertThat(peerDescriptor2.packetVersion).isEqualTo(1)
+        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetCodec)
 
         // Waiting for all connections to be established
         val connection1 = argumentCaptor<PeerConnection>()
@@ -65,9 +67,11 @@ class IntNettyConnector2PeersCommunicationIT {
                 .untilAsserted {
                     verify(context1.events).onNodeConnected(connection1.capture())
                     assertThat(connection1.firstValue.descriptor().nodeId.data).isContentEqualTo(peerInfo2.pubKey)
+                    assertThat(connection1.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     verify(context2.events).onNodeConnected(connection2.capture())
                     assertThat(connection2.firstValue.descriptor().nodeId.data).isContentEqualTo(peerInfo1.pubKey)
+                    assertThat(connection2.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
                 }
 
         // Sending packets
@@ -76,15 +80,15 @@ class IntNettyConnector2PeersCommunicationIT {
                 byteArrayOf(1, 2, 3, 4),
                 byteArrayOf(10, 2, 3, 4),
                 byteArrayOf(100, 2, 3, 4))
-        connection1.firstValue.sendPacket { packets1[0] }
-        connection1.firstValue.sendPacket { packets1[1] }
-        connection1.firstValue.sendPacket { packets1[2] }
+        connection1.firstValue.sendPacket(lazy { packets1[0] })
+        connection1.firstValue.sendPacket(lazy { packets1[1] })
+        connection1.firstValue.sendPacket(lazy { packets1[2] })
         // * 2 -> 1
         val packets2 = arrayOf(
                 byteArrayOf(1, 2, 3, 4),
                 byteArrayOf(10, 20, 30, 40))
-        connection2.firstValue.sendPacket { packets2[0] }
-        connection2.firstValue.sendPacket { packets2[1] }
+        connection2.firstValue.sendPacket(lazy { packets2[0] })
+        connection2.firstValue.sendPacket(lazy { packets2[1] })
 
         // * asserting
         await().atMost(TEN_SECONDS)

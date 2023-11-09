@@ -14,12 +14,17 @@ import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.io.File
 import java.nio.file.Paths
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 
 class RestApiValidateConfigEndpointTest {
 
@@ -42,7 +47,7 @@ class RestApiValidateConfigEndpointTest {
         bccFile = Paths.get(javaClass.getResource("/net/postchain/config/blockchain_config.xml")!!.toURI()).toFile()
         bccByteArray = GtvEncoder.encodeGtv(GtvFileReader.readFile(bccFile))
 
-        restApi = RestApi(0, basePath, gracefulShutdown = false)
+        restApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
     }
 
     @AfterEach
@@ -106,9 +111,10 @@ class RestApiValidateConfigEndpointTest {
                 .body("error", containsString(""))
     }
 
-    @Test
-    fun `Validate configuration endpoint can return 400 on invalid configuration`() {
-        whenever(model.validateBlockchainConfiguration(any())).thenThrow(UserMistake("invalid configuration"))
+    @ParameterizedTest
+    @MethodSource("invalidConfigExceptions")
+    fun `Validate configuration endpoint can return 400 on invalid configuration`(exception: Exception, expectedErrorMessage: String) {
+        whenever(model.validateBlockchainConfiguration(any())).thenThrow(exception)
 
         restApi.attachModel(blockchainRID, model)
 
@@ -119,7 +125,7 @@ class RestApiValidateConfigEndpointTest {
                 .then()
                 .statusCode(400)
                 .contentType(ContentType.JSON)
-                .body("error", equalTo("invalid configuration"))
+                .body("error", equalTo(expectedErrorMessage))
     }
 
     @Test
@@ -134,5 +140,13 @@ class RestApiValidateConfigEndpointTest {
                 .statusCode(404)
                 .contentType(ContentType.JSON)
                 .body("error", startsWith("Can't find blockchain with blockchainRID"))
+    }
+
+    companion object {
+        @JvmStatic
+        fun invalidConfigExceptions(): List<Array<Any>> = listOf(
+                arrayOf(UserMistake("UserMistake message"), "UserMistake message"),
+                arrayOf(RuntimeException("Exception message"), "Invalid configuration: Exception message"),
+        )
     }
 }

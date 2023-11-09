@@ -13,6 +13,7 @@ import net.postchain.config.node.NodeConfigurationProviderFactory
 import net.postchain.core.Storage
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvFileReader
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.extension.ExtendWith
 import java.io.File
@@ -54,6 +55,11 @@ abstract class CommandITBase {
     @BeforeEach
     fun beforeEach() {
         storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
+    }
+
+    @AfterEach
+    fun afterEach() {
+        storage.close()
     }
 
     protected fun addBlockchain(config: File = blockchainConfig) {

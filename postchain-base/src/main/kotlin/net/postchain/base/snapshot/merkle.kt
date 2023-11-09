@@ -85,7 +85,6 @@ open class EventPageStore(
 
     fun writeEventTree(blockHeight: Long, leafHashes: List<Hash>): Hash {
         val entriesPerPage = 1 shl levelsPerPage
-        val prevHighestLevelPage = highestLevelPage(blockHeight)
 
         fun updateLevel(level: Int, entryHashes: List<Hash>): Hash {
             var current = 0
@@ -102,7 +101,7 @@ open class EventPageStore(
                 writePage(page)
                 current = left + entriesPerPage
             }
-            return if (upperEntry.size > 2 || prevHighestLevelPage > level)
+            return if (upperEntry.size > 1)
                 updateLevel(level + levelsPerPage, upperEntry)
             else {
                 upperEntry[0]
@@ -184,12 +183,14 @@ open class SnapshotPageStore(
         val nextPrunableSnapshotHeight = db.getNextPrunableSnapshotHeight(ctx, name, blockHeight, snapshotsToKeep)
                 ?: return
         val pageIids = db.getPrunablePages(ctx, name, nextPrunableSnapshotHeight)
-        val leftIndex = db.getLeftIndex(ctx, name, pageIids)
-        leftIndex.forEach {
-            db.safePruneAccountStates(ctx, tableNamePrefix,
-                    it + 1, it + (1 shl levelsPerPage), nextPrunableSnapshotHeight)
+        if (pageIids.isNotEmpty()) {
+            val leftIndex = db.getLeftIndex(ctx, name, pageIids)
+            leftIndex.forEach {
+                db.safePruneAccountStates(ctx, tableNamePrefix,
+                        it + 1, it + (1 shl levelsPerPage), nextPrunableSnapshotHeight)
+            }
+            db.deletePages(ctx, name, pageIids)
         }
-        db.deletePages(ctx, name, pageIids)
     }
 }
 

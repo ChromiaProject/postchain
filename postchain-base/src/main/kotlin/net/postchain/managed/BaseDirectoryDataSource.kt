@@ -1,6 +1,7 @@
 package net.postchain.managed
 
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.resources.ResourceLimitFactory
@@ -12,22 +13,14 @@ open class BaseDirectoryDataSource(
         appConfig: AppConfig,
 ) : BaseManagedNodeDataSource(queryRunner, appConfig), DirectoryDataSource {
 
-    override fun getContainersToRun(): List<String>? {
+    override fun getContainersToRun(): List<String>? = try {
         val res = query(
                 "nm_get_containers",
                 buildArgs("pubkey" to gtv(appConfig.pubKeyByteArray))
         )
-
-        return res.asArray().map { it.asString() }
-    }
-
-    override fun getBlockchainsForContainer(containerId: String): List<BlockchainRid>? {
-        val res = query(
-                "nm_get_blockchains_for_container",
-                buildArgs("container_id" to gtv(containerId))
-        )
-
-        return res.asArray().map { BlockchainRid(it.asByteArray()) }
+        res.asArray().map { it.asString() }
+    } catch (e: UserMistake) { // this can fail if we are the genesis node before having initialized the network, since we are not registered as node yet
+        listOf()
     }
 
     override fun getContainerForBlockchain(brid: BlockchainRid): String {

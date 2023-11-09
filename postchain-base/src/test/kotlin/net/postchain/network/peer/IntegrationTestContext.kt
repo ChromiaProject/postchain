@@ -18,11 +18,9 @@ class IntegrationTestContext(
         on { privKeyByteArray } doReturn KeyPairHelper.privKey(myIndex)
         on { pubKeyByteArray } doReturn KeyPairHelper.pubKey(myIndex)
     }
-    val peerCommunicationConfig = BasePeerCommConfiguration.build(
-            peerInfos, appConfig1)
+    val peerCommunicationConfig = BasePeerCommConfiguration.build(peerInfos, appConfig1)
 
-    val connectionManager = DefaultPeerConnectionManager<Int>(
-            mock(), mock())
+    val connectionManager = DefaultPeerConnectionManager<Int>(mock())
 
     val communicationManager = DefaultPeerCommunicationManager<Int>(
             connectionManager, peerCommunicationConfig, 1L, mock(), mock(), mock()

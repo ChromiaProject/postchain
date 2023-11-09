@@ -2,7 +2,6 @@
 
 package net.postchain.api.rest.controller
 
-import com.google.gson.JsonElement
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Timer
 import mu.KLogging
@@ -14,6 +13,7 @@ import net.postchain.api.rest.model.TxRid
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.ConfirmationProof
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.base.withReadConnection
@@ -26,6 +26,7 @@ import net.postchain.common.tx.TransactionStatus.UNKNOWN
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockRid
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.DefaultBlockchainConfigurationFactory
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.core.Storage
@@ -39,6 +40,9 @@ import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.UnknownQuery
@@ -53,19 +57,22 @@ import net.postchain.metrics.QUERIES_METRIC_DESCRIPTION
 import net.postchain.metrics.QUERIES_METRIC_NAME
 
 open class PostchainModel(
-        final override val chainIID: Long,
+        blockchainConfiguration: BlockchainConfiguration,
         val txQueue: TransactionQueue,
         val blockQueries: BlockQueries,
-        private val debugInfoQuery: DebugInfoQuery,
         final override val blockchainRid: BlockchainRid,
         val storage: Storage,
         val postchainContext: PostchainContext,
-        private val diagnosticData: DiagnosticData
+        private val diagnosticData: DiagnosticData,
+        override val queryCacheTtlSeconds: Long
 ) : Model {
 
     companion object : KLogging()
 
+    final override val chainIID = blockchainConfiguration.chainID
     protected val metrics = PostchainModelMetrics(chainIID, blockchainRid)
+
+    private val currentRawConfiguration = GtvEncoder.encodeGtv(blockchainConfiguration.rawConfig)
 
     override var live = true
 
@@ -150,21 +157,23 @@ open class PostchainModel(
             diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES]?.value as? List<StateNodeStatus>
                     ?: throw NotFoundError("NotFound")
 
-    override fun debugQuery(subQuery: String?): JsonElement = debugInfoQuery.queryDebugInfo(subQuery)
-
     override fun getCurrentBlockHeight(): BlockHeight = BlockHeight(blockQueries.getLastBlockHeight().get() + 1)
 
     override fun getBlockchainConfiguration(height: Long): ByteArray? = withReadConnection(storage, chainIID) { ctx ->
-        val db = DatabaseAccess.of(ctx)
         if (height < 0) {
-            db.getConfigurationDataForHeight(ctx, db.getLastBlockHeight(ctx))
+            currentRawConfiguration
         } else {
-            db.getConfigurationData(ctx, height)
+            postchainContext.configurationProvider.getHistoricConfiguration(ctx, chainIID, height)
         }
     }
 
     override fun validateBlockchainConfiguration(configuration: Gtv) {
-        val blockConfData = configuration.toObject<BlockchainConfigurationData>()
+        val fixedConfiguration = if (configuration[KEY_SIGNERS] == null) {
+            GtvDictionary.build(configuration.asDict() + (KEY_SIGNERS to GtvArray(emptyArray())))
+        } else {
+            configuration
+        }
+        val blockConfData = fixedConfiguration.toObject<BlockchainConfigurationData>()
         withWriteConnection(storage, chainIID) { eContext ->
             val blockchainRid = DatabaseAccess.of(eContext).getBlockchainRid(eContext)!!
             val partialContext = BaseBlockchainContext(chainIID, blockchainRid, NODE_ID_AUTO, postchainContext.appConfig.pubKeyByteArray)

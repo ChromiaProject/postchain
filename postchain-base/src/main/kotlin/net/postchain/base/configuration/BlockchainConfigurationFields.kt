@@ -36,8 +36,13 @@ const val KEY_MAX_TX_EXECUTION_TIME = "max_transaction_execution_time"
 
 const val KEY_REVOLT = "revolt"
 const val KEY_REVOLT_TIMEOUT = "timeout"
+const val KEY_REVOLT_EXPONENTIAL_DELAY_INITIAL = "exponential_delay_initial"
 const val KEY_REVOLT_EXPONENTIAL_DELAY_BASE = "exponential_delay_base"
+const val KEY_REVOLT_EXPONENTIAL_DELAY_POWER_BASE = "exponential_delay_power_base"
 const val KEY_REVOLT_EXPONENTIAL_DELAY_MAX = "exponential_delay_max"
 const val KEY_REVOLT_FAST_REVOLT_STATUS_TIMEOUT = "fast_revolt_status_timeout"
+const val KEY_REVOLT_WHEN_SHOULD_BUILD_BLOCK = "revolt_when_should_build_block"
 
 const val KEY_CONFIG_CONSENSUS_STRATEGY = "config_consensus_strategy"
+
+const val KEY_QUERY_CACHE_TTL_SECONDS = "query_cache_ttl_seconds"

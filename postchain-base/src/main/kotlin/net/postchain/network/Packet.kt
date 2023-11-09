@@ -6,24 +6,23 @@ import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 
-interface XPacketEncoder<PacketType> {
+interface XPacketCodec<PacketType> {
+    fun getPacketVersion(): Long
+
     fun makeIdentPacket(forNode: NodeRid): ByteArray
-    fun encodePacket(packet: PacketType): ByteArray
+    fun makeVersionPacket(): ByteArray
+    fun encodePacket(packet: PacketType, packetVersion: Long): ByteArray
+
+    fun parseIdentPacket(rawMessage: ByteArray): IdentPacketInfo
+    fun parseVersionPacket(rawMessage: ByteArray): Long
+    fun decodePacket(pubKey: ByteArray, rawMessage: ByteArray, packetVersion: Long): PacketType
+    fun decodePacket(rawMessage: ByteArray, packetVersion: Long): PacketType?
+    fun isIdentPacket(rawMessage: ByteArray): Boolean
+    fun isVersionPacket(rawMessage: ByteArray): Boolean
 }
 
-interface XPacketEncoderFactory<PacketType> {
-    fun create(config: PeerCommConfiguration, blockchainRID: BlockchainRid): XPacketEncoder<PacketType>
-}
-
-interface XPacketDecoder<PacketType> {
-    fun parseIdentPacket(bytes: ByteArray): IdentPacketInfo
-    fun decodePacket(pubKey: ByteArray, bytes: ByteArray): PacketType
-    fun decodePacket(bytes: ByteArray): PacketType?
-    fun isIdentPacket(bytes: ByteArray): Boolean
-}
-
-interface XPacketDecoderFactory<PacketType> {
-    fun create(config: PeerCommConfiguration): XPacketDecoder<PacketType>
+interface XPacketCodecFactory<PacketType> {
+    fun create(config: PeerCommConfiguration, blockchainRID: BlockchainRid): XPacketCodec<PacketType>
 }
 
 data class IdentPacketInfo(

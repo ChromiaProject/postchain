@@ -77,15 +77,15 @@ open class BaseBlockQueries(
         val ctx = try {
             storage.openReadConnection(chainId)
         } catch (e: SQLException) {
-            if (isShutdown) throw PmEngineIsAlreadyClosed("Engine is closed", e)
-            throw e
+            if (isShutdown) return CompletableFuture.failedStage(PmEngineIsAlreadyClosed("Engine is closed", e))
+            return CompletableFuture.failedStage(e)
         }
 
         val result = try {
             operation(ctx)
         } catch (e: Exception) {
             logger.trace(e) { "An error occurred" }
-            throw e
+            return CompletableFuture.failedStage(e)
         } finally {
             storage.closeReadConnection(ctx)
         }

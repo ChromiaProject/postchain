@@ -12,11 +12,12 @@ import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.BadDataException
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
-import net.postchain.debug.EagerDiagnosticValue
+import net.postchain.debug.ErrorDiagnosticValue
 import net.postchain.gtv.Gtv
 import net.postchain.server.NodeProvider
 import java.nio.file.Path
@@ -61,7 +62,12 @@ class PostchainService(private val nodeProvider: NodeProvider) {
             }
             if (initialized) brid else null
         } catch (e: Exception) {
-            postchainNode.postchainContext.nodeDiagnosticContext.blockchainErrorQueue(brid).add(EagerDiagnosticValue(e.message))
+            postchainNode.postchainContext.nodeDiagnosticContext.blockchainErrorQueue(brid).add(
+                    ErrorDiagnosticValue(
+                            e.message ?: "Failed to initialize blockchain with chainId: $chainId",
+                            System.currentTimeMillis()
+                    )
+            )
             throw InitializationError(e.message)
         }
 
@@ -125,6 +131,11 @@ class PostchainService(private val nodeProvider: NodeProvider) {
         stopBlockchain(chainId)
 
         withWriteConnection(postchainNode.postchainContext.sharedStorage, chainId) { ctx ->
+            val dependentChains = BlockchainApi.getDependentChains(ctx)
+            if (dependentChains.isNotEmpty()) {
+                throw UserMistake("Blockchain may not be deleted due to the following dependent chains: ${dependentChains.joinToString(", ")}")
+            }
+
             BlockchainApi.deleteBlockchain(ctx)
             true
         }

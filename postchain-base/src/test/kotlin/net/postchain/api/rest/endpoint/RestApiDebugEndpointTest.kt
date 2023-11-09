@@ -5,46 +5,36 @@ package net.postchain.api.rest.endpoint
 import com.google.gson.JsonObject
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
-import net.postchain.api.rest.controller.Model
-import net.postchain.api.rest.controller.RestApi
+import net.postchain.api.rest.controller.DebugApi
+import net.postchain.api.rest.controller.DebugInfoQuery
 import net.postchain.api.rest.json.JsonFactory
-import net.postchain.api.rest.model.TxRid
-import net.postchain.base.cryptoSystem
 import net.postchain.common.BlockchainRid
-import net.postchain.common.toHex
-import net.postchain.core.BlockRid
-import net.postchain.core.TransactionInfoExt
+import net.postchain.debug.ErrorDiagnosticValue
+import net.postchain.debug.JsonNodeDiagnosticContext
 import org.hamcrest.CoreMatchers.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
 class RestApiDebugEndpointTest {
 
-    private val basePath = "/api/v1"
-    private lateinit var restApi: RestApi
-    private lateinit var model: Model
+    private lateinit var debugInfoQuery: DebugInfoQuery
+    private lateinit var debugApi: DebugApi
     private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
     private val prettyGson = JsonFactory.makePrettyJson()
-    private val compactGson = JsonFactory.makeJson()
 
     @BeforeEach
     fun setup() {
-        model = mock {
-            on { chainIID } doReturn 1L
-            on { blockchainRid } doReturn blockchainRID
-            on { live } doReturn true
-        }
+        debugInfoQuery = mock()
 
-        restApi = RestApi(0, basePath, gracefulShutdown = false)
+        debugApi = DebugApi(0, debugInfoQuery, gracefulShutdown = false)
     }
 
     @AfterEach
     fun tearDown() {
-        restApi.close()
+        debugApi.close()
     }
 
     @Test
@@ -54,12 +44,10 @@ class RestApiDebugEndpointTest {
         }
 
         whenever(
-                model.debugQuery(null)
+                debugInfoQuery.queryDebugInfo(null)
         ).thenReturn(response)
 
-        restApi.attachModel(blockchainRID, model)
-
-        given().basePath(basePath).port(restApi.actualPort())
+        given().basePath("/").port(debugApi.actualPort())
                 .get("/_debug")
                 .then()
                 .statusCode(200)
@@ -68,22 +56,20 @@ class RestApiDebugEndpointTest {
     }
 
     @Test
-    fun `non-debug response is compact`() {
-        val tx = "tx2".toByteArray()
-        val txRID = cryptoSystem.digest(tx)
-        val response = TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(),
-                "signatures".toByteArray(), 1574849940, txRID, "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), tx)
-
+    fun someErrorsInDebug() {
+        val nodeDiagnosticContext = JsonNodeDiagnosticContext()
+        nodeDiagnosticContext.blockchainErrorQueue(blockchainRID).add(ErrorDiagnosticValue("foo", 42L))
+        nodeDiagnosticContext.blockchainErrorQueue(blockchainRID).add(ErrorDiagnosticValue("bar", 42L, 10))
+        val response = nodeDiagnosticContext.format()
         whenever(
-                model.getTransactionInfo(TxRid(txRID))
+                debugInfoQuery.queryDebugInfo(null)
         ).thenReturn(response)
-        restApi.attachModel(blockchainRID, model)
 
-        given().basePath(basePath).port(restApi.actualPort())
-                .get("/transactions/$blockchainRID/${txRID.toHex()}")
+        given().basePath("/").port(debugApi.actualPort())
+                .get("/_debug")
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
-                .body(equalTo(compactGson.toJson(response)))
+                .body(equalTo(prettyGson.toJson(response)))
     }
 }

@@ -98,8 +98,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
     }
 
     protected fun restartNodeClean(nodeIndex: Int, brid: BlockchainRid) {
-        val nodeSetup = systemSetup.nodeMap[NodeSeqNumber(nodeIndex)]!!
-        val peerInfoMap = nodeSetup.configurationProvider!!.getConfiguration().peerInfoMap
+        val peerInfoMap = nodes[nodeIndex].postchainContext.nodeConfigProvider.getConfiguration().peerInfoMap
         val peers = peerInfoMap.values.toTypedArray()
 
         // Shutdown the node
@@ -156,13 +155,13 @@ open class AbstractSyncTest : IntegrationTestSetup() {
         addNodeConfigurationOverrides(nodeSetup)
 
         // 2. Create the provider
-        val nodeConfigProvider = NodeConfigurationProviderGenerator.buildFromSetup(
+        val appConfig = AppConfigGenerator.buildFromSetup(
                 getTestName(),
                 this.configOverrides, // Don't think these test ever use this
                 nodeSetup,
                 systemSetup
         )
-        nodeSetup.configurationProvider = nodeConfigProvider // New way of fetching the config
+        nodeSetup.appConfig = appConfig // New way of fetching the config
     }
 
     /**
@@ -174,7 +173,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
             wipeDb: Boolean,
             brid: BlockchainRid
     ) {
-        val appConfig = nodeSetup.configurationProvider!!.getConfiguration().appConfig
+        val appConfig = nodeSetup.appConfig!!
 
         if (wipeDb) {
             logger.debug { "++ Wiping DB for Node: ${nodeSetup.sequenceNumber.nodeNumber}, BC: ${brid.toShortHex()}" }
@@ -247,7 +246,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
      * @param blocksToSync height when sync nodes are wiped.
      */
     fun runSyncTest(signerCount: Int, replicaCount: Int, syncIndex: Set<Int>, stopIndex: Set<Int>, blocksToSync: Int) {
-        val nodeSetups = runNodes(signerCount, replicaCount) // This gives us SystemSetup
+        runNodes(signerCount, replicaCount) // This gives us SystemSetup
 
         val checkpointBlockHeight = blocksToSync - 1L  // The block height before the last block
 
@@ -257,7 +256,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
         logger.debug { "++ 1.b) All nodes have block height checkpoint $checkpointBlockHeight" }
 
         val expectedBlockRid = nodes[0].blockQueries(0).getBlockRid(checkpointBlockHeight).get()
-        val peerInfos = nodeSetups[0].configurationProvider!!.getConfiguration().peerInfoMap
+        val peerInfos = nodes[0].postchainContext.nodeConfigProvider.getConfiguration().peerInfoMap
         stopIndex.forEach {
             logger.debug { "++ 2.a) Shutting down ${n(it)}" }
             nodes[it].shutdown()

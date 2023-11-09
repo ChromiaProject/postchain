@@ -38,11 +38,10 @@ import net.postchain.metrics.ContainerMetrics
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 import org.mandas.docker.client.DockerClient
 import java.util.Collections
-import java.util.LinkedHashMap
 
 const val POSTCHAIN_MASTER_PUBKEY = "postchain-master-pubkey"
 
-open class ContainerManagedBlockchainProcessManager(
+class ContainerManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
         private val masterBlockchainInfra: MasterBlockchainInfra,
         blockchainConfigProvider: BlockchainConfigurationProvider,
@@ -68,6 +67,8 @@ open class ContainerManagedBlockchainProcessManager(
     private val containerJobManager = DefaultContainerJobManager(containerNodeConfig, containerJobHandler, containerHealthcheckHandler)
     private val runningInContainer = System.getenv("POSTCHAIN_RUNNING_IN_CONTAINER").toBoolean()
 
+    private val metrics = ContainerMetrics(this)
+
     init {
         logger.info(if (runningInContainer) "Running in container" else "Running as native process")
         Runtime.getRuntime().addShutdownHook(
@@ -85,12 +86,11 @@ open class ContainerManagedBlockchainProcessManager(
                     logger.info("Stopping subnode containers done")
                 }
         )
-        ContainerMetrics(::numberOfSubnodes, ::numberOfContainers)
     }
 
-    private fun numberOfSubnodes(): Int = containers().size
+    fun numberOfSubnodes(): Int = containers().size
 
-    private fun numberOfContainers(): Int = directoryDataSource.getContainersToRun()?.size ?: 0
+    fun numberOfContainers(): Int = directoryDataSource.getContainersToRun()?.size ?: 0
 
     private fun containers(): MutableMap<ContainerName, PostchainContainer> = postchainContainers
 
@@ -204,6 +204,7 @@ open class ContainerManagedBlockchainProcessManager(
         getStartingOrRunningContainerBlockchains()
                 .forEach { stopBlockchain(it.key, bTrace = null) }
         containerJobManager.shutdown()
+        metrics.close()
         super.shutdown()
     }
 

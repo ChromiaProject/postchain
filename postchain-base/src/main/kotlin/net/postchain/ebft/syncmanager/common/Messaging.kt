@@ -6,6 +6,7 @@ import net.postchain.concurrent.util.get
 import net.postchain.core.NodeRid
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockQueries
+import net.postchain.crypto.Signature
 import net.postchain.ebft.message.BlockHeader
 import net.postchain.ebft.message.BlockRange
 import net.postchain.ebft.message.BlockSignature
@@ -13,7 +14,6 @@ import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockRange
-import net.postchain.ebft.message.Signature
 import net.postchain.ebft.message.UnfinishedBlock
 import net.postchain.network.CommunicationManager
 
@@ -71,6 +71,7 @@ abstract class Messaging(
         val blocks = mutableListOf<CompleteBlock>()
         val allBlocksFit = blockPacker.packBlockRange(
                 peerId,
+                communicationManager.getPeerPacketVersion(peerId),
                 startAtHeight,
                 myHeight,
                 ::simpleGetBlockAtHeight,

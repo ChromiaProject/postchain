@@ -16,8 +16,7 @@ data class PostchainContext(
         val connectionManager: ConnectionManager,
         val blockQueriesProvider: BlockQueriesProvider,
         val nodeDiagnosticContext: NodeDiagnosticContext,
-        val configurationProvider: BlockchainConfigurationProvider,
-        val debug: Boolean
+        val configurationProvider: BlockchainConfigurationProvider
 ) {
     val cryptoSystem get() = appConfig.cryptoSystem
 

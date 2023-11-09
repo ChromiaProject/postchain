@@ -8,12 +8,18 @@ import net.postchain.base.data.DatabaseAccessFactory
 import net.postchain.config.app.AppConfig
 import net.postchain.core.Storage
 import org.apache.commons.dbcp2.BasicDataSource
+import java.sql.Connection.TRANSACTION_REPEATABLE_READ
 import javax.sql.DataSource
 import kotlin.time.Duration
 
 object StorageBuilder {
 
-    private const val DB_VERSION = 9
+    private const val DB_VERSION = 10
+
+    /**
+     * This is to be used by dependent projects to determine current version
+     */
+    fun getCurrentDbVersion() = DB_VERSION
 
     fun buildStorage(appConfig: AppConfig, maxWaitWrite: Duration = Duration.ZERO, maxWriteTotal: Int = 2,
                      wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION, allowUpgrade: Boolean = true): Storage {
@@ -22,7 +28,8 @@ object StorageBuilder {
 
         // Read DataSource
         val readDataSource = createBasicDataSource(appConfig).apply {
-            defaultAutoCommit = true
+            defaultAutoCommit = false
+            defaultTransactionIsolation = TRANSACTION_REPEATABLE_READ
             maxTotal = appConfig.databaseReadConcurrency
             defaultReadOnly = true
         }

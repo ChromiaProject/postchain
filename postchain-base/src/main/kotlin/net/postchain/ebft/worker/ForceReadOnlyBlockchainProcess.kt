@@ -1,6 +1,7 @@
 package net.postchain.ebft.worker
 
 import mu.withLoggingContext
+import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainState
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticData
@@ -10,7 +11,6 @@ import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.ebft.syncmanager.readonly.ForceReadOnlyMessageProcessor
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
-import kotlin.collections.mapOf
 import kotlin.collections.set
 
 class ForceReadOnlyBlockchainProcess(
@@ -23,7 +23,9 @@ class ForceReadOnlyBlockchainProcess(
             BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex()
     )
 
-    private val forceReadOnlyMessageProcessor = ForceReadOnlyMessageProcessor(workerContext.engine.getBlockQueries(), workerContext.communicationManager)
+    private val blockHeight = workerContext.engine.getBlockQueries().getLastBlockHeight().get()
+
+    private val forceReadOnlyMessageProcessor = ForceReadOnlyMessageProcessor(workerContext.engine.getBlockQueries(), workerContext.communicationManager, blockHeight)
 
     override fun action() {
         withLoggingContext(loggingContext) {
@@ -46,4 +48,6 @@ class ForceReadOnlyBlockchainProcess(
         super.registerDiagnosticData(diagnosticData)
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_FORCE_READ_ONLY.prettyName)
     }
+
+    override fun currentBlockHeight(): Long = blockHeight
 }

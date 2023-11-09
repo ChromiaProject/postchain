@@ -3,21 +3,21 @@
 package net.postchain.integrationtest.api
 
 import assertk.assertThat
-import assertk.assertions.hasSize
+import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import assertk.assertions.isGreaterThan
 import assertk.isContentEqualTo
-import com.google.common.util.concurrent.ThreadFactoryBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
-import net.postchain.api.rest.controller.RestApi
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
+import net.postchain.core.EContext
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.IntegrationTestSetup
@@ -26,15 +26,16 @@ import net.postchain.devtools.RestTools
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
 import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvFileReader
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
+import net.postchain.gtx.SimpleGTXModule
 import net.postchain.integrationtest.JsonTools
 import net.postchain.integrationtest.JsonTools.jsonAsMap
-import net.postchain.integrationtest.managedmode.getLoggerCaptor
 import net.postchain.integrationtest.reconfiguration.TogglableFaultyGtxModule
 import org.awaitility.Awaitility
 import org.hamcrest.CoreMatchers.equalTo
@@ -45,7 +46,7 @@ import org.skyscreamer.jsonassert.JSONAssert
 import org.skyscreamer.jsonassert.JSONCompareMode
 import java.nio.file.Paths
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
+import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
 
 class RestApiIT : IntegrationTestSetup() {
@@ -330,9 +331,25 @@ class RestApiIT : IntegrationTestSetup() {
     }
 
     @Test
-    fun testValidateBlockchainConfigurationWithNoSigners() {
+    fun testValidateBlockchainConfigurationWithEmptySigners() {
         val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
-        val blockChainFileToValidate = "/net/postchain/devtools/api/blockchain_config_0.xml"
+        val blockChainFileToValidate = "/net/postchain/devtools/api/blockchain_config_empty_signers.xml"
+        val sysSetup = doSystemSetup(1, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        val config = GtvEncoder.encodeGtv(GtvFileReader.readFile(Paths.get(javaClass.getResource(blockChainFileToValidate)!!.toURI()).toFile()))
+        given().port(nodes[0].getRestApiHttpPort())
+                .header("Content-Type", ContentType.BINARY)
+                .body(config)
+                .post("/config/$blockchainRID")
+                .then()
+                .statusCode(200)
+    }
+
+    @Test
+    fun testValidateBlockchainConfigurationWithoutSigners() {
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
+        val blockChainFileToValidate = "/net/postchain/devtools/api/blockchain_config_no_signers.xml"
         val sysSetup = doSystemSetup(1, blockChainFile)
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
@@ -435,8 +452,9 @@ class RestApiIT : IntegrationTestSetup() {
         )
         nodes[0].addConfiguration(PostchainTestNode.DEFAULT_CHAIN_IID, 4, faultyConfig)
         buildBlock(PostchainTestNode.DEFAULT_CHAIN_IID, 3)
-        buildBlockNoWait(nodes, PostchainTestNode.DEFAULT_CHAIN_IID, 4)
-        Thread.sleep(1000) // give it some time to fail
+        Awaitility.await().untilAsserted {
+            assertThat(nodes[0].getRestApiModel().live).isFalse()
+        }
 
         // get transactions
         given().port(nodes[0].getRestApiHttpPort())
@@ -476,56 +494,92 @@ class RestApiIT : IntegrationTestSetup() {
     }
 
     @Test
-    fun `REST API limit number of concurrent requests`() {
+    fun `debug API`() {
         val nodeCount = 1
         val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
+        val sysSetup = doSystemSetup(nodeCount, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        given().port(nodes[0].getDebugApiHttpPort())
+                .header("Accept", ContentType.JSON)
+                .get("/_debug")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body("blockchain[0].brid", equalTo(blockchainRID))
+    }
+
+    @Test
+    fun `REST API limit number of concurrent requests overall`() {
+        val nodeCount = 1
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_blockable_1.xml"
         configOverrides.setProperty("api.request-concurrency", 2)
         val sysSetup = doSystemSetup(nodeCount, blockChainFile)
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
-        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem)
-        val blocks = mutableListOf<List<TestOneOpGtxTransaction>>()
-        val blockCount = 1
-        val txPerBlockCount = 4
 
-        // create blocks
-        var currentId = 0
-        for (blockHeight in 0 until blockCount) {
-            val transactions = mutableListOf<TestOneOpGtxTransaction>()
-            for (txInBlock in 0 until txPerBlockCount) {
-                transactions.add(postGtxTransaction(factory, ++currentId, blockHeight, nodeCount, blockchainRIDBytes))
-            }
-            buildBlockAndCommit(nodes[0])
-            blocks.add(transactions)
-        }
-
-        // get transactions
-        val body = given().port(nodes[0].getRestApiHttpPort())
-                .get("/transactions/$blockchainRID")
-                .then()
-                .statusCode(200)
-                .extract().body().asString()
-        val txRids = (JsonParser.parseString(body) as JsonArray).asList().map { it.asJsonObject.get("txRID").asString }
-        assertThat(txRids).hasSize(4)
-
-        // fetch them in parallel
-        val appender = getLoggerCaptor(RestApi::class.java)
-        val threadPool = Executors.newFixedThreadPool(txRids.size, ThreadFactoryBuilder().setNameFormat("client-to-REST-API-%d").build())
-        val tasks = txRids.map { txRid ->
-            CompletableFuture.supplyAsync({
+        // run 3 blockable queries
+        val queries = (0..2).map {
+            CompletableFuture.supplyAsync {
                 given().port(nodes[0].getRestApiHttpPort())
-                        .get("/transactions/$blockchainRID/$txRid")
+                        .get("/query_gtv/$blockchainRID?type=blockable")
                         .then()
-                        .statusCode(200)
-                        .body("txRID", equalTo(txRid))
-                        .extract()
-            }, threadPool)
+                        .extract().body()
+            }
         }
-        CompletableFuture.allOf(*tasks.toTypedArray()).get(10, TimeUnit.SECONDS)
-        val logs = appender.events
-        val startTimes = logs.filter { it.message.toString().contains("GET") }.map { it.timeMillis }
-        val endTimes = logs.filter { it.message.toString().contains("Response body:") }.map { it.timeMillis }
-        assertThat(startTimes.max()).isGreaterThan(endTimes.min())
+        // Give the queries time to execute
+        Thread.sleep(1000)
+
+        // Release semaphore so all queries can complete
+        BlockableQueryGtxModule.querySemaphore.release(queries.size)
+
+        CompletableFuture.allOf(*queries.toTypedArray()).get(10, TimeUnit.SECONDS)
+        val responses = queries.map { GtvDecoder.decodeGtv(it.get().asByteArray()).asArray() }
+        val maxStart = responses.maxOf { it[0].asInteger() }
+        val minEnd = responses.minOf { it[1].asInteger() }
+        assertThat(maxStart).isGreaterThan(minEnd)
+    }
+
+    @Test
+    fun `REST API limit number of concurrent requests per chain`() {
+        val nodeCount = 1
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_blockable_1.xml"
+        configOverrides.setProperty("api.request-concurrency", 4)
+        configOverrides.setProperty("api.chain-request-concurrency", 2)
+        val sysSetup = doSystemSetup(nodeCount, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+
+        // run 2 blockable queries
+        val query1Status = CompletableFuture.supplyAsync {
+            given().port(nodes[0].getRestApiHttpPort())
+                    .get("/query/$blockchainRID?type=blockable")
+                    .then()
+                    .extract().statusCode()
+        }
+        val query2Status = CompletableFuture.supplyAsync {
+            given().port(nodes[0].getRestApiHttpPort())
+                    .get("/query/$blockchainRID?type=blockable")
+                    .then()
+                    .extract().statusCode()
+        }
+
+        Awaitility.await().untilAsserted {
+            assertThat(BlockableQueryGtxModule.querySemaphore.queueLength).isEqualTo(2)
+        }
+
+        // Assert that we can't have 3 queries running at the same time for same BC
+        given().port(nodes[0].getRestApiHttpPort())
+                .get("/query/$blockchainRID?type=blockable")
+                .then()
+                .statusCode(503)
+
+        // Release the two queries
+        BlockableQueryGtxModule.querySemaphore.release(2)
+
+        CompletableFuture.allOf(query1Status, query2Status).get(10, TimeUnit.SECONDS)
+        assertThat(query1Status.get()).isEqualTo(200)
+        assertThat(query2Status.get()).isEqualTo(200)
     }
 
     /**
@@ -576,4 +630,19 @@ class RestApiIT : IntegrationTestSetup() {
                 .then()
                 .statusCode(expectedStatus)
     }
+}
+
+class BlockableQueryGtxModule : SimpleGTXModule<Unit>(Unit, mapOf(), mapOf(
+        "blockable" to { _, _, _ ->
+            val queryStart = System.currentTimeMillis()
+            querySemaphore.acquire()
+            val queryEnd = System.currentTimeMillis()
+            gtv(listOf(gtv(queryStart), gtv(queryEnd)))
+        }
+)) {
+    companion object {
+        val querySemaphore = Semaphore(0)
+    }
+
+    override fun initializeDB(ctx: EContext) {}
 }

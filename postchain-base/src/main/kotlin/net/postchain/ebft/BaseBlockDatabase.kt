@@ -145,8 +145,11 @@ class BaseBlockDatabase(
                     addBlockLog("Got error when loading: ${exception.message}")
                     throw exception
                 } else {
-                    updateBTrace(existingBTrace, theBlockBuilder.getBTrace())
+                    theBlockBuilder.getBTrace()?.let { updateBTrace(existingBTrace, it) }
+                    val blockSample = Timer.start(Metrics.globalRegistry)
                     theBlockBuilder.commit(block.witness) // No need to set BTrace, because we have it
+                    blockSample.stop(metrics.confirmedBlocks)
+                    metrics.confirmedTransactions.increment(block.transactions.size.toDouble())
                     addBlockLog("Done commit", theBlockBuilder.getBTrace())
                 }
             }
@@ -164,7 +167,6 @@ class BaseBlockDatabase(
                 } else {
                     blockBuilder = theBlockBuilder
                     witnessBuilder = blockBuilder!!.getBlockWitnessBuilder() as MultiSigBlockWitnessBuilder
-                    logger.info("Signed block with RID ${block.header.blockRID.toHex()} at height ${theBlockBuilder.height}")
                     nodeDiagnosticContext.blockchainBlockStats(engine.blockchainRid).add(DiagnosticData(
                             DiagnosticProperty.BLOCK_RID withValue block.header.blockRID.toHex(),
                             DiagnosticProperty.BLOCK_HEIGHT withValue theBlockBuilder.height,
@@ -181,7 +183,13 @@ class BaseBlockDatabase(
     override fun commitBlock(signatures: Array<Signature?>): CompletionStage<Unit> {
         return runOpAsync("commitBlock") {
             // TODO: process signatures
-            blockBuilder!!.commit(witnessBuilder!!.getWitness())
+            val theBlockBuilder = blockBuilder!!
+            withLoggingContext(BLOCK_RID_TAG to theBlockBuilder.getBlockData().header.blockRID.toHex()) {
+                val blockSample = Timer.start(Metrics.globalRegistry)
+                theBlockBuilder.commit(witnessBuilder!!.getWitness())
+                blockSample.stop(metrics.confirmedBlocks)
+                metrics.confirmedTransactions.increment(theBlockBuilder.getBlockData().transactions.size.toDouble())
+            }
             blockBuilder = null
             witnessBuilder = null
         }
@@ -201,7 +209,7 @@ class BaseBlockDatabase(
         }
     }
 
-    override fun verifyBlockSignature(s: Signature): Boolean {
+    override fun applyAndVerifyBlockSignature(s: Signature): Boolean {
         return if (witnessBuilder != null) {
             try {
                 witnessBuilder!!.applySignature(s)

@@ -103,11 +103,13 @@ class MessagingTest {
         // setup
         val myHeight = 5L
         val startAtHeight = 1L
-        doReturn(true).whenever(blockPacker).packBlockRange(isA(), anyLong(), anyLong(), any(), any(), anyList())
+        val packetVersion = 1L
+        doReturn(true).whenever(blockPacker).packBlockRange(isA(), anyLong(), anyLong(), anyLong(), any(), any(), anyList())
+        doReturn(packetVersion).whenever(commManager).getPeerPacketVersion(nodeRid)
         // execute
         sut.sendBlockRangeFromHeight(nodeRid, startAtHeight, myHeight)
         // verify
-        verify(blockPacker).packBlockRange(eq(nodeRid), eq(startAtHeight), eq(myHeight), any(), any(), anyList())
+        verify(blockPacker).packBlockRange(eq(nodeRid), eq(packetVersion), eq(startAtHeight), eq(myHeight), any(), any(), anyList())
         argumentCaptor<BlockRange>().apply {
             verify(commManager).sendPacket(capture(), eq(nodeRid))
             assertThat(firstValue.startAtHeight).isEqualTo(startAtHeight)
@@ -120,11 +122,13 @@ class MessagingTest {
         // setup
         val myHeight = 5L
         val startAtHeight = 1L
-        doReturn(false).whenever(blockPacker).packBlockRange(isA(), anyLong(), anyLong(), any(), any(), anyList())
+        val packetVersion = 1L
+        doReturn(false).whenever(blockPacker).packBlockRange(isA(), anyLong(), anyLong(), anyLong(), any(), any(), anyList())
+        doReturn(packetVersion).whenever(commManager).getPeerPacketVersion(nodeRid)
         // execute
         sut.sendBlockRangeFromHeight(nodeRid, startAtHeight, myHeight)
         // verify
-        verify(blockPacker).packBlockRange(eq(nodeRid), eq(startAtHeight), eq(myHeight), any(), any(), anyList())
+        verify(blockPacker).packBlockRange(eq(nodeRid), eq(packetVersion), eq(startAtHeight), eq(myHeight), any(), any(), anyList())
         argumentCaptor<BlockRange>().apply {
             verify(commManager).sendPacket(capture(), eq(nodeRid))
             assertThat(firstValue.startAtHeight).isEqualTo(startAtHeight)

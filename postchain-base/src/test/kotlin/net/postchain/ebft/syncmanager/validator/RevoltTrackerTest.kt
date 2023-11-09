@@ -2,6 +2,7 @@ package net.postchain.ebft.syncmanager.validator
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import net.postchain.DynamicValueAnswer
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.ebft.NodeStatus
@@ -10,11 +11,13 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.Clock
 
 class RevoltTrackerTest {
 
@@ -30,12 +33,14 @@ class RevoltTrackerTest {
     }
     private val revoltConfig: RevoltConfigurationData = mock {
         on { timeout } doReturn 1000
-        on { exponentialDelayBase } doReturn 1000
+        on { getInitialDelay() } doReturn 1000
+        on { getDelayPowerBase() } doReturn 1.2
         on { exponentialDelayMax } doReturn 600_000
         on { fastRevoltStatusTimeout } doReturn -1
+        on { revoltWhenShouldBuildBlock } doReturn true
     }
 
-    private var currentTimeMillis: Long = 100
+    private var currentMillis = DynamicValueAnswer(100L)
     private lateinit var sut: RevoltTracker
 
     companion object {
@@ -54,9 +59,10 @@ class RevoltTrackerTest {
 
     @BeforeEach
     fun setUp() {
-        sut = object : RevoltTracker(statusManager, revoltConfig, engine) {
-            override fun currentTimeMillis() = currentTimeMillis
+        val clock: Clock = mock {
+            on { millis() } doAnswer currentMillis
         }
+        sut = RevoltTracker(statusManager, revoltConfig, engine, clock)
     }
 
     @Test
@@ -170,7 +176,7 @@ class RevoltTrackerTest {
     fun `If deadline has not passed do not revolt`() {
         // setup
         whenever(blockBuildingStrategy.shouldBuildBlock()).thenReturn(true)
-        currentTimeMillis = 1100
+        currentMillis.value = 1100
         // execute
         sut.update()
         // verify
@@ -181,7 +187,7 @@ class RevoltTrackerTest {
     fun `If deadline has passed and is already revolting, do not revolt again`() {
         // setup
         whenever(blockBuildingStrategy.shouldBuildBlock()).thenReturn(true)
-        currentTimeMillis = 10000
+        currentMillis.value = 10000
         myStatus.revolting = true
         // execute
         sut.update()
@@ -193,7 +199,17 @@ class RevoltTrackerTest {
     fun `If deadline has passed do revolt`() {
         // setup
         whenever(blockBuildingStrategy.shouldBuildBlock()).thenReturn(true)
-        currentTimeMillis = 10000
+        currentMillis.value = 10000
+        // execute
+        sut.update()
+        // verify
+        verify(statusManager).onStartRevolting()
+    }
+
+    @Test
+    fun `Check that should build block is ignored if we have not configured to check it`() {
+        whenever(revoltConfig.revoltWhenShouldBuildBlock).thenReturn(false)
+        currentMillis.value = 10000
         // execute
         sut.update()
         // verify

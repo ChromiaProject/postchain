@@ -46,7 +46,7 @@ open class DefaultMasterSyncInfra(
                 connectionManager,
                 masterConnectionManager,
                 afterSubnodeCommitListeners
-        ).apply { init() }
+        )
 
         return DefaultContainerBlockchainProcess(
                 nodeConfig,

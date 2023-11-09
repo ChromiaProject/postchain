@@ -6,7 +6,7 @@ import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.ebft.message.CompleteBlock
 import net.postchain.network.MAX_PAYLOAD_SIZE
 
-object BlockPacker: KLogging() {
+object BlockPacker : KLogging() {
 
     /**
      * We don't want to consume the maximum package size with content, so we reduce the maximum package size with
@@ -23,30 +23,32 @@ object BlockPacker: KLogging() {
      * @return true if all blocks we had could fit in the block
      */
     fun packBlockRange(
-        peerId: NodeRid,
-        startAtHeight: Long,
-        myHeight: Long,
-        getBlockFromHeight: (height: Long) -> BlockDataWithWitness?, // Sending this to simplify testing
-        buildFromBlockDataWithWitness: (height: Long, blockData: BlockDataWithWitness) -> CompleteBlock, // Sending this to simplify testing
-        packedBlocks: MutableList<CompleteBlock> // Holds the "return" list
+            peerId: NodeRid,
+            peerEbftVersion: Long,
+            startAtHeight: Long,
+            myHeight: Long,
+            getBlockFromHeight: (height: Long) -> BlockDataWithWitness?, // Sending this to simplify testing
+            buildFromBlockDataWithWitness: (height: Long, blockData: BlockDataWithWitness) -> CompleteBlock, // Sending this to simplify testing
+            packedBlocks: MutableList<CompleteBlock> // Holds the "return" list
     ): Boolean {
         var totByteSize = 0
         var blocksAdded = 0
+        logger.debug { "GetBlockRange from peer $peerId, starting at height $startAtHeight, myHeight is $myHeight" }
         while (blocksAdded < MAX_BLOCKS_IN_PACKAGE) {
             val height = startAtHeight + blocksAdded
-            logger.debug { "GetBlockRange from peer $peerId , height $height, myHeight is $myHeight" }
+            logger.debug { "GetBlockRange from peer $peerId, packing height $height" }
             val blockData = getBlockFromHeight(height)
             if (blockData == null) {
-                logger.debug { "GetBlockRange no more blocks in DB."}
+                logger.debug { "GetBlockRange no more blocks in DB." }
                 return true
             } else {
                 val completeBlock = buildFromBlockDataWithWitness(height, blockData)
 
                 // We are not allowed to send packages above the size limit
-                totByteSize += completeBlock.encoded.size
+                totByteSize += completeBlock.encoded(peerEbftVersion).value.size
 
                 if (totByteSize < MAX_PACKAGE_CONTENT_BYTES) {
-                    logger.trace { "GetBlockRange block found in DB."}
+                    logger.trace { "GetBlockRange block found in DB." }
                     packedBlocks.add(completeBlock)
                     blocksAdded++
                 } else {

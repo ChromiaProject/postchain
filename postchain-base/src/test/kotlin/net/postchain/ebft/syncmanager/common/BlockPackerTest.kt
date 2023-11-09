@@ -4,23 +4,26 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.core.NodeRid
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.ebft.message.CompleteBlock
-import org.junit.jupiter.api.Test
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
 
 @Suppress("UNUSED_PARAMETER")
 class BlockPackerTest {
 
-    val nodeHex = "121212"
-    val theOnlyOtherNode = NodeRid(nodeHex.hexStringToByteArray())
-    val startAtHeight = 17L
-    val myHeight = 19L
+    private val nodeHex = "121212"
+    private val theOnlyOtherNode = NodeRid(nodeHex.hexStringToByteArray())
+    private val startAtHeight = 17L
+    private val myHeight = 19L
 
-    val smallBlockBytes = ByteArray(1000)
-    val bigBlockBytes = ByteArray(10_000_000)
+    private val smallBlockBytes = ByteArray(1000)
+    private val bigBlockBytes = ByteArray(10_000_000)
+
+    private val packetVersion = 1L
 
     private lateinit var mockedBd: BlockDataWithWitness
     private lateinit var mockedCb: CompleteBlock
@@ -42,16 +45,17 @@ class BlockPackerTest {
         val packedBlocks = mutableListOf<CompleteBlock>()
         mockedBd = mock { }
         mockedCb = mock {
-            on { encoded } doReturn smallBlockBytes
+            on { encoded(any()) } doReturn lazy { smallBlockBytes }
         }
 
         val allFit = BlockPacker.packBlockRange(
-            theOnlyOtherNode,
-            startAtHeight,
-            myHeight,
-            ::dummyGetBlockAtHeight,
-            ::dummyBuildFromBlockDataWithWitness,
-            packedBlocks)
+                theOnlyOtherNode,
+                packetVersion,
+                startAtHeight,
+                myHeight,
+                ::dummyGetBlockAtHeight,
+                ::dummyBuildFromBlockDataWithWitness,
+                packedBlocks)
 
         assertTrue(allFit)
         assertEquals(BlockPacker.MAX_BLOCKS_IN_PACKAGE, packedBlocks.size)
@@ -66,16 +70,17 @@ class BlockPackerTest {
         val packedBlocks = mutableListOf<CompleteBlock>()
         mockedBd = mock { }
         mockedCb = mock {
-            on { encoded } doReturn bigBlockBytes
+            on { encoded(any()) } doReturn lazy { bigBlockBytes }
         }
 
         val allFit = BlockPacker.packBlockRange(
-            theOnlyOtherNode,
-            startAtHeight,
-            myHeight,
-            ::dummyGetBlockAtHeight,
-            ::dummyBuildFromBlockDataWithWitness,
-            packedBlocks)
+                theOnlyOtherNode,
+                packetVersion,
+                startAtHeight,
+                myHeight,
+                ::dummyGetBlockAtHeight,
+                ::dummyBuildFromBlockDataWithWitness,
+                packedBlocks)
 
         assertFalse(allFit)
         val expectedBlocks = BlockPacker.MAX_PACKAGE_CONTENT_BYTES / bigBlockBytes.size

@@ -12,11 +12,15 @@ import net.postchain.core.NodeRid
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
-import net.postchain.network.XPacketDecoderFactory
-import net.postchain.network.XPacketEncoderFactory
-import net.postchain.network.common.*
+import net.postchain.network.XPacketCodecFactory
+import net.postchain.network.common.ChainWithConnections
+import net.postchain.network.common.ChainsWithConnections
+import net.postchain.network.common.ConnectionDirection
+import net.postchain.network.common.LazyPacket
+import net.postchain.network.common.NetworkTopology
+import net.postchain.network.common.NodeConnector
+import net.postchain.network.common.NodeConnectorEvents
 import net.postchain.network.netty2.NettyPeerConnector
-import java.time.Clock
 
 /**
  * Default implementation for "peer" based networks (which EBFT is).
@@ -51,8 +55,7 @@ import java.time.Clock
  * @property PacketType is the type of packets that can be handled
  */
 open class DefaultPeerConnectionManager<PacketType>(
-        private val packetEncoderFactory: XPacketEncoderFactory<PacketType>,
-        private val packetDecoderFactory: XPacketDecoderFactory<PacketType>
+        private val packetCodecFactory: XPacketCodecFactory<PacketType>
 ) : NetworkTopology, // Only "Peer" networks need this
         PeerConnectionManager,  // Methods specific to the "X" connection part
         NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
@@ -145,12 +148,12 @@ open class DefaultPeerConnectionManager<PacketType>(
         // blockchain started, but not for subsequent ones.
         if (connector == null) {
             myPeerInfo = chainPeersConfig.commConfiguration.myPeerInfo()
-            peersConnectionStrategy = DefaultPeersConnectionStrategy(this, myPeerInfo.peerId(), Clock.systemUTC())
+            peersConnectionStrategy = DefaultPeersConnectionStrategy(this, myPeerInfo.peerId())
 
-            val packetDecoder = packetDecoderFactory.create(chainPeersConfig.commConfiguration)
+            val packetCodec = packetCodecFactory.create(chainPeersConfig.commConfiguration, chainPeersConfig.blockchainRid)
             // We have already given away we are using Netty, so skipping the factory
             connector = NettyPeerConnector<PacketType>(this).apply {
-                init(myPeerInfo, packetDecoder)
+                init(myPeerInfo, packetCodec)
             }
         }
 
@@ -184,12 +187,8 @@ open class DefaultPeerConnectionManager<PacketType>(
             )
         }
 
-        val packetEncoder = packetEncoderFactory.create(
-                chainPeersConfig.commConfiguration,
-                chainPeersConfig.blockchainRid
-        )
-
-        connector?.connectNode(descriptor, peerInfo, packetEncoder)
+        val packetCodec = packetCodecFactory.create(chainPeersConfig.commConfiguration, chainPeersConfig.blockchainRid)
+        connector?.connectNode(descriptor, peerInfo, packetCodec)
     }
 
     @Synchronized
@@ -214,6 +213,10 @@ open class DefaultPeerConnectionManager<PacketType>(
     override fun sendPacket(data: LazyPacket, chainId: Long, nodeRid: NodeRid) {
         chainsWithConnections.getNodeConnection(chainId, nodeRid)?.sendPacket(data)
     }
+
+    @Synchronized
+    override fun getPacketVersion(chainId: Long, nodeRid: NodeRid): Long =
+            chainsWithConnections.getNodeConnection(chainId, nodeRid)?.descriptor()?.packetVersion ?: 1
 
     @Synchronized
     override fun broadcastPacket(data: LazyPacket, chainId: Long) {
@@ -426,6 +429,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                             return null
                         }
                     }
+
                     ConnectionDirection.OUTGOING -> {
                         logger.error(
                                 "getChainIdOnConnected() - We initiated this contact but lost the Chain ID"
@@ -451,6 +455,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                         connection.close()
                         return null
                     }
+
                     ConnectionDirection.OUTGOING -> {
                         logger.error("getChainOnConnected() - We initiated this contact but lost the Chain")
                         connection.close()
@@ -481,6 +486,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                         )
                         null
                     }
+
                     ConnectionDirection.OUTGOING -> {
                         // Should never happen
                         logger.error(

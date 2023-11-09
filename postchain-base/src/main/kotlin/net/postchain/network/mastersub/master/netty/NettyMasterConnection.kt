@@ -31,7 +31,7 @@ class NettyMasterConnection :
     }
 
     override fun sendPacket(packet: LazyPacket) {
-        context.writeAndFlush(Transport.wrapMessage(packet()))
+        context.writeAndFlush(Transport.wrapMessage(packet.value))
     }
 
     override fun remoteAddress(): String {
@@ -46,21 +46,23 @@ class NettyMasterConnection :
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         val messageBytes = Transport.unwrapMessage(msg as ByteBuf)
-        when (val message = MsCodec.decode(messageBytes)) {
-            is MsHandshakeMessage -> {
-                connectionDescriptor = MasterConnectionDescriptor(message.blockchainRid?.let { BlockchainRid(it) }, message.containerIID)
-                onConnectedHandler?.invoke(connectionDescriptor!!, this)
-                messageHandler?.onMessage(message)
-            }
-
-            else -> {
-                if (connectionDescriptor != null) {
+        try {
+            when (val message = MsCodec.decode(messageBytes)) {
+                is MsHandshakeMessage -> {
+                    connectionDescriptor = MasterConnectionDescriptor(message.blockchainRid?.let { BlockchainRid(it) }, message.containerIID)
+                    onConnectedHandler?.invoke(connectionDescriptor!!, this)
                     messageHandler?.onMessage(message)
                 }
-            }
-        }
 
-        msg.release()
+                else -> {
+                    if (connectionDescriptor != null) {
+                        messageHandler?.onMessage(message)
+                    }
+                }
+            }
+        } finally {
+            msg.release()
+        }
     }
 
     override fun channelActive(ctx: ChannelHandlerContext?) {

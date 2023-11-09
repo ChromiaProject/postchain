@@ -12,9 +12,8 @@ import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.app.AppConfig
-import net.postchain.network.XPacketDecoder
-import net.postchain.network.XPacketDecoderFactory
-import net.postchain.network.XPacketEncoderFactory
+import net.postchain.network.XPacketCodec
+import net.postchain.network.XPacketCodecFactory
 import net.postchain.network.common.ChainsWithConnections
 import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.common.LazyPacket
@@ -42,8 +41,7 @@ class DefaultPeerConnectionManagerTest {
 
     private lateinit var peerInfo1: PeerInfo
     private lateinit var peerConnectionDescriptor1: PeerConnectionDescriptor
-    private lateinit var packetEncoderFactory: XPacketEncoderFactory<Int>
-    private lateinit var packetDecoderFactory: XPacketDecoderFactory<Int>
+    private lateinit var packetCodecFactory: XPacketCodecFactory<Int>
 
     private lateinit var peerInfo2: PeerInfo
     private lateinit var peerConnectionDescriptor2: PeerConnectionDescriptor
@@ -72,12 +70,8 @@ class DefaultPeerConnectionManagerTest {
         peerConnectionDescriptor1 = PeerConnectionDescriptor(blockchainRid, peerInfo1.peerId(), ConnectionDirection.OUTGOING)
         peerConnectionDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
 
-        packetEncoderFactory = mock {
+        packetCodecFactory = mock {
             on { create(any(), any()) } doReturn mock()
-        }
-
-        packetDecoderFactory = mock {
-            on { create(any()) } doReturn mock()
         }
     }
 
@@ -94,9 +88,9 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        ).apply { connectChain(chainPeerConfig, false) }
+        val connectionManager = DefaultPeerConnectionManager(packetCodecFactory).apply {
+            connectChain(chainPeerConfig, false)
+        }
 
         // Then
         verify(communicationConfig, never()).networkNodes
@@ -118,9 +112,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        )
+        val connectionManager = DefaultPeerConnectionManager(packetCodecFactory)
 
         try {
             connectionManager.also { it.connectChain(chainPeerConfig, true) }
@@ -154,9 +146,9 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        ).apply { connectChain(chainPeerConfig, true) }
+        val connectionManager = DefaultPeerConnectionManager(packetCodecFactory).apply {
+            connectChain(chainPeerConfig, true)
+        }
 
         // Then
         verify(chainPeerConfig, atLeast(1)).chainId
@@ -180,17 +172,14 @@ class DefaultPeerConnectionManagerTest {
         val chainPeerConf = XChainPeersConfiguration(1L, blockchainRid, communicationConfig, mock())
 
         // Hate mocking
-        val d: XPacketDecoder<Int> = mock { }
-        val df: XPacketDecoderFactory<Int> = mock {
-            on { create(any()) } doReturn d
+        val codec: XPacketCodec<Int> = mock { }
+        val codecFactory: XPacketCodecFactory<Int> = mock {
+            on { create(any(), any()) } doReturn codec
         }
 
         // When / Then exception
         assertThrows<ProgrammerMistake> {
-            DefaultPeerConnectionManager(
-                    mock(),
-                    df
-            ).apply {
+            DefaultPeerConnectionManager(codecFactory).apply {
                 connectChain(chainPeerConf, false) // Without connecting to peers
                 connectChainPeer(1, unknownPeerInfo.peerId())
             }
@@ -214,9 +203,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        ).apply {
+        val connectionManager = DefaultPeerConnectionManager(packetCodecFactory).apply {
             connectChain(chainPeerConfig, false) // Without connecting to peers
             connectChainPeer(1, peerInfo2.peerId())
         }
@@ -246,9 +233,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        ).apply {
+        val connectionManager = DefaultPeerConnectionManager(packetCodecFactory).apply {
             connectChain(chainPeerConfig, true) // Auto connect all peers
 
             // Emulates call of onPeerConnected() by XConnector
@@ -298,9 +283,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        ).apply {
+        val connectionManager = DefaultPeerConnectionManager(packetCodecFactory).apply {
             connectChain(chainPeerConfig, true) // With autoConnect
 
             // Then / before peers connected
@@ -353,7 +336,7 @@ class DefaultPeerConnectionManagerTest {
     @Test
     fun sendPacket_will_result_in_exception_if_chain_is_not_connected() {
         assertThrows<ProgrammerMistake> {
-            emptyManager().sendPacket({ byteArrayOf() }, 1, peerInfo2.peerId())
+            emptyManager().sendPacket((lazy { byteArrayOf() }), 1, peerInfo2.peerId())
         }
     }
 
@@ -372,27 +355,25 @@ class DefaultPeerConnectionManagerTest {
             on { blockchainRid } doReturn blockchainRid
             on { commConfiguration } doReturn communicationConfig
         }
-        val connection1: NettyPeerConnection = mockConnection(peerConnectionDescriptor1)
-        val connection2: NettyPeerConnection = mockConnection(peerConnectionDescriptor2)
+        val connection1: NettyPeerConnection<Int> = mockConnection(peerConnectionDescriptor1)
+        val connection2: NettyPeerConnection<Int> = mockConnection(peerConnectionDescriptor2)
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        ).apply {
+        val connectionManager = DefaultPeerConnectionManager(packetCodecFactory).apply {
             connectChain(chainPeerConfig, true) // With autoConnect
 
             // Emulates call of onPeerConnected() by XConnector
             onNodeConnected(connection1)
             onNodeConnected(connection2)
 
-            sendPacket({ byteArrayOf(0x04, 0x02) }, 1L, peerInfo2.peerId())
+            sendPacket((lazy { byteArrayOf(0x04, 0x02) }), 1L, peerInfo2.peerId())
         }
 
         // Then / verify and assert
         verify(connection1, times(0)).sendPacket(any())
         argumentCaptor<LazyPacket>().apply {
             verify(connection2, times(1)).sendPacket(capture())
-            assertThat(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
+            assertThat(firstValue.value).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
 
         connectionManager.shutdown()
@@ -401,11 +382,11 @@ class DefaultPeerConnectionManagerTest {
     @Test
     fun broadcastPacket_will_result_in_exception_if_chain_is_not_connected() {
         assertThrows<ProgrammerMistake> {
-            emptyManager().broadcastPacket({ byteArrayOf() }, 1)
+            emptyManager().broadcastPacket(lazy { byteArrayOf() }, 1)
         }
     }
 
-    private fun emptyManager() = DefaultPeerConnectionManager<Int>(mock(), mock())
+    private fun emptyManager() = DefaultPeerConnectionManager<Int>(mock())
 
     private fun emptyCommConf(): PeerCommConfiguration {
         return mock {
@@ -428,37 +409,35 @@ class DefaultPeerConnectionManagerTest {
             on { blockchainRid } doReturn blockchainRid
             on { commConfiguration } doReturn communicationConfig
         }
-        val connection1: NettyPeerConnection = mockConnection(peerConnectionDescriptor1)
-        val connection2: NettyPeerConnection = mockConnection(peerConnectionDescriptor2)
+        val connection1: NettyPeerConnection<Int> = mockConnection(peerConnectionDescriptor1)
+        val connection2: NettyPeerConnection<Int> = mockConnection(peerConnectionDescriptor2)
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        ).apply {
+        val connectionManager = DefaultPeerConnectionManager(packetCodecFactory).apply {
             connectChain(chainPeerConfig, true) // With autoConnect
 
             // Emulates call of onPeerConnected() by XConnector
             onNodeConnected(connection1)
             onNodeConnected(connection2)
 
-            broadcastPacket({ byteArrayOf(0x04, 0x02) }, 1L)
+            broadcastPacket(lazy { byteArrayOf(0x04, 0x02) }, 1L)
         }
 
         // Then / verify and assert
         argumentCaptor<LazyPacket>().apply {
             verify(connection1, times(1)).sendPacket(capture())
-            assertThat(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
+            assertThat(firstValue.value).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
         argumentCaptor<LazyPacket>().apply {
             verify(connection2, times(1)).sendPacket(capture())
-            assertThat(firstValue()).isContentEqualTo(byteArrayOf(0x04, 0x02))
+            assertThat(firstValue.value).isContentEqualTo(byteArrayOf(0x04, 0x02))
         }
 
         connectionManager.shutdown()
     }
 
-    fun mockConnection(descriptor: PeerConnectionDescriptor): NettyPeerConnection {
-        val m: NettyPeerConnection = mock()
+    fun mockConnection(descriptor: PeerConnectionDescriptor): NettyPeerConnection<Int> {
+        val m: NettyPeerConnection<Int> = mock()
         whenever(m.descriptor()).thenReturn(descriptor)
         return m
     }

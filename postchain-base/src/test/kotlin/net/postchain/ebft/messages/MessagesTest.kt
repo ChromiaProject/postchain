@@ -4,6 +4,7 @@ package net.postchain.ebft.messages
 
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.crypto.Signature
 import net.postchain.ebft.message.BlockData
 import net.postchain.ebft.message.BlockRange
 import net.postchain.ebft.message.BlockSignature
@@ -11,7 +12,6 @@ import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockRange
-import net.postchain.ebft.message.Signature
 import net.postchain.ebft.message.Status
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Test
@@ -25,22 +25,23 @@ class MessagesTest {
     val tx1Hex = "23232323"
     val tx2Hex = "45454545"
     val witnessHex = "787878787878"
+    val version = 1L
 
     @Test
     fun testGetBlockAtHeight() {
         val mess = GetBlockAtHeight(29)
-        val encoded = mess.encoded
+        val encoded = mess.encoded(version).value
 
-        val result = EbftMessage.decodeAs<GetBlockAtHeight>(encoded)
+        val result = EbftMessage.decodeAs<GetBlockAtHeight>(encoded, version)
         assertEquals(mess.height, result.height)
     }
 
     @Test
     fun testGetBlockRange() {
         val mess = GetBlockRange(29)
-        val encoded = mess.encoded
+        val encoded = mess.encoded(version).value
 
-        val result = EbftMessage.decodeAs<GetBlockRange>(encoded)
+        val result = EbftMessage.decodeAs<GetBlockRange>(encoded, version)
         assertEquals(mess.startAtHeight, result.startAtHeight)
     }
 
@@ -52,9 +53,9 @@ class MessagesTest {
         val data = ByteArray(40) { (it + 1).toByte() }
         val sig = Signature(subjectID, data)
         val mess = BlockSignature(blockRID, sig)
-        val encoded = mess.encoded
+        val encoded = mess.encoded(version).value
 
-        val result = EbftMessage.decodeAs<BlockSignature>(encoded)
+        val result = EbftMessage.decodeAs<BlockSignature>(encoded, version)
         assertArrayEquals(mess.blockRID, result.blockRID)
         assertArrayEquals(mess.sig.subjectID, result.sig.subjectID)
         assertArrayEquals(mess.sig.data, result.sig.data)
@@ -70,8 +71,8 @@ class MessagesTest {
         val state = 123
 
         val status = Status(blockRID, height, revolting, round, serial, state)
-        val encoded = status.encoded
-        val expected = EbftMessage.decodeAs<Status>(encoded)
+        val encoded = status.encoded(version).value
+        val expected = EbftMessage.decodeAs<Status>(encoded, version)
 
         assertArrayEquals(status.blockRID, expected.blockRID)
         assertEquals(status.height, expected.height)
@@ -79,14 +80,15 @@ class MessagesTest {
         assertEquals(status.round, expected.round)
         assertEquals(status.serial, expected.serial)
         assertEquals(status.state, expected.state)
+        assertEquals(status.signature, expected.signature)
     }
 
     @Test
     fun testCompleteBlockGtvEncodeDecode() {
         val mess: CompleteBlock = buildCompleteBlock(11L)
-        val encoded = mess.encoded
+        val encoded = mess.encoded(version).value
 
-        val result = EbftMessage.decodeAs<CompleteBlock>(encoded)
+        val result = EbftMessage.decodeAs<CompleteBlock>(encoded, version)
 
         assertEquals(11L, result.height)
         assertEquals(headerHex, result.data.header.toHex())
@@ -104,9 +106,9 @@ class MessagesTest {
         val compBlock2 = buildCompleteBlock(12L)
         val mess = BlockRange(11L, false, listOf(compBlock1, compBlock2))
 
-        val encoded = mess.encoded
+        val encoded = mess.encoded(version).value
 
-        val result = EbftMessage.decodeAs<BlockRange>(encoded)
+        val result = EbftMessage.decodeAs<BlockRange>(encoded, version)
 
         assertEquals(11L, result.startAtHeight)
 

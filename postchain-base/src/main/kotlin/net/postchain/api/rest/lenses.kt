@@ -2,7 +2,6 @@ package net.postchain.api.rest
 
 import com.google.gson.JsonElement
 import com.google.gson.JsonNull
-import net.postchain.api.rest.json.GtvJsonFactory.auto as gtvJson
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.json.JsonFactory.auto
 import net.postchain.api.rest.json.JsonFactory.json
@@ -45,7 +44,7 @@ import org.http4k.lens.long
 import org.http4k.lens.regex
 import org.http4k.lens.string
 import java.io.InputStream
-import java.lang.UnsupportedOperationException
+import net.postchain.api.rest.json.GtvJsonFactory.auto as gtvJson
 
 const val ridRegex = "([0-9a-fA-F]{64})"
 

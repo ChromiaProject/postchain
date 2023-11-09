@@ -110,7 +110,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
     }
 
     override fun getFaultyBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): ByteArray? {
-        if (nmApiVersion < 5) return null
+        if (nmApiVersion < 6) return null
 
         val res = query(
                 "nm_get_faulty_blockchain_configuration",
@@ -135,6 +135,15 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
             val peers = pair.asArray()[1].asArray()
             BlockchainRid(brid.asByteArray()) to peers.map { NodeRid(it.asByteArray()) }
         }
+    }
+
+    override fun getSignersInLatestConfiguration(blockchainRid: BlockchainRid): List<NodeRid> {
+        if (nmApiVersion < 9) return emptyList()
+
+        return query(
+                "nm_get_blockchain_signers_in_latest_configuration",
+                buildArgs("blockchain_rid" to gtv(blockchainRid))
+        ).asArray().map { NodeRid(it.asByteArray()) }
     }
 
     fun buildArgs(vararg args: Pair<String, Gtv>): Gtv = gtv(*args)
@@ -167,6 +176,30 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
             }
         } else {
             null
+        }
+    }
+
+    override fun findNextInactiveBlockchains(height: Long): List<InactiveBlockchainInfo> {
+        return if (nmApiVersion >= 11) {
+            val res = query(
+                    "nm_find_next_inactive_blockchains",
+                    buildArgs("height" to gtv(height))
+            )
+
+            try {
+                res.asArray().map {
+                    InactiveBlockchainInfo(
+                            BlockchainRid(it["rid"]!!.asByteArray()),
+                            BlockchainState.valueOf(it["state"]!!.asString()),
+                            it["height"]!!.asInteger()
+                    )
+                }
+            } catch (e: Exception) {
+                logger.error(e) { "Can't parse nm_find_next_inactive_blockchains() query result" }
+                emptyList()
+            }
+        } else {
+            emptyList()
         }
     }
 }

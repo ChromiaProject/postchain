@@ -2,7 +2,6 @@ package net.postchain.debug
 
 import assertk.assertFailure
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
-import net.postchain.api.rest.controller.DisabledDebugInfoQuery
 import org.junit.jupiter.api.Test
 import assertk.assertThat
 import assertk.assertions.isEqualTo
@@ -114,18 +113,5 @@ class DefaultDebugInfoQueryTest {
         assertFailure {
             sut.queryDebugInfo("$.bogus")
         }.isInstanceOf(UserMistake::class).messageContains("No results for path")
-    }
-
-    @Test
-    fun testError_When_DisabledDebugInfoQuery() {
-        val sut = DisabledDebugInfoQuery()
-
-        // Actions
-        val json = sut.queryDebugInfo(null)
-        val actual = json.asJsonObject
-
-        // Asserts
-        assertThat(actual.size()).isEqualTo(1)
-        assertThat(actual.has("error")).isTrue()
     }
 }

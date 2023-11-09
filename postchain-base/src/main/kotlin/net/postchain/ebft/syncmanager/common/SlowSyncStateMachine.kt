@@ -75,7 +75,7 @@ class SlowSyncStateMachine(
                     sendRequest(nowMs, this, waitForNodeId!!)
                 } else {
                     logger.debug { "maybeGetBlockRange() - still waiting for height: $waitForHeight, go back to sleep." }
-                    // Still waiting for last request, go back to sleep
+                    // Still waiting for the last request, go back to sleep
                 }
             }
         }

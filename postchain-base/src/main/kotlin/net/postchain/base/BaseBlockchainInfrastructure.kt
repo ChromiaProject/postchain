@@ -6,6 +6,7 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
+import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -26,9 +27,14 @@ import net.postchain.core.EContext
 import net.postchain.core.Storage
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.core.SynchronizationInfrastructureExtension
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
 import net.postchain.crypto.SigMaker
+import net.postchain.gtv.Gtv
+import net.postchain.metrics.BaseBlockchainEngineMetrics
+import kotlin.time.Duration.Companion.minutes
 
 open class BaseBlockchainInfrastructure(
         val defaultSynchronizationInfrastructure: SynchronizationInfrastructure,
@@ -99,9 +105,25 @@ open class BaseBlockchainInfrastructure(
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier
     ): BaseBlockchainEngine {
+        val blockQueries: BlockQueries = configuration.makeBlockQueries(sharedStorage)
+        val transactionQueue = BaseTransactionQueue(
+                configuration.transactionQueueSize,
+                recheckThreadInterval = 1.minutes,
+                recheckTxInterval = configuration.transactionQueueRecheckInterval,
+                if (configuration.hasQuery(PRIORITIZE_QUERY_NAME))
+                    BaseTransactionPrioritizer { name: String, args: Gtv ->
+                        blockQueries.query(name, args).toCompletableFuture().get()
+                    }
+                else
+                    null
+        )
+        val metrics = BaseBlockchainEngineMetrics(configuration.chainID, configuration.blockchainRid, transactionQueue)
+        val strategy: BlockBuildingStrategy = configuration.getBlockBuildingStrategy(blockQueries, transactionQueue)
+
         return BaseBlockchainEngine(configuration, blockBuilderStorage, sharedStorage, configuration.chainID,
-                initialEContext, blockchainConfigurationProvider, restartNotifier, postchainContext.nodeDiagnosticContext,
-                beforeCommitHandler, afterCommitHandler)
+                initialEContext, blockchainConfigurationProvider, restartNotifier,
+                postchainContext.nodeDiagnosticContext, beforeCommitHandler, afterCommitHandler, true,
+                blockQueries, transactionQueue, metrics, strategy)
     }
 
     override fun makeBlockchainProcess(

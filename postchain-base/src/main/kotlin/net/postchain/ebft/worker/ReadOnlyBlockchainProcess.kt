@@ -24,7 +24,6 @@ import net.postchain.ebft.syncmanager.common.SyncMethod
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
-import java.time.Clock
 
 class ReadOnlyBlockchainProcess(
         private val workerContext: WorkerContext,
@@ -54,7 +53,6 @@ class ReadOnlyBlockchainProcess(
             blockDatabase,
             params,
             FastSyncPeerStatuses(params),
-            Clock.systemUTC(),
             ::isProcessRunning
     )
 
@@ -62,12 +60,8 @@ class ReadOnlyBlockchainProcess(
             workerContext,
             blockDatabase,
             params,
-            Clock.systemUTC(),
             ::isProcessRunning
     )
-
-    var blockHeight: Long = blockQueries.getLastBlockHeight().get()
-        private set
 
     private var syncMethod = SyncMethod.NOT_SYNCING
 
@@ -105,7 +99,7 @@ class ReadOnlyBlockchainProcess(
         super.registerDiagnosticData(diagnosticData)
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_REPLICA.prettyName)
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS] = LazyDiagnosticValue {
-            StateNodeStatus(myPubKey, DpNodeType.NODE_TYPE_REPLICA.name, syncMethod.name, blockQueries.getLastBlockHeight().get())
+            StateNodeStatus(myPubKey, DpNodeType.NODE_TYPE_REPLICA.name, syncMethod.name, currentBlockHeight())
         }
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES] = LazyDiagnosticValue {
             val peerStates: List<Pair<String, KnownState>> = when (syncMethod) {
@@ -119,4 +113,11 @@ class ReadOnlyBlockchainProcess(
 
     override fun isSigner() = false
     override fun getBlockchainState(): BlockchainState = blockchainState
+
+    override fun currentBlockHeight(): Long = when (syncMethod) {
+        SyncMethod.FAST_SYNC -> fastSynchronizer.blockHeight.get()
+        SyncMethod.SLOW_SYNC -> slowSynchronizer.blockHeight.get()
+        SyncMethod.NOT_SYNCING -> blockQueries.getLastBlockHeight().get()
+        SyncMethod.LOCAL_DB -> blockQueries.getLastBlockHeight().get()
+    }
 }

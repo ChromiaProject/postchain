@@ -27,7 +27,7 @@ class Ext4FileSystemTest {
     @BeforeEach
     fun beforeTest() {
         sut = spy(Ext4FileSystem(containerConfig))
-        doReturn(FileSystem.CommandResult(0, realResult)).`when`(sut).runCommandWithOutput(anyArray())
+        doReturn(FileSystem.CommandResult(0, realResult)).whenever(sut).runCommandWithOutput(anyArray())
         whenever(containerName.containerIID).thenReturn(1)
         whenever(resourceLimits.hasStorage()).thenReturn(true)
     }

@@ -3,6 +3,7 @@
 package net.postchain.network.netty2
 
 import assertk.assertThat
+import assertk.assertions.isEqualTo
 import assertk.assertions.isIn
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
@@ -55,7 +56,7 @@ class IntNettyConnector3PeersCommunicationIT {
     private fun startContext(peerInfo: PeerInfo): IntTestContext {
         return IntTestContext(peerInfo, arrayOf(peerInfo1, peerInfo2, peerInfo3))
                 .also {
-                    it.peer.init(peerInfo, it.packetDecoder)
+                    it.peer.init(peerInfo, it.packetCodec)
                 }
     }
 
@@ -68,12 +69,12 @@ class IntNettyConnector3PeersCommunicationIT {
         // Connecting
         // * 1 -> 2
         val peerDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetEncoder)
+        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetCodec)
         // * 1 -> 3
         val peerDescriptor3 = PeerConnectionDescriptor(blockchainRid, peerInfo3.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor3, peerInfo3, context1.packetEncoder)
+        context1.peer.connectNode(peerDescriptor3, peerInfo3, context1.packetCodec)
         // * 3 -> 2
-        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetEncoder)
+        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.packetCodec)
 
         // Waiting for all connections to be established
         val connection1 = argumentCaptor<PeerConnection>()
@@ -86,33 +87,39 @@ class IntNettyConnector3PeersCommunicationIT {
                     verify(context1.events, times(2)).onNodeConnected(connection1.capture())
                     assertThat(connection1.firstValue.descriptor().nodeId).isIn(*expected1)
                     assertThat(connection1.secondValue.descriptor().nodeId).isIn(*expected1)
+                    assertThat(connection1.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
+                    assertThat(connection1.secondValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     // 2
                     val expected2 = arrayOf(peerInfo1, peerInfo3).map(PeerInfo::peerId).toTypedArray()
                     verify(context2.events, times(2)).onNodeConnected(connection2.capture())
                     assertThat(connection2.firstValue.descriptor().nodeId).isIn(*expected2)
                     assertThat(connection2.secondValue.descriptor().nodeId).isIn(*expected2)
+                    assertThat(connection2.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
+                    assertThat(connection2.secondValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     // 3
                     val expected3 = arrayOf(peerInfo1, peerInfo2).map(PeerInfo::peerId).toTypedArray()
                     verify(context3.events, times(2)).onNodeConnected(connection3.capture())
                     assertThat(connection3.firstValue.descriptor().nodeId).isIn(*expected3)
                     assertThat(connection3.secondValue.descriptor().nodeId).isIn(*expected3)
+                    assertThat(connection3.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
+                    assertThat(connection3.secondValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
                 }
 
         // Sending packets
         // * 1 -> 2 and 1 -> 3
         val packet1 = byteArrayOf(10, 2, 3, 4)
-        connection1.firstValue.sendPacket { packet1 }
-        connection1.secondValue.sendPacket { packet1 }
+        connection1.firstValue.sendPacket(lazy { packet1 })
+        connection1.secondValue.sendPacket(lazy { packet1 })
         // * 2 -> 1 and 2 -> 3
         val packet2 = byteArrayOf(1, 20, 3, 4)
-        connection2.firstValue.sendPacket { packet2 }
-        connection2.secondValue.sendPacket { packet2 }
+        connection2.firstValue.sendPacket(lazy { packet2 })
+        connection2.secondValue.sendPacket(lazy { packet2 })
         // * 3 -> 1 and 3 -> 2
         val packet3 = byteArrayOf(1, 2, 30, 4)
-        connection3.firstValue.sendPacket { packet3 }
-        connection3.secondValue.sendPacket { packet3 }
+        connection3.firstValue.sendPacket(lazy { packet3 })
+        connection3.secondValue.sendPacket(lazy { packet3 })
 
         // * asserting
         await().atMost(TEN_SECONDS)

@@ -25,6 +25,7 @@ import net.postchain.api.rest.blocksBody
 import net.postchain.api.rest.configurationInBody
 import net.postchain.api.rest.configurationOutBody
 import net.postchain.api.rest.controller.http4k.NettyWithCustomWorkerGroup
+import net.postchain.api.rest.controller.http4k.expires
 import net.postchain.api.rest.emptyBody
 import net.postchain.api.rest.errorBody
 import net.postchain.api.rest.gtvJsonBody
@@ -36,9 +37,9 @@ import net.postchain.api.rest.model.TxRid
 import net.postchain.api.rest.nodeStatusBody
 import net.postchain.api.rest.nodeStatusesBody
 import net.postchain.api.rest.nullBody
+import net.postchain.api.rest.prettyGson
 import net.postchain.api.rest.prettyJsonBody
 import net.postchain.api.rest.proofBody
-import net.postchain.api.rest.queryQuery
 import net.postchain.api.rest.signerQuery
 import net.postchain.api.rest.statusBody
 import net.postchain.api.rest.stringsBody
@@ -58,6 +59,7 @@ import net.postchain.common.toHex
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockDetail
 import net.postchain.crypto.PubKey
+import net.postchain.debug.ErrorValue
 import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
@@ -89,11 +91,14 @@ import org.http4k.core.Status.Companion.INTERNAL_SERVER_ERROR
 import org.http4k.core.Status.Companion.NOT_FOUND
 import org.http4k.core.Status.Companion.OK
 import org.http4k.core.Status.Companion.SERVICE_UNAVAILABLE
+import org.http4k.core.maxAge
+import org.http4k.core.public
 import org.http4k.core.queries
 import org.http4k.core.then
 import org.http4k.core.toParametersMap
 import org.http4k.core.with
 import org.http4k.filter.AllowAll
+import org.http4k.filter.CachingFilters
 import org.http4k.filter.CorsPolicy
 import org.http4k.filter.MicrometerMetrics
 import org.http4k.filter.OriginPolicy
@@ -115,7 +120,9 @@ import org.http4k.server.ServerConfig
 import org.http4k.server.asServer
 import java.io.Closeable
 import java.nio.ByteBuffer
+import java.time.Clock
 import java.time.Duration
+import java.util.concurrent.Semaphore
 
 const val BLOCKCHAIN_RID = "blockchainRid"
 
@@ -124,17 +131,21 @@ const val BLOCKCHAIN_RID = "blockchainRid"
  *
  * @param requestConcurrency  number of incoming HTTP requests to handle concurrently,
  *                            specify 0 for default value based on number of available processor cores
+ * @param chainRequestConcurrency  number of incoming HTTP requests to handle concurrently per blockchain,
+ *                                 specify `-1` for no extra limit per chain
  */
 class RestApi(
         private val listenPort: Int,
         val basePath: String,
         private val nodeDiagnosticContext: NodeDiagnosticContext = JsonNodeDiagnosticContext(),
+        private val clock: Clock = Clock.systemUTC(),
         gracefulShutdown: Boolean = true,
-        requestConcurrency: Int = 0
+        requestConcurrency: Int = 0,
+        private val chainRequestConcurrency: Int = -1
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 3
+        const val REST_API_VERSION = 4
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -144,22 +155,22 @@ class RestApi(
         private val chainIidPattern = Regex("iid_([0-9]+)")
     }
 
-    private val models = mutableMapOf<BlockchainRid, ChainModel>()
+    private val models = mutableMapOf<BlockchainRid, Pair<ChainModel, Semaphore>>()
     private val bridByIID = mutableMapOf<Long, BlockchainRid>()
 
     override fun attachModel(blockchainRid: BlockchainRid, chainModel: ChainModel) {
-        models[blockchainRid] = chainModel
+        models[blockchainRid] = chainModel to Semaphore(if (chainRequestConcurrency < 0) Int.MAX_VALUE else chainRequestConcurrency)
         bridByIID[chainModel.chainIID] = blockchainRid
     }
 
     override fun detachModel(blockchainRid: BlockchainRid) {
         val model = models.remove(blockchainRid)
         if (model != null) {
-            bridByIID.remove(model.chainIID)
+            bridByIID.remove(model.first.chainIID)
         } else throw ProgrammerMistake("Blockchain $blockchainRid not attached")
     }
 
-    override fun retrieveModel(blockchainRid: BlockchainRid): ChainModel? = models[blockchainRid] as? Model
+    override fun retrieveModel(blockchainRid: BlockchainRid): ChainModel? = models[blockchainRid]?.first
 
     fun actualPort(): Int = server.port()
 
@@ -170,25 +181,35 @@ class RestApi(
             val ref = request.path(BLOCKCHAIN_RID)?.let { parseBlockchainRid(it) }
             if (ref != null) {
                 val blockchainRid = resolveBlockchain(ref)
-                val chainModel = chainModel(blockchainRid)
+                val (chainModel, semaphore) = chainModel(blockchainRid)
                 if (failOnNonLive && !chainModel.live) throw UnavailableException("Blockchain is unavailable")
                 withLoggingContext(
                         BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
                         CHAIN_IID_TAG to chainModel.chainIID.toString()) {
-                    when (chainModel) {
-                        is Model -> {
-                            logger.trace { "Local REST API model found: $chainModel" }
-                            next(request.with(modelKey of chainModel))
-                        }
+                    if (semaphore.tryAcquire()) {
+                        try {
+                            when (chainModel) {
+                                is Model -> {
+                                    logger.trace { "Local REST API model found: $chainModel" }
+                                    next(request.with(modelKey of chainModel))
+                                }
 
-                        is ExternalModel -> {
-                            logger.trace { "External REST API model found: $chainModel" }
-                            chainModel(request)
+                                is ExternalModel -> {
+                                    logger.trace { "External REST API model found: $chainModel" }
+                                    chainModel(request)
+                                }
+                            }
+                        } finally {
+                            semaphore.release()
                         }
+                    } else {
+                        Response(SERVICE_UNAVAILABLE).with(
+                                errorBody.outbound(request) of ErrorBody("Too many concurrent requests for blockchain $blockchainRid")
+                        )
                     }
                 }
             } else {
-                next(request)
+                throw invalidBlockchainRid()
             }
         }
     }
@@ -206,27 +227,55 @@ class RestApi(
         }
     }
 
-    private val liveBlockchain = blockchainRefFilter(true).then(blockchainMetricsFilter)
-    private val blockchain = blockchainRefFilter(false).then(blockchainMetricsFilter)
+    private val loggingFilter = Filter { next ->
+        { request ->
+            if (logger.isDebugEnabled) {
+                val requestInfo = "[${request.source?.address ?: "(unknown)"}] ${request.method} ${request.uri.path}"
+                // Assuming content-type is correctly set we will avoid logging binary request bodies
+                if (Header.CONTENT_TYPE(request)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
+                        && (request.body.length ?: 0) > 0) {
+                    logger.debug { "$requestInfo with body: ${String(request.body.payload.array())}" }
+                } else {
+                    val queryString = request.uri.query
+                    logger.debug("$requestInfo${if (queryString.isBlank()) "" else "?$queryString"}")
+                }
+            }
+            val response = next(request)
+            if (logger.isDebugEnabled) {
+                // Assuming content-type is correctly set we will avoid logging binary response bodies
+                if (Header.CONTENT_TYPE(response)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
+                        && (response.body.length ?: 0) > 0) {
+                    logger.debug("Response body: ${String(response.body.payload.array())}")
+                }
+            }
+            response
+        }
+    }
+
+    private val liveBlockchain = blockchainRefFilter(true).then(blockchainMetricsFilter).then(loggingFilter)
+    private val blockchain = blockchainRefFilter(false).then(blockchainMetricsFilter).then(loggingFilter)
+
+    private val immutableResponse = CachingFilters.Response.MaxAge(clock, Duration.ofDays(365))
+    private val volatileResponse = CachingFilters.Response.NoCache()
 
     private val app = routes(
             "/" bind static(ResourceLoader.Classpath("/restapi-root")),
             "/apidocs" bind static(ResourceLoader.Classpath("/restapi-docs")),
+            "/_debug" bind static(ResourceLoader.Classpath("/restapi-root/_debug")),
 
             "/version" bind GET to ::getVersion,
-            "/_debug" bind GET to ::getDebug,
 
             "/tx/{blockchainRid}" bind POST to liveBlockchain.then(::postTransaction),
-            "/tx/{blockchainRid}/{txRid}" bind GET to blockchain.then(::getTransaction),
-            "/transactions/{blockchainRid}/count" bind GET to blockchain.then(::getTransactionsCount),
-            "/transactions/{blockchainRid}/{txRid}" bind GET to blockchain.then(::getTransactionInfo),
-            "/transactions/{blockchainRid}" bind GET to blockchain.then(::getTransactionsInfo),
-            "/tx/{blockchainRid}/{txRid}/confirmationProof" bind GET to blockchain.then(::getConfirmationProof),
-            "/tx/{blockchainRid}/{txRid}/status" bind GET to liveBlockchain.then(::getTransactionStatus),
+            "/tx/{blockchainRid}/{txRid}" bind GET to blockchain.then(immutableResponse).then(::getTransaction),
+            "/tx/{blockchainRid}/{txRid}/confirmationProof" bind GET to blockchain.then(immutableResponse).then(::getConfirmationProof),
+            "/tx/{blockchainRid}/{txRid}/status" bind GET to liveBlockchain.then(volatileResponse).then(::getTransactionStatus),
+            "/transactions/{blockchainRid}/count" bind GET to blockchain.then(volatileResponse).then(::getTransactionsCount),
+            "/transactions/{blockchainRid}/{txRid}" bind GET to blockchain.then(immutableResponse).then(::getTransactionInfo),
+            "/transactions/{blockchainRid}" bind GET to blockchain.then(volatileResponse).then(::getTransactionsInfo),
 
-            "/blocks/{blockchainRid}" bind GET to blockchain.then(::getBlocks),
-            "/blocks/{blockchainRid}/{blockRid}" bind GET to blockchain.then(::getBlock),
-            "/blocks/{blockchainRid}/height/{height}" bind GET to blockchain.then(::getBlockByHeight),
+            "/blocks/{blockchainRid}" bind GET to blockchain.then(volatileResponse).then(::getBlocks),
+            "/blocks/{blockchainRid}/{blockRid}" bind GET to blockchain.then(immutableResponse).then(::getBlock),
+            "/blocks/{blockchainRid}/height/{height}" bind GET to blockchain.then(immutableResponse).then(::getBlockByHeight),
 
             "/query/{blockchainRid}" bind GET to liveBlockchain.then(::getQuery),
             "/query/{blockchainRid}" bind POST to liveBlockchain.then(::postQuery),
@@ -234,33 +283,25 @@ class RestApi(
             // Direct query. That should be used as example: <img src="http://node/dquery/brid?type=get_picture&id=4555" />
             "/dquery/{blockchainRid}" bind GET to liveBlockchain.then(::directQuery),
             "/query_gtx/{blockchainRid}" bind POST to liveBlockchain.then(::queryGtx),
-            "/query_gtv/{blockchainRid}" bind POST to liveBlockchain.then(::queryGtv),
+            "/query_gtv/{blockchainRid}" bind GET to liveBlockchain.then(::getQueryGtv),
+            "/query_gtv/{blockchainRid}" bind POST to liveBlockchain.then(::postQueryGtv),
 
-            "/node/{blockchainRid}/my_status" bind GET to liveBlockchain.then(::getNodeStatus),
-            "/node/{blockchainRid}/statuses" bind GET to liveBlockchain.then(::getNodeStatuses),
+            "/node/{blockchainRid}/my_status" bind GET to liveBlockchain.then(volatileResponse).then(::getNodeStatus),
+            "/node/{blockchainRid}/statuses" bind GET to liveBlockchain.then(volatileResponse).then(::getNodeStatuses),
             "/brid/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainRid),
 
-            "/blockchain/{blockchainRid}/height" bind GET to blockchain.then(::getCurrentHeight),
+            "/blockchain/{blockchainRid}/height" bind GET to blockchain.then(volatileResponse).then(::getCurrentHeight),
 
             "/config/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainConfiguration),
             "/config/{blockchainRid}" bind POST to liveBlockchain.then(::validateBlockchainConfiguration),
 
-            "/errors/{blockchainRid}" bind GET to blockchain.then(::getErrors),
+            "/errors/{blockchainRid}" bind GET to blockchain.then(volatileResponse).then(::getErrors),
     )
 
     @Suppress("UNUSED_PARAMETER")
     private fun getVersion(request: Request): Response = Response(OK).with(
             versionBody of Version(REST_API_VERSION)
     )
-
-    private fun getDebug(request: Request): Response {
-        val debugInfo = models.values
-                .filterIsInstance(Model::class.java)
-                .firstOrNull()
-                ?.debugQuery(queryQuery(request))
-                ?: throw NotFoundError("There are no running chains")
-        return Response(OK).with(prettyJsonBody of debugInfo)
-    }
 
     private fun postTransaction(request: Request): Response {
         val model = model(request)
@@ -361,7 +402,8 @@ class RestApi(
         val model = model(request)
         val query = extractGetQuery(request.uri.queries().toParametersMap())
         val queryResult = model.query(query)
-        return Response(OK).with(gtvJsonBody of queryResult)
+        val response = Response(OK).with(gtvJsonBody of queryResult)
+        return getQueryResponse(model, response)
     }
 
     private fun postQuery(request: Request): Response {
@@ -393,7 +435,7 @@ class RestApi(
         // first element is content-type
         val contentType = array[0].asString()
         val content = array[1]
-        return when (content.type) {
+        val response = when (content.type) {
             GtvType.STRING -> Response(OK)
                     .with(Header.CONTENT_TYPE.of(ContentType(contentType)))
                     .body(content.asString())
@@ -404,6 +446,7 @@ class RestApi(
 
             else -> throw UserMistake("Unexpected content")
         }
+        return getQueryResponse(model, response)
     }
 
     private fun queryGtx(request: Request): Response {
@@ -420,7 +463,14 @@ class RestApi(
         return Response(OK).with(stringsBody of responses)
     }
 
-    private fun queryGtv(request: Request): Response {
+    private fun getQueryGtv(request: Request): Response {
+        val model = model(request)
+        val query = extractGetQuery(request.uri.queries().toParametersMap())
+        val queryResult = model.query(query)
+        return getQueryResponse(model, Response(OK).with(binaryBody of GtvEncoder.encodeGtv(queryResult)))
+    }
+
+    private fun postQueryGtv(request: Request): Response {
         val model = model(request)
         val query = binaryBody(request)
         val gtvQuery = try {
@@ -430,6 +480,13 @@ class RestApi(
         }
         val response = model.query(gtvQuery)
         return Response(OK).with(binaryBody of GtvEncoder.encodeGtv(response))
+    }
+
+    private fun getQueryResponse(model: Model, response: Response): Response = if (model.queryCacheTtlSeconds > 0) {
+        val ttl = Duration.ofSeconds(model.queryCacheTtlSeconds)
+        response.public().maxAge(ttl).expires(ttl, clock)
+    } else {
+        response
     }
 
     private fun getNodeStatus(request: Request): Response {
@@ -458,7 +515,12 @@ class RestApi(
         val height = heightQuery(request)
         val configuration = model.getBlockchainConfiguration(height)
                 ?: throw UserMistake("Failed to find configuration")
-        return Response(OK).with(configurationOutBody.outbound(request) of configuration)
+        val response = Response(OK).with(configurationOutBody.outbound(request) of configuration)
+        return if (height == -1L) {
+            volatileResponse.then { response }(request)
+        } else {
+            response
+        }
     }
 
     private fun validateBlockchainConfiguration(request: Request): Response {
@@ -478,7 +540,12 @@ class RestApi(
     private fun getErrors(request: Request): Response {
         val model = model(request)
         val errors = JsonArray()
-        (checkDiagnosticError(model.blockchainRid) ?: listOf()).forEach { errors.add(it) }
+        (checkDiagnosticError(model.blockchainRid) ?: listOf()).forEach {
+            when (it) {
+                is ErrorValue -> errors.add(prettyGson.toJsonTree(it))
+                else -> errors.add(it.toString())
+            }
+        }
         return Response(OK).with(prettyJsonBody of errors)
     }
 
@@ -493,30 +560,6 @@ class RestApi(
             .then(ServerFilters.Cors(
                     CorsPolicy(OriginPolicy.AllowAll(), listOf("Content-Type", "Accept"), listOf(GET, POST, OPTIONS), credentials = false)))
             .then(ServerFilters.GZip())
-            .then(Filter { next ->
-                { request ->
-                    if (logger.isDebugEnabled) {
-                        val requestInfo = "[${request.source?.address ?: "(unknown)"}] ${request.method} ${request.uri.path}"
-                        // Assuming content-type is correctly set we will avoid logging binary request bodies
-                        if (Header.CONTENT_TYPE(request)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
-                                && (request.body.length ?: 0) > 0) {
-                            logger.debug { "$requestInfo with body: ${String(request.body.payload.array())}" }
-                        } else {
-                            val queryString = request.uri.query
-                            logger.debug("$requestInfo${if (queryString.isBlank()) "" else "?$queryString"}")
-                        }
-                    }
-                    val response = next(request)
-                    if (logger.isDebugEnabled) {
-                        // Assuming content-type is correctly set we will avoid logging binary response bodies
-                        if (Header.CONTENT_TYPE(response)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
-                                && (response.body.length ?: 0) > 0) {
-                            logger.debug("Response body: ${String(response.body.payload.array())}")
-                        }
-                    }
-                    response
-                }
-            })
             .then(Filter { next ->
                 { request ->
                     try {
@@ -596,10 +639,9 @@ class RestApi(
                 errorResponse(request, INTERNAL_SERVER_ERROR, errorMessage.toString())
             } ?: errorResponse(request, status, error.message ?: "Unknown error")
 
-    @Suppress("UNCHECKED_CAST")
-    private fun checkDiagnosticError(blockchainRid: BlockchainRid): List<String>? =
+    private fun checkDiagnosticError(blockchainRid: BlockchainRid): List<Any?>? =
             if (nodeDiagnosticContext.hasBlockchainErrors(blockchainRid)) {
-                nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).value as List<String>
+                nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).value
             } else {
                 null
             }
@@ -647,7 +689,7 @@ class RestApi(
             txAction(model, txRid)
                     ?: throw NotFoundError("Can't find tx with hash $txRid")
 
-    private fun chainModel(blockchainRid: BlockchainRid): ChainModel = models[blockchainRid]
+    private fun chainModel(blockchainRid: BlockchainRid): Pair<ChainModel, Semaphore> = models[blockchainRid]
             ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRid")
 
     /**

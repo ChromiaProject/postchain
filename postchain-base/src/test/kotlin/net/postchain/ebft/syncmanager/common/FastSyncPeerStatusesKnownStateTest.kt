@@ -63,25 +63,25 @@ class FastSyncPeerStatusesKnownStateTest {
 
         var timeIter = makePeerBlacklisted(state)
         assertFalse(state.isSyncable(1)) //
-        assertTrue(state.isBlacklisted(timeIter)) // 10 blacklist calls should make it blacklisted
+        assertTrue(state.updateAndCheckBlacklisted(timeIter)) // 10 blacklist calls should make it blacklisted
         val expectedTimeout = params.blacklistingTimeoutMs + timeIter // This is when we will get it back
 
         // Wait one millisecond
-        assertTrue(state.isBlacklisted(timeIter + 1))
+        assertTrue(state.updateAndCheckBlacklisted(timeIter + 1))
 
         // Wait some time
         val wait = params.blacklistingTimeoutMs / 2
-        assertTrue(state.isBlacklisted(timeIter + wait)) // Still blacklisted
+        assertTrue(state.updateAndCheckBlacklisted(timeIter + wait)) // Still blacklisted
 
         // Wait until the exact right time for release
-        assertFalse(state.isBlacklisted(expectedTimeout + 1)) // Now released from blacklist
+        assertFalse(state.updateAndCheckBlacklisted(expectedTimeout + 1)) // Now released from blacklist
         assertTrue(state.isSyncable(1)) // Syncable again
 
         // We have to make sure it works again, but at some later time
         val currentTime = timeIter + expectedTimeout * 3
         timeIter = makePeerBlacklisted(state, currentTime)
         assertFalse(state.isSyncable(1))
-        assertTrue(state.isBlacklisted(timeIter))
+        assertTrue(state.updateAndCheckBlacklisted(timeIter))
     }
 
     @Test
@@ -99,25 +99,25 @@ class FastSyncPeerStatusesKnownStateTest {
             state.blacklist("Bad peer", it.toLong())
         }
         assertFalse(state.isSyncable(1)) //
-        assertTrue(state.isBlacklisted(1))
+        assertTrue(state.updateAndCheckBlacklisted(1))
 
         // More errors should still yield blacklisted status
         state.blacklist("Bad peer", 4)
         assertFalse(state.isSyncable(1)) //
-        assertTrue(state.isBlacklisted(1))
+        assertTrue(state.updateAndCheckBlacklisted(1))
 
         // When blacklistingErrorTimeoutMs time has passed for an error remove it
         // First 2 errors are removed since time has passed and one new is added => Under blacklist limit
         state.blacklist("Bad peer", params.blacklistingErrorTimeoutMs + 2) //
         assertTrue(state.isSyncable(1)) //
-        assertFalse(state.isBlacklisted(1))
+        assertFalse(state.updateAndCheckBlacklisted(1))
 
         // And back to blacklisted
         repeat(params.maxErrorsBeforeBlacklisting) {
             state.blacklist("Bad peer", it.toLong() + params.blacklistingErrorTimeoutMs + 5)
         }
         assertFalse(state.isSyncable(1)) //
-        assertTrue(state.isBlacklisted(1))
+        assertTrue(state.updateAndCheckBlacklisted(1))
     }
 
     private fun makePeerBlacklisted(state: FastSyncKnownState, startTime: Long = 0L): Long {

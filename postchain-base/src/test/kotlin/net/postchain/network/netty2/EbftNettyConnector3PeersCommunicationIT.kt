@@ -91,12 +91,12 @@ class EbftNettyConnector3PeersCommunicationIT {
         // Connecting
         // * 1 -> 2
         val peerDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.buildPacketEncoder())
+        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.buildPacketCodec())
         // * 1 -> 3
         val peerDescriptor3 = PeerConnectionDescriptor(blockchainRid, peerInfo3.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor3, peerInfo3, context2.buildPacketEncoder())
+        context1.peer.connectNode(peerDescriptor3, peerInfo3, context2.buildPacketCodec())
         // * 3 -> 2
-        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.buildPacketEncoder())
+        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.buildPacketCodec())
 
         // Waiting for all connections to be established
         val connection1 = argumentCaptor<PeerConnection>()
@@ -128,31 +128,31 @@ class EbftNettyConnector3PeersCommunicationIT {
         val packets1 = arrayOf(
                 GetBlockAtHeight(10),
                 GetBlockAtHeight(11))
-        connection1.firstValue.sendPacket { context1.encodePacket(packets1[0]) }
-        connection1.firstValue.sendPacket { context1.encodePacket(packets1[1]) }
+        connection1.firstValue.sendPacket(lazy { context1.encodePacket(packets1[0], 1) })
+        connection1.firstValue.sendPacket(lazy { context1.encodePacket(packets1[1], 1) })
         // * 1 -> 3
-        connection1.secondValue.sendPacket { context1.encodePacket(packets1[0]) }
-        connection1.secondValue.sendPacket { context1.encodePacket(packets1[1]) }
+        connection1.secondValue.sendPacket(lazy { context1.encodePacket(packets1[0], 1) })
+        connection1.secondValue.sendPacket(lazy { context1.encodePacket(packets1[1], 1) })
 
         // * 2 -> 1
         val packets2 = arrayOf(
                 GetBlockAtHeight(20),
                 GetBlockAtHeight(21))
-        connection2.firstValue.sendPacket { context2.encodePacket(packets2[0]) }
-        connection2.firstValue.sendPacket { context2.encodePacket(packets2[1]) }
+        connection2.firstValue.sendPacket(lazy { context2.encodePacket(packets2[0], 1) })
+        connection2.firstValue.sendPacket(lazy { context2.encodePacket(packets2[1], 1) })
         // * 2 -> 3
-        connection2.secondValue.sendPacket { context2.encodePacket(packets2[0]) }
-        connection2.secondValue.sendPacket { context2.encodePacket(packets2[1]) }
+        connection2.secondValue.sendPacket(lazy { context2.encodePacket(packets2[0], 1) })
+        connection2.secondValue.sendPacket(lazy { context2.encodePacket(packets2[1], 1) })
 
         // * 3 -> 1
         val packets3 = arrayOf(
                 GetBlockAtHeight(30),
                 GetBlockAtHeight(31))
-        connection3.firstValue.sendPacket { context3.encodePacket(packets3[0]) }
-        connection3.firstValue.sendPacket { context3.encodePacket(packets3[1]) }
+        connection3.firstValue.sendPacket(lazy { context3.encodePacket(packets3[0], 1) })
+        connection3.firstValue.sendPacket(lazy { context3.encodePacket(packets3[1], 1) })
         // * 3 -> 2
-        connection3.secondValue.sendPacket { context3.encodePacket(packets3[0]) }
-        connection3.secondValue.sendPacket { context3.encodePacket(packets3[1]) }
+        connection3.secondValue.sendPacket(lazy { context3.encodePacket(packets3[0], 1) })
+        connection3.secondValue.sendPacket(lazy { context3.encodePacket(packets3[1], 1) })
 
         // * asserting
         await().atMost(TEN_SECONDS)
@@ -162,7 +162,7 @@ class EbftNettyConnector3PeersCommunicationIT {
                     val expected1 = arrayOf(20L, 21L, 30L, 31L)
                     verify(context1.packets, times(4)).handle(actualPackets1.capture(), any())
                     actualPackets1.allValues
-                            .map { (context1.decodePacket(it) as GetBlockAtHeight).height }
+                            .map { (context1.decodePacket(it, 1) as GetBlockAtHeight).height }
                             .forEach { assertThat(it).isIn(*expected1) }
 
                     // Peer2
@@ -170,7 +170,7 @@ class EbftNettyConnector3PeersCommunicationIT {
                     val expected2 = arrayOf(10L, 11L, 30L, 31L)
                     verify(context2.packets, times(4)).handle(actualPackets2.capture(), any())
                     actualPackets2.allValues
-                            .map { (context2.decodePacket(it) as GetBlockAtHeight).height }
+                            .map { (context2.decodePacket(it, 1) as GetBlockAtHeight).height }
                             .forEach { assertThat(it).isIn(*expected2) }
 
                     // Peer2
@@ -178,7 +178,7 @@ class EbftNettyConnector3PeersCommunicationIT {
                     val expected3 = arrayOf(10L, 11L, 20L, 21L)
                     verify(context3.packets, times(4)).handle(actualPackets3.capture(), any())
                     actualPackets3.allValues
-                            .map { (context2.decodePacket(it) as GetBlockAtHeight).height }
+                            .map { (context2.decodePacket(it, 1) as GetBlockAtHeight).height }
                             .forEach { assertThat(it).isIn(*expected3) }
                 }
     }

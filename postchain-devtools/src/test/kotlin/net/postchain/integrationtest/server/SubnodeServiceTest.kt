@@ -34,7 +34,7 @@ class SubnodeServiceTest : PostchainServerBase() {
     }
 
     private fun setupLazyNodeProvider() {
-        lazyNodeProvider = TestLazyPostchainNodeProvider(true) {
+        lazyNodeProvider = TestLazyPostchainNodeProvider {
             val nodes = createNodes(1, "/net/postchain/devtools/server/blockchain_config_1.xml")
             node = nodes[0]
             node

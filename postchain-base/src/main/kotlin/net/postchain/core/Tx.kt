@@ -7,6 +7,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.types.WrappedByteArray
+import kotlin.time.Duration
 
 /**
  * Transactor is an individual operation which can be applied to the database
@@ -59,7 +60,20 @@ interface TransactionFactory {
 }
 
 interface TransactionQueue {
+    /**
+     * Take a transaction from queue without waiting.
+     *
+     * @return the next transaction in queue, or `null` if queue is empty
+     */
     fun takeTransaction(): Transaction?
+
+    /**
+     * Take a transaction from queue, wait up to `timeout` if queue is initially empty.
+     *
+     * @return the next transaction in queue, or `null` if queue is still empty after waiting
+     */
+    fun takeTransaction(timeout: Duration): Transaction?
+
     fun enqueue(tx: Transaction): EnqueueTransactionResult
     fun findTransaction(txRID: WrappedByteArray): Transaction?
     fun getTransactionStatus(txRID: ByteArray): TransactionStatus

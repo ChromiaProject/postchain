@@ -26,21 +26,19 @@ class SubQueryHandler(private val chainId: Long,
                 val blockQueries = message.targetBlockchainRid?.let { blockQueriesProvider.getBlockQueries(it) }
                 (blockQueries?.query(message.name, message.args)
                         ?: CompletableFuture.failedFuture(UserMistake("blockchain ${message.targetBlockchainRid} not found")))
-                        .whenCompleteUnwrapped { response, exception ->
-                            if (exception == null) {
-                                logger.trace { "Sending response to master for request-id ${message.requestId}" }
-                                subConnectionManager.sendMessageToMaster(chainId, MsQueryResponse(
-                                        message.requestId,
-                                        response
-                                ))
-                            } else {
-                                logger.trace { "Sending failure to master for request-id ${message.requestId}" }
-                                subConnectionManager.sendMessageToMaster(chainId, MsQueryFailure(
-                                        message.requestId,
-                                        exception.toString()
-                                ))
-                            }
-                        }
+                        .whenCompleteUnwrapped(onSuccess = { response ->
+                            logger.trace { "Sending response to master for request-id ${message.requestId}" }
+                            subConnectionManager.sendMessageToMaster(chainId, MsQueryResponse(
+                                    message.requestId,
+                                    response
+                            ))
+                        }, onError = { exception ->
+                            logger.trace { "Sending failure to master for request-id ${message.requestId}" }
+                            subConnectionManager.sendMessageToMaster(chainId, MsQueryFailure(
+                                    message.requestId,
+                                    exception.toString()
+                            ))
+                        })
             }
 
             is MsBlockAtHeightRequest -> {
@@ -52,19 +50,17 @@ class SubQueryHandler(private val chainId: Long,
                         blockQueries.getBlock(it, true)
                     }
                 } ?: CompletableFuture.failedFuture(UserMistake("blockchain ${message.targetBlockchainRid} not found")))
-                        .whenCompleteUnwrapped { response, exception ->
-                            if (exception == null) {
-                                subConnectionManager.sendMessageToMaster(chainId, MsBlockAtHeightResponse(
-                                        message.requestId,
-                                        response
-                                ))
-                            } else {
-                                subConnectionManager.sendMessageToMaster(chainId, MsQueryFailure(
-                                        message.requestId,
-                                        exception.toString()
-                                ))
-                            }
-                        }
+                        .whenCompleteUnwrapped(onSuccess = { response ->
+                            subConnectionManager.sendMessageToMaster(chainId, MsBlockAtHeightResponse(
+                                    message.requestId,
+                                    response
+                            ))
+                        }, onError = { exception ->
+                            subConnectionManager.sendMessageToMaster(chainId, MsQueryFailure(
+                                    message.requestId,
+                                    exception.toString()
+                            ))
+                        })
             }
         }
     }

@@ -5,7 +5,9 @@ package net.postchain.ebft.worker
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.NetworkAwareTxQueue
+import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.concurrent.util.get
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainState
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticData
@@ -18,12 +20,17 @@ import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.StatusManager
+import net.postchain.ebft.message.StateChangeTracker
 import net.postchain.ebft.rest.contract.toStateNodeStatus
 import net.postchain.ebft.syncmanager.validator.AppliedConfigSender
+import net.postchain.ebft.syncmanager.validator.RevoltConfigurationData
+import net.postchain.ebft.syncmanager.validator.RevoltTracker
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
+import net.postchain.gtv.mapper.toObject
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.metrics.NodeStatusMetrics
+import net.postchain.metrics.SyncMetrics
 import java.lang.Thread.sleep
 import java.time.Duration
 
@@ -43,11 +50,12 @@ class ValidatorBlockchainProcess(
     private val blockManager: BaseBlockManager
     val syncManager: ValidatorSyncManager
     val networkAwareTxQueue: NetworkAwareTxQueue
-    val nodeStateTracker = NodeStateTracker()
+    private val nodeStateTracker = NodeStateTracker()
     val statusManager: StatusManager
     private val appliedConfigSender = AppliedConfigSender(
             workerContext,
-            Duration.ofMillis(workerContext.appConfig.appliedConfigSendInterval())
+            Duration.ofMillis(workerContext.appConfig.appliedConfigSendInterval()),
+            ::currentBlockHeight
     )
 
     private val loggingContext = mapOf(
@@ -56,12 +64,15 @@ class ValidatorBlockchainProcess(
     )
 
     init {
+        val nodeStatusMetrics = NodeStatusMetrics(workerContext.blockchainConfiguration.chainID, workerContext.blockchainConfiguration.blockchainRid)
+        val stateChangeTracker = StateChangeTracker(workerContext.appConfig, nodeStatusMetrics)
         val blockchainConfiguration = workerContext.blockchainConfiguration
         statusManager = BaseStatusManager(
                 blockchainConfiguration.signers,
                 blockchainConfiguration.blockchainContext.nodeID,
                 blockchainEngine.getBlockQueries().getLastBlockHeight().get() + 1,
-                NodeStatusMetrics()
+                nodeStatusMetrics,
+                stateChangeTracker
         )
 
         blockDatabase = BaseBlockDatabase(
@@ -74,6 +85,15 @@ class ValidatorBlockchainProcess(
                 workerContext
         )
 
+        val ensureAppliedConfigSender: () -> Boolean = {
+            if (!appliedConfigSender.isStarted) {
+                appliedConfigSender.start()
+                appliedConfigSender.isStarted
+            } else {
+                true
+            }
+        }
+
         // Give the SyncManager the BaseTransactionQueue (part of workerContext) and not the network-aware one,
         // because we don't want tx forwarding/broadcasting when received through p2p network
         syncManager = ValidatorSyncManager(
@@ -83,8 +103,11 @@ class ValidatorBlockchainProcess(
                 blockManager,
                 blockDatabase,
                 nodeStateTracker,
+                RevoltTracker(statusManager, blockchainConfiguration.revoltConfiguration, blockchainEngine),
+                SyncMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid),
                 ::isProcessRunning,
-                startWithFastSync
+                startWithFastSync,
+                ensureAppliedConfigSender
         )
 
         networkAwareTxQueue = NetworkAwareTxQueue(
@@ -133,4 +156,16 @@ class ValidatorBlockchainProcess(
 
     override fun isSigner(): Boolean = !syncManager.isInFastSync()
     override fun getBlockchainState(): BlockchainState = BlockchainState.RUNNING
+
+    override fun currentBlockHeight(): Long = syncManager.currentBlockHeight()
+            ?: blockchainEngine.getBlockQueries().getLastBlockHeight().get()
 }
+
+val BlockchainConfiguration.revoltConfiguration: RevoltConfigurationData
+    get() =
+        if (this is BaseBlockchainConfiguration) {
+            configData.revoltConfigData?.toObject()
+                    ?: RevoltConfigurationData.default
+        } else {
+            RevoltConfigurationData.default
+        }

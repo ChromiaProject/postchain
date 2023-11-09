@@ -5,18 +5,22 @@ package net.postchain.ebft.syncmanager.validator
 import net.postchain.core.BlockchainEngine
 import net.postchain.ebft.NodeStatus
 import net.postchain.ebft.StatusManager
+import java.time.Clock
 import kotlin.math.log
 import kotlin.math.pow
 
-open class RevoltTracker(
+class RevoltTracker(
         private val statusManager: StatusManager,
         private val config: RevoltConfigurationData,
-        engine: BlockchainEngine
+        engine: BlockchainEngine,
+        private val clock: Clock = Clock.systemUTC()
 ) {
+    private val initialDelay = config.getInitialDelay()
+    private val exponentialDelayPowerBase = config.getDelayPowerBase()
     private val blockBuildingStrategy = engine.getBlockBuildingStrategy()
     private val maxDelayRound = log(
-            ((config.exponentialDelayMax + config.exponentialDelayBase) / config.exponentialDelayBase).toDouble(),
-            DELAY_POWER_BASE
+            ((config.exponentialDelayMax + initialDelay) / initialDelay).toDouble(),
+            exponentialDelayPowerBase
     ).toLong()
     private val initialHeight = statusManager.myStatus.height
     private var prevHeight = initialHeight
@@ -24,18 +28,21 @@ open class RevoltTracker(
     var deadline = newDeadline(0)
         private set
 
-    companion object {
-        const val DELAY_POWER_BASE = 1.2
-    }
-
     /**
      * Starts a revolt if certain conditions are met.
      */
     fun update() {
-        val current = statusManager.myStatus
-        if (fastRevolt(current)) return
+        if (shouldRevolt(statusManager.myStatus)) {
+            statusManager.onStartRevolting()
+        }
+    }
 
-        if (!shouldBuildBlock()) return
+    private fun shouldRevolt(current: NodeStatus): Boolean {
+        if (shouldDoFastRevolt(current)) {
+            return (!current.revolting)
+        }
+
+        if (config.revoltWhenShouldBuildBlock && !shouldBuildBlock()) return false
 
         if (current.height > prevHeight ||
                 current.height == prevHeight && current.round > prevRound) {
@@ -43,30 +50,10 @@ open class RevoltTracker(
             prevRound = current.round
             deadline = newDeadline(current.round)
         } else if (currentTimeMillis() > deadline && !current.revolting) {
-            this.statusManager.onStartRevolting()
+            return true
         }
+        return false
     }
-
-    /**
-     * Set new deadline for the revolt tracker with exponential delay for each round
-     *
-     * @return the time at which the deadline is passed
-     */
-    private fun newDeadline(round: Long): Long {
-        val baseTimeout = currentTimeMillis() + config.timeout
-        return if (round >= maxDelayRound) {
-            baseTimeout + config.exponentialDelayMax
-        } else {
-            baseTimeout + (config.exponentialDelayBase * (DELAY_POWER_BASE.pow(round.toDouble()))).toLong() - config.exponentialDelayBase
-        }
-    }
-
-    private fun fastRevolt(current: NodeStatus): Boolean =
-            if (shouldDoFastRevolt(current)) {
-                if (!current.revolting) statusManager.onStartRevolting()
-                true
-            } else
-                false
 
     private fun shouldDoFastRevolt(current: NodeStatus): Boolean {
         // Check if fast revolt is enabled
@@ -80,5 +67,19 @@ open class RevoltTracker(
 
     private fun shouldBuildBlock(): Boolean = blockBuildingStrategy.shouldBuildBlock()
 
-    protected open fun currentTimeMillis() = System.currentTimeMillis()
+    /**
+     * Set new deadline for the revolt tracker with exponential delay for each round
+     *
+     * @return the time at which the deadline is passed
+     */
+    private fun newDeadline(round: Long): Long {
+        val baseTimeout = currentTimeMillis() + config.timeout
+        return if (round >= maxDelayRound) {
+            baseTimeout + config.exponentialDelayMax
+        } else {
+            baseTimeout + (initialDelay * (exponentialDelayPowerBase.pow(round.toDouble()))).toLong() - initialDelay
+        }
+    }
+
+    private fun currentTimeMillis() = clock.millis()
 }

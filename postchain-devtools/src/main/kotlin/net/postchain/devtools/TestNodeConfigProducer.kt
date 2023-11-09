@@ -1,7 +1,7 @@
 package net.postchain.devtools
 
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.devtools.utils.configuration.NodeConfigurationProviderGenerator
+import net.postchain.devtools.utils.configuration.AppConfigGenerator
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.devtools.utils.configuration.SystemSetup
 import org.apache.commons.configuration2.Configuration
@@ -13,7 +13,7 @@ import org.apache.commons.configuration2.PropertiesConfiguration
  * - "Legacy" just call "createLegacyNodeConfig()"
  * - "Managed" just call "createManagedNodeConfig()"
  *
- * Note: yeah this could have been a part of the [NodeConfigurationProviderGenerator] but I broke it out to make testing
+ * Note: yeah this could have been a part of the [AppConfigGenerator] but I broke it out to make testing
  *       easier (fewer dependencies).
  */
 object TestNodeConfigProducer {
@@ -132,6 +132,10 @@ object TestNodeConfigProducer {
 
         // To convert negative indexes of replica nodes to 'replica_' prefixed indexes.
         baseConfig.setProperty("database.schema", dbSchema.replace("-", "replica_"))
+        // This is to support 4 nodes without exceeding 100 connections (if tests use more nodes they need to override)
+        // Shared storage 2 + 8, bb storage 6 + 8 -> 4 * 24 = 96
+        baseConfig.setProperty("database.blockBuilderWriteConcurrency", 6)
+        baseConfig.setProperty("database.readConcurrency", 8)
     }
 
 
@@ -166,8 +170,10 @@ object TestNodeConfigProducer {
     ) {
         if (needRestApi) {
             baseConfig.setProperty("api.port", nodeSetup.getApiPortNumber())
+            baseConfig.setProperty("debug.port", nodeSetup.getDebugPortNumber())
         } else {
             baseConfig.setProperty("api.port", -1) // -1 means "don't start"
+            baseConfig.setProperty("debug.port", -1) // -1 means "don't start"
         }
     }
 

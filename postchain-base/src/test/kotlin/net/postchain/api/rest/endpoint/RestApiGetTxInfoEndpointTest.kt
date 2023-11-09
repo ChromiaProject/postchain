@@ -14,12 +14,16 @@ import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import org.hamcrest.CoreMatchers.equalTo
+import org.hamcrest.CoreMatchers.nullValue
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 
 class RestApiGetTxInfoEndpointTest {
 
@@ -37,7 +41,7 @@ class RestApiGetTxInfoEndpointTest {
             on { live } doReturn true
         }
 
-        restApi = RestApi(0, basePath, gracefulShutdown = false)
+        restApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
     }
 
     @AfterEach
@@ -62,6 +66,8 @@ class RestApiGetTxInfoEndpointTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
+                .header("Cache-Control", equalTo("public, max-age=31536000"))
+                .header("Expires", equalTo("Fri, 1 Jan 1971 00:00:00 GMT"))
                 .body("blockRID", equalTo("0404040404040404040404040404040404040404040404040404040404040404"))
     }
 
@@ -80,6 +86,8 @@ class RestApiGetTxInfoEndpointTest {
                 .then()
                 .statusCode(404)
                 .contentType(ContentType.JSON)
+                .header("Cache-Control", nullValue())
+                .header("Expires", nullValue())
                 .body("error", equalTo("Can't find tx with hash ${txRID.toHex()}"))
     }
 
@@ -101,6 +109,8 @@ class RestApiGetTxInfoEndpointTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
+                .header("Cache-Control", equalTo("private, must-revalidate"))
+                .header("Expires", equalTo("0"))
                 .body(equalTo(gson.toJson(response).toString()))
     }
 

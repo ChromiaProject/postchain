@@ -2,9 +2,8 @@ package net.postchain.server.cli
 
 import com.github.ajalt.clikt.core.PrintMessage
 import net.postchain.PostchainNode
-import net.postchain.StorageBuilder
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.withReadConnection
+import net.postchain.base.runStorageCommand
 import net.postchain.config.app.AppConfig
 import org.apache.commons.configuration2.ex.ConfigurationException
 import org.apache.commons.dbcp2.BasicDataSource
@@ -31,9 +30,8 @@ fun waitDb(retryTimes: Int, retryInterval: Long, appConfig: AppConfig) {
 
 private fun tryCreateBasicDataSource(appConfig: AppConfig): Connection? {
     return try {
-        val storage = StorageBuilder.buildStorage(appConfig)
-        storage.withReadConnection {
-            if (!DatabaseAccess.of(it).isSchemaExists(it.conn, appConfig.databaseSchema)) throw PrintMessage("Database schema ${appConfig.databaseSchema} does not exist")
+        runStorageCommand(appConfig, allowUpgrade = true) { ctx ->
+            if (!DatabaseAccess.of(ctx).isSchemaExists(ctx.conn, appConfig.databaseSchema)) throw PrintMessage("Database schema ${appConfig.databaseSchema} does not exist")
         }
 
         BasicDataSource().apply {

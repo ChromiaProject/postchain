@@ -5,6 +5,7 @@ package net.postchain.network.mastersub.subnode.netty
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
+import io.netty.channel.EventLoopGroup
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.network.common.LazyPacket
@@ -20,12 +21,13 @@ import java.net.SocketAddress
 
 class NettySubConnection(
         private val masterNode: PeerInfo,
-        private val connectionDescriptor: SubConnectionDescriptor
+        private val connectionDescriptor: SubConnectionDescriptor,
+        private val eventLoopGroup: EventLoopGroup
 ) : ChannelInboundHandlerAdapter(), SubConnection {
 
     companion object : KLogging()
 
-    private val nettyClient = NettyClient()
+    private var nettyClient: NettyClient? = null
     private lateinit var context: ChannelHandlerContext
     private var messageHandler: MsMessageHandler? = null
     private lateinit var onConnected: () -> Unit
@@ -35,9 +37,8 @@ class NettySubConnection(
         this.onConnected = onConnected
         this.onDisconnected = onDisconnected
 
-        nettyClient.apply {
-            setChannelHandler(this@NettySubConnection)
-            connect(masterAddress()).await().apply {
+        nettyClient = NettyClient(this@NettySubConnection, masterAddress(), eventLoopGroup).also {
+            it.channelFuture.await().apply {
                 if (!isSuccess) {
                     logger.info("Connection failed: ${cause().message}")
                     onDisconnected()
@@ -60,9 +61,12 @@ class NettySubConnection(
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         val bytes = Transport.unwrapMessage(msg as ByteBuf)
-        val message = MsCodec.decode(bytes)
-        messageHandler?.onMessage(message)
-        msg.release()
+        try {
+            val message = MsCodec.decode(bytes)
+            messageHandler?.onMessage(message)
+        } finally {
+            msg.release()
+        }
     }
 
     override fun accept(handler: MsMessageHandler) {
@@ -70,7 +74,7 @@ class NettySubConnection(
     }
 
     override fun sendPacket(packet: LazyPacket) {
-        context.writeAndFlush(Transport.wrapMessage(packet()))
+        context.writeAndFlush(Transport.wrapMessage(packet.value))
     }
 
     override fun remoteAddress(): String {
@@ -80,7 +84,7 @@ class NettySubConnection(
     }
 
     override fun close() {
-        nettyClient.shutdownAsync()
+        nettyClient?.shutdownAsync()
     }
 
     override fun descriptor(): SubConnectionDescriptor {

@@ -53,7 +53,7 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: "2"
+  version: "4"
 paths:
   /tx/{blockchainRid}:
     post:
@@ -488,7 +488,7 @@ paths:
         - query
       summary: Make query
       description: Make a query to a chain. Named arguments to query as additional query parameters.
-        This operation is intended for development, testing and simple web apps, more advanced production use cases should use `POST /query_gtv` instead.
+        This operation is intended for development, testing and simple web apps, more advanced production use cases should use `/query_gtv` instead.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: type
@@ -533,7 +533,7 @@ paths:
         - query
       summary: Make query
       description: Make a query to a chain.
-        This operation is deprecated, use `GET /query` or `POST /query_gtv` instead.
+        This operation is deprecated, use `GET /query` or `/query_gtv` instead.
       deprecated: true
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
@@ -578,7 +578,7 @@ paths:
         - query
       summary: Make queries
       description: Make multiple queries to a chain
-        This operation is deprecated, use `POST /query_gtv` instead.
+        This operation is deprecated, use `/query_gtv` instead.
       deprecated: true
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
@@ -684,7 +684,7 @@ paths:
       summary: Make GTV encoded queries
       description: |
         Make GTV encoded queries to a chain.
-        This operation is deprecated, use `POST /query_gtv` instead.
+        This operation is deprecated, use `/query_gtv` instead.
       deprecated: true
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
@@ -751,6 +751,38 @@ paths:
                   value:
                     error: "Unknown error"
   /query_gtv/{blockchainRid}:
+    description: |
+      The GET method enable caching of query responses, while the POST method has more robust and efficient encoding of query parameters.
+    get:
+      tags:
+        - query
+      summary: Make a query with GTV encoded response
+      description: |
+        Make a query with GTV encoded response to a chain. 
+        Named arguments to query as additional query parameters.
+        Response body contains binary GTV value.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - name: type
+          in: query
+          description: Query name
+          required: true
+          schema:
+            type: string
+          example: my_query
+      responses:
+        200:
+          description: OK
+          content:
+            application/octet-stream: { }
+        400:
+          description: Invalid query
+          content:
+            application/octet-stream: { }
+        404:
+          description: Not found
+          content:
+            application/octet-stream: { }
     post:
       tags:
         - query
@@ -827,21 +859,6 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
-  /_debug:
-    get:
-      tags:
-        - node
-      summary: Get node debug information
-      description: This endpoint does not have a stable API, and is subject to change without notice.
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: "#/components/schemas/nodeDebug"
-                  - $ref: "#/components/schemas/noDebug"
   /brid/iid_{chainIid}:
     get:
       tags:
@@ -1091,7 +1108,7 @@ paths:
               examples:
                 version:
                   value:
-                    version: 2
+                    version: 4
 
 components:
   parameters:
@@ -1272,101 +1289,6 @@ components:
         type: "my_query"
         arg1: 17
         arg2: "foo"
-    nodeDebug:
-      type: object
-      required:
-        - version
-        - pub-key
-        - infrastructure
-        - infrastructure-version
-        - blockchain
-      properties:
-        version:
-          type: string
-        pub-key:
-          type: string
-          pattern: "[0-9a-fA-F]"
-          description: "Hex encoded public key"
-        infrastructure:
-          type: string
-        infrastructure-version:
-          type: string
-        blockchain:
-          type: array
-          items:
-            type: object
-            required:
-              - brid
-              - node-type
-              - error
-              - height
-              - peers
-              - node-status
-              - node-peer-statuses
-            properties:
-              brid:
-                $ref: "#/components/schemas/hash"
-              node-type:
-                type: string
-                enum:
-                  - "Validator"
-                  - "Replica"
-                  - "Historic Replica"
-              error:
-                type: array
-                items:
-                  type: string
-              height:
-                type: integer
-                format: int64
-              peers:
-                type: object
-              node-status:
-                $ref: "#/components/schemas/nodeStatus"
-              node-peer-statuses:
-                type: array
-                items:
-                  $ref: "#/components/schemas/nodeStatus"
-      example:
-        version: "3.12.0"
-        pub-key: "0350fe40766bc0ce8d08b3f5b810e49a8352fdd458606bd5fafe5acdcdc8ff3f57"
-        infrastructure: "net.postchain.ebft.BaseEBFTInfrastructureFactory"
-        infrastructure-version: "3.12.0"
-        blockchain:
-          - brid: "0398A1E7B0F87709AFD14CD1821EAAAFB41931A8097FFA2D83E5FE10DA7E4DD5"
-            node-type: "Validator"
-            error: []
-            height: 17
-            peers:
-              035676109C54B9A16D271ABEB4954316A40A32BCCE023AC14C8E26E958AA68FBA9: "s-c, /16.170.97.56:45262"
-              031793A971EC85A53A8819163DFE2658D4EF57090420B5FC5E1EFE8B6ABFEE404B": "s-c, /13.49.35.185:39324"
-            node-status:
-              pubKey: "0350FE40766BC0CE8D08B3F5B810E49A8352FDD458606BD5FAFE5ACDCDC8FF3F57"
-              type: "NODE_TYPE_VALIDATOR"
-              state: "WaitBlock"
-              height: 19404
-              serial: 174848298232
-              round: 0
-              revolting: false
-              error: "[]"
-            node-peer-statuses:
-              - pubKey: "035676109C54B9A16D271ABEB4954316A40A32BCCE023AC14C8E26E958AA68FBA9"
-                type: "NODE_TYPE_VALIDATOR"
-                state: "WaitBlock"
-                height: 19404
-                serial: 174848298203
-                round: 0
-                revolting: false
-                error: "null"
-    noDebug:
-      type: object
-      required:
-        - Error
-      properties:
-        Error:
-          type: string
-      example:
-        Error: "Debug mode is not enabled. Use --debug cli option to enable it."
     nodeStatus:
       type: object
       required:

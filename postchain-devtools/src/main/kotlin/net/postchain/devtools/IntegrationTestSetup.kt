@@ -137,7 +137,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
             nodesCount: Int,
             blockchainConfigFilename: String,
             preWipeDatabase: Boolean = true,
-            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit },
+            setupAction: (appConfig: AppConfig) -> Unit = { _ -> },
             keyPairCache: KeyPairCache = KeyPairHelper,
             overrideSigners: List<ByteArray> = emptyList()
     ): Array<PostchainTestNode> {
@@ -170,12 +170,12 @@ open class IntegrationTestSetup : AbstractIntegration() {
      * Used to create the [PostchainTestNode] 's needed for this test.
      * Will start the nodes and all chains on them.
      *
-     * @param systemSetup is the map of what the test setup looks like.
+     * @param sysSetup is the map of what the test setup looks like.
      */
     protected fun createNodesFromSystemSetup(
             sysSetup: SystemSetup,
             preWipeDatabase: Boolean = true,
-            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
+            setupAction: (appConfig: AppConfig) -> Unit = { _ -> }
     ) {
         this.systemSetup = sysSetup
 
@@ -248,21 +248,21 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected fun createNodeConfProvidersAndAddToNodeSetup(
             sysSetup: SystemSetup,
             confOverrides: MapConfiguration,
-            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
+            setupAction: (appConfig: AppConfig) -> Unit = { _ -> }
     ) {
         val peerList = sysSetup.toPeerInfoList()
         confOverrides.setProperty("testpeerinfos", peerList.toTypedArray())
 
         val testName: String = getTestName()
         for (nodeSetup in sysSetup.nodeMap.values) {
-            val nodeConfigProvider = NodeConfigurationProviderGenerator.buildFromSetup(
+            val appConfig = AppConfigGenerator.buildFromSetup(
                     testName,
                     confOverrides,
                     nodeSetup,
                     sysSetup,
                     setupAction
             )
-            nodeSetup.configurationProvider = nodeConfigProvider
+            nodeSetup.appConfig = appConfig
         }
     }
 
@@ -283,18 +283,18 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected fun addConfigProviderToNodeSetups(
             systemSetup: SystemSetup,
             configOverrides: MapConfiguration,
-            setupAction: (appConfig: AppConfig) -> Unit = { _ -> Unit }
+            setupAction: (appConfig: AppConfig) -> Unit = { _ -> }
     ) {
         val testName = this::class.simpleName!!
         for (nodeSetup in systemSetup.nodeMap.values) {
 
-            val nodeConfProv: NodeConfigurationProvider = NodeConfigurationProviderGenerator.buildFromSetup(
+            val appConfig = AppConfigGenerator.buildFromSetup(
                     testName,
                     configOverrides,
                     nodeSetup,
                     systemSetup,
                     setupAction)
-            nodeSetup.configurationProvider = nodeConfProv // TODO: A bit ugly to mutate an existing instance like this. Ideas?
+            nodeSetup.appConfig = appConfig // TODO: A bit ugly to mutate an existing instance like this. Ideas?
         }
 
     }

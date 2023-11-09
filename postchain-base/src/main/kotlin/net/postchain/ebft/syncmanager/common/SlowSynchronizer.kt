@@ -21,6 +21,7 @@ import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
+import net.postchain.ebft.message.Status
 import net.postchain.ebft.worker.WorkerContext
 import java.time.Clock
 import java.util.concurrent.locks.ReentrantLock
@@ -29,7 +30,7 @@ import kotlin.math.min
 
 /**
  * Used by replicas only!
- * Will consume blocks in the same pace as they are made, to avoid spamming the block producers too much.
+ * Will consume blocks at the same pace as they are made, to avoid spamming the block producers too much.
  *
  * To consume blocks fast, use [FastSynchronizer]
  *
@@ -43,8 +44,8 @@ class SlowSynchronizer(
         workerContext: WorkerContext,
         private val blockDatabase: BlockDatabase,
         val params: SyncParameters,
-        val clock: Clock,
         private val isProcessRunning: () -> Boolean,
+        val clock: Clock = Clock.systemUTC(),
         slowSyncStateMachineProvider: (Int) -> SlowSyncStateMachine = { chainId -> SlowSyncStateMachine.buildWithChain(chainId, params) },
         slowSyncPeerStatusesProvider: () -> SlowSyncPeerStatuses = { SlowSyncPeerStatuses(params) },
         val slowSyncSleepDataProvider: () -> SlowSyncSleepData = { SlowSyncSleepData(params) },
@@ -52,6 +53,7 @@ class SlowSynchronizer(
 ) : AbstractSynchronizer(workerContext) {
 
     private val stateMachine = slowSyncStateMachineProvider(blockchainConfiguration.chainID.toInt())
+    private val messageDurationTracker = workerContext.messageDurationTracker
 
     private val stateMachineLock = reentrantLockProvider()
     private val allBlocksCommitted = stateMachineLock.newCondition()
@@ -67,10 +69,11 @@ class SlowSynchronizer(
      */
     fun syncUntil() {
         try {
-            blockHeight = blockQueries.getLastBlockHeight().get()
-            syncDebug("Start", blockHeight)
-            stateMachine.lastCommittedBlockHeight = blockHeight
-            stateMachine.lastUncommittedBlockHeight = blockHeight
+            val currentBlockHeight = blockQueries.getLastBlockHeight().get()
+            blockHeight.set(currentBlockHeight)
+            logger.debug { syncDebug("Start", currentBlockHeight) }
+            stateMachine.lastCommittedBlockHeight = currentBlockHeight
+            stateMachine.lastUncommittedBlockHeight = currentBlockHeight
             val sleepData = slowSyncSleepDataProvider()
             while (isProcessRunning()) {
                 processMessages(sleepData)
@@ -85,17 +88,20 @@ class SlowSynchronizer(
         } catch (e: Exception) {
             logger.debug(e) { "syncUntil() -- ${"Exception"}" }
         } finally {
-            syncDebug("Await commits", blockHeight)
+            logger.debug { syncDebug("Await commits", blockHeight.get()) }
             peerStatuses.clear()
-            syncDebug("Exit slowsync", blockHeight)
+            logger.debug { syncDebug("Exit slowsync", blockHeight.get()) }
         }
     }
 
     internal fun sendRequest(now: Long, slowSyncStateMachine: SlowSyncStateMachine, lastPeer: NodeRid? = null) {
         val startAtHeight = slowSyncStateMachine.getStartHeight()
-        val excludedPeers = peerStatuses.exclNonSyncable(startAtHeight, now)
-        val peers = configuredPeers.minus(excludedPeers)
-        if (peers.isEmpty()) return
+        val peers = configuredPeers.minus(peerStatuses.excludedNonSyncable(startAtHeight, now)).ifEmpty {
+            peerStatuses.reviveAllBlacklisted()
+            configuredPeers.minus(peerStatuses.excludedNonSyncable(startAtHeight, now)).ifEmpty {
+                return
+            }
+        }
 
         // Sometimes we prefer not to use the same peer as last time
         val usePeers = if (peers.size > 1 && lastPeer != null) {
@@ -103,9 +109,11 @@ class SlowSynchronizer(
         } else {
             peers
         }
-        val pickedPeerId = communicationManager.sendToRandomPeer(GetBlockRange(startAtHeight), usePeers).first
+        val message = GetBlockRange(startAtHeight)
+        val pickedPeerId = communicationManager.sendToRandomPeer(message, usePeers).first
 
         if (pickedPeerId != null) {
+            messageDurationTracker.send(pickedPeerId, message)
             if (stateMachine.hasUnacknowledgedFailedCommit()) stateMachine.acknowledgeFailedCommit()
             slowSyncStateMachine.updateToWaitForReply(pickedPeerId, startAtHeight, now)
         } else {
@@ -120,12 +128,11 @@ class SlowSynchronizer(
      * @return SleepData we should use to sleep
      */
     internal fun processMessages(sleepData: SlowSyncSleepData) {
-        for (packet in communicationManager.getPackets()) {
-            val peerId = packet.first
+        messageDurationTracker.cleanup()
+        for ((peerId, _, message) in communicationManager.getPackets()) {
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue
             }
-            val message = packet.second
             if (message is GetBlockHeaderAndBlock || message is BlockHeader) {
                 peerStatuses.confirmModern(peerId)
             }
@@ -133,20 +140,19 @@ class SlowSynchronizer(
                 when (message) {
                     // We will answer any get call
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
-                    is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight)
-                    is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight) // A replica might ask us
+                    is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight.get())
+                    is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight.get()) // A replica might ask us
                     is GetBlockSignature -> sendBlockSignature(peerId, message.blockRID)
 
                     // But we only expect ranges and status to be sent to us
                     is BlockRange -> {
+                        messageDurationTracker.receive(peerId, message)
                         val processedBlocks = handleBlockRange(peerId, message.blocks, message.startAtHeight)
                         sleepData.updateData(processedBlocks)
                     }
 
-                    is AppliedConfig -> {
-                        if (checkIfWeNeedToApplyPendingConfig(peerId, message)) return
-                    }
-
+                    is Status -> if (message.configHash != null && checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
+                    is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
                     else -> logger.debug { "Unhandled type $message from peer $peerId" }
                 }
             } catch (e: Exception) {
@@ -306,13 +312,13 @@ class SlowSynchronizer(
         // (this is usually slow and is therefore handled via a future).
         addBlockCompletionFuture = blockDatabase
                 .addBlock(block, addBlockCompletionFuture, bTrace)
-                .whenCompleteUnwrapped(loggingContext) { _: Any?, exception ->
+                .whenCompleteUnwrapped(loggingContext, always = { _, exception ->
                     stateMachineLock.withLock {
                         if (exception == null) {
                             logger.debug { "commitBlock() - Block height: $height committed successfully." }
                             try {
                                 stateMachine.updateAfterSuccessfulCommit(height)
-                                blockHeight = height
+                                blockHeight.set(height)
                             } catch (t: Throwable) {
                                 logger.warn(t) { "Failed to update after successful commit" }
                             }
@@ -324,12 +330,10 @@ class SlowSynchronizer(
                             allBlocksCommitted.signalAll()
                         }
                     }
-                }
+                })
     }
 
     private fun currentTimeMillis() = clock.millis()
 
-    private fun syncDebug(message: String, height: Long, e: Exception? = null) {
-        logger.debug(e) { "syncUntil() -- $message, at height: $height" }
-    }
+    private fun syncDebug(message: String, height: Long) = "syncUntil() -- $message, at height: $height"
 }

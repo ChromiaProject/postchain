@@ -3,7 +3,9 @@
 package net.postchain.managed
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.PostchainContext
+import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.*
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
@@ -16,12 +18,17 @@ import net.postchain.core.*
 import net.postchain.core.block.BlockTrace
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
-import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GTXModuleAware
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.managed.config.ManagedDataSourceAware
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.concurrent.withLock
+import kotlin.system.measureTimeMillis
 
 /**
  * Extends on the [BaseBlockchainProcessManager] with managed mode. "Managed" means that the nodes automatically
@@ -49,7 +56,7 @@ import net.postchain.managed.config.ManagedDataSourceAware
  * has been build to see if we need to upgrade anything about the chain's configuration.
  * Since ProcMan doesn't like to do many important things at once, we block (=synchorize) in the beginning of
  * "wrappedRestartHandler()", and only let go after we are done. If there are errors somewhere else in the code,
- * we will see threads deadlock waiting for the lock in wrappedRestartHandler() (see test [ForkTestNightly]
+ * we will see threads deadlock waiting for the lock in wrappedRestartHandler() (see test [ForkSlowIntegrationTest]
  * "testAliasesManyLevels()" for an example that (used to cause) deadlock).
  *
  * Doc: see the /doc/postchain_ManagedModeFlow.graphml (created with yEd)
@@ -70,8 +77,17 @@ open class ManagedBlockchainProcessManager(
 
     protected open lateinit var dataSource: ManagedNodeDataSource
     protected val CHAIN0 = 0L
+    protected val areBlockchainsPruning = AtomicBoolean(false)
+
+    @Volatile
+    protected var currentInactiveBlockchainsHeight = 0L
 
     companion object : KLogging()
+
+    init {
+        executor.scheduleWithFixedDelay(
+                ::pruneRemovedBlockchains, appConfig.housekeepingIntervalMs, appConfig.housekeepingIntervalMs, TimeUnit.MILLISECONDS)
+    }
 
     protected open fun initManagedEnvironment(dataSource: ManagedNodeDataSource) {
         this.dataSource = dataSource
@@ -123,7 +139,7 @@ open class ManagedBlockchainProcessManager(
 
         fun beforeCommitHandlerChainN(bTrace: BlockTrace?, bctx: BlockEContext) {
             logger.trace { "Running before commit handler -- block causing handler to run: $bTrace" }
-            saveConfigurationInDatabaseIfNotAlreadyExists(bctx, blockchainConfig)
+            saveConfigurationHashInDatabaseIfNotAlreadyExists(bctx, blockchainConfig)
         }
 
         fun wrappedBeforeCommitHandler(bTrace: BlockTrace?, bctx: BlockEContext) {
@@ -153,7 +169,6 @@ open class ManagedBlockchainProcessManager(
         @Suppress("UNUSED_PARAMETER")
         fun afterCommitHandlerChain0(bTrace: BlockTrace?, blockTimestamp: Long): Boolean {
             wrTrace("chain0 begin", bTrace)
-
             // Checking out for chain0 configuration changes
             val reloadChain0 = isConfigurationChanged(CHAIN0)
             startStopBlockchainsAsync(reloadChain0, bTrace)
@@ -212,10 +227,10 @@ open class ManagedBlockchainProcessManager(
         return ::wrappedAfterCommitHandler
     }
 
-    private fun saveConfigurationInDatabaseIfNotAlreadyExists(bctx: BlockEContext, blockchainConfig: BlockchainConfiguration) {
+    private fun saveConfigurationHashInDatabaseIfNotAlreadyExists(bctx: BlockEContext, blockchainConfig: BlockchainConfiguration) {
         val db = DatabaseAccess.of(bctx)
-        if (db.getConfigurationData(bctx, blockchainConfig.configHash) == null) {
-            db.addConfigurationData(bctx, bctx.height, encodeGtv(blockchainConfig.rawConfig))
+        if (!db.configurationHashExists(bctx, blockchainConfig.configHash)) {
+            db.addConfigurationHash(bctx, bctx.height, blockchainConfig.configHash)
         }
     }
 
@@ -228,7 +243,7 @@ open class ManagedBlockchainProcessManager(
      * @param reloadChain0 is true if the chain zero must be restarted.
      */
     private fun startStopBlockchainsAsync(reloadChain0: Boolean, bTrace: BlockTrace?) {
-        synchronized(synchronizer) {
+        processLock.withLock {
             ssaTrace("Begin", bTrace)
             val toLaunch = retrieveBlockchainsToLaunch()
             val chainIdsToLaunch = toLaunch.map { it.chainId }.toSet()
@@ -260,6 +275,75 @@ open class ManagedBlockchainProcessManager(
                         stopBlockchainAsync(it, bTrace)
                     }
             ssaTrace("End", bTrace)
+        }
+    }
+
+    protected fun pruneRemovedBlockchains() {
+        if (!::dataSource.isInitialized) return
+        if (!areBlockchainsPruning.compareAndSet(false, true)) return
+
+        try {
+            val inactiveChains = dataSource.findNextInactiveBlockchains(currentInactiveBlockchainsHeight)
+            withLoggingContext(CHAIN_IID_TAG to CHAIN0.toString()) {
+                val chainsToLog = inactiveChains.associate { it.rid.toHex() to (it.state to it.height) }
+                logger.debug { "Inactive blockchains starting from height $currentInactiveBlockchainsHeight: $chainsToLog" }
+
+                // No inactive chains, OR some of the inactive chains have not yet been stopped. We'll be back on the next iteration.
+                when {
+                    inactiveChains.isEmpty() -> return
+                    !areChainsAvailableForPruning(inactiveChains) -> {
+                        logger.debug { "Inactive blockchains are not available for pruning" }
+                        return
+                    }
+                    else -> logger.debug { "Inactive blockchains are available for pruning" }
+                }
+            }
+
+            inactiveChains.forEach { chain ->
+                val inactiveChainId = withReadConnection(sharedStorage, 0) { ctx0 ->
+                    DatabaseAccess.of(ctx0).getChainId(ctx0, chain.rid)
+                }
+
+                withLoggingContext(
+                        buildMap {
+                            put(BLOCKCHAIN_RID_TAG, chain.rid.toString())
+                            if (inactiveChainId != null) put(CHAIN_IID_TAG, inactiveChainId.toString())
+                        }
+                ) {
+                    if (inactiveChainId != null) {
+                        if (chain.state == BlockchainState.REMOVED) {
+                            logger.debug { "Deleting blockchain" }
+                            val elapsed = measureTimeMillis {
+                                withReadWriteConnection(sharedStorage, inactiveChainId) {
+                                    BlockchainApi.deleteBlockchain(it)
+                                }
+                            }
+                            logger.debug { "Blockchain deleted in $elapsed ms" }
+                        } else if (chain.state == BlockchainState.ARCHIVED) {
+                            logger.debug { "Archiving blockchain" }
+                            val elapsed = measureTimeMillis {
+                                withReadWriteConnection(sharedStorage, inactiveChainId) {
+                                    BlockchainApi.archiveBlockchain(it)
+                                }
+                            }
+                            logger.debug { "Blockchain archived in $elapsed ms" }
+                        }
+                    } else {
+                        logger.debug { "Blockchain is already pruned" }
+                    }
+                }
+            }
+            currentInactiveBlockchainsHeight = inactiveChains.first().height
+        } catch (e: Exception) {
+            logger.error(e) { e.message }
+        } finally {
+            areBlockchainsPruning.set(false)
+        }
+    }
+
+    protected open fun areChainsAvailableForPruning(chains: List<InactiveBlockchainInfo>): Boolean {
+        return processLock.withLock {
+            chains.all { !bridToChainId.containsKey(it.rid) }
         }
     }
 

@@ -18,6 +18,8 @@ import net.postchain.core.block.BlockQueriesProviderImpl
 import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.metrics.initMetrics
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 /**
  * Postchain node instantiates infrastructure and blockchain process manager.
@@ -33,8 +35,15 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
     init {
         initMetrics(appConfig)
 
-        val blockBuilderStorage = StorageBuilder.buildStorage(appConfig, appConfig.databaseBlockBuilderMaxWaitWrite, appConfig.databaseBlockBuilderWriteConcurrency, wipeDb)
-        val sharedStorage = StorageBuilder.buildStorage(appConfig, appConfig.databaseSharedMaxWaitWrite, appConfig.databaseSharedWriteConcurrency, wipeDb)
+        val blockBuilderStorage = StorageBuilder.buildStorage(
+                appConfig,
+                appConfig.databaseBlockBuilderMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
+                appConfig.databaseBlockBuilderWriteConcurrency,
+                wipeDb)
+        val sharedStorage = StorageBuilder.buildStorage(appConfig,
+                appConfig.databaseSharedMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
+                appConfig.databaseSharedWriteConcurrency,
+                wipeDb)
 
         sharedStorage.withReadConnection { ctx ->
             DatabaseAccess.of(ctx).checkCollation(ctx.conn, suppressError = appConfig.databaseSuppressCollationCheck)
@@ -52,8 +61,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 infrastructureFactory.makeConnectionManager(appConfig),
                 blockQueriesProvider,
                 JsonNodeDiagnosticContext(version, appConfig.pubKey, infrastructureFactory),
-                blockchainConfigProvider,
-                appConfig.debug
+                blockchainConfigProvider
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)
         processManager = infrastructureFactory.makeProcessManager(postchainContext, blockchainInfrastructure, blockchainConfigProvider)

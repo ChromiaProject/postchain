@@ -20,8 +20,6 @@ abstract class CommandRunServerBase(name: String?, help: String) : CliktCommand(
 
     companion object : KLogging()
 
-    protected val debug by debugOption()
-
     private val port by option("-p", "--port", envvar = "POSTCHAIN_SERVER_PORT", help = "Port for the server")
             .int().default(PostchainServerConfig.DEFAULT_RPC_SERVER_PORT)
 
@@ -29,12 +27,16 @@ abstract class CommandRunServerBase(name: String?, help: String) : CliktCommand(
 
     protected val services = mutableListOf<BindableService>()
 
+    init {
+        deprecatedDebugOption()
+    }
+
     fun runServer(nodeProvider: NodeProvider, initialChainIds: List<Long>? = null) {
         val serverConfig = tlsOptions?.let {
             PostchainServerConfig(port, TlsConfig(it.certChainFile, it.privateKeyFile))
         } ?: PostchainServerConfig(port)
 
-        if (debug) services.add(DebugServiceGrpcImpl(DebugService(nodeProvider)))
+        services.add(DebugServiceGrpcImpl(DebugService(nodeProvider)))
 
         PostchainServer(nodeProvider, serverConfig, services)
                 .apply {

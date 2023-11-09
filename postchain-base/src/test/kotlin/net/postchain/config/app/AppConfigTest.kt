@@ -28,7 +28,7 @@ class AppConfigTest {
 
     @Test
     fun testNoNodeConfig() {
-        val appConfig = AppConfig.fromEnvironment(false)
+        val appConfig = AppConfig.fromEnvironment()
 
         assertThat(appConfig.nodeConfigProvider).isEqualTo("properties")
         assertEquals("org.postgresql.Driver", appConfig.databaseDriverclass)
@@ -57,10 +57,10 @@ class AppConfigTest {
 
     @Test
     fun overridesEnvTest() {
-        val appConfig = AppConfig.fromEnvironment(false)
+        val appConfig = AppConfig.fromEnvironment()
         assertFalse(appConfig.containsKey("foo"))
 
-        val appConfigOverridden = AppConfig.fromEnvironment(false, overrides = mapOf("foo" to 123))
+        val appConfigOverridden = AppConfig.fromEnvironment(overrides = mapOf("foo" to 123))
         assertEquals(123, appConfigOverridden.getInt("foo"))
     }
 

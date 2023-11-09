@@ -28,9 +28,12 @@ import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
+import net.postchain.ebft.message.MessageDurationTracker
+import net.postchain.ebft.message.Status
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.gtv.Gtv
 import net.postchain.network.CommunicationManager
+import net.postchain.network.ReceivedPacket
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -51,6 +54,7 @@ import org.mockito.kotlin.isA
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.spy
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.time.Clock
@@ -117,11 +121,13 @@ class SlowSynchronizerTest {
     private val peerCommConf: PeerCommConfiguration = mock {
         on { networkNodes } doReturn networkNodes
     }
+    private val messageDurationTracker: MessageDurationTracker = mock()
     private val workerContext: WorkerContext = mock {
         on { engine } doReturn blockchainEngine
         on { communicationManager } doReturn commManager
         on { peerCommConfiguration } doReturn peerCommConf
         on { blockchainConfiguration } doReturn blockchainConfiguration
+        on { messageDurationTracker } doReturn messageDurationTracker
     }
     private val blockDatabase: BlockDatabase = mock()
     private val params = SyncParameters()
@@ -153,8 +159,8 @@ class SlowSynchronizerTest {
                 workerContext,
                 blockDatabase,
                 params,
-                clock,
                 isProcessRunningProvider,
+                clock,
                 { stateMachine },
                 { peerStatuses },
                 { slowSyncSleepData },
@@ -186,15 +192,16 @@ class SlowSynchronizerTest {
         }
 
         @Test
-        fun `with no valid peers should do nothing`() {
+        fun `with no valid peers should try to revive blacklisted`() {
             // setup
             peerIds.add(toExcludeNodeRid)
-            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).exclNonSyncable(4L, currentTimeMillis)
+            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).excludedNonSyncable(4L, currentTimeMillis)
             // execute
             sut.sendRequest(currentTimeMillis, stateMachine, null)
             // verify
             verify(stateMachine).getStartHeight()
-            verify(peerStatuses).exclNonSyncable(anyLong(), anyLong())
+            verify(peerStatuses).reviveAllBlacklisted()
+            verify(peerStatuses, times(2)).excludedNonSyncable(anyLong(), anyLong())
             verify(commManager, never()).sendToRandomPeer(isA(), anySet())
         }
 
@@ -203,7 +210,7 @@ class SlowSynchronizerTest {
             // setup
             peerIds.add(toExcludeNodeRid)
             peerIds.add(nodeRid)
-            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).exclNonSyncable(anyLong(), anyLong())
+            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
             doReturn(nodeRid to setOf(nodeRid)).whenever(commManager).sendToRandomPeer(isA(), anySet())
             doReturn(true).whenever(stateMachine).hasUnacknowledgedFailedCommit()
             // execute
@@ -212,6 +219,7 @@ class SlowSynchronizerTest {
             verify(stateMachine).acknowledgeFailedCommit()
             verify(stateMachine).updateToWaitForReply(nodeRid, startHeight, currentTimeMillis)
             verify(commManager).sendToRandomPeer(isA(), eq(setOf(nodeRid)))
+            verify(messageDurationTracker).send(eq(nodeRid), isA())
         }
 
         @Test
@@ -219,7 +227,7 @@ class SlowSynchronizerTest {
             // setup
             peerIds.add(toExcludeNodeRid)
             peerIds.add(nodeRid)
-            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).exclNonSyncable(anyLong(), anyLong())
+            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
             doReturn(nodeRid to setOf(nodeRid)).whenever(commManager).sendToRandomPeer(isA(), anySet())
             doReturn(false).whenever(stateMachine).hasUnacknowledgedFailedCommit()
             // execute
@@ -235,7 +243,7 @@ class SlowSynchronizerTest {
             // setup
             peerIds.add(toExcludeNodeRid)
             peerIds.add(nodeRid)
-            doReturn(setOf<NodeRid>()).whenever(peerStatuses).exclNonSyncable(anyLong(), anyLong())
+            doReturn(setOf<NodeRid>()).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
             doReturn(null to setOf(nodeRid)).whenever(commManager).sendToRandomPeer(isA(), anySet())
             // execute
             sut.sendRequest(currentTimeMillis, stateMachine, nodeRid)
@@ -243,6 +251,7 @@ class SlowSynchronizerTest {
             verify(stateMachine, never()).acknowledgeFailedCommit()
             verify(stateMachine, never()).updateToWaitForReply(nodeRid, startHeight, currentTimeMillis)
             verify(commManager).sendToRandomPeer(isA(), eq(setOf(toExcludeNodeRid)))
+            verify(messageDurationTracker, never()).send(eq(nodeRid), isA())
         }
     }
 
@@ -261,7 +270,7 @@ class SlowSynchronizerTest {
         @Test
         fun `with blacklisted peer should do nothing`() {
             // setup
-            doReturn(listOf(nodeRid to GetBlockHeaderAndBlock(lastBlockHeight))).whenever(commManager).getPackets()
+            doReturn(listOf(ReceivedPacket(nodeRid, 1, GetBlockHeaderAndBlock(lastBlockHeight)))).whenever(commManager).getPackets()
             doReturn(true).whenever(peerStatuses).isBlacklisted(isA())
             // execute
             sut.processMessages(slowSyncSleepData)
@@ -273,7 +282,7 @@ class SlowSynchronizerTest {
         @Test
         fun `with message GetBlockHeaderAndBlock should call internal method`() {
             // setup
-            doReturn(listOf(nodeRid to GetBlockHeaderAndBlock(height))).whenever(commManager).getPackets()
+            doReturn(listOf(ReceivedPacket(nodeRid, 1, GetBlockHeaderAndBlock(height)))).whenever(commManager).getPackets()
             doNothing().whenever(sut).sendBlockHeaderAndBlock(isA(), anyLong(), anyLong())
             // execute
             sut.processMessages(slowSyncSleepData)
@@ -286,7 +295,7 @@ class SlowSynchronizerTest {
         @Test
         fun `with message GetBlockAtHeight should call internal method`() {
             // setup
-            doReturn(listOf(nodeRid to GetBlockAtHeight(height))).whenever(commManager).getPackets()
+            doReturn(listOf(ReceivedPacket(nodeRid, 1, GetBlockAtHeight(height)))).whenever(commManager).getPackets()
             doNothing().whenever(sut).sendBlockAtHeight(isA(), anyLong())
             // execute
             sut.processMessages(slowSyncSleepData)
@@ -298,7 +307,7 @@ class SlowSynchronizerTest {
         @Test
         fun `with message GetBlockRange should call internal method`() {
             // setup
-            doReturn(listOf(nodeRid to GetBlockRange(height))).whenever(commManager).getPackets()
+            doReturn(listOf(ReceivedPacket(nodeRid, 1, GetBlockRange(height)))).whenever(commManager).getPackets()
             doNothing().whenever(sut).sendBlockRangeFromHeight(isA(), anyLong(), anyLong())
             // execute
             sut.processMessages(slowSyncSleepData)
@@ -310,7 +319,7 @@ class SlowSynchronizerTest {
         @Test
         fun `with message GetBlockSignature should call internal method`() {
             // setup
-            doReturn(listOf(nodeRid to GetBlockSignature(blockRID.data))).whenever(commManager).getPackets()
+            doReturn(listOf(ReceivedPacket(nodeRid, 1, GetBlockSignature(blockRID.data)))).whenever(commManager).getPackets()
             doNothing().whenever(sut).sendBlockSignature(isA(), isA())
             // execute
             sut.processMessages(slowSyncSleepData)
@@ -320,17 +329,31 @@ class SlowSynchronizerTest {
         }
 
         @Test
-        fun `with message AppliedConfig should call internal method`() {
+        fun `with message Status and config hash should verify and apply config`() {
             // setup
             val configHash = "configHash".toByteArray()
-            val message = AppliedConfig(configHash, height)
-            doReturn(listOf(nodeRid to message)).whenever(commManager).getPackets()
-            doReturn(true).whenever(sut).checkIfWeNeedToApplyPendingConfig(isA(), isA())
+            val message = Status(blockRID.data, height, false, 0, 0, 0, null, configHash)
+            doReturn(listOf(ReceivedPacket(nodeRid, 1, message))).whenever(commManager).getPackets()
+            doReturn(true).whenever(sut).checkIfWeNeedToApplyPendingConfig(isA(), isA(), isA())
             // execute
             sut.processMessages(slowSyncSleepData)
             // verify
             verify(peerStatuses, never()).confirmModern(nodeRid)
-            verify(sut).checkIfWeNeedToApplyPendingConfig(nodeRid, message)
+            verify(sut).checkIfWeNeedToApplyPendingConfig(nodeRid, configHash, height)
+        }
+
+        @Test
+        fun `with message AppliedConfig should call internal method`() {
+            // setup
+            val configHash = "configHash".toByteArray()
+            val message = AppliedConfig(configHash, height)
+            doReturn(listOf(ReceivedPacket(nodeRid, 1, message))).whenever(commManager).getPackets()
+            doReturn(true).whenever(sut).checkIfWeNeedToApplyPendingConfig(isA(), isA(), isA())
+            // execute
+            sut.processMessages(slowSyncSleepData)
+            // verify
+            verify(peerStatuses, never()).confirmModern(nodeRid)
+            verify(sut).checkIfWeNeedToApplyPendingConfig(nodeRid, configHash, height)
         }
 
         @Test
@@ -339,12 +362,14 @@ class SlowSynchronizerTest {
             val completeBlock = CompleteBlock(blockData, height, witness)
             val blocks = listOf(completeBlock)
             val processedBlocks = 37
-            doReturn(listOf(nodeRid to BlockRange(startHeight, false, blocks))).whenever(commManager).getPackets()
+            val message = BlockRange(startHeight, false, blocks)
+            doReturn(listOf(ReceivedPacket(nodeRid, 1, message))).whenever(commManager).getPackets()
             doReturn(processedBlocks).whenever(sut).handleBlockRange(nodeRid, blocks, startHeight)
             // execute
             sut.processMessages(slowSyncSleepData)
             // verify
             verify(peerStatuses, never()).confirmModern(nodeRid)
+            verify(messageDurationTracker).receive(nodeRid, message)
             verify(sut).handleBlockRange(nodeRid, blocks, startHeight)
             verify(slowSyncSleepData).updateData(processedBlocks)
         }

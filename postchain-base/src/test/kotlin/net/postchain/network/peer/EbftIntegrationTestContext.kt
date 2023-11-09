@@ -4,10 +4,10 @@ package net.postchain.network.peer
 
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.BlockchainRid
-import net.postchain.ebft.EbftPacketDecoder
-import net.postchain.ebft.EbftPacketDecoderFactory
-import net.postchain.ebft.EbftPacketEncoder
-import net.postchain.ebft.EbftPacketEncoderFactory
+import net.postchain.ebft.EbftPacketCodec
+import net.postchain.ebft.EbftPacketCodecFactory
+import net.postchain.ebft.message.ebftMessageToString
+import org.mockito.kotlin.mock
 import java.io.Closeable
 
 class EbftIntegrationTestContext(
@@ -18,17 +18,15 @@ class EbftIntegrationTestContext(
     val chainId = 1L
     //private val connectorFactory = NettyPeerConnectorFactory<Message>()
 
-    val connectionManager = DefaultPeerConnectionManager(
-            EbftPacketEncoderFactory(),
-            EbftPacketDecoderFactory())
+    val connectionManager = DefaultPeerConnectionManager(EbftPacketCodecFactory())
 
     val communicationManager = DefaultPeerCommunicationManager(
             connectionManager,
             config,
             chainId,
             blockchainRid,
-            EbftPacketEncoder(config, blockchainRid),
-            EbftPacketDecoder(config)
+            EbftPacketCodec(config, blockchainRid),
+            ebftMessageToString(mock())
     )
 
     fun shutdown() {

@@ -121,7 +121,7 @@ class BaseManagedNodeDataSourceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("getBlockchainConfigurationOptions")
+    @MethodSource("getBlockchainConfigurationOptionsData")
     fun testGetBlockchainConfigurationOptions(gtvResult: Gtv, expected: BlockchainConfigurationOptions?) {
         val appConfig: AppConfig = mock {
             on { pubKeyByteArray } doReturn byteArrayOf(0)
@@ -132,6 +132,17 @@ class BaseManagedNodeDataSourceTest {
         }
         val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
         assertEquals(expected, sut.getBlockchainConfigurationOptions(ZERO_RID, 0L))
+    }
+
+    @ParameterizedTest
+    @MethodSource("findNextInactiveBlockchainsData")
+    fun testFindNextInactiveBlockchains(gtvResult: Gtv, expected: List<InactiveBlockchainInfo>?) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(11)
+            on { query(eq("nm_find_next_inactive_blockchains"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock())
+        assertEquals(expected, sut.findNextInactiveBlockchains(0L))
     }
 
     companion object {
@@ -258,7 +269,7 @@ class BaseManagedNodeDataSourceTest {
         }
 
         @JvmStatic
-        fun getBlockchainConfigurationOptions(): List<Array<Any?>> {
+        fun getBlockchainConfigurationOptionsData(): List<Array<Any?>> {
             return listOf(
                     arrayOf(GtvNull, null),
                     arrayOf(
@@ -269,6 +280,26 @@ class BaseManagedNodeDataSourceTest {
                             gtv(mapOf("suppress_special_transaction_validation" to gtv(false))),
                             BlockchainConfigurationOptions(false)
                     )
+            )
+        }
+
+        @JvmStatic
+        fun findNextInactiveBlockchainsData(): List<Array<Any?>> {
+            val brid0 = ZERO_RID
+            val brid1 = BlockchainRid.buildRepeat(1)
+
+            val nonTrivialGtv = GtvArray(arrayOf(
+                    gtv(mapOf("rid" to gtv(brid0), "state" to gtv("REMOVED"), "height" to gtv(10))),
+                    gtv(mapOf("rid" to gtv(brid1), "state" to gtv("ARCHIVED"), "height" to gtv(20)))
+            ))
+            val nonTrivialExpected = listOf(
+                    InactiveBlockchainInfo(brid0, BlockchainState.REMOVED, 10),
+                    InactiveBlockchainInfo(brid1, BlockchainState.ARCHIVED, 20)
+            )
+
+            return listOf(
+                    arrayOf(GtvArray(emptyArray()), emptyList<InactiveBlockchainInfo>()),
+                    arrayOf(nonTrivialGtv, nonTrivialExpected)
             )
         }
     }

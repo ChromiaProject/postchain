@@ -9,7 +9,7 @@ import net.postchain.server.service.SubnodeService
 class CommandRunSubNode : CommandRunServerBase("run-subnode", "Start postchain sub node server") {
 
     override fun run() {
-        val nodeProvider = LazyPostchainNodeProvider(debug)
+        val nodeProvider = LazyPostchainNodeProvider()
         services.add(SubnodeServiceGrpcImpl(SubnodeService(nodeProvider)))
         runServer(nodeProvider)
     }

@@ -102,6 +102,7 @@ class BaseStorage(
         if (!connection.isReadOnly) {
             throw ProgrammerMistake("trying to close a writable connection as a read-only connection")
         }
+        connection.commit()
         connection.close()
     }
 

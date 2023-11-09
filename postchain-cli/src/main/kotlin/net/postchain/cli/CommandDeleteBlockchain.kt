@@ -24,6 +24,11 @@ class CommandDeleteBlockchain : CliktCommand(name = "delete", help = "Delete blo
             val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
             try {
                 runStorageCommand(appConfig, chainId) {
+                    val dependentChains = BlockchainApi.getDependentChains(it)
+                    if (dependentChains.isNotEmpty()) {
+                        throw UserMistake("Blockchain may not be deleted due to the following dependent chains: ${dependentChains.joinToString(", ")}")
+                    }
+
                     BlockchainApi.deleteBlockchain(it)
                 }
                 echo("OK: Blockchain was deleted")

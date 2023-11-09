@@ -13,6 +13,7 @@ import net.postchain.devtools.utils.configuration.NodeSeqNumber
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.gtv.Gtv
 import net.postchain.managed.BlockchainInfo
+import net.postchain.managed.InactiveBlockchainInfo
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.PendingBlockchainConfiguration
 import java.util.TreeMap
@@ -23,9 +24,11 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     val pendingBridToConfigs: MutableMap<BlockchainRid, TreeMap<Long, MutableList<Pair<BlockchainConfiguration, ByteArray>>>> = mutableMapOf()
     val faultyConfigHashes: MutableMap<BlockchainRid, MutableMap<Long, ByteArray>> = mutableMapOf()
     val bridState: MutableMap<BlockchainRid, BlockchainState> = mutableMapOf()
+    val historicStates: MutableMap<Long, MutableList<Pair<BlockchainRid, BlockchainState>>> = sortedMapOf()
     private val extraReplicas = mutableMapOf<BlockchainRid, MutableSet<NodeRid>>()
     private lateinit var nodes: Map<NodeSeqNumber, NodeSetup>
     private lateinit var myNode: NodeSetup
+    private val inactiveStates = setOf(BlockchainState.REMOVED, BlockchainState.ARCHIVED)
 
     fun addNodeSetup(nodeMap: Map<NodeSeqNumber, NodeSetup>, nodeSetup: NodeSetup) {
         nodes = nodeMap
@@ -41,7 +44,7 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
 
     override fun computeBlockchainInfoList(): List<BlockchainInfo> {
         return computeBlockchainList()
-                .filter { bridState[BlockchainRid(it)] != BlockchainState.REMOVED }
+                .filter { bridState[BlockchainRid(it)] !in inactiveStates }
                 .map {
                     BlockchainInfo(
                             BlockchainRid(it),
@@ -85,8 +88,13 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         return faultyConfigHashes[blockchainRid]?.let { it[height] }
     }
 
-    fun setBlockchainState(blockchainRid: BlockchainRid, blockchainState: BlockchainState) {
+    fun setBlockchainState(blockchainRid: BlockchainRid, blockchainState: BlockchainState, chain0height: Long = 0L) {
         bridState[blockchainRid] = blockchainState
+        historicStates
+                .getOrPut(chain0height) { mutableListOf() }
+                .run {
+                    add(blockchainRid to blockchainState)
+                }
     }
 
     override fun getBlockchainState(blockchainRid: BlockchainRid): BlockchainState {
@@ -94,6 +102,16 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     }
 
     override fun getBlockchainConfigurationOptions(blockchainRid: BlockchainRid, height: Long): BlockchainConfigurationOptions? = null
+
+    override fun findNextInactiveBlockchains(height: Long): List<InactiveBlockchainInfo> {
+        return historicStates.firstNotNullOfOrNull { e ->
+            if (e.key > height)
+                e.value.map { chainState ->
+                    InactiveBlockchainInfo(chainState.first, chainState.second, e.key)
+                }
+            else null
+        } ?: emptyList()
+    }
 
     override fun query(name: String, args: Gtv): Gtv {
         TODO("Not yet implemented")
@@ -114,6 +132,11 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
             result[it] = replicas.toList()
         }
         return result
+    }
+
+    override fun getSignersInLatestConfiguration(blockchainRid: BlockchainRid): List<NodeRid> {
+        val (latestConfig, _) = bridToConfigs[blockchainRid]?.maxBy { it.key }?.value ?: return listOf()
+        return latestConfig.signers.map { NodeRid(it) }
     }
 
     fun addExtraReplica(brid: BlockchainRid, replica: NodeRid) {

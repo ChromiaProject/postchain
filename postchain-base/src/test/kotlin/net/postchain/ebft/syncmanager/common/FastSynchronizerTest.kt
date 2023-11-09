@@ -31,6 +31,7 @@ import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.BlockData
 import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.message.MessageDurationTracker
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
@@ -39,7 +40,9 @@ import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.UnfinishedBlock
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.network.CommunicationManager
+import net.postchain.network.ReceivedPacket
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.ArgumentMatchers.any
@@ -116,11 +119,13 @@ class FastSynchronizerTest {
     private val peerCommConf: PeerCommConfiguration = mock {
         on { networkNodes } doReturn networkNodes
     }
+    private val messageDurationTracker: MessageDurationTracker = mock()
     private val workerContext: WorkerContext = mock {
         on { engine } doReturn blockchainEngine
         on { communicationManager } doReturn commManager
         on { peerCommConfiguration } doReturn peerCommConf
         on { blockchainConfiguration } doReturn blockchainConfiguration
+        on { messageDurationTracker } doReturn messageDurationTracker
     }
     private val blockDatabase: BlockDatabase = mock()
     private val clock: Clock = mock {
@@ -133,233 +138,236 @@ class FastSynchronizerTest {
 
     @BeforeEach
     fun setup() {
-        sut = spy(FastSynchronizer(workerContext, blockDatabase, params, peerStatuses, clock) { isProcessRunning })
+        sut = spy(FastSynchronizer(workerContext, blockDatabase, params, peerStatuses, { isProcessRunning }, clock))
     }
 
-    ///// processDoneJob /////
-    @Test
-    fun `processDoneJob should remove old job and increase block height`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        // execute
-        sut.processDoneJob(job, false)
-        // verify
-        assertThat(sut.jobs[job.height]).isNull()
-        assertThat(sut.blockHeight).isEqualTo(lastBlockHeight + 1)
-    }
-
-    @Test
-    fun `processDoneJob with allowed job start should remove old job and start next job and increase block height`() {
-        // setup
-        doReturn(true).whenever(sut).startJob(anyLong())
-        val job = addJob(height, nodeRid)
-        // execute
-        sut.processDoneJob(job)
-        // verify
-        verify(sut).startJob(anyLong())
-        assertThat(sut.jobs[job.height]).isNull()
-        assertThat(sut.blockHeight).isEqualTo(lastBlockHeight + 1)
-    }
-
-    @Test
-    fun `processDoneJob with PmEngineIsAlreadyClosed should remove job`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        job.addBlockException = PmEngineIsAlreadyClosed("Failure")
-        // execute
-        sut.processDoneJob(job)
-        // verify
-        assertThat(sut.jobs[job.height]).isNull()
-        assertThat(sut.blockHeight).isEqualTo(lastBlockHeight)
-    }
-
-    @Test
-    fun `processDoneJob with BDBAbortException should cleanup job and re-submit`() {
-        // setup
-        doNothing().whenever(sut).commitJobsAsNecessary(any())
-        val job = addJob(height, nodeRid)
-        job.addBlockException = BDBAbortException(mock())
-        job.blockCommitting = true
-        // execute
-        sut.processDoneJob(job)
-        // verify
-        assertThat(sut.jobs[job.height]).isNotNull()
-        assertThat(sut.blockHeight).isEqualTo(lastBlockHeight)
-        assertThat(job.blockCommitting).isFalse()
-        assertThat(job.addBlockException).isNull()
-        verify(sut).commitJobsAsNecessary(any())
-    }
-
-    @Test
-    fun `processDoneJob with PrevBlockMismatchException should bail and re-throw exception`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        job.addBlockException = PrevBlockMismatchException("Failure")
-        // execute & verify
-        assertThat(
-                assertThrows<PrevBlockMismatchException> {
-                    sut.processDoneJob(job)
-                }
-        ).isEqualTo(job.addBlockException)
-    }
-
-    @Test
-    fun `processDoneJob with job should be considered done should increase block height and remove job`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        job.addBlockException = Exception()
-        // execute
-        sut.processDoneJob(job)
-        // verify
-        assertThat(sut.jobs[job.height]).isNull()
-        assertThat(sut.blockHeight).isEqualTo(lastBlockHeight + 1)
-    }
-
-    @Test
-    fun `processDoneJob with unknown exception should blacklist peer and remove job`() {
-        // setup
-        val job = addJob(height + 1, nodeRid)
-        sut.jobs[job.height] = job
-        job.addBlockException = Exception("Failure")
-        // execute
-        sut.processDoneJob(job, false)
-        // verify
-        verify(peerStatuses).maybeBlacklist(eq(nodeRid), anyString())
-        assertThat(sut.jobs[job.height]).isNull()
-    }
-
-    @Test
-    fun `processDoneJob with allowed job start and unknown exception should blacklist peer and restart job`() {
-        // setup
-        val job = sut.Job(height + 1, nodeRid)
-        sut.jobs[job.height] = job
-        job.addBlockException = Exception("Failure")
-        doNothing().whenever(sut).restartJob(job)
-        // execute
-        sut.processDoneJob(job)
-        // verify
-        verify(peerStatuses).maybeBlacklist(nodeRid, "Invalid block $job. Blacklisting peer ${job.peerId}: Failure")
-        verify(sut).restartJob(job)
-        assertThat(sut.jobs[job.height]).isNotNull()
-    }
-
-    ///// processStaleJobs /////
-    @Test
-    fun `processStaleJobs with job failed restart should restart job`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        job.hasRestartFailed = true
-        doNothing().whenever(sut).restartJob(job)
-        // execute
-        sut.processStaleJobs()
-        // verify
-        verify(sut).restartJob(job)
-    }
-
-    @Test
-    fun `processStaleJobs with timed out job and job failed restart should restart job and mark peer unresponsive`() {
-        // setup
-        params.jobTimeout = 0
-        whenever(clock.millis()).doReturnConsecutively(listOf(0, 42))
-        val job = addJob(height, nodeRid)
-        job.hasRestartFailed = true
-        doNothing().whenever(sut).restartJob(job)
-        doNothing().whenever(peerStatuses).unresponsive(isA(), anyString())
-        // execute
-        sut.processStaleJobs()
-        // verify
-        verify(sut).restartJob(job)
-        verify(peerStatuses).unresponsive(nodeRid, "Sync: Marking peer for restarted job $job unresponsive")
-    }
-
-    @Test
-    fun `processStaleJobs with timed out job and missing job block and is confirmed new node should restart job and mark peer unresponsive`() {
-        // setup
-        params.jobTimeout = 0
-        whenever(clock.millis()).doReturnConsecutively(listOf(0, 42))
-        val job = addJob(height, nodeRid)
-        doNothing().whenever(sut).restartJob(job)
-        doNothing().whenever(peerStatuses).unresponsive(isA(), anyString())
-        doReturn(true).whenever(peerStatuses).isConfirmedModern(isA())
-        // execute
-        sut.processStaleJobs()
-        // verify
-        verify(sut).restartJob(job)
-        verify(peerStatuses).unresponsive(nodeRid, "Sync: Marking modern peer for job $job unresponsive")
-    }
-
-
-    @Test
-    fun `processStaleJobs with timed out job and missing job block and is maybe legacy node should restart job and mark peer unresponsive and set node status as not legacy`() {
-        // setup
-        params.jobTimeout = 0
-        whenever(clock.millis()).doReturnConsecutively(listOf(0, 42))
-        val job = addJob(height, nodeRid)
-        doNothing().whenever(sut).restartJob(job)
-        doNothing().whenever(peerStatuses).unresponsive(isA(), anyString())
-        doNothing().whenever(peerStatuses).setMaybeLegacy(isA(), anyBoolean())
-        doReturn(true).whenever(peerStatuses).isMaybeLegacy(isA())
-        // execute
-        sut.processStaleJobs()
-        // verify
-        verify(sut).restartJob(job)
-        verify(peerStatuses).setMaybeLegacy(nodeRid, false)
-        verify(peerStatuses).unresponsive(nodeRid, "Sync: Marking potentially legacy peer for job $job unresponsive")
-    }
-
-    @Test
-    fun `processStaleJobs with timed out job and missing job block and is legacy node should restart job and set node status as legacy`() {
-        // setup
-        params.jobTimeout = 0
-        whenever(clock.millis()).doReturnConsecutively(listOf(0, 42))
-        val job = addJob(height, nodeRid)
-        doNothing().whenever(sut).restartJob(job)
-        doNothing().whenever(peerStatuses).setMaybeLegacy(isA(), anyBoolean())
-        doReturn(false).whenever(peerStatuses).isMaybeLegacy(isA())
-        // execute
-        sut.processStaleJobs()
-        // verify
-        verify(sut).restartJob(job)
-        verify(peerStatuses).setMaybeLegacy(nodeRid, true)
-    }
-
-    @Test
-    fun `processStaleJobs with 2 jobs from same peer should not check if maybe legacy twice if not legacy`() {
-        // setup
-        params.jobTimeout = 0
-        whenever(clock.millis()).doReturnConsecutively(listOf(0, 10, 42))
-        val job1 = addJob(height, nodeRid)
-        val job2 = addJob(height + 1, nodeRid)
-        doNothing().whenever(sut).restartJob(isA())
-        doNothing().whenever(peerStatuses).unresponsive(isA(), anyString())
-        doNothing().whenever(peerStatuses).setMaybeLegacy(isA(), anyBoolean())
-        doReturn(false, true).whenever(peerStatuses).isMaybeLegacy(isA())
-        // execute
-        sut.processStaleJobs()
-        // verify
-        argumentCaptor<FastSynchronizer.Job>().apply {
-            verify(sut, times(2)).restartJob(capture())
-            val jobs = allValues
-            assertThat(jobs.size).isEqualTo(2)
-            assertThat(jobs[0]).isEqualTo(job1)
-            assertThat(jobs[1]).isEqualTo(job2)
+    @Nested
+    inner class processDoneJob {
+        @Test
+        fun `should remove old job and increase block height`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            // execute
+            sut.processDoneJob(job, false)
+            // verify
+            assertThat(sut.jobs[job.height]).isNull()
+            assertThat(sut.blockHeight.get()).isEqualTo(lastBlockHeight + 1)
         }
-        argumentCaptor<Boolean>().apply {
-            verify(peerStatuses, times(2)).setMaybeLegacy(eq(nodeRid), capture())
-            val isLegacies = allValues
-            assertThat(isLegacies.size).isEqualTo(2)
-            assertThat(isLegacies[0]).isTrue()
-            assertThat(isLegacies[1]).isTrue()
+
+        @Test
+        fun `with allowed job start should remove old job and start next job and increase block height`() {
+            // setup
+            doReturn(true).whenever(sut).startJob(anyLong())
+            val job = addJob(height, nodeRid)
+            // execute
+            sut.processDoneJob(job)
+            // verify
+            verify(sut).startJob(anyLong())
+            assertThat(sut.jobs[job.height]).isNull()
+            assertThat(sut.blockHeight.get()).isEqualTo(lastBlockHeight + 1)
+        }
+
+        @Test
+        fun `with PmEngineIsAlreadyClosed should remove job`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            job.addBlockException = PmEngineIsAlreadyClosed("Failure")
+            // execute
+            sut.processDoneJob(job)
+            // verify
+            assertThat(sut.jobs[job.height]).isNull()
+            assertThat(sut.blockHeight.get()).isEqualTo(lastBlockHeight)
+        }
+
+        @Test
+        fun `with BDBAbortException should cleanup job and re-submit`() {
+            // setup
+            doNothing().whenever(sut).commitJobsAsNecessary(any())
+            val job = addJob(height, nodeRid)
+            job.addBlockException = BDBAbortException(mock())
+            job.blockCommitting = true
+            // execute
+            sut.processDoneJob(job)
+            // verify
+            assertThat(sut.jobs[job.height]).isNotNull()
+            assertThat(sut.blockHeight.get()).isEqualTo(lastBlockHeight)
+            assertThat(job.blockCommitting).isFalse()
+            assertThat(job.addBlockException).isNull()
+            verify(sut).commitJobsAsNecessary(any())
+        }
+
+        @Test
+        fun `with PrevBlockMismatchException should bail and re-throw exception`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            job.addBlockException = PrevBlockMismatchException("Failure")
+            // execute & verify
+            assertThat(
+                    assertThrows<PrevBlockMismatchException> {
+                        sut.processDoneJob(job)
+                    }
+            ).isEqualTo(job.addBlockException)
+        }
+
+        @Test
+        fun `with job should be considered done should increase block height and remove job`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            job.addBlockException = Exception()
+            // execute
+            sut.processDoneJob(job)
+            // verify
+            assertThat(sut.jobs[job.height]).isNull()
+            assertThat(sut.blockHeight.get()).isEqualTo(lastBlockHeight + 1)
+        }
+
+        @Test
+        fun `with unknown exception should blacklist peer and remove job`() {
+            // setup
+            val job = addJob(height + 1, nodeRid)
+            sut.jobs[job.height] = job
+            job.addBlockException = Exception("Failure")
+            // execute
+            sut.processDoneJob(job, false)
+            // verify
+            verify(peerStatuses).maybeBlacklist(eq(nodeRid), anyString())
+            assertThat(sut.jobs[job.height]).isNull()
+        }
+
+        @Test
+        fun `with allowed job start and unknown exception should blacklist peer and restart job`() {
+            // setup
+            val job = sut.Job(height + 1, nodeRid)
+            sut.jobs[job.height] = job
+            job.addBlockException = Exception("Failure")
+            doNothing().whenever(sut).restartJob(job)
+            // execute
+            sut.processDoneJob(job)
+            // verify
+            verify(peerStatuses).maybeBlacklist(nodeRid, "Invalid block $job. Blacklisting peer ${job.peerId}: Failure")
+            verify(sut).restartJob(job)
+            assertThat(sut.jobs[job.height]).isNotNull()
         }
     }
 
-    ///// processMessages /////
+    @Nested
+    inner class processStaleJobs {
+        @Test
+        fun `with job failed restart should restart job`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            job.hasRestartFailed = true
+            doNothing().whenever(sut).restartJob(job)
+            // execute
+            sut.processStaleJobs()
+            // verify
+            verify(sut).restartJob(job)
+        }
+
+        @Test
+        fun `with timed out job and job failed restart should restart job and mark peer unresponsive`() {
+            // setup
+            params.jobTimeout = 0
+            whenever(clock.millis()).doReturnConsecutively(listOf(0, 42))
+            val job = addJob(height, nodeRid)
+            job.hasRestartFailed = true
+            doNothing().whenever(sut).restartJob(job)
+            doNothing().whenever(peerStatuses).unresponsive(isA(), anyString())
+            // execute
+            sut.processStaleJobs()
+            // verify
+            verify(sut).restartJob(job)
+            verify(peerStatuses).unresponsive(nodeRid, "Sync: Marking peer for restarted job $job unresponsive")
+        }
+
+        @Test
+        fun `with timed out job and missing job block and is confirmed new node should restart job and mark peer unresponsive`() {
+            // setup
+            params.jobTimeout = 0
+            whenever(clock.millis()).doReturnConsecutively(listOf(0, 42))
+            val job = addJob(height, nodeRid)
+            doNothing().whenever(sut).restartJob(job)
+            doNothing().whenever(peerStatuses).unresponsive(isA(), anyString())
+            doReturn(true).whenever(peerStatuses).isConfirmedModern(isA())
+            // execute
+            sut.processStaleJobs()
+            // verify
+            verify(sut).restartJob(job)
+            verify(peerStatuses).unresponsive(nodeRid, "Sync: Marking modern peer for job $job unresponsive")
+        }
+
+
+        @Test
+        fun `with timed out job and missing job block and is maybe legacy node should restart job and mark peer unresponsive and set node status as not legacy`() {
+            // setup
+            params.jobTimeout = 0
+            whenever(clock.millis()).doReturnConsecutively(listOf(0, 42))
+            val job = addJob(height, nodeRid)
+            doNothing().whenever(sut).restartJob(job)
+            doNothing().whenever(peerStatuses).unresponsive(isA(), anyString())
+            doNothing().whenever(peerStatuses).setMaybeLegacy(isA(), anyBoolean())
+            doReturn(true).whenever(peerStatuses).isMaybeLegacy(isA())
+            // execute
+            sut.processStaleJobs()
+            // verify
+            verify(sut).restartJob(job)
+            verify(peerStatuses).setMaybeLegacy(nodeRid, false)
+            verify(peerStatuses).unresponsive(nodeRid, "Sync: Marking potentially legacy peer for job $job unresponsive")
+        }
+
+        @Test
+        fun `with timed out job and missing job block and is legacy node should restart job and set node status as legacy`() {
+            // setup
+            params.jobTimeout = 0
+            whenever(clock.millis()).doReturnConsecutively(listOf(0, 42))
+            val job = addJob(height, nodeRid)
+            doNothing().whenever(sut).restartJob(job)
+            doNothing().whenever(peerStatuses).setMaybeLegacy(isA(), anyBoolean())
+            doReturn(false).whenever(peerStatuses).isMaybeLegacy(isA())
+            // execute
+            sut.processStaleJobs()
+            // verify
+            verify(sut).restartJob(job)
+            verify(peerStatuses).setMaybeLegacy(nodeRid, true)
+        }
+
+        @Test
+        fun `with 2 jobs from same peer should not check if maybe legacy twice if not legacy`() {
+            // setup
+            params.jobTimeout = 0
+            whenever(clock.millis()).doReturnConsecutively(listOf(0, 10, 42))
+            val job1 = addJob(height, nodeRid)
+            val job2 = addJob(height + 1, nodeRid)
+            doNothing().whenever(sut).restartJob(isA())
+            doNothing().whenever(peerStatuses).unresponsive(isA(), anyString())
+            doNothing().whenever(peerStatuses).setMaybeLegacy(isA(), anyBoolean())
+            doReturn(false, true).whenever(peerStatuses).isMaybeLegacy(isA())
+            // execute
+            sut.processStaleJobs()
+            // verify
+            argumentCaptor<FastSynchronizer.Job>().apply {
+                verify(sut, times(2)).restartJob(capture())
+                val jobs = allValues
+                assertThat(jobs.size).isEqualTo(2)
+                assertThat(jobs[0]).isEqualTo(job1)
+                assertThat(jobs[1]).isEqualTo(job2)
+            }
+            argumentCaptor<Boolean>().apply {
+                verify(peerStatuses, times(2)).setMaybeLegacy(eq(nodeRid), capture())
+                val isLegacies = allValues
+                assertThat(isLegacies.size).isEqualTo(2)
+                assertThat(isLegacies[0]).isTrue()
+                assertThat(isLegacies[1]).isTrue()
+            }
+        }
+    }
+
     @Test
     fun `processMessages with blacklisted peer should ignore message`() {
         // setup
         val message1: GetBlockHeaderAndBlock = mock()
         val message2: GetBlockHeaderAndBlock = mock()
-        val packets = listOf<Pair<NodeRid, EbftMessage>>(nodeRid to message1, nodeRid to message2)
+        val packets = listOf(ReceivedPacket(nodeRid, 1, message1), ReceivedPacket(nodeRid, 1, message2))
         doReturn(packets).whenever(commManager).getPackets()
         doReturn(true).whenever(peerStatuses).isBlacklisted(nodeRid)
         // execute
@@ -369,7 +377,6 @@ class FastSynchronizerTest {
         verify(peerStatuses, never()).confirmModern(nodeRid)
     }
 
-    ///// message: GetBlockAtHeight /////
     @Test
     fun `GetBlockAtHeight should call super method`() {
         // setup
@@ -381,7 +388,6 @@ class FastSynchronizerTest {
         verify(sut).sendBlockAtHeight(nodeRid, height)
     }
 
-    ///// message: GetBlockRange /////
     @Test
     fun `GetBlockRange should call super method`() {
         // setup
@@ -394,7 +400,6 @@ class FastSynchronizerTest {
         verify(sut).sendBlockRangeFromHeight(nodeRid, startAtHeight, height)
     }
 
-    ///// message: GetBlockHeaderAndBlock /////
     @Test
     fun `GetBlockHeaderAndBlock should confirm modern node and call super method`() {
         // setup
@@ -409,7 +414,6 @@ class FastSynchronizerTest {
         verify(sut).sendBlockHeaderAndBlock(nodeRid, startAtHeight, height)
     }
 
-    ///// message: GetBlockSignature /////
     @Test
     fun `GetBlockSignature should call super method`() {
         // setup
@@ -421,257 +425,281 @@ class FastSynchronizerTest {
         verify(sut).sendBlockSignature(nodeRid, blockRID.data)
     }
 
-    ///// message: BlockHeaderMessage /////
     @Test
     fun `BlockHeaderMessage should confirm modern node and call internal method`() {
         // setup
-        addMessage(net.postchain.ebft.message.BlockHeader(header, witness, height))
+        val message = net.postchain.ebft.message.BlockHeader(header, witness, height)
+        addMessage(message)
         doReturn(true).whenever(sut).handleBlockHeader(isA(), isA(), isA(), anyLong())
         doNothing().whenever(peerStatuses).confirmModern(isA())
         // execute
         sut.processMessages()
         // verify
+        verify(messageDurationTracker).receive(nodeRid, message)
         verify(peerStatuses).confirmModern(nodeRid)
         verify(sut).handleBlockHeader(nodeRid, header, witness, height)
     }
 
-    @Test
-    fun `handleBlockHeader with missing job should blacklist peer`() {
-        // execute
-        assertThat(sut.handleBlockHeader(nodeRid, header, witness, height)).isFalse()
-        // verify
-        verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Why do we receive a header for a block height not in our job list? Received: height: $height, peerId: $nodeRid")
-    }
+    @Nested
+    inner class handleBlockHeader {
+        @Test
+        fun `with missing job should blacklist peer`() {
+            // execute
+            assertThat(sut.handleBlockHeader(nodeRid, header, witness, height)).isFalse()
+            // verify
+            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Why do we receive a header for a block height not in our job list? Received: height: $height, peerId: $nodeRid")
+        }
 
-    @Test
-    fun `handleBlockHeader with header from wrong peer should blacklist peer`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        // execute
-        assertThat(sut.handleBlockHeader(otherNodeRid, header, witness, height)).isFalse()
-        // verify
-        verify(peerStatuses).maybeBlacklist(otherNodeRid, "Sync: Why do we receive a header from a peer when we didn't ask this peer? Received: height: $height, peerId: $otherNodeRid, Requested (job): $job")
-    }
+        @Test
+        fun `with header from wrong peer should blacklist peer`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            // execute
+            assertThat(sut.handleBlockHeader(otherNodeRid, header, witness, height)).isFalse()
+            // verify
+            verify(peerStatuses).maybeBlacklist(otherNodeRid, "Sync: Why do we receive a header from a peer when we didn't ask this peer? Received: height: $height, peerId: $otherNodeRid, Requested (job): $job")
+        }
 
-    @Test
-    fun `handleBlockHeader with job already have header should blacklist peer`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        job.header = mock()
-        // execute
-        assertThat(sut.handleBlockHeader(nodeRid, header, witness, height)).isFalse()
-        // verify
-        verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Why do we receive a header when we already have the header? Received: height: $height, peerId: $nodeRid, Requested (job): $job")
-    }
+        @Test
+        fun `with job already have header should blacklist peer`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            job.header = mock()
+            // execute
+            assertThat(sut.handleBlockHeader(nodeRid, header, witness, height)).isFalse()
+            // verify
+            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Why do we receive a header when we already have the header? Received: height: $height, peerId: $nodeRid, Requested (job): $job")
+        }
 
-    @Test
-    fun `handleBlockHeader with empty header and witness should mark peer drained and restart job`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        val emptyHeader = "".toByteArray()
-        val emptyWitness = "".toByteArray()
-        doNothing().whenever(sut).restartJob(isA())
-        doNothing().whenever(peerStatuses).drained(isA(), anyLong(), anyLong())
-        // execute
-        assertThat(sut.handleBlockHeader(nodeRid, emptyHeader, emptyWitness, height)).isFalse()
-        // verify
-        verify(sut).restartJob(job)
-        verify(peerStatuses).drained(nodeRid, -1, currentTimeMillis)
-    }
+        @Test
+        fun `with empty header and witness should mark peer drained and restart job`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            val emptyHeader = "".toByteArray()
+            val emptyWitness = "".toByteArray()
+            doNothing().whenever(sut).restartJob(isA())
+            doNothing().whenever(peerStatuses).drained(isA(), anyLong(), anyLong())
+            // execute
+            assertThat(sut.handleBlockHeader(nodeRid, emptyHeader, emptyWitness, height)).isFalse()
+            // verify
+            verify(sut).restartJob(job)
+            verify(peerStatuses).drained(nodeRid, -1, currentTimeMillis)
+        }
 
-    @Test
-    fun `handleBlockHeader with empty header but not empty witness should blacklist peer`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        val emptyHeader = "".toByteArray()
-        // execute
-        assertThat(sut.handleBlockHeader(nodeRid, emptyHeader, witness, height)).isFalse()
-        // verify
-        verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Why did we get a witness without a header? Received: height: $height, peerId: $nodeRid, Requested (job): $job")
-    }
+        @Test
+        fun `with empty header but not empty witness should blacklist peer`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            val emptyHeader = "".toByteArray()
+            // execute
+            assertThat(sut.handleBlockHeader(nodeRid, emptyHeader, witness, height)).isFalse()
+            // verify
+            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Why did we get a witness without a header? Received: height: $height, peerId: $nodeRid, Requested (job): $job")
+        }
 
-    @Test
-    fun `handleBlockHeader with peer height differ from job height should mark peer drained and restart job`() {
-        // setup
-        val job = addJob(height + 1, nodeRid)
-        doNothing().whenever(sut).restartJob(isA())
-        doNothing().whenever(peerStatuses).drained(isA(), anyLong(), anyLong())
-        // execute
-        assertThat(sut.handleBlockHeader(nodeRid, header, witness, height + 1)).isFalse()
-        // verify
-        verify(sut).restartJob(job)
-        verify(peerStatuses).drained(nodeRid, height, currentTimeMillis)
-    }
+        @Test
+        fun `with peer height lower than job height should mark peer drained and restart job`() {
+            // setup
+            val job = addJob(height + 1, nodeRid)
+            doNothing().whenever(sut).restartJob(isA())
+            doNothing().whenever(peerStatuses).drained(isA(), anyLong(), anyLong())
+            // execute
+            assertThat(sut.handleBlockHeader(nodeRid, header, witness, height + 1)).isFalse()
+            // verify
+            verify(sut).restartJob(job)
+            verify(peerStatuses).drained(nodeRid, height, currentTimeMillis)
+        }
 
-    /**
-     * Here we should ideally test when configs match and validation fails but since we can not mock
-     * extension functions, in this case BlockHeader.getConfigHash, we could make a method for it to override
-     * it but that would force us to open FastSynchronizer and so on so will accept the loss for now and just
-     * verify with missing config.
-     */
-    @Test
-    fun `handleBlockHeader with missing config and failed to validate witness should blacklist peer`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        doThrow(RuntimeException("Failure")).whenever(blockWitnessProvider).validateWitness(isA(), isA())
-        // execute
-        assertThat(sut.handleBlockHeader(nodeRid, header, witness, height)).isFalse()
-        // verify
-        verify(blockWitnessProvider).validateWitness(blockWitness, blockWitnessBuilder)
-        verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Invalid header received (Failure). Received: height: $height, peerId: $nodeRid, Requested (job): $job")
-    }
+        @Test
+        fun `with peer height higher than job height should blacklist peer`() {
+            // setup
+            val job = addJob(height - 1, nodeRid)
+            // execute
+            assertThat(sut.handleBlockHeader(nodeRid, header, witness, height - 1)).isFalse()
+            // verify
+            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Received a header at height $height but we asked for a lower height ${job.height}")
+        }
 
-    @Test
-    fun `handleBlockHeader should validate witness and set header and witness on job`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        doNothing().whenever(blockWitnessProvider).validateWitness(isA(), isA())
-        doNothing().whenever(peerStatuses).headerReceived(nodeRid, height)
-        // execute
-        assertThat(sut.handleBlockHeader(nodeRid, header, witness, height)).isTrue()
-        // verify
-        verify(blockWitnessProvider).validateWitness(blockWitness, blockWitnessBuilder)
-        verify(peerStatuses).headerReceived(nodeRid, height)
-        assertThat(job.header).isEqualTo(baseBlockHeader)
-        assertThat(job.witness).isEqualTo(blockWitness)
-    }
+        /**
+         * Here we should ideally test when configs match and validation fails but since we can not mock
+         * extension functions, in this case BlockHeader.getConfigHash, we could make a method for it to override
+         * it but that would force us to open FastSynchronizer and so on so will accept the loss for now and just
+         * verify with missing config.
+         */
+        @Test
+        fun `with missing config and failed to validate witness should blacklist peer`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            doThrow(RuntimeException("Failure")).whenever(blockWitnessProvider).validateWitness(isA(), isA())
+            // execute
+            assertThat(sut.handleBlockHeader(nodeRid, header, witness, height)).isFalse()
+            // verify
+            verify(blockWitnessProvider).validateWitness(blockWitness, blockWitnessBuilder)
+            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Invalid header received (Failure). Received: height: $height, peerId: $nodeRid, Requested (job): $job")
+        }
 
-    ///// message: UnfinishedBlock /////
-    @Test
-    fun `UnfinishedBlock should call internal method`() {
-        // setup
-        addMessage(UnfinishedBlock(header, transactions))
-        doNothing().whenever(sut).handleUnfinishedBlock(isA(), isA(), anyList())
-        // execute
-        sut.processMessages()
-        // verify
-        verify(sut).handleUnfinishedBlock(nodeRid, header, transactions)
-    }
-
-    @Test
-    fun `handleUnfinishedBlock with wrong block header type should throw exception`() {
-        // setup
-        val blockHeader: BlockHeader = mock()
-        doReturn(blockHeader).whenever(blockchainConfiguration).decodeBlockHeader(header)
-        // execute & verify
-        assertThrows<BadMessageException> {
-            sut.handleUnfinishedBlock(nodeRid, header, transactions)
+        @Test
+        fun `should validate witness and set header and witness on job`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            doNothing().whenever(blockWitnessProvider).validateWitness(isA(), isA())
+            doNothing().whenever(peerStatuses).headerReceived(nodeRid, height)
+            // execute
+            assertThat(sut.handleBlockHeader(nodeRid, header, witness, height)).isTrue()
+            // verify
+            verify(blockWitnessProvider).validateWitness(blockWitness, blockWitnessBuilder)
+            verify(peerStatuses).headerReceived(nodeRid, height)
+            assertThat(job.header).isEqualTo(baseBlockHeader)
+            assertThat(job.witness).isEqualTo(blockWitness)
         }
     }
 
     @Test
-    fun `handleUnfinishedBlock with missing job should blacklist peer`() {
-        // execute
-        sut.handleUnfinishedBlock(nodeRid, header, transactions)
-        // verify
-        verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Why did we get an unfinished block of height: $height from peer: $nodeRid ? We didn't ask for it")
-    }
-
-    @Test
-    fun `handleUnfinishedBlock with duplicate block should blacklist peer`() {
+    fun `UnfinishedBlock should call internal method`() {
         // setup
-        val job = addJob(height, nodeRid)
-        job.block = mock()
-        // execute
-        sut.handleUnfinishedBlock(nodeRid, header, transactions)
-        // verify
-        verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: We got this block height = $height already, why send it again?. $job")
-    }
-
-    @Test
-    fun `handleUnfinishedBlock with block from wrong peer should blacklist peer`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        // execute
-        sut.handleUnfinishedBlock(otherNodeRid, header, transactions)
-        // verify
-        verify(peerStatuses).maybeBlacklist(otherNodeRid, "Sync: We didn't expect $otherNodeRid to send us an unfinished block (height = $height). We wanted ${job.peerId} to do it. $job")
-    }
-
-    @Test
-    fun `handleUnfinishedBlock with missing header in job should blacklist peer`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        // execute
-        sut.handleUnfinishedBlock(nodeRid, header, transactions)
-        // verify
-        verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: We don't have a header yet, why does $nodeRid send us an unfinished block (height = $height )? $job")
-    }
-
-    @Test
-    fun `handleUnfinishedBlock with mismatched expected header should blacklist peer`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        job.header = mock()
-        // execute
-        sut.handleUnfinishedBlock(nodeRid, header, transactions)
-        // verify
-        verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Peer: ${job.peerId} is sending us an unfinished block (height = $height) with a header that doesn't match the header we expected. $job")
-    }
-
-    @Test
-    fun `handleUnfinishedBlock should create job block and commit jobs`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        job.witness = mock()
-        job.header = baseBlockHeader
-        doReturn(header).whenever(baseBlockHeader).rawData
-        doNothing().whenever(sut).commitJobsAsNecessary(any())
-        // execute
-        sut.handleUnfinishedBlock(nodeRid, header, transactions)
-        // verify
-        assertThat(job.block).isNotNull()
-        verify(sut).commitJobsAsNecessary(any())
-    }
-
-    ///// message: CompleteBlock /////
-    @Test
-    fun `CompleteBlock with new node should do nothing`() {
-        // setup
-        addMessage(CompleteBlock(BlockData(header, transactions), height, witness))
-        doReturn(false).whenever(peerStatuses).isMaybeLegacy(nodeRid)
-        doReturn(false).whenever(sut).handleBlockHeader(isA(), isA(), isA(), anyLong())
+        val message = UnfinishedBlock(header, transactions)
+        addMessage(message)
+        doNothing().whenever(sut).handleUnfinishedBlock(isA(), isA())
         // execute
         sut.processMessages()
         // verify
-        verify(peerStatuses).isMaybeLegacy(nodeRid)
-        verify(sut, never()).handleBlockHeader(isA(), isA(), isA(), anyLong())
+        verify(sut).handleUnfinishedBlock(nodeRid, message)
     }
 
-    @Test
-    fun `CompleteBlock with legacy node should add header and witness to job`() {
-        // setup
-        addMessage(CompleteBlock(BlockData(header, transactions), height, witness))
-        doReturn(true).whenever(peerStatuses).isMaybeLegacy(nodeRid)
-        doReturn(false).whenever(sut).handleBlockHeader(isA(), isA(), isA(), anyLong())
-        // execute
-        sut.processMessages()
-        // verify
-        verify(peerStatuses).isMaybeLegacy(nodeRid)
-        verify(sut).handleBlockHeader(nodeRid, header, witness, height)
-        verify(sut, never()).handleUnfinishedBlock(isA(), isA(), isA())
+    @Nested
+    inner class handleUnfinishedBlock {
+        @Test
+        fun `with wrong block header type should throw exception`() {
+            // setup
+            val blockHeader: BlockHeader = mock()
+            doReturn(blockHeader).whenever(blockchainConfiguration).decodeBlockHeader(header)
+            // execute & verify
+            assertThrows<BadMessageException> {
+                sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
+            }
+        }
+
+        @Test
+        fun `with missing job should blacklist peer`() {
+            // execute
+            sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
+            // verify
+            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Why did we get an unfinished block of height: $height from peer: $nodeRid ? We didn't ask for it")
+        }
+
+        @Test
+        fun `with duplicate block should blacklist peer`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            job.block = mock()
+            // execute
+            sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
+            // verify
+            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: We got this block height = $height already, why send it again?. $job")
+        }
+
+        @Test
+        fun `with block from wrong peer should blacklist peer`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            // execute
+            sut.handleUnfinishedBlock(otherNodeRid, UnfinishedBlock(header, transactions))
+            // verify
+            verify(peerStatuses).maybeBlacklist(otherNodeRid, "Sync: We didn't expect $otherNodeRid to send us an unfinished block (height = $height). We wanted ${job.peerId} to do it. $job")
+        }
+
+        @Test
+        fun `with missing header in job should blacklist peer`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            // execute
+            sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
+            // verify
+            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: We don't have a header yet, why does $nodeRid send us an unfinished block (height = $height )? $job")
+        }
+
+        @Test
+        fun `with mismatched expected header should blacklist peer`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            job.header = mock()
+            // execute
+            sut.handleUnfinishedBlock(nodeRid, UnfinishedBlock(header, transactions))
+            // verify
+            verify(peerStatuses).maybeBlacklist(nodeRid, "Sync: Peer: ${job.peerId} is sending us an unfinished block (height = $height) with a header that doesn't match the header we expected. $job")
+        }
+
+        @Test
+        fun `should create job block and commit jobs`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            job.witness = mock()
+            job.header = baseBlockHeader
+            val message = UnfinishedBlock(header, transactions)
+            doReturn(header).whenever(baseBlockHeader).rawData
+            doNothing().whenever(sut).commitJobsAsNecessary(any())
+            // execute
+            sut.handleUnfinishedBlock(nodeRid, message)
+            // verify
+            verify(messageDurationTracker).receive(nodeRid, message, baseBlockHeader)
+            assertThat(job.block).isNotNull()
+            verify(sut).commitJobsAsNecessary(any())
+        }
     }
 
-    @Test
-    fun `CompleteBlock with legacy node and unfinished block should add header and witness to job and handle unfinished block`() {
-        // setup
-        addMessage(CompleteBlock(BlockData(header, transactions), height, witness))
-        doReturn(true).whenever(peerStatuses).isMaybeLegacy(nodeRid)
-        doReturn(true).whenever(sut).handleBlockHeader(isA(), isA(), isA(), anyLong())
-        doNothing().whenever(sut).handleUnfinishedBlock(isA(), isA(), anyList())
-        // execute
-        sut.processMessages()
-        // verify
-        verify(peerStatuses).isMaybeLegacy(nodeRid)
-        verify(sut).handleBlockHeader(nodeRid, header, witness, height)
-        verify(sut).handleUnfinishedBlock(nodeRid, header, transactions)
+    @Nested
+    inner class CompleteBlock {
+        @Test
+        fun `with new node should do nothing`() {
+            // setup
+            val message = CompleteBlock(BlockData(header, transactions), height, witness)
+            addMessage(message)
+            doReturn(false).whenever(peerStatuses).isMaybeLegacy(nodeRid)
+            doReturn(false).whenever(sut).handleBlockHeader(isA(), isA(), isA(), anyLong())
+            // execute
+            sut.processMessages()
+            // verify
+            verify(messageDurationTracker).receive(nodeRid, message)
+            verify(peerStatuses).isMaybeLegacy(nodeRid)
+            verify(sut, never()).handleBlockHeader(isA(), isA(), isA(), anyLong())
+        }
+
+        @Test
+        fun `with legacy node should add header and witness to job`() {
+            // setup
+            addMessage(CompleteBlock(BlockData(header, transactions), height, witness))
+            doReturn(true).whenever(peerStatuses).isMaybeLegacy(nodeRid)
+            doReturn(false).whenever(sut).handleBlockHeader(isA(), isA(), isA(), anyLong())
+            // execute
+            sut.processMessages()
+            // verify
+            verify(peerStatuses).isMaybeLegacy(nodeRid)
+            verify(sut).handleBlockHeader(nodeRid, header, witness, height)
+            verify(sut, never()).handleUnfinishedBlock(isA(), isA(), isA(), isA())
+        }
+
+        @Test
+        fun `with legacy node and unfinished block should add header and witness to job and handle unfinished block`() {
+            // setup
+            addMessage(CompleteBlock(BlockData(header, transactions), height, witness))
+            doReturn(true).whenever(peerStatuses).isMaybeLegacy(nodeRid)
+            doReturn(true).whenever(sut).handleBlockHeader(isA(), isA(), isA(), anyLong())
+            doNothing().whenever(sut).handleUnfinishedBlock(isA(), isA(), isA(), anyList())
+            val blockHeader: BaseBlockHeader = mock()
+            doReturn(blockHeader).whenever(blockchainConfiguration).decodeBlockHeader(header)
+            // execute
+            sut.processMessages()
+            // verify
+            verify(peerStatuses).isMaybeLegacy(nodeRid)
+            verify(sut).handleBlockHeader(nodeRid, header, witness, height)
+            verify(sut).handleUnfinishedBlock(nodeRid, header, blockHeader, transactions)
+        }
     }
 
-    ///// message: Status /////
     @Test
     fun `Status should trigger status received`() {
         // setup
-        addMessage(Status(blockRID.data, height, false, 0, 0, 0))
+        addMessage(Status(blockRID.data, height, false, 0, 0, 0, null))
         doNothing().whenever(peerStatuses).statusReceived(isA(), anyLong())
         // execute
         sut.processMessages()
@@ -679,241 +707,293 @@ class FastSynchronizerTest {
         verify(peerStatuses).statusReceived(nodeRid, height - 1)
     }
 
-    ///// message: AppliedConfig /////
+    @Test
+    fun `Status with config hash that should call internal check`() {
+        // setup
+        val configHash: ByteArray = "configHash".toByteArray()
+        addMessage(Status(blockRID.data, height, false, 0, 0, 0, null, configHash))
+        doNothing().whenever(peerStatuses).statusReceived(isA(), anyLong())
+        doReturn(true).whenever(sut).checkIfWeNeedToApplyPendingConfig(isA(), isA(), isA())
+        // execute
+        sut.processMessages()
+        // verify
+        verify(peerStatuses).statusReceived(nodeRid, height - 1)
+        verify(sut).checkIfWeNeedToApplyPendingConfig(nodeRid, configHash, height)
+    }
+
     @Test
     fun `AppliedConfig should call internal check`() {
         // setup
         val configHash: ByteArray = "configHash".toByteArray()
         val message = AppliedConfig(configHash, height)
         addMessage(message)
-        doReturn(true).whenever(sut).checkIfWeNeedToApplyPendingConfig(isA(), isA())
+        doReturn(true).whenever(sut).checkIfWeNeedToApplyPendingConfig(isA(), isA(), isA())
         // execute
         sut.processMessages()
         // verify
-        verify(sut).checkIfWeNeedToApplyPendingConfig(nodeRid, message)
+        verify(sut).checkIfWeNeedToApplyPendingConfig(nodeRid, configHash, height)
     }
 
-    ///// startJob /////
-    @Test
-    fun `startJob with modern peer should create job and set calculated peer`() {
-        // setup
-        val toExcludeNodeRid = NodeRid.fromHex("2".repeat(32))
-        val selectedPeer = NodeRid.fromHex("3".repeat(32))
-        val peerToDisconnect = NodeRid.fromHex("4".repeat(32))
-        peerIds.add(nodeRid)
-        peerIds.add(toExcludeNodeRid)
-        peerIds.add(selectedPeer)
-        peerIds.add(peerToDisconnect)
-        val connectedPeers = setOf(nodeRid, selectedPeer)
-        doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).exclNonSyncable(anyLong(), anyLong())
-        doReturn(selectedPeer to connectedPeers).whenever(commManager).sendToRandomPeer(isA(), anySet())
-        doNothing().whenever(peerStatuses).markConnected(anySet())
-        doNothing().whenever(peerStatuses).markDisconnected(anySet())
-        doNothing().whenever(peerStatuses).addPeer(selectedPeer)
-        // execute
-        assertThat(sut.startJob(height)).isTrue()
-        // verify
-        verify(peerStatuses).markConnected(connectedPeers)
-        verify(peerStatuses).markDisconnected(setOf(peerToDisconnect))
-        verify(peerStatuses).addPeer(selectedPeer)
-        assertThat(sut.jobs[height]).isNotNull()
-    }
-
-    @Test
-    fun `startJob with missing modern peer should use legacy peer and create job and set calculated peer`() {
-        // setup
-        peerIds.add(nodeRid)
-        val setOfPeers = setOf(nodeRid)
-        doReturn(setOfPeers).whenever(peerStatuses).exclNonSyncable(anyLong(), anyLong())
-        doReturn(setOfPeers).whenever(peerStatuses).getLegacyPeers(height)
-        doReturn(nodeRid to setOfPeers).whenever(commManager).sendToRandomPeer(isA(), anySet())
-        doNothing().whenever(peerStatuses).markConnected(anySet())
-        doNothing().whenever(peerStatuses).markDisconnected(anySet())
-        // execute
-        assertThat(sut.startJob(height)).isTrue()
-        // verify
-        verify(peerStatuses).markConnected(setOfPeers)
-        verify(peerStatuses).markDisconnected(emptySet())
-        assertThat(sut.jobs[height]).isNotNull()
-    }
-
-    @Test
-    fun `startJob with no peers should return false`() {
-        // setup
-        doReturn(emptySet<NodeRid>()).whenever(peerStatuses).exclNonSyncable(anyLong(), anyLong())
-        doReturn(emptySet<NodeRid>()).whenever(peerStatuses).getLegacyPeers(height)
-        // execute & verify
-        assertThat(sut.startJob(height)).isFalse()
-    }
-
-    ///// commitJobsAsNecessary /////
-    @Test
-    fun `commitJobsAsNecessary with not running process should do nothing`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        job.blockCommitting = false
-        isProcessRunning = false
-        doNothing().whenever(sut).commitBlock(isA(), eq(null), anyBoolean())
-        // execute
-        sut.commitJobsAsNecessary(null)
-        // verify
-        verify(sut, never()).commitBlock(isA(), eq(null), anyBoolean())
-    }
-
-    @Test
-    fun `commitJobsAsNecessary with missing block in job should do nothing`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        job.blockCommitting = false
-        doNothing().whenever(sut).commitBlock(isA(), eq(null), anyBoolean())
-        // execute
-        sut.commitJobsAsNecessary(null)
-        // verify
-        verify(sut, never()).commitBlock(isA(), eq(null), anyBoolean())
-    }
-
-    @Test
-    fun `commitJobsAsNecessary with job still committing should do nothing`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        val blockDataWithWitness = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
-        job.block = blockDataWithWitness
-        job.blockCommitting = true
-        doNothing().whenever(sut).commitBlock(isA(), eq(null), anyBoolean())
-        // execute
-        sut.commitJobsAsNecessary(null)
-        // verify
-        verify(sut, never()).commitBlock(isA(), eq(null), anyBoolean())
-    }
-
-    @Test
-    fun `commitJobsAsNecessary with job committed should commit block`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        val blockDataWithWitness = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
-        job.block = blockDataWithWitness
-        job.blockCommitting = false
-        doNothing().whenever(sut).commitBlock(isA(), eq(null), anyBoolean())
-        // execute
-        sut.commitJobsAsNecessary(null)
-        // verify
-        verify(sut).commitBlock(job, null, true)
-    }
-
-    ///// commitBlock /////
-    @Test
-    fun `commitBlock with missing job block should throw exception`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        // execute
-        assertThrows<ProgrammerMistake> {
-            sut.commitBlock(job, null, true)
+    @Nested
+    inner class startJob {
+        @Test
+        fun `should not whitelist peers if should not sync until height`() {
+            // setup
+            params.mustSyncUntilHeight = -1
+            val toExcludeNodeRid = NodeRid.fromHex("2".repeat(32))
+            peerIds.add(toExcludeNodeRid)
+            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
+            // execute
+            assertThat(sut.startJob(height)).isFalse()
+            // verify
+            verify(peerStatuses, never()).reviveAllBlacklisted()
+            verify(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
         }
-        // verify
-        assertThat(job.blockCommitting).isTrue()
+
+        @Test
+        fun `should whitelist peers if all are blacklisted and we should sync until height`() {
+            // setup
+            params.mustSyncUntilHeight = 42
+            val toExcludeNodeRid = NodeRid.fromHex("2".repeat(32))
+            peerIds.add(toExcludeNodeRid)
+            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
+            // execute
+            assertThat(sut.startJob(height)).isFalse()
+            // verify
+            verify(peerStatuses).reviveAllBlacklisted()
+            verify(peerStatuses, times(2)).excludedNonSyncable(anyLong(), anyLong())
+        }
+
+        @Test
+        fun `with modern peer should create job and set calculated peer`() {
+            // setup
+            val toExcludeNodeRid = NodeRid.fromHex("2".repeat(32))
+            val selectedPeer = NodeRid.fromHex("3".repeat(32))
+            val peerToDisconnect = NodeRid.fromHex("4".repeat(32))
+            peerIds.add(nodeRid)
+            peerIds.add(toExcludeNodeRid)
+            peerIds.add(selectedPeer)
+            peerIds.add(peerToDisconnect)
+            val connectedPeers = setOf(nodeRid, selectedPeer)
+            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
+            doReturn(selectedPeer to connectedPeers).whenever(commManager).sendToRandomPeer(isA(), anySet())
+            doNothing().whenever(peerStatuses).markConnected(anySet())
+            doNothing().whenever(peerStatuses).markDisconnected(anySet())
+            doNothing().whenever(peerStatuses).addPeer(selectedPeer)
+            // execute
+            assertThat(sut.startJob(height)).isTrue()
+            // verify
+            verify(peerStatuses).markConnected(connectedPeers)
+            verify(peerStatuses).markDisconnected(setOf(peerToDisconnect))
+            verify(peerStatuses).addPeer(selectedPeer)
+            verify(messageDurationTracker).send(eq(selectedPeer), isA())
+            assertThat(sut.jobs[height]).isNotNull()
+        }
+
+        @Test
+        fun `with missing modern peer should use legacy peer and create job and set calculated peer`() {
+            // setup
+            peerIds.add(nodeRid)
+            val setOfPeers = setOf(nodeRid)
+            doReturn(setOfPeers).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
+            doReturn(setOfPeers).whenever(peerStatuses).getLegacyPeers(height)
+            doReturn(nodeRid to setOfPeers).whenever(commManager).sendToRandomPeer(isA(), anySet())
+            doNothing().whenever(peerStatuses).markConnected(anySet())
+            doNothing().whenever(peerStatuses).markDisconnected(anySet())
+            // execute
+            assertThat(sut.startJob(height)).isTrue()
+            // verify
+            verify(peerStatuses).markConnected(setOfPeers)
+            verify(peerStatuses).markDisconnected(emptySet())
+            assertThat(sut.jobs[height]).isNotNull()
+        }
+
+        @Test
+        fun `with no peers should return false`() {
+            // setup
+            doReturn(emptySet<NodeRid>()).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
+            doReturn(emptySet<NodeRid>()).whenever(peerStatuses).getLegacyPeers(height)
+            // execute & verify
+            assertThat(sut.startJob(height)).isFalse()
+        }
     }
 
-    @Test
-    fun `commitBlock with failed to add block to database should handle exception`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
-        job.block = block
-        val exception = Exception("Failure")
-        val completionStage: CompletionStage<Unit> = CompletableFuture.failedStage(exception)
-        doReturn(completionStage).whenever(blockDatabase).addBlock(block, null, null)
-        doNothing().whenever(sut).handleAddBlockException(isA(), isA(), eq(null), isA(), isA())
-        // execute
-        sut.commitBlock(job, null, true)
-        // verify
-        assertThat(job.addBlockException).isEqualTo(exception)
-        assertThat(job.blockCommitting).isTrue()
-        assertThat(sut.finishedJobs).contains(job)
-        verify(sut).handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
+    @Nested
+    inner class commitJobsAsNecessary {
+        @Test
+        fun `with not running process should do nothing`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            job.blockCommitting = false
+            isProcessRunning = false
+            doNothing().whenever(sut).commitBlock(isA(), eq(null), anyBoolean())
+            // execute
+            sut.commitJobsAsNecessary(null)
+            // verify
+            verify(sut, never()).commitBlock(isA(), eq(null), anyBoolean())
+        }
+
+        @Test
+        fun `with missing block in job should do nothing`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            job.blockCommitting = false
+            doNothing().whenever(sut).commitBlock(isA(), eq(null), anyBoolean())
+            // execute
+            sut.commitJobsAsNecessary(null)
+            // verify
+            verify(sut, never()).commitBlock(isA(), eq(null), anyBoolean())
+        }
+
+        @Test
+        fun `with job still committing should do nothing`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            val blockDataWithWitness = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
+            job.block = blockDataWithWitness
+            job.blockCommitting = true
+            doNothing().whenever(sut).commitBlock(isA(), eq(null), anyBoolean())
+            // execute
+            sut.commitJobsAsNecessary(null)
+            // verify
+            verify(sut, never()).commitBlock(isA(), eq(null), anyBoolean())
+        }
+
+        @Test
+        fun `with job committed should commit block`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            val blockDataWithWitness = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
+            job.block = blockDataWithWitness
+            job.blockCommitting = false
+            doNothing().whenever(sut).commitBlock(isA(), eq(null), anyBoolean())
+            // execute
+            sut.commitJobsAsNecessary(null)
+            // verify
+            verify(sut).commitBlock(job, null, true)
+        }
     }
 
-    @Test
-    fun `commitBlock should add block to database`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
-        job.block = block
-        val completionStage: CompletionStage<Unit> = CompletableFuture.completedStage(null)
-        doReturn(completionStage).whenever(blockDatabase).addBlock(block, null, null)
-        // execute
-        sut.commitBlock(job, null, true)
-        // verify
-        assertThat(job.addBlockException).isNull()
-        assertThat(job.blockCommitting).isTrue()
-        assertThat(sut.finishedJobs).contains(job)
+    @Nested
+    inner class commitBlock {
+        @Test
+        fun `with missing job block should throw exception`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            // execute
+            assertThrows<ProgrammerMistake> {
+                sut.commitBlock(job, null, true)
+            }
+            // verify
+            assertThat(job.blockCommitting).isTrue()
+        }
+
+        @Test
+        fun `with failed to add block to database should handle exception`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
+            job.block = block
+            val exception = Exception("Failure")
+            val completionStage: CompletionStage<Unit> = CompletableFuture.failedStage(exception)
+            doReturn(completionStage).whenever(blockDatabase).addBlock(block, null, null)
+            doNothing().whenever(sut).handleAddBlockException(isA(), isA(), eq(null), isA(), isA())
+            // execute
+            sut.commitBlock(job, null, true)
+            // verify
+            assertThat(job.addBlockException).isEqualTo(exception)
+            assertThat(job.blockCommitting).isTrue()
+            assertThat(sut.finishedJobs).contains(job)
+            verify(sut).handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
+        }
+
+        @Test
+        fun `should add block to database`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
+            job.block = block
+            val completionStage: CompletionStage<Unit> = CompletableFuture.completedStage(null)
+            doReturn(completionStage).whenever(blockDatabase).addBlock(block, null, null)
+            // execute
+            sut.commitBlock(job, null, true)
+            // verify
+            assertThat(job.addBlockException).isNull()
+            assertThat(job.blockCommitting).isTrue()
+            assertThat(sut.finishedJobs).contains(job)
+        }
     }
 
-    ///// restartJob /////
-    @Test
-    fun `restartJob should try to start job`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        doReturn(true).whenever(sut).startJob(height)
-        // execute
-        sut.restartJob(job)
-        // verify
-        assertThat(job.hasRestartFailed).isFalse()
+    @Nested
+    inner class restartJob {
+        @Test
+        fun `should try to start job`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            doReturn(true).whenever(sut).startJob(height)
+            // execute
+            sut.restartJob(job)
+            // verify
+            assertThat(job.hasRestartFailed).isFalse()
+        }
+
+        @Test
+        fun `with failed to start job should set failed restart on job`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            doReturn(false).whenever(sut).startJob(height)
+            // execute
+            sut.restartJob(job)
+            // verify
+            assertThat(job.hasRestartFailed).isTrue()
+        }
     }
 
-    @Test
-    fun `restartJob with failed to start job should set failed restart on job`() {
-        // setup
-        val job = addJob(height, nodeRid)
-        doReturn(false).whenever(sut).startJob(height)
-        // execute
-        sut.restartJob(job)
-        // verify
-        assertThat(job.hasRestartFailed).isTrue()
-    }
+    @Nested
+    inner class areResponsiveNodesDrained {
+        @Test
+        fun `with nodes left to sync should return false`() {
+            // setup
+            val timeout = currentTimeMillis - 1
+            params.mustSyncUntilHeight = 0
+            peerIds.add(nodeRid)
+            doReturn(setOf(nodeRid)).whenever(peerStatuses).getSyncableAndConnected(anyLong())
+            // execute & verify
+            assertThat(sut.areResponsiveNodesDrained(timeout)).isFalse()
+        }
 
-    ///// areResponsiveNodesDrained /////
-    @Test
-    fun `areResponsiveNodesDrained with nodes left to sync should return false`() {
-        // setup
-        val timeout = currentTimeMillis - 1
-        params.mustSyncUntilHeight = 0
-        peerIds.add(nodeRid)
-        doReturn(setOf(nodeRid)).whenever(peerStatuses).getSyncableAndConnected(anyLong())
-        // execute & verify
-        assertThat(sut.areResponsiveNodesDrained(timeout)).isFalse()
-    }
+        @Test
+        fun `with time out should return false`() {
+            // setup
+            val timeout = currentTimeMillis
+            params.mustSyncUntilHeight = 0
+            peerIds.add(nodeRid)
+            doReturn(emptySet<NodeRid>()).whenever(peerStatuses).getSyncableAndConnected(anyLong())
+            // execute & verify
+            assertThat(sut.areResponsiveNodesDrained(timeout)).isFalse()
+        }
 
-    @Test
-    fun `areResponsiveNodesDrained with time out should return false`() {
-        // setup
-        val timeout = currentTimeMillis
-        params.mustSyncUntilHeight = 0
-        peerIds.add(nodeRid)
-        doReturn(emptySet<NodeRid>()).whenever(peerStatuses).getSyncableAndConnected(anyLong())
-        // execute & verify
-        assertThat(sut.areResponsiveNodesDrained(timeout)).isFalse()
-    }
+        @Test
+        fun `with mustSyncUntilHeight is higher then current height should return false`() {
+            // setup
+            val timeout = currentTimeMillis - 1
+            params.mustSyncUntilHeight = height + 1
+            peerIds.add(nodeRid)
+            doReturn(emptySet<NodeRid>()).whenever(peerStatuses).getSyncableAndConnected(anyLong())
+            // execute & verify
+            assertThat(sut.areResponsiveNodesDrained(timeout)).isFalse()
+        }
 
-    @Test
-    fun `areResponsiveNodesDrained with mustSyncUntilHeight is higher then current height should return false`() {
-        // setup
-        val timeout = currentTimeMillis - 1
-        params.mustSyncUntilHeight = height + 1
-        peerIds.add(nodeRid)
-        doReturn(emptySet<NodeRid>()).whenever(peerStatuses).getSyncableAndConnected(anyLong())
-        // execute & verify
-        assertThat(sut.areResponsiveNodesDrained(timeout)).isFalse()
-    }
-
-    @Test
-    fun `areResponsiveNodesDrained with all conditions met should return true`() {
-        // setup
-        val timeout = currentTimeMillis - 1
-        params.mustSyncUntilHeight = 0
-        peerIds.add(nodeRid)
-        doReturn(emptySet<NodeRid>()).whenever(peerStatuses).getSyncableAndConnected(anyLong())
-        // execute & verify
-        assertThat(sut.areResponsiveNodesDrained(timeout)).isTrue()
+        @Test
+        fun `with all conditions met should return true`() {
+            // setup
+            val timeout = currentTimeMillis - 1
+            params.mustSyncUntilHeight = 0
+            peerIds.add(nodeRid)
+            doReturn(emptySet<NodeRid>()).whenever(peerStatuses).getSyncableAndConnected(anyLong())
+            // execute & verify
+            assertThat(sut.areResponsiveNodesDrained(timeout)).isTrue()
+        }
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -924,7 +1004,7 @@ class FastSynchronizerTest {
     }
 
     private fun addMessage(message: EbftMessage) {
-        val packets = listOf<Pair<NodeRid, EbftMessage>>(nodeRid to message)
+        val packets = listOf(ReceivedPacket(nodeRid, 1, message))
         doReturn(packets).whenever(commManager).getPackets()
         doReturn(false).whenever(peerStatuses).isBlacklisted(nodeRid)
     }

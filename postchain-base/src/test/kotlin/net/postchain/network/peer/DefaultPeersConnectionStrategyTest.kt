@@ -8,31 +8,39 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.core.NodeRid
 import net.postchain.network.peer.DefaultPeersConnectionStrategy.Companion.SUCCESSFUL_CONNECTION_THRESHOLD
 import org.awaitility.Awaitility
-import org.junit.jupiter.api.Test
-import org.mockito.kotlin.*
-import java.lang.Thread.sleep
-import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doReturnConsecutively
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.reset
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import java.lang.Thread.sleep
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 
 class DefaultPeersConnectionStrategyTest {
 
     companion object : KLogging()
 
-    val peer1 = NodeRid("111111".hexStringToByteArray())
-    val peer2 = NodeRid("222222".hexStringToByteArray())
-    val peer3 = NodeRid("333333".hexStringToByteArray())
-    val peer4 = NodeRid("444444".hexStringToByteArray())
-    val peerCaptor = argumentCaptor<NodeRid>()
-    val peerCaptor2 = argumentCaptor<NodeRid>()
-    val chainCaptor = argumentCaptor<Long>()
-    val connMan: PeerConnectionManager = mock()
+    private val peer1 = NodeRid("111111".hexStringToByteArray())
+    private val peer2 = NodeRid("222222".hexStringToByteArray())
+    private val peer3 = NodeRid("333333".hexStringToByteArray())
+    private val peer4 = NodeRid("444444".hexStringToByteArray())
+    private val peerCaptor = argumentCaptor<NodeRid>()
+    private val peerCaptor2 = argumentCaptor<NodeRid>()
+    private val chainCaptor = argumentCaptor<Long>()
+    private val connMan: PeerConnectionManager = mock()
 
-    fun testConnectAll(me: NodeRid, peerIds: Set<NodeRid>, expectedConns: Set<NodeRid>): DefaultPeersConnectionStrategy {
+    private fun testConnectAll(me: NodeRid, peerIds: Set<NodeRid>, expectedConns: Set<NodeRid>): DefaultPeersConnectionStrategy {
         val strategy = sut(me)
         strategy.connectAll(0, BlockchainRid.ZERO_RID, peerIds)
 
@@ -105,11 +113,17 @@ class DefaultPeersConnectionStrategyTest {
     }
 
     @Test
-    fun lostNonexisting() {
-        // This should actually work the same as if the peer was part of the network
-        // because the strategy doesn't know which nodes there are. It just reacts
-        // to events. It's up to the caller to discriminate among nodes.
-        connectionLost(peer1, setOf(peer2, peer3), peer4, false)
+    fun lostConnectionToUnknownPeer() {
+        // We don't care about reconnecting to an unknown peer
+        val chainId = 0L
+        val strategy = sut(peer1)
+        strategy.connectAll(chainId, BlockchainRid.ZERO_RID, setOf(peer2))
+        strategy.connectionEstablished(chainId, true, peer2)
+        // Unknown peer3 connects
+        strategy.connectionEstablished(chainId, false, peer3)
+        strategy.connectionLost(chainId, BlockchainRid.ZERO_RID, peer3, false)
+        sleep(200)
+        verify(connMan, never()).connectChainPeer(chainId, peer3)
     }
 
     @Test
@@ -135,6 +149,10 @@ class DefaultPeersConnectionStrategyTest {
             )
         }
         val strategy = sut(peer1, clock)
+        strategy.connectAll(chainId, BlockchainRid.ZERO_RID, setOf(peer2))
+        Awaitility.await().atMost(400, TimeUnit.MILLISECONDS).untilAsserted {
+            verify(connMan).connectChainPeer(0, peer2)
+        }
         strategy.connectionEstablished(chainId, true, peer2)
         assertFalse(strategy.isLatestConnectionSuccessful(peer2))
         assertFalse(strategy.isLatestConnectionSuccessful(peer2))
@@ -143,7 +161,7 @@ class DefaultPeersConnectionStrategyTest {
         // Assert that connection is not considered successful if we do not call connectionEstablished
         strategy.connectionLost(chainId, BlockchainRid.ZERO_RID, peer2, true)
         Awaitility.await().atMost(400, TimeUnit.MILLISECONDS).untilAsserted {
-            verify(connMan).connectChainPeer(0, peer2)
+            verify(connMan, times(2)).connectChainPeer(0, peer2)
         }
         assertFalse(strategy.isLatestConnectionSuccessful(peer2))
     }

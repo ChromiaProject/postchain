@@ -80,6 +80,11 @@ object ContainerConfigFactory : KLogging() {
         if (restApiConfig.port > -1) {
             portBindings[restApiPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
         }
+        // debug-api-port
+        val debugApiPort = "${containerNodeConfig.subnodeDebugApiPort}/tcp"
+        if (restApiConfig.debugPort > -1) {
+            portBindings[debugApiPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
+        }
         // admin-rpc-port
         val adminRpcPort = "${containerNodeConfig.subnodeAdminRpcPort}/tcp"
         portBindings[adminRpcPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
@@ -154,7 +159,7 @@ object ContainerConfigFactory : KLogging() {
                 .apply {
                     containerNodeConfig.subnodeUser?.let { user(it) }
                 }
-                .image(containerNodeConfig.containerImage)
+                .image(getContainerImage(containerNodeConfig))
                 .hostConfig(hostConfig)
                 .exposedPorts(portBindings.keys)
                 .env(createNodeConfigEnv(appConfig, containerNodeConfig, container))
@@ -162,10 +167,24 @@ object ContainerConfigFactory : KLogging() {
                 .build()
     }
 
+    fun getContainerImage(config: ContainerNodeConfig): String =
+            when (val expectedTag = config.imageVersionTag) {
+                "" -> config.containerImage
+                else -> {
+                    when (val actualTag = config.containerImage.substringAfter(":", "")) {
+                        "" -> config.containerImage.substringBefore(":") + ":" + expectedTag
+                        else -> {
+                            if (expectedTag != actualTag) {
+                                logger.warn { "Container image version tag ($actualTag) is not equal to the environment image version tag ($expectedTag)" }
+                            }
+                            config.containerImage
+                        }
+                    }
+                }
+            }
+
     private fun createNodeConfigEnv(appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer) = buildList {
         val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-
-        add("POSTCHAIN_DEBUG=${restApiConfig.debug}")
 
         add("POSTCHAIN_INFRASTRUCTURE=${Infrastructure.EbftContainerSub.get()}")
 
@@ -177,6 +196,10 @@ object ContainerConfigFactory : KLogging() {
         add("POSTCHAIN_DB_USERNAME=${appConfig.databaseUsername}")
         add("POSTCHAIN_DB_PASSWORD=${appConfig.databasePassword}")
         add("POSTCHAIN_DB_READ_CONCURRENCY=${appConfig.databaseReadConcurrency}")
+        add("POSTCHAIN_DB_BLOCK_BUILDER_WRITE_CONCURRENCY=${appConfig.databaseBlockBuilderWriteConcurrency}")
+        add("POSTCHAIN_DB_SHARED_WRITE_CONCURRENCY=${appConfig.databaseSharedWriteConcurrency}")
+        add("POSTCHAIN_DB_BLOCK_BUILDER_MAX_WAIT_WRITE=${appConfig.databaseBlockBuilderMaxWaitWrite}")
+        add("POSTCHAIN_DB_SHARED_MAX_WAIT_WRITE=${appConfig.databaseSharedMaxWaitWrite}")
         add("POSTCHAIN_CRYPTO_SYSTEM=${appConfig.cryptoSystemClass}")
         // Do not add privKey. It is supplied through initialization via gRPC
         add("POSTCHAIN_PUBKEY=${appConfig.pubKey}")
@@ -195,6 +218,13 @@ object ContainerConfigFactory : KLogging() {
         }
         add("POSTCHAIN_API_PORT=${restApiPort}")
 
+        val debugApiPort = if (restApiConfig.debugPort > -1) {
+            containerNodeConfig.subnodeDebugApiPort
+        } else {
+            -1
+        }
+        add("POSTCHAIN_DEBUG_PORT=${debugApiPort}")
+
         add("POSTCHAIN_MASTER_HOST=${containerNodeConfig.masterHost}")
         add("POSTCHAIN_MASTER_PORT=${containerNodeConfig.masterPort}")
         add("POSTCHAIN_HOST_MOUNT_DIR=${containerNodeConfig.hostMountDir}")
@@ -208,6 +238,12 @@ object ContainerConfigFactory : KLogging() {
         add("POSTCHAIN_CONTAINER_ID=${container.containerName.containerIID}")
 
         add("POSTCHAIN_PROMETHEUS_PORT=${containerNodeConfig.prometheusPort}")
+
+        add("POSTGRES_MAX_LOCKS_PER_TRANSACTION=${containerNodeConfig.postgresMaxLocksPerTransaction}")
+
+        add("POSTCHAIN_HOUSEKEEPING_INTERVAL_MS=${appConfig.housekeepingIntervalMs}")
+
+        add("POSTCHAIN_TRACKED_EBFT_MESSAGE_MAX_KEEP_TIME_MS=${appConfig.trackedEbftMessageMaxKeepTimeMs}")
 
         val javaToolOptions = createJavaToolOptions(containerNodeConfig, container)
         if (javaToolOptions.isNotEmpty()) {

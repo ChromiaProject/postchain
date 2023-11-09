@@ -23,13 +23,13 @@ import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.SigMaker
 import net.postchain.ebft.BDBAbortException
-import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicLong
 
 abstract class AbstractSynchronizer(
         val workerContext: WorkerContext,
@@ -42,7 +42,7 @@ abstract class AbstractSynchronizer(
     // this is used to track pending asynchronous BlockDatabase.addBlock tasks to make sure failure to commit propagates properly
     protected var addBlockCompletionFuture: CompletableFuture<Unit>? = null
 
-    var blockHeight: Long = blockQueries.getLastBlockHeight().get()
+    val blockHeight = AtomicLong(blockQueries.getLastBlockHeight().get())
 
     private var pendingConfigPromotingUsAsSigner: ByteArray? = null
     private val relevantSignersThatHaveAppliedConfig = mutableSetOf<PubKey>()
@@ -73,10 +73,7 @@ abstract class AbstractSynchronizer(
      * We do this check to avoid getting stuck when chain is waiting for a pending config where we are promoted to signer to be applied
      * In other cases config updates will be handled when adding blocks
      */
-    internal fun checkIfWeNeedToApplyPendingConfig(peer: NodeRid, appliedConfig: AppliedConfig): Boolean {
-        val incomingConfigHash = appliedConfig.configHash
-        val incomingHeight = appliedConfig.height
-
+    internal fun checkIfWeNeedToApplyPendingConfig(peer: NodeRid, incomingConfigHash: ByteArray, incomingHeight: Long): Boolean {
         if (blockchainConfiguration.chainID == 0L) return false
         val configProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
                 ?: return false
@@ -85,7 +82,7 @@ abstract class AbstractSynchronizer(
             if (blockQueries.getLastBlockHeight().get() + 1 != incomingHeight) return false
             val currentConfigHash = blockchainConfiguration.configHash
 
-            logger.debug { "blockHeight = $blockHeight, blockQueries.getLastBlockHeight() = ${blockQueries.getLastBlockHeight().get()}, currentConfigHash = ${currentConfigHash.wrap()}" }
+            logger.debug { "blockHeight = ${blockHeight.get()}, blockQueries.getLastBlockHeight() = ${blockQueries.getLastBlockHeight().get()}, currentConfigHash = ${currentConfigHash.wrap()}" }
             logger.debug { "incomingHeight = $incomingHeight, incomingConfigHash = ${incomingConfigHash.wrap()}" }
 
             if (!currentConfigHash.contentEquals(incomingConfigHash)) {

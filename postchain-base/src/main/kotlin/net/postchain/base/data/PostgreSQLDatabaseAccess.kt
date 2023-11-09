@@ -181,6 +181,11 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " ALTER COLUMN configuration_hash SET NOT NULL"
     }
 
+    override fun cmdDropTableConfigurationDataNotNull(chainId: Long): String {
+        return "ALTER TABLE ${tableConfigurations(chainId)}" +
+                " ALTER COLUMN configuration_data DROP NOT NULL"
+    }
+
     override fun cmdAddTableBlockchainReplicasPubKeyConstraint(): String =
             "ALTER TABLE ${tableBlockchainReplicas()} ADD FOREIGN KEY ($TABLE_REPLICAS_FIELD_PUBKEY)" +
                     " REFERENCES ${tablePeerinfos()} ($TABLE_PEERINFOS_FIELD_PUBKEY)"

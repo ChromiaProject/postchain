@@ -7,6 +7,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionFailed
 import net.postchain.common.exception.TransactionIncorrect
+import net.postchain.common.exception.TransactionTimeout
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
@@ -122,7 +123,7 @@ abstract class AbstractBlockBuilder(
             transactions.add(tx)
             rawTransactions.add(tx.getRawData())
         } else {
-            throw TransactionFailed("Transaction ${tx.getRID().toHex()} failed")
+            throw TransactionFailed(tx.getRID())
         }
     }
 
@@ -134,7 +135,7 @@ abstract class AbstractBlockBuilder(
                         .get()
             } catch (e: ExecutionException) {
                 throw if (e.cause is TimeoutException) {
-                    TransactionFailed("Transaction failed to execute within given time constraint: $maxTxExecutionTime ms")
+                    TransactionTimeout(tx.getRID(), maxTxExecutionTime)
                 } else {
                     e.cause ?: e
                 }

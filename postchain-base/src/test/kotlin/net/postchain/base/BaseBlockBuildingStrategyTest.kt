@@ -3,6 +3,7 @@ package net.postchain.base
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
+import net.postchain.DynamicValueAnswer
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockQueries
@@ -13,9 +14,7 @@ import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
-import org.mockito.invocation.InvocationOnMock
 import org.mockito.kotlin.*
-import org.mockito.stubbing.Answer
 import java.time.Clock
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -70,20 +69,16 @@ class BaseBlockBuildingStrategyTest {
         }
 
         private val sut = BaseBlockBuildingStrategy(strategyData.toObject(), blockQueries, txQueue, clock)
-
-        class DynamicValueAnswer<T>(var value: T) : Answer<T> {
-            override fun answer(p0: InvocationOnMock?): T = value
-        }
     }
 
     @Test
     @Order(1)
     fun test_maxBlockTime_for_block0() {
         currentMillis.value = MIN_INTER_BLOCK_INTERVAL + 1
-        assertThat(sut.shouldBuildBlock()).isEqualTo(false)
+        assertThat(sut.hasReachedTimeConstraintsForBlockBuilding(false)).isEqualTo(false)
 
         currentMillis.value = MAX_BLOCK_TIME + 1
-        assertThat(sut.shouldBuildBlock()).isEqualTo(true)
+        assertThat(sut.hasReachedTimeConstraintsForBlockBuilding(false)).isEqualTo(true)
 
         // Commiting block0 now
         sut.blockCommitted(committedBlockData())
@@ -116,11 +111,11 @@ class BaseBlockBuildingStrategyTest {
         currentMillis.value = currentMillis.value + MIN_INTER_BLOCK_INTERVAL + 1
 
         // Testing 'maxtxdelay': 'minInterBlockInterval' is NOT passed yet
-        assertThat(sut.shouldBuildBlock()).isEqualTo(false) // 1 tx only
+        assertThat(sut.hasReachedTimeConstraintsForBlockBuilding(true)).isEqualTo(false) // 1 tx only
 
         // Testing 'maxtxdelay': 'maxtxdelay' already passed.
         currentMillis.value = currentMillis.value + MAX_TX_DELAY + 1
-        assertThat(sut.shouldBuildBlock()).isEqualTo(true)
+        assertThat(sut.hasReachedTimeConstraintsForBlockBuilding(true)).isEqualTo(true)
 
         // Commiting block2 now
         sut.blockCommitted(committedBlockData())

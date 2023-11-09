@@ -3,7 +3,6 @@ package net.postchain.devtools.utils.configuration
 import mu.KLogging
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.config.app.AppConfig
-import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.crypto.devtools.KeyPairCache
 import net.postchain.devtools.PostchainTestNode
 import org.apache.commons.configuration2.Configuration
@@ -23,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap
  * @property privKeyHex is the private key
  * @property nodeSpecificConfigs are configurations that will be only for this node (usually nodes share config most
  *                       settings, but this can be useful sometimes)
- * @property configurationProvider is the configuration provider for the node
+ * @property appConfig is the app config for the node
  */
 data class NodeSetup(
         val sequenceNumber: NodeSeqNumber,
@@ -32,7 +31,7 @@ data class NodeSetup(
         val pubKeyHex: String,
         val privKeyHex: String,
         val nodeSpecificConfigs: Configuration = PropertiesConfiguration(),
-        var configurationProvider: NodeConfigurationProvider? = null // We might not set this at first
+        var appConfig: AppConfig? = null // We might not set this at first
 ) {
     // Internal thread safe sets
     private val _chainsToSign = Collections.newSetFromMap(ConcurrentHashMap<Int, Boolean>())
@@ -92,6 +91,9 @@ data class NodeSetup(
     fun getApiPortNumber() = getApiPortNumber(RestApiConfig.DEFAULT_REST_API_PORT)
     fun getApiPortNumber(portBase: Int) = sequenceNumber.nodeNumber + portBase // Must be different from "normal" port base
 
+    fun getDebugPortNumber() = getDebugPortNumber(RestApiConfig.DEFAULT_DEBUG_API_PORT)
+    fun getDebugPortNumber(portBase: Int) = sequenceNumber.nodeNumber + portBase // Must be different from "normal" port base
+
     /**
      * It can be pretty hard to figure out if a node needs to know about some other node,
      * but we have done most of the work already since we know all the BC's this node is holding.
@@ -120,8 +122,8 @@ data class NodeSetup(
             preWipeDatabase: Boolean = true
     ): PostchainTestNode {
 
-        require(configurationProvider != null) { "Cannot build a PostchainTestNode without a NodeConfigurationProvider set" }
-        val node = PostchainTestNode(configurationProvider!!.getConfiguration().appConfig, preWipeDatabase)
+        require(appConfig != null) { "Cannot build a PostchainTestNode without an AppConfig set" }
+        val node = PostchainTestNode(appConfig!!, preWipeDatabase)
 
         if (initialChainsToRead.isNotEmpty()) {
             logger.debug("Node ${sequenceNumber.nodeNumber}: Start all read only blockchains (dependencies must be installed first)")

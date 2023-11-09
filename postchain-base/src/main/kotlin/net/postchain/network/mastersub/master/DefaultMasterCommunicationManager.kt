@@ -36,7 +36,7 @@ import java.util.concurrent.TimeUnit
 open class DefaultMasterCommunicationManager(
         val appConfig: AppConfig,
         val nodeConfig: NodeConfig,
-        private val containerNodeConfig: ContainerNodeConfig,
+        containerNodeConfig: ContainerNodeConfig,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
         private val peersCommConfigFactory: PeersCommConfigFactory,
@@ -49,9 +49,9 @@ open class DefaultMasterCommunicationManager(
         private val peerTaskScheduler = Executors.newSingleThreadScheduledExecutor(ThreadFactoryBuilder().setNameFormat("PeerTaskScheduler").build())
     }
 
-    private lateinit var sendConnectedPeersTask: ScheduledFuture<*>
+    private val sendConnectedPeersTask: ScheduledFuture<*>
 
-    override fun init() {
+    init {
         val subnodeChainConfig = SubChainConfig(chainId, blockchainRid, subnodePacketConsumer())
         masterConnectionManager.initSubChainConnection(subnodeChainConfig)
 
@@ -87,7 +87,7 @@ open class DefaultMasterCommunicationManager(
 
                         is MsDataMessage -> {
                             connectionManager.sendPacket(
-                                    { message.xPacket },
+                                    lazy { message.xPacket },
                                     chainId,
                                     NodeRid(message.destination)
                             )
@@ -163,9 +163,7 @@ open class DefaultMasterCommunicationManager(
 
     override fun shutdown() {
         // Canceling SendConnectedPeers task
-        if (::sendConnectedPeersTask.isInitialized) {
-            sendConnectedPeersTask.cancel(true)
-        }
+        sendConnectedPeersTask.cancel(true)
 
         connectionManager.disconnectChain(chainId)
         masterConnectionManager.disconnectSubChain(chainId)

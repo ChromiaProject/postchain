@@ -1,8 +1,10 @@
 package net.postchain.core.framework
 
 import mu.NamedKLogging
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
+import net.postchain.metrics.AbstractBlockchainProcessMetrics
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
@@ -11,13 +13,18 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
     val logger = NamedKLogging(this::class.java.simpleName).logger
 
     private val running = AtomicBoolean(false)
-    internal lateinit var process: Thread
+    private val started = AtomicBoolean(false)
+    internal val process: Thread = thread(name = processName, start = false) { main() }
+
+    val metrics = AbstractBlockchainProcessMetrics(blockchainEngine.getConfiguration().chainID, blockchainEngine.getConfiguration().blockchainRid, this)
 
     override fun isProcessRunning() = running.get()
 
     final override fun start() {
-        running.set(true)
-        process = thread(name = processName) { main() }
+        if (!started.getAndSet(true)) {
+            running.set(true)
+            process.start()
+        } else throw ProgrammerMistake("Process is already started")
     }
 
     private fun main() {
@@ -49,11 +56,14 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
     protected abstract fun cleanup()
 
     final override fun shutdown() {
+        // Clean up the process here if it was never started
+        if (!started.get()) cleanup()
         running.set(false)
-        if (alreadyShutdown()) return
+        if (!process.isAlive) return
         logger.debug { "Shutting down process $processName" }
         process.join()
+        metrics.close()
     }
 
-    private fun alreadyShutdown() = !::process.isInitialized || !process.isAlive
+    abstract fun currentBlockHeight(): Long
 }

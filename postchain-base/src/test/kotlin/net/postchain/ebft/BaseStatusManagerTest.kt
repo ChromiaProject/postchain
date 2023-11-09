@@ -5,6 +5,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import io.micrometer.core.instrument.Counter
 import net.postchain.common.hexStringToByteArray
+import net.postchain.ebft.message.StateChangeTracker
 import net.postchain.metrics.NodeStatusMetrics
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -12,6 +13,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import java.time.Clock
 
 class BaseStatusManagerTest {
 
@@ -30,6 +32,10 @@ class BaseStatusManagerTest {
         on { revoltsByNode } doReturn revoltsByNodeCounter
         on { revoltsBetweenOthers } doReturn revoltsBetweenOthersCounter
     }
+    private val stateChangeTracker: StateChangeTracker = mock()
+    private val clock: Clock = mock {
+        on { millis() } doReturn BaseStatusManager.ZERO_SERIAL_TIME
+    }
 
     private lateinit var sut: BaseStatusManager
     private lateinit var status: NodeStatus
@@ -38,7 +44,7 @@ class BaseStatusManagerTest {
     fun beforeEach() {
         status = NodeStatus(54, 0)
         status.revolting = true
-        sut = BaseStatusManager(nodes, myNodeIndex, myNextHeight, nodeStatusMetrics)
+        sut = BaseStatusManager(nodes, myNodeIndex, myNextHeight, nodeStatusMetrics, stateChangeTracker, clock)
         sut.myStatus.height = 54
     }
 

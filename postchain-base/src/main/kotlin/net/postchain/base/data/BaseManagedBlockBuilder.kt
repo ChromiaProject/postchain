@@ -6,10 +6,6 @@ import mu.KLogging
 import net.postchain.base.data.SqlUtils.isClosed
 import net.postchain.base.data.SqlUtils.isFatal
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.common.exception.TransactionFailed
-import net.postchain.common.exception.TransactionIncorrect
-import net.postchain.common.exception.UserMistake
-import net.postchain.common.toHex
 import net.postchain.core.EContext
 import net.postchain.core.Storage
 import net.postchain.core.Transaction
@@ -22,6 +18,8 @@ import net.postchain.core.block.BlockWitnessBuilder
 import net.postchain.core.block.ManagedBlockBuilder
 import java.sql.SQLException
 import java.sql.Savepoint
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import kotlin.system.exitProcess
 
 /**
@@ -53,6 +51,8 @@ class BaseManagedBlockBuilder(
     private var closed = false
 
     private var blocTrace: BlockTrace? = null // Only for logging, remains "null" unless TRACE
+
+    private val storageLock = ReentrantLock()
 
     /**
      * Wrapper for block builder operations. Will close current working block for further modifications
@@ -108,18 +108,7 @@ class BaseManagedBlockBuilder(
         }
 
         return if (storage.isSavepointSupported()) {
-            storage.withSavepoint(eContext, action).also {
-                if (it != null) {
-                    when (it) {
-                        // Don't log stacktrace
-                        is TransactionIncorrect -> logger.debug { "Tx Incorrect ${tx.getRID().toHex()}." }
-                        is TransactionFailed -> logger.debug { "Tx failed ${tx.getRID().toHex()}." }
-                        is UserMistake -> logger.debug(it) { "Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}." }
-                        // Should be unusual, so let's log everything
-                        else -> logger.error("Failed to append transaction ${tx.getRID().toHex()} due to ${it.message}.", it)
-                    }
-                }
-            }
+            storage.withSavepoint(eContext, action)
         } else {
             logger.warn("Savepoint not supported! Unclear if Postchain will work under these conditions")
             action()
@@ -148,7 +137,7 @@ class BaseManagedBlockBuilder(
         commitLog("Start")
         getOrBuildBlockTrace()
 
-        synchronized(storage) {
+        storageLock.withLock {
             if (!closed) {
                 commitLog("Got lock")
                 beforeCommit(blockBuilder)
@@ -168,11 +157,15 @@ class BaseManagedBlockBuilder(
 
     override fun rollback() {
         rollbackDebugLog("Start")
-        synchronized(storage) {
+        storageLock.withLock {
             if (!closed) {
                 rollbackLog("Got lock")
                 if (!eContext.conn.isClosed) {
                     eContext.conn.rollback(savepoint)
+                    // Release the savepoint here, we will create a new save point next time we try to build a block
+                    eContext.conn.releaseSavepoint(savepoint)
+                } else {
+                    logger.error("Unable to rollback since connection is already closed")
                 }
                 closed = true
             }
@@ -236,3 +229,11 @@ class BaseManagedBlockBuilder(
         }
     }
 }
+
+typealias BaseManagedBlockBuilderProvider = (
+        eContext: EContext,
+        savepoint: Savepoint,
+        storage: Storage,
+        blockBuilder: BlockBuilder,
+        beforeCommit: (BlockBuilder) -> Unit,
+        afterCommit: (BlockBuilder) -> Unit) -> BaseManagedBlockBuilder

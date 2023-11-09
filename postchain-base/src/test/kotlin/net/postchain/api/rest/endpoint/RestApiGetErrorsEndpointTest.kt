@@ -7,10 +7,11 @@ import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.common.BlockchainRid
-import net.postchain.debug.EagerDiagnosticValue
+import net.postchain.debug.ErrorDiagnosticValue
 import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.debug.NodeDiagnosticContext
 import org.hamcrest.CoreMatchers.equalTo
+import org.hamcrest.CoreMatchers.nullValue
 import org.hamcrest.collection.IsCollectionWithSize.hasSize
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -18,6 +19,9 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 
 class RestApiGetErrorsEndpointTest {
 
@@ -26,7 +30,6 @@ class RestApiGetErrorsEndpointTest {
     private lateinit var model: Model
     private lateinit var nodeDiagnosticContext: NodeDiagnosticContext
     private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
-
 
     @BeforeEach
     fun setup() {
@@ -38,7 +41,7 @@ class RestApiGetErrorsEndpointTest {
 
         nodeDiagnosticContext = JsonNodeDiagnosticContext()
 
-        restApi = RestApi(0, basePath, gracefulShutdown = false, nodeDiagnosticContext = nodeDiagnosticContext)
+        restApi = RestApi(0, basePath, nodeDiagnosticContext = nodeDiagnosticContext, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
     }
 
     @AfterEach
@@ -61,8 +64,8 @@ class RestApiGetErrorsEndpointTest {
     @Test
     fun someErrors() {
         restApi.attachModel(blockchainRID, model)
-        nodeDiagnosticContext.blockchainErrorQueue(blockchainRID).add(EagerDiagnosticValue("foo"))
-        nodeDiagnosticContext.blockchainErrorQueue(blockchainRID).add(EagerDiagnosticValue("bar"))
+        nodeDiagnosticContext.blockchainErrorQueue(blockchainRID).add(ErrorDiagnosticValue("foo", 42L))
+        nodeDiagnosticContext.blockchainErrorQueue(blockchainRID).add(ErrorDiagnosticValue("bar", 42L, 10))
 
         given().basePath(basePath).port(restApi.actualPort())
                 .get("/errors/$blockchainRID")
@@ -70,16 +73,20 @@ class RestApiGetErrorsEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON)
                 .body("", hasSize<String>(2))
-                .body("[0]", equalTo("foo"))
-                .body("[1]", equalTo("bar"))
+                .body("[0].message", equalTo("foo"))
+                .body("[0].timestamp", equalTo(42))
+                .body("[0].height", nullValue())
+                .body("[1].message", equalTo("bar"))
+                .body("[1].timestamp", equalTo(42))
+                .body("[1].height", equalTo(10))
     }
 
     @Test
-    fun errorInUnavaliableChain() {
+    fun errorInUnavailableChain() {
         whenever(model.live).thenReturn(false)
 
         restApi.attachModel(blockchainRID, model)
-        nodeDiagnosticContext.blockchainErrorQueue(blockchainRID).add(EagerDiagnosticValue("foobar"))
+        nodeDiagnosticContext.blockchainErrorQueue(blockchainRID).add(ErrorDiagnosticValue("foobar", 54L, 42))
 
         given().basePath(basePath).port(restApi.actualPort())
                 .get("/errors/$blockchainRID")
@@ -87,7 +94,9 @@ class RestApiGetErrorsEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON)
                 .body("", hasSize<String>(1))
-                .body("[0]", equalTo("foobar"))
+                .body("[0].message", equalTo("foobar"))
+                .body("[0].timestamp", equalTo(54))
+                .body("[0].height", equalTo(42))
     }
 
     @Test

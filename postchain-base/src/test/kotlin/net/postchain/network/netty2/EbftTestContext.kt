@@ -2,17 +2,16 @@
 
 package net.postchain.network.netty2
 
+import net.postchain.base.PeerCommConfiguration
+import net.postchain.common.BlockchainRid
+import net.postchain.ebft.EbftPacketCodec
+import net.postchain.ebft.message.EbftMessage
+import net.postchain.network.common.NodeConnectorEvents
+import net.postchain.network.peer.PeerConnectionDescriptor
+import net.postchain.network.peer.PeerPacketHandler
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import net.postchain.common.BlockchainRid
-import net.postchain.base.PeerCommConfiguration
-import net.postchain.ebft.EbftPacketDecoder
-import net.postchain.ebft.EbftPacketEncoder
-import net.postchain.ebft.message.EbftMessage
-import net.postchain.network.common.NodeConnectorEvents
-import net.postchain.network.peer.PeerPacketHandler
-import net.postchain.network.peer.PeerConnectionDescriptor
 
 class EbftTestContext(val config: PeerCommConfiguration, val blockchainRid: BlockchainRid) {
 
@@ -24,15 +23,13 @@ class EbftTestContext(val config: PeerCommConfiguration, val blockchainRid: Bloc
 
     val peer = NettyPeerConnector<EbftMessage>(events)
 
-    fun init() = peer.init(config.myPeerInfo(), EbftPacketDecoder(config))
+    fun init() = peer.init(config.myPeerInfo(), EbftPacketCodec(config, blockchainRid))
 
-    fun buildPacketEncoder(): EbftPacketEncoder = EbftPacketEncoder(config, blockchainRid)
+    fun buildPacketCodec(): EbftPacketCodec = EbftPacketCodec(config, blockchainRid)
 
-    fun buildPacketDecoder(): EbftPacketDecoder = EbftPacketDecoder(config)
+    fun encodePacket(message: EbftMessage, version: Long): ByteArray = buildPacketCodec().encodePacket(message, version)
 
-    fun encodePacket(message: EbftMessage): ByteArray = buildPacketEncoder().encodePacket(message)
-
-    fun decodePacket(bytes: ByteArray): EbftMessage = buildPacketDecoder().decodePacket(bytes)!!
+    fun decodePacket(bytes: ByteArray, version: Long): EbftMessage = buildPacketCodec().decodePacket(bytes, version)!!
 
     fun shutdown() = peer.shutdown()
 }

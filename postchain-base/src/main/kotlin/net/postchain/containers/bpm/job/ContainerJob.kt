@@ -2,6 +2,7 @@ package net.postchain.containers.bpm.job
 
 import net.postchain.containers.bpm.Chain
 import net.postchain.containers.bpm.ContainerName
+import java.time.Clock
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -21,7 +22,7 @@ open class Job(val name: String)
  * Describes actions over chains that should be done for the container [containerName].
  * Actions are: stop chain, start chain.
  */
-open class ContainerJob(val containerName: ContainerName) : Job(containerName.name) {
+class ContainerJob(val containerName: ContainerName, private val clock: Clock = Clock.systemUTC()) : Job(containerName.name) {
 
     private val maxBackoffTime = 5.toDuration(DurationUnit.MINUTES)
     private val lock = ReentrantLock()
@@ -118,7 +119,7 @@ open class ContainerJob(val containerName: ContainerName) : Job(containerName.na
         return !internalDone.get() && internalNextExecutionTime.get() <= currentTimeMillis()
     }
 
-    open fun currentTimeMillis() = System.currentTimeMillis()
+    private fun currentTimeMillis() = clock.millis()
 
     fun resetFailedStartCount() = internalFailedStartCount.set(0)
 

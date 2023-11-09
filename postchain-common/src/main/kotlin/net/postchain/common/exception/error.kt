@@ -15,7 +15,13 @@ class TransactionIncorrect(txRid: ByteArray, message: String? = null, cause: Exc
  * When the TX failed during runtime. This could be a common error, since we must assume people will
  * try to send many crazy things to the Dapp, so don't log this in full.
  */
-class TransactionFailed(message: String, cause: Exception? = null) : UserMistake(message, cause)
+class TransactionFailed(txRid: ByteArray) : UserMistake("Transaction ${txRid.toHex()} failed")
+
+/**
+ * When the TX timeout due to `max_transaction_execution_time` being exceeded.
+ */
+class TransactionTimeout(txRid: ByteArray, maxTxExecutionTime: Long)
+    : UserMistake("Transaction ${txRid.toHex()} failed to execute within given time constraint: $maxTxExecutionTime ms")
 
 class NotFound(message: String, cause: Exception? = null) : UserMistake(message, cause)
 

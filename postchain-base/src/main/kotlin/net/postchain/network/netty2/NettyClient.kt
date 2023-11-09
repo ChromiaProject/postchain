@@ -8,28 +8,21 @@ import io.netty.channel.ChannelHandler
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
 import io.netty.channel.EventLoopGroup
-import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
-import io.netty.util.concurrent.DefaultThreadFactory
 import net.postchain.core.Shutdownable
 import java.net.SocketAddress
-import java.util.concurrent.TimeUnit
 
-class NettyClient : Shutdownable {
+class NettyClient(
+        channelHandler: ChannelHandler,
+        peerAddress: SocketAddress,
+        eventLoopGroup: EventLoopGroup
+) : Shutdownable {
 
-    private lateinit var client: Bootstrap
-    private lateinit var channelHandler: ChannelHandler
-    private lateinit var eventLoopGroup: EventLoopGroup
+    val channelFuture: ChannelFuture
 
-    fun setChannelHandler(channelHandler: ChannelHandler) {
-        this.channelHandler = channelHandler
-    }
-
-    fun connect(peerAddress: SocketAddress): ChannelFuture {
-        eventLoopGroup = NioEventLoopGroup(1, DefaultThreadFactory("NettyClient"))
-
-        client = Bootstrap()
+    init {
+        val client = Bootstrap()
                 .group(eventLoopGroup)
                 .channel(NioSocketChannel::class.java)
                 .option(ChannelOption.TCP_NODELAY, true)
@@ -45,14 +38,14 @@ class NettyClient : Shutdownable {
                     }
                 })
 
-        return client.connect(peerAddress)
+        channelFuture = client.connect(peerAddress)
     }
 
     override fun shutdown() {
-        eventLoopGroup.shutdownGracefully(0, 2000, TimeUnit.MILLISECONDS).sync()
+        channelFuture.channel().close().sync()
     }
 
     fun shutdownAsync() {
-        eventLoopGroup.shutdownGracefully(0, 2000, TimeUnit.MILLISECONDS)
+        channelFuture.channel().close()
     }
 }

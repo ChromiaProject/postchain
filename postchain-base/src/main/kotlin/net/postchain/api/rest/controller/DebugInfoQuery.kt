@@ -3,7 +3,6 @@
 package net.postchain.api.rest.controller
 
 import com.google.gson.JsonElement
-import com.google.gson.JsonObject
 import com.jayway.jsonpath.Configuration
 import com.jayway.jsonpath.JsonPath
 import com.jayway.jsonpath.JsonPathException
@@ -18,12 +17,6 @@ interface DebugInfoQuery {
      * Returns string representation of [NodeDiagnosticContext] object converted to Json
      */
     fun queryDebugInfo(query: String?): JsonElement
-}
-
-class DisabledDebugInfoQuery : DebugInfoQuery {
-    override fun queryDebugInfo(query: String?): JsonElement = JsonObject().apply {
-        addProperty("error", "Debug endpoint is not enabled. Use --debug cli option to enable it.")
-    }
 }
 
 private const val MAX_QUERY_LENGTH = 1024

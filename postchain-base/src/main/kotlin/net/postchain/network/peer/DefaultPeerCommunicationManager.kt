@@ -3,29 +3,48 @@
 package net.postchain.network.peer
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.BlockchainRid
+import net.postchain.common.toHex
 import net.postchain.core.BadDataException
 import net.postchain.core.BadMessageException
 import net.postchain.core.NodeRid
 import net.postchain.devtools.NameHelper.peerName
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.logging.MESSAGE_TYPE_TAG
+import net.postchain.logging.SOURCE_NODE_TAG
+import net.postchain.logging.TARGET_NODE_TAG
 import net.postchain.network.CommunicationManager
-import net.postchain.network.XPacketDecoder
-import net.postchain.network.XPacketEncoder
+import net.postchain.network.PacketVersionFilter
+import net.postchain.network.ReceivedPacket
+import net.postchain.network.XPacketCodec
 import net.postchain.network.common.ConnectionManager
+import net.postchain.network.common.LazyPacket
 
 class DefaultPeerCommunicationManager<PacketType>(
         val connectionManager: ConnectionManager,
         val config: PeerCommConfiguration,
         val chainId: Long,
         val blockchainRid: BlockchainRid,
-        private val packetEncoder: XPacketEncoder<PacketType>,
-        private val packetDecoder: XPacketDecoder<PacketType>
+        private val packetCodec: XPacketCodec<PacketType>,
+        private val packetToString: (PacketType, Long) -> String
 ) : CommunicationManager<PacketType> {
 
     companion object : KLogging()
 
-    private var inboundPackets = mutableListOf<Pair<NodeRid, PacketType>>()
+    private val myPeerId = config.myPeerInfo().pubKey.toHex()
+    private val baseLoggingContext = arrayOf(
+            BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
+            CHAIN_IID_TAG to chainId.toString()
+    )
+    private val baseLoggingContextWithSender = arrayOf(
+            *baseLoggingContext,
+            SOURCE_NODE_TAG to myPeerId,
+    )
+
+    private var inboundPackets = mutableListOf<ReceivedPacket<PacketType>>()
     var connected = false
 
     /**
@@ -46,36 +65,72 @@ class DefaultPeerCommunicationManager<PacketType>(
     }
 
     @Synchronized
-    override fun getPackets(): MutableList<Pair<NodeRid, PacketType>> {
+    override fun getPackets(): MutableList<ReceivedPacket<PacketType>> {
         val currentQueue = inboundPackets
         inboundPackets = mutableListOf()
         return currentQueue
     }
 
     override fun sendPacket(packet: PacketType, recipient: NodeRid) {
-        logger.trace { "sendPacket($packet, ${peerName(recipient.toString())})" }
-
-        val encodingFunction = { packetEncoder.encodePacket(packet) }
+        val packetVersion = getPeerPacketVersion(recipient)
+        if (logger.isTraceEnabled) {
+            withLoggingContext(
+                    *baseLoggingContextWithSender,
+                    TARGET_NODE_TAG to recipient.toHex(),
+                    MESSAGE_TYPE_TAG to packet!!::class.java.simpleName
+            ) {
+                logger.trace { "sendPacket(${peerName(recipient.toString())}, ${packetToString(packet, packetVersion)}, $packetVersion)" }
+            }
+        }
+        val encodingFunction = lazy { packetCodec.encodePacket(packet, packetVersion) }
         sendEncodedPacket(encodingFunction, recipient)
     }
 
     override fun sendPacket(packet: PacketType, recipients: List<NodeRid>) {
-        val lazyPacket by lazy { packetEncoder.encodePacket(packet) }
+        val encodedPackets: MutableMap<Long, LazyPacket> = mutableMapOf()
         recipients.forEach {
-            logger.trace { "sendPacket($packet, ${peerName(it.toString())})" }
-
-            sendEncodedPacket({ lazyPacket }, it)
+            val packetVersion = getPeerPacketVersion(it)
+            if (logger.isTraceEnabled) {
+                withLoggingContext(
+                        *baseLoggingContextWithSender,
+                        TARGET_NODE_TAG to it.toHex(),
+                        MESSAGE_TYPE_TAG to packet!!::class.java.simpleName
+                ) {
+                    logger.trace { "sendPacket(${peerName(it.toString())}, ${packetToString(packet, packetVersion)}, $packetVersion)" }
+                }
+            }
+            val lazyPacket = encodedPackets.getOrPut(packetVersion) { lazy { packetCodec.encodePacket(packet, packetVersion) } }
+            sendEncodedPacket(lazyPacket, it)
         }
     }
 
-    override fun broadcastPacket(packet: PacketType) {
-        logger.trace { "broadcastPacket($packet)" }
+    override fun broadcastPacket(
+            packet: PacketType,
+            oldPackets: Map<Long, LazyPacket>?,
+            allowedVersionsFilter: PacketVersionFilter?
+    ): Map<Long, LazyPacket> {
+        if (logger.isTraceEnabled) {
+            withLoggingContext(
+                    *baseLoggingContextWithSender,
+                    MESSAGE_TYPE_TAG to packet!!::class.java.simpleName
+            ) {
+                logger.trace { "broadcastPacket(${packetToString(packet, packetCodec.getPacketVersion())}, reusing=${oldPackets != null})" }
+            }
+        }
 
-        val lazyPacket by lazy { packetEncoder.encodePacket(packet) }
-        connectionManager.broadcastPacket(
-                { lazyPacket },
-                chainId
-        )
+        val encodedPackets: MutableMap<Long, LazyPacket> = mutableMapOf()
+        oldPackets?.let { encodedPackets.putAll(oldPackets) }
+        val nodes = connectionManager.getConnectedNodes(chainId)
+        nodes.forEach {
+            val peerPacketVersion = getPeerPacketVersion(it)
+            if (allowedVersionsFilter == null || allowedVersionsFilter(peerPacketVersion)) {
+                val lazyPacket = encodedPackets.getOrPut(peerPacketVersion) { lazy { packetCodec.encodePacket(packet, peerPacketVersion) } }
+                sendEncodedPacket(lazyPacket, it)
+            } else {
+                logger.trace { "Will not broadcast packet ${packetToString(packet, packetCodec.getPacketVersion())} to peer $it due to peer packet version $peerPacketVersion" }
+            }
+        }
+        return encodedPackets
     }
 
     override fun sendToRandomPeer(packet: PacketType, amongPeers: Set<NodeRid>): Pair<NodeRid?, Set<NodeRid>> {
@@ -85,7 +140,13 @@ class DefaultPeerCommunicationManager<PacketType>(
         }
         val peer = possiblePeers.random()
         if (logger.isTraceEnabled) {
-            logger.trace("sendToRandomPeer($packet, ${peerName(peer.toString())})")
+            withLoggingContext(
+                    *baseLoggingContextWithSender,
+                    TARGET_NODE_TAG to peer.toHex(),
+                    MESSAGE_TYPE_TAG to packet!!::class.java.simpleName
+            ) {
+                logger.trace { "sendToRandomPeer(${peerName(peer.toString())}, ${packetToString(packet, getPeerPacketVersion(peer))})" }
+            }
         }
         return try {
             sendPacket(packet, peer)
@@ -103,13 +164,14 @@ class DefaultPeerCommunicationManager<PacketType>(
         connected = false
     }
 
-    private fun sendEncodedPacket(encodingFunction: () -> ByteArray, recipient: NodeRid) {
+    override fun getPeerPacketVersion(peerId: NodeRid): Long = connectionManager.getPacketVersion(chainId, peerId)
+
+    private fun sendEncodedPacket(lazyPacket: LazyPacket, recipient: NodeRid) {
         require(NodeRid(config.pubKey) != recipient) {
             "CommunicationManager.sendPacket(): sender can not be the recipient"
         }
-
         connectionManager.sendPacket(
-                encodingFunction,
+                lazyPacket,
                 chainId,
                 recipient
         )
@@ -118,16 +180,24 @@ class DefaultPeerCommunicationManager<PacketType>(
     private fun consumePacket(packet: ByteArray, peerId: NodeRid) {
         try {
             /**
-             * Packet decoding should not be synchronized so we can make
+             * Packet decoding should not be synchronized, so we can make
              * use of parallel processing in different threads
              */
-            logger.trace { "Receiving a packet from peer: ${peerId.toHex()}" }
-            val decodedPacket = packetDecoder.decodePacket(peerId.data, packet)
+            val packetVersion = getPeerPacketVersion(peerId)
+            val decodedPacket = packetCodec.decodePacket(peerId.data, packet, packetVersion)
             synchronized(this) {
-                logger.trace { "Successfully decoded the package, now adding it " }
-                inboundPackets.add(peerId to decodedPacket)
+                if (logger.isTraceEnabled) {
+                    withLoggingContext(
+                            *baseLoggingContext,
+                            SOURCE_NODE_TAG to peerId.toHex(),
+                            TARGET_NODE_TAG to myPeerId,
+                            MESSAGE_TYPE_TAG to decodedPacket!!::class.java.simpleName
+                    ) {
+                        logger.trace { "receivePacket(${peerId.toHex()}, ${packetToString(decodedPacket, packetVersion)}, $packetVersion)" }
+                    }
+                }
+                inboundPackets.add(ReceivedPacket(peerId, packetVersion, decodedPacket))
             }
-
         } catch (e: BadMessageException) {
             logger.info("Bad message received from peer ${peerId}: ${e.message}")
         } catch (e: BadDataException) {

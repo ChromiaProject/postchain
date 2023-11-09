@@ -55,7 +55,7 @@ interface TxEContext : BlockEContext {
 const val NODE_ID_AUTO = -2
 
 /**
- * Indicates that node is should be configured as read-only replica which has no special role
+ * Indicates that node should be configured as read-only replica which has no special role
  * in the consensus process and thus its identity does not matter.
  */
 const val NODE_ID_READ_ONLY = -1

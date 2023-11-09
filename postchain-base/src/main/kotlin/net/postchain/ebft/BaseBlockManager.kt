@@ -5,6 +5,7 @@ package net.postchain.ebft
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.BaseBlockHeader
+import net.postchain.base.ForceStopBlockBuildingException
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.extension.getConfigHash
 import net.postchain.base.extension.getFailedConfigHash
@@ -25,6 +26,7 @@ import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockTrace
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.BLOCK_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import java.util.concurrent.CompletionStage
@@ -45,6 +47,9 @@ class BaseBlockManager(
     @Volatile
     private var intent: BlockIntent = DoNothingIntent
 
+    @Volatile
+    private var previousBlockIntent: BlockIntent = DoNothingIntent
+
     // Will be set to non-null value after the first block-db operation.
     override var lastBlockTimestamp: Long? = null
 
@@ -62,17 +67,19 @@ class BaseBlockManager(
                         CHAIN_IID_TAG to workerContext.blockchainConfiguration.chainID.toString()
                 )
                 withLoggingContext(loggingContext) {
-                    op().whenCompleteUnwrapped(loggingContext) { res, throwable ->
+                    op().whenCompleteUnwrapped(loggingContext, onSuccess = { res ->
                         try {
-                            if (throwable == null) {
-                                onSuccessfulOperation(res, onSuccess)
-                            } else {
-                                onFailedOperation(throwable, onFailure)
-                            }
+                            onSuccessfulOperation(res, onSuccess)
                         } finally {
                             operationSemaphore.release()
                         }
-                    }
+                    }, onError = { error ->
+                        try {
+                            onFailedOperation(error, onFailure)
+                        } finally {
+                            operationSemaphore.release()
+                        }
+                    })
                 }
             } catch (e: Exception) {
                 operationSemaphore.release()
@@ -101,6 +108,9 @@ class BaseBlockManager(
                     blockTrace(theIntent)
                     blockDB.loadUnfinishedBlock(block)
                 }, { signature ->
+                    withLoggingContext(BLOCK_RID_TAG to block.header.blockRID.toHex()) {
+                        logger.info("Signed block ${block.header.blockRID.toHex()}")
+                    }
                     if (statusManager.onReceivedBlock(block.header.blockRID, signature)) {
                         currentBlock = block
                         lastBlockTimestamp = blockTimestamp(block)
@@ -128,6 +138,9 @@ class BaseBlockManager(
 
                     blockDB.addBlock(block, null, bTrace)
                 }, {
+                    withLoggingContext(BLOCK_RID_TAG to block.header.blockRID.toHex()) {
+                        logger.info("Committed block ${block.header.blockRID.toHex()}")
+                    }
                     if (statusManager.onHeightAdvance(height + 1)) {
                         currentBlock = null
                         lastBlockTimestamp = blockTimestamp(block)
@@ -193,24 +206,26 @@ class BaseBlockManager(
             val bcConfig = workerContext.blockchainConfiguration
             val incomingBlockConfigHash = blockHeader.getConfigHash()?.wrap()
 
-            withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
-                val isMyConfigPending = bcConfigProvider.isConfigPending(
+            val isMyConfigPending = withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
+                bcConfigProvider.isConfigPending(
                         ctx, bcConfig.blockchainRid, statusManager.myStatus.height, bcConfig.configHash
                 )
+            }
 
-                val lastBlockHeight = statusManager.myStatus.height - 1
-                val lastBlockConfigHash = blockDB.getBlockAtHeight(lastBlockHeight, false).get()
-                        ?.header?.getConfigHash()?.wrap()
+            val lastBlockHeight = statusManager.myStatus.height - 1
+            val lastBlockConfigHash = blockDB.getBlockAtHeight(lastBlockHeight, false).get()
+                    ?.header?.getConfigHash()?.wrap()
 
-                if (isMyConfigPending && incomingBlockConfigHash == lastBlockConfigHash) {
-                    // early adopter
-                    logger.info("Wrong config used. Chain will be restarted")
-                    workerContext.restartNotifier.notifyRestart(false)
-                } else if (bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, true)) {
-                    // late adopter
-                    logger.info("Wrong config used. Chain will be restarted")
-                    workerContext.restartNotifier.notifyRestart(true)
-                }
+            if (isMyConfigPending && incomingBlockConfigHash == lastBlockConfigHash) {
+                // early adopter
+                logger.info("Wrong config used. Chain will be restarted")
+                workerContext.restartNotifier.notifyRestart(false)
+            } else if (withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
+                        bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, true)
+                    }) {
+                // late adopter
+                logger.info("Wrong config used. Chain will be restarted")
+                workerContext.restartNotifier.notifyRestart(true)
             }
         }
     }
@@ -221,6 +236,10 @@ class BaseBlockManager(
             // We can release immediately because we are inside statusManager synchronized block
             operationSemaphore.release()
             val blockIntent = statusManager.getBlockIntent()
+            if (previousBlockIntent == BuildBlockIntent && previousBlockIntent != blockIntent) {
+                blockStrategy.setForceStopBlockBuilding(true)
+            }
+            previousBlockIntent = blockIntent
             intent = DoNothingIntent
             when (blockIntent) {
 
@@ -237,6 +256,9 @@ class BaseBlockManager(
                         blockTrace(blockIntent)
                         blockDB.commitBlock(statusManager.commitSignatures)
                     }, {
+                        withLoggingContext(BLOCK_RID_TAG to currentBlock!!.header.blockRID.toHex()) {
+                            logger.info("Committed block ${currentBlock!!.header.blockRID.toHex()}")
+                        }
                         statusManager.onCommittedBlock(currentBlock!!.header.blockRID)
                         lastBlockTimestamp = blockTimestamp(currentBlock!!)
                         currentBlock = null
@@ -247,6 +269,7 @@ class BaseBlockManager(
                 }
 
                 is BuildBlockIntent -> {
+                    blockStrategy.setForceStopBlockBuilding(false)
                     // It's our turn to build a block. But we need to consult the
                     // BlockBuildingStrategy in order to figure out if this is the
                     // right time. For example, the strategy may decide that
@@ -273,12 +296,16 @@ class BaseBlockManager(
                         }
                     }, { exception ->
                         val msg = "Can't build block at height ${statusManager.myStatus.height}: ${exception.message}"
-                        if (exception is PmEngineIsAlreadyClosed) {
+                        if (exception is ForceStopBlockBuildingException) {
                             logger.debug(msg)
                         } else {
-                            logger.error(msg, exception)
+                            if (exception is PmEngineIsAlreadyClosed) {
+                                logger.debug(msg)
+                            } else {
+                                logger.error(msg, exception)
+                            }
+                            blockStrategy.blockFailed()
                         }
-                        blockStrategy.blockFailed()
                     })
                 }
 
@@ -287,8 +314,10 @@ class BaseBlockManager(
         }
     }
 
+    // Only start building block when preemptiveBlockBuilding if we actually have any transactions to build
+    // to avoid holding a db connection unnecessarily.
     private fun shouldBuildBlock() = !blockStrategy.mustWaitBeforeBuildBlock() &&
-            (blockStrategy.preemptiveBlockBuilding() || blockStrategy.shouldBuildBlock())
+            (blockStrategy.shouldBuildPreemptiveBlock() || blockStrategy.shouldBuildBlock())
 
     override fun processBlockIntent(): BlockIntent {
         update()

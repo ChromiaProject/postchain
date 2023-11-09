@@ -15,6 +15,7 @@ import java.time.Clock
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration
 
 /**
@@ -32,6 +33,8 @@ class OnDemandBlockBuildingStrategy(
 
     companion object : KLogging()
 
+    private val forceStopBlockBuilding: AtomicBoolean = AtomicBoolean(false)
+
     @Volatile
     var upToHeight: Long = -1
 
@@ -41,9 +44,19 @@ class OnDemandBlockBuildingStrategy(
 
     override fun preemptiveBlockBuilding(): Boolean = false
 
+    override fun shouldBuildPreemptiveBlock(): Boolean = false
+
     override fun shouldBuildBlock(): Boolean {
         return upToHeight > committedHeight
     }
+
+    override fun shouldForceStopBlockBuilding(): Boolean = forceStopBlockBuilding.get()
+
+    override fun setForceStopBlockBuilding(value: Boolean) {
+        forceStopBlockBuilding.set(value)
+    }
+
+    override fun hasReachedTimeConstraintsForBlockBuilding(haveSeenTxs: Boolean): Boolean = false
 
     override fun mustWaitMinimumBuildBlockTime(): Long = 0
 

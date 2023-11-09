@@ -1,7 +1,6 @@
 package net.postchain.ebft.syncmanager.readonly
 
 import mu.KLogging
-import net.postchain.concurrent.util.get
 import net.postchain.core.block.BlockQueries
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.GetBlockAtHeight
@@ -12,15 +11,13 @@ import net.postchain.ebft.syncmanager.common.BlockPacker
 import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.network.CommunicationManager
 
-class ForceReadOnlyMessageProcessor(blockQueries: BlockQueries, communicationManager: CommunicationManager<EbftMessage>)
+class ForceReadOnlyMessageProcessor(blockQueries: BlockQueries, communicationManager: CommunicationManager<EbftMessage>, private val blockHeight: Long)
     : Messaging(blockQueries, communicationManager, BlockPacker) {
 
     companion object : KLogging()
 
-    var blockHeight: Long = blockQueries.getLastBlockHeight().get()
-
     fun processMessages() {
-        for ((peerId, message) in communicationManager.getPackets()) {
+        for ((peerId, _, message) in communicationManager.getPackets()) {
             try {
                 when (message) {
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)

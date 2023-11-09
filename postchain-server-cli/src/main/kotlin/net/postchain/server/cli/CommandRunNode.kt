@@ -30,11 +30,14 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
     private val retryTimes by option("-rt", "--retry-times", help = "Number of retries to connect to database").int().default(50)
     private val retryInterval by option("-ri", "--retry-interval", help = "Retry interval for connecting to database (ms)").long().default(1000L)
 
-    private val debug by debugOption()
     private val dumpPid by dumpPidOption()
 
+    init {
+        deprecatedDebugOption()
+    }
+
     override fun run() {
-        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile, debug)
+        val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
 
         waitDb(retryTimes, retryInterval, appConfig)
         runStorageCommand(appConfig) {
