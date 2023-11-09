@@ -1,7 +1,8 @@
 package net.postchain.crypto
 
+import net.postchain.bitcoinj.forks.crypto.HDKeyDerivation
 import net.postchain.bitcoinj.forks.crypto.MnemonicCode
-import org.bitcoinj.crypto.HDKeyDerivation
+
 
 class DeterministicKeygen {
     private val mnemonicInstance = MnemonicCode()
@@ -15,7 +16,7 @@ class DeterministicKeygen {
     fun createKeyPairWithMnemonic(mnemonic: String): Pair<KeyPair, String> {
         validateMnemonic(mnemonic)
         val seed = mnemonicInstance.toSeed(mnemonic.split(" "), " ")
-        val privKey = HDKeyDerivation.createMasterPrivateKey(seed).privKeyBytes
+        val privKey = HDKeyDerivation.createMasterPrivateKey(seed)
         val pubKey = secp256k1_derivePubKey(privKey)
         val keyPair = KeyPair(PubKey(pubKey), PrivKey(privKey))
         return keyPair to mnemonic

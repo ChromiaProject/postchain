@@ -12,3 +12,4 @@ fun sha256Digest(bytes: ByteArray): ByteArray {
     val digest = MessageDigest.getInstance("SHA-256")
     return digest.digest(bytes)
 }
+
