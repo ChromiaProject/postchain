@@ -30,8 +30,8 @@ class DeterministicKeygenTest {
         assertEquals(mnemonicInput, mnemonic)
         assertEquals(keyPair.pubKey.data.size, 33)
         assertEquals(keyPair.privKey.data.size, 32)
-        assertEquals(keyPair.pubKey.data.toHex(), "03A1BB610A1AF00D1AC2765829E35DE6302F1BF249B46113BF52D2C97D3EDB15A9")
-        assertEquals(keyPair.privKey.data.toHex(), "1310CFC4A192A1399350E24C4E948868B8DFD5C45919DC9DC9C3A23E2962A834")
+        assertEquals(keyPair.pubKey.data.toHex(), "0388CCAFF64FC155ADC9DF75B1138D9CA2B33C7B605B16021E1CB7B7E6C8EB0FA4")
+        assertEquals(keyPair.privKey.data.toHex(), "F1779080FD92FD4B44CE4C3A14274CB1ED8BF11704BA2AD6C334252F45B9AD20")
     }
 
     @Test
@@ -42,8 +42,8 @@ class DeterministicKeygenTest {
         assertEquals(mnemonicInput, mnemonic)
         assertEquals(keyPair.pubKey.data.size, 33)
         assertEquals(keyPair.privKey.data.size, 32)
-        assertEquals(keyPair.pubKey.data.toHex(), "034FA11EB35F6975B279FD0EAABACB3B43F9C654F8C1F62AB504A4F18BD1E6B07F")
-        assertEquals(keyPair.privKey.data.toHex(), "FA76C4AECCF5AAD36E6AE17D909671E957D8855B9D155879ACD1A208BFD35EA3")
+        assertEquals(keyPair.pubKey.data.toHex(), "028E95DCD8CEBBEF598A5671C58CDBAC941FC9488764F6A9345D151CF1692FA29A")
+        assertEquals(keyPair.privKey.data.toHex(), "BB680527828123974992AB68E0A1B8187B87CE26B13008E79E643C5942CB1828")
     }
 
     @Test

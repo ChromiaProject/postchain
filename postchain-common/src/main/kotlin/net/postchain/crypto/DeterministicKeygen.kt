@@ -15,7 +15,7 @@ class DeterministicKeygen {
 
     fun createKeyPairWithMnemonic(mnemonic: String): Pair<KeyPair, String> {
         validateMnemonic(mnemonic)
-        val seed = mnemonicInstance.toSeed(mnemonic.split(" "), " ")
+        val seed = mnemonicInstance.toSeed(mnemonic.split(" "), "")
         val privKey = HDKeyDerivation.createMasterPrivateKey(seed)
         val pubKey = secp256k1_derivePubKey(privKey)
         val keyPair = KeyPair(PubKey(pubKey), PrivKey(privKey))
