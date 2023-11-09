@@ -196,18 +196,22 @@ open class Secp256K1CryptoSystem : BaseCryptoSystem() {
      */
     fun generatePrivKey(): PrivKey {
         var privateKey: ByteArray
-        var d: BigInteger
         while (true) {
             privateKey = getRandomBytes(32)
-            d = BigInteger(1, privateKey)
-            try {
-                ECPrivateKeyParameters(d, CURVE) // validate private key
-                break
-            } catch (e: Exception) {
-                logger.debug { "Generated invalid private key: $d" }
-            }
+            if (validatePrivKey(privateKey)) break
         }
         return PrivKey(privateKey)
+    }
+
+    private fun validatePrivKey(privateKey: ByteArray): Boolean {
+        val d = BigInteger(1, privateKey)
+        return try {
+            ECPrivateKeyParameters(d, CURVE) // validate private key
+            true
+        } catch (e: Exception) {
+            logger.debug { "Generated invalid private key: $d" }
+            false
+        }
     }
 
     override fun deriveSignatureVerificationFromSubject(subjectID: ByteArray): BasicVerifier? =
@@ -216,7 +220,7 @@ open class Secp256K1CryptoSystem : BaseCryptoSystem() {
 
     override fun createDeterministicKeyPair(): Pair<KeyPair, String> {
         val mnemonicInstance = MnemonicCode()
-        val entropy = Secp256K1CryptoSystem().generatePrivKey().data
+        val entropy = getRandomBytes(32)
         val mnemonic = mnemonicInstance.toMnemonic(entropy)
         return createDeterministicKeyPair(mnemonic.joinToString(" "))
     }
@@ -226,6 +230,7 @@ open class Secp256K1CryptoSystem : BaseCryptoSystem() {
         validateMnemonic(mnemonic)
         val seed = mnemonicInstance.toSeed(mnemonic.split(" "), "")
         val privKey = HDKeyDerivation.createMasterPrivateKey(seed)
+        check(validatePrivKey(privKey)) { "Invalid private key generated" }
         val pubKey = secp256k1_derivePubKey(privKey)
         val keyPair = KeyPair(PubKey(pubKey), PrivKey(privKey))
         return keyPair to mnemonic
