@@ -3,6 +3,8 @@
 package net.postchain.crypto
 
 import mu.KotlinLogging
+import net.postchain.bitcoinj.forks.crypto.HDKeyDerivation
+import net.postchain.bitcoinj.forks.crypto.MnemonicCode
 import net.postchain.common.data.Hash
 import org.bouncycastle.asn1.x9.X9ECParameters
 import org.bouncycastle.crypto.digests.SHA256Digest
@@ -210,4 +212,29 @@ open class Secp256K1CryptoSystem : BaseCryptoSystem() {
 
     override fun deriveSignatureVerificationFromSubject(subjectID: ByteArray): BasicVerifier? =
             if (subjectID[0] in setOf(2.toByte(), 3.toByte(), 4.toByte(), 6.toByte(), 7.toByte())) ::secp256k1_verify else null
+
+
+    override fun createDeterministicKeyPair(): Pair<KeyPair, String> {
+        val mnemonicInstance = MnemonicCode()
+        val entropy = Secp256K1CryptoSystem().generatePrivKey().data
+        val mnemonic = mnemonicInstance.toMnemonic(entropy)
+        return createDeterministicKeyPair(mnemonic.joinToString(" "))
+    }
+
+    override fun createDeterministicKeyPair(mnemonic: String): Pair<KeyPair, String> {
+        val mnemonicInstance = MnemonicCode()
+        validateMnemonic(mnemonic)
+        val seed = mnemonicInstance.toSeed(mnemonic.split(" "), "")
+        val privKey = HDKeyDerivation.createMasterPrivateKey(seed)
+        val pubKey = secp256k1_derivePubKey(privKey)
+        val keyPair = KeyPair(PubKey(pubKey), PrivKey(privKey))
+        return keyPair to mnemonic
+    }
+
+    private fun validateMnemonic(mnemonic: String) {
+        val nrOfWords = mnemonic.split(" ").size
+        if (nrOfWords != 12 && nrOfWords != 24) {
+            throw IllegalArgumentException("Invalid number of words in mnemonic. Supported number of words are 12 or 24")
+        }
+    }
 }

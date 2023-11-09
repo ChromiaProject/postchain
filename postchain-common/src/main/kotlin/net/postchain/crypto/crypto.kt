@@ -54,6 +54,10 @@ interface CryptoSystem : Digester {
     fun validatePubKey(pubKey: ByteArray): Boolean
 
     fun derivePubKey(privKey: PrivKey): PubKey
+
+    fun createDeterministicKeyPair():Pair<KeyPair, String>
+
+    fun createDeterministicKeyPair(mnemonic: String):Pair<KeyPair, String>
 }
 
 fun interface Digester {
