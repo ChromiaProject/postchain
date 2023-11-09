@@ -13,15 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package net.postchain.bitcoinj.forks.base
 
 import java.util.HexFormat
 
-
 /**
- * Utility methods for bit, byte, and integer manipulation and conversion. Most of these were moved here
- * from `org.bitcoinj.core.Utils`.
+ * Code copied from: https://github.com/bitcoinj/bitcoinj/blob/bce4475aaf58fe533f338ef119d6255f815e3155/core/src/main/java/org/bitcoinj/base/internal/ByteUtils.java
+ * Copied code is under Apache License, the same license that is included in this file
+ * Changes:
+ *  - Have removed unneeded code
+ *  - Converted from Java to Kotlin
  */
+
 object ByteUtils {
 
     private val hexFormat = HexFormat.of()

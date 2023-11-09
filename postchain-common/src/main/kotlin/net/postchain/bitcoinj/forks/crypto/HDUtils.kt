@@ -1,9 +1,3 @@
-package net.postchain.bitcoinj.forks.crypto
-
-import org.bouncycastle.crypto.digests.SHA512Digest
-import org.bouncycastle.crypto.macs.HMac
-import org.bouncycastle.crypto.params.KeyParameter
-
 /*
  * Copyright 2013 Matija Mazi.
  * Copyright 2014 Giannis Dzegoutanis.
@@ -21,11 +15,20 @@ import org.bouncycastle.crypto.params.KeyParameter
  * limitations under the License.
  */
 
+package net.postchain.bitcoinj.forks.crypto
 
+import org.bouncycastle.crypto.digests.SHA512Digest
+import org.bouncycastle.crypto.macs.HMac
+import org.bouncycastle.crypto.params.KeyParameter
 
 /**
- * Static utilities used in BIP 32 Hierarchical Deterministic Wallets (HDW).
+ * Code copied from: https://github.com/bitcoinj/bitcoinj/blob/v0.16.1/core/src/main/java/org/bitcoinj/crypto/HDUtils.java
+ * Copied code is under Apache License, the same license that is included in this file
+ * Changes:
+ *  - Have removed unneeded code
+ *  - Converted from Java to Kotlin
  */
+
 object HDUtils {
     fun createHmacSha512Digest(key: ByteArray?): HMac {
         val digest = SHA512Digest()

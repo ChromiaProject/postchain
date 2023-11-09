@@ -34,11 +34,12 @@ import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 /**
- * This is a clean-room implementation of PBKDF2 using RFC 2898 as a reference.
- * Modified to use SHA-512 by Ken Sedgwick (ken@bonsai.com)
- * @see [RFC 2898
- * @see [PBKDF2 – Pure Java Implementation by Cryptofreek](https://cryptofreek.org/2012/11/29/pbkdf2-pure-java-implementation/)
-](https://datatracker.ietf.org/doc/html/rfc2898.section-5.2) */
+ * Code copied from: https://github.com/bitcoinj/bitcoinj/blob/v0.16.1/core/src/main/java/org/bitcoinj/crypto/MnemonicCode.java
+ * Copied code was under the same copyright license as in this file
+ * Changes:
+ *  - Have removed unneeded code
+ *  - Converted from Java to Kotlin
+ */
 object PBKDF2SHA512 {
     // Length of HMAC result
     private const val H_LEN = 64

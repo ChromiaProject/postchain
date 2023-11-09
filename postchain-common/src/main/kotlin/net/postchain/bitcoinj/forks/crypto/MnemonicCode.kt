@@ -14,11 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package net.postchain.bitcoinj.forks.crypto
 
 import net.postchain.bitcoinj.forks.base.ByteUtils
 import java.io.BufferedReader
-import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
@@ -27,33 +27,25 @@ import java.security.MessageDigest
 import java.util.Objects
 
 /**
- * A MnemonicCode object may be used to convert between binary seed values and
- * lists of words per [the BIP 39
- * specification](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)
+ * Code copied from: https://github.com/bitcoinj/bitcoinj/blob/v0.16.1/core/src/main/java/org/bitcoinj/crypto/MnemonicCode.java
+ * Copied code is under Apache License, the same license that is included in this file
+ * Changes:
+ *  - Have removed unneeded code
+ *  - Converted from Java to Kotlin
  */
-class MnemonicCode @JvmOverloads constructor() {
+class MnemonicCode {
 
     private val BIP39_ENGLISH_SHA256 = "ad90bf3beb7b0eb7e5acd74727dc0da96e0a280a258354e7293fb7e211ac03db"
-    /**
-     * Gets the word list this code uses.
-     * @return unmodifiable word list
-     */
     private var wordList: List<String>? = null
-    /**
-     * Creates an MnemonicCode object, initializing with words read from the supplied input stream.  If a wordListDigest
-     * is supplied the digest of the words will be checked.
-     * @param wordstream input stream of 2048 line-seperated words
-     * @param wordListDigest hex-encoded Sha256 digest to check against
-     * @throws IOException if there was a problem reading the steam
-     * @throws IllegalArgumentException if list size is not 2048 or digest mismatch
-     */
-    /** Initialise from the included word list. Won't work on Android.  */
+
     init {
         val md = MessageDigest.getInstance("SHA-256")
-        BufferedReader(InputStreamReader(openDefaultWords(), StandardCharsets.UTF_8)).use { br ->
+        openDefaultWords()?.let { InputStreamReader(it, StandardCharsets.UTF_8) }?.let {
+            BufferedReader(it).use { br ->
             wordList = br.lines()
                     .peek { word: String -> md.update(word.toByteArray()) }
                     .toList()
+        }
         }
         require(wordList!!.size == 2048) { "input stream did not contain 2048 words" }
 
@@ -64,8 +56,8 @@ class MnemonicCode @JvmOverloads constructor() {
     }
 
     @Throws(IOException::class)
-    private fun openDefaultWords(): InputStream {
-        return File("/Users/tim/chromaway/core/postchain/postchain-common/src/main/resources/mnemonic/wordlist/english.txt").inputStream()
+    private fun openDefaultWords(): InputStream? {
+        return object {}.javaClass.getResourceAsStream("/mnemonic/wordlist/english.txt")
     }
 
     private fun hash(input: ByteArray): ByteArray {
