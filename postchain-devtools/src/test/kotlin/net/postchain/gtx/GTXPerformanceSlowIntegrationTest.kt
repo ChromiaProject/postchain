@@ -40,23 +40,31 @@ import kotlin.system.measureNanoTime
  * parseTxVerify - parse and verify 1000 transactions, one gtx_test operation each.
  * 0.2 ms per transaction. (This suggests that signature verification is the most expensive part of transaction ingestion.)
  *
- * runXNodesWithYTxPerBlockBuildOnly - build X nodes, and process Y transactions per block, for 2 blocks.
+ * runXNodesWithYTxPerBlock - build X nodes, and process Y transactions with Z ops each per block for 2 blocks.
  * The third parameter indicates mode:
  *  * mode 0 - do not include transaction decoding in time
  *  * mode 1 - include transaction decoding in time
+ *  * mode 10 - same as mode 0, but using network-aware transaction queue (tx forwarding)
+ *  * mode 11 - same as mode 1, but using network-aware transaction queue (tx forwarding)
  *
- * 1 node, 1000 tx per block, mode 0: 390 ms per block
+ * 1 node, 1000 tx per block, 1 op per tx, mode 0: 310 ms per block
  * It's also worth looking for a log line saying something like:
- * Block is finalized: 365 ms, 2758 net tps, 2737 gross tps, delay: 0 ms, height: 1, accepted txs: 1000
+ * Block is finalized: 293 ms, 3446 net tps, 3408 gross tps, delay: 0 ms, height: 0, accepted txs: 1000
  *
  * The difference between "Time elapsed" number and "Block is finalized" number is the time spent on committing a block.
  * Thus, this test also gives you an idea how long it takes to commit a block, for example.
  *
- * Numbers from different runs suggest it would take 0.25 to 0.35 ms to append a single transaction on this machine.
+ * Numbers from different runs suggest it would take around 0.25-0.35 ms to apply a single transaction on this machine.
  *
  * 1 node, 1000 tx per block, mode 1: 590 ms per block
  * This is pretty straightforward, as it takes 200 ms to parse and verify 1000 transactions.
  * Enqueueing overhead seems to be negligible.
+ *
+ * 1 node, 100 tx per block, 10 ops per tx, mode 1: 142 ms per block
+ * 1 node, 10 tx per block, 100 ops per tx, mode 1: 91 ms per block
+ *
+ * So by adding multiple operations to a single tx, we can decrease operation processing time from 0.3 ms to 0.1 ms.
+ * I.e. transaction itself takes 0.2 ms, while the operation takes 0.1 ms.
  *
  * 4 nodes, 1000 tx per block, mode 0: 900 ms per block
  * Here's what's going on:
@@ -95,6 +103,19 @@ class GTXPerformanceSlowIntegrationTest : IntegrationTestSetup() {
                 .sign(sigMaker)
                 .buildGtx()
         return b.encode()
+    }
+
+    private fun makeTestBatchTx(txCounter: Int, opCount: Int,  blockchainRid: BlockchainRid): ByteArray {
+        val b = GtxBuilder(blockchainRid, listOf(pubKey(0)), net.postchain.devtools.gtx.myCS)
+
+        for (i in 0 until opCount) {
+            b.addOperation("gtx_test", gtv(1L), gtv((txCounter * opCount +  i).toString()))
+        }
+
+        return b.finish()
+                .sign(sigMaker)
+                .buildGtx()
+                .encode()
     }
 
     @Test
@@ -167,10 +188,12 @@ class GTXPerformanceSlowIntegrationTest : IntegrationTestSetup() {
 
     @ParameterizedTest
     @CsvSource(
-            "1, 1000, 0", "1, 1000, 1",
-            "4, 1000, 0", "4, 1000, 1"
+            "1, 1000, 1, 0", "1, 1000, 1, 1",
+            "1, 100, 10, 1", "1, 10, 100, 1",
+            "4, 1000, 1, 0", "4, 1000, 1, 1",
+            "4, 1000, 1, 10", "4, 1000, 1, 11"
     )
-    fun runXNodesWithYTxPerBlockBuildOnly(nodeCount: Int, txPerBlock: Int, mode: Int) {
+    fun runXNodesWithYTxPerBlockBuildOnly(nodeCount: Int, txPerBlock: Int, opPerTx: Int, mode: Int) {
         val blocksCount = 2
         configOverrides.setProperty("testpeerinfos", createPeerInfos(nodeCount))
         val nodes = createNodes(nodeCount, "/net/postchain/devtools/performance/blockchain_config_$nodeCount.xml")
@@ -179,17 +202,22 @@ class GTXPerformanceSlowIntegrationTest : IntegrationTestSetup() {
         var txId = 0
         val statusManager = (nodes[0].getBlockchainInstance() as ValidatorBlockchainProcess).statusManager
         for (i in 0 until blocksCount) {
-            val txs = (1..txPerBlock).map { makeTestTx(1, (txId++).toString(), blockchainRid) }
+            val txs = (1..txPerBlock).map { makeTestBatchTx(txId++, opPerTx, blockchainRid) }
 
-            val engine = nodes[statusManager.primaryIndex()]
+            val primaryNode = nodes[statusManager.primaryIndex()]
+            val engine = primaryNode
                     .getBlockchainInstance()
                     .blockchainEngine
             val txFactory = engine
                     .getConfiguration()
                     .getTransactionFactory()
-            val queue = engine.getTransactionQueue()
 
-            val nanoDelta = if (mode == 0) {
+            val queue =  if (mode < 10)
+                primaryNode.transactionQueue()
+            else
+                (primaryNode.getBlockchainInstance() as ValidatorBlockchainProcess).networkAwareTxQueue
+
+            val nanoDelta = if ((mode % 10) == 0) {
                 txs.forEach {
                     queue.enqueue(txFactory.decodeTransaction(it))
                 }

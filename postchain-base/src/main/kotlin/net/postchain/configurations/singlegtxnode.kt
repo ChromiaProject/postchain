@@ -15,6 +15,7 @@ import net.postchain.gtx.GTXSchemaManager
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.data.ExtOpData
 import org.apache.commons.dbutils.QueryRunner
+import org.apache.commons.dbutils.handlers.ColumnListHandler
 import org.apache.commons.dbutils.handlers.ScalarHandler
 
 // TODO: [POS-128]: Refactor this
@@ -53,8 +54,8 @@ class GTXTestOp(@Suppress("UNUSED_PARAMETER") u: Unit, opdata: ExtOpData) : GTXO
         try {
             r.update(
                     ctx.conn,
-                    """INSERT INTO ${table_gtx_test_value(ctx)}(tx_iid, value) VALUES (?, ?)""",
-                    ctx.txIID, data.args[1].asString()
+                    """INSERT INTO ${table_gtx_test_value(ctx)}(tx_iid, op_idx, value) VALUES (?,?, ?)""",
+                    ctx.txIID, data.opIndex, data.args[1].asString()
             )
         } catch (e: Exception) {
             throw e // Just a good spot to place breakpoint
@@ -77,11 +78,8 @@ class GTXTestModule : SimpleGTXModule<Unit>(Unit,
                 INNER JOIN ${table_transactions(ctxt)} t ON g.tx_iid=t.tx_iid
                 WHERE t.tx_rid = ?
             """.trimIndent()
-            val value = r.query(ctxt.conn, sql, nullableStringReader, txRID.asByteArray(true))
-            if (value == null)
-                GtvNull
-            else
-                gtv(value)
+            val value = r.query(ctxt.conn, sql, ColumnListHandler<String>(), txRID.asByteArray(true))
+            gtv( value.map { gtv(it) })
         })
 ) {
     companion object : KLogging()
@@ -91,7 +89,8 @@ class GTXTestModule : SimpleGTXModule<Unit>(Unit,
         val version = GTXSchemaManager.getModuleVersion(ctx, moduleName)
         logger.info("initializeDB version = $version")
         if (version == null) {
-            val sql = "CREATE TABLE ${table_gtx_test_value(ctx)}(tx_iid BIGINT PRIMARY KEY, value TEXT NOT NULL)"
+            val sql = "CREATE TABLE ${table_gtx_test_value(ctx)}(tx_iid BIGINT, op_idx INTEGER, value TEXT NOT NULL," +
+                    "PRIMARY KEY (tx_iid, op_idx))"
             r.update(ctx.conn, sql)
             GTXSchemaManager.setModuleVersion(ctx, moduleName, 0)
         }
