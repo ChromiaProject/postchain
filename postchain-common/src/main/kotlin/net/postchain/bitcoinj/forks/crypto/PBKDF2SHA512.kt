@@ -22,7 +22,6 @@
  */
 package net.postchain.bitcoinj.forks.crypto
 
-import net.postchain.bitcoinj.forks.base.ByteUtils
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -39,6 +38,7 @@ import javax.crypto.spec.SecretKeySpec
  * Changes:
  *  - Have removed unneeded code
  *  - Converted from Java to Kotlin
+ *  - Refactored concat to method. Line 84 in original file
  */
 object PBKDF2SHA512 {
     // Length of HMAC result
@@ -87,7 +87,7 @@ object PBKDF2SHA512 {
         mac.init(key)
         for (j in 0 until c) {
             if (j == 0) {
-                val baU: ByteArray = ByteUtils.concat(S.toByteArray(StandardCharsets.UTF_8), INT(i))
+                val baU: ByteArray = concat(S.toByteArray(StandardCharsets.UTF_8), INT(i))
                 U_XOR = mac.doFinal(baU)
                 U_LAST = U_XOR
             } else {
@@ -106,5 +106,12 @@ object PBKDF2SHA512 {
                 .order(ByteOrder.BIG_ENDIAN)
                 .putInt(i)
                 .array()
+    }
+
+    private fun concat(b1: ByteArray, b2: ByteArray): ByteArray {
+        val result = ByteArray(b1.size + b2.size)
+        System.arraycopy(b1, 0, result, 0, b1.size)
+        System.arraycopy(b2, 0, result, b1.size, b2.size)
+        return result
     }
 }

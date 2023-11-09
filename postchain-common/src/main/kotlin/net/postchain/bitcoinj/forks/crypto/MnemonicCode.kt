@@ -17,13 +17,13 @@
 
 package net.postchain.bitcoinj.forks.crypto
 
-import net.postchain.bitcoinj.forks.base.ByteUtils
 import java.io.BufferedReader
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
+import java.util.HexFormat
 import java.util.Objects
 
 /**
@@ -32,6 +32,7 @@ import java.util.Objects
  * Changes:
  *  - Have removed unneeded code
  *  - Converted from Java to Kotlin
+ *  - Refactored hex formatting to method. line 107 in original file
  */
 class MnemonicCode {
 
@@ -51,7 +52,7 @@ class MnemonicCode {
 
         // If a wordListDigest is supplied check to make sure it matches.
         val digest = md.digest()
-        val hexdigest: String = ByteUtils.formatHex(digest)
+        val hexdigest: String = formatHex(digest)
         require(hexdigest == BIP39_ENGLISH_SHA256) { "wordlist digest mismatch" }
     }
 
@@ -130,5 +131,10 @@ class MnemonicCode {
         val bits = BooleanArray(data.size * 8)
         for (i in data.indices) for (j in 0..7) bits[i * 8 + j] = data[i].toInt() and (1 shl 7 - j) != 0
         return bits
+    }
+
+    fun formatHex(bytes: ByteArray?): String {
+        val hexFormat = HexFormat.of()
+        return hexFormat.formatHex(bytes)
     }
 }
