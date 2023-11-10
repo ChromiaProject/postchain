@@ -17,6 +17,7 @@ import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.BlockHeader
 import net.postchain.ebft.message.BlockRange
 import net.postchain.ebft.message.CompleteBlock
+import net.postchain.ebft.message.EbftVersion
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
@@ -153,6 +154,7 @@ class SlowSynchronizer(
 
                     is Status -> if (message.configHash != null && checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
                     is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
+                    is EbftVersion -> logger.debug { "Received EbftVersion from peer $peerId" }
                     else -> logger.debug { "Unhandled type $message from peer $peerId" }
                 }
             } catch (e: Exception) {

@@ -29,6 +29,7 @@ import net.postchain.ebft.message.BlockHeader
 import net.postchain.ebft.message.BlockRange
 import net.postchain.ebft.message.BlockSignature
 import net.postchain.ebft.message.CompleteBlock
+import net.postchain.ebft.message.EbftVersion
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
@@ -208,7 +209,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                 }
 
                                 is AppliedConfig -> applyConfig(message.configHash, message.height)
-
+                                is EbftVersion -> logger.debug { "Received EbftVersion from peer $xPeerId" }
                                 else -> throw ProgrammerMistake("Unhandled type ${message::class}")
                             }
                         }

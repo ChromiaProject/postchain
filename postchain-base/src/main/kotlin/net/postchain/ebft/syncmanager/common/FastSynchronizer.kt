@@ -24,6 +24,7 @@ import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.message.EbftVersion
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
@@ -673,8 +674,8 @@ class FastSynchronizer(
                     }
 
                     is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
-
                     is Transaction -> logger.trace { "Got transaction from peer $peerId, ignoring" }
+                    is EbftVersion -> logger.debug { "Received EbftVersion from peer $peerId" }
                     else -> logger.warn { "Unhandled message type: ${message.topic} from peer $peerId" } // WARN b/c this might be buggy?
                 }
             } catch (e: Exception) {

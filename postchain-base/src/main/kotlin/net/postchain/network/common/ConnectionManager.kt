@@ -33,9 +33,4 @@ interface ConnectionManager : NetworkTopology, Shutdownable {
      * @return all nodes connected to the given chain
      */
     fun getConnectedNodes(chainId: Long): List<NodeRid>
-
-    /**
-     * @return packet version for the given chain and node
-     */
-    fun getPacketVersion(chainId: Long, nodeRid: NodeRid): Long
 }

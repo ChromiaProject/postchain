@@ -84,6 +84,7 @@ class EbftPacketCodec(val config: PeerCommConfiguration, val blockchainRID: Bloc
             is AppliedConfig -> appliedConfigCache.get(pubKey, rawMessage, signedMessage.topic)
                     ?: appliedConfigCache.put(pubKey, rawMessage, verifySignedMessage(signedMessage, pubKey, packetVersion))
 
+            is EbftVersion -> verifySignedMessage(signedMessage, pubKey, 1)
             else -> verifySignedMessage(signedMessage, pubKey, packetVersion)
         }
     }

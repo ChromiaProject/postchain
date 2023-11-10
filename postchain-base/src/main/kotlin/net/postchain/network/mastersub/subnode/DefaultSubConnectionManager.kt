@@ -45,9 +45,7 @@ interface SubConnectionManager : ConnectionManager {
      * Sends a [MsMessage] to the Master node
      */
     fun sendMessageToMaster(chainId: Long, message: MsMessage): Boolean
-
 }
-
 
 /**
  * While the "master" simply pass on messages, the subnode must deal with the content of the messages,
@@ -170,8 +168,6 @@ class DefaultSubConnectionManager(
                 ?.let { connectedPeers[it.getBlockchainRid()] }
                 ?: emptyList()
     }
-
-    override fun getPacketVersion(chainId: Long, nodeRid: NodeRid): Long = 1
 
     @Synchronized
     override fun disconnectChain(chainId: Long) {

@@ -6,6 +6,7 @@ import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BadDataException
 import net.postchain.core.BadMessageException
@@ -44,6 +45,7 @@ class DefaultPeerCommunicationManager<PacketType>(
             SOURCE_NODE_TAG to myPeerId,
     )
 
+    private val nodePacketVersions = mutableMapOf<NodeRid, Long>()
     private var inboundPackets = mutableListOf<ReceivedPacket<PacketType>>()
     var connected = false
 
@@ -164,7 +166,7 @@ class DefaultPeerCommunicationManager<PacketType>(
         connected = false
     }
 
-    override fun getPeerPacketVersion(peerId: NodeRid): Long = connectionManager.getPacketVersion(chainId, peerId)
+    override fun getPeerPacketVersion(peerId: NodeRid): Long = nodePacketVersions.getOrDefault(peerId, 1)
 
     private fun sendEncodedPacket(lazyPacket: LazyPacket, recipient: NodeRid) {
         require(NodeRid(config.pubKey) != recipient) {
@@ -177,21 +179,21 @@ class DefaultPeerCommunicationManager<PacketType>(
         )
     }
 
-    private fun consumePacket(packet: ByteArray, peerId: NodeRid) {
+    internal fun consumePacket(packet: ByteArray, peerId: NodeRid) {
         try {
             /**
              * Packet decoding should not be synchronized, so we can make
              * use of parallel processing in different threads
              */
-            val packetVersion = getPeerPacketVersion(peerId)
-            val decodedPacket = packetCodec.decodePacket(peerId.data, packet, packetVersion)
+            val packetVersion = getPacketVersion(peerId, packet)
+            val decodedPacket = decodePacket(peerId, packet, packetVersion) ?: return
             synchronized(this) {
                 if (logger.isTraceEnabled) {
                     withLoggingContext(
                             *baseLoggingContext,
                             SOURCE_NODE_TAG to peerId.toHex(),
                             TARGET_NODE_TAG to myPeerId,
-                            MESSAGE_TYPE_TAG to decodedPacket!!::class.java.simpleName
+                            MESSAGE_TYPE_TAG to decodedPacket::class.java.simpleName
                     ) {
                         logger.trace { "receivePacket(${peerId.toHex()}, ${packetToString(decodedPacket, packetVersion)}, $packetVersion)" }
                     }
@@ -203,5 +205,45 @@ class DefaultPeerCommunicationManager<PacketType>(
         } catch (e: BadDataException) {
             logger.error("Error when receiving message from peer $peerId", e)
         }
+    }
+
+    private fun decodePacket(peerId: NodeRid, packet: ByteArray, packetVersion: Long) =
+            try {
+                packetCodec.decodePacket(peerId.data, packet, packetVersion)
+            } catch (e: UserMistake) {
+                if (packetVersion > 1) {
+                    // In some cases, our packet version has not been received quick enough by the other peer,
+                    // so it will think we are on packet version 1. This will be resolved as soon as the version
+                    // packet is received by the other node, but there is a small window when this might happen,
+                    // and in that case we will try to decode with version 1 instead to verify that is the case.
+                    // If it is version 1, we will discard it since we do not want to risk the version being used
+                    // further up the call chain, e.g., starting the AppliedConfigSender when we should not.
+                    try {
+                        packetCodec.decodePacket(peerId.data, packet, 1)
+                        logger.info { "Got exception when decoding receive packet from ${peerId.toHex()} with version $packetVersion. Retry with version 1 succeeded so discarding packet." }
+                        null
+                    } catch (e2: Exception) {
+                        // Throw the original exception if there really is a problem with the verification and not a
+                        // version problem.
+                        throw e
+                    }
+                } else {
+                    throw e
+                }
+            }
+
+    private fun getPacketVersion(peerId: NodeRid, packet: ByteArray): Long {
+        if (nodePacketVersions[peerId] == null) {
+            if (packetCodec.isVersionPacket(packet)) {
+                nodePacketVersions[peerId] = packetCodec.parseVersionPacket(packet)
+                logger.info { "Got packet version ${nodePacketVersions[peerId]} from $peerId" }
+            } else {
+                // If we end up here, we did not get a version packet from the other node (yet),
+                // and so node is probably legacy of version 1
+                logger.info { "Did not receive version for peer $peerId. Will default to packet version 1." }
+                nodePacketVersions[peerId] = 1
+            }
+        }
+        return getPeerPacketVersion(peerId)
     }
 }

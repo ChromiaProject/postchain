@@ -57,7 +57,6 @@ class IntNettyConnector2PeersCommunicationIT {
     fun testConnectAndCommunicate() {
         // Connecting 1 -> 2
         val peerDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
-        assertThat(peerDescriptor2.packetVersion).isEqualTo(1)
         context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.packetCodec)
 
         // Waiting for all connections to be established
@@ -67,11 +66,9 @@ class IntNettyConnector2PeersCommunicationIT {
                 .untilAsserted {
                     verify(context1.events).onNodeConnected(connection1.capture())
                     assertThat(connection1.firstValue.descriptor().nodeId.data).isContentEqualTo(peerInfo2.pubKey)
-                    assertThat(connection1.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     verify(context2.events).onNodeConnected(connection2.capture())
                     assertThat(connection2.firstValue.descriptor().nodeId.data).isContentEqualTo(peerInfo1.pubKey)
-                    assertThat(connection2.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
                 }
 
         // Sending packets
@@ -96,17 +93,19 @@ class IntNettyConnector2PeersCommunicationIT {
                     // Peer1
                     val actualPackets1 = argumentCaptor<ByteArray>()
                     val expected1 = packets2.map(ByteArray::wrap).toTypedArray()
-                    verify(context1.packets, times(2)).handle(actualPackets1.capture(), any())
-                    assertThat(actualPackets1.firstValue.wrap()).isIn(*expected1)
+                    verify(context1.packets, times(3)).handle(actualPackets1.capture(), any())
+                    assertThat(actualPackets1.firstValue.wrap()).isEqualTo(INT_PACKET_VERSION_ARRAY.wrap())
                     assertThat(actualPackets1.secondValue.wrap()).isIn(*expected1)
+                    assertThat(actualPackets1.thirdValue.wrap()).isIn(*expected1)
 
                     // Peer2
                     val actualPackets2 = argumentCaptor<ByteArray>()
                     val expected2 = packets1.map(ByteArray::wrap).toTypedArray()
-                    verify(context2.packets, times(3)).handle(actualPackets2.capture(), any())
-                    assertThat(actualPackets2.firstValue.wrap()).isIn(*expected2)
+                    verify(context2.packets, times(4)).handle(actualPackets2.capture(), any())
+                    assertThat(actualPackets2.firstValue.wrap()).isEqualTo(INT_PACKET_VERSION_ARRAY.wrap())
                     assertThat(actualPackets2.secondValue.wrap()).isIn(*expected2)
                     assertThat(actualPackets2.thirdValue.wrap()).isIn(*expected2)
+                    assertThat(actualPackets2.allValues[3].wrap()).isIn(*expected2)
                 }
     }
 }

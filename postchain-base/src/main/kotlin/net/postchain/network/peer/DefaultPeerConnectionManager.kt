@@ -215,10 +215,6 @@ open class DefaultPeerConnectionManager<PacketType>(
     }
 
     @Synchronized
-    override fun getPacketVersion(chainId: Long, nodeRid: NodeRid): Long =
-            chainsWithConnections.getNodeConnection(chainId, nodeRid)?.descriptor()?.packetVersion ?: 1
-
-    @Synchronized
     override fun broadcastPacket(data: LazyPacket, chainId: Long) {
         val chain = chainsWithConnections.getOrThrow(chainId)
         for (conn in chain.getAllConnections()) {
