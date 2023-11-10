@@ -41,14 +41,6 @@ class MockCryptoSystem : CryptoSystem {
         return PubKey(secp256k1_derivePubKey(privKey.data))
     }
 
-    override fun generateKeyPairWithMnemonic(): Pair<KeyPair, String> {
-        TODO("Not yet implemented")
-    }
-
-    override fun recoverKeyPairFromMnemonic(mnemonic: String): Pair<KeyPair, String> {
-        TODO("Not yet implemented")
-    }
-
     override fun getRandomBytes(size: Int): ByteArray {
         return ByteArray(size)
     }

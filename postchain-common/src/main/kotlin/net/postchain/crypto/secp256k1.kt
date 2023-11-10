@@ -218,14 +218,14 @@ open class Secp256K1CryptoSystem : BaseCryptoSystem() {
             if (subjectID[0] in setOf(2.toByte(), 3.toByte(), 4.toByte(), 6.toByte(), 7.toByte())) ::secp256k1_verify else null
 
 
-    override fun generateKeyPairWithMnemonic(): Pair<KeyPair, String> {
+    fun generateKeyPairWithMnemonic(): Pair<KeyPair, String> {
         val mnemonicInstance = MnemonicCode()
         val entropy = getRandomBytes(32)
         val mnemonic = mnemonicInstance.toMnemonic(entropy)
         return recoverKeyPairFromMnemonic(mnemonic.joinToString(" "))
     }
 
-    override fun recoverKeyPairFromMnemonic(mnemonic: String): Pair<KeyPair, String> {
+    fun recoverKeyPairFromMnemonic(mnemonic: String): Pair<KeyPair, String> {
         val mnemonicInstance = MnemonicCode()
         validateMnemonic(mnemonic)
         val seed = mnemonicInstance.toSeed(mnemonic.split(" "), "")
