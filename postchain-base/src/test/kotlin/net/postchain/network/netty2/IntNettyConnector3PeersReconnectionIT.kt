@@ -22,7 +22,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 
@@ -92,24 +91,18 @@ class IntNettyConnector3PeersReconnectionIT {
                     verify(context1.events, times(2)).onNodeConnected(connection1.capture())
                     assertThat(connection1.firstValue.descriptor().nodeId).isIn(*expected1)
                     assertThat(connection1.secondValue.descriptor().nodeId).isIn(*expected1)
-                    assertThat(connection1.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
-                    assertThat(connection1.secondValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     // 2
                     val expected2 = arrayOf(peerInfo1, peerInfo3).map(PeerInfo::peerId).toTypedArray()
                     verify(context2.events, times(2)).onNodeConnected(connection2.capture())
                     assertThat(connection2.firstValue.descriptor().nodeId).isIn(*expected2)
                     assertThat(connection2.secondValue.descriptor().nodeId).isIn(*expected2)
-                    assertThat(connection2.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
-                    assertThat(connection2.secondValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     // 3
                     val expected3 = arrayOf(peerInfo1, peerInfo2).map(PeerInfo::peerId).toTypedArray()
                     verify(context3.events, times(2)).onNodeConnected(connection3.capture())
                     assertThat(connection3.firstValue.descriptor().nodeId).isIn(*expected3)
                     assertThat(connection3.secondValue.descriptor().nodeId).isIn(*expected3)
-                    assertThat(connection3.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
-                    assertThat(connection3.secondValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
                 }
 
         // Disconnecting: peer3 disconnects from peer1 and peer2
@@ -139,8 +132,10 @@ class IntNettyConnector3PeersReconnectionIT {
                 .untilAsserted {
                     // Peer2
                     val packets2 = argumentCaptor<ByteArray>()
-                    verify(context2.packets, times(1)).handle(packets2.capture(), any())
-                    assertThat(packets2.firstValue.wrap()).isEqualTo(packet1.wrap())
+                    verify(context2.packets, times(3)).handle(packets2.capture(), any())
+                    assertThat(packets2.firstValue.wrap()).isEqualTo(INT_PACKET_VERSION_ARRAY.wrap())
+                    assertThat(packets2.secondValue.wrap()).isEqualTo(INT_PACKET_VERSION_ARRAY.wrap())
+                    assertThat(packets2.thirdValue.wrap()).isEqualTo(packet1.wrap())
                 }
 
         // Asserting peer3 haven't received packet1
@@ -148,7 +143,10 @@ class IntNettyConnector3PeersReconnectionIT {
                 .atMost(FIVE_SECONDS.multiply(2))
                 .untilAsserted {
                     // Peer3
-                    verify(context3.packets, never()).handle(any(), any())
+                    val packets3 = argumentCaptor<ByteArray>()
+                    verify(context3.packets, times(2)).handle(packets3.capture(), any())
+                    assertThat(packets3.firstValue.wrap()).isEqualTo(INT_PACKET_VERSION_ARRAY.wrap())
+                    assertThat(packets3.secondValue.wrap()).isEqualTo(INT_PACKET_VERSION_ARRAY.wrap())
                 }
 
         // Re-borning of peer3
@@ -170,20 +168,16 @@ class IntNettyConnector3PeersReconnectionIT {
                     // 1
                     verify(context1.events, times(3)).onNodeConnected(connection1_2.capture())
                     assertThat(connection1_2.thirdValue.descriptor().nodeId).isEqualTo(peerInfo3.peerId())
-                    assertThat(connection1_2.thirdValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     // 2
                     verify(context2.events, times(3)).onNodeConnected(connection2_2.capture())
                     assertThat(connection2_2.thirdValue.descriptor().nodeId).isEqualTo(peerInfo3.peerId())
-                    assertThat(connection2_2.thirdValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
 
                     // 3
                     val expected3 = arrayOf(peerInfo1, peerInfo2).map(PeerInfo::peerId).toTypedArray()
                     verify(context3.events, times(2)).onNodeConnected(connection3_2.capture())
                     assertThat(connection3_2.firstValue.descriptor().nodeId).isIn(*expected3)
                     assertThat(connection3_2.secondValue.descriptor().nodeId).isIn(*expected3)
-                    assertThat(connection3_2.firstValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
-                    assertThat(connection3_2.secondValue.descriptor().packetVersion).isEqualTo(INT_PACKET_VERSION)
                 }
 
         // Sending packets
@@ -203,22 +197,30 @@ class IntNettyConnector3PeersReconnectionIT {
                 .untilAsserted {
                     // Peer1
                     val packets1 = argumentCaptor<ByteArray>()
-                    verify(context1.packets, times(1)).handle(packets1.capture(), any())
-                    assertThat(packets1.firstValue.wrap()).isEqualTo(packet3_2.wrap())
+                    verify(context1.packets, times(4)).handle(packets1.capture(), any())
+                    assertThat(packets1.firstValue.wrap()).isEqualTo(INT_PACKET_VERSION_ARRAY.wrap())
+                    assertThat(packets1.secondValue.wrap()).isEqualTo(INT_PACKET_VERSION_ARRAY.wrap())
+                    assertThat(packets1.thirdValue.wrap()).isEqualTo(INT_PACKET_VERSION_ARRAY.wrap())
+                    assertThat(packets1.allValues[3].wrap()).isEqualTo(packet3_2.wrap())
 
                     // Peer2
                     val packets2 = argumentCaptor<ByteArray>()
-                    val expected2 = arrayOf(packet1, packet3_2).map(ByteArray::wrap).toTypedArray()
-                    verify(context2.packets, times(2)).handle(packets2.capture(), any())
+                    val expected2 = arrayOf(packet1, packet3_2, INT_PACKET_VERSION_ARRAY).map(ByteArray::wrap).toTypedArray()
+                    verify(context2.packets, times(5)).handle(packets2.capture(), any())
                     assertThat(packets2.firstValue.wrap()).isIn(*expected2)
                     assertThat(packets2.secondValue.wrap()).isIn(*expected2)
+                    assertThat(packets2.thirdValue.wrap()).isIn(*expected2)
+                    assertThat(packets2.allValues[3].wrap()).isIn(*expected2)
+                    assertThat(packets2.allValues[4].wrap()).isIn(*expected2)
 
                     // Peer3
                     val packets3 = argumentCaptor<ByteArray>()
-                    val expected3 = arrayOf(packet1_2, packet2_2).map(ByteArray::wrap).toTypedArray()
-                    verify(context3.packets, times(2)).handle(packets3.capture(), any())
+                    val expected3 = arrayOf(packet1_2, packet2_2, INT_PACKET_VERSION_ARRAY).map(ByteArray::wrap).toTypedArray()
+                    verify(context3.packets, times(4)).handle(packets3.capture(), any())
                     assertThat(packets3.firstValue.wrap()).isIn(*expected3)
                     assertThat(packets3.secondValue.wrap()).isIn(*expected3)
+                    assertThat(packets3.thirdValue.wrap()).isIn(*expected3)
+                    assertThat(packets3.allValues[3].wrap()).isIn(*expected3)
                 }
     }
 

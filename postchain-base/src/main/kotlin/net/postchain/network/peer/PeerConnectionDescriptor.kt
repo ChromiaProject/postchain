@@ -12,8 +12,7 @@ import net.postchain.network.common.ConnectionDirection
 class PeerConnectionDescriptor(
         val bcRid: BlockchainRid,
         val nodeId: NodeRid,
-        val dir: ConnectionDirection,
-        var packetVersion: Long = 1
+        val dir: ConnectionDirection
 ) : ConnectionDescriptor(bcRid) {
 
     fun isOutgoing() = (dir == ConnectionDirection.OUTGOING)

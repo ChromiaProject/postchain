@@ -67,7 +67,7 @@ class NettyServerPeerConnection<PacketType>(
             if (isPing(message)) {
                 handlePing(ctx)
             } else if (isVersion(message)) {
-                handleVersion(message)
+                handleVersion(message, ctx)
             } else {
                 handleMessage(message, ctx)
             }
@@ -78,11 +78,11 @@ class NettyServerPeerConnection<PacketType>(
         }
     }
 
-    private fun handleVersion(message: ByteArray) {
+    private fun handleVersion(message: ByteArray, ctx: ChannelHandlerContext?) {
         if (!hasReceivedVersion) {
-            descriptor().packetVersion = packetCodec.parseVersionPacket(message)
-            logger.info { "Got packet version ${descriptor().packetVersion} from ${descriptor().nodeId.toHex()}" }
+            logger.debug { "Got packet version from ${descriptor().nodeId.toHex()}" }
             hasReceivedVersion = true
+            handleMessage(message, ctx)
         }
     }
 
@@ -100,8 +100,8 @@ class NettyServerPeerConnection<PacketType>(
 
             // Notify peer that we have ping capability
             ctx?.let {
-                sendPing(it)
                 sendVersion(it)
+                sendPing(it)
             }
             onConnectedHandler?.invoke(this)
         } else {

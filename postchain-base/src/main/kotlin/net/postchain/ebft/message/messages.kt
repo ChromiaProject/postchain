@@ -112,14 +112,14 @@ class Status(
             var signature: Signature? = null
             var configHash: ByteArray? = null
             when {
-                version >= 2 -> {
+                version >= 2 && gtv.getSize() == 10 -> {
                     val sigSubjectID = gtvToNullableByteArray(gtv[7])
                     val sigData = gtvToNullableByteArray(gtv[8])
                     signature = if (sigSubjectID != null && sigData != null) Signature(sigSubjectID, sigData) else null
-
                     configHash = gtvToNullableByteArray(gtv[9])
                 }
             }
+
             return Status(
                     gtvToNullableByteArray(gtv[1]),
                     gtv[2].asInteger(),

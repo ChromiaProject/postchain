@@ -10,6 +10,7 @@ import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
 import net.postchain.config.app.AppConfig
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.ebft.message.EbftVersion
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.peer.PeerConnection
@@ -21,6 +22,7 @@ import org.awaitility.Duration.TEN_SECONDS
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.fail
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
@@ -159,26 +161,44 @@ class EbftNettyConnector3PeersCommunicationIT {
                 .untilAsserted {
                     // Peer1
                     val actualPackets1 = argumentCaptor<ByteArray>()
-                    val expected1 = arrayOf(20L, 21L, 30L, 31L)
-                    verify(context1.packets, times(4)).handle(actualPackets1.capture(), any())
+                    val expected1 = arrayOf(20L, 21L, 30L, 31L, 1337L)
+                    verify(context1.packets, times(6)).handle(actualPackets1.capture(), any())
                     actualPackets1.allValues
-                            .map { (context1.decodePacket(it, 1) as GetBlockAtHeight).height }
+                            .map {
+                                when (val message = context1.decodePacket(it, 1)) {
+                                    is GetBlockAtHeight -> message.height
+                                    is EbftVersion -> 1337
+                                    else -> fail("Got unexpected message")
+                                }
+                            }
                             .forEach { assertThat(it).isIn(*expected1) }
 
                     // Peer2
                     val actualPackets2 = argumentCaptor<ByteArray>()
-                    val expected2 = arrayOf(10L, 11L, 30L, 31L)
-                    verify(context2.packets, times(4)).handle(actualPackets2.capture(), any())
+                    val expected2 = arrayOf(10L, 11L, 30L, 31L, 1337L)
+                    verify(context2.packets, times(6)).handle(actualPackets2.capture(), any())
                     actualPackets2.allValues
-                            .map { (context2.decodePacket(it, 1) as GetBlockAtHeight).height }
+                            .map {
+                                when (val message = context2.decodePacket(it, 1)) {
+                                    is GetBlockAtHeight -> message.height
+                                    is EbftVersion -> 1337
+                                    else -> fail("Got unexpected message")
+                                }
+                            }
                             .forEach { assertThat(it).isIn(*expected2) }
 
                     // Peer2
                     val actualPackets3 = argumentCaptor<ByteArray>()
-                    val expected3 = arrayOf(10L, 11L, 20L, 21L)
-                    verify(context3.packets, times(4)).handle(actualPackets3.capture(), any())
+                    val expected3 = arrayOf(10L, 11L, 20L, 21L, 1337L)
+                    verify(context3.packets, times(6)).handle(actualPackets3.capture(), any())
                     actualPackets3.allValues
-                            .map { (context2.decodePacket(it, 1) as GetBlockAtHeight).height }
+                            .map {
+                                when (val message = context2.decodePacket(it, 1)) {
+                                    is GetBlockAtHeight -> message.height
+                                    is EbftVersion -> 1337
+                                    else -> fail("Got unexpected message")
+                                }
+                            }
                             .forEach { assertThat(it).isIn(*expected3) }
                 }
     }
