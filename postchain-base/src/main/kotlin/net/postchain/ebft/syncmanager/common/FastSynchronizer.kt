@@ -674,7 +674,7 @@ class FastSynchronizer(
 
                     is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
 
-                    is Transaction -> logger.info("Got unexpected transaction from peer $peerId, ignoring")
+                    is Transaction -> logger.trace { "Got transaction from peer $peerId, ignoring" }
                     else -> logger.warn { "Unhandled message type: ${message.topic} from peer $peerId" } // WARN b/c this might be buggy?
                 }
             } catch (e: Exception) {
