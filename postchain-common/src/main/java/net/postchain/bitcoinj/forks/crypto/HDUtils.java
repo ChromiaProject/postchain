@@ -15,33 +15,32 @@
  * limitations under the License.
  */
 
-package net.postchain.bitcoinj.forks.crypto
+package net.postchain.bitcoinj.forks.crypto;
 
-import org.bouncycastle.crypto.digests.SHA512Digest
-import org.bouncycastle.crypto.macs.HMac
-import org.bouncycastle.crypto.params.KeyParameter
+import org.bouncycastle.crypto.digests.SHA512Digest;
+import org.bouncycastle.crypto.macs.HMac;
+import org.bouncycastle.crypto.params.KeyParameter;
 
 /**
  * Code copied from: https://github.com/bitcoinj/bitcoinj/blob/v0.16.1/core/src/main/java/org/bitcoinj/crypto/HDUtils.java
  * Copied code is under Apache License, the same license that is included in this file
  * Changes:
  *  - Have removed unneeded code
- *  - Converted from Java to Kotlin
  */
+public final class HDUtils {
 
-object HDUtils {
-    fun createHmacSha512Digest(key: ByteArray?): HMac {
-        val digest = SHA512Digest()
-        val hMac = HMac(digest)
-        hMac.init(KeyParameter(key))
-        return hMac
+    static HMac createHmacSha512Digest(byte[] key) {
+        SHA512Digest digest = new SHA512Digest();
+        HMac hMac = new HMac(digest);
+        hMac.init(new KeyParameter(key));
+        return hMac;
     }
 
-    fun hmacSha512(hmacSha512: HMac, input: ByteArray): ByteArray {
-        hmacSha512.reset()
-        hmacSha512.update(input, 0, input.size)
-        val out = ByteArray(64)
-        hmacSha512.doFinal(out, 0)
-        return out
+    static byte[] hmacSha512(HMac hmacSha512, byte[] input) {
+        hmacSha512.reset();
+        hmacSha512.update(input, 0, input.length);
+        byte[] out = new byte[64];
+        hmacSha512.doFinal(out, 0);
+        return out;
     }
 }
