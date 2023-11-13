@@ -145,10 +145,16 @@ class BaseBlockDatabase(
                     addBlockLog("Got error when loading: ${exception.message}")
                     throw exception
                 } else {
-                    theBlockBuilder.getBTrace()?.let { updateBTrace(existingBTrace, it) }
-                    val blockSample = Timer.start(Metrics.globalRegistry)
-                    theBlockBuilder.commit(block.witness) // No need to set BTrace, because we have it
-                    blockSample.stop(metrics.confirmedBlocks)
+                    try {
+                        theBlockBuilder.getBTrace()?.let { updateBTrace(existingBTrace, it) }
+                        val blockSample = Timer.start(Metrics.globalRegistry)
+                        theBlockBuilder.commit(block.witness) // No need to set BTrace, because we have it
+                        blockSample.stop(metrics.confirmedBlocks)
+                    } catch (e: Exception) {
+                        // In case exception was thrown before DB commit was successful we need to roll back
+                        theBlockBuilder.rollback()
+                        throw e
+                    }
                     metrics.confirmedTransactions.increment(block.transactions.size.toDouble())
                     addBlockLog("Done commit", theBlockBuilder.getBTrace())
                 }
