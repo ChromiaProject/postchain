@@ -263,7 +263,7 @@ open class ManagedBlockchainProcessManager(
                             ssaInfo("Launching blockchain")
                             startBlockchainAsync(it.chainId, bTrace)
                         } else if (process.getBlockchainState() != it.state) {
-                            ssaInfo("Restarting blockchain due to state change")
+                            ssaInfo("Restarting blockchain due to state change from ${process.getBlockchainState()} to ${it.state}")
                             startBlockchainAsync(it.chainId, bTrace)
                         }
                     }

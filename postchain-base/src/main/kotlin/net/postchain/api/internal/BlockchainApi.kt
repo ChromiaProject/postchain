@@ -180,4 +180,10 @@ object BlockchainApi {
         db.removeAllBlockchainSpecificFunctions(ctx)
         db.removeAllBlockchainSpecificTables(ctx, listOf("configurations", "blocks", "transactions"))
     }
+
+    fun isBlockchainArchivedOnNode(ctx: EContext): Boolean {
+        val db = DatabaseAccess.of(ctx)
+        val tables = db.getBlockchainTables(ctx).map { it.substringAfter(".") }.toSet()
+        return tables == setOf("configurations", "blocks", "transactions")
+    }
 }

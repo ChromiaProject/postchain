@@ -41,7 +41,8 @@ import java.time.Duration
  */
 class ValidatorBlockchainProcess(
         val workerContext: WorkerContext,
-        startWithFastSync: Boolean
+        startWithFastSync: Boolean,
+        private val blockchainState: BlockchainState
 ) : AbstractBlockchainProcess("validator-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine) {
 
     companion object : KLogging()
@@ -155,7 +156,8 @@ class ValidatorBlockchainProcess(
     }
 
     override fun isSigner(): Boolean = !syncManager.isInFastSync()
-    override fun getBlockchainState(): BlockchainState = BlockchainState.RUNNING
+
+    override fun getBlockchainState(): BlockchainState = blockchainState
 
     override fun currentBlockHeight(): Long = syncManager.currentBlockHeight()
             ?: blockchainEngine.getBlockQueries().getLastBlockHeight().get()

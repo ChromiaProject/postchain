@@ -4,10 +4,11 @@ package net.postchain.ebft
 
 import mu.KLogging
 import net.postchain.PostchainContext
+import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.configuration.BaseBlockchainConfiguration
-import net.postchain.base.peerId
+import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.wrap
@@ -72,7 +73,7 @@ open class EBFTSynchronizationInfrastructure(
         val peerCommConfiguration = peersCommConfigFactory.create(postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
         val peers: Set<NodeRid> = peerCommConfiguration.networkNodes.getPeerIds()
         val signers: Set<NodeRid> = blockchainConfig.signers.map { NodeRid(it) }.toSet()
-        val iAmASigner = signers.contains(peerCommConfiguration.networkNodes.myself.peerId())
+        val iAmASigner = blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY
         if (iAmASigner) {
             if (signers.size == 1) {
                 logger.info("I am alone signer")
@@ -136,29 +137,28 @@ open class EBFTSynchronizationInfrastructure(
         return when {
             forceReadOnly -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
 
-            blockchainState == BlockchainState.RUNNING -> {
-                when {
-                    historicBlockchainContext != null ->
-                        HistoricBlockchainProcess(workerContext, historicBlockchainContext)
-
-                    blockchainConfig.blockchainContext.nodeID == NODE_ID_READ_ONLY ->
-                        ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries(), blockchainState)
-
-                    else ->
-                        ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(chainId))
-                }
+            blockchainState == BlockchainState.RUNNING -> when {
+                historicBlockchainContext != null -> HistoricBlockchainProcess(workerContext, historicBlockchainContext)
+                iAmASigner -> ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(chainId), blockchainState)
+                else -> ReadOnlyBlockchainProcess(workerContext, blockchainState)
             }
 
-            blockchainState == BlockchainState.PAUSED -> {
-                ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries(), blockchainState)
-            }
+            blockchainState == BlockchainState.PAUSED -> ReadOnlyBlockchainProcess(workerContext, blockchainState)
 
-            blockchainState == BlockchainState.IMPORTING -> {
-                ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
+            blockchainState == BlockchainState.IMPORTING -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
+
+            blockchainState == BlockchainState.UNARCHIVING -> when {
+                isArchivedOnTheNode(chainId) -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
+                iAmASigner -> ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(chainId), blockchainState)
+                else -> ReadOnlyBlockchainProcess(workerContext, blockchainState)
             }
 
             else -> throw ProgrammerMistake("Unexpected blockchain state $blockchainState for blockchain $blockchainRid")
         }
+    }
+
+    private fun isArchivedOnTheNode(chainId: Long) = withReadConnection(postchainContext.sharedStorage, chainId) {
+        BlockchainApi.isBlockchainArchivedOnNode(it)
     }
 
     /*
