@@ -23,7 +23,7 @@ import java.util.Arrays;
  * Copied code is under Apache License, the same license that is included in this file
  * Changes:
  *  - Have removed unneeded code
- *  - Return of method createMasterPrivateKey returns byte[] instead of org.bitcoinj.crypto.DeterministicKey and we
+ *  - Return of method createMasterPrivateKey returns byte[] instead of org.bitcoinj.crypto.DeterministicKey
  */
 
 public final class HDKeyDerivation {
