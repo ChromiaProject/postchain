@@ -100,7 +100,7 @@ build:
   script:
     - mvn
       $MAVEN_CLI_OPTS
-      --activate-profiles ci,docker,coverage
+      --activate-profiles ci,coverage
       verify
 
 test-coverage-report:
