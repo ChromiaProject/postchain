@@ -77,8 +77,8 @@ class Secp256k1CryptoSystemTest {
         Assertions.assertEquals(mnemonicInput, mnemonic)
         Assertions.assertEquals(keyPair.pubKey.data.size, 33)
         Assertions.assertEquals(keyPair.privKey.data.size, 32)
-        Assertions.assertEquals(keyPair.pubKey.data.toHex(), "0388CCAFF64FC155ADC9DF75B1138D9CA2B33C7B605B16021E1CB7B7E6C8EB0FA4")
-        Assertions.assertEquals(keyPair.privKey.data.toHex(), "F1779080FD92FD4B44CE4C3A14274CB1ED8BF11704BA2AD6C334252F45B9AD20")
+        Assertions.assertEquals(keyPair.pubKey.data.toHex(), "02AF635148608B9A18DF11241F1862624C3E7CCEDEC0864FEE00B3D4E7093CC4CF")
+        Assertions.assertEquals(keyPair.privKey.data.toHex(), "CE59E2F0E7342EFB12A889B4168E3C7D909EC858849C0CA5FFAB78541C22AB65")
     }
 
     @Test
@@ -89,8 +89,8 @@ class Secp256k1CryptoSystemTest {
         Assertions.assertEquals(mnemonicInput, mnemonic)
         Assertions.assertEquals(keyPair.pubKey.data.size, 33)
         Assertions.assertEquals(keyPair.privKey.data.size, 32)
-        Assertions.assertEquals(keyPair.pubKey.data.toHex(), "028E95DCD8CEBBEF598A5671C58CDBAC941FC9488764F6A9345D151CF1692FA29A")
-        Assertions.assertEquals(keyPair.privKey.data.toHex(), "BB680527828123974992AB68E0A1B8187B87CE26B13008E79E643C5942CB1828")
+        Assertions.assertEquals(keyPair.pubKey.data.toHex(), "02B0DDEE98F25AF559A101ED7E14085A054605EE4EADF3C53FDDDCE12FF038FEDD")
+        Assertions.assertEquals(keyPair.privKey.data.toHex(), "3A98200C1203EFD1E0F2CEEB0F6A30D8F8BFA2A4DD3D6965FFD9A1D9AB8EE130")
     }
 
     @Test
