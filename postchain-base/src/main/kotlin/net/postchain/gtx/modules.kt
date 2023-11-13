@@ -160,7 +160,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
             }
             _stxs.addAll(m.getSpecialTxExtensions())
             if (m is OperationWrapper) m.injectDelegateTransactorMaker(TransactorMaker { opData ->
-                if (opData.opName in ops) {
+                if (opData.opName in opmap.keys) {
                     opmap[opData.opName]!!.makeTransactor(opData)
                 } else {
                     throw UnknownOperation(opData.opName)
