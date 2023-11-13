@@ -122,8 +122,10 @@ class BaseStatusManager(
         val revoltingNode = nodeRids[revoltingNodeIndex]
         val revoltedOnNodeIndex = calculateIndex(status.height, status.round)
         val revoltedOnNode = nodeRids[revoltedOnNodeIndex]
-        withLoggingContext(REVOLTED_ON_NODE_TAG to revoltedOnNode.toString(), REVOLTING_NODE_TAG to revoltingNode.toString()) {
-            logger.info("Node $revoltingNode has revolted against $revoltedOnNode")
+        if (logger.isDebugEnabled) {
+            withLoggingContext(REVOLTED_ON_NODE_TAG to revoltedOnNode.toString(), REVOLTING_NODE_TAG to revoltingNode.toString()) {
+                logger.debug { "Node $revoltingNode has revolted against $revoltedOnNode" }
+            }
         }
         getRevoltCounter(revoltingNodeIndex, revoltedOnNodeIndex).increment()
     }
