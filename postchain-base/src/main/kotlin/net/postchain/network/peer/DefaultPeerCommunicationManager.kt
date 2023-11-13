@@ -23,6 +23,7 @@ import net.postchain.network.ReceivedPacket
 import net.postchain.network.XPacketCodec
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.common.LazyPacket
+import java.util.concurrent.ConcurrentHashMap
 
 class DefaultPeerCommunicationManager<PacketType>(
         val connectionManager: ConnectionManager,
@@ -45,7 +46,7 @@ class DefaultPeerCommunicationManager<PacketType>(
             SOURCE_NODE_TAG to myPeerId,
     )
 
-    private val nodePacketVersions = mutableMapOf<NodeRid, Long>()
+    private val nodePacketVersions = ConcurrentHashMap<NodeRid, Long>()
     private var inboundPackets = mutableListOf<ReceivedPacket<PacketType>>()
     var connected = false
 
@@ -232,18 +233,17 @@ class DefaultPeerCommunicationManager<PacketType>(
                 }
             }
 
-    private fun getPacketVersion(peerId: NodeRid, packet: ByteArray): Long {
-        if (nodePacketVersions[peerId] == null) {
-            if (packetCodec.isVersionPacket(packet)) {
-                nodePacketVersions[peerId] = packetCodec.parseVersionPacket(packet)
-                logger.info { "Got packet version ${nodePacketVersions[peerId]} from $peerId" }
+    private fun getPacketVersion(peerId: NodeRid, packet: ByteArray): Long = nodePacketVersions[peerId]
+            ?: if (packetCodec.isVersionPacket(packet)) {
+                val version = packetCodec.parseVersionPacket(packet)
+                nodePacketVersions[peerId] = version
+                logger.info { "Got packet version $version from $peerId" }
+                version
             } else {
                 // If we end up here, we did not get a version packet from the other node (yet),
                 // and so node is probably legacy of version 1
                 logger.info { "Did not receive version for peer $peerId. Will default to packet version 1." }
                 nodePacketVersions[peerId] = 1
+                1
             }
-        }
-        return getPeerPacketVersion(peerId)
-    }
 }
