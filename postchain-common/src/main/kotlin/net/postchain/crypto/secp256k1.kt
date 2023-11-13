@@ -3,6 +3,8 @@
 package net.postchain.crypto
 
 import mu.KotlinLogging
+import net.postchain.bitcoinj.forks.crypto.HDKeyDerivation
+import net.postchain.bitcoinj.forks.crypto.MnemonicCode
 import net.postchain.common.data.Hash
 import org.bouncycastle.asn1.x9.X9ECParameters
 import org.bouncycastle.crypto.digests.SHA256Digest
@@ -194,20 +196,50 @@ open class Secp256K1CryptoSystem : BaseCryptoSystem() {
      */
     fun generatePrivKey(): PrivKey {
         var privateKey: ByteArray
-        var d: BigInteger
         while (true) {
             privateKey = getRandomBytes(32)
-            d = BigInteger(1, privateKey)
-            try {
-                ECPrivateKeyParameters(d, CURVE) // validate private key
-                break
-            } catch (e: Exception) {
-                logger.debug { "Generated invalid private key: $d" }
-            }
+            if (validatePrivKey(privateKey)) break
         }
         return PrivKey(privateKey)
     }
 
+    private fun validatePrivKey(privateKey: ByteArray): Boolean {
+        val d = BigInteger(1, privateKey)
+        return try {
+            ECPrivateKeyParameters(d, CURVE) // validate private key
+            true
+        } catch (e: Exception) {
+            logger.debug { "Generated invalid private key: $d" }
+            false
+        }
+    }
+
     override fun deriveSignatureVerificationFromSubject(subjectID: ByteArray): BasicVerifier? =
             if (subjectID[0] in setOf(2.toByte(), 3.toByte(), 4.toByte(), 6.toByte(), 7.toByte())) ::secp256k1_verify else null
+
+
+    fun generateKeyPairWithMnemonic(): Pair<KeyPair, String> {
+        val mnemonicInstance = MnemonicCode()
+        val entropy = getRandomBytes(32)
+        val mnemonic = mnemonicInstance.toMnemonic(entropy)
+        return recoverKeyPairFromMnemonic(mnemonic.joinToString(" "))
+    }
+
+    fun recoverKeyPairFromMnemonic(mnemonic: String): Pair<KeyPair, String> {
+        val mnemonicInstance = MnemonicCode()
+        validateMnemonic(mnemonic)
+        val seed = mnemonicInstance.toSeed(mnemonic.split(" "), "")
+        val privKey = HDKeyDerivation.createMasterPrivateKey(seed)
+        check(validatePrivKey(privKey)) { "Invalid private key generated" }
+        val pubKey = secp256k1_derivePubKey(privKey)
+        val keyPair = KeyPair(PubKey(pubKey), PrivKey(privKey))
+        return keyPair to mnemonic
+    }
+
+    private fun validateMnemonic(mnemonic: String) {
+        val nrOfWords = mnemonic.split(" ").size
+        if (nrOfWords != 12 && nrOfWords != 24) {
+            throw IllegalArgumentException("Invalid number of words in mnemonic. Supported number of words are 12 or 24")
+        }
+    }
 }

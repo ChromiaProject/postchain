@@ -502,11 +502,6 @@
             </dependency>
 
             <dependency>
-                <groupId>org.bitcoinj</groupId>
-                <artifactId>bitcoinj-core</artifactId>
-                <version>0.16.2</version>
-            </dependency>
-            <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
                 <version>32.1.2-jre</version>
@@ -573,7 +568,6 @@
     </dependencyManagement>
 
     <build>
-        <sourceDirectory>src/main/kotlin</sourceDirectory>
         <pluginManagement>
             <plugins>
                 <plugin>
