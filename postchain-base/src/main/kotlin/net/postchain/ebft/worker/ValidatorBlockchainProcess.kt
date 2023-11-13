@@ -9,6 +9,7 @@ import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainState
+import net.postchain.core.NodeRid
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
@@ -113,7 +114,11 @@ class ValidatorBlockchainProcess(
 
         networkAwareTxQueue = NetworkAwareTxQueue(
                 blockchainEngine.getTransactionQueue(),
-                workerContext.communicationManager)
+                workerContext.communicationManager,
+                blockchainConfiguration.signers
+                        .filter { !it.contentEquals(workerContext.appConfig.pubKeyByteArray) }
+                        .map { NodeRid(it) }
+        )
 
         statusManager.recomputeStatus()
     }
