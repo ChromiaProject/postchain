@@ -80,6 +80,7 @@ class MessagesTest {
         assertEquals(status.round, expected.round)
         assertEquals(status.serial, expected.serial)
         assertEquals(status.state, expected.state)
+        assertEquals(status.signature, expected.signature)
     }
 
     @Test

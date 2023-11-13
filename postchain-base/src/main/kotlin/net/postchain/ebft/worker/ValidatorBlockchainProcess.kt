@@ -86,6 +86,15 @@ class ValidatorBlockchainProcess(
                 workerContext
         )
 
+        val ensureAppliedConfigSender: () -> Boolean = {
+            if (!appliedConfigSender.isStarted) {
+                appliedConfigSender.start()
+                appliedConfigSender.isStarted
+            } else {
+                true
+            }
+        }
+
         // Give the SyncManager the BaseTransactionQueue (part of workerContext) and not the network-aware one,
         // because we don't want tx forwarding/broadcasting when received through p2p network
         syncManager = ValidatorSyncManager(
@@ -98,7 +107,8 @@ class ValidatorBlockchainProcess(
                 RevoltTracker(statusManager, blockchainConfiguration.revoltConfiguration, blockchainEngine),
                 SyncMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid),
                 ::isProcessRunning,
-                startWithFastSync
+                startWithFastSync,
+                ensureAppliedConfigSender
         )
 
         networkAwareTxQueue = NetworkAwareTxQueue(
@@ -106,7 +116,6 @@ class ValidatorBlockchainProcess(
                 workerContext.communicationManager)
 
         statusManager.recomputeStatus()
-        appliedConfigSender.start()
     }
 
     fun isInFastSyncMode() = syncManager.isInFastSync()

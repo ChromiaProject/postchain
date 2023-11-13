@@ -46,6 +46,7 @@ import org.apache.commons.configuration2.PropertiesConfiguration
 import org.junit.jupiter.api.BeforeEach
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.ArgumentMatchers.eq
+import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -81,7 +82,10 @@ abstract class EBFTProtocolBase {
     protected val header0 = createBlockHeader(blockchainRid, 2L, 0, prevBlockRid, 1)
     protected val blockRid0 = header0.blockRID
 
-    protected val blockDatabase: BlockDatabase = mock()
+    protected val blockDatabase: BlockDatabase = mock {
+        on { applyAndVerifyBlockSignature(any()) } doReturn true
+    }
+
     protected val blockStrategy: BlockBuildingStrategy = mock()
     protected val nodeStateTracker: NodeStateTracker = mock()
     protected val counter: Counter = mock()
@@ -148,19 +152,21 @@ abstract class EBFTProtocolBase {
         doReturn(BaseStatusManager.ZERO_SERIAL_TIME).whenever(clock).millis()
         statusManager = BaseStatusManager(nodes, myNodeId, 0, nodeStatusMetrics, stateChangeTracker, clock)
         blockManager = BaseBlockManager(blockDatabase, statusManager, blockStrategy, workerContext)
-        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, syncMetrics, { true }, false, clock)
+        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, syncMetrics, { true }, false, { true }, clock)
         statusManager.recomputeStatus()
     }
 
-    protected fun verifyStatus(blockRID: ByteArray?, height: Long, serial: Long, round: Long, revolting: Boolean, state: NodeBlockState) {
+    protected fun verifyStatus(blockRID: ByteArray?, height: Long, serial: Long, round: Long, revolting: Boolean, state: NodeBlockState, signature: Signature? = null, configHash: ByteArray? = null) {
         argumentCaptor<Status> {
-            verify(commManager).broadcastPacket(capture(), eq(null))
+            verify(commManager).broadcastPacket(capture(), eq(null), eq(null))
             assertThat(firstValue.blockRID).isEqualTo(blockRID)
             assertThat(firstValue.height).isEqualTo(height)
             assertThat(firstValue.serial).isEqualTo(serial)
             assertThat(firstValue.round).isEqualTo(round)
             assertThat(firstValue.revolting).isEqualTo(revolting)
             assertThat(firstValue.state).isEqualTo(state.ordinal)
+            assertThat(firstValue.signature).isEqualTo(signature)
+            assertThat(firstValue.configHash).isEqualTo(configHash)
         }
     }
 

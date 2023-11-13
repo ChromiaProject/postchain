@@ -26,7 +26,7 @@ class SubnodeServiceGrpcImpl(private val subnodeService: SubnodeService) : Subno
                     Status.ALREADY_EXISTS.withDescription(e.message).asRuntimeException()
             )
         } catch (e: Exception) {
-            logger.warn(e) { "Unable to initialize PostchainNode: $e.message}" }
+            logger.warn(e) { "Unable to initialize PostchainNode: ${e.message}" }
             responseObserver.onError(
                     Status.INTERNAL.withDescription(e.message).asRuntimeException()
             )

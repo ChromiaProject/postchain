@@ -699,7 +699,7 @@ class FastSynchronizerTest {
     @Test
     fun `Status should trigger status received`() {
         // setup
-        addMessage(Status(blockRID.data, height, false, 0, 0, 0))
+        addMessage(Status(blockRID.data, height, false, 0, 0, 0, null))
         doNothing().whenever(peerStatuses).statusReceived(isA(), anyLong())
         // execute
         sut.processMessages()
@@ -708,16 +708,30 @@ class FastSynchronizerTest {
     }
 
     @Test
+    fun `Status with config hash that should call internal check`() {
+        // setup
+        val configHash: ByteArray = "configHash".toByteArray()
+        addMessage(Status(blockRID.data, height, false, 0, 0, 0, null, configHash))
+        doNothing().whenever(peerStatuses).statusReceived(isA(), anyLong())
+        doReturn(true).whenever(sut).checkIfWeNeedToApplyPendingConfig(isA(), isA(), isA())
+        // execute
+        sut.processMessages()
+        // verify
+        verify(peerStatuses).statusReceived(nodeRid, height - 1)
+        verify(sut).checkIfWeNeedToApplyPendingConfig(nodeRid, configHash, height)
+    }
+
+    @Test
     fun `AppliedConfig should call internal check`() {
         // setup
         val configHash: ByteArray = "configHash".toByteArray()
         val message = AppliedConfig(configHash, height)
         addMessage(message)
-        doReturn(true).whenever(sut).checkIfWeNeedToApplyPendingConfig(isA(), isA())
+        doReturn(true).whenever(sut).checkIfWeNeedToApplyPendingConfig(isA(), isA(), isA())
         // execute
         sut.processMessages()
         // verify
-        verify(sut).checkIfWeNeedToApplyPendingConfig(nodeRid, message)
+        verify(sut).checkIfWeNeedToApplyPendingConfig(nodeRid, configHash, height)
     }
 
     @Nested

@@ -50,6 +50,7 @@ class NettyClientPeerConnection<PacketType>(
         ctx?.let {
             context = it
             context.writeAndFlush(buildIdentPacket())
+            sendVersion(it)
             onConnected()
         }
     }
@@ -64,11 +65,9 @@ class NettyClientPeerConnection<PacketType>(
             if (isPing(message)) {
                 handlePing(ctx)
             } else if (isVersion(message)) {
-                handleVersion(message, ctx)
+                handleVersion(message)
             } else {
-                peerPacketHandler?.handle(
-                        message,
-                        peerInfo.peerId())
+                peerPacketHandler?.handle(message, peerInfo.peerId())
             }
         } catch (e: Exception) {
             logger.error("Error when receiving message from peer ${peerInfo.peerId()}", e)
@@ -77,14 +76,11 @@ class NettyClientPeerConnection<PacketType>(
         }
     }
 
-    private fun handleVersion(message: ByteArray, ctx: ChannelHandlerContext?) {
+    private fun handleVersion(message: ByteArray) {
         if (!hasReceivedVersion) {
-            ctx?.let {
-                sendVersion(it)
-            }
-            descriptor.packetVersion = packetCodec.parseVersionPacket(message)
-            logger.info { "Got packet version ${descriptor.packetVersion} from ${descriptor.nodeId.toHex()}" }
+            logger.debug { "Got packet version from ${descriptor.nodeId.toHex()}" }
             hasReceivedVersion = true
+            peerPacketHandler?.handle(message, peerInfo.peerId())
         }
     }
 

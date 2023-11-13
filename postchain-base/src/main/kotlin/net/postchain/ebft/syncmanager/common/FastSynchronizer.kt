@@ -24,6 +24,7 @@ import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.message.EbftVersion
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
@@ -651,7 +652,6 @@ class FastSynchronizer(
      */
     internal fun processMessages() {
         messageDurationTracker.cleanup()
-        // TODO: Handle version
         for ((peerId, _, message) in communicationManager.getPackets()) {
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue
@@ -668,10 +668,14 @@ class FastSynchronizer(
                     is BlockHeaderMessage -> handleBlockHeader(peerId, message)
                     is UnfinishedBlock -> handleUnfinishedBlock(peerId, message)
                     is CompleteBlock -> handleCompleteBlock(peerId, message)
-                    is Status -> peerStatuses.statusReceived(peerId, message.height - 1)
-                    is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message)) return
+                    is Status -> {
+                        peerStatuses.statusReceived(peerId, message.height - 1)
+                        if (message.configHash != null && checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
+                    }
 
-                    is Transaction -> logger.info("Got unexpected transaction from peer $peerId, ignoring")
+                    is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
+                    is Transaction -> logger.trace { "Got transaction from peer $peerId, ignoring" }
+                    is EbftVersion -> logger.debug { "Received EbftVersion from peer $peerId" }
                     else -> logger.warn { "Unhandled message type: ${message.topic} from peer $peerId" } // WARN b/c this might be buggy?
                 }
             } catch (e: Exception) {

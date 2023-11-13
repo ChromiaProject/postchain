@@ -23,7 +23,6 @@ import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.SigMaker
 import net.postchain.ebft.BDBAbortException
-import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
@@ -74,10 +73,7 @@ abstract class AbstractSynchronizer(
      * We do this check to avoid getting stuck when chain is waiting for a pending config where we are promoted to signer to be applied
      * In other cases config updates will be handled when adding blocks
      */
-    internal fun checkIfWeNeedToApplyPendingConfig(peer: NodeRid, appliedConfig: AppliedConfig): Boolean {
-        val incomingConfigHash = appliedConfig.configHash
-        val incomingHeight = appliedConfig.height
-
+    internal fun checkIfWeNeedToApplyPendingConfig(peer: NodeRid, incomingConfigHash: ByteArray, incomingHeight: Long): Boolean {
         if (blockchainConfiguration.chainID == 0L) return false
         val configProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
                 ?: return false

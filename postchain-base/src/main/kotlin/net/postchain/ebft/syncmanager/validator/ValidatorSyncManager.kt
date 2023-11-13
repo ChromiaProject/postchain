@@ -29,6 +29,7 @@ import net.postchain.ebft.message.BlockHeader
 import net.postchain.ebft.message.BlockRange
 import net.postchain.ebft.message.BlockSignature
 import net.postchain.ebft.message.CompleteBlock
+import net.postchain.ebft.message.EbftVersion
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
@@ -66,16 +67,18 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            private val syncMetrics: SyncMetrics,
                            isProcessRunning: () -> Boolean,
                            startInFastSync: Boolean,
+                           private val ensureAppliedConfigSenderStarted: () -> Boolean,
                            private val clock: Clock = Clock.systemUTC()
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker) {
     private val blockchainConfiguration = workerContext.blockchainConfiguration
-    private val statusSender = StatusSender(MAX_STATUS_INTERVAL, statusManager, workerContext.communicationManager, clock)
+    private val statusSender = StatusSender(MAX_STATUS_INTERVAL, workerContext, statusManager, clock)
     private val defaultTimeout = 1000
     private var currentTimeout: Int
     private var processingIntent: BlockIntent
     private var processingIntentDeadline = 0L
     private var lastStatusLogged: Long
     private val messageDurationTracker = workerContext.messageDurationTracker
+    private var appliedConfigSenderEnsured = false
 
     @Volatile
     private var useFastSyncAlgorithm: Boolean
@@ -117,14 +120,14 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     /**
      * Handle incoming messages
      */
-    private fun dispatchMessages() {
+    internal fun dispatchMessages() {
         messageDurationTracker.cleanup()
-        for ((xPeerId, _, message) in communicationManager.getPackets()) {
-            //TODO: Handle version
+        for ((xPeerId, version, message) in communicationManager.getPackets()) {
+            ensureAppliedConfigSender(version)
             val nodeIndex = indexOfValidator(xPeerId)
             val isReadOnlyNode = nodeIndex == -1 // This must be a read-only node since not in the validator list
 
-            logger.trace { "Received message type ${message.javaClass.simpleName} from node $nodeIndex" }
+            logger.trace { "Received message type ${message.javaClass.simpleName} from node $xPeerId ($nodeIndex)" }
 
             try {
                 when (message) {
@@ -147,7 +150,12 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                                 revolting = message.revolting
                                                 round = message.round
                                                 state = NodeBlockState.values()[message.state]
+                                                if (shouldSetSignature(state, message)) {
+                                                    logger.trace { "Got signature from Status for ${blockRID?.toHex()} from $xPeerId" }
+                                                    signature = message.signature
+                                                }
                                             }.also {
+                                                applyConfig(message.configHash, message.height)
                                                 statusManager.onStatusUpdate(nodeIndex, it)
                                             }
 
@@ -162,7 +170,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                         logger.debug("Received signature not needed")
                                     } else if (!smBlockRID.contentEquals(message.blockRID)) {
                                         logger.info("Receive signature for a different block")
-                                    } else if (this.blockDatabase.verifyBlockSignature(signature)) {
+                                    } else if (this.blockDatabase.applyAndVerifyBlockSignature(signature)) {
                                         this.statusManager.onCommitSignature(nodeIndex, message.blockRID, signature)
                                     } else {
                                         logger.warn { "BlockSignature from peer: $xPeerId is invalid for block with with RID: ${smBlockRID.toHex()}" }
@@ -200,12 +208,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                     //  are still responding to our old requests. For this case this is harmless.
                                 }
 
-                                is AppliedConfig -> {
-                                    if (statusManager.myStatus.revolting) {
-                                        processIncomingConfig(message.configHash, message.height)
-                                    }
-                                }
-
+                                is AppliedConfig -> applyConfig(message.configHash, message.height)
+                                is EbftVersion -> logger.debug { "Received EbftVersion from peer $xPeerId" }
                                 else -> throw ProgrammerMistake("Unhandled type ${message::class}")
                             }
                         }
@@ -217,7 +221,28 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         }
     }
 
-    private fun processIncomingConfig(incomingConfigHash: ByteArray, incomingHeight: Long) {
+    private fun ensureAppliedConfigSender(version: Long) {
+        if (version < 2 && !appliedConfigSenderEnsured) {
+            appliedConfigSenderEnsured = ensureAppliedConfigSenderStarted()
+        }
+    }
+
+    private fun applyConfig(configHash: ByteArray?, height: Long) {
+        configHash?.apply {
+            if (statusManager.myStatus.revolting) {
+                processIncomingConfig(this, height)
+            }
+        }
+    }
+
+    private fun shouldSetSignature(state: NodeBlockState, message: Status) =
+            (statusManager.shouldApplySignature(state)
+                    && message.signature != null
+                    && message.blockRID != null
+                    && message.blockRID.contentEquals(statusManager.myStatus.blockRID)
+                    && blockDatabase.applyAndVerifyBlockSignature(message.signature))
+
+    internal fun processIncomingConfig(incomingConfigHash: ByteArray, incomingHeight: Long) {
         val bcConfig = workerContext.blockchainConfiguration
         if (incomingHeight == statusManager.myStatus.height && !incomingConfigHash.contentEquals(bcConfig.configHash)) {
             restartWithNewConfigIfPossible()
@@ -446,7 +471,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         }
     }
 
-    private fun tryToSwitchToFastSync() {
+    internal fun tryToSwitchToFastSync() {
         val useFastSyncAlgorithmBefore = useFastSyncAlgorithm
         useFastSyncAlgorithm = EBFTNodesCondition(statusManager.nodeStatuses) { status ->
             status.height - statusManager.myStatus.height >= 3
