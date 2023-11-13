@@ -5,6 +5,7 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.common.toHex
 import net.postchain.common.tx.EnqueueTransactionResult
+import net.postchain.core.NodeRid
 import net.postchain.core.TransactionQueue
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.network.CommunicationManager
@@ -14,8 +15,9 @@ import net.postchain.network.CommunicationManager
  */
 class NetworkAwareTxQueue(
     private val queue: TransactionQueue,
-    private val network: CommunicationManager<EbftMessage>)
-    : TransactionQueue by queue {
+    private val network: CommunicationManager<EbftMessage>,
+    private val signerPeers: List<NodeRid>
+) : TransactionQueue by queue {
 
     companion object : KLogging()
 
@@ -56,9 +58,9 @@ where we are guaranteed not to drop transactions.
 
     override fun enqueue(tx: net.postchain.core.Transaction): EnqueueTransactionResult {
         val result = queue.enqueue(tx)
-        if (result == EnqueueTransactionResult.OK) {
-            logger.debug("Node broadcasting tx ${tx.getRID().toHex()}")
-            network.broadcastPacket(net.postchain.ebft.message.Transaction(tx.getRawData()))
+        if (result == EnqueueTransactionResult.OK && signerPeers.isNotEmpty()) {
+            logger.debug { "Node broadcasting tx ${tx.getRID().toHex()} to peers $signerPeers" }
+            network.sendPacket(net.postchain.ebft.message.Transaction(tx.getRawData()), signerPeers)
         }
         return result
     }
