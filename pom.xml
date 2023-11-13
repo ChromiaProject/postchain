@@ -568,7 +568,6 @@
     </dependencyManagement>
 
     <build>
-        <sourceDirectory>src/main/kotlin</sourceDirectory>
         <pluginManagement>
             <plugins>
                 <plugin>
