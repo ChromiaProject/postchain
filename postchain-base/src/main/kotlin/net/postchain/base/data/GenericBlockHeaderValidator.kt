@@ -151,6 +151,8 @@ object GenericBlockHeaderValidator {
             expectedMerkleRootHash: () -> ByteArray,
             blockRidFromHeight: (height: Long) -> ByteArray?, // We will probably need to go to DB to find this, so don't call this in vain
             currentBlockTimestamp: Long,
+            currentTimestamp: Long,
+            maxBlockFutureTime: Long,
             nrOfDependencies: Int,
             extraData: Map<String, Gtv>
     ): ValidationResult {
@@ -172,6 +174,9 @@ object GenericBlockHeaderValidator {
 
         // The "advanced" checks
         return when {
+            maxBlockFutureTime > -1 && header.timestamp - currentTimestamp > maxBlockFutureTime ->
+                ValidationResult(ValidationResult.Result.INVALID_TIMESTAMP, "Block timestamp too far in the future")
+
             currentBlockTimestamp >= header.timestamp ->
                 ValidationResult(ValidationResult.Result.INVALID_TIMESTAMP, "Block timestamp >= header.timestamp")
 

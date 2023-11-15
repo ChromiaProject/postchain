@@ -59,7 +59,8 @@ class BaseBlockBuilderTest {
             maxBlockTransactions = 100,
             maxTxExecutionTime = 0,
             maxSpecialEndTransactionSize = maxSpecialEndTransactionSize,
-            suppressSpecialTransactionValidation = false)
+            suppressSpecialTransactionValidation = false,
+            maxBlockFutureTime = -1)
 
     @Test
     fun invalidMonotoneTimestamp() {
