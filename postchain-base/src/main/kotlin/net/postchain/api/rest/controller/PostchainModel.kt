@@ -7,6 +7,7 @@ import io.micrometer.core.instrument.Timer
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.BlockHeight
+import net.postchain.api.rest.BlockchainNodeState
 import net.postchain.api.rest.TransactionsCount
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
@@ -38,6 +39,7 @@ import net.postchain.crypto.PubKey
 import net.postchain.crypto.SigMaker
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpBlockchainNodeState
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
@@ -158,6 +160,12 @@ open class PostchainModel(
                     ?: throw NotFoundError("NotFound")
 
     override fun getCurrentBlockHeight(): BlockHeight = BlockHeight(blockQueries.getLastBlockHeight().get() + 1)
+
+    override fun getBlockchainNodeState(): BlockchainNodeState {
+        val nodeState = diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATE]?.value as? DpBlockchainNodeState
+                ?: throw NotFoundError("NotFound")
+        return BlockchainNodeState(nodeState.name)
+    }
 
     override fun getBlockchainConfiguration(height: Long): ByteArray? = withReadConnection(storage, chainIID) { ctx ->
         if (height < 0) {

@@ -10,6 +10,7 @@ import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpBlockchainNodeState
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.debug.LazyDiagnosticValue
@@ -97,6 +98,13 @@ class ReadOnlyBlockchainProcess(
     override fun registerDiagnosticData(diagnosticData: DiagnosticData) {
         super.registerDiagnosticData(diagnosticData)
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_REPLICA.prettyName)
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATE] = EagerDiagnosticValue(
+                when (blockchainState) {
+                    BlockchainState.PAUSED -> DpBlockchainNodeState.PAUSED_READ_ONLY
+                    BlockchainState.UNARCHIVING -> DpBlockchainNodeState.UNARCHIVING_READ_ONLY
+                    else -> DpBlockchainNodeState.RUNNING_READ_ONLY
+                }
+        )
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS] = LazyDiagnosticValue {
             StateNodeStatus(myPubKey, DpNodeType.NODE_TYPE_REPLICA.name, syncMethod.name, currentBlockHeight())
         }

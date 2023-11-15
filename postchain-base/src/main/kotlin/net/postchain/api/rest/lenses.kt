@@ -154,7 +154,9 @@ val nodeStatusBody = Body.auto<StateNodeStatus>().toLens()
 val nodeStatusesBody = Body.auto<List<StateNodeStatus>>().toLens()
 val textBody = Body.string(ContentType.TEXT_PLAIN).toLens()
 val blockHeightBody = Body.auto<BlockHeight>().toLens()
+val blockchainNodeStateBody = Body.auto<BlockchainNodeState>().toLens()
 val transactionsCountBody = Body.auto<TransactionsCount>().toLens()
+
 @Suppress("UNREACHABLE_CODE", "USELESS_CAST")
 val configurationXmlOutBody: BiDiBodyLens<ByteArray> = httpBodyRoot(listOf(Meta(true, location = "body",
         ParamMeta.StringParam, "configuration", "GtvML")), ContentType.TEXT_XML, None)
@@ -194,4 +196,5 @@ data class TransactionsCount(val transactionsCount: Long)
 data class Tx(val tx: String)
 data class ErrorBody(val error: String = "")
 data class Version(val version: Int)
+data class BlockchainNodeState(val state: String)
 object Empty

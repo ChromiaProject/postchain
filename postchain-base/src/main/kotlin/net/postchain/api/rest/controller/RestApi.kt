@@ -21,6 +21,7 @@ import net.postchain.api.rest.binaryBody
 import net.postchain.api.rest.blockBody
 import net.postchain.api.rest.blockHeightBody
 import net.postchain.api.rest.blockRidPath
+import net.postchain.api.rest.blockchainNodeStateBody
 import net.postchain.api.rest.blocksBody
 import net.postchain.api.rest.configurationInBody
 import net.postchain.api.rest.configurationOutBody
@@ -291,6 +292,7 @@ class RestApi(
             "/brid/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainRid),
 
             "/blockchain/{blockchainRid}/height" bind GET to blockchain.then(volatileResponse).then(::getCurrentHeight),
+            "/blockchain/{blockchainRid}/nodestate" bind GET to blockchain.then(::getBlockchainNodeState),
 
             "/config/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainConfiguration),
             "/config/{blockchainRid}" bind POST to liveBlockchain.then(::validateBlockchainConfiguration),
@@ -508,6 +510,12 @@ class RestApi(
         val model = model(request)
         val blockHeight = model.getCurrentBlockHeight()
         return Response(OK).with(blockHeightBody of blockHeight)
+    }
+
+    private fun getBlockchainNodeState(request: Request): Response {
+        val model = model(request)
+        val blockchainNodeState = model.getBlockchainNodeState()
+        return Response(OK).with(blockchainNodeStateBody of blockchainNodeState)
     }
 
     private fun getBlockchainConfiguration(request: Request): Response {

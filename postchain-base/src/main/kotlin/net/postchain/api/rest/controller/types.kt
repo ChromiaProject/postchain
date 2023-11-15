@@ -3,6 +3,7 @@
 package net.postchain.api.rest.controller
 
 import net.postchain.api.rest.BlockHeight
+import net.postchain.api.rest.BlockchainNodeState
 import net.postchain.api.rest.TransactionsCount
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
@@ -32,7 +33,7 @@ interface ExternalModel : ChainModel, HttpHandler {
 interface Model : ChainModel {
     val blockchainRid: BlockchainRid
     val queryCacheTtlSeconds: Long
-    
+
     fun postTransaction(tx: ByteArray)
     fun getTransaction(txRID: TxRid): ByteArray?
     fun getTransactionInfo(txRID: TxRid): TransactionInfoExt?
@@ -49,6 +50,7 @@ interface Model : ChainModel {
     fun nodeStatusQuery(): StateNodeStatus
     fun nodePeersStatusQuery(): List<StateNodeStatus>
     fun getCurrentBlockHeight(): BlockHeight
+    fun getBlockchainNodeState(): BlockchainNodeState
     fun getBlockchainConfiguration(height: Long = -1): ByteArray?
     fun validateBlockchainConfiguration(configuration: Gtv)
 }
