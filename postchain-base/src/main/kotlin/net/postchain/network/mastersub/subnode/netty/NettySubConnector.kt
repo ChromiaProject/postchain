@@ -17,7 +17,7 @@ class NettySubConnector(
 
     companion object : KLogging()
 
-    private val eventLoopGroup = NioEventLoopGroup(1, DefaultThreadFactory("NettySubClient"))
+    private val eventLoopGroup = NioEventLoopGroup(DefaultThreadFactory("NettySubClient"))
 
     override fun connectMaster(
         masterNode: PeerInfo,
