@@ -170,7 +170,8 @@ open class BaseBlockchainConfiguration(
                     withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainRid.toHex(), CHAIN_IID_TAG to chainID.toString()) {
                         logger.debug { "suppressSpecialTransactionValidation: $it" }
                     }
-                }
+                },
+                configData.maxBlockFutureTime
         )
 
         return bb

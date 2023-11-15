@@ -4,7 +4,12 @@ import net.postchain.base.BaseDependencyFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.mapper.*
+import net.postchain.gtv.mapper.DefaultValue
+import net.postchain.gtv.mapper.Name
+import net.postchain.gtv.mapper.Nested
+import net.postchain.gtv.mapper.Nullable
+import net.postchain.gtv.mapper.RawGtv
+import net.postchain.gtv.mapper.toObject
 
 data class BlockchainConfigurationData(
         @RawGtv
@@ -60,7 +65,10 @@ data class BlockchainConfigurationData(
         private val configConsensusStrategyString: String?,
         @Name(KEY_QUERY_CACHE_TTL_SECONDS)
         @DefaultValue(defaultLong = 0)
-        val queryCacheTtlSeconds: Long?
+        val queryCacheTtlSeconds: Long?,
+        @Name(KEY_MAX_BLOCK_FUTURE_TIME)
+        @DefaultValue(defaultLong = 10 * 1000) // 10 seconds
+        val maxBlockFutureTime: Long
 ) {
     val historicBrid = historicBridAsByteArray?.let { BlockchainRid(it) }
     val blockchainDependencies = blockchainDependenciesRaw?.let { BaseDependencyFactory.build(it) } ?: listOf()

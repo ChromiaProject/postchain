@@ -12,6 +12,8 @@ const val KEY_BLOCKSTRATEGY_MAXBACKOFFTIME = "maxbackofftime"
 const val KEY_BLOCKSTRATEGY_MAXSPECIALENDTRANSACTIONSIZE = "maxspecialendtransactionsize"
 const val KEY_BLOCKSTRATEGY_PREEMPTIVEBLOCKBUILDING = "preemptiveblockbuilding"
 
+const val KEY_MAX_BLOCK_FUTURE_TIME = "max_block_future_time"
+
 const val KEY_QUEUE_CAPACITY = "txqueuecapacity"
 const val KEY_QUEUE_TX_RECHECK_INTERVAL = "txqueuerecheckinterval"
 

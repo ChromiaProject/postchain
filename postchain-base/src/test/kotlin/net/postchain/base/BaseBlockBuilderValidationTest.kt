@@ -38,12 +38,14 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.sql.Connection
+import java.time.Clock
 
 class BaseBlockBuilderValidationTest {
     // Mocks
     val cryptoSystem = MockCryptoSystem()
     val merkeHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
     val mockedConn: Connection = mock {}
+    val clock: Clock = mock()
 
     // Real stuff
     var bbs = BaseBlockStore()
@@ -74,7 +76,9 @@ class BaseBlockBuilderValidationTest {
             maxBlockTransactions = 100,
             maxTxExecutionTime = 0,
             maxSpecialEndTransactionSize = 1024,
-            suppressSpecialTransactionValidation = false)
+            suppressSpecialTransactionValidation = false,
+            maxBlockFutureTime = -1,
+            clock)
 
     @Test
     fun validateBlockHeader_valid() {
@@ -206,11 +210,29 @@ class BaseBlockBuilderValidationTest {
         assertThat(bbb.transactions.size).isEqualTo(2)
     }
 
-    private fun buildBaseBlockBuilder(sth: SpecialTransactionHandler, suppressSpecialTransactionValidation: Boolean) =
+    @Test
+    fun validateBlockHeader_invalid_future_timestamp() {
+        doReturn(50L).whenever(clock).millis()
+        val timestamp = 100L
+        val blockData = InitialBlockData(myBlockchainRid, 2, 2, empty32Bytes, 1, timestamp, null)
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, rootHash, timestamp, mapOf())
+        val bbb = buildBaseBlockBuilder(NullSpecialTransactionHandler(), suppressSpecialTransactionValidation = true, 10)
+        bbb.bctx = bctx
+        bbb.initialBlockData = blockData
+
+        val validation = bbb.validateBlockHeader(header)
+
+        assertEquals(INVALID_TIMESTAMP, validation.result)
+        assertEquals("Block timestamp too far in the future", validation.message)
+    }
+
+    private fun buildBaseBlockBuilder(sth: SpecialTransactionHandler, suppressSpecialTransactionValidation: Boolean, maxBlockFutureTime: Long = -1) =
             BaseBlockBuilder(
                     BlockchainRid.ZERO_RID, cryptoSystem, ctx, bbs, tf,
                     sth,
                     subjects, sigMaker, validator, listOf(), listOf(), false,
                     26 * 1024 * 1024, 100, 0, 1024,
-                    suppressSpecialTransactionValidation)
+                    suppressSpecialTransactionValidation,
+                    maxBlockFutureTime,
+                    clock)
 }

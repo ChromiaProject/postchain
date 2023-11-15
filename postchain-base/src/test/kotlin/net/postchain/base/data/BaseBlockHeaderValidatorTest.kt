@@ -18,13 +18,13 @@ import org.junit.jupiter.api.Test
 class BaseBlockHeaderValidatorTest {
 
     val myMerkleRootHash = "46AF9064F12528CAD6A7C377204ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()
-    val myBlockRid       = "3333333333333333333333333333333333333333333333333333333333333333".hexStringToByteArray()
+    val myBlockRid = "3333333333333333333333333333333333333333333333333333333333333333".hexStringToByteArray()
 
     @Test
     fun testHappy() {
 
-        val myPrevBlockRid   = "1234123412341234123412341234123412341234123412341234123412341234".hexStringToByteArray()
-        val myBlockchainRid  = BlockchainRid.buildRepeat(7)
+        val myPrevBlockRid = "1234123412341234123412341234123412341234123412341234123412341234".hexStringToByteArray()
+        val myBlockchainRid = BlockchainRid.buildRepeat(7)
 
         val myChainIid = 2L
         val myBlockId = 111L
@@ -32,11 +32,12 @@ class BaseBlockHeaderValidatorTest {
         val myTimestamp = 100L
 
         // Make a header
-        val myBlockData = InitialBlockData(myBlockchainRid,myBlockId, myChainIid, myPrevBlockRid, myHeight.toLong(), myTimestamp, arrayOf())
+        val myBlockData = InitialBlockData(myBlockchainRid, myBlockId, myChainIid, myPrevBlockRid, myHeight.toLong(), myTimestamp, arrayOf())
         val header = BaseBlockHeader.make(calculator, myBlockData, myMerkleRootHash, myTimestamp, mapOf("eif" to GtvString("this is root hash of eif event and state tree")))
 
-        val valid = GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(header, myBlockData, ::expectedMerkleHash, ::getBlockRid, myTimestamp - 1, 0,
-            mapOf("eif" to GtvString("this is root hash of eif event and state tree")))
+        val valid = GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(header, myBlockData, ::expectedMerkleHash,
+                ::getBlockRid, myTimestamp - 1, 0, -1, 0,
+                mapOf("eif" to GtvString("this is root hash of eif event and state tree")))
         assertThat(valid.result).isEqualTo(ValidationResult.Result.OK)
     }
 

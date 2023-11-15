@@ -47,15 +47,16 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import java.lang.Long.max
+import java.time.Clock
 
 /**
  * BaseBlockBuilder is used to aid in building blocks, including construction and validation of block header and witness
  *
- * @property blockchainRID
+ * @param blockchainRID
  * @property cryptoSystem Crypto utilities
  * @param    eContext Connection context including blockchain and node identifiers
- * @property store For database access
- * @property txFactory Used for serializing transaction data
+ * @param store For database access
+ * @param txFactory Used for serializing transaction data
  * @property specialTxHandler is the main entry point for special transaction handling.
  * @property subjects Public keys for nodes authorized to sign blocks
  * @property blockSigMaker used to produce signatures on blocks for local node
@@ -65,6 +66,12 @@ import java.lang.Long.max
  * @property usingHistoricBRID
  * @property maxBlockSize
  * @property maxBlockTransactions
+ * @param maxTxExecutionTime
+ * @property maxSpecialEndTransactionSize
+ * @property suppressSpecialTransactionValidation
+ * @property maxBlockFutureTime
+ * @property clock
+ *
  */
 open class BaseBlockBuilder(
         blockchainRID: BlockchainRid,
@@ -72,18 +79,20 @@ open class BaseBlockBuilder(
         eContext: EContext,
         store: BlockStore,
         txFactory: TransactionFactory,
-        val specialTxHandler: SpecialTransactionHandler,
+        private val specialTxHandler: SpecialTransactionHandler,
         val subjects: Array<ByteArray>,
         val blockSigMaker: SigMaker,
         override val blockWitnessProvider: BlockWitnessProvider,
-        val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
+        private val blockchainRelatedInfoDependencyList: List<BlockchainRelatedInfo>,
         val extensions: List<BaseBlockBuilderExtension>,
-        val usingHistoricBRID: Boolean,
+        private val usingHistoricBRID: Boolean,
         val maxBlockSize: Long,
         val maxBlockTransactions: Long,
         maxTxExecutionTime: Long,
         val maxSpecialEndTransactionSize: Long,
-        val suppressSpecialTransactionValidation: Boolean
+        val suppressSpecialTransactionValidation: Boolean,
+        private val maxBlockFutureTime: Long,
+        val clock: Clock = Clock.systemUTC()
 ) : AbstractBlockBuilder(eContext, blockchainRID, store, txFactory, maxTxExecutionTime) {
 
     companion object : KLogging()
@@ -351,6 +360,8 @@ open class BaseBlockBuilder(
                 ::computeMerkleRootHash,
                 ::getBlockRidAtHeight,
                 bctx.timestamp,
+                clock.millis(),
+                maxBlockFutureTime,
                 nrOfDependencies,
                 extraData
         )
