@@ -295,6 +295,7 @@ open class ManagedBlockchainProcessManager(
                         logger.debug { "Inactive blockchains are not available for pruning" }
                         return
                     }
+
                     else -> logger.debug { "Inactive blockchains are available for pruning" }
                 }
             }
@@ -408,7 +409,7 @@ open class ManagedBlockchainProcessManager(
             val all = domainBlockchains.union(locallyConfiguredBlockchainsToReplicate())
             all.forEach { blockchainInfo ->
                 val chainId = db.getChainId(ctx0, blockchainInfo.rid)
-                retrieveTrace("launch chainIid: $chainId,  BC RID: ${blockchainInfo.rid.toShortHex()} ")
+                retrieveTrace("launch chainIid: $chainId, BC RID: ${blockchainInfo.rid.toShortHex()} ")
                 val localBlockchainInfo = if (chainId == null) {
                     val calculatedChainId = if (blockchainInfo.system) {
                         (db.getMaxSystemChainId(ctx0) ?: 0) + 1
@@ -478,4 +479,8 @@ open class ManagedBlockchainProcessManager(
 
     override fun getBlockchainState(chainId: Long, blockchainRid: BlockchainRid): BlockchainState =
             if (chainId == CHAIN0) BlockchainState.RUNNING else dataSource.getBlockchainState(blockchainRid)
+
+    override fun getBlockchainStartArgs(chainId: Long, blockchainRid: BlockchainRid): BlockchainStartArgs? =
+            if (chainId == CHAIN0) null else dataSource.getBlockchainStartArgs(blockchainRid)
+
 }

@@ -5,6 +5,7 @@ import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainStartArgs
 import net.postchain.core.BlockchainState
 import net.postchain.core.NodeRid
 import net.postchain.devtools.awaitDebug
@@ -111,6 +112,10 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
                 }
             else null
         } ?: emptyList()
+    }
+
+    override fun getBlockchainStartArgs(blockchainRid: BlockchainRid): BlockchainStartArgs? {
+        return null
     }
 
     override fun query(name: String, args: Gtv): Gtv {

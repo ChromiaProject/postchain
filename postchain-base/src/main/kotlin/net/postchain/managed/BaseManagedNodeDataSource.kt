@@ -9,12 +9,14 @@ import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
+import net.postchain.core.BlockchainStartArgs
 import net.postchain.core.BlockchainState
 import net.postchain.core.NodeRid
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 import net.postchain.managed.query.QueryRunner
@@ -201,5 +203,23 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         } else {
             emptyList()
         }
+    }
+
+    override fun getBlockchainStartArgs(blockchainRid: BlockchainRid): BlockchainStartArgs? {
+        if (nmApiVersion < 13) return null
+        if (getBlockchainState(blockchainRid) != BlockchainState.UNARCHIVING) return null
+
+        val res = query(
+                "nm_get_blockchain_start_args",
+                buildArgs("blockchain_rid" to gtv(blockchainRid.data))
+        )
+        if (res.isNull()) return null
+
+        return UnarchivingBlockchainStartArgs(
+                blockchainRid,
+                res["source_container"]?.asString() ?: return null,
+                res["destination_container"]?.asString() ?: return null,
+                res["up_to_height"]?.asInteger() ?: return null
+        )
     }
 }
