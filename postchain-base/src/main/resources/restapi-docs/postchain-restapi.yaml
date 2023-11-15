@@ -925,6 +925,61 @@ paths:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
             application/octet-stream: { }
+  /blockchain/{blockchainRid}/nodestate:
+    get:
+      tags:
+        - experimental
+      summary: Experimental - Fetch current state of blockchain node
+      description: >
+        <strong>This endpoint is currently in a beta phase and may be subject to changes.</strong><br>
+        Fetch the current state of the blockchain node as a combination of the blockchain state and the node state.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - state
+                properties:
+                  state:
+                    type: string
+                    enum:
+                      - RUNNING_HISTORIC
+                      - RUNNING_VALIDATOR
+                      - RUNNING_READ_ONLY
+                      - PAUSED_READ_ONLY
+                      - FORCED_READ_ONLY
+                      - IMPORTING_FORCED_READ_ONLY
+                      - UNARCHIVING_FORCED_READ_ONLY
+                      - UNARCHIVING_VALIDATOR
+                      - UNARCHIVING_READ_ONLY
+                    description: |
+                      * RUNNING_HISTORIC - Running in Historic context
+                      * RUNNING_VALIDATOR - Running as Validator
+                      * RUNNING_READ_ONLY - Running in read-only mode
+                      * PAUSED_READ_ONLY - Paused in read-only mode
+                      * FORCED_READ_ONLY - Node is forced to read-only mode
+                      * IMPORTING_FORCED_READ_ONLY - Importing blockchain and is running in forced read-only mode
+                      * UNARCHIVING_FORCED_READ_ONLY - Unarchiving blockchain and is running in forced read-only mode
+                      * UNARCHIVING_VALIDATOR - Unarchiving blockchain and is running as Validator
+                      * UNARCHIVING_READ_ONLY - Unarchiving blockchain and is running in read-only mode
+              example:
+                state: RUNNING_VALIDATOR
+        404:
+          description: Chain not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
   /config/{blockchainRid}:
     get:
       tags:

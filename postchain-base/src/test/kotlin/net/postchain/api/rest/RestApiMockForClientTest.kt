@@ -179,6 +179,10 @@ class RestApiMockForClientManual {
             TODO("Not yet implemented")
         }
 
+        override fun getBlockchainNodeState(): BlockchainNodeState {
+            TODO("Not yet implemented")
+        }
+
         override fun getTransactionInfo(txRID: TxRid): TransactionInfoExt {
             val block = blocks.filter { block -> block.transactions.filter { tx -> cryptoSystem.digest(tx.data!!).contentEquals(txRID.bytes) }.size > 0 }[0]
             val tx = block.transactions.filter { tx -> cryptoSystem.digest(tx.data!!).contentEquals(txRID.bytes) }[0]

@@ -13,6 +13,7 @@ enum class DiagnosticProperty(val prettyName: String) {
 
     BLOCKCHAIN("blockchain"),
     BLOCKCHAIN_RID("brid"),
+    BLOCKCHAIN_NODE_STATE("node-state"),
     BLOCKCHAIN_NODE_TYPE("node-type"),
     BLOCKCHAIN_LAST_HEIGHT("height"),
     BLOCKCHAIN_NODE_PEERS("peers"),
@@ -43,4 +44,16 @@ enum class DpNodeType(val prettyName: String) {
     NODE_TYPE_REPLICA("Replica"),
     NODE_TYPE_HISTORIC_REPLICA("Historic Replica"),
     NODE_TYPE_FORCE_READ_ONLY("Force read only")
+}
+
+enum class DpBlockchainNodeState() {
+    RUNNING_HISTORIC,
+    RUNNING_VALIDATOR,
+    RUNNING_READ_ONLY,
+    PAUSED_READ_ONLY,
+    FORCED_READ_ONLY,
+    IMPORTING_FORCED_READ_ONLY,
+    UNARCHIVING_FORCED_READ_ONLY,
+    UNARCHIVING_VALIDATOR,
+    UNARCHIVING_READ_ONLY
 }

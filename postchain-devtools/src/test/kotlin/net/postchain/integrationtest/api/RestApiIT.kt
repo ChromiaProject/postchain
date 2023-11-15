@@ -37,7 +37,7 @@ import net.postchain.gtx.SimpleGTXModule
 import net.postchain.integrationtest.JsonTools
 import net.postchain.integrationtest.JsonTools.jsonAsMap
 import net.postchain.integrationtest.reconfiguration.TogglableFaultyGtxModule
-import org.awaitility.Awaitility
+import org.awaitility.Awaitility.await
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.core.IsEqual
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -228,7 +228,7 @@ class RestApiIT : IntegrationTestSetup() {
             }
         """.trimIndent()
 
-        Awaitility.await().untilAsserted {
+        await().untilAsserted {
             val body = given().port(nodes[0].getRestApiHttpPort())
                     .get("/tx/$blockchainRID/$txRidHex/status")
                     .then()
@@ -379,6 +379,19 @@ class RestApiIT : IntegrationTestSetup() {
     }
 
     @Test
+    fun testGetBlockchainNodeState() {
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
+        val sysSetup = doSystemSetup(1, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        given().port(nodes[0].getRestApiHttpPort())
+                .get("/blockchain/$blockchainRID/nodestate")
+                .then()
+                .statusCode(200)
+                .body(IsEqual.equalTo("{\"state\":\"RUNNING_VALIDATOR\"}"))
+    }
+
+    @Test
     fun `Get Transactions should return blocks and transactions in descending order`() {
         val nodeCount = 1
         val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
@@ -452,7 +465,7 @@ class RestApiIT : IntegrationTestSetup() {
         )
         nodes[0].addConfiguration(PostchainTestNode.DEFAULT_CHAIN_IID, 4, faultyConfig)
         buildBlock(PostchainTestNode.DEFAULT_CHAIN_IID, 3)
-        Awaitility.await().untilAsserted {
+        await().untilAsserted {
             assertThat(nodes[0].getRestApiModel().live).isFalse()
         }
 
@@ -564,7 +577,7 @@ class RestApiIT : IntegrationTestSetup() {
                     .extract().statusCode()
         }
 
-        Awaitility.await().untilAsserted {
+        await().untilAsserted {
             assertThat(BlockableQueryGtxModule.querySemaphore.queueLength).isEqualTo(2)
         }
 

@@ -13,6 +13,7 @@ import net.postchain.core.NodeRid
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpBlockchainNodeState
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.debug.LazyDiagnosticValue
@@ -144,6 +145,12 @@ class ValidatorBlockchainProcess(
         super.registerDiagnosticData(diagnosticData)
         val myNodeIndex = statusManager.getMyIndex()
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_VALIDATOR.prettyName)
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATE] = EagerDiagnosticValue(
+                when (blockchainState) {
+                    BlockchainState.UNARCHIVING -> DpBlockchainNodeState.UNARCHIVING_VALIDATOR
+                    else -> DpBlockchainNodeState.RUNNING_VALIDATOR
+                }
+        )
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS] = LazyDiagnosticValue {
             val errorQueue = workerContext.nodeDiagnosticContext.blockchainErrorQueue(workerContext.blockchainConfiguration.blockchainRid)
             val nodeRid = syncManager.validatorAtIndex(myNodeIndex)

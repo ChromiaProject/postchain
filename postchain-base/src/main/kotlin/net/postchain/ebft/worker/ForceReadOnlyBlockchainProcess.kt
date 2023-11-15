@@ -6,6 +6,7 @@ import net.postchain.core.BlockchainState
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpBlockchainNodeState
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.ebft.syncmanager.readonly.ForceReadOnlyMessageProcessor
@@ -47,6 +48,13 @@ class ForceReadOnlyBlockchainProcess(
     override fun registerDiagnosticData(diagnosticData: DiagnosticData) {
         super.registerDiagnosticData(diagnosticData)
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_FORCE_READ_ONLY.prettyName)
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATE] = EagerDiagnosticValue(
+                when (blockchainState) {
+                    BlockchainState.IMPORTING -> DpBlockchainNodeState.IMPORTING_FORCED_READ_ONLY
+                    BlockchainState.UNARCHIVING -> DpBlockchainNodeState.UNARCHIVING_FORCED_READ_ONLY
+                    else -> DpBlockchainNodeState.FORCED_READ_ONLY
+                }
+        )
     }
 
     override fun currentBlockHeight(): Long = blockHeight
