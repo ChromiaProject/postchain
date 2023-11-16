@@ -5,7 +5,6 @@ import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainConfiguration
-import net.postchain.core.BlockchainStartArgs
 import net.postchain.core.BlockchainState
 import net.postchain.core.NodeRid
 import net.postchain.devtools.awaitDebug
@@ -17,6 +16,7 @@ import net.postchain.managed.BlockchainInfo
 import net.postchain.managed.InactiveBlockchainInfo
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.PendingBlockchainConfiguration
+import net.postchain.managed.UnarchivingBlockchainInfo
 import java.util.TreeMap
 
 open class MockManagedNodeDataSource : ManagedNodeDataSource {
@@ -114,7 +114,7 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         } ?: emptyList()
     }
 
-    override fun getBlockchainStartArgs(blockchainRid: BlockchainRid): BlockchainStartArgs? {
+    override fun getUnarchivingBlockchainInfo(blockchainRid: BlockchainRid): UnarchivingBlockchainInfo? {
         return null
     }
 

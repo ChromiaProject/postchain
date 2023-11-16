@@ -30,6 +30,7 @@ import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
+import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.metrics.MessageDurationTrackerMetricsFactory
 import net.postchain.network.CommunicationManager
 import net.postchain.network.peer.DefaultPeerCommunicationManager
@@ -149,7 +150,9 @@ open class EBFTSynchronizationInfrastructure(
 
             blockchainState == BlockchainState.UNARCHIVING -> when {
                 isArchivedOnTheNode(chainId) -> {
-                    ForceReadOnlyBlockchainProcess(workerContext, blockchainState, -1 /*maxExposedHeight*/)
+                    val upToHeight = (blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider)
+                            ?.getUnarchivingBlockchainInfo(blockchainRid)?.upToHeight ?: -1
+                    ForceReadOnlyBlockchainProcess(workerContext, blockchainState, upToHeight)
                 }
 
                 iAmASigner -> ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(chainId), blockchainState)

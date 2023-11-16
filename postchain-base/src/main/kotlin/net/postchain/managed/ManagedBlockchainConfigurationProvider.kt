@@ -104,6 +104,10 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         }
     }
 
+    fun getUnarchivingBlockchainInfo(blockchainRid: BlockchainRid): UnarchivingBlockchainInfo? {
+        return if (::dataSource.isInitialized) dataSource.getUnarchivingBlockchainInfo(blockchainRid) else null
+    }
+
     // --------- Private --------
 
     protected fun checkNeedConfChangeViaDataSource(eContext: EContext, checkPendingConfigs: Boolean): Boolean {
