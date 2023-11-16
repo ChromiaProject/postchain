@@ -2,8 +2,11 @@ package net.postchain.gtv.parse
 
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvString
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -12,7 +15,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.math.BigInteger
 
 internal class GtvParserTest {
-
 
     @ParameterizedTest
     @MethodSource("testObjects")
@@ -42,6 +44,26 @@ internal class GtvParserTest {
         assertEquals(gtv("a" to gtv("""contains\=equals""")), escapedEqualsWithPrecedingBackslash)
     }
 
+    @Test
+    fun emptyDictionary() {
+        assertEquals(GtvDictionary.build(mapOf()), GtvParser.parse("{}"))
+    }
+
+    @Test
+    fun emptyArray() {
+        assertEquals(GtvArray(arrayOf()), GtvParser.parse("[]"))
+    }
+
+    @Test
+    fun quotedString() {
+        assertEquals(GtvString("foobar"), GtvParser.parse(""""foobar""""))
+    }
+
+    @Test
+    fun escapedString() {
+        assertEquals(GtvString("foo \"bar\" baz"), GtvParser.parse(""""foo \"bar\" baz""""))
+    }
+
     companion object {
         @JvmStatic
         fun testObjects() = arrayOf(
@@ -53,6 +75,7 @@ internal class GtvParserTest {
                 arrayOf(gtv("AB".hexStringToByteArray())),
                 arrayOf(gtv(gtv(3))),
                 arrayOf(gtv(gtv("0,0"))),
+                arrayOf(gtv(gtv(1), gtv(2), gtv(3))),
                 arrayOf(gtv("a" to gtv("0,0"))),
                 arrayOf(gtv("a" to gtv(3), "b" to gtv("mega"))),
                 arrayOf(gtv(gtv(1), gtv(gtv(2), gtv(3)))),

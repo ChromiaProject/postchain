@@ -54,6 +54,11 @@
             <artifactId>gson</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.github.h0tk3y.betterParse</groupId>
+            <artifactId>better-parse-jvm</artifactId>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>net.postchain</groupId>
@@ -86,7 +91,7 @@
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-reflect</artifactId>
-        </dependency>
+        </dependency><dependency><groupId>org.apache.groovy</groupId><artifactId>groovy</artifactId><version>4.0.6</version><scope>compile</scope></dependency>
     </dependencies>
 
     <build>

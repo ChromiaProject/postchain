@@ -553,6 +553,12 @@
                 <version>6.0.53</version>
             </dependency>
 
+            <dependency>
+                <groupId>com.github.h0tk3y.betterParse</groupId>
+                <artifactId>better-parse-jvm</artifactId>
+                <version>0.4.4</version>
+            </dependency>
+
             <dependency> <!-- used by downstream projects -->
                 <groupId>org.jooq</groupId>
                 <artifactId>jooq</artifactId>
