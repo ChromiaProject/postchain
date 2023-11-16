@@ -2,6 +2,7 @@ package net.postchain.containers.bpm
 
 import mu.KLogging
 import net.postchain.api.rest.infra.RestApiConfig
+import net.postchain.common.reflection.newInstanceOf
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.infra.ContainerNodeConfig
@@ -248,6 +249,11 @@ object ContainerConfigFactory : KLogging() {
         val javaToolOptions = createJavaToolOptions(containerNodeConfig, container)
         if (javaToolOptions.isNotEmpty()) {
             add("JAVA_TOOL_OPTIONS=${javaToolOptions.joinToString(" ")}")
+        }
+
+        containerNodeConfig.containerConfigProviders.forEach { configProviderClass ->
+            val configProvider = newInstanceOf<ContainerConfigProvider>(configProviderClass)
+            configProvider.getConfig(appConfig).forEach { add("${it.key}=${it.value}") }
         }
     }
 

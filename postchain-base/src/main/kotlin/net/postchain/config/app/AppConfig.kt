@@ -8,6 +8,7 @@ import net.postchain.common.config.cryptoSystem
 import net.postchain.common.config.cryptoSystemClass
 import net.postchain.common.config.getEnvOrBooleanProperty
 import net.postchain.common.config.getEnvOrIntProperty
+import net.postchain.common.config.getEnvOrListProperty
 import net.postchain.common.config.getEnvOrLongProperty
 import net.postchain.common.config.getEnvOrStringProperty
 import net.postchain.common.hexStringToByteArray
@@ -202,5 +203,6 @@ class AppConfig(private val config: Configuration) : Config {
     fun getEnvOrInt(env: String, key: String, defaultValue: Int) = config.getEnvOrIntProperty(env, key, defaultValue)
     fun getEnvOrLong(env: String, key: String, defaultValue: Long) = config.getEnvOrLongProperty(env, key, defaultValue)
     fun getEnvOrBoolean(env: String, key: String, defaultValue: Boolean) = config.getEnvOrBooleanProperty(env, key, defaultValue)
+    fun getEnvOrListProperty(env: String, key: String, defaultValue: List<String>) = config.getEnvOrListProperty(env, key, defaultValue)
     fun hasEnvOrKey(env: String, key: String) = System.getenv(env) != null || config.containsKey(key)
 }
