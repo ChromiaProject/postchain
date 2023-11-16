@@ -9,7 +9,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
-import net.postchain.core.BlockchainStartArgs
 import net.postchain.core.BlockchainState
 import net.postchain.core.NodeRid
 import net.postchain.crypto.PubKey
@@ -147,15 +146,14 @@ class BaseManagedNodeDataSourceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("testGetBlockchainStartArgsData")
-    fun testGetBlockchainStartArgs(apiVersion: Long, state: BlockchainState, gtvResult: Gtv, expected: BlockchainStartArgs?) {
+    @MethodSource("testGetUnarchivingBlockchainInfoData")
+    fun testGetUnarchivingBlockchainInfo(apiVersion: Long, state: BlockchainState, gtvResult: Gtv, expected: UnarchivingBlockchainInfo?) {
         val queryRunner: QueryRunner = mock {
             on { query(eq("nm_api_version"), any()) } doReturn gtv(apiVersion)
-            on { query(eq("nm_get_blockchain_state"), any()) } doReturn gtv(state.name)
-            on { query(eq("nm_get_blockchain_start_args"), any()) } doReturn gtvResult
+            on { query(eq("nm_get_unarchiving_blockchain_info"), any()) } doReturn gtvResult
         }
         val sut = BaseManagedNodeDataSource(queryRunner, mock())
-        assertEquals(expected, sut.getBlockchainStartArgs(ZERO_RID))
+        assertEquals(expected, sut.getUnarchivingBlockchainInfo(ZERO_RID))
     }
 
 
@@ -318,14 +316,12 @@ class BaseManagedNodeDataSourceTest {
         }
 
         @JvmStatic
-        fun testGetBlockchainStartArgsData(): List<Array<Any?>> {
+        fun testGetUnarchivingBlockchainInfoData(): List<Array<Any?>> {
             return listOf(
-                    arrayOf(12, BlockchainState.RUNNING, GtvNull, null),
-                    arrayOf(12, BlockchainState.UNARCHIVING, GtvNull, null),
-                    arrayOf(13, BlockchainState.RUNNING, GtvNull, null),
-                    arrayOf(13, BlockchainState.UNARCHIVING,
+                    arrayOf(12, GtvNull, null),
+                    arrayOf(13,
                             gtv(mapOf("rid" to gtv(ZERO_RID), "source_container" to gtv("src"), "destination_container" to gtv("dst"), "up_to_height" to gtv(100))),
-                            UnarchivingBlockchainStartArgs(ZERO_RID, "src", "dst", 100L)
+                            UnarchivingBlockchainInfo(ZERO_RID, "src", "dst", 100L)
                     ),
             )
         }

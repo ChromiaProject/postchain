@@ -18,7 +18,6 @@ import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainRestartNotifier
-import net.postchain.core.BlockchainStartArgs
 import net.postchain.core.BlockchainState
 import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.NodeRid
@@ -31,7 +30,6 @@ import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
-import net.postchain.managed.UnarchivingBlockchainStartArgs
 import net.postchain.metrics.MessageDurationTrackerMetricsFactory
 import net.postchain.network.CommunicationManager
 import net.postchain.network.peer.DefaultPeerCommunicationManager
@@ -56,8 +54,7 @@ open class EBFTSynchronizationInfrastructure(
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
-            blockchainState: BlockchainState,
-            blockchainStartArgs: BlockchainStartArgs?
+            blockchainState: BlockchainState
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
         val chainId = blockchainConfig.chainID
@@ -152,8 +149,7 @@ open class EBFTSynchronizationInfrastructure(
 
             blockchainState == BlockchainState.UNARCHIVING -> when {
                 isArchivedOnTheNode(chainId) -> {
-                    val maxExposedHeight = (blockchainStartArgs as? UnarchivingBlockchainStartArgs)?.upToHeight ?: -1
-                    ForceReadOnlyBlockchainProcess(workerContext, blockchainState, maxExposedHeight)
+                    ForceReadOnlyBlockchainProcess(workerContext, blockchainState, -1 /*maxExposedHeight*/)
                 }
 
                 iAmASigner -> ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(chainId), blockchainState)

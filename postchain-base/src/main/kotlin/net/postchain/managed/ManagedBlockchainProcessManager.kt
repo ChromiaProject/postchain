@@ -480,7 +480,4 @@ open class ManagedBlockchainProcessManager(
     override fun getBlockchainState(chainId: Long, blockchainRid: BlockchainRid): BlockchainState =
             if (chainId == CHAIN0) BlockchainState.RUNNING else dataSource.getBlockchainState(blockchainRid)
 
-    override fun getBlockchainStartArgs(chainId: Long, blockchainRid: BlockchainRid): BlockchainStartArgs? =
-            if (chainId == CHAIN0) null else dataSource.getBlockchainStartArgs(blockchainRid)
-
 }

@@ -22,8 +22,7 @@ interface SynchronizationInfrastructure : Shutdownable {
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
-            blockchainState: BlockchainState,
-            blockchainStartArgs: BlockchainStartArgs? = null
+            blockchainState: BlockchainState
     ): BlockchainProcess
 
     /**

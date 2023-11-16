@@ -26,7 +26,6 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.BlockchainRestartNotifier
-import net.postchain.core.BlockchainStartArgs
 import net.postchain.core.BlockchainState
 import net.postchain.core.DefaultBlockchainConfigurationFactory
 import net.postchain.core.EContext
@@ -257,8 +256,7 @@ open class BaseBlockchainProcessManager(
                 blockchainConfig,
                 engine,
                 restartNotifier,
-                getBlockchainState(chainId, blockchainConfig.blockchainRid),
-                getBlockchainStartArgs(chainId, blockchainConfig.blockchainRid)
+                getBlockchainState(chainId, blockchainConfig.blockchainRid)
         )
         logger.debug("BlockchainProcess has been launched")
 
@@ -271,8 +269,6 @@ open class BaseBlockchainProcessManager(
     }
 
     protected open fun getBlockchainState(chainId: Long, blockchainRid: BlockchainRid): BlockchainState = BlockchainState.RUNNING
-
-    protected open fun getBlockchainStartArgs(chainId: Long, blockchainRid: BlockchainRid): BlockchainStartArgs? = null
 
     private fun hasBuiltInitialBlock(eContext: EContext) = DatabaseAccess.of(eContext).getLastBlockHeight(eContext) > -1L
 
@@ -323,10 +319,9 @@ open class BaseBlockchainProcessManager(
             blockchainConfig: BlockchainConfiguration,
             engine: BlockchainEngine,
             restartNotifier: BlockchainRestartNotifier,
-            blockchainState: BlockchainState,
-            blockchainStartArgs: BlockchainStartArgs?
+            blockchainState: BlockchainState
     ) {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(engine, blockchainConfigProvider, restartNotifier, blockchainState, blockchainStartArgs)
+        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(engine, blockchainConfigProvider, restartNotifier, blockchainState)
                 .also {
                     val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainConfig.blockchainRid).also { data ->
                         data[DiagnosticProperty.BLOCKCHAIN_LAST_HEIGHT] = LazyDiagnosticValue { engine.getBlockQueries().getLastBlockHeight().get() }

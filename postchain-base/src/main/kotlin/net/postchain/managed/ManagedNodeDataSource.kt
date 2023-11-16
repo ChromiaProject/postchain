@@ -5,7 +5,6 @@ package net.postchain.managed
 import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.common.BlockchainRid
 import net.postchain.config.node.PeerInfoDataSource
-import net.postchain.core.BlockchainStartArgs
 import net.postchain.core.BlockchainState
 import net.postchain.managed.query.QueryRunner
 
@@ -33,5 +32,5 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
 
     fun findNextInactiveBlockchains(height: Long): List<InactiveBlockchainInfo>
 
-    fun getBlockchainStartArgs(blockchainRid: BlockchainRid): BlockchainStartArgs?
+    fun getUnarchivingBlockchainInfo(blockchainRid: BlockchainRid): UnarchivingBlockchainInfo?
 }

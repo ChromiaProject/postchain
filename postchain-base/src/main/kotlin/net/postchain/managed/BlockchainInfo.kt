@@ -1,7 +1,6 @@
 package net.postchain.managed
 
 import net.postchain.common.BlockchainRid
-import net.postchain.core.BlockchainStartArgs
 import net.postchain.core.BlockchainState
 
 data class BlockchainInfo(
@@ -16,9 +15,9 @@ data class InactiveBlockchainInfo(
         val height: Long
 )
 
-data class UnarchivingBlockchainStartArgs(
+data class UnarchivingBlockchainInfo(
         val rid: BlockchainRid,
         val sourceContainer: String,
         val destinationContainer: String,
         val upToHeight: Long
-) : BlockchainStartArgs()
+)
