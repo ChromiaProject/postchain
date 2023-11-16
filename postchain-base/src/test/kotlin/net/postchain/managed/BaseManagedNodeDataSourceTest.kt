@@ -147,7 +147,7 @@ class BaseManagedNodeDataSourceTest {
 
     @ParameterizedTest
     @MethodSource("testGetUnarchivingBlockchainInfoData")
-    fun testGetUnarchivingBlockchainInfo(apiVersion: Long, state: BlockchainState, gtvResult: Gtv, expected: UnarchivingBlockchainInfo?) {
+    fun testGetUnarchivingBlockchainInfo(apiVersion: Long, gtvResult: Gtv, expected: UnarchivingBlockchainInfo?) {
         val queryRunner: QueryRunner = mock {
             on { query(eq("nm_api_version"), any()) } doReturn gtv(apiVersion)
             on { query(eq("nm_get_unarchiving_blockchain_info"), any()) } doReturn gtvResult
