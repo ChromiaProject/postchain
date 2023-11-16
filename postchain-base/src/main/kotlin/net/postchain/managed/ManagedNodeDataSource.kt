@@ -31,4 +31,6 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
     fun getBlockchainConfigurationOptions(blockchainRid: BlockchainRid, height: Long): BlockchainConfigurationOptions?
 
     fun findNextInactiveBlockchains(height: Long): List<InactiveBlockchainInfo>
+
+    fun getUnarchivingBlockchainInfo(blockchainRid: BlockchainRid): UnarchivingBlockchainInfo?
 }

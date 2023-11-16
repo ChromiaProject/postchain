@@ -14,3 +14,10 @@ data class InactiveBlockchainInfo(
         val state: BlockchainState,
         val height: Long
 )
+
+data class UnarchivingBlockchainInfo(
+        val rid: BlockchainRid,
+        val sourceContainer: String,
+        val destinationContainer: String,
+        val upToHeight: Long
+)

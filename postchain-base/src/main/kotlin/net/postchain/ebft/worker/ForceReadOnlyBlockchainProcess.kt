@@ -16,7 +16,8 @@ import kotlin.collections.set
 
 class ForceReadOnlyBlockchainProcess(
         private val workerContext: WorkerContext,
-        private val blockchainState: BlockchainState
+        private val blockchainState: BlockchainState,
+        private val maxExposedHeight: Long = -1
 ) : AbstractBlockchainProcess("force-readonly-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine) {
 
     private val loggingContext = mapOf(

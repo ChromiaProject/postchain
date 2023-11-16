@@ -202,4 +202,21 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
             emptyList()
         }
     }
+
+    override fun getUnarchivingBlockchainInfo(blockchainRid: BlockchainRid): UnarchivingBlockchainInfo? {
+        if (nmApiVersion < 13) return null
+
+        val res = query(
+                "nm_get_unarchiving_blockchain_info",
+                buildArgs("blockchain_rid" to gtv(blockchainRid.data))
+        )
+        if (res.isNull()) return null
+
+        return UnarchivingBlockchainInfo(
+                blockchainRid,
+                res["source_container"]?.asString() ?: return null,
+                res["destination_container"]?.asString() ?: return null,
+                res["up_to_height"]?.asInteger() ?: return null
+        )
+    }
 }

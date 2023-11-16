@@ -16,6 +16,7 @@ import net.postchain.managed.BlockchainInfo
 import net.postchain.managed.InactiveBlockchainInfo
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.PendingBlockchainConfiguration
+import net.postchain.managed.UnarchivingBlockchainInfo
 import java.util.TreeMap
 
 open class MockManagedNodeDataSource : ManagedNodeDataSource {
@@ -111,6 +112,10 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
                 }
             else null
         } ?: emptyList()
+    }
+
+    override fun getUnarchivingBlockchainInfo(blockchainRid: BlockchainRid): UnarchivingBlockchainInfo? {
+        return null
     }
 
     override fun query(name: String, args: Gtv): Gtv {

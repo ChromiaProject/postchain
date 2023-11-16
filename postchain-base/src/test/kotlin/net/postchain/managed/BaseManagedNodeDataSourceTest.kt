@@ -145,6 +145,18 @@ class BaseManagedNodeDataSourceTest {
         assertEquals(expected, sut.findNextInactiveBlockchains(0L))
     }
 
+    @ParameterizedTest
+    @MethodSource("testGetUnarchivingBlockchainInfoData")
+    fun testGetUnarchivingBlockchainInfo(apiVersion: Long, gtvResult: Gtv, expected: UnarchivingBlockchainInfo?) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(apiVersion)
+            on { query(eq("nm_get_unarchiving_blockchain_info"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock())
+        assertEquals(expected, sut.getUnarchivingBlockchainInfo(ZERO_RID))
+    }
+
+
     companion object {
 
         private val hashCalculator: GtvMerkleHashCalculator = GtvMerkleHashCalculator(Secp256K1CryptoSystem())
@@ -300,6 +312,17 @@ class BaseManagedNodeDataSourceTest {
             return listOf(
                     arrayOf(GtvArray(emptyArray()), emptyList<InactiveBlockchainInfo>()),
                     arrayOf(nonTrivialGtv, nonTrivialExpected)
+            )
+        }
+
+        @JvmStatic
+        fun testGetUnarchivingBlockchainInfoData(): List<Array<Any?>> {
+            return listOf(
+                    arrayOf(12, GtvNull, null),
+                    arrayOf(13,
+                            gtv(mapOf("rid" to gtv(ZERO_RID), "source_container" to gtv("src"), "destination_container" to gtv("dst"), "up_to_height" to gtv(100))),
+                            UnarchivingBlockchainInfo(ZERO_RID, "src", "dst", 100L)
+                    ),
             )
         }
     }
