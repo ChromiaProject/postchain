@@ -7,7 +7,6 @@ import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.base.configuration.BlockchainConfigurationOptions
-import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
@@ -16,7 +15,6 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockWitness
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
-import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 import kotlin.time.Duration
 
@@ -38,6 +36,7 @@ interface BlockchainConfiguration {
     val syncInfrastructureExtensionNames: List<DynamicClassName>
     val transactionQueueSize: Int
     val transactionQueueRecheckInterval: Duration
+    val configHash: ByteArray
 
     fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader
     fun decodeWitness(rawWitness: ByteArray): BlockWitness
@@ -49,9 +48,6 @@ interface BlockchainConfiguration {
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
     fun initializeModules(postchainContext: PostchainContext)
     fun shutdownModules()
-
-    val configHash: ByteArray
-        get() = GtvToBlockchainRidFactory.calculateBlockchainRid(rawConfig, ::sha256Digest).data
 }
 
 fun interface BlockchainConfigurationFactorySupplier {
