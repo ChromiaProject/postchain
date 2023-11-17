@@ -3,6 +3,8 @@
 package net.postchain.network.peer
 
 import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.isEmpty
 import assertk.isContentEqualTo
 import net.postchain.base.NetworkNodes
@@ -292,7 +294,7 @@ class DefaultPeerConnectionManagerTest {
             assertFalse { isPeerConnected(1L, peerInfo2.peerId()) }
             assertFalse { isPeerConnected(1L, unknownPeerInfo.peerId()) }
             // - getConnectedPeers
-            assertThat(getConnectedNodes(1L).toTypedArray()).isEmpty()
+            assertThat(getConnectedNodes(1L)).isEmpty()
 
             // Emulates call of onPeerConnected() by XConnector
             onNodeConnected(mockConnection(peerConnectionDescriptor1))
@@ -304,8 +306,8 @@ class DefaultPeerConnectionManagerTest {
             assertTrue { isPeerConnected(1L, peerInfo2.peerId()) }
             assertFalse { isPeerConnected(1L, unknownPeerInfo.peerId()) }
             // - getConnectedPeers
-            assertThat(getConnectedNodes(1L).toTypedArray()).isContentEqualTo(
-                    arrayOf(peerInfo1.peerId(), peerInfo2.peerId())
+            assertThat(getConnectedNodes(1L)).containsExactlyInAnyOrder(
+                    peerInfo1.peerId(), peerInfo2.peerId()
             )
 
 
@@ -317,9 +319,7 @@ class DefaultPeerConnectionManagerTest {
             assertTrue { isPeerConnected(1L, peerInfo2.peerId()) }
             assertFalse { isPeerConnected(1L, unknownPeerInfo.peerId()) }
             // - getConnectedPeers
-            assertThat(getConnectedNodes(1L).toTypedArray()).isContentEqualTo(
-                    arrayOf(peerInfo2.peerId())
-            )
+            assertThat(getConnectedNodes(1L)).containsExactly(peerInfo2.peerId())
 
 
             // When / Disconnecting the whole chain
