@@ -44,6 +44,8 @@ class ForceReadOnlyBlockchainProcessTest {
         }
 
         // verification
-        assertThat(sut.messageProcessor().lastBlockHeight).isEqualTo(min(maxExposedHeight, 10))
+        assertThat(sut.messageProcessor().lastBlockHeight).isEqualTo(
+                if (maxExposedHeight == -1L) 10L else min(maxExposedHeight, 10)
+        )
     }
 }

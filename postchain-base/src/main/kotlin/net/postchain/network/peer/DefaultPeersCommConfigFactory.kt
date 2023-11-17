@@ -1,5 +1,6 @@
 package net.postchain.network.peer
 
+import mu.KLogging
 import net.postchain.base.BasePeerCommConfiguration
 import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.PeerCommConfiguration
@@ -11,6 +12,8 @@ import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.NodeRid
 
 open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
+
+    companion object : KLogging()
 
     override fun create(
             appConfig: AppConfig,
@@ -77,17 +80,26 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
             signers: List<ByteArray>, // signers
             historicBlockchainContext: HistoricBlockchainContext?
     ): Map<NodeRid, PeerInfo> {
+        logger.error { "buildRelevantNodeInfoMap: " }
+
         val myNodeRid = NodeRid(appConfig.pubKeyByteArray)
+        logger.error { "myNodeRid: $myNodeRid" }
+
         val signers0 = signers.map { NodeRid(it) }
+        logger.error { "signers0: " + signers0.toTypedArray().contentToString() }
         val iAmASigner = myNodeRid in signers0
+        logger.error { "iAmASigner: $iAmASigner" }
         val latestSigners = nodeConfig.getSignersInLatestConfiguration(blockchainRid, chainId)
+        logger.error { "latestSigners: " + latestSigners.toTypedArray().contentToString() }
 
         val blockchainReplicas = if (historicBlockchainContext != null) {
-            getBlockchainReplicaNodes(nodeConfig, historicBlockchainContext.historicBrid, chainId, iAmASigner) +
-                    getBlockchainReplicaNodes(nodeConfig, blockchainRid, chainId, iAmASigner)
+            getBlockchainReplicaNodes(nodeConfig, historicBlockchainContext.historicBrid) +
+                    getBlockchainReplicaNodes(nodeConfig, blockchainRid)
         } else {
-            getBlockchainReplicaNodes(nodeConfig, blockchainRid, chainId, iAmASigner)
+            getBlockchainReplicaNodes(nodeConfig, blockchainRid)
         }
+
+        logger.error { "blockchainReplicas: " + blockchainReplicas.toTypedArray().contentToString() }
 
         // We keep
         // 1. All BC's signers
@@ -105,11 +117,23 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
      *
      * NOTE: This could be made smarter, perhaps some replica nodes should be included in some cases
      */
-    private fun getBlockchainReplicaNodes(nodeConfig: NodeConfig, blockchainRid: BlockchainRid, chainId: Long, iAmASigner: Boolean): List<NodeRid> {
-        return if (iAmASigner || (nodeConfig.mustSyncUntilHeight?.get(chainId) ?: -1) > -1) {
-            nodeConfig.blockchainReplicaNodes[blockchainRid]
-        } else {
-            nodeConfig.locallyConfiguredBlockchainReplicaNodes[blockchainRid]
-        } ?: emptyList()
+    private fun getBlockchainReplicaNodes(nodeConfig: NodeConfig, blockchainRid: BlockchainRid): List<NodeRid> {
+        return buildList {
+            addAll(nodeConfig.blockchainReplicaNodes[blockchainRid] ?: emptyList())
+            addAll(nodeConfig.locallyConfiguredBlockchainReplicaNodes[blockchainRid] ?: emptyList())
+        }
+
+        /*
+            return if ((nodeConfig.mustSyncUntilHeight?.get(chainId) ?: -1) > -1) {
+                nodeConfig.locallyConfiguredBlockchainReplicaNodes[blockchainRid]
+            } else {
+                logger.error { "nodeConfig.blockchainReplicaNodes: " }
+                nodeConfig.blockchainReplicaNodes.forEach {
+                    logger.error { it.key.toHex() + "  " + it.value.toTypedArray().contentToString() }
+                }
+                nodeConfig.blockchainReplicaNodes[blockchainRid]
+            } ?: emptyList()
+
+         */
     }
 }

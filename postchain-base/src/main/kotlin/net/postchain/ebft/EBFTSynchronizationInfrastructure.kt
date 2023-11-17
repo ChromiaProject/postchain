@@ -4,11 +4,9 @@ package net.postchain.ebft
 
 import mu.KLogging
 import net.postchain.PostchainContext
-import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.configuration.BaseBlockchainConfiguration
-import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.wrap
@@ -89,6 +87,9 @@ open class EBFTSynchronizationInfrastructure(
         val forceReadOnly = postchainContext.appConfig.readOnly
         if (forceReadOnly) logger.warn("I am running in forced read only mode")
 
+        logger.error { "peers: ${peers.toTypedArray().contentToString()}" }
+        logger.error { "signers: ${signers.toTypedArray().contentToString()}" }
+
         // worker context
         val buildWorkerContext = { brid: BlockchainRid, peerCommConfig: PeerCommConfiguration ->
             val communicationManager = buildXCommunicationManager(blockchainConfig, peerCommConfig, brid)
@@ -148,23 +149,22 @@ open class EBFTSynchronizationInfrastructure(
 
             blockchainState == BlockchainState.IMPORTING -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
 
-            blockchainState == BlockchainState.UNARCHIVING -> when {
-                isArchivedOnTheNode(chainId) -> {
-                    val upToHeight = (blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider)
-                            ?.getUnarchivingBlockchainInfo(blockchainRid)?.upToHeight ?: -1
-                    ForceReadOnlyBlockchainProcess(workerContext, blockchainState, upToHeight)
-                }
+            blockchainState == BlockchainState.UNARCHIVING -> {
+                val bcInfo = (blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider)
+                        ?.getUnarchivingBlockchainNodeInfo(blockchainRid)
+                logger.error { "bcInfo: $bcInfo" }
+                when {
+                    bcInfo != null && bcInfo.isSourceNode ->
+                        ForceReadOnlyBlockchainProcess(workerContext, blockchainState, bcInfo.upToHeight)
 
-                iAmASigner -> ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(chainId), blockchainState)
-                else -> ReadOnlyBlockchainProcess(workerContext, blockchainState)
+                    iAmASigner -> ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(chainId), blockchainState)
+
+                    else -> ReadOnlyBlockchainProcess(workerContext, blockchainState)
+                }
             }
 
             else -> throw ProgrammerMistake("Unexpected blockchain state $blockchainState for blockchain $blockchainRid")
         }
-    }
-
-    private fun isArchivedOnTheNode(chainId: Long) = withReadConnection(postchainContext.sharedStorage, chainId) {
-        BlockchainApi.isBlockchainArchivedOnNode(it)
     }
 
     /*
