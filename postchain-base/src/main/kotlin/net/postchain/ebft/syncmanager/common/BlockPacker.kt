@@ -31,15 +31,21 @@ object BlockPacker : KLogging() {
             buildFromBlockDataWithWitness: (height: Long, blockData: BlockDataWithWitness) -> CompleteBlock, // Sending this to simplify testing
             packedBlocks: MutableList<CompleteBlock> // Holds the "return" list
     ): Boolean {
+        logger.debug { "GetBlockRange from peer $peerId, starting at height $startAtHeight, myHeight is $myHeight" }
         var totByteSize = 0
         var blocksAdded = 0
-        logger.debug { "GetBlockRange from peer $peerId, starting at height $startAtHeight, myHeight is $myHeight" }
         while (blocksAdded < MAX_BLOCKS_IN_PACKAGE) {
             val height = startAtHeight + blocksAdded
-            logger.debug { "GetBlockRange from peer $peerId, packing height $height" }
+
+            if (height > myHeight) {
+                logger.debug { "GetBlockRange: myHeight reached, no more blocks to send" }
+                return true
+            }
+
+            logger.debug { "GetBlockRange: from peer $peerId, packing height $height" }
             val blockData = getBlockFromHeight(height)
             if (blockData == null) {
-                logger.debug { "GetBlockRange no more blocks in DB." }
+                logger.debug { "GetBlockRange: no more blocks in DB" }
                 return true
             } else {
                 val completeBlock = buildFromBlockDataWithWitness(height, blockData)

@@ -13,11 +13,12 @@ import net.postchain.ebft.syncmanager.readonly.ForceReadOnlyMessageProcessor
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import kotlin.collections.set
+import kotlin.math.min
 
-class ForceReadOnlyBlockchainProcess(
+open class ForceReadOnlyBlockchainProcess(
         private val workerContext: WorkerContext,
         private val blockchainState: BlockchainState,
-        private val maxExposedHeight: Long = -1
+        maxExposedHeight: Long = -1
 ) : AbstractBlockchainProcess("force-readonly-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine) {
 
     private val loggingContext = mapOf(
@@ -25,9 +26,9 @@ class ForceReadOnlyBlockchainProcess(
             BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex()
     )
 
-    private val blockHeight = workerContext.engine.getBlockQueries().getLastBlockHeight().get()
+    private val blockHeight = min(maxExposedHeight, workerContext.engine.getBlockQueries().getLastBlockHeight().get())
 
-    private val forceReadOnlyMessageProcessor = ForceReadOnlyMessageProcessor(workerContext.engine.getBlockQueries(), workerContext.communicationManager, blockHeight)
+    protected open val forceReadOnlyMessageProcessor = ForceReadOnlyMessageProcessor(workerContext.engine.getBlockQueries(), workerContext.communicationManager, blockHeight)
 
     override fun action() {
         withLoggingContext(loggingContext) {

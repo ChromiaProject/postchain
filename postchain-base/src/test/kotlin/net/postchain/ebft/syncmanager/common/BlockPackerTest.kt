@@ -17,36 +17,25 @@ class BlockPackerTest {
 
     private val nodeHex = "121212"
     private val theOnlyOtherNode = NodeRid(nodeHex.hexStringToByteArray())
-    private val startAtHeight = 17L
-    private val myHeight = 19L
-
     private val smallBlockBytes = ByteArray(1000)
     private val bigBlockBytes = ByteArray(10_000_000)
-
     private val packetVersion = 1L
-
-    private lateinit var mockedBd: BlockDataWithWitness
-    private lateinit var mockedCb: CompleteBlock
-
-    private fun dummyGetBlockAtHeight(height: Long): BlockDataWithWitness? {
-        return mockedBd
+    private var mockedCb: CompleteBlock = mock {
+        on { encoded(any()) } doReturn lazy { smallBlockBytes }
     }
+
+    private fun dummyGetBlockAtHeight(height: Long): BlockDataWithWitness = mock()
 
     private fun dummyBuildFromBlockDataWithWitness(height: Long, blockData: BlockDataWithWitness): CompleteBlock {
         return mockedCb
 
     }
 
-    /**
-     * Here we see that if blocks are small we will happily fill the block list with 10 blocks.
-     */
     @Test
-    fun happy() {
+    fun `BlockPacker returns full BlockRange and myHeight is not reached`() {
+        val startAtHeight = 0L
+        val myHeight = 50L
         val packedBlocks = mutableListOf<CompleteBlock>()
-        mockedBd = mock { }
-        mockedCb = mock {
-            on { encoded(any()) } doReturn lazy { smallBlockBytes }
-        }
 
         val allFit = BlockPacker.packBlockRange(
                 theOnlyOtherNode,
@@ -61,14 +50,49 @@ class BlockPackerTest {
         assertEquals(BlockPacker.MAX_BLOCKS_IN_PACKAGE, packedBlocks.size)
     }
 
-    /**
-     * For bigger blocks we will only fit a few blocks in the package.
-     */
     @Test
-    fun only_two_big_blocks_will_fit() {
-
+    fun `BlockPacker returns full BlockRange and myHeight is reached`() {
+        val startAtHeight = 41L
+        val myHeight = 50L
         val packedBlocks = mutableListOf<CompleteBlock>()
-        mockedBd = mock { }
+
+        val allFit = BlockPacker.packBlockRange(
+                theOnlyOtherNode,
+                packetVersion,
+                startAtHeight,
+                myHeight,
+                ::dummyGetBlockAtHeight,
+                ::dummyBuildFromBlockDataWithWitness,
+                packedBlocks)
+
+        assertTrue(allFit)
+        assertEquals(BlockPacker.MAX_BLOCKS_IN_PACKAGE, packedBlocks.size)
+    }
+
+    @Test
+    fun `BlockPacker returns not full BlockRange because myHeight is reached`() {
+        val startAtHeight = 45L
+        val myHeight = 50L
+        val packedBlocks = mutableListOf<CompleteBlock>()
+
+        val allFit = BlockPacker.packBlockRange(
+                theOnlyOtherNode,
+                packetVersion,
+                startAtHeight,
+                myHeight,
+                ::dummyGetBlockAtHeight,
+                ::dummyBuildFromBlockDataWithWitness,
+                packedBlocks)
+
+        assertTrue(allFit)
+        assertEquals(6, packedBlocks.size)
+    }
+
+    @Test
+    fun `BlockPacker returns not full BlockRange because MAX_PACKAGE_CONTENT_BYTES is reached`() {
+        val startAtHeight = 0L
+        val myHeight = 20L
+        val packedBlocks = mutableListOf<CompleteBlock>()
         mockedCb = mock {
             on { encoded(any()) } doReturn lazy { bigBlockBytes }
         }
@@ -86,5 +110,4 @@ class BlockPackerTest {
         val expectedBlocks = BlockPacker.MAX_PACKAGE_CONTENT_BYTES / bigBlockBytes.size
         assertEquals(expectedBlocks, packedBlocks.size)
     }
-
 }
