@@ -66,8 +66,6 @@ abstract class Messaging(
      * @param startAtHeight requested block height to start from
      */
     fun sendBlockRangeFromHeight(peerId: NodeRid, startAtHeight: Long, myHeight: Long) {
-        logger.trace { "GetBlockRange from peer $peerId , start at height $startAtHeight, myHeight is $myHeight" }
-
         val blocks = mutableListOf<CompleteBlock>()
         val allBlocksFit = blockPacker.packBlockRange(
                 peerId,

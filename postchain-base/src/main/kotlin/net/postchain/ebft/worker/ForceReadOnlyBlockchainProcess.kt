@@ -13,6 +13,7 @@ import net.postchain.ebft.syncmanager.readonly.ForceReadOnlyMessageProcessor
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import kotlin.collections.set
+import kotlin.math.min
 
 class ForceReadOnlyBlockchainProcess(
         private val workerContext: WorkerContext,
@@ -25,7 +26,7 @@ class ForceReadOnlyBlockchainProcess(
             BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex()
     )
 
-    private val blockHeight = workerContext.engine.getBlockQueries().getLastBlockHeight().get()
+    private val blockHeight = min(maxExposedHeight, workerContext.engine.getBlockQueries().getLastBlockHeight().get())
 
     private val forceReadOnlyMessageProcessor = ForceReadOnlyMessageProcessor(workerContext.engine.getBlockQueries(), workerContext.communicationManager, blockHeight)
 
