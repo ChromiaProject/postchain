@@ -26,7 +26,9 @@ open class ForceReadOnlyBlockchainProcess(
             BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex()
     )
 
-    private val blockHeight = min(maxExposedHeight, workerContext.engine.getBlockQueries().getLastBlockHeight().get())
+    private val blockHeight = workerContext.engine.getBlockQueries().getLastBlockHeight().get().let {
+        if (maxExposedHeight != -1L) min(maxExposedHeight, it) else it
+    }
 
     protected open val forceReadOnlyMessageProcessor = ForceReadOnlyMessageProcessor(workerContext.engine.getBlockQueries(), workerContext.communicationManager, blockHeight)
 
