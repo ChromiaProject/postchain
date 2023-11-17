@@ -39,7 +39,7 @@ object BlockPacker : KLogging() {
 
             if (height > myHeight) {
                 logger.debug { "GetBlockRange: myHeight reached, no more blocks to send" }
-                return false
+                return true
             }
 
             logger.debug { "GetBlockRange: from peer $peerId, packing height $height" }
