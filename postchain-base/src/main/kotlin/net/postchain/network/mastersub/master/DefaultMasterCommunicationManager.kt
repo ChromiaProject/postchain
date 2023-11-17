@@ -82,6 +82,9 @@ open class DefaultMasterCommunicationManager(
                     when (message) {
                         is MsHandshakeMessage -> {
                             disconnectChainPeers()
+                            if (message.blockchainRid != null) {
+                                masterConnectionManager.onReceivedHandshake(BlockchainRid(message.blockchainRid))
+                            }
                             connectChainPeers(message.peers)
                         }
 

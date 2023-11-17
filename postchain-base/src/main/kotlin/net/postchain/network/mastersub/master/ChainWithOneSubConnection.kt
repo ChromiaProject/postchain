@@ -11,6 +11,7 @@ class ChainWithOneSubConnection(val config: SubChainConfig) :
 
     // Maximum ONE connection
     var conn: MasterConnection? = null
+    var handshakeReceived = false
 
     // ---------------------------
     // Trivial impl of the interface
