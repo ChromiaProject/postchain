@@ -69,11 +69,13 @@ class DefaultMasterConnectionManager(
         val chain = chainsWithOneSubConnection.get(blockchainRid)
         return if (chain != null) {
             val conn = chain.getConnection()
-            if (conn != null) {
+            // We should not pass anything on to the subnode until receiving a handshake since
+            // packets must be coming from old connections
+            if (conn != null && chain.handshakeReceived) {
                 conn.sendPacket(lazy { MsCodec.encode(message) })
                 logger.trace { "$prefix - end: message sent" }
             } else {
-                logger.debug { "$prefix - end: conn not found" }
+                logger.debug { "$prefix - end: conn not found or has not received handshake yet" }
             }
             true
         } else {
@@ -93,6 +95,12 @@ class DefaultMasterConnectionManager(
         } else {
             logger.debug("Subnode chain is not connected")
         }
+    }
+
+    @Synchronized
+    override fun onReceivedHandshake(blockchainRid: BlockchainRid) {
+        logger.debug { "Received handshake for chain: ${blockchainRid.toShortHex()}" }
+        chainsWithOneSubConnection.get(blockchainRid)?.handshakeReceived = true
     }
 
     @Synchronized
