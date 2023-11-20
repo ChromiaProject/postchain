@@ -11,10 +11,17 @@ class DiagnosticQueue(
     }
     private val queue get() = map.keys
 
+    @Synchronized
     override fun poll() = peek()?.also { queue.remove(it) }
+
+    @Synchronized
     override fun peek() = queue.firstOrNull()
+
+    @Synchronized
     override fun offer(element: DiagnosticValue) = map.put(element, true).let { true }
+
+    @Synchronized
     override fun iterator() = queue.iterator()
-    override val size get() = queue.size
-    override val value get() = queue.map { it.value }
+    override val size @Synchronized get() = queue.size
+    override val value @Synchronized get() = queue.map { it.value }
 }
