@@ -3,6 +3,7 @@ package net.postchain.network.common
 import net.postchain.core.NodeRid
 import net.postchain.core.Shutdownable
 import net.postchain.network.peer.XChainPeersConfiguration
+import java.util.concurrent.CompletableFuture
 
 /**
  * Holds the functions signatures common to all "connection managers".
@@ -16,8 +17,10 @@ interface ConnectionManager : NetworkTopology, Shutdownable {
 
     /**
      * Disconnect all nodes from the chain
+     *
+     * @return A future that completes when all connections are completely closed
      */
-    fun disconnectChain(chainId: Long)
+    fun disconnectChain(chainId: Long): CompletableFuture<Void>
 
     /**
      * Send a packet to the given chain at the given node

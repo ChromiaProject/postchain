@@ -21,6 +21,7 @@ import net.postchain.network.common.NetworkTopology
 import net.postchain.network.common.NodeConnector
 import net.postchain.network.common.NodeConnectorEvents
 import net.postchain.network.netty2.NettyPeerConnector
+import java.util.concurrent.CompletableFuture
 
 /**
  * Default implementation for "peer" based networks (which EBFT is).
@@ -243,21 +244,23 @@ open class DefaultPeerConnectionManager<PacketType>(
     }
 
     @Synchronized
-    override fun disconnectChain(chainId: Long) {
+    override fun disconnectChain(chainId: Long): CompletableFuture<Void> {
         logger.debug("Disconnecting chain")
 
         // Remove the chain before closing connections so that we won't
         // reconnect in onPeerDisconnected()
         val chain = chainsWithConnections.remove(chainId)
-        if (chain != null) {
+        return if (chain != null) {
             val old = chainIdForBlockchainRid.remove(chain.peerConfig.blockchainRid)
             if (old != null) {
                 disconnectedChainIdForBlockchainRid[chain.peerConfig.blockchainRid] = old
             }
-            chain.closeConnections()
+            val future = chain.closeConnections()
             logger.debug("Chain disconnected")
+            return future
         } else {
             logger.debug("Unknown chain")
+            CompletableFuture.completedFuture(null)
         }
     }
 

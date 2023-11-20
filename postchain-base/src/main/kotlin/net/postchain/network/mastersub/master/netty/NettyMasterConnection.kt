@@ -14,6 +14,7 @@ import net.postchain.network.mastersub.master.MasterConnectionDescriptor
 import net.postchain.network.mastersub.protocol.MsCodec
 import net.postchain.network.mastersub.protocol.MsHandshakeMessage
 import net.postchain.network.netty2.Transport
+import java.util.concurrent.CompletableFuture
 
 class NettyMasterConnection :
         ChannelInboundHandlerAdapter(),  // Make it "Netty"
@@ -25,6 +26,8 @@ class NettyMasterConnection :
 
     var onConnectedHandler: ((MasterConnectionDescriptor, MasterConnection) -> Unit)? = null
     var onDisconnectedHandler: ((MasterConnectionDescriptor, MasterConnection) -> Unit)? = null
+
+    private val channelInactiveFuture = CompletableFuture<Void>()
 
     override fun accept(handler: MsMessageHandler) {
         this.messageHandler = handler
@@ -40,8 +43,9 @@ class NettyMasterConnection :
         else ""
     }
 
-    override fun close() {
+    override fun close(): CompletableFuture<Void> {
         context.close()
+        return channelInactiveFuture
     }
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
@@ -70,6 +74,7 @@ class NettyMasterConnection :
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext?) {
+        channelInactiveFuture.complete(null)
         if (connectionDescriptor != null) {
             onDisconnectedHandler?.invoke(connectionDescriptor!!, this)
         }

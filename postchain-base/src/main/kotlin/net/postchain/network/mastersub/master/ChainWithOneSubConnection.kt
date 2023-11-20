@@ -2,6 +2,7 @@ package net.postchain.network.mastersub.master
 
 import net.postchain.network.common.ChainWithOneConnection
 import net.postchain.network.mastersub.MsMessageHandler
+import java.util.concurrent.CompletableFuture
 
 /**
  *
@@ -25,12 +26,13 @@ class ChainWithOneSubConnection(val config: SubChainConfig) :
         conn = newConn
     }
 
-    override fun closeConnection() {
-        conn?.close()
+    override fun closeConnection(): CompletableFuture<Void>? {
+        return conn?.close()
     }
 
-    override fun removeAndCloseConnection() {
-        conn?.close()
+    override fun removeAndCloseConnection(): CompletableFuture<Void>? {
+        val future = conn?.close()
         conn = null
+        return future
     }
 }

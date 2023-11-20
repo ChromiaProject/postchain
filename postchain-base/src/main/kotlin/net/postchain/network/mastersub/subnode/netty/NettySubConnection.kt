@@ -18,6 +18,7 @@ import net.postchain.network.netty2.NettyClient
 import net.postchain.network.netty2.Transport
 import java.net.InetSocketAddress
 import java.net.SocketAddress
+import java.util.concurrent.CompletableFuture
 
 class NettySubConnection(
         private val masterNode: PeerInfo,
@@ -31,17 +32,18 @@ class NettySubConnection(
     private lateinit var context: ChannelHandlerContext
     private var messageHandler: MsMessageHandler? = null
     private lateinit var onConnected: () -> Unit
-    private lateinit var onDisconnected: () -> Unit
+
+    private val channelInactiveFuture = CompletableFuture<Void>()
 
     fun open(onConnected: () -> Unit, onDisconnected: () -> Unit) {
         this.onConnected = onConnected
-        this.onDisconnected = onDisconnected
+        channelInactiveFuture.thenApply { onDisconnected() }
 
         nettyClient = NettyClient(this@NettySubConnection, masterAddress(), eventLoopGroup).also {
             it.channelFuture.await().apply {
                 if (!isSuccess) {
                     logger.info("Connection failed: ${cause().message}")
-                    onDisconnected()
+                    channelInactiveFuture.complete(null)
                 }
             }
         }
@@ -56,7 +58,7 @@ class NettySubConnection(
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext?) {
-        onDisconnected()
+        channelInactiveFuture.complete(null)
     }
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
@@ -83,8 +85,9 @@ class NettySubConnection(
         else ""
     }
 
-    override fun close() {
+    override fun close(): CompletableFuture<Void> {
         nettyClient?.shutdownAsync()
+        return channelInactiveFuture
     }
 
     override fun descriptor(): SubConnectionDescriptor {

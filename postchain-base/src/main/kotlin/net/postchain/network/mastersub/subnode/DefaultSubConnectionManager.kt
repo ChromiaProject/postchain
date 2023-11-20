@@ -21,6 +21,7 @@ import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.subnode.netty.NettySubConnector
 import net.postchain.network.peer.XChainPeersConfiguration
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -170,15 +171,17 @@ class DefaultSubConnectionManager(
     }
 
     @Synchronized
-    override fun disconnectChain(chainId: Long) {
+    override fun disconnectChain(chainId: Long): CompletableFuture<Void> {
         logger.debug("Disconnecting master chain")
 
         val chain = chains.remove(chainId)
-        if (chain != null) {
-            chain.removeAndCloseConnection()
+        return if (chain != null) {
+            val future = chain.removeAndCloseConnection()
             logger.debug("Master chain disconnected")
+            future ?: CompletableFuture.completedFuture(null)
         } else {
             logger.debug("Master chain is not connected")
+            CompletableFuture.completedFuture(null)
         }
     }
 
