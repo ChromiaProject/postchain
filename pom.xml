@@ -63,7 +63,7 @@
         <jasn.version>1.11.3</jasn.version>
         <json.version>20170516</json.version>
         <jaxb.version>4.0.1</jaxb.version>
-        <jackson.version>2.15.2</jackson.version>
+        <jackson.version>2.15.3</jackson.version>
         <gson.version>2.10</gson.version>
         <commons-dbutils.version>1.7</commons-dbutils.version>
         <commons-dbcp2.version>2.9.0</commons-dbcp2.version>
