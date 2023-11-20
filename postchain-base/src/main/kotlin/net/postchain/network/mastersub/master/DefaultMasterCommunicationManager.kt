@@ -141,7 +141,8 @@ open class DefaultMasterCommunicationManager(
 
     private fun disconnectChainPeers() {
         logger.info("Disconnecting chain peers")
-        connectionManager.disconnectChain(chainId)
+        // Blocking wait so we know we don't get any more packets
+        connectionManager.disconnectChain(chainId).join()
     }
 
     /**

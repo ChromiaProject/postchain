@@ -1,6 +1,7 @@
 package net.postchain.network.common
 
 import net.postchain.common.BlockchainRid
+import java.util.concurrent.CompletableFuture
 
 /**
  * This is a mapping between a blockchain and its connection to another node.
@@ -30,10 +31,10 @@ interface ChainWithOneConnection<NodeConnectionType, PacketHandler> {
     /**
      * Will close the connection
      */
-    fun closeConnection()
+    fun closeConnection(): CompletableFuture<Void>?
 
     /**
      * Remove and class conn
      */
-    fun removeAndCloseConnection()
+    fun removeAndCloseConnection(): CompletableFuture<Void>?
 }

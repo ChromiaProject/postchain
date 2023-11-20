@@ -12,6 +12,7 @@ import net.postchain.network.peer.PeerConnection
 import net.postchain.network.peer.PeerConnectionDescriptor
 import net.postchain.network.peer.PeerConnectionDescriptorFactory
 import net.postchain.network.peer.PeerPacketHandler
+import java.util.concurrent.CompletableFuture
 
 class NettyServerPeerConnection<PacketType>(
         packetCodec: XPacketCodec<PacketType>
@@ -26,6 +27,8 @@ class NettyServerPeerConnection<PacketType>(
 
     private var hasReceivedPing = false
     private var hasReceivedVersion = false
+
+    private val channelInactiveFuture = CompletableFuture<Void>()
 
     companion object : KLogging()
 
@@ -43,8 +46,9 @@ class NettyServerPeerConnection<PacketType>(
         else ""
     }
 
-    override fun close() {
+    override fun close(): CompletableFuture<Void> {
         context.close()
+        return channelInactiveFuture
     }
 
     override fun descriptor(): PeerConnectionDescriptor {
@@ -116,6 +120,7 @@ class NettyServerPeerConnection<PacketType>(
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext?) {
+        channelInactiveFuture.complete(null)
         // If peerConnectionDescriptor is null, we can't do much handling
         // in which case we just ignore the inactivation of this channel.
         if (peerConnectionDescriptor != null) {

@@ -36,6 +36,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.util.concurrent.CompletableFuture
 
 class DefaultPeerConnectionManagerTest {
 
@@ -439,6 +440,7 @@ class DefaultPeerConnectionManagerTest {
     fun mockConnection(descriptor: PeerConnectionDescriptor): NettyPeerConnection<Int> {
         val m: NettyPeerConnection<Int> = mock()
         whenever(m.descriptor()).thenReturn(descriptor)
+        whenever(m.close()).thenReturn(CompletableFuture.completedFuture(null))
         return m
     }
 }

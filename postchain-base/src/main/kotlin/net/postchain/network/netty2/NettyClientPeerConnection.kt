@@ -14,6 +14,7 @@ import net.postchain.network.peer.PeerConnectionDescriptor
 import net.postchain.network.peer.PeerPacketHandler
 import java.net.InetSocketAddress
 import java.net.SocketAddress
+import java.util.concurrent.CompletableFuture
 
 class NettyClientPeerConnection<PacketType>(
         private val peerInfo: PeerInfo,
@@ -24,23 +25,23 @@ class NettyClientPeerConnection<PacketType>(
 
     companion object : KLogging()
 
+    private val channelInactiveFuture = CompletableFuture<Void>()
     private var nettyClient: NettyClient? = null
     private var hasReceivedPing = false
     private var hasReceivedVersion = false
     private var peerPacketHandler: PeerPacketHandler? = null
     private lateinit var context: ChannelHandlerContext
     private lateinit var onConnected: () -> Unit
-    private lateinit var onDisconnected: () -> Unit
 
     fun open(onConnected: () -> Unit, onDisconnected: () -> Unit) {
         this.onConnected = onConnected
-        this.onDisconnected = onDisconnected
+        channelInactiveFuture.thenApply { onDisconnected() }
 
         nettyClient = NettyClient(this@NettyClientPeerConnection, peerAddress(), eventLoopGroup).also {
             it.channelFuture.addListener { future ->
                 if (!future.isSuccess) {
                     logger.info("Connection failed: ${future.cause().message}")
-                    onDisconnected()
+                    channelInactiveFuture.complete(null)
                 }
             }
         }
@@ -56,7 +57,7 @@ class NettyClientPeerConnection<PacketType>(
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext?) {
-        onDisconnected()
+        channelInactiveFuture.complete(null)
     }
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
@@ -110,8 +111,9 @@ class NettyClientPeerConnection<PacketType>(
         else ""
     }
 
-    override fun close() {
+    override fun close(): CompletableFuture<Void> {
         nettyClient?.shutdownAsync()
+        return channelInactiveFuture
     }
 
     override fun descriptor(): PeerConnectionDescriptor = descriptor
