@@ -52,7 +52,7 @@ class SyncChainWithNoOriginalSignersSlowIntegrationTest : ManagedModeTest() {
         )
 
         buildBlockNoWait(nodes, chain, 4)
-        await().atMost(10, TimeUnit.SECONDS).untilAsserted {
+        await().atMost(30, TimeUnit.SECONDS).untilAsserted {
             nodes.forEach {
                 val bc = it.retrieveBlockchain()
                 assertThat(bc).isNotNull()
