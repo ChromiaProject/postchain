@@ -49,11 +49,3 @@ default, postchain waits a configurable amount of time for more transactions tha
 block. Normally this is good since there is an overhead in building a block and you want to pack them with as many
 transactions as possible. However, If transactions are few this waiting time is most likely useless idle time. You can
 lower this delay by tweaking `maxtxdelay` under `blockstrategy`.
-
-## Long-running transaction protection
-
-First and foremost you should ensure that your dApp does not expose any operation that can run infinitely or for a very
-long time. However, there is a protection mechanism in postchain that can abort and reject unexpected long-running
-transactions. This can be activated by setting `max_transaction_execution_time` to a positive value (in milliseconds).
-Still, such rejections should be acted upon and dApp code should be fixed, either by preventing such operations or by
-optimizing them.

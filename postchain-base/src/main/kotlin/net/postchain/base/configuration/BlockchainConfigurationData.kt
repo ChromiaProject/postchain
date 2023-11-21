@@ -54,9 +54,6 @@ data class BlockchainConfigurationData(
         @Name(KEY_GTX)
         @Nullable
         val gtx: Gtv?,
-        @Name(KEY_MAX_TX_EXECUTION_TIME)
-        @DefaultValue(defaultLong = 0)
-        val maxTxExecutionTime: Long,
         @Name(KEY_REVOLT)
         @Nullable
         val revoltConfigData: Gtv?,

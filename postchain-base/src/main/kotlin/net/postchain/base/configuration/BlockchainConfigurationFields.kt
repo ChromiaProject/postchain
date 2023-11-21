@@ -34,8 +34,6 @@ const val KEY_HISTORIC_BRID = "historic_brid"
 const val KEY_SYNC = "sync"
 const val KEY_SYNC_EXT = "sync_ext"
 
-const val KEY_MAX_TX_EXECUTION_TIME = "max_transaction_execution_time"
-
 const val KEY_REVOLT = "revolt"
 const val KEY_REVOLT_TIMEOUT = "timeout"
 const val KEY_REVOLT_EXPONENTIAL_DELAY_INITIAL = "exponential_delay_initial"

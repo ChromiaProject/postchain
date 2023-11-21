@@ -32,7 +32,6 @@ class BaseBlockBuilderTest {
     val cryptoSystem = MockCryptoSystem()
     val merkeHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
     var bbs = BaseBlockStore()
-    val tf = BaseTransactionFactory()
     val db: DatabaseAccess = mock {}
     val ctx = BaseEContext(mock {}, 2L, db)
 
@@ -52,12 +51,11 @@ class BaseBlockBuilderTest {
     val specialTransactionHandler: SpecialTransactionHandler = mock()
     val maxBlockSize = 26 * 1024 * 1024L
     val maxSpecialEndTransactionSize = 1024L
-    val bbb = BaseBlockBuilder(myBlockchainRid, cryptoSystem, ctx, bbs, tf,
+    val bbb = BaseBlockBuilder(myBlockchainRid, cryptoSystem, ctx, bbs,
             specialTransactionHandler,
             subjects, signer, validator, listOf(), listOf(), false,
             maxBlockSize = maxBlockSize,
             maxBlockTransactions = 100,
-            maxTxExecutionTime = 0,
             maxSpecialEndTransactionSize = maxSpecialEndTransactionSize,
             suppressSpecialTransactionValidation = false,
             maxBlockFutureTime = -1)

@@ -9,7 +9,6 @@ import net.postchain.base.SpecialTransactionPosition.End
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.BaseBlockWitnessProvider
-import net.postchain.base.data.BaseTransactionFactory
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
@@ -49,7 +48,6 @@ class BaseBlockBuilderValidationTest {
 
     // Real stuff
     var bbs = BaseBlockStore()
-    val tf = BaseTransactionFactory()
     val myBlockchainRid = BlockchainRid.ZERO_RID
     val empty32Bytes = ByteArray(32, { 0 })
     val rootHash = "46AF9064F12528CAD6A7C377204ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()
@@ -69,12 +67,11 @@ class BaseBlockBuilderValidationTest {
 
     val validator = BaseBlockWitnessProvider(cryptoSystem, sigMaker, subjects)
     val bctx = BaseBlockEContext(ctx, 0, 1, 10, mapOf(), dummyEventSink)
-    val bbb = BaseBlockBuilder(BlockchainRid.buildRepeat(0), cryptoSystem, ctx, bbs, tf,
+    val bbb = BaseBlockBuilder(BlockchainRid.buildRepeat(0), cryptoSystem, ctx, bbs,
             NullSpecialTransactionHandler(),
             subjects, sigMaker, validator, listOf(), listOf(), false,
             maxBlockSize = 26 * 1024 * 1024,
             maxBlockTransactions = 100,
-            maxTxExecutionTime = 0,
             maxSpecialEndTransactionSize = 1024,
             suppressSpecialTransactionValidation = false,
             maxBlockFutureTime = -1,
@@ -228,10 +225,10 @@ class BaseBlockBuilderValidationTest {
 
     private fun buildBaseBlockBuilder(sth: SpecialTransactionHandler, suppressSpecialTransactionValidation: Boolean, maxBlockFutureTime: Long = -1) =
             BaseBlockBuilder(
-                    BlockchainRid.ZERO_RID, cryptoSystem, ctx, bbs, tf,
+                    BlockchainRid.ZERO_RID, cryptoSystem, ctx, bbs,
                     sth,
                     subjects, sigMaker, validator, listOf(), listOf(), false,
-                    26 * 1024 * 1024, 100, 0, 1024,
+                    26 * 1024 * 1024, 100, 1024,
                     suppressSpecialTransactionValidation,
                     maxBlockFutureTime,
                     clock)
