@@ -146,14 +146,16 @@ class BaseManagedNodeDataSourceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("testGetUnarchivingBlockchainInfoData")
-    fun testGetUnarchivingBlockchainInfo(apiVersion: Long, gtvResult: Gtv, expected: UnarchivingBlockchainInfo?) {
+    @MethodSource("testGetUnarchivingBlockchainNodeInfoData")
+    fun testGetUnarchivingBlockchainInfo(apiVersion: Long, gtvResult: Gtv, expected: UnarchivingBlockchainNodeInfo?) {
         val queryRunner: QueryRunner = mock {
             on { query(eq("nm_api_version"), any()) } doReturn gtv(apiVersion)
-            on { query(eq("nm_get_unarchiving_blockchain_info"), any()) } doReturn gtvResult
+            on { query(eq("nm_get_unarchiving_blockchain_node_info"), any()) } doReturn gtvResult
         }
-        val sut = BaseManagedNodeDataSource(queryRunner, mock())
-        assertEquals(expected, sut.getUnarchivingBlockchainInfo(ZERO_RID))
+        val sut = BaseManagedNodeDataSource(queryRunner, mock {
+            on { pubKeyByteArray } doReturn byteArrayOf()
+        })
+        assertEquals(expected, sut.getUnarchivingBlockchainNodeInfo(ZERO_RID))
     }
 
 
@@ -316,12 +318,38 @@ class BaseManagedNodeDataSourceTest {
         }
 
         @JvmStatic
-        fun testGetUnarchivingBlockchainInfoData(): List<Array<Any?>> {
+        fun testGetUnarchivingBlockchainNodeInfoData(): List<Array<Any?>> {
             return listOf(
                     arrayOf(12, GtvNull, null),
                     arrayOf(13,
-                            gtv(mapOf("rid" to gtv(ZERO_RID), "source_container" to gtv("src"), "destination_container" to gtv("dst"), "up_to_height" to gtv(100))),
-                            UnarchivingBlockchainInfo(ZERO_RID, "src", "dst", 100L)
+                            gtv(mapOf(
+                                    "rid" to gtv(ZERO_RID),
+                                    "source_container" to gtv("src"),
+                                    "destination_container" to gtv("dst"),
+                                    "up_to_height" to gtv(100),
+                                    "is_source_node" to gtv(true)
+                            )),
+                            UnarchivingBlockchainNodeInfo(
+                                    ZERO_RID,
+                                    "src",
+                                    "dst",
+                                    100L,
+                                    true)
+                    ),
+                    arrayOf(13,
+                            gtv(mapOf(
+                                    "rid" to gtv(ZERO_RID),
+                                    "source_container" to gtv("src"),
+                                    "destination_container" to gtv("dst"),
+                                    "up_to_height" to gtv(100),
+                                    "is_source_node" to gtv(false)
+                            )),
+                            UnarchivingBlockchainNodeInfo(
+                                    ZERO_RID,
+                                    "src",
+                                    "dst",
+                                    100L,
+                                    false)
                     ),
             )
         }

@@ -15,9 +15,10 @@ data class InactiveBlockchainInfo(
         val height: Long
 )
 
-data class UnarchivingBlockchainInfo(
+data class UnarchivingBlockchainNodeInfo(
         val rid: BlockchainRid,
         val sourceContainer: String,
         val destinationContainer: String,
-        val upToHeight: Long
+        val upToHeight: Long,
+        val isSourceNode: Boolean
 )
