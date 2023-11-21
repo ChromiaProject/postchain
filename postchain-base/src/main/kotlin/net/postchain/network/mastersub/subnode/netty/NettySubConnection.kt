@@ -40,9 +40,9 @@ class NettySubConnection(
         channelInactiveFuture.thenApply { onDisconnected() }
 
         nettyClient = NettyClient(this@NettySubConnection, masterAddress(), eventLoopGroup).also {
-            it.channelFuture.await().apply {
-                if (!isSuccess) {
-                    logger.info("Connection failed: ${cause().message}")
+            it.channelFuture.addListener { future ->
+                if (!future.isSuccess) {
+                    logger.info("Connection failed: ${future.cause().message}")
                     channelInactiveFuture.complete(null)
                 }
             }
