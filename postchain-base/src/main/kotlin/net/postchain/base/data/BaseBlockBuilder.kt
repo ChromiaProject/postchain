@@ -30,7 +30,6 @@ import net.postchain.core.FailedConfigurationMismatchException
 import net.postchain.core.MissingDependencyException
 import net.postchain.core.PrevBlockMismatchException
 import net.postchain.core.Transaction
-import net.postchain.core.TransactionFactory
 import net.postchain.core.TxEContext
 import net.postchain.core.ValidationResult
 import net.postchain.core.ValidationResult.Result.INVALID_EXTRA_DATA
@@ -56,7 +55,6 @@ import java.time.Clock
  * @property cryptoSystem Crypto utilities
  * @param    eContext Connection context including blockchain and node identifiers
  * @param store For database access
- * @param txFactory Used for serializing transaction data
  * @property specialTxHandler is the main entry point for special transaction handling.
  * @property subjects Public keys for nodes authorized to sign blocks
  * @property blockSigMaker used to produce signatures on blocks for local node
@@ -66,7 +64,6 @@ import java.time.Clock
  * @property usingHistoricBRID
  * @property maxBlockSize
  * @property maxBlockTransactions
- * @param maxTxExecutionTime
  * @property maxSpecialEndTransactionSize
  * @property suppressSpecialTransactionValidation
  * @property maxBlockFutureTime
@@ -78,7 +75,6 @@ open class BaseBlockBuilder(
         val cryptoSystem: CryptoSystem,
         eContext: EContext,
         store: BlockStore,
-        txFactory: TransactionFactory,
         private val specialTxHandler: SpecialTransactionHandler,
         val subjects: Array<ByteArray>,
         val blockSigMaker: SigMaker,
@@ -88,12 +84,11 @@ open class BaseBlockBuilder(
         private val usingHistoricBRID: Boolean,
         val maxBlockSize: Long,
         val maxBlockTransactions: Long,
-        maxTxExecutionTime: Long,
         val maxSpecialEndTransactionSize: Long,
         val suppressSpecialTransactionValidation: Boolean,
         private val maxBlockFutureTime: Long,
         val clock: Clock = Clock.systemUTC()
-) : AbstractBlockBuilder(eContext, blockchainRID, store, txFactory, maxTxExecutionTime) {
+) : AbstractBlockBuilder(eContext, blockchainRID, store) {
 
     companion object : KLogging()
 

@@ -7,13 +7,11 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionFailed
 import net.postchain.common.exception.TransactionIncorrect
-import net.postchain.common.exception.TransactionTimeout
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.Transaction
-import net.postchain.core.TransactionFactory
 import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockData
@@ -23,10 +21,6 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.BlockWitnessBuilder
 import net.postchain.core.block.InitialBlockData
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.TimeUnit
-import java.util.concurrent.TimeoutException
 
 /**
  * The abstract block builder has only a vague concept about the core procedures of a block builder, for example:
@@ -40,9 +34,7 @@ import java.util.concurrent.TimeoutException
 abstract class AbstractBlockBuilder(
         val ectx: EContext,               // a general DB context (use bctx when possible)
         val blockchainRID: BlockchainRid, // is the RID of the chain
-        val store: BlockStore,
-        val txFactory: TransactionFactory, // Used for serializing transaction data
-        private val maxTxExecutionTime: Long
+        val store: BlockStore
 ) : BlockBuilder, TxEventSink {
 
     companion object : KLogging()
@@ -117,31 +109,13 @@ abstract class AbstractBlockBuilder(
         }
         // In case of errors, tx.apply may either return false or throw UserMistake
 
-        if (applyTransaction(tx, txctx)) {
+        if (tx.apply(txctx)) {
             nextTransactionNumber++
             txctx.done()
             transactions.add(tx)
             rawTransactions.add(tx.getRawData())
         } else {
             throw TransactionFailed(tx.getRID())
-        }
-    }
-
-    private fun applyTransaction(tx: Transaction, txctx: TxEContext): Boolean {
-        return if (maxTxExecutionTime > 0) {
-            try {
-                CompletableFuture.supplyAsync { tx.apply(txctx) }
-                        .orTimeout(maxTxExecutionTime, TimeUnit.MILLISECONDS)
-                        .get()
-            } catch (e: ExecutionException) {
-                throw if (e.cause is TimeoutException) {
-                    TransactionTimeout(tx.getRID(), maxTxExecutionTime)
-                } else {
-                    e.cause ?: e
-                }
-            }
-        } else {
-            tx.apply(txctx)
         }
     }
 

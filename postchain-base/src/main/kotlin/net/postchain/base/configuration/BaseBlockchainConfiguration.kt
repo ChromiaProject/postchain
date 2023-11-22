@@ -151,7 +151,6 @@ open class BaseBlockchainConfiguration(
                 cryptoSystem,
                 ctx,
                 blockStore,
-                getTransactionFactory(),
                 getSpecialTxHandler(),
                 signers.toTypedArray(),
                 blockSigMaker,
@@ -161,7 +160,6 @@ open class BaseBlockchainConfiguration(
                 effectiveBlockchainRID != blockchainRid,
                 blockStrategyConfig.maxBlockSize,
                 blockStrategyConfig.maxBlockTransactions,
-                if (isSyncing) 0 else configData.maxTxExecutionTime,
                 blockStrategyConfig.maxSpecialEndTransactionSize,
                 isSuppressSpecialTransactionValidation().also {
                     withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainRid.toHex(), CHAIN_IID_TAG to chainID.toString()) {
