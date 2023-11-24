@@ -211,16 +211,29 @@ open class BaseBlockchainEngine(
             }
             blockBuilder.begin(block.header)
 
-            val netStart = nanoTime()
             val decodedTxs = transactionsDecoder(block.transactions)
-            decodedTxs.forEach(blockBuilder::appendTransaction)
-            val netEnd = nanoTime()
+            var netStart = -1L
+            var netEnd = -1L
+            var numberOfTxs = 0
+            decodedTxs.forEach { tx ->
+                if (!tx.isSpecial()) {
+                    numberOfTxs++
+                    // First non-special tx, start timer
+                    if (netStart == -1L) netStart = nanoTime()
+                } else if (netStart != -1L) {
+                    // End special tx, stop timer
+                    netEnd = nanoTime()
+                }
+                blockBuilder.appendTransaction(tx)
+            }
+            if (netStart == -1L) netStart = nanoTime()
+            if (netEnd == -1L) netEnd = nanoTime()
 
             blockBuilder.finalizeAndValidate(block.header)
             val grossEnd = nanoTime()
 
             val prettyBlockHeader = prettyBlockHeader(
-                    block.header, block.transactions.size, 0, grossStart to grossEnd, netStart to netEnd, 0
+                    block.header, numberOfTxs, 0, grossStart to grossEnd, netStart to netEnd, 0
             )
             logger.info("Loaded block: $prettyBlockHeader")
         } catch (e: Exception) {
