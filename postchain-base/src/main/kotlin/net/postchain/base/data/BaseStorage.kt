@@ -24,14 +24,27 @@ class BaseStorage(
         private val savepointSupport: Boolean = true
 ) : Storage {
 
+    private val cachedConnection = ThreadLocal<CachedConnection>()
+
     companion object : KLogging()
 
     override fun openReadConnection(): AppContext {
-        val context = buildAppContext(readDataSource)
+        val connection = cachedConnection.get()?.let {
+            it.refCount++
+            it.connection
+        } ?: getAndCacheNewReadConnection()
+
+        val context = buildAppContext(connection)
         if (!context.conn.isReadOnly) {
             throw ProgrammerMistake("Connection is not read-only")
         }
         return context
+    }
+
+    private fun getAndCacheNewReadConnection(): Connection {
+        val newConnection = readDataSource.connection
+        cachedConnection.set(CachedConnection(newConnection))
+        return newConnection
     }
 
     override fun closeReadConnection(context: AppContext) {
@@ -39,7 +52,7 @@ class BaseStorage(
     }
 
     override fun openWriteConnection(): AppContext {
-        return buildAppContext(writeDataSource)
+        return buildAppContext(writeDataSource.connection)
     }
 
     override fun closeWriteConnection(context: AppContext, commit: Boolean) {
@@ -47,7 +60,12 @@ class BaseStorage(
     }
 
     override fun openReadConnection(chainID: Long): EContext {
-        val context = buildEContext(chainID, readDataSource)
+        val connection = cachedConnection.get()?.let {
+            it.refCount++
+            it.connection
+        } ?: getAndCacheNewReadConnection()
+
+        val context = buildEContext(chainID, connection)
         if (!context.conn.isReadOnly) {
             throw ProgrammerMistake("Connection is not read-only")
         }
@@ -59,7 +77,7 @@ class BaseStorage(
     }
 
     override fun openWriteConnection(chainID: Long): EContext {
-        return buildEContext(chainID, writeDataSource)
+        return buildEContext(chainID, writeDataSource.connection)
     }
 
     override fun closeWriteConnection(context: EContext, commit: Boolean) {
@@ -102,8 +120,14 @@ class BaseStorage(
         if (!connection.isReadOnly) {
             throw ProgrammerMistake("trying to close a writable connection as a read-only connection")
         }
-        connection.commit()
-        connection.close()
+        val cache = cachedConnection.get()
+        if (cache.refCount > 1) {
+            cache.refCount--
+        } else {
+            connection.commit()
+            connection.close()
+            cachedConnection.set(null)
+        }
     }
 
     private fun closeWriteConnection(connection: Connection, commit: Boolean) {
@@ -133,9 +157,9 @@ class BaseStorage(
         }
     }
 
-    private fun buildAppContext(dataSource: DataSource): AppContext =
-            BaseAppContext(dataSource.connection, db)
+    private fun buildAppContext(connection: Connection): AppContext =
+            BaseAppContext(connection, db)
 
-    private fun buildEContext(chainID: Long, dataSource: DataSource): EContext =
-            BaseEContext(dataSource.connection, chainID, db)
+    private fun buildEContext(chainID: Long, connection: Connection): EContext =
+            BaseEContext(connection, chainID, db)
 }
