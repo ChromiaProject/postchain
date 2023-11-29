@@ -75,6 +75,13 @@ class EbftPacketCodec(val config: PeerCommConfiguration, val blockchainRID: Bloc
         return message.ebftVersion
     }
 
+    override fun getVersionFromVersionPacket(packet: EbftMessage): Long {
+        if (packet !is EbftVersion) {
+            throw UserMistake("Packet was not an EbftVersion. Got ${packet::class}")
+        }
+        return packet.ebftVersion
+    }
+
     override fun decodePacket(pubKey: ByteArray, rawMessage: ByteArray, packetVersion: Long): EbftMessage {
         val signedMessage = decodeSignedMessage(rawMessage, packetVersion)
         return when (signedMessage.message) {
@@ -94,6 +101,8 @@ class EbftPacketCodec(val config: PeerCommConfiguration, val blockchainRID: Bloc
 
     override fun isVersionPacket(rawMessage: ByteArray): Boolean =
             decodeSignedMessage(rawMessage, 1).message is EbftVersion
+
+    override fun isVersionPacket(packet: EbftMessage): Boolean = packet is EbftVersion
 
     @TestOnly
     override fun decodePacket(rawMessage: ByteArray, packetVersion: Long): EbftMessage? {
