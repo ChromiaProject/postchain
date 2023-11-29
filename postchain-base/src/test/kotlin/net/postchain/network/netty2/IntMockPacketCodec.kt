@@ -30,6 +30,8 @@ class IntMockPacketCodec(
 
     override fun parseVersionPacket(rawMessage: ByteArray): Long = rawMessage.decodeToString().toLong()
 
+    override fun getVersionFromVersionPacket(packet: Int): Long = packet.toLong()
+
     override fun decodePacket(pubKey: ByteArray, rawMessage: ByteArray, packetVersion: Long): Int = ByteBuffer.wrap(rawMessage).int
 
     override fun decodePacket(rawMessage: ByteArray, packetVersion: Long): Int? = ByteBuffer.wrap(rawMessage).int
@@ -37,4 +39,6 @@ class IntMockPacketCodec(
     override fun isIdentPacket(rawMessage: ByteArray): Boolean = peerInfos.any { it.pubKey.contentEquals(rawMessage) }
 
     override fun isVersionPacket(rawMessage: ByteArray): Boolean = rawMessage.contentEquals(INT_PACKET_VERSION_ARRAY)
+
+    override fun isVersionPacket(packet: Int): Boolean = packet.toLong() == INT_PACKET_VERSION
 }

@@ -188,6 +188,10 @@ class DefaultPeerCommunicationManager<PacketType>(
              */
             val packetVersion = getPacketVersion(peerId, packet)
             val decodedPacket = decodePacket(peerId, packet, packetVersion) ?: return
+            // Extra check to see if incoming version match what we have cached
+            if (packetCodec.isVersionPacket(decodedPacket)) {
+                updateVersionCache(decodedPacket, peerId, packetVersion)
+            }
             synchronized(this) {
                 if (logger.isTraceEnabled) {
                     withLoggingContext(
@@ -246,4 +250,12 @@ class DefaultPeerCommunicationManager<PacketType>(
                 nodePacketVersions[peerId] = 1
                 1
             }
+
+    private fun updateVersionCache(decodedPacket: PacketType, peerId: NodeRid, cachedVersion: Long) {
+        val version = packetCodec.getVersionFromVersionPacket(decodedPacket)
+        if (version != cachedVersion) {
+            logger.info { "Got new packet version $version from $peerId. Updating cache." }
+            nodePacketVersions[peerId] = version
+        }
+    }
 }

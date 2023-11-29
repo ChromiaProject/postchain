@@ -210,7 +210,7 @@ class DefaultPeerCommunicationManagerTest {
         }
 
         val packetCodec: XPacketCodec<Int> = mock {
-            on { isVersionPacket(any()) } doReturn true
+            on { isVersionPacket(any<ByteArray>()) } doReturn true
             on { parseVersionPacket(pubKey1) } doReturn 1
             on { parseVersionPacket(pubKey2) } doReturn 2
         }

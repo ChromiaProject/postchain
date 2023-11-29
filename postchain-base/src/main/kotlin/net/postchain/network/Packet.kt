@@ -15,10 +15,12 @@ interface XPacketCodec<PacketType> {
 
     fun parseIdentPacket(rawMessage: ByteArray): IdentPacketInfo
     fun parseVersionPacket(rawMessage: ByteArray): Long
+    fun getVersionFromVersionPacket(packet: PacketType): Long
     fun decodePacket(pubKey: ByteArray, rawMessage: ByteArray, packetVersion: Long): PacketType
     fun decodePacket(rawMessage: ByteArray, packetVersion: Long): PacketType?
     fun isIdentPacket(rawMessage: ByteArray): Boolean
     fun isVersionPacket(rawMessage: ByteArray): Boolean
+    fun isVersionPacket(packet: PacketType): Boolean
 }
 
 interface XPacketCodecFactory<PacketType> {
