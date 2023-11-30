@@ -72,9 +72,13 @@ class DefaultSubnodeAdminClient(
                     val creds = InsecureChannelCredentials.create()
                     channel = Grpc.newChannelBuilder(target, creds).build()
                     service = PostchainServiceGrpc.newBlockingStub(channel)
+                            .withInterceptors(SubnodeAdminClientTimeoutInterceptor(containerNodeConfig))
                     peerService = PeerServiceGrpc.newBlockingStub(channel)
+                            .withInterceptors(SubnodeAdminClientTimeoutInterceptor(containerNodeConfig))
                     healthcheckService = HealthGrpc.newBlockingStub(channel)
+                            .withInterceptors(SubnodeAdminClientTimeoutInterceptor(containerNodeConfig))
                     subnodeService = SubnodeServiceGrpc.newBlockingStub(channel)
+                            .withInterceptors(SubnodeAdminClientTimeoutInterceptor(containerNodeConfig))
                     logger.info { "connect() -- Subnode container connection established on $target" }
                     return@submit
                 } catch (e: Exception) {
