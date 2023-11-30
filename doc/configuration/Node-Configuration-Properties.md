@@ -94,6 +94,7 @@ It is possible to configure peers via node configuration with these properties.
 | `container.log4j-configuration-file`                    | Path to log4j configuration file to use for subnodes                                                                                                   | String       |                    |                            | `POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE`            |
 | `container.postgres_max_locks_per_transaction`          | Overrides the postgres setting for `max_locks_per_transaction` in subnode database                                                                     | Int          |                    | 1024                       | `POSTCHAIN_SUBNODE_POSTGRES_MAX_LOCKS_PER_TRANSACTION`  |
 | `container.config-providers`                            | Comma separated list of `ContainerConfigProvider` classes to use for deriving container config                                                         | List<String> |                    | ""                         | `POSTCHAIN_SUBNODE_CONFIG_PROVIDERS`                    |
+| `container.admin-client-timeout-ms`                     | Timeout for master node admin gRPC requests towards subnode                                                                                            | Int          |                    | 10 000                     | `POSTCHAIN_SUBNODE_ADMIN_CLIENT_TIMEOUT_MS`             |
 
 ### ZFS
 Relevant when `container.filesystem` is configured as `ZFS`.
