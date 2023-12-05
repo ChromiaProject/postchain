@@ -6,7 +6,6 @@ import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import net.postchain.api.rest.json.JsonFactory.gsonBuilder
 import net.postchain.api.rest.model.ApiStatus
-import net.postchain.api.rest.model.GTXQuery
 import net.postchain.base.ConfirmationProof
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.block.BlockDetail
@@ -25,7 +24,6 @@ object JsonFactory : ConfigurableGson(gsonBuilder(false)) {
     private fun gsonBuilder(pretty: Boolean): GsonBuilder = GsonBuilder()
             .registerTypeAdapter(ConfirmationProof::class.java, ConfirmationProofSerializer())
             .registerTypeAdapter(ApiStatus::class.java, ApiStatusSerializer())
-            .registerTypeAdapter(GTXQuery::class.java, GTXQueryDeserializer())
             .registerTypeAdapter(TransactionInfoExt::class.java, TransactionInfoExtSerializer())
             .registerTypeAdapter(BlockDetail::class.java, BlockDetailSerializer())
             .apply {

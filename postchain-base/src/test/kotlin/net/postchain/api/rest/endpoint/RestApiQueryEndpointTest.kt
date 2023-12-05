@@ -11,7 +11,6 @@ import net.postchain.api.rest.controller.RestApi
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.toHex
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -83,33 +82,6 @@ class RestApiQueryEndpointTest {
         RestAssured.given().basePath(basePath).port(restApi.actualPort())
                 .body(queryString)
                 .post("/query/$blockchainRID")
-                .then()
-                .statusCode(200)
-                .contentType(ContentType.JSON)
-                .body(equalTo(answerString))
-    }
-
-    @Test
-    fun test_batch_query() {
-        val queryMap = mapOf(
-                "type" to gtv("test_query"),
-                "a" to gtv("b"),
-                "c" to gtv(3)
-        )
-
-        val queryString = """{"queries":[${gtvToJSON(gtv(queryMap), gson)}]}"""
-        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
-
-        val answerString = """["{\"d\":0}"]"""
-        val answer = gtv(mapOf("d" to gtv(false)))
-
-        whenever(model.query(query)).thenReturn(answer)
-
-        restApi.attachModel(blockchainRID, model)
-
-        RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .body(queryString)
-                .post("/batch_query/$blockchainRID")
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
@@ -343,26 +315,6 @@ class RestApiQueryEndpointTest {
                 .statusCode(400)
                 .contentType(ContentType.JSON)
                 .body("error", containsString("blockchainRid"))
-    }
-
-    @Test
-    fun queryGTX() {
-        val gtxQuery1 = gtv(gtv("gtx_test_get_value"), gtv("txRID" to gtv("abcd")))
-        val gtxQuery2 = gtv(gtv("gtx_test_get_value"), gtv("txRID" to gtv("cdef")))
-        val jsonQuery = """{"queries":["${GtvEncoder.encodeGtv(gtxQuery1).toHex()}", "${GtvEncoder.encodeGtv(gtxQuery2).toHex()}"]}""".trimMargin()
-
-        whenever(model.query(GtxQuery("gtx_test_get_value", gtv("txRID" to gtv("abcd"))))).thenReturn(gtv("one"))
-        whenever(model.query(GtxQuery("gtx_test_get_value", gtv("txRID" to gtv("cdef"))))).thenReturn(gtv("two"))
-
-        restApi.attachModel(blockchainRID, model)
-
-        RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .body(jsonQuery)
-                .post("/query_gtx/$blockchainRID")
-                .then()
-                .statusCode(200)
-                .contentType(ContentType.JSON)
-                .body(equalTo("[\"A2050C036F6E65\",\"A2050C0374776F\"]"))
     }
 
     @Test

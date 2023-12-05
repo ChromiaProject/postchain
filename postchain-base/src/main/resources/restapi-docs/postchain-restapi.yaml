@@ -53,7 +53,7 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: "4"
+  version: "5"
 paths:
   /tx/{blockchainRid}:
     post:
@@ -572,68 +572,6 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
-  /batch_query/{blockchainRid}:
-    post:
-      tags:
-        - query
-      summary: Make queries
-      description: Make multiple queries to a chain
-        This operation is deprecated, use `/query_gtv` instead.
-      deprecated: true
-      parameters:
-        - $ref: "#/components/parameters/blockchainRid"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - queries
-              properties:
-                queries:
-                  type: array
-                  items:
-                    $ref: "#/components/schemas/query"
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: string
-                  description: Query result as JSON string
-        400:
-          description: Invalid query
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/error"
-              examples:
-                unknownQuery:
-                  value:
-                    error: "Unknown query: the_query"
-        404:
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/error"
-              examples:
-                chainNotFound:
-                  value:
-                    error: "Can't find blockchain with blockchainRID: <hex-string>"
-        500:
-          description: Malformed query JSON
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/error"
-              examples:
-                unknownError:
-                  value:
-                    error: "Unknown error"
   /dquery/{blockchainRid}:
     get:
       tags:
@@ -677,79 +615,6 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
-  /query_gtx/{blockchainRid}:
-    post:
-      tags:
-        - query
-      summary: Make GTV encoded queries
-      description: |
-        Make GTV encoded queries to a chain.
-        This operation is deprecated, use `/query_gtv` instead.
-      deprecated: true
-      parameters:
-        - $ref: "#/components/parameters/blockchainRid"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - queries
-              properties:
-                queries:
-                  type: array
-                  items:
-                    type: string
-                    pattern: "[0-9a-fA-F]{2,}"
-                    description: Hex encoded two element GTV array with the query name as first element (string) and the named parameters as second element (dict)
-              example:
-                queries:
-                  - "A52E302CA20A0C086D795F7175657279A41E301C300B0C0461726731A303020111300D0C0461726732A2050C03666F6F"
-                  - "A5153013A20D0C0B6F746865725F7175657279A4023000"
-      responses:
-        200:
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  type: string
-                  pattern: "[0-9a-fA-F]{2,}"
-                  description: Query result as hex encoded GTV value
-              example:
-                - "A5023000"
-                - "A5025060"
-        400:
-          description: Invalid query
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/error"
-              examples:
-                unknownQuery:
-                  value:
-                    error: "Unknown query: the_query"
-        404:
-          description: Not found
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/error"
-              examples:
-                chainNotFound:
-                  value:
-                    error: "Can't find blockchain with blockchainRID: <hex-string>"
-        500:
-          description: Malformed query JSON
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/error"
-              examples:
-                unknownError:
-                  value:
-                    error: "Unknown error"
   /query_gtv/{blockchainRid}:
     description: |
       The GET method enable caching of query responses, while the POST method has more robust and efficient encoding of query parameters.
@@ -1163,7 +1028,7 @@ paths:
               examples:
                 version:
                   value:
-                    version: 4
+                    version: 5
 
 components:
   parameters:

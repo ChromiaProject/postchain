@@ -158,48 +158,6 @@ class RestApiIT : IntegrationTestSetup() {
     }
 
     @Test
-    fun testBatchQueriesApi() {
-        val nodesCount = 1
-
-        val sysSetup = doSystemSetup(nodesCount, "/net/postchain/devtools/api/blockchain_config_1.xml")
-        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
-        val blockchainRID = blockchainRIDBytes.toHex()
-
-        buildBlockAndCommit(nodes[0])
-        val query = """{"queries": [{"type"="gtx_test_get_value", "txRID"="abcd"},
-                                    {"type"="gtx_test_get_value", "txRID"="cdef"}]}""".trimMargin()
-        given().port(nodes[0].getRestApiHttpPort())
-                .body(query)
-                .post("/batch_query/$blockchainRID")
-                .then()
-                .statusCode(200)
-                .body(IsEqual.equalTo("[\"null\",\"null\"]"))
-    }
-
-    @Test
-    fun testQueryGTXApi() {
-        val nodesCount = 1
-
-        val sysSetup = doSystemSetup(nodesCount, "/net/postchain/devtools/api/blockchain_config_1.xml")
-        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
-        val blockchainRID = blockchainRIDBytes.toHex()
-
-        buildBlockAndCommit(nodes[0])
-
-        val gtxQuery1 = gtv(gtv("gtx_test_get_value"), gtv("txRID" to gtv("abcd")))
-        val gtxQuery2 = gtv(gtv("gtx_test_get_value"), gtv("txRID" to gtv("cdef")))
-        val jsonQuery = """{"queries" : ["${GtvEncoder.encodeGtv(gtxQuery1).toHex()}", "${GtvEncoder.encodeGtv(gtxQuery2).toHex()}"]}""".trimMargin()
-
-
-        given().port(nodes[0].getRestApiHttpPort())
-                .body(jsonQuery)
-                .post("/query_gtx/$blockchainRID")
-                .then()
-                .statusCode(200)
-                .body(IsEqual.equalTo("[\"A0020500\",\"A0020500\"]"))
-    }
-
-    @Test
     fun testRejectedTransactionWithReason() {
         val nodesCount = 1
         val sysSetup = doSystemSetup(nodesCount, "/net/postchain/devtools/api/blockchain_config_rejected.xml")

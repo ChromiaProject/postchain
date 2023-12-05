@@ -22,7 +22,6 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.mapper.GtvObjectMapper
 import org.http4k.core.Body
 import org.http4k.core.ContentType
@@ -66,7 +65,6 @@ val heightQuery = Query.long().map {
 val queryQuery = Query.string().optional("query")
 val signerQuery = Query.string().regex("([0-9a-fA-F]+)").optional("signer")
 
-val gtvGson = make_gtv_gson()
 val prettyGson = JsonFactory.makePrettyJson()
 
 val errorJsonBody = Body.auto<ErrorBody>().toLens()
@@ -145,11 +143,6 @@ val binaryBody = Body.binary(ContentType.OCTET_STREAM, "binary").map(
         }
 ).toLens()
 val gtvJsonBody = Body.gtvJson<Gtv>().toLens()
-val batchQueriesBody = Body.json("queries").map {
-    it.asJsonObject["queries"].asJsonArray.map { e -> gtvGson.fromJson(e, Gtv::class.java) }
-}.toLens()
-val gtxQueriesBody = Body.auto<GtxQueries>().toLens()
-val stringsBody = Body.auto<List<String>>().toLens()
 val nodeStatusBody = Body.auto<StateNodeStatus>().toLens()
 val nodeStatusesBody = Body.auto<List<StateNodeStatus>>().toLens()
 val textBody = Body.string(ContentType.TEXT_PLAIN).toLens()
@@ -190,7 +183,6 @@ sealed interface BlockchainRef
 data class BlockchainRidRef(val rid: BlockchainRid) : BlockchainRef
 data class BlockchainIidRef(val iid: Long) : BlockchainRef
 
-data class GtxQueries(val queries: List<String>)
 data class BlockHeight(val blockHeight: Long)
 data class TransactionsCount(val transactionsCount: Long)
 data class Tx(val tx: String)
