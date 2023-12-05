@@ -189,17 +189,7 @@ class RestApi(
                         CHAIN_IID_TAG to chainModel.chainIID.toString()) {
                     if (semaphore.tryAcquire()) {
                         try {
-                            when (chainModel) {
-                                is Model -> {
-                                    logger.trace { "Local REST API model found: $chainModel" }
-                                    next(request.with(modelKey of chainModel))
-                                }
-
-                                is ExternalModel -> {
-                                    logger.trace { "External REST API model found: $chainModel" }
-                                    chainModel(request)
-                                }
-                            }
+                            next(request.with(chainModelKey of chainModel, blockchainRidKey of blockchainRid))
                         } finally {
                             semaphore.release()
                         }
@@ -218,14 +208,11 @@ class RestApi(
     private val blockchainMetricsFilter = ServerFilters.MicrometerMetrics.RequestTimer(Metrics.globalRegistry, labeler = ::blockchainLabeler)
 
     private fun blockchainLabeler(httpTransaction: HttpTransaction): HttpTransaction {
-        val model = modelKey(httpTransaction.request)
-        return if (model != null) {
-            httpTransaction
-                    .label(CHAIN_IID_TAG, model.chainIID.toString())
-                    .label(BLOCKCHAIN_RID_TAG, model.blockchainRid.toHex())
-        } else {
-            httpTransaction
-        }
+        val model = chainModelKey(httpTransaction.request)
+        val blockchainRid = blockchainRidKey(httpTransaction.request)
+        return httpTransaction
+                .label(CHAIN_IID_TAG, model.chainIID.toString())
+                .label(BLOCKCHAIN_RID_TAG, blockchainRid.toHex())
     }
 
     private val loggingFilter = Filter { next ->
@@ -241,7 +228,17 @@ class RestApi(
                     logger.debug("$requestInfo${if (queryString.isBlank()) "" else "?$queryString"}")
                 }
             }
-            val response = next(request)
+            val response = when (val chainModel = chainModelKey(request)) {
+                is Model -> {
+                    logger.trace { "Local REST API model found: $chainModel" }
+                    next(request.with(modelKey of chainModel))
+                }
+
+                is ExternalModel -> {
+                    logger.trace { "External REST API model found: $chainModel" }
+                    chainModel(request)
+                }
+            }
             if (logger.isDebugEnabled) {
                 // Assuming content-type is correctly set we will avoid logging binary response bodies
                 if (Header.CONTENT_TYPE(response)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
@@ -562,6 +559,8 @@ class RestApi(
     )
 
     private val contexts = RequestContexts()
+    private val chainModelKey = RequestContextKey.required<ChainModel>(contexts)
+    private val blockchainRidKey = RequestContextKey.required<BlockchainRid>(contexts)
     private val modelKey = RequestContextKey.optional<Model>(contexts)
 
     val server = ServerFilters.InitialiseRequestContext(contexts)
