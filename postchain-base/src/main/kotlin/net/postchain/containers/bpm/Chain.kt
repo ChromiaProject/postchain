@@ -3,9 +3,9 @@ package net.postchain.containers.bpm
 import net.postchain.common.BlockchainRid
 
 class Chain(
-        val containerName: ContainerName,
         val chainId: Long,
-        val brid: BlockchainRid
+        val brid: BlockchainRid,
+        val containerName: ContainerName
 ) {
 
     override fun equals(other: Any?): Boolean {
@@ -14,9 +14,7 @@ class Chain(
 
         other as Chain
 
-        if (chainId != other.chainId) return false
-
-        return true
+        return chainId == other.chainId
     }
 
     override fun hashCode(): Int {

@@ -147,7 +147,7 @@ class ContainerJobHandler(
         job.chainsToStart.forEach { chain ->
             withLoggingContext(CHAIN_IID_TAG to chain.chainId.toString(), BLOCKCHAIN_RID_TAG to chain.brid.toHex()) {
                 val process = createBlockchainProcess(chain, psContainer)
-                logger.debug { "ContainerBlockchainProcess created" }
+                logger.debug { "ContainerBlockchainProcess created: ${process != null}" }
                 if (process == null) {
                     logger.error { "Blockchain didn't start" }
                 } else {

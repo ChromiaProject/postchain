@@ -24,6 +24,12 @@ interface DirectoryDataSource : ManagedNodeDataSource {
     fun getContainerForBlockchainOnTheNode(brid: BlockchainRid): String
 
     /**
+     * Returns a list of containers running on a node.
+     * NM API Version: 14
+     */
+    fun getBlockchainContainersForNode(brid: BlockchainRid): List<String>
+
+    /**
      * What is the resource limits for this container?
      */
     fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits

@@ -56,7 +56,7 @@ class ContainerManagedBlockchainProcessManager(
     companion object : KLogging()
 
     private val directoryDataSource: DirectoryDataSource by lazy { dataSource as DirectoryDataSource }
-    private val chains: MutableMap<Long, Chain> = mutableMapOf() // chainId -> Chain
+    private val chains: MutableMap<Pair<Long, String>, Chain> = mutableMapOf() // (chainId, containerName) -> Chain
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
     private val dockerClient: DockerClient = ContainerEnvironment.dockerClient
     private val postchainContainers = Collections.synchronizedMap(LinkedHashMap<ContainerName, PostchainContainer>()) // { ContainerName -> PsContainer }
@@ -158,7 +158,7 @@ class ContainerManagedBlockchainProcessManager(
         val toLaunch: Set<LocalBlockchainInfo> = retrieveBlockchainsToLaunch()
         val chainIdsToLaunch: Set<Long> = toLaunch.map { it.chainId }.toSet()
         val masterLaunched: Map<Long, BlockchainProcess> = getLaunchedBlockchains()
-        val subnodeLaunched: Map<Long, ContainerBlockchainProcess> = getStartingOrRunningContainerBlockchains()
+        val subnodeLaunched = getStartingOrRunningContainerBlockchains()
 
         // Chain0
         if (reloadChain0) {
@@ -171,38 +171,44 @@ class ContainerManagedBlockchainProcessManager(
             logger.debug { "ContainerJob -- Stop system chain: $it" }
             stopBlockchainAsync(it, null)
         }
-        subnodeLaunched.keys.filterNot(chainIdsToLaunch::contains).forEach {
-            logger.debug { "ContainerJob -- Stop subnode chain: ${getChain(it)}" }
-            containerJobManager.stopChain(getChain(it))
+        subnodeLaunched.filterKeys { it !in chainIdsToLaunch }.values.forEach { containerProcesses ->
+            containerProcesses.forEach {
+                chains[it.second.chainId to it.first.containerName.name]?.also { chain ->
+                    logger.debug { "ContainerJob -- Stop subnode chain: $chain" }
+                    containerJobManager.stopChain(chain)
+                }
+            }
         }
 
-        // Launching new and updated state blockchains except blockchain 0
-        toLaunch.filter { it.chainId != CHAIN0 }.forEach {
-            if (it.system) {
-                val process = masterLaunched[it.chainId]
+        // Launching new and updated state blockchains except chain0
+        toLaunch.filter { it.chainId != CHAIN0 }.forEach { bcInfo ->
+            if (bcInfo.system) {
+                val process = masterLaunched[bcInfo.chainId]
                 if (process == null) {
-                    logger.debug { "ContainerJob -- Start system chain: ${it.chainId}" }
-                    startBlockchainAsync(it.chainId, null)
-                } else if (process.getBlockchainState() != it.state) {
-                    logger.debug { "ContainerJob -- Restart system chain due to state change: ${it.chainId}" }
-                    startBlockchainAsync(it.chainId, null)
+                    logger.debug { "ContainerJob -- Start system chain: ${bcInfo.chainId}" }
+                    startBlockchainAsync(bcInfo.chainId, null)
+                } else if (process.getBlockchainState() != bcInfo.state) {
+                    logger.debug { "ContainerJob -- Restart system chain due to state change: ${bcInfo.chainId}" }
+                    startBlockchainAsync(bcInfo.chainId, null)
                 }
             } else {
-                val process = subnodeLaunched[it.chainId]
-                if (process == null) {
-                    logger.debug { "ContainerJob -- Start subnode chain: ${getChain(it.chainId)}" }
-                    containerJobManager.startChain(getChain(it.chainId))
-                } else if (process.blockchainState != it.state) {
-                    logger.debug { "ContainerJob -- Restart subnode chain due to state change: ${getChain(it.chainId)}" }
-                    containerJobManager.startChain(getChain(it.chainId))
+                getOrCreateContainerChains(bcInfo.chainId).forEach { chain ->
+                    val process = subnodeLaunched[chain.chainId]
+                            ?.firstOrNull { it.first.containerName == chain.containerName }?.second
+                    if (process == null) {
+                        logger.debug { "ContainerJob -- Start subnode chain: $chain" }
+                        containerJobManager.startChain(chain)
+                    } else if (process.blockchainState != bcInfo.state) {
+                        logger.debug { "ContainerJob -- Restart subnode chain due to state change: $chain" }
+                        containerJobManager.startChain(chain)
+                    }
                 }
             }
         }
     }
 
     override fun shutdown() {
-        getStartingOrRunningContainerBlockchains()
-                .forEach { stopBlockchain(it.key, bTrace = null) }
+        getStartingOrRunningContainerBlockchains().forEach { stopBlockchain(it.key, null) }
         containerJobManager.shutdown()
         metrics.close()
         super.shutdown()
@@ -237,37 +243,36 @@ class ContainerManagedBlockchainProcessManager(
 
     private fun removeBlockchainProcess(chainId: Long, psContainer: PostchainContainer): ContainerBlockchainProcess? =
             psContainer.removeProcess(chainId)
-                    ?.also { cleanUpBlockchainProcess(chainId, it) }
+                    ?.also { cleanUpBlockchainProcess(chainId, psContainer, it) }
 
     private fun terminateBlockchainProcess(chainId: Long, psContainer: PostchainContainer): ContainerBlockchainProcess? =
             psContainer.terminateProcess(chainId)
-                    ?.also { cleanUpBlockchainProcess(chainId, it) }
+                    ?.also { cleanUpBlockchainProcess(chainId, psContainer, it) }
 
-    private fun cleanUpBlockchainProcess(chainId: Long, process: ContainerBlockchainProcess) {
+    private fun cleanUpBlockchainProcess(chainId: Long, psContainer: PostchainContainer, process: ContainerBlockchainProcess) {
         extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
                 .forEach { it.disconnectRemoteProcess(process) }
         masterBlockchainInfra.exitMasterBlockchainProcess(process)
         val blockchainRid = chainIdToBrid.remove(chainId)
         nodeDiagnosticContext.removeBlockchainData(blockchainRid)
         bridToChainId.remove(blockchainRid)
-        chains.remove(chainId)
+        chains.remove(chainId to psContainer.containerName.name)
         process.shutdown()
     }
 
-    private fun getStartingOrRunningContainerBlockchains(): Map<Long, ContainerBlockchainProcess> {
+    private fun getStartingOrRunningContainerBlockchains(): Map<Long, List<Pair<PostchainContainer, ContainerBlockchainProcess>>> {
         return postchainContainers.values
                 .filter { it.state == STARTING || it.state == RUNNING }
-                .flatMap { it.getAllProcesses().toList() }
-                .toMap()
+                .flatMap { cont -> cont.getAllProcesses().map { (chain, proc) -> Triple(chain, cont, proc) } }
+                .groupBy({ it.first }, { it.second to it.third })
     }
 
-    private fun getChain(chainId: Long): Chain {
-        return chains.computeIfAbsent(chainId) {
-            val brid = getBridByChainId(chainId)
-            val container = directoryDataSource.getContainerForBlockchainOnTheNode(brid)
-            val containerIid = getContainerIid(container)
-            val containerName = ContainerName.create(appConfig, container, containerIid)
-            Chain(containerName, chainId, brid)
+    private fun getOrCreateContainerChains(chainId: Long): List<Chain> {
+        val brid = getBridByChainId(chainId)
+        return directoryDataSource.getBlockchainContainersForNode(brid).map { container ->
+            chains.computeIfAbsent(chainId to container) {
+                Chain(chainId, brid, ContainerName.create(appConfig, container, getContainerIid(container)))
+            }
         }
     }
 
