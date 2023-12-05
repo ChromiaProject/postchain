@@ -184,7 +184,7 @@ data class ContainerNodeConfig(
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", KEY_LOG4J_CONFIGURATION_FILE),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_POSTGRES_MAX_LOCKS_PER_TRANSACTION", KEY_POSTGRES_MAX_LOCKS_PER_TRANSACTION, 1024),
                         getEnvOrListProperty("POSTCHAIN_SUBNODE_CONFIG_PROVIDERS", KEY_CONFIG_PROVIDERS, emptyList()),
-                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_ADMIN_CLIENT_TIMEOUT_MS", KEY_ADMIN_CLIENT_TIMEOUT_MS, 10_000),
+                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_ADMIN_CLIENT_TIMEOUT_MS", KEY_ADMIN_CLIENT_TIMEOUT_MS, 60_000),
                         System.getenv(KEY_IMAGE_VERSION_TAG) ?: ""
                 )
             }
