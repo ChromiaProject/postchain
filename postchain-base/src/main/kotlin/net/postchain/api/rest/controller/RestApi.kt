@@ -215,7 +215,7 @@ class RestApi(
                 .label(BLOCKCHAIN_RID_TAG, blockchainRid.toHex())
     }
 
-    private val loggingFilter = Filter { next ->
+    private val externalRoutingFilter = Filter { next ->
         { request ->
             if (logger.isDebugEnabled) {
                 val requestInfo = "[${request.source?.address ?: "(unknown)"}] ${request.method} ${request.uri.path}"
@@ -250,8 +250,8 @@ class RestApi(
         }
     }
 
-    private val liveBlockchain = blockchainRefFilter(true).then(blockchainMetricsFilter).then(loggingFilter)
-    private val blockchain = blockchainRefFilter(false).then(blockchainMetricsFilter).then(loggingFilter)
+    private val liveBlockchain = blockchainRefFilter(true).then(blockchainMetricsFilter).then(externalRoutingFilter)
+    private val blockchain = blockchainRefFilter(false).then(blockchainMetricsFilter).then(externalRoutingFilter)
 
     private val immutableResponse = CachingFilters.Response.MaxAge(clock, Duration.ofDays(365))
     private val volatileResponse = CachingFilters.Response.NoCache()
