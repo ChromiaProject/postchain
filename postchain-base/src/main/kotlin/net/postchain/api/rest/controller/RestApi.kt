@@ -14,7 +14,6 @@ import net.postchain.api.rest.BlockchainRidRef
 import net.postchain.api.rest.Empty
 import net.postchain.api.rest.ErrorBody
 import net.postchain.api.rest.Version
-import net.postchain.api.rest.batchQueriesBody
 import net.postchain.api.rest.beforeHeightQuery
 import net.postchain.api.rest.beforeTimeQuery
 import net.postchain.api.rest.binaryBody
@@ -30,7 +29,6 @@ import net.postchain.api.rest.controller.http4k.expires
 import net.postchain.api.rest.emptyBody
 import net.postchain.api.rest.errorBody
 import net.postchain.api.rest.gtvJsonBody
-import net.postchain.api.rest.gtxQueriesBody
 import net.postchain.api.rest.heightPath
 import net.postchain.api.rest.heightQuery
 import net.postchain.api.rest.limitQuery
@@ -43,7 +41,6 @@ import net.postchain.api.rest.prettyJsonBody
 import net.postchain.api.rest.proofBody
 import net.postchain.api.rest.signerQuery
 import net.postchain.api.rest.statusBody
-import net.postchain.api.rest.stringsBody
 import net.postchain.api.rest.textBody
 import net.postchain.api.rest.transactionsCountBody
 import net.postchain.api.rest.txBody
@@ -55,8 +52,6 @@ import net.postchain.api.rest.versionBody
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.hexStringToByteArray
-import net.postchain.common.toHex
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockDetail
 import net.postchain.crypto.PubKey
@@ -68,8 +63,6 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvException
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvType
-import net.postchain.gtv.gtvToJSON
-import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
@@ -146,7 +139,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 4
+        const val REST_API_VERSION = 5
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -174,8 +167,6 @@ class RestApi(
     override fun retrieveModel(blockchainRid: BlockchainRid): ChainModel? = models[blockchainRid]?.first
 
     fun actualPort(): Int = server.port()
-
-    private val gtvGson = make_gtv_gson()
 
     private fun blockchainRefFilter(failOnNonLive: Boolean) = Filter { next ->
         { request ->
@@ -277,10 +268,8 @@ class RestApi(
 
             "/query/{blockchainRid}" bind GET to liveBlockchain.then(::getQuery),
             "/query/{blockchainRid}" bind POST to liveBlockchain.then(::postQuery),
-            "/batch_query/{blockchainRid}" bind POST to liveBlockchain.then(::batchQuery),
             // Direct query. That should be used as example: <img src="http://node/dquery/brid?type=get_picture&id=4555" />
             "/dquery/{blockchainRid}" bind GET to liveBlockchain.then(::directQuery),
-            "/query_gtx/{blockchainRid}" bind POST to liveBlockchain.then(::queryGtx),
             "/query_gtv/{blockchainRid}" bind GET to liveBlockchain.then(::getQueryGtv),
             "/query_gtv/{blockchainRid}" bind POST to liveBlockchain.then(::postQueryGtv),
 
@@ -413,17 +402,6 @@ class RestApi(
         return Response(OK).with(gtvJsonBody of queryResult)
     }
 
-    private fun batchQuery(request: Request): Response {
-        val model = model(request)
-        val queries: List<Gtv> = batchQueriesBody(request)
-        val responses: List<String> = queries.map { gtxQuery ->
-            val query = parseQuery(gtxQuery)
-            val queryResult = model.query(query)
-            gtvToJSON(queryResult, gtvGson)
-        }
-        return Response(OK).with(stringsBody of responses)
-    }
-
     private fun directQuery(request: Request): Response {
         val model = model(request)
         val query = extractGetQuery(request.uri.queries().toParametersMap())
@@ -446,20 +424,6 @@ class RestApi(
             else -> throw UserMistake("Unexpected content")
         }
         return getQueryResponse(model, response)
-    }
-
-    private fun queryGtx(request: Request): Response {
-        val model = model(request)
-        val queries = gtxQueriesBody(request)
-        val responses = queries.queries.map {
-            val gtxQuery = try {
-                GtxQuery.decode(it.hexStringToByteArray())
-            } catch (e: GtvException) {
-                throw IllegalArgumentException(e.message ?: "")
-            }
-            GtvEncoder.encodeGtv(model.query(gtxQuery)).toHex()
-        }
-        return Response(OK).with(stringsBody of responses)
     }
 
     private fun getQueryGtv(request: Request): Response {
