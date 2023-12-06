@@ -165,7 +165,7 @@ open class BaseBlockchainInfrastructure(
             try {
                 getSynchronizationInfrastructureExtension(it).connectProcess(process)
             } catch (e: Exception) {
-                throw ProgrammerMistake("Error when connecting sync-infra extension: ${it.className}", e)
+                throw ProgrammerMistake("Error when connecting sync-infra extension ${it.className}: ${e.message}", e)
             }
         }
         apiInfrastructure.connectProcess(process)
