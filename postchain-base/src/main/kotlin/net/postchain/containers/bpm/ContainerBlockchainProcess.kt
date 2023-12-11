@@ -18,11 +18,12 @@ interface ContainerBlockchainProcess : RemoteBlockchainProcess, Shutdownable {
 class DefaultContainerBlockchainProcess(
         val nodeConfig: NodeConfig,
         val containerNodeConfig: ContainerNodeConfig,
+        override val restApiEnabled: Boolean,
         restApiPort: Int,
         override val chainId: Long,
         override val blockchainRid: BlockchainRid,
         override val blockchainState: BlockchainState,
-        private val communicationManager: MasterCommunicationManager,
+        private val communicationManager: MasterCommunicationManager
 ) : ContainerBlockchainProcess {
 
     companion object : KLogging()

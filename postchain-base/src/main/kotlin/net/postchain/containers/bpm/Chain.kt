@@ -5,7 +5,8 @@ import net.postchain.common.BlockchainRid
 class Chain(
         val chainId: Long,
         val brid: BlockchainRid,
-        val containerName: ContainerName
+        val containerName: ContainerName,
+        var restApiEnabled: Boolean = true
 ) {
 
     override fun equals(other: Any?): Boolean {
@@ -14,11 +15,18 @@ class Chain(
 
         other as Chain
 
-        return chainId == other.chainId
+        if (chainId != other.chainId) return false
+        if (brid != other.brid) return false
+        if (containerName != other.containerName) return false
+
+        return true
     }
 
     override fun hashCode(): Int {
-        return chainId.hashCode()
+        var result = chainId.hashCode()
+        result = 31 * result + brid.hashCode()
+        result = 31 * result + containerName.hashCode()
+        return result
     }
 
     override fun toString(): String {

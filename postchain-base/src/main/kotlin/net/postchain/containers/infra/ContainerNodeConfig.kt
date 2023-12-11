@@ -68,6 +68,7 @@ data class ContainerNodeConfig(
         val bindPgdataVolume: Boolean,
         val dockerLogConf: DockerLogConfig?,
         val containerIID: Int,
+        val directoryContainer: String,
         val remoteDebugEnabled: Boolean,
         val remoteDebugSuspend: Boolean,
         val prometheusPort: Int,
@@ -175,6 +176,7 @@ data class ContainerNodeConfig(
                         getEnvOrBooleanProperty("POSTCHAIN_BIND_PGDATA_VOLUME", KEY_BIND_PGDATA_VOLUME, true),
                         logConf,
                         System.getenv("POSTCHAIN_CONTAINER_ID")?.toInt() ?: -1,
+                        System.getenv("POSTCHAIN_DIRECTORY_CONTAINER")?.toString() ?: "",
                         getEnvOrBooleanProperty("POSTCHAIN_SUBNODE_REMOTE_DEBUG_ENABLED", KEY_REMOTE_DEBUG_ENABLED, false),
                         getEnvOrBooleanProperty("POSTCHAIN_SUBNODE_REMOTE_DEBUG_SUSPEND", KEY_REMOTE_DEBUG_SUSPEND, false),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_PROMETHEUS_PORT", KEY_PROMETHEUS_PORT, -1),
@@ -184,7 +186,7 @@ data class ContainerNodeConfig(
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", KEY_LOG4J_CONFIGURATION_FILE),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_POSTGRES_MAX_LOCKS_PER_TRANSACTION", KEY_POSTGRES_MAX_LOCKS_PER_TRANSACTION, 1024),
                         getEnvOrListProperty("POSTCHAIN_SUBNODE_CONFIG_PROVIDERS", KEY_CONFIG_PROVIDERS, emptyList()),
-                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_ADMIN_CLIENT_TIMEOUT_MS", KEY_ADMIN_CLIENT_TIMEOUT_MS, 10_000),
+                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_ADMIN_CLIENT_TIMEOUT_MS", KEY_ADMIN_CLIENT_TIMEOUT_MS, 60_000),
                         System.getenv(KEY_IMAGE_VERSION_TAG) ?: ""
                 )
             }

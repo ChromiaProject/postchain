@@ -20,7 +20,8 @@ interface MasterSyncInfra : SynchronizationInfrastructure {
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
             targetContainer: PostchainContainer,
-            blockchainState: BlockchainState
+            blockchainState: BlockchainState,
+            restApiEnabled: Boolean
     ): ContainerBlockchainProcess
 
     fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess)

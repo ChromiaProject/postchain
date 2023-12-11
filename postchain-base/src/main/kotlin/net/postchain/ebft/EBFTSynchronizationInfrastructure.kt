@@ -89,7 +89,7 @@ open class EBFTSynchronizationInfrastructure(
 
         // worker context
         val buildWorkerContext = { brid: BlockchainRid, peerCommConfig: PeerCommConfiguration ->
-            val communicationManager = buildXCommunicationManager(blockchainConfig, peerCommConfig, brid)
+            val communicationManager = buildXCommunicationManager(blockchainConfigurationProvider, blockchainConfig, peerCommConfig, brid)
             val messageDurationTracker = MessageDurationTracker(
                     postchainContext.appConfig,
                     communicationManager,
@@ -146,21 +146,35 @@ open class EBFTSynchronizationInfrastructure(
 
             blockchainState == BlockchainState.IMPORTING -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
 
-            blockchainState == BlockchainState.UNARCHIVING -> {
-                val bcInfo = (blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider)
-                        ?.getUnarchivingBlockchainNodeInfo(blockchainRid)
-                logger.error { "bcInfo: $bcInfo" }
-                when {
-                    bcInfo != null && bcInfo.isSourceNode ->
-                        ForceReadOnlyBlockchainProcess(workerContext, blockchainState, bcInfo.upToHeight)
-
-                    iAmASigner -> ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(chainId), blockchainState)
-
-                    else -> ReadOnlyBlockchainProcess(workerContext, blockchainState)
-                }
-            }
+            blockchainState == BlockchainState.UNARCHIVING -> createUnarchivingBlockchainProcess(
+                    workerContext,
+                    blockchainConfigurationProvider,
+                    blockchainConfig,
+                    blockchainState,
+                    iAmASigner)
 
             else -> throw ProgrammerMistake("Unexpected blockchain state $blockchainState for blockchain $blockchainRid")
+        }
+    }
+
+    protected open fun createUnarchivingBlockchainProcess(
+            workerContext: WorkerContext,
+            blockchainConfigProvider: BlockchainConfigurationProvider,
+            blockchainConfig: BlockchainConfiguration,
+            blockchainState: BlockchainState,
+            iAmASigner: Boolean
+    ): BlockchainProcess {
+        val bcInfo = (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
+                ?.getUnarchivingBlockchainNodeInfo(blockchainConfig.blockchainRid)
+        logger.error { "bcInfo: $bcInfo" }
+        return when {
+            bcInfo != null && bcInfo.isSourceNode && !bcInfo.isDestinationNode -> ForceReadOnlyBlockchainProcess(
+                    workerContext, blockchainState, bcInfo.upToHeight)
+
+            iAmASigner -> ValidatorBlockchainProcess(
+                    workerContext, getStartWithFastSyncValue(blockchainConfig.chainID), blockchainState)
+
+            else -> ReadOnlyBlockchainProcess(workerContext, blockchainState)
         }
     }
 
@@ -208,7 +222,8 @@ open class EBFTSynchronizationInfrastructure(
         }
     }
 
-    private fun buildXCommunicationManager(
+    protected open fun buildXCommunicationManager(
+            blockchainConfigProvider: BlockchainConfigurationProvider,
             blockchainConfig: BlockchainConfiguration,
             relevantPeerCommConfig: PeerCommConfiguration,
             blockchainRid: BlockchainRid
@@ -223,7 +238,7 @@ open class EBFTSynchronizationInfrastructure(
         ).apply { init() }
     }
 
-    private fun getStartWithFastSyncValue(chainId: Long): Boolean {
+    protected fun getStartWithFastSyncValue(chainId: Long): Boolean {
         return startWithFastSync[chainId] ?: true
     }
 }
