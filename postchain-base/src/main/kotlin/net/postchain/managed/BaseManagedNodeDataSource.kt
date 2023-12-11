@@ -219,8 +219,9 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
                 blockchainRid,
                 res["source_container"]?.asString() ?: return null,
                 res["destination_container"]?.asString() ?: return null,
-                res["up_to_height"]?.asInteger() ?: return null,
-                res["is_source_node"]?.asBoolean() ?: return null
+                res["is_source_node"]?.asBoolean() ?: return null,
+                res["is_destination_node"]?.asBoolean() ?: return null,
+                res["up_to_height"]?.asInteger() ?: return null
         )
     }
 }

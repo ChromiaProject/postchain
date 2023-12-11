@@ -326,30 +326,34 @@ class BaseManagedNodeDataSourceTest {
                                     "rid" to gtv(ZERO_RID),
                                     "source_container" to gtv("src"),
                                     "destination_container" to gtv("dst"),
-                                    "up_to_height" to gtv(100),
-                                    "is_source_node" to gtv(true)
+                                    "is_source_node" to gtv(false),
+                                    "is_destination_node" to gtv(true),
+                                    "up_to_height" to gtv(100)
                             )),
                             UnarchivingBlockchainNodeInfo(
                                     ZERO_RID,
                                     "src",
                                     "dst",
-                                    100L,
-                                    true)
+                                    isSourceNode = false,
+                                    isDestinationNode = true,
+                                    upToHeight = 100L)
                     ),
                     arrayOf(13,
                             gtv(mapOf(
                                     "rid" to gtv(ZERO_RID),
                                     "source_container" to gtv("src"),
                                     "destination_container" to gtv("dst"),
-                                    "up_to_height" to gtv(100),
-                                    "is_source_node" to gtv(false)
+                                    "is_source_node" to gtv(true),
+                                    "is_destination_node" to gtv(false),
+                                    "up_to_height" to gtv(100)
                             )),
                             UnarchivingBlockchainNodeInfo(
                                     ZERO_RID,
                                     "src",
                                     "dst",
-                                    100L,
-                                    false)
+                                    isSourceNode = true,
+                                    isDestinationNode = false,
+                                    upToHeight = 100L)
                     ),
             )
         }

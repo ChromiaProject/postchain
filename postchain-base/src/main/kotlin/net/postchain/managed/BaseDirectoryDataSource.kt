@@ -49,7 +49,7 @@ open class BaseDirectoryDataSource(
         return if (nmApiVersion >= 14) {
             query(
                     "nm_get_blockchain_containers_for_node",
-                    buildArgs("pubkey" to gtv(appConfig.pubKeyByteArray), "blockchain_rid" to gtv(brid.data))
+                    buildArgs("node_id" to gtv(appConfig.pubKeyByteArray), "blockchain_rid" to gtv(brid.data))
             ).asArray().map { it.asString() }
         } else {
             listOf(getContainerForBlockchainOnTheNode(brid))
