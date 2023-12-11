@@ -132,6 +132,14 @@ object ImporterExporter : KLogging() {
         return ExportResult(fromHeight = firstBlock, toHeight = lastBlock, numBlocks = numBlocks)
     }
 
+    fun exportBlock(storage: Storage, chainId: Long, height: Long): Gtv = withReadConnection(storage, chainId) { ctx ->
+        var res: Gtv = GtvNull
+        DatabaseAccess.of(ctx).getAllBlocksWithTransactions(ctx, fromHeight = height, upToHeight = height) {
+            res = encodeBlockEntry(it)
+        }
+        res
+    }
+
     /**
      * @param nodeKeyPair         KeyPair of the node
      * @param cryptoSystem        CryptoSystem of the node
@@ -266,6 +274,27 @@ object ImporterExporter : KLogging() {
                 firstImportedBlock = firstImportedBlock,
                 numBlocks = numBlocks,
                 blockchainRid = blockchainRid)
+    }
+
+    fun importBlock(storage: Storage, chainId: Long, blockData: Gtv, nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem) {
+        val blockchainRid = withReadConnection(storage, chainId) { ctx ->
+            DatabaseAccess.of(ctx).getBlockchainRid(ctx)
+        } ?: throw UserMistake("Can't find blockchain RID for chainIid $chainId")
+
+        val partialContext = BaseBlockchainContext(chainId, blockchainRid, NODE_ID_READ_ONLY, nodeKeyPair.pubKey.data)
+        val blockSigMaker = cryptoSystem.buildSigMaker(nodeKeyPair)
+        val (blockHeader, blockWitness, transactions) = decodeBlockEntry(blockData)
+        val blockHeight = blockHeader.blockHeaderRec.getHeight()
+
+        withReadWriteConnection(storage, chainId) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            val configHeight = DatabaseAccess.of(ctx).findConfigurationHeightForBlock(ctx, blockHeight)
+                    ?: throw UserMistake("Can't find config height for block $blockHeight")
+            val configData = db.getConfigurationData(ctx, configHeight)
+                    ?: throw UserMistake("Can't load config for block $blockHeight")
+            val config = makeBlockchainConfiguration(configData, partialContext, blockSigMaker, ctx, cryptoSystem)
+            importBlock(ctx, config, blockHeader, transactions, blockWitness)
+        }
     }
 
     private fun makeBlockchainConfiguration(rawConfigurationData: ByteArray, partialContext: BaseBlockchainContext,

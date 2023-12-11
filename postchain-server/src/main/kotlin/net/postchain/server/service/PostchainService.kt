@@ -19,6 +19,7 @@ import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
 import net.postchain.debug.ErrorDiagnosticValue
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
 import net.postchain.server.NodeProvider
 import java.nio.file.Path
 
@@ -106,6 +107,12 @@ class PostchainService(private val nodeProvider: NodeProvider) {
                     fromHeight = fromHeight,
                     upToHeight = upToHeight)
 
+    fun exportBlock(chainId: Long, height: Long): Gtv = ImporterExporter.exportBlock(
+            postchainNode.postchainContext.sharedStorage,
+            chainId,
+            height
+    )
+
     fun importBlockchain(chainId: Long, blockchainRidData: ByteArray, configurationFile: Path, blocksFile: Path, incremental: Boolean): ImportResult {
         val chainId0 = if (blockchainRidData.isNotEmpty()) {
             val brid = BlockchainRid(blockchainRidData)
@@ -118,13 +125,23 @@ class PostchainService(private val nodeProvider: NodeProvider) {
         }
 
         return ImporterExporter.importBlockchain(
-                KeyPair(PubKey(postchainNode.appConfig.pubKeyByteArray), PrivKey(postchainNode.appConfig.privKeyByteArray)),
+                KeyPair(PubKey(postchainNode.appConfig.pubKey), PrivKey(postchainNode.appConfig.privKey)),
                 postchainNode.postchainContext.cryptoSystem,
                 postchainNode.postchainContext.sharedStorage,
                 chainId0,
                 configurationsFile = configurationFile,
                 blocksFile = blocksFile,
                 incremental)
+    }
+
+    fun importBlock(chainId: Long, blockData: ByteArray) {
+        ImporterExporter.importBlock(
+                postchainNode.postchainContext.sharedStorage,
+                chainId,
+                GtvDecoder.decodeGtv(blockData),
+                KeyPair(PubKey(postchainNode.appConfig.pubKey), PrivKey(postchainNode.appConfig.privKey)),
+                postchainNode.postchainContext.cryptoSystem
+        )
     }
 
     fun removeBlockchain(chainId: Long) {
