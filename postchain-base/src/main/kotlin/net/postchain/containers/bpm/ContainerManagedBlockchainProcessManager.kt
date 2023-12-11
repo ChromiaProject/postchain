@@ -229,8 +229,7 @@ class ContainerManagedBlockchainProcessManager(
                                 dstChain.restApiEnabled = false
                                 startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
                                 blockchainReplicators.getOrPut(chain.chainId) {
-                                    BlockchainReplicator(srcChain, dstChain, info.upToHeight, directoryDataSource, ::findPostchainContainer).apply {
-                                        start()
+                                    BlockchainReplicator(srcChain, dstChain, info.upToHeight, directoryDataSource, ::findPostchainContainer).also {
                                         logger.error { "BlockchainReplicator(${chains.size}) started" }
                                     }
                                 }

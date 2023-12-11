@@ -1,11 +1,12 @@
 package net.postchain.containers.bpm
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
-import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.managed.DirectoryDataSource
-import java.lang.Thread.sleep
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.concurrent.thread
 
 class BlockchainReplicator(
         val srcChain: Chain,
@@ -22,65 +23,55 @@ class BlockchainReplicator(
     private val chainId = srcChain.chainId
     private val blockchainRid = srcChain.brid
     private val processName = "blockchain-replicator-chainId-$chainId"
-    private val process: Thread = thread(name = processName, start = false) { main() }
-    private val started = AtomicBoolean(false)
-    private val running = AtomicBoolean(false)
+    private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
+            ThreadFactoryBuilder().setNameFormat(processName).build()
+    )
     private val done = AtomicBoolean(false)
 
-    fun start() {
-        if (done.get()) throw ProgrammerMistake("BlockchainReplicator process is already done")
-
-        if (!started.getAndSet(true)) {
-            running.set(true)
-            process.start()
-        } else throw ProgrammerMistake("BlockchainReplicator process is already started")
+    init {
+        executor.scheduleWithFixedDelay(::jobHandler, 5000, 2000, TimeUnit.MILLISECONDS)
     }
 
-    private fun main() {
+    private fun jobHandler() {
         try {
-            while (running.get()) {
-                sleep(1000)
-                val upToHeight0 = upToHeight
+            val upToHeight0 = upToHeight
 
-                // require src container is running and healthy
-                val srcContainer = ensureContainer(srcChain.containerName, ContainerRole.SOURCE) ?: continue
+            // require src container is running and healthy
+            val srcContainer = ensureContainer(srcChain.containerName, ContainerRole.SOURCE) ?: return
 
-                // require dst container is running and healthy
-                val dstContainer = ensureContainer(dstChain.containerName, ContainerRole.DESTINATION) ?: continue
+            // require dst container is running and healthy
+            val dstContainer = ensureContainer(dstChain.containerName, ContainerRole.DESTINATION) ?: return
 
-                val currentUpToHeight = if (upToHeight0 == -1L) {
-                    val srcLastBlockHeight = srcContainer.getBlockchainLastBlockHeight(chainId)
-                    if (srcLastBlockHeight == -1L) {
-                        logger.error { "Source blockchain has no blocks: srcLastBlockHeight = -1L" }
-                        continue
-                    } else {
-                        logger.error { "Source chain lastBlockHeight: $srcLastBlockHeight" }
-                    }
-                    srcLastBlockHeight
+            val currentUpToHeight = if (upToHeight0 == -1L) {
+                val srcLastBlockHeight = srcContainer.getBlockchainLastBlockHeight(chainId)
+                if (srcLastBlockHeight == -1L) {
+                    logger.error { "Source blockchain has no blocks: srcLastBlockHeight = -1L" }
+                    return
                 } else {
-                    upToHeight0
+                    logger.error { "Source chain lastBlockHeight: $srcLastBlockHeight" }
                 }
-
-                val dstLastBlockHeight = dstContainer.getBlockchainLastBlockHeight(chainId)
-                logger.error { "Destination chain lastBlockHeight: $dstLastBlockHeight" }
-
-                if (currentUpToHeight <= dstLastBlockHeight) {
-                    logger.error { "Source blockchain has no blocks: upToHeight = $currentUpToHeight, dstLastBlockHeight = $dstLastBlockHeight" }
-                    if (upToHeight0 != -1L) break else continue
-                }
-
-                // Importing configs
-                replicateConfigurations(currentUpToHeight, dstLastBlockHeight, dstContainer)
-
-                // Importing blocks
-                val replicated = replicateBlocks(currentUpToHeight, dstLastBlockHeight, srcContainer, dstContainer)
-                if (!replicated && upToHeight0 != -1L) break
+                srcLastBlockHeight
+            } else {
+                upToHeight0
             }
+
+            val dstLastBlockHeight = dstContainer.getBlockchainLastBlockHeight(chainId)
+            logger.error { "Destination chain lastBlockHeight: $dstLastBlockHeight" }
+
+            if (currentUpToHeight <= dstLastBlockHeight) {
+                logger.error { "Source blockchain has no blocks: upToHeight = $currentUpToHeight, dstLastBlockHeight = $dstLastBlockHeight" }
+                if (upToHeight0 != -1L) done()
+                return
+            }
+
+            // Importing configs
+            replicateConfigurations(currentUpToHeight, dstLastBlockHeight, dstContainer)
+
+            // Importing blocks
+            val replicated = replicateBlocks(currentUpToHeight, dstLastBlockHeight, srcContainer, dstContainer)
+            if (!replicated && upToHeight0 != -1L) done()
         } catch (e: Exception) {
             logger.error(e) { "BlockchainReplicator process $processName stopped unexpectedly" }
-            running.set(false)
-        } finally {
-            done.set(true)
         }
     }
 
@@ -136,12 +127,11 @@ class BlockchainReplicator(
         }
     }
 
-    fun isDone() = upToHeight != 1L && done.get()
-
-    fun shutdown() {
-        running.set(false)
-        if (!process.isAlive) return
-        logger.debug { "Shutting down process $processName" }
-        process.join()
+    private fun done() {
+        executor.shutdown()
+        done.set(true)
+        logger.error { "$processName is done" }
     }
+
+    fun isDone() = upToHeight != 1L && done.get()
 }
