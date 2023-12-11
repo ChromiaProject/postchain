@@ -5,6 +5,7 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Shutdownable
 import net.postchain.crypto.PrivKey
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.gtv.Gtv
 
 interface SubnodeAdminClient : Shutdownable {
 
@@ -21,5 +22,9 @@ interface SubnodeAdminClient : Shutdownable {
     fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid): Boolean
     fun stopBlockchain(chainId: Long): Boolean
     fun isBlockchainRunning(chainId: Long): Boolean
-    fun getBlockchainLastHeight(chainId: Long): Long
+    fun getBlockchainLastBlockHeight(chainId: Long): Long
+    fun initializeBlockchain(chainId: Long, config: ByteArray)
+    fun addBlockchainConfiguration(chainId: Long, height: Long, config: ByteArray)
+    fun exportBlock(chainId: Long, height: Long): Gtv
+    fun importBlock(chainId: Long, blockData: Gtv)
 }

@@ -6,6 +6,7 @@ import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.bpm.rpc.SubnodeAdminClient
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.crypto.PrivKey
+import net.postchain.gtv.Gtv
 import net.postchain.managed.DirectoryDataSource
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -67,8 +68,24 @@ class DefaultPostchainContainer(
         return getAllChains().toSet().onEach(::terminateProcess)
     }
 
-    override fun getBlockchainLastHeight(chainId: Long): Long {
-        return subnodeAdminClient.getBlockchainLastHeight(chainId)
+    override fun getBlockchainLastBlockHeight(chainId: Long): Long {
+        return subnodeAdminClient.getBlockchainLastBlockHeight(chainId)
+    }
+
+    override fun addBlockchainConfiguration(chainId: Long, height: Long, config: ByteArray) {
+        if (height == 0L) {
+            subnodeAdminClient.initializeBlockchain(chainId, config)
+        } else {
+            subnodeAdminClient.addBlockchainConfiguration(chainId, height, config)
+        }
+    }
+
+    override fun exportBlock(chainId: Long, height: Long): Gtv {
+        return subnodeAdminClient.exportBlock(chainId, height)
+    }
+
+    override fun importBlock(chainId: Long, blockData: Gtv) {
+        subnodeAdminClient.importBlock(chainId, blockData)
     }
 
     override fun start() {

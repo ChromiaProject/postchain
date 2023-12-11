@@ -2,6 +2,7 @@ package net.postchain.containers.bpm
 
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.crypto.PrivKey
+import net.postchain.gtv.Gtv
 import java.util.concurrent.atomic.AtomicBoolean
 
 enum class ContainerState {
@@ -25,15 +26,20 @@ interface PostchainContainer {
     fun removeProcess(chainId: Long): ContainerBlockchainProcess?
     fun terminateProcess(chainId: Long): ContainerBlockchainProcess?
     fun terminateAllProcesses(): Set<Long>
-    fun getBlockchainLastHeight(chainId: Long): Long
     fun start()
     fun reset()
     fun stop()
     fun isEmpty(): Boolean
     fun isSubnodeHealthy(): Boolean
     fun initializePostchainNode(privKey: PrivKey): Boolean
+
     /** @return `true` if there are updates */
     fun updateResourceLimits(): Boolean
+
     /** @return `false` if a limit is reached and state has changed */
     fun checkResourceLimits(fileSystem: FileSystem): Boolean
+    fun getBlockchainLastBlockHeight(chainId: Long): Long
+    fun addBlockchainConfiguration(chainId: Long, height: Long, config: ByteArray)
+    fun exportBlock(chainId: Long, height: Long): Gtv
+    fun importBlock(chainId: Long, blockData: Gtv)
 }
