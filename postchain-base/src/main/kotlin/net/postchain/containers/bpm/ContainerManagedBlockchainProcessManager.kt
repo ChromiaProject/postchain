@@ -162,35 +162,22 @@ class ContainerManagedBlockchainProcessManager(
         val masterLaunched: Map<Long, BlockchainProcess> = getLaunchedBlockchains()
         val subnodeLaunched = getStartingOrRunningContainerBlockchains()
 
-        logger.error { "chainIdsToLaunch: ${chainIdsToLaunch.toTypedArray().contentToString()}" }
-        logger.error { "subnodeLaunched: ${subnodeLaunched.keys.toTypedArray().contentToString()}" }
-
         // Chain0
         if (reloadChain0) {
-            logger.error("ContainerJob -- Restart chain0")
+            logger.debug { "ContainerJob -- Restart chain0" }
             startBlockchainAsync(CHAIN0, null)
         }
 
         // Stopping launched blockchains
         masterLaunched.keys.filterNot(chainIdsToLaunch::contains).forEach {
-            logger.error { "ContainerJob -- Stop system chain: $it" }
+            logger.debug { "ContainerJob -- Stop system chain: $it" }
             stopBlockchainAsync(it, null)
         }
-
         subnodeLaunched.filterKeys { it !in chainIdsToLaunch }.values.forEach { containerProcesses ->
-            containerProcesses.forEach { e ->
-                logger.error { "e.first.containerName.name: ${e.first.containerName.name}" }
-                logger.error { "e.second.container-process: ${e.second.chainId}" }
-            }
-
             containerProcesses.forEach {
-                logger.error { "container: ${it.first.containerName}" }
                 chains[it.second.chainId to it.first.containerName]?.also { chain ->
-                    logger.error { "ContainerJob -- Stop subnode chain: $chain" }
+                    logger.debug { "ContainerJob -- Stop subnode chain: $chain" }
                     containerJobManager.stopChain(chain)
-                } ?: run {
-                    logger.error { "ContainerJob -- Can't find chain: ${it.second.chainId to it.first.containerName.name}" }
-                    logger.error { "chains.keys: " + chains.keys.toTypedArray().contentToString() }
                 }
             }
         }
@@ -200,22 +187,21 @@ class ContainerManagedBlockchainProcessManager(
             if (bcInfo.system) {
                 val process = masterLaunched[bcInfo.chainId]
                 if (process == null) {
-                    logger.error { "ContainerJob -- Start system chain: ${bcInfo.chainId}" }
+                    logger.debug { "ContainerJob -- Start system chain: ${bcInfo.chainId}" }
                     startBlockchainAsync(bcInfo.chainId, null)
                 } else if (process.getBlockchainState() != bcInfo.state) {
-                    logger.error { "ContainerJob -- Restart system chain due to state change: ${bcInfo.chainId}" }
+                    logger.debug { "ContainerJob -- Restart system chain due to state change: ${bcInfo.chainId}" }
                     startBlockchainAsync(bcInfo.chainId, null)
                 } else {
-                    logger.error { "ContainerJob -- System chain already launched, nothing to do: ${bcInfo.chainId}" }
+                    logger.debug { "ContainerJob -- System chain already launched, nothing to do: ${bcInfo.chainId}" }
                 }
             } else {
                 val chains = getOrCreateContainerChains(bcInfo.chainId) // Support max 2 containers for now
-                logger.error { "Chains: ${chains.toTypedArray().contentToString()}" }
+                logger.debug { "Chains: ${chains.toTypedArray().contentToString()}" }
 
                 if (chains.size == 1) {
                     startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
                 } else if (chains.size > 1) {
-                    logger.error { "chains.size is ${chains.size}, BlockchainReplicator will be started" }
                     val chain = chains.first()
                     val info = directoryDataSource.getUnarchivingBlockchainNodeInfo(chain.brid)
                     if (info != null) {
@@ -230,7 +216,7 @@ class ContainerManagedBlockchainProcessManager(
                                 startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
                                 blockchainReplicators.getOrPut(chain.chainId) {
                                     BlockchainReplicator(srcChain, dstChain, info.upToHeight, directoryDataSource, ::findPostchainContainer).also {
-                                        logger.error { "BlockchainReplicator(${chains.size}) started" }
+                                        logger.debug { "BlockchainReplicator(${chains.size}) started" }
                                     }
                                 }
                             }
@@ -266,7 +252,7 @@ class ContainerManagedBlockchainProcessManager(
             launchedContainerProcesses: List<Pair<PostchainContainer, ContainerBlockchainProcess>>?
     ) {
         chains.forEach { chain ->
-            logger.error { "chain to be processed: $chain" }
+            logger.debug { "chain to be processed: $chain" }
             val process = launchedContainerProcesses
                     ?.firstOrNull { it.first.containerName == chain.containerName }?.second
             if (process == null) {
@@ -276,7 +262,7 @@ class ContainerManagedBlockchainProcessManager(
                 logger.debug { "ContainerJob -- Restart subnode chain due to state change: $chain" }
                 containerJobManager.startChain(chain)
             } else {
-                logger.error { "ContainerJob -- Already launched, nothing to do: ${bcInfo.chainId}" }
+                logger.debug { "ContainerJob -- Already launched, nothing to do: ${bcInfo.chainId}" }
             }
         }
     }
@@ -351,9 +337,7 @@ class ContainerManagedBlockchainProcessManager(
                 .map { container ->
                     val containerName = ContainerName.create(appConfig, container, getContainerIid(container))
                     chains.computeIfAbsent(chainId to containerName) {
-                        val c = Chain(chainId, brid, containerName)
-                        logger.error { "Chain was put into chains map: $c" }
-                        c
+                        Chain(chainId, brid, containerName)
                     }
                 }
     }
