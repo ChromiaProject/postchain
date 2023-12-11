@@ -8,6 +8,7 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.crypto.PrivKey
 import net.postchain.gtv.Gtv
 import net.postchain.managed.DirectoryDataSource
+import java.time.Clock
 import java.util.concurrent.atomic.AtomicBoolean
 
 class DefaultPostchainContainer(
@@ -18,6 +19,7 @@ class DefaultPostchainContainer(
         override var state: ContainerState,
         private val subnodeAdminClient: SubnodeAdminClient,
         override var containerId: String? = null,
+        val clock: Clock = Clock.systemUTC()
 ) : PostchainContainer {
 
     companion object : KLogging()
@@ -30,6 +32,7 @@ class DefaultPostchainContainer(
     override var resourceLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
 
     override val readOnly = AtomicBoolean(false)
+    private var lastUpdated = clock.millis()
 
     override fun shortContainerId(): String? {
         return DockerTools.shortContainerId(containerId)
@@ -53,14 +56,18 @@ class DefaultPostchainContainer(
         subnodeAdminClient.startBlockchain(process.chainId, process.blockchainRid).also {
             if (it) processes[process.chainId] = process
         }
+        setLastUpdated()
         return true
     }
 
-    override fun removeProcess(chainId: Long): ContainerBlockchainProcess? = processes.remove(chainId)
+    override fun removeProcess(chainId: Long): ContainerBlockchainProcess? = processes.remove(chainId).also {
+        setLastUpdated()
+    }
 
     override fun terminateProcess(chainId: Long): ContainerBlockchainProcess? {
         return processes.remove(chainId)?.also {
             subnodeAdminClient.stopBlockchain(chainId)
+            setLastUpdated()
         }
     }
 
@@ -78,6 +85,7 @@ class DefaultPostchainContainer(
         } else {
             subnodeAdminClient.addBlockchainConfiguration(chainId, height, config)
         }
+        setLastUpdated()
     }
 
     override fun exportBlock(chainId: Long, height: Long): Gtv {
@@ -86,31 +94,38 @@ class DefaultPostchainContainer(
 
     override fun importBlock(chainId: Long, blockData: Gtv) {
         subnodeAdminClient.importBlock(chainId, blockData)
+        setLastUpdated()
     }
 
     override fun start() {
         state = ContainerState.RUNNING
         subnodeAdminClient.connect()
+        setLastUpdated()
     }
 
     override fun reset() {
         subnodeAdminClient.disconnect()
         state = ContainerState.STARTING
         initialized = false
+        setLastUpdated()
     }
 
     override fun stop() {
         state = ContainerState.STOPPING
         subnodeAdminClient.shutdown()
+        setLastUpdated()
     }
 
-    override fun isEmpty() = processes.isEmpty()
+    override fun isIdle(): Boolean {
+        return processes.isEmpty() && (System.currentTimeMillis() - lastUpdated > 5 * 60 * 1000)
+    }
 
     override fun isSubnodeHealthy() = subnodeAdminClient.isSubnodeHealthy()
 
     override fun initializePostchainNode(privKey: PrivKey): Boolean = if (!initialized) {
         val success = subnodeAdminClient.initializePostchainNode(privKey)
         if (success) initialized = true
+        setLastUpdated()
         success
     } else true
 
@@ -119,6 +134,7 @@ class DefaultPostchainContainer(
         val newResourceLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
         return if (newResourceLimits != oldResourceLimits) {
             resourceLimits = newResourceLimits
+            setLastUpdated()
             true
         } else {
             false
@@ -134,8 +150,13 @@ class DefaultPostchainContainer(
                     logger.warn("Space used is too close to hard limit. Switching to read only mode. (used space: ${it.spaceUsedMB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceHardLimitMB}MB)")
                 else
                     logger.info("Space used is no longer too close to hard limit. (used space: ${it.spaceUsedMB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceHardLimitMB}MB)")
+                setLastUpdated()
             }
         }
         return readOnlyBeforeCheck == readOnly.get()
+    }
+
+    private fun setLastUpdated() {
+        lastUpdated = clock.millis()
     }
 }

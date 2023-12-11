@@ -29,7 +29,7 @@ interface PostchainContainer {
     fun start()
     fun reset()
     fun stop()
-    fun isEmpty(): Boolean
+    fun isIdle(): Boolean
     fun isSubnodeHealthy(): Boolean
     fun initializePostchainNode(privKey: PrivKey): Boolean
 
