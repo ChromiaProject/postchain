@@ -22,6 +22,7 @@ data class HttpExternalModel(
     override var live = true
 
     val client: HttpHandler = ApacheClient(HttpClients.custom()
+            .disableContentCompression()
             .setDefaultRequestConfig(RequestConfig.custom()
                     .setRedirectsEnabled(false)
                     .setCookieSpec(StandardCookieSpec.IGNORE)
