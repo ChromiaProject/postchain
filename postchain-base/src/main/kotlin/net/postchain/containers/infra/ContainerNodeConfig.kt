@@ -32,6 +32,7 @@ data class ContainerNodeConfig(
         val subnodeUser: String?,
         val sendMasterConnectedPeersPeriod: Long,
         val healthcheckRunningContainersCheckPeriod: Long,
+        val idleTimeoutMs: Long,
         // Container FileSystem
         val containerFilesystem: String,
 
@@ -100,6 +101,7 @@ data class ContainerNodeConfig(
         const val KEY_SUBNODE_USER = "subnode-user"
         const val KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD = "send-master-connected-peers-period"
         const val KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD = "healthcheck.running-containers-check-period"
+        const val KEY_SUBNODE_IDLE_TIMEOUT_MS = "idle-timeout-ms"
         const val KEY_SUBNODE_DATABASE_URL = "subnode-database-url"
         const val KEY_SUBNODE_FILESYSTEM = "filesystem"
         const val KEY_HOST_MOUNT_DIR = "host-mount-dir"
@@ -167,6 +169,7 @@ data class ContainerNodeConfig(
                         subnodeUser,
                         getEnvOrLongProperty("POSTCHAIN_SEND_MASTER_CONNECTED_PEERS_PERIOD", KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD, 60_000L),
                         getEnvOrLongProperty("POSTCHAIN_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD", KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 60_000),
+                        getEnvOrLongProperty("POSTCHAIN_SUBNODE_IDLE_TIMEOUT_MS", KEY_SUBNODE_IDLE_TIMEOUT_MS, 5 * 60_000),
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_FILESYSTEM", KEY_SUBNODE_FILESYSTEM, FileSystem.Type.LOCAL.name).uppercase(), // LOCAL | ZFS
                         hostMountDir,
                         hostMountDevice,
