@@ -287,11 +287,13 @@ class BaseTransactionQueue(private val queueCapacity: Int,
                         if (queueMap.contains(txRid)) {
                             queue.remove(wt)
                             queue.add(WrappedTransaction(wt.tx, wt.accountId, transactionPriority.txCostPoints, transactionPriority.priority, wt.seqNumber, wt.enter, now))
-                            accountBasedRateLimiting(
-                                    transactionPriority.accountId,
-                                    accountPoints = transactionPriority.accountPoints,
-                                    newTxCostPoints = 0
-                            )
+                            transactionPriority.accountId?.let { accountId ->
+                                accountBasedRateLimiting(
+                                        accountId,
+                                        accountPoints = transactionPriority.accountPoints,
+                                        newTxCostPoints = 0
+                                )
+                            }
                         }
                     }
                 }

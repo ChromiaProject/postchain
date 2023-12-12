@@ -276,19 +276,22 @@ class BaseTransactionQueueTest {
             on { prioritize(eq(tx1), any(), any()) } doReturn TxPriorityStateV1(account1, accountPoints = 3, txCostPoints = 1, ZERO)
             on { prioritize(eq(tx2), any(), any()) } doReturn TxPriorityStateV1(account1, accountPoints = 3, txCostPoints = 1, ONE)
             on { prioritize(eq(tx3), any(), any()) } doReturn TxPriorityStateV1(account1, accountPoints = 3, txCostPoints = 1, TWO)
+            on { prioritize(eq(tx4), any(), any()) } doReturn TxPriorityStateV1(null, accountPoints = 0, txCostPoints = 0, ZERO)
         }
         sut = BaseTransactionQueue(10, INFINITE, 100.milliseconds, prioritizer, clock)
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         whenever(clock.instant()).doReturn(now + Duration.ofMillis(110))
         assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx3)).isEqualTo(EnqueueTransactionResult.OK)
-        assertThat(sut.getTransactionQueueSize()).isEqualTo(3)
+        assertThat(sut.enqueue(tx4)).isEqualTo(EnqueueTransactionResult.OK)
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(4)
 
         whenever(prioritizer.prioritize(eq(tx1), any(), any())) doReturn TxPriorityStateV1(account1, accountPoints = 2, txCostPoints = 1, ZERO)
         sut.recheckPriorities()
-        assertThat(sut.getTransactionQueueSize()).isEqualTo(2)
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(3)
         assertThat(sut.takeTransaction()).isSameAs(tx3)
         assertThat(sut.takeTransaction()).isSameAs(tx2)
+        assertThat(sut.takeTransaction()).isSameAs(tx4)
     }
 
     @Test
