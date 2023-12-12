@@ -134,5 +134,5 @@ class BlockchainReplicator(
         logger.error { "$processName is done" }
     }
 
-    fun isDone() = upToHeight != 1L && done.get()
+    fun isDone() = upToHeight != -1L && done.get()
 }
