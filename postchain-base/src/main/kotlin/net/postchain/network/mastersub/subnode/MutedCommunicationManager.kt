@@ -8,7 +8,7 @@ import net.postchain.network.PacketVersionFilter
 import net.postchain.network.ReceivedPacket
 import net.postchain.network.common.LazyPacket
 
-class MutedCommunicationManager<PacketType>() : CommunicationManager<PacketType> {
+class MutedCommunicationManager<PacketType> : CommunicationManager<PacketType> {
 
     companion object : KLogging()
 
@@ -18,9 +18,7 @@ class MutedCommunicationManager<PacketType>() : CommunicationManager<PacketType>
 
     override fun getPackets(): MutableList<ReceivedPacket<PacketType>> = mutableListOf()
 
-    override fun shutdown() {
-        throw ProgrammerMistake(errorMessage())
-    }
+    override fun shutdown() = Unit
 
     override fun getPeerPacketVersion(peerId: NodeRid): Long {
         throw ProgrammerMistake(errorMessage())
