@@ -152,7 +152,13 @@ class BaseTransactionQueue(private val queueCapacity: Int,
         try {
             // 1. We do is_correct() check before anything else
             tx.checkCorrectness()
-            val transactionPriority = prioritizer?.prioritize(tx as GTXTransaction, txEnter, clock.instant())
+
+            val transactionPriority = try {
+                prioritizer?.prioritize(tx as GTXTransaction, txEnter, clock.instant())
+            } catch (e: Exception) {
+                logger.warn { "Prioritizer returned error when enqueuing $txRid: ${e.message}" }
+                null
+            }
 
             // 2. if tx_cost_points is higher than account_points, tx is immediately rejected.
             if (transactionPriority != null && transactionPriority.txCostPoints > transactionPriority.accountPoints) {
@@ -282,19 +288,23 @@ class BaseTransactionQueue(private val queueCapacity: Int,
                 val now = clock.instant()
                 if (now.isAfter(wt.lastRecheck + recheckTxInterval.toJavaDuration())) {
                     logger.debug { "Rechecking tx $txRid" }
-                    val transactionPriority = prioritizer.prioritize(wt.tx as GTXTransaction, wt.enter, now)
-                    lock.withLock {
-                        if (queueMap.contains(txRid)) {
-                            queue.remove(wt)
-                            queue.add(WrappedTransaction(wt.tx, wt.accountId, transactionPriority.txCostPoints, transactionPriority.priority, wt.seqNumber, wt.enter, now))
-                            transactionPriority.accountId?.let { accountId ->
-                                accountBasedRateLimiting(
-                                        accountId,
-                                        accountPoints = transactionPriority.accountPoints,
-                                        newTxCostPoints = 0
-                                )
+                    try {
+                        val transactionPriority = prioritizer.prioritize(wt.tx as GTXTransaction, wt.enter, now)
+                        lock.withLock {
+                            if (queueMap.contains(txRid)) {
+                                queue.remove(wt)
+                                queue.add(WrappedTransaction(wt.tx, wt.accountId, transactionPriority.txCostPoints, transactionPriority.priority, wt.seqNumber, wt.enter, now))
+                                transactionPriority.accountId?.let { accountId ->
+                                    accountBasedRateLimiting(
+                                            accountId,
+                                            accountPoints = transactionPriority.accountPoints,
+                                            newTxCostPoints = 0
+                                    )
+                                }
                             }
                         }
+                    } catch (e: Exception) {
+                        logger.warn { "Prioritizer returned error when rechecking $txRid: ${e.message}" }
                     }
                 }
             }
