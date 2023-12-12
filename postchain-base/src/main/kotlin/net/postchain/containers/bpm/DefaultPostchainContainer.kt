@@ -117,7 +117,7 @@ class DefaultPostchainContainer(
     }
 
     override fun isIdle(): Boolean {
-        return processes.isEmpty() && (System.currentTimeMillis() - lastUpdated > 5 * 60 * 1000)
+        return processes.isEmpty() && (clock.millis() - lastUpdated > 5 * 60 * 1000)
     }
 
     override fun isSubnodeHealthy() = subnodeAdminClient.isSubnodeHealthy()
