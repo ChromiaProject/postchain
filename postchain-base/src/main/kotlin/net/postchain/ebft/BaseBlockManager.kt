@@ -296,15 +296,21 @@ class BaseBlockManager(
                         }
                     }, { exception ->
                         val msg = "Can't build block at height ${statusManager.myStatus.height}: ${exception.message}"
-                        if (exception is ForceStopBlockBuildingException) {
-                            logger.debug(msg)
-                        } else {
-                            if (exception is PmEngineIsAlreadyClosed) {
+                        when (exception) {
+                            is ForceStopBlockBuildingException ->
                                 logger.debug(msg)
-                            } else {
-                                logger.error(msg, exception)
+
+                            is InterruptedException ->
+                                logger.debug { "Got interrupted while building block at height ${statusManager.myStatus.height}: ${exception.message}" }
+
+                            else -> {
+                                if (exception is PmEngineIsAlreadyClosed) {
+                                    logger.debug(msg)
+                                } else {
+                                    logger.error(msg, exception)
+                                }
+                                blockStrategy.blockFailed()
                             }
-                            blockStrategy.blockFailed()
                         }
                     })
                 }
