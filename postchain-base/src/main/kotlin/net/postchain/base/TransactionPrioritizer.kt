@@ -7,7 +7,7 @@ import java.time.Instant
 
 interface TransactionPriorityState {
     /** id of account which wants to push the tx forward */
-    val accountId: WrappedByteArray
+    val accountId: WrappedByteArray?
 
     /** number of points currently associated with the account */
     val accountPoints: Long

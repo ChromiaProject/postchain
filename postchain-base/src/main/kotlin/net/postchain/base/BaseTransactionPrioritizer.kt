@@ -25,7 +25,7 @@ class PrioritizeQueryRequest(
 class TxPriorityStateV1(
         /** id of account which wants to push the tx forward */
         @Name("account_id")
-        override val accountId: WrappedByteArray,
+        override val accountId: WrappedByteArray?,
 
         /** number of points currently associated with the account */
         @Name("account_points")
