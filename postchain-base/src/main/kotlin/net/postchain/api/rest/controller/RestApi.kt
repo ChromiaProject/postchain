@@ -212,7 +212,8 @@ class RestApi(
                 val requestInfo = "[${request.source?.address ?: "(unknown)"}] ${request.method} ${request.uri.path}"
                 // Assuming content-type is correctly set we will avoid logging binary request bodies
                 if (Header.CONTENT_TYPE(request)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
-                        && (request.body.length ?: 0) > 0) {
+                        && (request.body.length ?: 0) > 0
+                        && request.header("content-encoding") != "gzip") {
                     logger.debug { "$requestInfo with body: ${String(request.body.payload.array())}" }
                 } else {
                     val queryString = request.uri.query
@@ -233,7 +234,8 @@ class RestApi(
             if (logger.isDebugEnabled) {
                 // Assuming content-type is correctly set we will avoid logging binary response bodies
                 if (Header.CONTENT_TYPE(response)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
-                        && (response.body.length ?: 0) > 0) {
+                        && (response.body.length ?: 0) > 0
+                        && response.header("content-encoding") != "gzip") {
                     logger.debug("Response body: ${String(response.body.payload.array())}")
                 }
             }
@@ -241,8 +243,8 @@ class RestApi(
         }
     }
 
-    private val liveBlockchain = blockchainRefFilter(true).then(blockchainMetricsFilter).then(externalRoutingFilter)
-    private val blockchain = blockchainRefFilter(false).then(blockchainMetricsFilter).then(externalRoutingFilter)
+    private val liveBlockchain = blockchainRefFilter(true).then(blockchainMetricsFilter).then(externalRoutingFilter).then(ServerFilters.GZip())
+    private val blockchain = blockchainRefFilter(false).then(blockchainMetricsFilter).then(externalRoutingFilter).then(ServerFilters.GZip())
 
     private val immutableResponse = CachingFilters.Response.MaxAge(clock, Duration.ofDays(365))
     private val volatileResponse = CachingFilters.Response.NoCache()
@@ -530,7 +532,6 @@ class RestApi(
     val server = ServerFilters.InitialiseRequestContext(contexts)
             .then(ServerFilters.Cors(
                     CorsPolicy(OriginPolicy.AllowAll(), listOf("Content-Type", "Accept"), listOf(GET, POST, OPTIONS), credentials = false)))
-            .then(ServerFilters.GZip())
             .then(Filter { next ->
                 { request ->
                     try {
