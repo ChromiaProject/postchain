@@ -242,6 +242,14 @@ class BaseTransactionQueueTest {
     }
 
     @Test
+    fun `errors from prioritizer are handled when enqueuing a transaction`() {
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, { _, _, _ -> throw Exception("boom") })
+        assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
+        assertThat(sut.takeTransaction()).isSameAs(tx1)
+    }
+
+    @Test
     fun `transactions can be reprioritized during recheck`() {
         val now = Instant.now()
         val clock: Clock = mock {
@@ -316,6 +324,21 @@ class BaseTransactionQueueTest {
         sut.recheckPriorities()
         assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
         assertThat(sut.takeTransaction()).isSameAs(tx3)
+    }
+
+    @Test
+    fun `errors from prioritizer are handled when rechecking`() {
+        val now = Instant.now()
+        val clock: Clock = mock {
+            on { instant() } doReturn now
+        }
+        sut = BaseTransactionQueue(3, INFINITE, 100.milliseconds, { _, _, _ -> throw Exception("boom") }, clock)
+        assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
+        whenever(clock.instant()).doReturn(now + Duration.ofMillis(110))
+        sut.recheckPriorities()
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
+        assertThat(sut.takeTransaction()).isSameAs(tx1)
     }
 
     @Test
