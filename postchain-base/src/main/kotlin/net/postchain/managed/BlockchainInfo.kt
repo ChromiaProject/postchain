@@ -1,6 +1,7 @@
 package net.postchain.managed
 
 import net.postchain.common.BlockchainRid
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.BlockchainState
 
 data class BlockchainInfo(
@@ -16,7 +17,7 @@ data class InactiveBlockchainInfo(
 )
 
 data class UnarchivingBlockchainNodeInfo(
-        val rid: BlockchainRid,
+        val rid: WrappedByteArray,
         val sourceContainer: String,
         val destinationContainer: String,
         val isSourceNode: Boolean,

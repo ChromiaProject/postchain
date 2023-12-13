@@ -2,6 +2,7 @@ package net.postchain.containers.bpm
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.managed.DirectoryDataSource
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -9,6 +10,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 class BlockchainReplicator(
+        val rid: WrappedByteArray,
         val srcChain: Chain,
         val dstChain: Chain,
         var upToHeight: Long,

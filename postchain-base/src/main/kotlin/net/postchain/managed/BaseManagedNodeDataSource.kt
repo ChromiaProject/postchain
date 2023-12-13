@@ -216,7 +216,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         if (res.isNull()) return null
 
         return UnarchivingBlockchainNodeInfo(
-                blockchainRid,
+                res["rid"]?.asByteArray()?.wrap() ?: return null,
                 res["source_container"]?.asString() ?: return null,
                 res["destination_container"]?.asString() ?: return null,
                 res["is_source_node"]?.asBoolean() ?: return null,
