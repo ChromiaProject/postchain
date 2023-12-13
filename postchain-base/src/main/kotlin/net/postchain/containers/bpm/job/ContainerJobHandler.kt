@@ -87,9 +87,6 @@ class ContainerJobHandler(
         // 5. Start chains
         startChains(job, psContainer)
 
-        // 6. Stop container if it is idle
-        stopContainerIfIdle(job, psContainer, containerName, dockerContainer)
-
         job.done = true
         return result(true)
     }
@@ -128,19 +125,6 @@ class ContainerJobHandler(
         job.resetFailedStartCount()
         logger.info { "Subnode is healthy, container: $containerName" }
         return true
-    }
-
-    private fun stopContainerIfIdle(job: ContainerJob, psContainer: PostchainContainer, containerName: ContainerName, dockerContainer: Container?) {
-        if (job.chainsToStart.isEmpty() && psContainer.isIdle()) {
-            logger.info { "Container is empty and will be stopped: $containerName" }
-            psContainer.stop()
-            postchainContainers().remove(psContainer.containerName)
-            if (dockerContainer != null) {
-                dockerClient.stopContainer(dockerContainer.id(), 10)
-                logger.debug { "Docker container stopped: $containerName" }
-            }
-            logger.info { "Container stopped: $containerName" }
-        }
     }
 
     private fun startChains(job: ContainerJob, psContainer: PostchainContainer) {
