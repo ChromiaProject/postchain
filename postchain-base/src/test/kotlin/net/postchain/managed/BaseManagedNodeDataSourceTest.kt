@@ -323,7 +323,7 @@ class BaseManagedNodeDataSourceTest {
                     arrayOf(12, GtvNull, null),
                     arrayOf(13,
                             gtv(mapOf(
-                                    "rid" to gtv(ZERO_RID),
+                                    "rid" to gtv(ZERO_RID.data),
                                     "source_container" to gtv("src"),
                                     "destination_container" to gtv("dst"),
                                     "is_source_node" to gtv(false),
@@ -331,7 +331,7 @@ class BaseManagedNodeDataSourceTest {
                                     "up_to_height" to gtv(100)
                             )),
                             UnarchivingBlockchainNodeInfo(
-                                    ZERO_RID,
+                                    ZERO_RID.wData,
                                     "src",
                                     "dst",
                                     isSourceNode = false,
@@ -340,7 +340,7 @@ class BaseManagedNodeDataSourceTest {
                     ),
                     arrayOf(13,
                             gtv(mapOf(
-                                    "rid" to gtv(ZERO_RID),
+                                    "rid" to gtv(ZERO_RID.data),
                                     "source_container" to gtv("src"),
                                     "destination_container" to gtv("dst"),
                                     "is_source_node" to gtv(true),
@@ -348,7 +348,7 @@ class BaseManagedNodeDataSourceTest {
                                     "up_to_height" to gtv(100)
                             )),
                             UnarchivingBlockchainNodeInfo(
-                                    ZERO_RID,
+                                    ZERO_RID.wData,
                                     "src",
                                     "dst",
                                     isSourceNode = true,
