@@ -32,6 +32,7 @@ data class ContainerNodeConfig(
         val subnodeUser: String?,
         val sendMasterConnectedPeersPeriod: Long,
         val healthcheckRunningContainersCheckPeriod: Long,
+        val idleTimeoutMs: Long,
         // Container FileSystem
         val containerFilesystem: String,
 
@@ -68,6 +69,7 @@ data class ContainerNodeConfig(
         val bindPgdataVolume: Boolean,
         val dockerLogConf: DockerLogConfig?,
         val containerIID: Int,
+        val directoryContainer: String,
         val remoteDebugEnabled: Boolean,
         val remoteDebugSuspend: Boolean,
         val prometheusPort: Int,
@@ -99,6 +101,7 @@ data class ContainerNodeConfig(
         const val KEY_SUBNODE_USER = "subnode-user"
         const val KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD = "send-master-connected-peers-period"
         const val KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD = "healthcheck.running-containers-check-period"
+        const val KEY_SUBNODE_IDLE_TIMEOUT_MS = "idle-timeout-ms"
         const val KEY_SUBNODE_DATABASE_URL = "subnode-database-url"
         const val KEY_SUBNODE_FILESYSTEM = "filesystem"
         const val KEY_HOST_MOUNT_DIR = "host-mount-dir"
@@ -166,6 +169,7 @@ data class ContainerNodeConfig(
                         subnodeUser,
                         getEnvOrLongProperty("POSTCHAIN_SEND_MASTER_CONNECTED_PEERS_PERIOD", KEY_SEND_MASTER_CONNECTED_PEERS_PERIOD, 60_000L),
                         getEnvOrLongProperty("POSTCHAIN_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD", KEY_HEALTHCHECK_RUNNING_CONTAINERS_CHECK_PERIOD, 60_000),
+                        getEnvOrLongProperty("POSTCHAIN_SUBNODE_IDLE_TIMEOUT_MS", KEY_SUBNODE_IDLE_TIMEOUT_MS, 5 * 60_000),
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_FILESYSTEM", KEY_SUBNODE_FILESYSTEM, FileSystem.Type.LOCAL.name).uppercase(), // LOCAL | ZFS
                         hostMountDir,
                         hostMountDevice,
@@ -175,6 +179,7 @@ data class ContainerNodeConfig(
                         getEnvOrBooleanProperty("POSTCHAIN_BIND_PGDATA_VOLUME", KEY_BIND_PGDATA_VOLUME, true),
                         logConf,
                         System.getenv("POSTCHAIN_CONTAINER_ID")?.toInt() ?: -1,
+                        System.getenv("POSTCHAIN_DIRECTORY_CONTAINER")?.toString() ?: "",
                         getEnvOrBooleanProperty("POSTCHAIN_SUBNODE_REMOTE_DEBUG_ENABLED", KEY_REMOTE_DEBUG_ENABLED, false),
                         getEnvOrBooleanProperty("POSTCHAIN_SUBNODE_REMOTE_DEBUG_SUSPEND", KEY_REMOTE_DEBUG_SUSPEND, false),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_PROMETHEUS_PORT", KEY_PROMETHEUS_PORT, -1),

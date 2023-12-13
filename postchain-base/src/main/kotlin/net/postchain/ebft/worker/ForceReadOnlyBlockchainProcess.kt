@@ -21,6 +21,9 @@ open class ForceReadOnlyBlockchainProcess(
         maxExposedHeight: Long = -1
 ) : AbstractBlockchainProcess("force-readonly-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine) {
 
+    constructor(workerContext: WorkerContext, blockchainState: BlockchainState, maxExposedHeight: Long?) :
+            this(workerContext, blockchainState, maxExposedHeight ?: -1L)
+
     private val loggingContext = mapOf(
             CHAIN_IID_TAG to workerContext.blockchainConfiguration.chainID.toString(),
             BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex()

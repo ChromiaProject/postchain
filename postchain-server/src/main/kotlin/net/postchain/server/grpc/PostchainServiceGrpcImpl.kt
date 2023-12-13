@@ -9,6 +9,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.core.BadDataException
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.server.service.PostchainService
 import java.nio.file.Path
@@ -226,6 +227,26 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         }
     }
 
+    override fun exportBlock(
+            request: ExportBlockRequest,
+            responseObserver: StreamObserver<ExportBlockReply>
+    ) {
+        try {
+            val response = postchainService.exportBlock(request.chainId, request.height)
+            responseObserver.onNext(ExportBlockReply.newBuilder()
+                    .setBlockData(ByteString.copyFrom(GtvEncoder.encodeGtv(response)))
+                    .build()
+            )
+            responseObserver.onCompleted()
+        } catch (e: NotFound) {
+            responseObserver.onError(Status.NOT_FOUND.withDescription(e.message).asRuntimeException())
+        } catch (e: Exception) {
+            responseObserver.onError(
+                    Status.INTERNAL.withDescription(e.message).asRuntimeException()
+            )
+        }
+    }
+
     override fun importBlockchain(request: ImportBlockchainRequest, responseObserver: StreamObserver<ImportBlockchainReply>) {
         try {
             val importResult = postchainService.importBlockchain(
@@ -240,6 +261,22 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
                     .setToHeight(importResult.toHeight)
                     .setNumBlocks(importResult.numBlocks)
                     .setBlockchainRid(ByteString.copyFrom(importResult.blockchainRid.data))
+                    .build())
+            responseObserver.onCompleted()
+        } catch (e: NotFound) {
+            responseObserver.onError(Status.NOT_FOUND.withDescription(e.message).asRuntimeException())
+        } catch (e: Exception) {
+            responseObserver.onError(
+                    Status.INTERNAL.withDescription(e.message).asRuntimeException()
+            )
+        }
+    }
+
+    override fun importBlock(request: ImportBlockRequest, responseObserver: StreamObserver<ImportBlockReply>) {
+        try {
+            postchainService.importBlock(request.chainId, request.blockData.toByteArray())
+            responseObserver.onNext(ImportBlockReply.newBuilder()
+                    .setMessage("OK")
                     .build())
             responseObserver.onCompleted()
         } catch (e: NotFound) {

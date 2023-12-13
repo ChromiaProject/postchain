@@ -17,8 +17,16 @@ import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.crypto.PrivKey
 import net.postchain.debug.ErrorDiagnosticValue
 import net.postchain.debug.NodeDiagnosticContext
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvNull
+import net.postchain.server.grpc.AddConfigurationRequest
+import net.postchain.server.grpc.ExportBlockRequest
 import net.postchain.server.grpc.FindBlockchainRequest
+import net.postchain.server.grpc.ImportBlockRequest
 import net.postchain.server.grpc.InitNodeRequest
+import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
 import net.postchain.server.grpc.PostchainServiceGrpc
 import net.postchain.server.grpc.StartSubnodeBlockchainRequest
@@ -183,7 +191,7 @@ class DefaultSubnodeAdminClient(
         }
     }
 
-    override fun getBlockchainLastHeight(chainId: Long): Long {
+    override fun getBlockchainLastBlockHeight(chainId: Long): Long {
         return try {
             val request = FindBlockchainRequest.newBuilder()
                     .setChainId(chainId)
@@ -195,6 +203,67 @@ class DefaultSubnodeAdminClient(
         } catch (e: Exception) {
             logger.error { "getBlockchainLastHeight($chainId) -- exception occurred: ${e.message}" }
             -1L
+        }
+    }
+
+    override fun initializeBlockchain(chainId: Long, config: ByteArray) {
+        try {
+            val request = InitializeBlockchainRequest.newBuilder()
+                    .setChainId(chainId)
+                    .setGtv(ByteString.copyFrom(config))
+                    .setOverride(true)
+                    .build()
+            val response = service?.initializeBlockchain(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { "initializeBlockchain($chainId) -- ${response.success}" }
+        } catch (e: Exception) {
+            logger.error { "initializeBlockchain($chainId) -- exception occurred: ${e.message}" }
+        }
+    }
+
+    override fun addBlockchainConfiguration(chainId: Long, height: Long, config: ByteArray) {
+        try {
+            val request = AddConfigurationRequest.newBuilder()
+                    .setChainId(chainId)
+                    .setHeight(height)
+                    .setGtv(ByteString.copyFrom(config))
+                    .setOverride(true)
+                    .build()
+            val response = service?.addConfiguration(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { "addBlockchainConfiguration(chainId = $chainId, height = $height) -- ${response.message}" }
+        } catch (e: Exception) {
+            logger.error { "addBlockchainConfiguration(chainId = $chainId, height = $height) -- exception occurred: ${e.message}" }
+        }
+    }
+
+    override fun exportBlock(chainId: Long, height: Long): Gtv {
+        return try {
+            val request = ExportBlockRequest.newBuilder()
+                    .setChainId(chainId)
+                    .setHeight(height)
+                    .build()
+            val response = service?.exportBlock(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { "exportBlock($chainId, $height)" }
+            GtvDecoder.decodeGtv(response.blockData.toByteArray())
+        } catch (e: Exception) {
+            logger.error { "exportBlock($chainId, $height) -- exception occurred: ${e.message}" }
+            GtvNull
+        }
+    }
+
+    override fun importBlock(chainId: Long, blockData: Gtv) {
+        try {
+            val request = ImportBlockRequest.newBuilder()
+                    .setChainId(chainId)
+                    .setBlockData(ByteString.copyFrom(GtvEncoder.encodeGtv(blockData)))
+                    .build()
+            val response = service?.importBlock(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { "importBlock($chainId) -- ${response.message}" }
+        } catch (e: Exception) {
+            logger.error { "importBlock($chainId) -- exception occurred: ${e.message}" }
         }
     }
 

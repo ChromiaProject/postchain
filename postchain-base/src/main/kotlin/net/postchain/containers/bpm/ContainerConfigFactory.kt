@@ -237,6 +237,7 @@ object ContainerConfigFactory : KLogging() {
 
         add("POSTCHAIN_EXIT_ON_FATAL_ERROR=true")
         add("POSTCHAIN_CONTAINER_ID=${container.containerName.containerIID}")
+        add("POSTCHAIN_DIRECTORY_CONTAINER=${container.containerName.directoryContainer}")
 
         add("POSTCHAIN_PROMETHEUS_PORT=${containerNodeConfig.prometheusPort}")
 

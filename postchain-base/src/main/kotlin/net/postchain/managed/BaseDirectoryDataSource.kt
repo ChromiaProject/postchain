@@ -45,6 +45,17 @@ open class BaseDirectoryDataSource(
         }
     }
 
+    override fun getBlockchainContainersForNode(brid: BlockchainRid): List<String> {
+        return if (nmApiVersion >= 14) {
+            query(
+                    "nm_get_blockchain_containers_for_node",
+                    buildArgs("node_id" to gtv(appConfig.pubKeyByteArray), "blockchain_rid" to gtv(brid.data))
+            ).asArray().map { it.asString() }
+        } else {
+            listOf(getContainerForBlockchainOnTheNode(brid))
+        }
+    }
+
     // TODO: [et]: directory vs containerId?
     override fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits {
         val resourceLimits = query(

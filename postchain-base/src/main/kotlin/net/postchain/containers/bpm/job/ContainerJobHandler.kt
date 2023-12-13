@@ -87,8 +87,8 @@ class ContainerJobHandler(
         // 5. Start chains
         startChains(job, psContainer)
 
-        // 6. Stop container if it is empty
-        stopContainerIfEmpty(job, psContainer, containerName, dockerContainer)
+        // 6. Stop container if it is idle
+        stopContainerIfIdle(job, psContainer, containerName, dockerContainer)
 
         job.done = true
         return result(true)
@@ -130,8 +130,8 @@ class ContainerJobHandler(
         return true
     }
 
-    private fun stopContainerIfEmpty(job: ContainerJob, psContainer: PostchainContainer, containerName: ContainerName, dockerContainer: Container?) {
-        if (job.chainsToStart.isEmpty() && psContainer.isEmpty()) {
+    private fun stopContainerIfIdle(job: ContainerJob, psContainer: PostchainContainer, containerName: ContainerName, dockerContainer: Container?) {
+        if (job.chainsToStart.isEmpty() && psContainer.isIdle()) {
             logger.info { "Container is empty and will be stopped: $containerName" }
             psContainer.stop()
             postchainContainers().remove(psContainer.containerName)
@@ -147,7 +147,7 @@ class ContainerJobHandler(
         job.chainsToStart.forEach { chain ->
             withLoggingContext(CHAIN_IID_TAG to chain.chainId.toString(), BLOCKCHAIN_RID_TAG to chain.brid.toHex()) {
                 val process = createBlockchainProcess(chain, psContainer)
-                logger.debug { "ContainerBlockchainProcess created" }
+                logger.debug { "ContainerBlockchainProcess created: ${process != null}" }
                 if (process == null) {
                     logger.error { "Blockchain didn't start" }
                 } else {

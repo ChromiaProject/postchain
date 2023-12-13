@@ -63,6 +63,7 @@ interface BlockchainProcess {
 interface RemoteBlockchainProcess {
     val chainId: Long
     val blockchainRid: BlockchainRid
+    val restApiEnabled: Boolean
     val restApiUrl: String
 }
 

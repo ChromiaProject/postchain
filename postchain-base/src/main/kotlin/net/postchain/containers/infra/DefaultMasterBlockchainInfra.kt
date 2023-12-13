@@ -26,15 +26,22 @@ open class DefaultMasterBlockchainInfra(
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
             targetContainer: PostchainContainer,
-            blockchainState: BlockchainState
+            blockchainState: BlockchainState,
+            restApiEnabled: Boolean
     ): ContainerBlockchainProcess {
         return masterSyncInfra.makeMasterBlockchainProcess(
-                chainId, blockchainRid, dataSource, targetContainer, blockchainState
-        ).also(masterApiInfra::connectContainerProcess)
+                chainId, blockchainRid, dataSource, targetContainer, blockchainState, restApiEnabled
+        ).also {
+            if (restApiEnabled) {
+                masterApiInfra.connectContainerProcess(it)
+            }
+        }
     }
 
     override fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess) {
-        masterApiInfra.disconnectContainerProcess(process)
+        if (process.restApiEnabled) {
+            masterApiInfra.disconnectContainerProcess(process)
+        }
     }
 
     override fun registerAfterSubnodeCommitListener(afterSubnodeCommitListener: AfterSubnodeCommitListener) {

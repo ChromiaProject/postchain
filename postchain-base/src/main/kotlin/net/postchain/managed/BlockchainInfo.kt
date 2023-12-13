@@ -19,6 +19,7 @@ data class UnarchivingBlockchainNodeInfo(
         val rid: BlockchainRid,
         val sourceContainer: String,
         val destinationContainer: String,
-        val upToHeight: Long,
-        val isSourceNode: Boolean
+        val isSourceNode: Boolean,
+        val isDestinationNode: Boolean,
+        val upToHeight: Long
 )

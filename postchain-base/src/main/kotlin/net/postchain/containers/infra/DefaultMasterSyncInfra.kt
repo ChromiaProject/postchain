@@ -33,7 +33,8 @@ open class DefaultMasterSyncInfra(
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
             targetContainer: PostchainContainer,
-            blockchainState: BlockchainState
+            blockchainState: BlockchainState,
+            restApiEnabled: Boolean
     ): ContainerBlockchainProcess {
 
         val communicationManager = DefaultMasterCommunicationManager(
@@ -51,7 +52,8 @@ open class DefaultMasterSyncInfra(
         return DefaultContainerBlockchainProcess(
                 nodeConfig,
                 containerNodeConfig,
-                targetContainer.containerPortMapping[containerNodeConfig.subnodeRestApiPort]
+                restApiEnabled,
+                restApiPort = targetContainer.containerPortMapping[containerNodeConfig.subnodeRestApiPort]
                         ?: throw ProgrammerMistake("No port mapping for subnode REST API"),
                 chainId,
                 blockchainRid,
