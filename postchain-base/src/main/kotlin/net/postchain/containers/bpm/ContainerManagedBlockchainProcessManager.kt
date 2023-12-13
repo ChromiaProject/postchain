@@ -64,7 +64,8 @@ class ContainerManagedBlockchainProcessManager(
     private val containerHealthcheckHandler = ContainerHealthcheckHandler(dockerClient, fileSystem, ::containers, ::removeBlockchainProcess)
     private val containerJobHandler = ContainerJobHandler(appConfig, nodeDiagnosticContext, dockerClient, fileSystem,
             ::directoryDataSource, ::containers, ::terminateBlockchainProcess, ::createBlockchainProcess)
-    private val containerJobManager = DefaultContainerJobManager(containerNodeConfig, containerJobHandler, containerHealthcheckHandler)
+    private val containerJobManager = DefaultContainerJobManager(
+            containerNodeConfig, containerJobHandler, containerHealthcheckHandler, ::housekeepingHandler)
     private val runningInContainer = System.getenv("POSTCHAIN_RUNNING_IN_CONTAINER").toBoolean()
     private val blockchainReplicators: MutableMap<Long, BlockchainReplicator> = mutableMapOf()
     private val completedReplicationDetails: MutableMap<Long, Pair<Chain, Chain>> = mutableMapOf()
@@ -312,6 +313,20 @@ class ContainerManagedBlockchainProcessManager(
     private fun terminateBlockchainProcess(chainId: Long, psContainer: PostchainContainer): ContainerBlockchainProcess? =
             psContainer.terminateProcess(chainId)
                     ?.also { cleanUpBlockchainProcess(chainId, psContainer, it) }
+
+    private fun housekeepingHandler() {
+        // Stopping idle containers
+        postchainContainers.filterValues { it.isIdle() }.keys
+                .forEach { containerName ->
+                    logger.info { "Container is idle and will be stopped: $containerName" }
+                    postchainContainers.remove(containerName)?.also { psContainer ->
+                        psContainer.stop()
+                        dockerClient.stopContainer(psContainer.containerId, 10)
+                        logger.debug { "Docker container stopped: $containerName" }
+                    }
+                    logger.info { "Container stopped: $containerName" }
+                }
+    }
 
     private fun cleanUpBlockchainProcess(chainId: Long, psContainer: PostchainContainer, process: ContainerBlockchainProcess) {
         extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
