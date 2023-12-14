@@ -22,7 +22,8 @@ internal interface ContainerJobManager {
 internal class DefaultContainerJobManager(
         val containerNodeConfig: ContainerNodeConfig,
         private val containerJobHandler: ContainerJobHandler,
-        private val containerHealthcheckHandler: ContainerHealthcheckHandler
+        private val containerHealthcheckHandler: ContainerHealthcheckHandler,
+        private val housekeepingHandler: () -> Unit
 ) : ContainerJobManager, Shutdownable {
 
     private val jobs = LinkedHashMap<String, Job>() // name -> job
@@ -119,6 +120,8 @@ internal class DefaultContainerJobManager(
                 logger.error("Can't handle container job: $currentJob", e)
             }
         }
+
+        housekeepingHandler()
     }
 
     private fun runHealthCheck(): Boolean =
