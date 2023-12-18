@@ -9,7 +9,8 @@ data class RestApiConfig(
         val debugPort: Int,
         val gracefulShutdown: Boolean = true,
         val requestConcurrency: Int = 0,
-        val chainRequestConcurrency: Int = -1
+        val chainRequestConcurrency: Int = -1,
+        val subnodeHttpRedirect: Boolean = false
 ) : Config {
 
     init {
@@ -32,7 +33,8 @@ data class RestApiConfig(
                     config.getEnvOrInt("POSTCHAIN_DEBUG_PORT", "debug.port", DEFAULT_DEBUG_API_PORT),
                     config.getBoolean("api.graceful-shutdown", true),
                     config.getEnvOrInt("POSTCHAIN_API_REQUEST_CONCURRENCY", "api.request-concurrency", 0),
-                    config.getEnvOrInt("POSTCHAIN_API_CHAIN_REQUEST_CONCURRENCY", "api.chain-request-concurrency", -1)
+                    config.getEnvOrInt("POSTCHAIN_API_CHAIN_REQUEST_CONCURRENCY", "api.chain-request-concurrency", -1),
+                    config.getEnvOrBoolean("POSTCHAIN_API_SUBNODE_HTTP_REDIRECT", "api.subnode-http-redirect", false)
             )
         }
     }
