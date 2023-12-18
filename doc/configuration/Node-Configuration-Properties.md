@@ -55,13 +55,15 @@ It is possible to configure peers via node configuration with these properties.
 | `node.<index>.port` | Peer-to-peer port of peer | Int |
 
 ## REST API
-| Name                            | Description                                                                                                                                            | Type | Default | Environment Variable |
-|---------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------| ------ |---------| ------ |
-| `api.basepath`                  | The API will be attached under the basepath. Don't append a trailing slash to the basepath. To run on root, leave this empty.                          | String | ""      | `POSTCHAIN_API_BASEPATH` |
-| `api.port`                      | REST API port, `-1` will disable the API, `0` will assign to a random free port.                                                                       | Int | 7740    | `POSTCHAIN_API_PORT` |
-| `api.request-concurrency`       | Number of incoming HTTP requests to handle concurrently. The default value `0` means the number of available processors * 2.                           | Int | `0`     | `POSTCHAIN_API_REQUEST_CONCURRENCY` |
-| `api.chain-request-concurrency` | Number of incoming HTTP requests to handle concurrently per blockchain. Unlimited by default. If exceeded, `503 Service Unavailable` will be returned. | Int | `-1`    | `POSTCHAIN_API_CHAIN_REQUEST_CONCURRENCY` |
-| `debug.port`                    | Debug API port.                                                                                                                                        | Int | 7750    | `POSTCHAIN_DEBUG_PORT` |
+
+| Name                            | Description                                                                                                                                            | Type    | Default | Environment Variable                      |
+|---------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------|---------|---------|-------------------------------------------|
+| `api.basepath`                  | The API will be attached under the basepath. Don't append a trailing slash to the basepath. To run on root, leave this empty.                          | String  | ""      | `POSTCHAIN_API_BASEPATH`                  |
+| `api.port`                      | REST API port, `-1` will disable the API, `0` will assign to a random free port.                                                                       | Int     | 7740    | `POSTCHAIN_API_PORT`                      |
+| `api.request-concurrency`       | Number of incoming HTTP requests to handle concurrently. The default value `0` means the number of available processors * 2.                           | Int     | `0`     | `POSTCHAIN_API_REQUEST_CONCURRENCY`       |
+| `api.chain-request-concurrency` | Number of incoming HTTP requests to handle concurrently per blockchain. Unlimited by default. If exceeded, `503 Service Unavailable` will be returned. | Int     | `-1`    | `POSTCHAIN_API_CHAIN_REQUEST_CONCURRENCY` |
+| `api.subnode-http-redirect`     | Enable to make master node respond with 307 redirect when requests are made to subnodes instead of routing the request internally.                     | Boolean | false   | `POSTCHAIN_API_SUBNODE_HTTP_REDIRECT`     |
+| `debug.port`                    | Debug API port.                                                                                                                                        | Int     | 7750    | `POSTCHAIN_DEBUG_PORT`                    |
 
 ## Containers (subnodes)
 

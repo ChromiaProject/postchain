@@ -34,7 +34,8 @@ open class BaseApiInfrastructure(
                         nodeDiagnosticContext = nodeDiagnosticContext,
                         gracefulShutdown = restApiConfig.gracefulShutdown,
                         requestConcurrency = restApiConfig.requestConcurrency,
-                        chainRequestConcurrency = restApiConfig.chainRequestConcurrency
+                        chainRequestConcurrency = restApiConfig.chainRequestConcurrency,
+                        subnodeHttpRedirect = restApiConfig.subnodeHttpRedirect
                 )
             } catch (e: Exception) {
                 logger.error("Unable to start REST API on port $port", e)

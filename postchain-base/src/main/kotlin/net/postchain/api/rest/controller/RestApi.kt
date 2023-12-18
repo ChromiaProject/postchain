@@ -85,6 +85,7 @@ import org.http4k.core.Status.Companion.INTERNAL_SERVER_ERROR
 import org.http4k.core.Status.Companion.NOT_FOUND
 import org.http4k.core.Status.Companion.OK
 import org.http4k.core.Status.Companion.SERVICE_UNAVAILABLE
+import org.http4k.core.Status.Companion.TEMPORARY_REDIRECT
 import org.http4k.core.maxAge
 import org.http4k.core.public
 import org.http4k.core.queries
@@ -135,7 +136,8 @@ class RestApi(
         private val clock: Clock = Clock.systemUTC(),
         gracefulShutdown: Boolean = true,
         requestConcurrency: Int = 0,
-        private val chainRequestConcurrency: Int = -1
+        private val chainRequestConcurrency: Int = -1,
+        private val subnodeHttpRedirect: Boolean = false
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
@@ -180,7 +182,11 @@ class RestApi(
                         CHAIN_IID_TAG to chainModel.chainIID.toString()) {
                     if (semaphore.tryAcquire()) {
                         try {
-                            next(request.with(chainModelKey of chainModel, blockchainRidKey of blockchainRid))
+                            if (subnodeHttpRedirect && chainModel is ExternalModel) {
+                                Response(TEMPORARY_REDIRECT).header("Location", chainModel.path + request.uri.toString().substring(basePath.length))
+                            } else {
+                                next(request.with(chainModelKey of chainModel, blockchainRidKey of blockchainRid))
+                            }
                         } finally {
                             semaphore.release()
                         }
