@@ -134,15 +134,13 @@ class PostchainService(private val nodeProvider: NodeProvider) {
                 incremental)
     }
 
-    fun importBlock(chainId: Long, blockData: ByteArray) {
-        ImporterExporter.importBlock(
-                postchainNode.postchainContext.sharedStorage,
-                chainId,
-                GtvDecoder.decodeGtv(blockData),
-                KeyPair(PubKey(postchainNode.appConfig.pubKey), PrivKey(postchainNode.appConfig.privKey)),
-                postchainNode.postchainContext.cryptoSystem
-        )
-    }
+    fun importBlock(chainId: Long, blockData: ByteArray): Long = ImporterExporter.importBlock(
+            postchainNode.postchainContext.sharedStorage,
+            chainId,
+            GtvDecoder.decodeGtv(blockData),
+            KeyPair(PubKey(postchainNode.appConfig.pubKey), PrivKey(postchainNode.appConfig.privKey)),
+            postchainNode.postchainContext.cryptoSystem
+    )
 
     fun removeBlockchain(chainId: Long) {
         stopBlockchain(chainId)

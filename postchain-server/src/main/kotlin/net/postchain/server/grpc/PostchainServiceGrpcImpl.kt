@@ -274,9 +274,10 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
 
     override fun importBlock(request: ImportBlockRequest, responseObserver: StreamObserver<ImportBlockReply>) {
         try {
-            postchainService.importBlock(request.chainId, request.blockData.toByteArray())
+            val height = postchainService.importBlock(request.chainId, request.blockData.toByteArray())
             responseObserver.onNext(ImportBlockReply.newBuilder()
                     .setMessage("OK")
+                    .setHeight(height)
                     .build())
             responseObserver.onCompleted()
         } catch (e: NotFound) {

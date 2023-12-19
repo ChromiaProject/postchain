@@ -276,7 +276,7 @@ object ImporterExporter : KLogging() {
                 blockchainRid = blockchainRid)
     }
 
-    fun importBlock(storage: Storage, chainId: Long, blockData: Gtv, nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem) {
+    fun importBlock(storage: Storage, chainId: Long, blockData: Gtv, nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem): Long {
         val blockchainRid = withReadConnection(storage, chainId) { ctx ->
             DatabaseAccess.of(ctx).getBlockchainRid(ctx)
         } ?: throw UserMistake("Can't find blockchain RID for chainIid $chainId")
@@ -286,7 +286,7 @@ object ImporterExporter : KLogging() {
         val (blockHeader, blockWitness, transactions) = decodeBlockEntry(blockData)
         val blockHeight = blockHeader.blockHeaderRec.getHeight()
 
-        withReadWriteConnection(storage, chainId) { ctx ->
+        return withReadWriteConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             val configHeight = DatabaseAccess.of(ctx).findConfigurationHeightForBlock(ctx, blockHeight)
                     ?: throw UserMistake("Can't find config height for block $blockHeight")
@@ -294,6 +294,7 @@ object ImporterExporter : KLogging() {
                     ?: throw UserMistake("Can't load config for block $blockHeight")
             val config = makeBlockchainConfiguration(configData, partialContext, blockSigMaker, ctx, cryptoSystem)
             importBlock(ctx, config, blockHeader, transactions, blockWitness)
+            db.getLastBlockHeight(ctx)
         }
     }
 
