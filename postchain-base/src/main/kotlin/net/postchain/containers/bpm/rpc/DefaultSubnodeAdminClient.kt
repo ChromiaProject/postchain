@@ -245,10 +245,10 @@ class DefaultSubnodeAdminClient(
                     .build()
             val response = service?.exportBlock(request)
                     ?: throw ProgrammerMistake("subnode admin client not connected")
-            logger.debug { "exportBlock($chainId, $height)" }
+            logger.debug { "exportBlock(chainId = $chainId, height = $height)" }
             GtvDecoder.decodeGtv(response.blockData.toByteArray())
         } catch (e: Exception) {
-            logger.error { "exportBlock($chainId, $height) -- exception occurred: ${e.message}" }
+            logger.error { "exportBlock(chainId = $chainId, height = $height) -- exception occurred: ${e.message}" }
             GtvNull
         }
     }
@@ -261,9 +261,9 @@ class DefaultSubnodeAdminClient(
                     .build()
             val response = service?.importBlock(request)
                     ?: throw ProgrammerMistake("subnode admin client not connected")
-            logger.debug { "importBlock($chainId) -- ${response.message}" }
+            logger.debug { "importBlock(chainId = $chainId, height = ${response.height}) -- ${response.message}" }
         } catch (e: Exception) {
-            logger.error { "importBlock($chainId) -- exception occurred: ${e.message}" }
+            logger.error { "importBlock(chainId = $chainId) -- exception occurred: ${e.message}" }
         }
     }
 
