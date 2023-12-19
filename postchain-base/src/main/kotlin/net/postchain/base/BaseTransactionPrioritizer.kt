@@ -15,6 +15,9 @@ class PrioritizeQueryRequest(
         @Name("tx_body")
         val txBody: GtxBody,
 
+        @Name("tx_size")
+        val txSize: Long,
+
         @Name("tx_enter_timestamp")
         val txEnterTimestamp: Long,
 
@@ -44,6 +47,7 @@ class BaseTransactionPrioritizer(private val query: QueryRunner) : TransactionPr
     override fun prioritize(tx: GTXTransaction, txEnter: Instant, current: Instant): TransactionPriorityState {
         return GtvObjectMapper.fromGtv(query.query(PRIORITIZE_QUERY_NAME, GtvObjectMapper.toGtvDictionary(PrioritizeQueryRequest(
                 txBody = tx.gtxData.gtxBody,
+                txSize = tx.getRawData().size.toLong(),
                 txEnterTimestamp = txEnter.toEpochMilli(),
                 currentTimestamp = current.toEpochMilli()
         ))), TxPriorityStateV1::class)
