@@ -108,6 +108,10 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         return if (::dataSource.isInitialized) dataSource.getUnarchivingBlockchainNodeInfo(blockchainRid) else null
     }
 
+    fun getMigratingBlockchainNodeInfo(blockchainRid: BlockchainRid): MigratingBlockchainNodeInfo? {
+        return if (::dataSource.isInitialized) dataSource.getMigratingBlockchainNodeInfo(blockchainRid) else null
+    }
+
     // --------- Private --------
 
     protected fun checkNeedConfChangeViaDataSource(eContext: EContext, checkPendingConfigs: Boolean): Boolean {
