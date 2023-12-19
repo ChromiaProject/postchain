@@ -6,12 +6,10 @@ import mu.KLogging
 import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.wrap
 import net.postchain.config.blockchain.AbstractBlockchainConfigurationProvider
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.EContext
-import net.postchain.crypto.PubKey
 
 open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
 
@@ -136,28 +134,33 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
 
     fun isConfigPending(eContext: EContext, blockchainRid: BlockchainRid, activeHeight: Long, configHash: ByteArray): Boolean {
         val logPrefix = "isConfigPending(${eContext.chainID}, ${blockchainRid.toShortHex()}, $activeHeight, ${configHash.wrap()})"
-        val configs = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight)
-        return if (configs.isNotEmpty()) {
-            logger.debug { "$logPrefix: ${configs.size} pending config(s) detected at height: $activeHeight" }
-            val configToApply = configs.firstOrNull {
-                !DatabaseAccess.of(eContext).configurationHashExists(eContext, it.configHash.data)
-            }
-            if (configToApply != null) {
-                logger.debug { "$logPrefix: config ${configToApply.configHash} will be loaded. Signers: ${configToApply.signers}" }
-                configToApply.configHash == configHash.wrap()
-            } else {
-                logger.debug { "$logPrefix: all pending configs already applied, config will be loaded from DataSource" }
-                false
-            }
-        } else { // This branch is chosen after blockchain restarts and if there is no a pending config at activeHeight
+        val pendingConfig = getConfigIfPending(eContext, blockchainRid, activeHeight, configHash)
+        return if (pendingConfig != null) {
+            logger.debug { "$logPrefix: config ${pendingConfig.configHash} will be loaded. Signers: ${pendingConfig.signers}" }
+            true
+        } else {
+            logger.debug { "$logPrefix: all pending configs already applied, config will be loaded from DataSource" }
             false
         }
     }
 
-    fun getPendingConfigSigners(blockchainRid: BlockchainRid, activeHeight: Long, configHash: ByteArray): List<PubKey> {
-        val config = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight).find { it.configHash == configHash.wrap() }
-        if (config != null) return config.signers
-        else throw ProgrammerMistake("No pending config with hash $configHash")
+    fun getConfigIfPending(eContext: EContext, blockchainRid: BlockchainRid, activeHeight: Long, configHash: ByteArray): PendingBlockchainConfiguration? {
+        val configs = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight)
+        return if (configs.isNotEmpty()) {
+            logger.debug { "${configs.size} pending config(s) detected at height: $activeHeight" }
+            val configToApply = configs.firstOrNull {
+                !DatabaseAccess.of(eContext).configurationHashExists(eContext, it.configHash.data)
+            }
+            if (configToApply != null) {
+                if (configToApply.configHash == configHash.wrap()) {
+                    return configToApply
+                } else null
+            } else {
+                null
+            }
+        } else { // This branch is chosen after blockchain restarts and if there is no a pending config at activeHeight
+            null
+        }
     }
 
     /**
