@@ -28,6 +28,7 @@ import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
+import net.postchain.managed.PendingBlockchainConfiguration
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicLong
 
@@ -94,9 +95,9 @@ abstract class AbstractSynchronizer(
     }
 
     private fun handleNewConfig(configProvider: ManagedBlockchainConfigurationProvider, incomingHeight: Long, incomingConfigHash: ByteArray, peer: NodeRid): Boolean {
-        if (!isIncomingConfigPending(configProvider, incomingHeight, incomingConfigHash)) return false
+        val pendingConfig = getConfigIfPending(configProvider, incomingHeight, incomingConfigHash) ?: return false
 
-        val pendingSigners = configProvider.getPendingConfigSigners(blockchainConfiguration.blockchainRid, incomingHeight, incomingConfigHash)
+        val pendingSigners = pendingConfig.signers
         val myPubKey = PubKey(workerContext.appConfig.pubKeyByteArray)
         return if (pendingSigners.contains(myPubKey)) {
             val promotedNodesAmount = pendingSigners.subtract(blockchainConfiguration.signers.map { PubKey(it) }.toSet()).size
@@ -133,29 +134,33 @@ abstract class AbstractSynchronizer(
     }
 
     internal fun handleAddBlockException(exception: Throwable, block: BlockDataWithWitness, bTrace: BlockTrace?, peerStatuses: AbstractPeerStatuses<*>, peerId: NodeRid) {
-        val height = getHeight(block.header)
-        when (exception) {
-            is PmEngineIsAlreadyClosed, is BDBAbortException -> logger.debug { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
-            is ConfigurationMismatchException -> {
-                if (!checkIfNewConfigurationCanBeLoaded(block)) {
-                    peerStatuses.maybeBlacklist(peerId, "Received a block with mismatching config but we could not apply any new config")
-                }
-            }
-
-            is FailedConfigurationMismatchException -> {
-                // We only expect the case of us not having applied the failed config yet here
-                val incomingFailedConfigHash = block.header.getFailedConfigHash()
-                if (incomingFailedConfigHash != null) {
-                    if (!checkIfConfigIsPendingAndCanBeLoaded(block, incomingFailedConfigHash)) {
-                        peerStatuses.maybeBlacklist(peerId, "Received a block with failing config that we could not apply")
+        try {
+            val height = getHeight(block.header)
+            when (exception) {
+                is PmEngineIsAlreadyClosed, is BDBAbortException -> logger.debug { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
+                is ConfigurationMismatchException -> {
+                    if (!checkIfNewConfigurationCanBeLoaded(block)) {
+                        peerStatuses.maybeBlacklist(peerId, "Received a block with mismatching config but we could not apply any new config")
                     }
-                } else {
-                    peerStatuses.maybeBlacklist(peerId, "Received a block without expected failed config hash")
                 }
-            }
 
-            is BadDataException -> logger.warn(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
-            else -> logger.error(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
+                is FailedConfigurationMismatchException -> {
+                    // We only expect the case of us not having applied the failed config yet here
+                    val incomingFailedConfigHash = block.header.getFailedConfigHash()
+                    if (incomingFailedConfigHash != null) {
+                        if (!checkIfConfigIsPendingAndCanBeLoaded(block, incomingFailedConfigHash)) {
+                            peerStatuses.maybeBlacklist(peerId, "Received a block with failing config that we could not apply")
+                        }
+                    } else {
+                        peerStatuses.maybeBlacklist(peerId, "Received a block without expected failed config hash")
+                    }
+                }
+
+                is BadDataException -> logger.warn(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
+                else -> logger.error(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
+            }
+        } catch (e: Exception) {
+            logger.error("Could not handle add block exception: ${e.message}", e)
         }
     }
 
@@ -180,12 +185,11 @@ abstract class AbstractSynchronizer(
 
     private fun checkIfConfigIsPendingAndCanBeLoaded(block: BlockDataWithWitness, configHash: ByteArray?): Boolean {
         val bcConfigProvider = workerContext.blockchainConfigurationProvider
-        val bcConfig = workerContext.blockchainConfiguration
         if (bcConfigProvider is ManagedBlockchainConfigurationProvider && configHash != null) {
-            val isIncomingConfigPending = isIncomingConfigPending(bcConfigProvider, getHeight(block.header), configHash)
-            if (isIncomingConfigPending) {
+            val pendingConfig = getConfigIfPending(bcConfigProvider, getHeight(block.header), configHash)
+            if (pendingConfig != null) {
                 logger.debug { "Matching pending configuration detected, will validate block signature before reloading" }
-                val pendingSigners = bcConfigProvider.getPendingConfigSigners(bcConfig.blockchainRid, getHeight(block.header), configHash)
+                val pendingSigners = pendingConfig.signers
 
                 val cryptoSystem = workerContext.appConfig.cryptoSystem
                 val myKeyPair = KeyPair(PubKey(workerContext.appConfig.pubKeyByteArray), PrivKey(workerContext.appConfig.privKeyByteArray))
@@ -209,9 +213,9 @@ abstract class AbstractSynchronizer(
         return false
     }
 
-    private fun isIncomingConfigPending(configProvider: ManagedBlockchainConfigurationProvider, height: Long, configHash: ByteArray): Boolean =
+    private fun getConfigIfPending(configProvider: ManagedBlockchainConfigurationProvider, height: Long, configHash: ByteArray): PendingBlockchainConfiguration? =
             withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
-                configProvider.isConfigPending(
+                configProvider.getConfigIfPending(
                         ctx,
                         blockchainConfiguration.blockchainRid,
                         height,
