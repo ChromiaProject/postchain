@@ -286,7 +286,7 @@ object ImporterExporter : KLogging() {
         val (blockHeader, blockWitness, transactions) = decodeBlockEntry(blockData)
         val blockHeight = blockHeader.blockHeaderRec.getHeight()
 
-        return withReadWriteConnection(storage, chainId) { ctx ->
+        withReadWriteConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             val configHeight = DatabaseAccess.of(ctx).findConfigurationHeightForBlock(ctx, blockHeight)
                     ?: throw UserMistake("Can't find config height for block $blockHeight")
@@ -294,8 +294,9 @@ object ImporterExporter : KLogging() {
                     ?: throw UserMistake("Can't load config for block $blockHeight")
             val config = makeBlockchainConfiguration(configData, partialContext, blockSigMaker, ctx, cryptoSystem)
             importBlock(ctx, config, blockHeader, transactions, blockWitness)
-            db.getLastBlockHeight(ctx)
         }
+
+        return blockHeight
     }
 
     private fun makeBlockchainConfiguration(rawConfigurationData: ByteArray, partialContext: BaseBlockchainContext,
