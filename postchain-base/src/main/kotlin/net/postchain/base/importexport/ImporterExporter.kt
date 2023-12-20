@@ -276,7 +276,7 @@ object ImporterExporter : KLogging() {
                 blockchainRid = blockchainRid)
     }
 
-    fun importBlock(storage: Storage, chainId: Long, blockData: Gtv, nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem) {
+    fun importBlock(storage: Storage, chainId: Long, blockData: Gtv, nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem): Long {
         val blockchainRid = withReadConnection(storage, chainId) { ctx ->
             DatabaseAccess.of(ctx).getBlockchainRid(ctx)
         } ?: throw UserMistake("Can't find blockchain RID for chainIid $chainId")
@@ -295,6 +295,8 @@ object ImporterExporter : KLogging() {
             val config = makeBlockchainConfiguration(configData, partialContext, blockSigMaker, ctx, cryptoSystem)
             importBlock(ctx, config, blockHeader, transactions, blockWitness)
         }
+
+        return blockHeight
     }
 
     private fun makeBlockchainConfiguration(rawConfigurationData: ByteArray, partialContext: BaseBlockchainContext,

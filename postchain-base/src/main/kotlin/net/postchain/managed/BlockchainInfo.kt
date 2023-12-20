@@ -24,3 +24,12 @@ data class UnarchivingBlockchainNodeInfo(
         val isDestinationNode: Boolean,
         val upToHeight: Long
 )
+
+data class MigratingBlockchainNodeInfo(
+        val rid: WrappedByteArray,
+        val sourceContainer: String,
+        val destinationContainer: String,
+        val isSourceNode: Boolean,
+        val isDestinationNode: Boolean,
+        val upToHeight: Long
+)

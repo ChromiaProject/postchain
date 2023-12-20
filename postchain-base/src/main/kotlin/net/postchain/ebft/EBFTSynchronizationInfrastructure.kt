@@ -136,26 +136,38 @@ open class EBFTSynchronizationInfrastructure(
         return when {
             forceReadOnly -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
 
-            blockchainState == BlockchainState.RUNNING -> when {
-                historicBlockchainContext != null -> HistoricBlockchainProcess(workerContext, historicBlockchainContext)
-                iAmASigner -> ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(chainId), blockchainState)
-                else -> ReadOnlyBlockchainProcess(workerContext, blockchainState)
-            }
+            blockchainState == BlockchainState.RUNNING -> createRunningBlockchainProcess(
+                    workerContext, historicBlockchainContext, blockchainConfigurationProvider, blockchainConfig, blockchainState, iAmASigner)
 
-            blockchainState == BlockchainState.PAUSED -> ReadOnlyBlockchainProcess(workerContext, blockchainState)
+            blockchainState == BlockchainState.PAUSED -> createPausedBlockchainProcess(
+                    workerContext, blockchainConfigurationProvider, blockchainConfig, blockchainState)
 
             blockchainState == BlockchainState.IMPORTING -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
 
             blockchainState == BlockchainState.UNARCHIVING -> createUnarchivingBlockchainProcess(
-                    workerContext,
-                    blockchainConfigurationProvider,
-                    blockchainConfig,
-                    blockchainState,
-                    iAmASigner)
+                    workerContext, blockchainConfigurationProvider, blockchainConfig, blockchainState, iAmASigner)
 
             else -> throw ProgrammerMistake("Unexpected blockchain state $blockchainState for blockchain $blockchainRid")
         }
     }
+
+    protected open fun createRunningBlockchainProcess(
+            workerContext: WorkerContext,
+            historicBlockchainContext: HistoricBlockchainContext?,
+            blockchainConfigProvider: BlockchainConfigurationProvider,
+            blockchainConfig: BlockchainConfiguration,
+            blockchainState: BlockchainState,
+            iAmASigner: Boolean
+    ): BlockchainProcess {
+        return when {
+            historicBlockchainContext != null -> HistoricBlockchainProcess(workerContext, historicBlockchainContext)
+            iAmASigner -> ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID), blockchainState)
+            else -> ReadOnlyBlockchainProcess(workerContext, blockchainState)
+        }
+    }
+
+    protected open fun createPausedBlockchainProcess(workerContext: WorkerContext, blockchainConfigProvider: BlockchainConfigurationProvider, blockchainConfig: BlockchainConfiguration, blockchainState: BlockchainState): BlockchainProcess =
+            ReadOnlyBlockchainProcess(workerContext, blockchainState)
 
     protected open fun createUnarchivingBlockchainProcess(
             workerContext: WorkerContext,
@@ -165,8 +177,7 @@ open class EBFTSynchronizationInfrastructure(
             iAmASigner: Boolean
     ): BlockchainProcess {
         val bcInfo = (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
-                ?.getUnarchivingBlockchainNodeInfo(blockchainConfig.blockchainRid)
-        logger.error { "bcInfo: $bcInfo" }
+                ?.getMigratingBlockchainNodeInfo(blockchainConfig.blockchainRid)
         return when {
             bcInfo != null && bcInfo.isSourceNode && !bcInfo.isDestinationNode -> ForceReadOnlyBlockchainProcess(
                     workerContext, blockchainState, bcInfo.upToHeight)

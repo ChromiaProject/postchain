@@ -224,4 +224,26 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
                 res["up_to_height"]?.asInteger() ?: return null
         )
     }
+
+    override fun getMigratingBlockchainNodeInfo(blockchainRid: BlockchainRid): MigratingBlockchainNodeInfo? {
+        if (nmApiVersion < 15) return null
+
+        val res = query(
+                "nm_get_migrating_blockchain_node_info",
+                buildArgs(
+                        "node_id" to gtv(appConfig.pubKeyByteArray),
+                        "blockchain_rid" to gtv(blockchainRid.data)
+                )
+        )
+        if (res.isNull()) return null
+
+        return MigratingBlockchainNodeInfo(
+                res["rid"]?.asByteArray()?.wrap() ?: return null,
+                res["source_container"]?.asString() ?: return null,
+                res["destination_container"]?.asString() ?: return null,
+                res["is_source_node"]?.asBoolean() ?: return null,
+                res["is_destination_node"]?.asBoolean() ?: return null,
+                res["up_to_height"]?.asInteger() ?: return null
+        )
+    }
 }
