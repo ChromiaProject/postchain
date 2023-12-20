@@ -177,7 +177,7 @@ open class EBFTSynchronizationInfrastructure(
             iAmASigner: Boolean
     ): BlockchainProcess {
         val bcInfo = (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
-                ?.getUnarchivingBlockchainNodeInfo(blockchainConfig.blockchainRid)
+                ?.getMigratingBlockchainNodeInfo(blockchainConfig.blockchainRid)
         return when {
             bcInfo != null && bcInfo.isSourceNode && !bcInfo.isDestinationNode -> ForceReadOnlyBlockchainProcess(
                     workerContext, blockchainState, bcInfo.upToHeight)
