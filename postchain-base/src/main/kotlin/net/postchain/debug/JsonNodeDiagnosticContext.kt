@@ -40,6 +40,8 @@ class JsonNodeDiagnosticContext(
         )
     }
 
+    override fun blockchainData(): Map<BlockchainRid, DiagnosticData> = blockchainDiagnosticData
+
     override fun removeBlockchainData(blockchainRid: BlockchainRid?) = blockchainDiagnosticData.remove(blockchainRid)
 
     override fun clearBlockchainData() = blockchainDiagnosticData.clear()
@@ -48,7 +50,6 @@ class JsonNodeDiagnosticContext(
     override fun isEmpty() = properties.isEmpty()
     override val size: Int
         get() = properties.size
-
 
     override fun format(): JsonElement = JsonObject().apply {
         properties.forEach { (p, v) -> add(p.prettyName, json.toJsonTree(v.value)) }

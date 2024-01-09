@@ -44,7 +44,7 @@ class RestApiDebugEndpointTest {
         }
 
         whenever(
-                debugInfoQuery.queryDebugInfo(null)
+                debugInfoQuery.default()
         ).thenReturn(response)
 
         given().basePath("/").port(debugApi.actualPort())
@@ -62,7 +62,7 @@ class RestApiDebugEndpointTest {
         nodeDiagnosticContext.blockchainErrorQueue(blockchainRID).add(ErrorDiagnosticValue("bar", 42L, 10))
         val response = nodeDiagnosticContext.format()
         whenever(
-                debugInfoQuery.queryDebugInfo(null)
+                debugInfoQuery.default()
         ).thenReturn(response)
 
         given().basePath("/").port(debugApi.actualPort())

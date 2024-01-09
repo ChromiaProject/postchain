@@ -9,7 +9,6 @@ import net.postchain.api.rest.ErrorBody
 import net.postchain.api.rest.controller.http4k.NettyWithCustomWorkerGroup
 import net.postchain.api.rest.errorBody
 import net.postchain.api.rest.prettyJsonBody
-import net.postchain.api.rest.queryQuery
 import org.http4k.core.Method.GET
 import org.http4k.core.Request
 import org.http4k.core.Response
@@ -46,11 +45,26 @@ class DebugApi(
 
     private val app = routes(
             "/" bind static(ResourceLoader.Classpath("/debugapi-root")),
-            "/_debug" bind GET to ::getDebug
+            "/_debug" bind GET to ::getDebug,
+            "/_debug/all" bind GET to ::getAllDebug,
+            "/_debug/block-statistics" bind GET to ::getBlockStats
     )
 
+    @Suppress("UNUSED_PARAMETER")
     private fun getDebug(request: Request): Response {
-        val debugInfo = debugInfoQuery.queryDebugInfo(queryQuery(request))
+        val debugInfo = debugInfoQuery.default()
+        return Response(OK).with(prettyJsonBody of debugInfo)
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun getAllDebug(request: Request): Response {
+        val debugInfo = debugInfoQuery.all()
+        return Response(OK).with(prettyJsonBody of debugInfo)
+    }
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun getBlockStats(request: Request): Response {
+        val debugInfo = debugInfoQuery.blockStats()
         return Response(OK).with(prettyJsonBody of debugInfo)
     }
 

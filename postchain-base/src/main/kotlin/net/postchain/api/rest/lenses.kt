@@ -62,7 +62,6 @@ val heightQuery = Query.long().map {
         throw LensFailure(listOf(
                 Invalid(Meta(false, "query", ParamMeta.IntegerParam, "height", "Height must be -1 (current height) or a non-negative integer"))))
 }.defaulted("height", -1)
-val queryQuery = Query.string().optional("query")
 val signerQuery = Query.string().regex("([0-9a-fA-F]+)").optional("signer")
 
 val prettyGson = JsonFactory.makePrettyJson()
