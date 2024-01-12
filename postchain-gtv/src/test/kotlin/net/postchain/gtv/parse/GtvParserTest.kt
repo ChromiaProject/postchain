@@ -4,6 +4,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -12,7 +13,11 @@ import org.junit.jupiter.params.provider.MethodSource
 import java.math.BigInteger
 
 internal class GtvParserTest {
-
+    
+    @Test
+    fun lexUnicode() {
+        assertArrayEquals(arrayOf(Token.Companion.String("foo ካ bar")), lexer("\"foo \u12AB bar\"").toList().toTypedArray())
+    }
 
     @ParameterizedTest
     @MethodSource("testObjects")
@@ -28,20 +33,6 @@ internal class GtvParserTest {
         }
     }
 
-    @Test
-    fun testStringsContainingEscapedEquals() {
-        val escapedEquals = GtvParser.parse("""{a=contains\=equals}""")
-        assertEquals(gtv("a" to gtv("contains=equals")), escapedEquals)
-
-        // Multiple
-        val multipleEscapedEquals = GtvParser.parse("""{a=contains\=equals\=twice}""")
-        assertEquals(gtv("a" to gtv("contains=equals=twice")), multipleEscapedEquals)
-
-        // Verify that I can still have a string value that contains "\="
-        val escapedEqualsWithPrecedingBackslash = GtvParser.parse("""{a=contains\\=equals}""")
-        assertEquals(gtv("a" to gtv("""contains\=equals""")), escapedEqualsWithPrecedingBackslash)
-    }
-
     companion object {
         @JvmStatic
         fun testObjects() = arrayOf(
@@ -50,9 +41,12 @@ internal class GtvParserTest {
                 arrayOf(gtv(BigInteger.ONE)),
                 arrayOf(gtv(true)),
                 arrayOf(gtv("Baloo")),
+                arrayOf(gtv("""'foo' "bar" \baz \u12AB""")),
                 arrayOf(gtv("AB".hexStringToByteArray())),
+                arrayOf(gtv(listOf())),
                 arrayOf(gtv(gtv(3))),
                 arrayOf(gtv(gtv("0,0"))),
+                arrayOf(gtv(mapOf())),
                 arrayOf(gtv("a" to gtv("0,0"))),
                 arrayOf(gtv("a" to gtv(3), "b" to gtv("mega"))),
                 arrayOf(gtv(gtv(1), gtv(gtv(2), gtv(3)))),
