@@ -7,6 +7,8 @@ import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.common.wrap
 import net.postchain.core.NodeRid
 import net.postchain.crypto.Signature
 import net.postchain.ebft.message.AppliedConfig
@@ -134,12 +136,12 @@ class EbftPacketCodecFactory : XPacketCodecFactory<EbftMessage> {
 
 class EbftPacketCache {
 
-    private val cache = mutableMapOf<ByteArray, Pair<ByteArray, EbftMessage>>()
+    private val cache = mutableMapOf<WrappedByteArray, Pair<ByteArray, EbftMessage>>()
 
     companion object : KLogging()
 
     fun get(pubKey: ByteArray, rawMessage: ByteArray, topic: MessageTopic): EbftMessage? {
-        val message = cache[pubKey]?.takeIf { it.first.contentEquals(rawMessage) }?.second
+        val message = cache[pubKey.wrap()]?.takeIf { it.first.contentEquals(rawMessage) }?.second
         if (logger.isTraceEnabled) {
             if (message != null) {
                 logger.trace { "Cache HIT for pubKey ${pubKey.toHex()} and topic $topic" }
@@ -151,7 +153,7 @@ class EbftPacketCache {
     }
 
     fun put(pubKey: ByteArray, rawMessage: ByteArray, message: EbftMessage): EbftMessage {
-        cache[pubKey] = rawMessage to message
+        cache[pubKey.wrap()] = rawMessage to message
         return message
     }
 }
