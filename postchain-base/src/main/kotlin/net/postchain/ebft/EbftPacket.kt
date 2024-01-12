@@ -8,7 +8,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
 import net.postchain.common.types.WrappedByteArray
-import net.postchain.common.wrap
 import net.postchain.core.NodeRid
 import net.postchain.crypto.Signature
 import net.postchain.ebft.message.AppliedConfig
@@ -84,17 +83,17 @@ class EbftPacketCodec(val config: PeerCommConfiguration, val blockchainRID: Bloc
         return packet.ebftVersion
     }
 
-    override fun decodePacket(pubKey: ByteArray, rawMessage: ByteArray, packetVersion: Long): EbftMessage {
+    override fun decodePacket(pubKey: WrappedByteArray, rawMessage: ByteArray, packetVersion: Long): EbftMessage {
         val signedMessage = decodeSignedMessage(rawMessage, packetVersion)
         return when (signedMessage.message) {
             is Status -> statusCache.get(pubKey, rawMessage, signedMessage.topic)
-                    ?: statusCache.put(pubKey, rawMessage, verifySignedMessage(signedMessage, pubKey, packetVersion))
+                    ?: statusCache.put(pubKey, rawMessage, verifySignedMessage(signedMessage, pubKey.data, packetVersion))
 
             is AppliedConfig -> appliedConfigCache.get(pubKey, rawMessage, signedMessage.topic)
-                    ?: appliedConfigCache.put(pubKey, rawMessage, verifySignedMessage(signedMessage, pubKey, packetVersion))
+                    ?: appliedConfigCache.put(pubKey, rawMessage, verifySignedMessage(signedMessage, pubKey.data, packetVersion))
 
-            is EbftVersion -> verifySignedMessage(signedMessage, pubKey, 1)
-            else -> verifySignedMessage(signedMessage, pubKey, packetVersion)
+            is EbftVersion -> verifySignedMessage(signedMessage, pubKey.data, 1)
+            else -> verifySignedMessage(signedMessage, pubKey.data, packetVersion)
         }
     }
 
@@ -140,20 +139,20 @@ class EbftPacketCache {
 
     companion object : KLogging()
 
-    fun get(pubKey: ByteArray, rawMessage: ByteArray, topic: MessageTopic): EbftMessage? {
-        val message = cache[pubKey.wrap()]?.takeIf { it.first.contentEquals(rawMessage) }?.second
+    fun get(pubKey: WrappedByteArray, rawMessage: ByteArray, topic: MessageTopic): EbftMessage? {
+        val message = cache[pubKey]?.takeIf { it.first.contentEquals(rawMessage) }?.second
         if (logger.isTraceEnabled) {
             if (message != null) {
-                logger.trace { "Cache HIT for pubKey ${pubKey.toHex()} and topic $topic" }
+                logger.trace { "Cache HIT for pubKey $pubKey and topic $topic" }
             } else {
-                logger.trace { "Cache MISS for pubKey ${pubKey.toHex()} and topic $topic" }
+                logger.trace { "Cache MISS for pubKey $pubKey and topic $topic" }
             }
         }
         return message
     }
 
-    fun put(pubKey: ByteArray, rawMessage: ByteArray, message: EbftMessage): EbftMessage {
-        cache[pubKey.wrap()] = rawMessage to message
+    fun put(pubKey: WrappedByteArray, rawMessage: ByteArray, message: EbftMessage): EbftMessage {
+        cache[pubKey] = rawMessage to message
         return message
     }
 }
