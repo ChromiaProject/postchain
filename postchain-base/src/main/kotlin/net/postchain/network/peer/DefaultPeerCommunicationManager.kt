@@ -214,7 +214,7 @@ class DefaultPeerCommunicationManager<PacketType>(
 
     private fun decodePacket(peerId: NodeRid, packet: ByteArray, packetVersion: Long) =
             try {
-                packetCodec.decodePacket(peerId.data, packet, packetVersion)
+                packetCodec.decodePacket(peerId, packet, packetVersion)
             } catch (e: UserMistake) {
                 if (packetVersion > 1) {
                     // In some cases, our packet version has not been received quick enough by the other peer,
@@ -224,7 +224,7 @@ class DefaultPeerCommunicationManager<PacketType>(
                     // If it is version 1, we will discard it since we do not want to risk the version being used
                     // further up the call chain, e.g., starting the AppliedConfigSender when we should not.
                     try {
-                        packetCodec.decodePacket(peerId.data, packet, 1)
+                        packetCodec.decodePacket(peerId, packet, 1)
                         logger.info { "Got exception when decoding receive packet from ${peerId.toHex()} with version $packetVersion. Retry with version 1 succeeded so discarding packet." }
                         null
                     } catch (e2: Exception) {

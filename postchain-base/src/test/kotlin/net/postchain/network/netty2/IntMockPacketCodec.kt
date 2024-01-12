@@ -4,6 +4,7 @@ package net.postchain.network.netty2
 
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.NodeRid
 import net.postchain.network.IdentPacketInfo
 import net.postchain.network.XPacketCodec
@@ -32,9 +33,9 @@ class IntMockPacketCodec(
 
     override fun getVersionFromVersionPacket(packet: Int): Long = packet.toLong()
 
-    override fun decodePacket(pubKey: ByteArray, rawMessage: ByteArray, packetVersion: Long): Int = ByteBuffer.wrap(rawMessage).int
+    override fun decodePacket(pubKey: WrappedByteArray, rawMessage: ByteArray, packetVersion: Long): Int = ByteBuffer.wrap(rawMessage).int
 
-    override fun decodePacket(rawMessage: ByteArray, packetVersion: Long): Int? = ByteBuffer.wrap(rawMessage).int
+    override fun decodePacket(rawMessage: ByteArray, packetVersion: Long): Int = ByteBuffer.wrap(rawMessage).int
 
     override fun isIdentPacket(rawMessage: ByteArray): Boolean = peerInfos.any { it.pubKey.contentEquals(rawMessage) }
 
