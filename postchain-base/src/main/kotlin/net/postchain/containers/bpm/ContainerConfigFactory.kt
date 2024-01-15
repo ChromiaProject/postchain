@@ -247,6 +247,8 @@ object ContainerConfigFactory : KLogging() {
 
         add("POSTCHAIN_TRACKED_EBFT_MESSAGE_MAX_KEEP_TIME_MS=${appConfig.trackedEbftMessageMaxKeepTimeMs}")
 
+        add("POSTCHAIN_MASTERSUB_QUERY_TIMEOUT_MS=${containerNodeConfig.masterSubQueryTimeoutMs}")
+
         val javaToolOptions = createJavaToolOptions(containerNodeConfig, container)
         if (javaToolOptions.isNotEmpty()) {
             add("JAVA_TOOL_OPTIONS=${javaToolOptions.joinToString(" ")}")

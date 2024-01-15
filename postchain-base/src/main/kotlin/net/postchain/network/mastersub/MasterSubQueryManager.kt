@@ -17,14 +17,11 @@ import java.util.concurrent.CompletionStage
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.time.Duration.Companion.seconds
 
 @Suppress("UNCHECKED_CAST")
-class MasterSubQueryManager(private val messageSender: (BlockchainRid?, MsMessage) -> Boolean) : MsMessageHandler {
+class MasterSubQueryManager(private val queryTimeoutMs: Long, private val messageSender: (BlockchainRid?, MsMessage) -> Boolean) : MsMessageHandler {
 
-    companion object : KLogging() {
-        val timeout = 10.seconds
-    }
+    companion object : KLogging()
 
     private val requestCounter = AtomicLong(0L)
     private val outstandingRequests = ConcurrentHashMap<Long, CompletableFuture<Any?>>()
@@ -46,7 +43,7 @@ class MasterSubQueryManager(private val messageSender: (BlockchainRid?, MsMessag
             future.completeExceptionally(ProgrammerMistake("Unable to send query"))
         }
         return future
-                .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
+                .orTimeout(queryTimeoutMs, TimeUnit.MILLISECONDS)
                 .whenComplete { _, _ -> outstandingRequests.remove(requestId) } as CompletionStage<Gtv>
     }
 
@@ -66,7 +63,7 @@ class MasterSubQueryManager(private val messageSender: (BlockchainRid?, MsMessag
             future.completeExceptionally(ProgrammerMistake("Unable to send block at height query"))
         }
         return future
-                .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
+                .orTimeout(queryTimeoutMs, TimeUnit.MILLISECONDS)
                 .whenComplete { _, _ -> outstandingRequests.remove(requestId) } as CompletionStage<BlockDetail?>
     }
 
