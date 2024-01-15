@@ -67,10 +67,7 @@ internal class GtvParserTest {
         @JvmStatic
         fun correctFormat() = arrayOf(
                 arrayOf("\"räksmörgås\"", GtvString("räksmörgås")),
-                arrayOf("""["räksmörgås": 17]""", gtv(mapOf("räksmörgås" to gtv(17)))),
-                arrayOf("[[][]]", gtv(listOf(gtv(listOf()), gtv(listOf())))),
-                arrayOf("[nullnull]", gtv(listOf(GtvNull, GtvNull))),
-                arrayOf("""["a":null"b":null]""", gtv(mapOf("a" to GtvNull, "b" to GtvNull)))
+                arrayOf("""["räksmörgås": 17]""", gtv(mapOf("räksmörgås" to gtv(17))))
         )
 
         @JvmStatic
@@ -80,7 +77,10 @@ internal class GtvParserTest {
                 // Contains un-escaped equal sign in string value
                 arrayOf("{name=provider;url=https://provider.com}"),
                 // Invalid byte array
-                arrayOf("""{pubkey=x"03D4C71C2B63F6CE7F4C29D91F651FE9AA3E936CCAD8FA73633A4315CB2CDCACEB";name="provider"}""")
+                arrayOf("""{pubkey=x"03D4C71C2B63F6CE7F4C29D91F651FE9AA3E936CCAD8FA73633A4315CB2CDCACEB";name="provider"}"""),
+                arrayOf("[[][]]"),
+                arrayOf("[nullnull]"),
+                arrayOf("""["a":null"b":null]""")
         )
     }
 }
