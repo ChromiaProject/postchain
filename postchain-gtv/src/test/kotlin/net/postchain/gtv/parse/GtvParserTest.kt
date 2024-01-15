@@ -4,6 +4,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvString
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -21,13 +22,19 @@ internal class GtvParserTest {
 
     @ParameterizedTest
     @MethodSource("testObjects")
-    fun parseGtv(input: Gtv) {
+    fun parseGtvObject(input: Gtv) {
         assertEquals(input, GtvParser.parse(input.toString()))
     }
 
     @ParameterizedTest
+    @MethodSource("correctFormat")
+    fun parseGtvWorks(str: String, expected: Gtv) {
+        assertEquals(expected, GtvParser.parse(str))
+    }
+
+    @ParameterizedTest
     @MethodSource("wrongFormat")
-    fun parseGtvThrows(str: String){
+    fun parseGtvThrows(str: String) {
         assertThrows<IllegalArgumentException> {
             GtvParser.parse(str)
         }
@@ -55,6 +62,15 @@ internal class GtvParserTest {
                 arrayOf(gtv("a" to gtv(gtv(1), gtv(2)))),
                 arrayOf(gtv("b" to gtv(1), "a" to gtv("b" to gtv(gtv(1), gtv("c" to gtv(1)))))),
                 arrayOf(gtv(gtv(1), gtv("a" to gtv("AB".hexStringToByteArray()))))
+        )
+
+        @JvmStatic
+        fun correctFormat() = arrayOf(
+                arrayOf("\"räksmörgås\"", GtvString("räksmörgås")),
+                arrayOf("""["räksmörgås": 17]""", gtv(mapOf("räksmörgås" to gtv(17)))),
+                arrayOf("[[][]]", gtv(listOf(gtv(listOf()), gtv(listOf())))),
+                arrayOf("[nullnull]", gtv(listOf(GtvNull, GtvNull))),
+                arrayOf("""["a":null"b":null]""", gtv(mapOf("a" to GtvNull, "b" to GtvNull)))
         )
 
         @JvmStatic
