@@ -32,8 +32,6 @@ class MasterSubQueryManager(private val messageSender: (BlockchainRid?, MsMessag
     fun query(targetBlockchainRid: BlockchainRid?, name: String, args: Gtv): CompletionStage<Gtv> {
         val requestId = requestCounter.incrementAndGet()
         val future = CompletableFuture<Any?>()
-                .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
-                .whenComplete { _, _ -> outstandingRequests.remove(requestId) }
         outstandingRequests[requestId] = future
 
         if (!messageSender(
@@ -47,14 +45,14 @@ class MasterSubQueryManager(private val messageSender: (BlockchainRid?, MsMessag
                 )) {
             future.completeExceptionally(ProgrammerMistake("Unable to send query"))
         }
-        return future as CompletionStage<Gtv>
+        return future
+                .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
+                .whenComplete { _, _ -> outstandingRequests.remove(requestId) } as CompletionStage<Gtv>
     }
 
     fun blockAtHeight(targetBlockchainRid: BlockchainRid, height: Long): CompletionStage<BlockDetail?> {
         val requestId = requestCounter.incrementAndGet()
         val future = CompletableFuture<Any?>()
-                .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
-                .whenComplete { _, _ -> outstandingRequests.remove(requestId) }
         outstandingRequests[requestId] = future
 
         if (!messageSender(
@@ -67,8 +65,12 @@ class MasterSubQueryManager(private val messageSender: (BlockchainRid?, MsMessag
                 )) {
             future.completeExceptionally(ProgrammerMistake("Unable to send block at height query"))
         }
-        return future as CompletionStage<BlockDetail?>
+        return future
+                .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
+                .whenComplete { _, _ -> outstandingRequests.remove(requestId) } as CompletionStage<BlockDetail?>
     }
+
+    fun isRequestOutstanding(requestId: Long) = outstandingRequests.containsKey(requestId)
 
     override fun onMessage(message: MsMessage) {
         when (message) {
