@@ -61,7 +61,8 @@ internal class GtvParserTest {
                 arrayOf(gtv(gtv("a" to gtv(2)), gtv("b" to gtv(3)))),
                 arrayOf(gtv("a" to gtv(gtv(1), gtv(2)))),
                 arrayOf(gtv("b" to gtv(1), "a" to gtv("b" to gtv(gtv(1), gtv("c" to gtv(1)))))),
-                arrayOf(gtv(gtv(1), gtv("a" to gtv("AB".hexStringToByteArray()))))
+                arrayOf(gtv(gtv(1), gtv("a" to gtv("AB".hexStringToByteArray())))),
+                arrayOf(gtv(mapOf("abc\"def" to gtv(17))))
         )
 
         @JvmStatic

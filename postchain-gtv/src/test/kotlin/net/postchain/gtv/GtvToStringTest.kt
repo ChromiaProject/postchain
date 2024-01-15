@@ -74,4 +74,10 @@ class GtvToStringTest {
         val gtvDictionary = GtvDictionary.build(mapOf())
         assertThat(gtvDictionary.toString()).isEqualTo("""[:]""")
     }
+
+    @Test
+    fun `dictionary keys are escaped`() {
+        val gtvDictionary = GtvDictionary.build(mapOf("a\"b" to GtvString("AAA")))
+        assertThat(gtvDictionary.toString()).isEqualTo("""["a\"b": "AAA"]""")
+    }
 }
