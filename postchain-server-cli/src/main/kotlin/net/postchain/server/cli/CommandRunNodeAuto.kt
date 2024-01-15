@@ -173,7 +173,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
     ) {
         runStorageCommand(appConfig, chainId, true) { ctx: EContext ->
             try {
-                if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners = false))
+                if (!BlockchainApi.addConfiguration(appConfig.pubKey, ctx, height, false, blockchainConfig, allowUnknownSigners = false))
                     println("Blockchain configuration of chainId $chainId at height $height already exists")
             } catch (e: MissingPeerInfoException) {
                 throw CliException(e.message + " Please add node with command peerinfo-add or set flag --allow-unknown-signers.")

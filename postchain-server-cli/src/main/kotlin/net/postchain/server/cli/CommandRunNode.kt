@@ -58,7 +58,7 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
 
                 if (!wasInitialized && update) {
                     val currentHeight = BlockchainApi.getLastBlockHeight(ctx)
-                    BlockchainApi.addConfiguration(ctx, currentHeight + 1, false, blockchainConfig)
+                    BlockchainApi.addConfiguration(appConfig.pubKey, ctx, currentHeight + 1, false, blockchainConfig)
                 }
             }
         }

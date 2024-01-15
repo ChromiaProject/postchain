@@ -73,7 +73,7 @@ object CliExecution {
             try {
                 when (mode) {
                     AlreadyExistMode.ERROR -> {
-                        if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners, validate)) {
+                        if (!BlockchainApi.addConfiguration(appConfig.pubKey, ctx, height, false, blockchainConfig, allowUnknownSigners, validate)) {
                             throw CliException(
                                     "Blockchain configuration of chainId $chainId at " +
                                             "height $height already exists. Use -f flag to force addition."
@@ -82,11 +82,11 @@ object CliExecution {
                     }
 
                     AlreadyExistMode.FORCE -> {
-                        BlockchainApi.addConfiguration(ctx, height, true, blockchainConfig, allowUnknownSigners, validate)
+                        BlockchainApi.addConfiguration(appConfig.pubKey, ctx, height, true, blockchainConfig, allowUnknownSigners, validate)
                     }
 
                     AlreadyExistMode.IGNORE -> {
-                        if (!BlockchainApi.addConfiguration(ctx, height, false, blockchainConfig, allowUnknownSigners, validate))
+                        if (!BlockchainApi.addConfiguration(appConfig.pubKey, ctx, height, false, blockchainConfig, allowUnknownSigners, validate))
                             println("Blockchain configuration of chainId $chainId at height $height already exists")
                     }
                 }

@@ -40,7 +40,7 @@ class PostchainService(private val nodeProvider: NodeProvider) {
      */
     fun addConfiguration(chainId: Long, height: Long, override: Boolean, config: Gtv, allowUnknownSigners: Boolean = false): Boolean =
             withWriteConnection(postchainNode.postchainContext.sharedStorage, chainId) { ctx ->
-                BlockchainApi.addConfiguration(ctx, height, override, config, allowUnknownSigners)
+                BlockchainApi.addConfiguration(postchainNode.appConfig.pubKey, ctx, height, override, config, allowUnknownSigners)
             }
 
     fun listConfigurations(chainId: Long): List<Long> {

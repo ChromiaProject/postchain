@@ -26,7 +26,7 @@ object BlockchainApi {
      * @throws IllegalStateException if current height => given height
      * @throws MissingPeerInfoException if signer pubkey does not exist in peerinfos and allowUnknownSigners is false
      */
-    fun addConfiguration(ctx: EContext, height: Long, override: Boolean, config: Gtv, allowUnknownSigners: Boolean = false, validate: Boolean = true): Boolean {
+    fun addConfiguration(myPubKey: String, ctx: EContext, height: Long, override: Boolean, config: Gtv, allowUnknownSigners: Boolean = false, validate: Boolean = true): Boolean {
         val db = DatabaseAccess.of(ctx)
 
         val blockchainRid = db.getBlockchainRid(ctx)
@@ -46,7 +46,7 @@ object BlockchainApi {
                 GTXBlockchainConfigurationFactory.validateConfiguration(config, blockchainRid)
             }
             db.addConfigurationData(ctx, height, GtvEncoder.encodeGtv(config))
-            addFutureSignersAsReplicas(ctx, db, height, config, allowUnknownSigners)
+            addFutureSignersAsReplicas(myPubKey, ctx, db, height, config, allowUnknownSigners)
             true
         } else {
             false
@@ -97,21 +97,20 @@ object BlockchainApi {
     /** When a new (height > 0) configuration is added, we automatically add signers in that config to table
      * blockchainReplicaNodes (for current blockchain). Useful for synchronization.
      */
-    private fun addFutureSignersAsReplicas(eContext: EContext, db: DatabaseAccess, height: Long, gtvData: Gtv, allowUnknownSigners: Boolean) {
+    private fun addFutureSignersAsReplicas(myPubKey: String, eContext: EContext, db: DatabaseAccess, height: Long, gtvData: Gtv, allowUnknownSigners: Boolean) {
         if (height > 0) {
             val brid = db.getBlockchainRid(eContext)!!
             val confGtvDict = gtvData as GtvDictionary
-            val signers = confGtvDict[KEY_SIGNERS]!!.asArray().map { it.asByteArray() }
-            for (sig in signers) {
-                val nodePubkey = sig.toHex()
+            val signers = confGtvDict[KEY_SIGNERS]!!.asArray().map { it.asByteArray().toHex() }
+            signers.filter { it != myPubKey }.forEach { pubKey ->
                 // Node must be in PeerInfo, or else it cannot be a blockchain replica.
-                val foundInPeerInfo = db.findPeerInfo(eContext, null, null, nodePubkey)
+                val foundInPeerInfo = db.findPeerInfo(eContext, null, null, pubKey)
                 if (foundInPeerInfo.isNotEmpty()) {
-                    db.addBlockchainReplica(eContext, brid, PubKey(nodePubkey))
+                    db.addBlockchainReplica(eContext, brid, PubKey(pubKey))
                     // If the node is not in the peerinfo table, and we do not allow unknown signers in a configuration,
                     // throw error
                 } else if (!allowUnknownSigners) {
-                    throw MissingPeerInfoException("Signer $nodePubkey does not exist in peerinfos.")
+                    throw MissingPeerInfoException("Signer $pubKey does not exist in peerinfos.")
                 }
             }
         }
