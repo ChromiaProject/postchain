@@ -27,7 +27,7 @@ class DefaultMasterConnectionManager(
 
     companion object : KLogging()
 
-    override val masterSubQueryManager = MasterSubQueryManager { blockchainRid, message ->
+    override val masterSubQueryManager = MasterSubQueryManager(containerNodeConfig.masterSubQueryTimeoutMs) { blockchainRid, message ->
         if (blockchainRid == null) throw ProgrammerMistake("Missing destination chain")
         sendPacketToSub(blockchainRid, message)
     }
