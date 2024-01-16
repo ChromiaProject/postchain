@@ -217,7 +217,7 @@ class ContainerManagedBlockchainProcessManager(
                                 dstChain.restApiEnabled = false
                                 startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
                                 blockchainReplicators.getOrPut(chain.chainId) {
-                                    BlockchainReplicator(info.rid, srcChain, dstChain, info.upToHeight, directoryDataSource, ::findPostchainContainer).also {
+                                    BlockchainReplicator(info.rid, srcChain, dstChain, info.finalHeight, directoryDataSource, ::findPostchainContainer).also {
                                         logger.debug { "BlockchainReplicator started: rid: ${info.rid}, srcChain: $srcChain, dstChain: $dstChain" }
                                     }
                                 }
@@ -240,8 +240,8 @@ class ContainerManagedBlockchainProcessManager(
                 completedReplicationDetails[replicator.rid] = replicator.srcChain to replicator.dstChain
             } else if (replicator.upToHeight == -1L) {
                 val info = directoryDataSource.getMigratingBlockchainNodeInfo(replicator.srcChain.brid)
-                if (info != null && info.upToHeight != -1L) {
-                    replicator.upToHeight = info.upToHeight
+                if (info != null && info.finalHeight != -1L) {
+                    replicator.upToHeight = info.finalHeight
                 }
             }
         }

@@ -16,20 +16,11 @@ data class InactiveBlockchainInfo(
         val height: Long
 )
 
-data class UnarchivingBlockchainNodeInfo(
-        val rid: WrappedByteArray,
-        val sourceContainer: String,
-        val destinationContainer: String,
-        val isSourceNode: Boolean,
-        val isDestinationNode: Boolean,
-        val upToHeight: Long
-)
-
 data class MigratingBlockchainNodeInfo(
         val rid: WrappedByteArray,
         val sourceContainer: String,
         val destinationContainer: String,
         val isSourceNode: Boolean,
         val isDestinationNode: Boolean,
-        val upToHeight: Long
+        val finalHeight: Long
 )

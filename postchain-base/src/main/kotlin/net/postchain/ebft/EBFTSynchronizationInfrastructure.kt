@@ -180,7 +180,7 @@ open class EBFTSynchronizationInfrastructure(
                 ?.getMigratingBlockchainNodeInfo(blockchainConfig.blockchainRid)
         return when {
             bcInfo != null && bcInfo.isSourceNode && !bcInfo.isDestinationNode -> ForceReadOnlyBlockchainProcess(
-                    workerContext, blockchainState, bcInfo.upToHeight)
+                    workerContext, blockchainState, bcInfo.finalHeight)
 
             iAmASigner -> ValidatorBlockchainProcess(
                     workerContext, getStartWithFastSyncValue(blockchainConfig.chainID), blockchainState)
