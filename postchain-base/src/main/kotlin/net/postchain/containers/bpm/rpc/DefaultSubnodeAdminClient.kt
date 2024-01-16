@@ -228,6 +228,7 @@ class DefaultSubnodeAdminClient(
                     .setHeight(height)
                     .setGtv(ByteString.copyFrom(config))
                     .setOverride(true)
+                    .setAllowUnknownSigners(true)
                     .build()
             val response = service?.addConfiguration(request)
                     ?: throw ProgrammerMistake("subnode admin client not connected")

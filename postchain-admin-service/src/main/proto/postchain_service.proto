@@ -47,6 +47,7 @@ message AddConfigurationRequest {
     string xml = 4;
     bytes gtv = 5;
   }
+  bool allowUnknownSigners = 6;
 }
 
 message AddConfigurationReply {
