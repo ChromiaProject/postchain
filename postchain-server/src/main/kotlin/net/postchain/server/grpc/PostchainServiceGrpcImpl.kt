@@ -62,7 +62,7 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         }
 
         try {
-            val added = postchainService.addConfiguration(request.chainId, request.height, request.override, config)
+            val added = postchainService.addConfiguration(request.chainId, request.height, request.override, config, request.allowUnknownSigners)
             if (added) {
                 responseObserver.onNext(
                         AddConfigurationReply.newBuilder().run {
