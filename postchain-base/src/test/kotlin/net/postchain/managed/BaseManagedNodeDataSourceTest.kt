@@ -336,7 +336,7 @@ class BaseManagedNodeDataSourceTest {
                                     "dst",
                                     isSourceNode = false,
                                     isDestinationNode = true,
-                                    upToHeight = 100L)
+                                    finalHeight = 100L)
                     ),
                     arrayOf(16,
                             gtv(mapOf(
@@ -353,7 +353,7 @@ class BaseManagedNodeDataSourceTest {
                                     "dst",
                                     isSourceNode = true,
                                     isDestinationNode = false,
-                                    upToHeight = 100L)
+                                    finalHeight = 100L)
                     ),
             )
         }

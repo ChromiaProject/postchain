@@ -22,5 +22,5 @@ data class MigratingBlockchainNodeInfo(
         val destinationContainer: String,
         val isSourceNode: Boolean,
         val isDestinationNode: Boolean,
-        val upToHeight: Long
+        val finalHeight: Long
 )
