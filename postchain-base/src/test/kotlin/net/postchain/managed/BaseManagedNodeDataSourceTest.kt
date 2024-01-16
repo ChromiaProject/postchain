@@ -146,16 +146,16 @@ class BaseManagedNodeDataSourceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("testGetUnarchivingBlockchainNodeInfoData")
-    fun testGetUnarchivingBlockchainInfo(apiVersion: Long, gtvResult: Gtv, expected: UnarchivingBlockchainNodeInfo?) {
+    @MethodSource("testGetMigratingBlockchainNodeInfoData")
+    fun testGetMigratingBlockchainInfo(apiVersion: Long, gtvResult: Gtv, expected: MigratingBlockchainNodeInfo?) {
         val queryRunner: QueryRunner = mock {
             on { query(eq("nm_api_version"), any()) } doReturn gtv(apiVersion)
-            on { query(eq("nm_get_unarchiving_blockchain_node_info"), any()) } doReturn gtvResult
+            on { query(eq("nm_get_migrating_blockchain_node_info"), any()) } doReturn gtvResult
         }
         val sut = BaseManagedNodeDataSource(queryRunner, mock {
             on { pubKeyByteArray } doReturn byteArrayOf()
         })
-        assertEquals(expected, sut.getUnarchivingBlockchainNodeInfo(ZERO_RID))
+        assertEquals(expected, sut.getMigratingBlockchainNodeInfo(ZERO_RID))
     }
 
 
@@ -318,19 +318,19 @@ class BaseManagedNodeDataSourceTest {
         }
 
         @JvmStatic
-        fun testGetUnarchivingBlockchainNodeInfoData(): List<Array<Any?>> {
+        fun testGetMigratingBlockchainNodeInfoData(): List<Array<Any?>> {
             return listOf(
-                    arrayOf(12, GtvNull, null),
-                    arrayOf(13,
+                    arrayOf(15, GtvNull, null),
+                    arrayOf(16,
                             gtv(mapOf(
                                     "rid" to gtv(ZERO_RID.data),
                                     "source_container" to gtv("src"),
                                     "destination_container" to gtv("dst"),
                                     "is_source_node" to gtv(false),
                                     "is_destination_node" to gtv(true),
-                                    "up_to_height" to gtv(100)
+                                    "final_height" to gtv(100)
                             )),
-                            UnarchivingBlockchainNodeInfo(
+                            MigratingBlockchainNodeInfo(
                                     ZERO_RID.wData,
                                     "src",
                                     "dst",
@@ -338,16 +338,16 @@ class BaseManagedNodeDataSourceTest {
                                     isDestinationNode = true,
                                     upToHeight = 100L)
                     ),
-                    arrayOf(13,
+                    arrayOf(16,
                             gtv(mapOf(
                                     "rid" to gtv(ZERO_RID.data),
                                     "source_container" to gtv("src"),
                                     "destination_container" to gtv("dst"),
                                     "is_source_node" to gtv(true),
                                     "is_destination_node" to gtv(false),
-                                    "up_to_height" to gtv(100)
+                                    "final_height" to gtv(100)
                             )),
-                            UnarchivingBlockchainNodeInfo(
+                            MigratingBlockchainNodeInfo(
                                     ZERO_RID.wData,
                                     "src",
                                     "dst",
