@@ -75,5 +75,5 @@ data class GtvDictionary private constructor(val dict: Map<String, Gtv>) : GtvCo
     override fun toString() = if (dict.isEmpty())
         "[:]"
     else
-        dict.asIterable().joinToString(prefix = "[", postfix = "]") { entity -> "\"${entity.key}\": ${entity.value}" }
+        dict.asIterable().joinToString(prefix = "[", postfix = "]") { entity -> "\"${ESCAPE_GTV.translate(entity.key)}\": ${entity.value}" }
 }

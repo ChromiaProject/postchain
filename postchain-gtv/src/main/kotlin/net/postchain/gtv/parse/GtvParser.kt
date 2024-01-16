@@ -94,7 +94,8 @@ class GtvParser private constructor(str: String) {
             while (true) {
                 if (peek() == Token.Companion.RBracket) break
                 add(value() ?: throw IllegalArgumentException("Unexpected token: ${peek()}}"))
-                if (peek() == Token.Companion.Comma) consume()
+                if (peek() == Token.Companion.RBracket) break
+                expect(Token.Companion.Comma)
             }
         }
         expect(Token.Companion.RBracket)
@@ -108,7 +109,8 @@ class GtvParser private constructor(str: String) {
                 if (peek() == Token.Companion.RBracket) break
                 val (key, value) = keyAndValue()
                 put(key, value)
-                if (peek() == Token.Companion.Comma) consume()
+                if (peek() == Token.Companion.RBracket) break
+                expect(Token.Companion.Comma)
             }
         }
         expect(Token.Companion.RBracket)

@@ -4,6 +4,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvString
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -21,13 +22,19 @@ internal class GtvParserTest {
 
     @ParameterizedTest
     @MethodSource("testObjects")
-    fun parseGtv(input: Gtv) {
+    fun parseGtvObject(input: Gtv) {
         assertEquals(input, GtvParser.parse(input.toString()))
     }
 
     @ParameterizedTest
+    @MethodSource("correctFormat")
+    fun parseGtvWorks(str: String, expected: Gtv) {
+        assertEquals(expected, GtvParser.parse(str))
+    }
+
+    @ParameterizedTest
     @MethodSource("wrongFormat")
-    fun parseGtvThrows(str: String){
+    fun parseGtvThrows(str: String) {
         assertThrows<IllegalArgumentException> {
             GtvParser.parse(str)
         }
@@ -54,7 +61,14 @@ internal class GtvParserTest {
                 arrayOf(gtv(gtv("a" to gtv(2)), gtv("b" to gtv(3)))),
                 arrayOf(gtv("a" to gtv(gtv(1), gtv(2)))),
                 arrayOf(gtv("b" to gtv(1), "a" to gtv("b" to gtv(gtv(1), gtv("c" to gtv(1)))))),
-                arrayOf(gtv(gtv(1), gtv("a" to gtv("AB".hexStringToByteArray()))))
+                arrayOf(gtv(gtv(1), gtv("a" to gtv("AB".hexStringToByteArray())))),
+                arrayOf(gtv(mapOf("abc\"def" to gtv(17))))
+        )
+
+        @JvmStatic
+        fun correctFormat() = arrayOf(
+                arrayOf("\"räksmörgås\"", GtvString("räksmörgås")),
+                arrayOf("""["räksmörgås": 17]""", gtv(mapOf("räksmörgås" to gtv(17))))
         )
 
         @JvmStatic
@@ -64,7 +78,10 @@ internal class GtvParserTest {
                 // Contains un-escaped equal sign in string value
                 arrayOf("{name=provider;url=https://provider.com}"),
                 // Invalid byte array
-                arrayOf("""{pubkey=x"03D4C71C2B63F6CE7F4C29D91F651FE9AA3E936CCAD8FA73633A4315CB2CDCACEB";name="provider"}""")
+                arrayOf("""{pubkey=x"03D4C71C2B63F6CE7F4C29D91F651FE9AA3E936CCAD8FA73633A4315CB2CDCACEB";name="provider"}"""),
+                arrayOf("[[][]]"),
+                arrayOf("[nullnull]"),
+                arrayOf("""["a":null"b":null]""")
         )
     }
 }
