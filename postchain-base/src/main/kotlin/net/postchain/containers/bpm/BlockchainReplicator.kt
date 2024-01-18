@@ -123,7 +123,7 @@ class BlockchainReplicator(
             logger.info { "Source chain has no new blocks" }
             false
         } else {
-            logger.info { "Block replication started" }
+            logger.info { "Block replication started, $newBlocks blocks will be imported" }
             newBlocks.forEach { height ->
                 val block = srcContainer.exportBlock(chainId, height)
                 logger.debug { "Block at height $height exported from source container/chain" }
