@@ -46,6 +46,13 @@ internal class GtvObjectMapperTest {
     }
 
     @Test
+    fun fromGtvIntIsNotAccepted() {
+        assertThrows<IllegalArgumentException> {
+            GtvObjectMapper.fromGtv(gtv(mapOf("key" to gtv(17L))), IntField::class)
+        }
+    }
+
+    @Test
     fun nullablePropertyIsNull() {
         data class SimpleNullable(@Name("missing") @Nullable val foo: Long?)
         assertThat(GtvObjectMapper.fromGtv(gtv(mapOf()), SimpleNullable::class)).isEqualTo(SimpleNullable(null))
@@ -375,5 +382,13 @@ internal class GtvObjectMapperTest {
     fun javaClass() {
         val dummy = gtv(mapOf("value" to gtv("FOO")))
         assertThat(GtvObjectMapper.fromGtv(dummy, AJavaClass::class)).isEqualTo(AJavaClass("FOO"))
+    }
+
+    @Test
+    fun unsupportedType() {
+        val e = assertThrows<IllegalArgumentException> {
+            GtvObjectMapper.fromGtv(gtv(mapOf("foo" to gtv(17L))), UnsupportedConstructorParamType::class)
+        }
+        assertThat(e.message).isEqualTo("Gtv must be a dictionary, but is: INTEGER with values 17; context: foo")
     }
 }
