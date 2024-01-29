@@ -81,11 +81,11 @@ object GtvObjectMapper {
     @Suppress("UNCHECKED_CAST")
     fun <T : Any> fromArray(gtv: Gtv, classType: Class<T>, transientMap: Map<String, Any> = mapOf()): List<T> {
         if (gtv !is GtvArray) throw IllegalArgumentException("Gtv must be array type")
-        return gtv.array.map {
+        return gtv.array.mapIndexed { i, it ->
             when {
                 it is GtvDictionary -> fromGtv(it, classType, transientMap)
                 classType.typeParameters.isNotEmpty() -> throw IllegalArgumentException("Generics are not allowed")
-                else -> classToValue(classType, it, transientMap)
+                else -> classToValue(classType, it, transientMap, "Array element [$i]")
             }
         } as List<T>
     }
@@ -185,6 +185,7 @@ private fun classToGtv(obj: Any, other: (Any) -> Gtv = { GtvObjectMapper.toGtvAr
     return when {
         obj is ToGtv -> obj.toGtv()
         obj::class.java.isString() -> gtv(obj as String)
+        obj::class.java.isInteger() -> gtv((obj as Int).toLong())
         obj::class.java.isLong() -> gtv(obj as Long)
         obj::class.java.isEnum -> gtv(obj.toString())
         obj::class.java.isBoolean() -> gtv(obj as Boolean)
@@ -235,7 +236,7 @@ private fun annotationToValue(gtv: Gtv, param: Parameter, transient: Map<String,
     val name = param.getAnnotation(Name::class.java)?.name!!
     try {
         val gtvField = gtv[name]
-        if (gtvField != null && !gtvField.isNull()) return parameterToValue(param, gtvField, transient)
+        if (gtvField != null && !gtvField.isNull()) return parameterToValue(param, gtvField, transient, name)
         if (param.isAnnotationPresent(DefaultValue::class.java)) {
             val default = param.getAnnotation(DefaultValue::class.java)
             if (param.type.isPrimitiveType()) {
@@ -248,7 +249,7 @@ private fun annotationToValue(gtv: Gtv, param: Parameter, transient: Map<String,
                     else -> default.defaultByteArray
                 }
             }
-            throw IllegalArgumentException("Default value not accepted for type: ${param.type}, must be Long, String or Bytearray")
+            throw IllegalArgumentException("Default value not accepted for type: ${param.type}, must be Long, String or Bytearray (field $name)")
         }
         if (param.isAnnotationPresent(Nullable::class.java)) {
             return null
@@ -259,39 +260,40 @@ private fun annotationToValue(gtv: Gtv, param: Parameter, transient: Map<String,
     }
 }
 
-private fun parameterToValue(param: Parameter, gtv: Gtv?, transient: Map<String, Any>): Any? {
+private fun parameterToValue(param: Parameter, gtv: Gtv?, transient: Map<String, Any>, context: String): Any? {
     if (gtv == null) return null
     if (param.parameterizedType is ParameterizedType) { // Collection types
         val parameterizedType = param.parameterizedType as ParameterizedType
         if (gtv is GtvDictionary) {
             val keyType = parameterizedType.actualTypeArguments[0].typeName
-            if (keyType != String::class.java.name) throw IllegalArgumentException("Map key type must be String, but was $keyType")
+            if (keyType != String::class.java.name) throw IllegalArgumentException("Map key type must be String, but was $keyType; context: $context")
             return gtv.dict.map { (t, u) ->
-                t to classToValue(Class.forName(parameterizedType.actualTypeArguments[1].typeName), u, transient)
+                t to classToValue(Class.forName(parameterizedType.actualTypeArguments[1].typeName), u, transient, t)
             }.toMap()
         }
-        if (gtv !is GtvArray) throw IllegalArgumentException("Gtv must be array or Dict, but is ${gtv.type} with values $gtv")
+        if (gtv !is GtvArray) throw IllegalArgumentException("Gtv must be array or Dict, but is ${gtv.type} with values $gtv; context: $context")
         val listTypeArgument = parameterizedType.actualTypeArguments[0]
-        return parameterizedTypeArgumentToValue(listTypeArgument, gtv, transient).let { if (param.type.isSet()) (it as List<*>).toSet() else it }
+        return parameterizedTypeArgumentToValue(listTypeArgument, gtv, transient, context).let { if (param.type.isSet()) (it as List<*>).toSet() else it }
     }
-    return classToValue(param.type, gtv, transient)
+    return classToValue(param.type, gtv, transient, context)
 }
 
-private fun parameterizedTypeArgumentToValue(type: Type, gtv: Gtv?, transient: Map<String, Any>): Any? {
+private fun parameterizedTypeArgumentToValue(type: Type, gtv: Gtv?, transient: Map<String, Any>, context: String): Any? {
     if (gtv == null) return null
     val gtvArray = gtv.asArray()
     if (type is WildcardType) { // List types
-        return gtvArray.map { parameterizedTypeArgumentToValue((type.upperBounds[0] as ParameterizedType).actualTypeArguments[0], it, transient) }
+        return gtvArray.map { parameterizedTypeArgumentToValue((type.upperBounds[0] as ParameterizedType).actualTypeArguments[0], it, transient, context) }
     }
-    if (type.typeName == "byte[]") return gtvArray.map { classToValue(ByteArray::class.java, it, transient) }
-    return gtvArray.map { classToValue(Class.forName(type.typeName), it, transient) }
+    if (type.typeName == "byte[]") return gtvArray.map { classToValue(ByteArray::class.java, it, transient, context) }
+    return gtvArray.mapIndexed { i, it -> classToValue(Class.forName(type.typeName), it, transient, "$context[$i]") }
 }
 
-private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, Any>): Any? {
+private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, Any>, context: String): Any? {
     if (gtv == null) return null
     return when {
         classType.isGtv() -> gtv
-        classType.isEnum -> getEnumValue(classType.name, gtv.asString())
+        classType.isEnum -> getEnumValue(classType.name, gtv.asString(), context)
+        classType.isInteger() -> throw IllegalArgumentException("Int is too small to represent GTV integer, please use Long; context: $context")
         classType.isLong() -> gtv.asInteger()
         classType.isString() -> gtv.asString()
         classType.isBoolean() -> gtv.asBoolean()
@@ -308,8 +310,8 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, 
             if (companionObject is FromGtv<*>) {
                 companionObject.fromGtv(gtv)
             } else {
-                if (gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be a dictionary, but is: ${gtv.type} with values $gtv")
-                if (classType.constructors.isEmpty()) throw IllegalArgumentException("Type $classType must have primary constructor")
+                if (gtv !is GtvDictionary) throw IllegalArgumentException("Gtv must be a dictionary, but is: ${gtv.type} with values $gtv; context: $context")
+                if (classType.constructors.isEmpty()) throw IllegalArgumentException("Type $classType must have primary constructor; context: $context")
                 val n = classType.constructors[0].parameters.map {
                     annotatedParameterToValue(it, gtv, transient)
                 }
@@ -319,10 +321,10 @@ private fun classToValue(classType: Class<*>, gtv: Gtv?, transient: Map<String, 
     }
 }
 
-fun getEnumValue(enumClassName: String, enumValue: String): Any {
+fun getEnumValue(enumClassName: String, enumValue: String, context: String): Any {
     @Suppress("UNCHECKED_CAST") val enum = Class.forName(enumClassName).enumConstants as Array<Enum<*>>
     return enum.firstOrNull { it.name == enumValue }
-            ?: throw IllegalArgumentException("invalid value '$enumValue' for enum $enumClassName")
+            ?: throw IllegalArgumentException("invalid value '$enumValue' for enum $enumClassName; context: $context")
 }
 
 private fun Class<*>.isPrimitiveType(): Boolean {
@@ -331,6 +333,10 @@ private fun Class<*>.isPrimitiveType(): Boolean {
 
 private fun Class<*>.isLong(): Boolean {
     return this == Long::class.java || this == java.lang.Long::class.java
+}
+
+private fun Class<*>.isInteger(): Boolean {
+    return this == Int::class.java || this == java.lang.Integer::class.java
 }
 
 private fun Class<*>.isString(): Boolean {
