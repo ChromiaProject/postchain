@@ -2,7 +2,6 @@ package net.postchain.containers.infra
 
 import mu.KLogging
 import net.postchain.PostchainContext
-import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
@@ -50,53 +49,24 @@ class DefaultSubSyncInfra(
             super.buildXCommunicationManager(blockchainConfigProvider, blockchainConfig, relevantPeerCommConfig, blockchainRid)
     }
 
-    override fun createRunningBlockchainProcess(
-            workerContext: WorkerContext,
-            historicBlockchainContext: HistoricBlockchainContext?,
-            blockchainConfigProvider: BlockchainConfigurationProvider,
+    override fun canMovingBlockchainBeForceReadOnly(
             blockchainConfig: BlockchainConfiguration,
             blockchainState: BlockchainState,
-            iAmASigner: Boolean
-    ): BlockchainProcess {
-        val (continueMigration, info) = shouldContinueMigrationWithinNodeFromCurrentContainer(blockchainConfigProvider, blockchainConfig)
-        return if (continueMigration) {
-            ForceReadOnlyBlockchainProcess(workerContext, blockchainState, info?.finalHeight)
-        } else {
-            super.createRunningBlockchainProcess(
-                    workerContext, historicBlockchainContext, blockchainConfigProvider, blockchainConfig, blockchainState, iAmASigner)
-        }
-    }
-
-    override fun createPausedBlockchainProcess(
-            workerContext: WorkerContext,
-            blockchainConfigProvider: BlockchainConfigurationProvider,
-            blockchainConfig: BlockchainConfiguration,
-            blockchainState: BlockchainState
-    ): BlockchainProcess {
-        val (continueMigration, info) = shouldContinueMigrationWithinNodeFromCurrentContainer(blockchainConfigProvider, blockchainConfig)
-        return if (continueMigration) {
-            ForceReadOnlyBlockchainProcess(workerContext, blockchainState, info?.finalHeight)
-        } else {
-            super.createPausedBlockchainProcess(workerContext, blockchainConfigProvider, blockchainConfig, blockchainState)
-        }
-    }
-
-    private fun shouldContinueMigrationWithinNodeFromCurrentContainer(
-            blockchainConfigProvider: BlockchainConfigurationProvider, blockchainConfig: BlockchainConfiguration
-    ): Pair<Boolean, MigratingBlockchainNodeInfo?> {
-        val info = (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
-                ?.getMigratingBlockchainNodeInfo(blockchainConfig.blockchainRid)
-                ?: return false to null
-
-        val res = if (info.isSourceNode && info.isDestinationNode) {
-            if (containerNodeConfig.directoryContainer == info.sourceContainer) { // src container
-                info.finalHeight != -1L
+            migratingInfo: MigratingBlockchainNodeInfo?
+    ): Boolean {
+        if (migratingInfo == null) return false // bc is not migrating
+        if (blockchainState == BlockchainState.UNARCHIVING) return false // bc is migrating but is not moving
+        return if (migratingInfo.isSourceNode && migratingInfo.isDestinationNode) { // migration within a node
+            if (containerNodeConfig.directoryContainer == migratingInfo.sourceContainer) { // src container
+                migratingInfo.finalHeight != -1L
             } else { // dst container
-                shouldContinueMigration(info.finalHeight, blockchainConfig.chainID)
+                shouldContinueMigration(blockchainConfig.chainID, migratingInfo.finalHeight)
             }
-        } else false
-
-        return res to info
+        } else if (migratingInfo.isSourceNode) {
+            migratingInfo.finalHeight != -1L
+        } else {
+            false
+        }
     }
 
     override fun createUnarchivingBlockchainProcess(
@@ -119,7 +89,7 @@ class DefaultSubSyncInfra(
                     if (containerNodeConfig.directoryContainer == info.sourceContainer) // src container
                         FORCE_READONLY
                     else { // dst container
-                        if (shouldContinueMigration(info.finalHeight, blockchainConfig.chainID))
+                        if (shouldContinueMigration(blockchainConfig.chainID, info.finalHeight))
                             FORCE_READONLY else VALIDATOR_OR_REPLICA
                     }
                 }
@@ -145,12 +115,12 @@ class DefaultSubSyncInfra(
 
         val withinNode = info.isSourceNode && info.isDestinationNode
         val iAmInDestinationContainer = containerNodeConfig.directoryContainer == info.destinationContainer
-        val continueMigration = shouldContinueMigration(info.finalHeight, blockchainConfig.chainID)
+        val continueMigration = shouldContinueMigration(blockchainConfig.chainID, info.finalHeight)
 
         return withinNode && iAmInDestinationContainer && continueMigration
     }
 
-    private fun shouldContinueMigration(finalHeight: Long, chainId: Long): Boolean {
+    private fun shouldContinueMigration(chainId: Long, finalHeight: Long): Boolean {
         return finalHeight == -1L || withReadConnection(postchainContext.sharedStorage, chainId) {
             DatabaseAccess.of(it).getLastBlockHeight(it) < finalHeight
         }

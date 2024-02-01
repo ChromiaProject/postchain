@@ -29,6 +29,7 @@ import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
+import net.postchain.managed.MigratingBlockchainNodeInfo
 import net.postchain.metrics.MessageDurationTrackerMetricsFactory
 import net.postchain.network.CommunicationManager
 import net.postchain.network.peer.DefaultPeerCommunicationManager
@@ -133,8 +134,14 @@ open class EBFTSynchronizationInfrastructure(
                     3. Sync from FB until drained or timeout
                     4. Goto 2
         */
+        val migratingInfo = (blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider)
+                ?.getMigratingBlockchainNodeInfo(blockchainConfig.blockchainRid)
         return when {
             forceReadOnly -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
+
+            // Must be before RUNNING | PAUSED b/c there is no explicit MOVING blockchain state
+            canMovingBlockchainBeForceReadOnly(blockchainConfig, blockchainState, migratingInfo) -> createMovingForceReadOnlyBlockchainProcess(
+                    workerContext, blockchainState, migratingInfo)
 
             blockchainState == BlockchainState.RUNNING -> createRunningBlockchainProcess(
                     workerContext, historicBlockchainContext, blockchainConfigurationProvider, blockchainConfig, blockchainState, iAmASigner)
@@ -168,6 +175,28 @@ open class EBFTSynchronizationInfrastructure(
 
     protected open fun createPausedBlockchainProcess(workerContext: WorkerContext, blockchainConfigProvider: BlockchainConfigurationProvider, blockchainConfig: BlockchainConfiguration, blockchainState: BlockchainState): BlockchainProcess =
             ReadOnlyBlockchainProcess(workerContext, blockchainState)
+
+    protected open fun canMovingBlockchainBeForceReadOnly(
+            blockchainConfig: BlockchainConfiguration,
+            blockchainState: BlockchainState,
+            migratingInfo: MigratingBlockchainNodeInfo?
+    ): Boolean = when {
+        migratingInfo == null -> false // bc is not migrating
+        blockchainState == BlockchainState.UNARCHIVING -> false // bc is migrating but is not moving
+        migratingInfo.isSourceNode && migratingInfo.finalHeight != -1L -> true // bc is moving and finalHeight is fixed
+        else -> false
+    }
+
+    protected open fun createMovingForceReadOnlyBlockchainProcess(
+            workerContext: WorkerContext,
+            blockchainState: BlockchainState,
+            migratingInfo: MigratingBlockchainNodeInfo?
+    ): BlockchainProcess {
+        if (migratingInfo == null || blockchainState == BlockchainState.UNARCHIVING) {
+            throw ProgrammerMistake("Can't create blockchain process for moving blockchain: ${workerContext.blockchainConfiguration.blockchainRid}")
+        }
+        return ForceReadOnlyBlockchainProcess(workerContext, blockchainState, migratingInfo.finalHeight)
+    }
 
     protected open fun createUnarchivingBlockchainProcess(
             workerContext: WorkerContext,
