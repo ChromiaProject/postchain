@@ -1,4 +1,4 @@
-## TS_MOV_2: 4-node network -- move
+## TS_MOVING_2: 4-node network -- move
 
 # 1. Preconditions / setup
 

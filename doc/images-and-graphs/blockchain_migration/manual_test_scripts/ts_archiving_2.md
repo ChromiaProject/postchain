@@ -1,4 +1,4 @@
-## TS_ARC_1: 4-node network -- archive/unarchive
+## TS_ARCHIVING_1: 4-node network -- archive/unarchive
 
 1. Preconditions / setup
 
