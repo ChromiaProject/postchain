@@ -107,10 +107,12 @@ class PostchainService(private val nodeProvider: NodeProvider) {
                     fromHeight = fromHeight,
                     upToHeight = upToHeight)
 
-    fun exportBlock(chainId: Long, height: Long): Gtv = ImporterExporter.exportBlock(
+    fun exportBlocks(chainId: Long, height: Long, blockCountLimit: Int, blocksSizeLimit: Int): List<Gtv> = ImporterExporter.exportBlocks(
             postchainNode.postchainContext.sharedStorage,
             chainId,
-            height
+            height,
+            blockCountLimit,
+            blocksSizeLimit
     )
 
     fun importBlockchain(chainId: Long, blockchainRidData: ByteArray, configurationFile: Path, blocksFile: Path, incremental: Boolean): ImportResult {
@@ -134,10 +136,10 @@ class PostchainService(private val nodeProvider: NodeProvider) {
                 incremental)
     }
 
-    fun importBlock(chainId: Long, blockData: ByteArray): Long = ImporterExporter.importBlock(
+    fun importBlocks(chainId: Long, blockData: List<Gtv>): LongRange = ImporterExporter.importBlocks(
             postchainNode.postchainContext.sharedStorage,
             chainId,
-            GtvDecoder.decodeGtv(blockData),
+            blockData,
             KeyPair(PubKey(postchainNode.appConfig.pubKey), PrivKey(postchainNode.appConfig.privKey)),
             postchainNode.postchainContext.cryptoSystem
     )

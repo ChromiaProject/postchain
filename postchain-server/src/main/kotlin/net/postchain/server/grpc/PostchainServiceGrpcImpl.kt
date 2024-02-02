@@ -227,16 +227,16 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         }
     }
 
-    override fun exportBlock(
-            request: ExportBlockRequest,
-            responseObserver: StreamObserver<ExportBlockReply>
-    ) {
+    override fun exportBlocks(request: ExportBlocksRequest, responseObserver: StreamObserver<ExportBlocksReply>) {
         try {
-            val response = postchainService.exportBlock(request.chainId, request.height)
-            responseObserver.onNext(ExportBlockReply.newBuilder()
-                    .setBlockData(ByteString.copyFrom(GtvEncoder.encodeGtv(response)))
-                    .build()
-            )
+
+            val builder = ExportBlocksReply.newBuilder()
+
+            postchainService.exportBlocks(request.chainId, request.fromHeight, request.blockCountLimit, request.blocksSizeLimit)
+                    .map { ByteString.copyFrom(GtvEncoder.encodeGtv(it)) }
+                    .forEach(builder::addBlockData)
+
+            responseObserver.onNext(builder.build())
             responseObserver.onCompleted()
         } catch (e: NotFound) {
             responseObserver.onError(Status.NOT_FOUND.withDescription(e.message).asRuntimeException())
@@ -272,12 +272,15 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         }
     }
 
-    override fun importBlock(request: ImportBlockRequest, responseObserver: StreamObserver<ImportBlockReply>) {
+    override fun importBlocks(request: ImportBlocksRequest, responseObserver: StreamObserver<ImportBlocksReply>) {
         try {
-            val height = postchainService.importBlock(request.chainId, request.blockData.toByteArray())
-            responseObserver.onNext(ImportBlockReply.newBuilder()
+            val importBlocks = postchainService.importBlocks(request.chainId, request.blockDataList
+                    .map { GtvDecoder.decodeGtv(it.toByteArray()) })
+
+            responseObserver.onNext(ImportBlocksReply.newBuilder()
                     .setMessage("OK")
-                    .setHeight(height)
+                    .setFromHeight(importBlocks.first)
+                    .setUpToHeight(importBlocks.last)
                     .build())
             responseObserver.onCompleted()
         } catch (e: NotFound) {

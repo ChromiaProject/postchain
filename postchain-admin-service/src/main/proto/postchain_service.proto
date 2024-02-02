@@ -17,9 +17,9 @@ service PostchainService {
   rpc AddBlockchainReplica (AddBlockchainReplicaRequest) returns (AddBlockchainReplicaReply) {} // Add a bc replica
   rpc RemoveBlockchainReplica (RemoveBlockchainReplicaRequest) returns (RemoveBlockchainReplicaReply) {} // Remove a bc replica
   rpc ExportBlockchain (ExportBlockchainRequest) returns (ExportBlockchainReply) {} // Export blockchain to file
-  rpc ExportBlock (ExportBlockRequest) returns (ExportBlockReply) {} // Export block
+  rpc ExportBlocks (ExportBlocksRequest) returns (ExportBlocksReply) {} // Export a range of blocks
   rpc ImportBlockchain (ImportBlockchainRequest) returns (ImportBlockchainReply) {} // Import blockchain from file
-  rpc ImportBlock (ImportBlockRequest) returns (ImportBlockReply) {} // Import block
+  rpc ImportBlocks (ImportBlocksRequest) returns (ImportBlocksReply) {} // Import a range of blocks
   rpc RemoveBlockchain (RemoveBlockchainRequest) returns (RemoveBlockchainReply) {} // Delete all blockchain data
 }
 
@@ -88,13 +88,15 @@ message FindBlockchainReply {
   int64 height = 3;
 }
 
-message ExportBlockRequest {
+message ExportBlocksRequest {
   int64 chainId = 1;
-  int64 height = 2;
+  int64 fromHeight = 2;
+  int32 blockCountLimit = 3;  // Max number of blocks to export
+  int32 blocksSizeLimit = 4;  // Max number of bytes of all blocks to export
 }
 
-message ExportBlockReply {
-    bytes blockData = 1;
+message ExportBlocksReply {
+    repeated bytes blockData = 1;
 }
 
 message AddBlockchainReplicaRequest {
@@ -145,14 +147,15 @@ message ImportBlockchainReply {
   bytes blockchainRid = 4;
 }
 
-message ImportBlockRequest {
+message ImportBlocksRequest {
   int64 chainId = 1;
-  bytes blockData = 3;
+  repeated bytes blockData = 2;
 }
 
-message ImportBlockReply {
+message ImportBlocksReply {
   string message = 1;
-  int64 height = 2;
+  int64 fromHeight = 2;
+  int64 upToHeight = 3;
 }
 
 message RemoveBlockchainRequest {
