@@ -40,11 +40,12 @@ import java.sql.Connection
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
+import kotlin.math.max
 
 
 abstract class SQLDatabaseAccess : DatabaseAccess {
 
-    protected fun tableMeta(): String = "meta"
+    internal fun tableMeta(): String = "meta"
     protected fun tableContainers(): String = "containers"
     internal fun tableBlockchains(): String = "blockchains"
     protected fun tablePeerinfos(): String = "peerinfos"
@@ -135,6 +136,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     internal val mapListHandler = MapListHandler()
 
     companion object : KLogging() {
+        const val TABLE_META_KEY_VERSION = "version"
+        const val TABLE_META_KEY_LAST_CHAIN_IID = "chain_iid"
+
         const val FIELD_NAME_CHAIN_IID = "chain_iid"
 
         const val TABLE_PEERINFOS_FIELD_HOST = "host"
@@ -561,7 +565,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int, allowUpgrade: Boolean) {
-        if (expectedDbVersion !in 1..10) {
+        if (expectedDbVersion !in 1..11) {
             throw UserMistake("Unsupported DB version $expectedDbVersion")
         }
 
@@ -572,7 +576,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
          */
         if (tableExists(connection, tableMeta())) {
             // meta table already exists. Check the version
-            val sql = "SELECT value FROM ${tableMeta()} WHERE key='version'"
+            val sql = "SELECT value FROM ${tableMeta()} WHERE key='$TABLE_META_KEY_VERSION'"
             val version = queryRunner.query(connection, sql, ScalarHandler<String>()).toInt()
 
             when {
@@ -636,14 +640,19 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 version10(connection)
             }
 
+            if (version < 11 && expectedDbVersion >= 11) {
+                logger.info("Upgrading to version 11")
+                version11(connection)
+            }
+
             if (expectedDbVersion > version) {
-                queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
+                queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = '$TABLE_META_KEY_VERSION'", expectedDbVersion)
                 logger.info("Database version has been updated to version: $expectedDbVersion")
             }
         } else {
             logger.debug("Meta table does not exist. Assume database does not exist and create it (version: $expectedDbVersion).")
             queryRunner.update(connection, cmdCreateTableMeta())
-            val sql = "INSERT INTO ${tableMeta()} (key, value) values ('version', ?)"
+            val sql = "INSERT INTO ${tableMeta()} (key, value) values ('$TABLE_META_KEY_VERSION', ?)"
             queryRunner.update(connection, sql, expectedDbVersion)
 
             /**
@@ -688,6 +697,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
             if (expectedDbVersion >= 10) {
                 version10(connection)
+            }
+
+            if (expectedDbVersion >= 11) {
+                version11(connection)
             }
         }
     }
@@ -777,6 +790,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 }
     }
 
+    private fun version11(connection: Connection) {
+        val maxChainIid = queryRunner.query(connection,
+                "SELECT MAX(chain_iid) FROM ${tableBlockchains()}", nullableLongRes) ?: -1
+        queryRunner.update(connection,
+                "INSERT INTO ${tableMeta()} (key, value) values ('$TABLE_META_KEY_LAST_CHAIN_IID', ?)",
+                max(maxChainIid, 99))
+    }
+
     protected fun calcConfigurationHash(configurationData: ByteArray) = GtvToBlockchainRidFactory.calculateBlockchainRid(
             GtvDecoder.decodeGtv(configurationData), ::sha256Digest).data
 
@@ -811,8 +832,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
         if (!initialized) {
             // Inserting chainId -> blockchainRid
-            val sql = "INSERT INTO ${tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)"
             try {
+                val sql = "INSERT INTO ${tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)"
                 queryRunner.update(ctx.conn, sql, ctx.chainID, blockchainRid.data)
             } catch (e: SQLException) {
                 if (e.isUniqueViolation())
@@ -867,14 +888,21 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, nullableLongRes, blockchainRid.data)
     }
 
-    override fun getMaxChainId(ctx: EContext): Long? {
-        val sql = "SELECT MAX(chain_iid) FROM ${tableBlockchains()}"
-        return queryRunner.query(ctx.conn, sql, nullableLongRes)
+    override fun getLastSystemChainId(ctx: EContext): Long {
+        val sql = "SELECT MAX(chain_iid) FROM ${tableBlockchains()} WHERE chain_iid < 100"
+        return queryRunner.query(ctx.conn, sql, nullableLongRes) ?: -1L
     }
 
-    override fun getMaxSystemChainId(ctx: EContext): Long? {
-        val sql = "SELECT MAX(chain_iid) FROM ${tableBlockchains()} WHERE chain_iid < 100"
-        return queryRunner.query(ctx.conn, sql, nullableLongRes)
+    override fun getLastChainId(ctx: EContext): Long {
+        val sql = "SELECT value FROM ${tableMeta()} WHERE key='$TABLE_META_KEY_LAST_CHAIN_IID'"
+        return queryRunner.query(ctx.conn, sql, ScalarHandler<String>()).toLong()
+    }
+
+    override fun setLastChainId(ctx: EContext) {
+        queryRunner.update(ctx.conn,
+                "UPDATE ${tableMeta()} set value = ? WHERE key = '$TABLE_META_KEY_LAST_CHAIN_IID'",
+                ctx.chainID
+        )
     }
 
     override fun getBlock(ctx: EContext, blockRID: ByteArray): DatabaseAccess.BlockInfoExt? {
