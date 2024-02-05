@@ -2,7 +2,6 @@
 
 package net.postchain.managed
 
-import com.google.common.primitives.Longs.max
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
@@ -29,6 +28,7 @@ import net.postchain.managed.config.ManagedDataSourceAware
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.withLock
+import kotlin.math.max
 import kotlin.system.measureTimeMillis
 
 /**
