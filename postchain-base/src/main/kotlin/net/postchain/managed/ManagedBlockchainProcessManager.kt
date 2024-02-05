@@ -2,6 +2,7 @@
 
 package net.postchain.managed
 
+import com.google.common.primitives.Longs.max
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
@@ -411,15 +412,25 @@ open class ManagedBlockchainProcessManager(
                 val chainId = db.getChainId(ctx0, blockchainInfo.rid)
                 retrieveTrace("launch chainIid: $chainId, BC RID: ${blockchainInfo.rid.toShortHex()} ")
                 val localBlockchainInfo = if (chainId == null) {
-                    val calculatedChainId = if (blockchainInfo.system) {
-                        (db.getMaxSystemChainId(ctx0) ?: 0) + 1
+                    val newChainId = if (blockchainInfo.system) {
+                        val newChainId = db.getLastSystemChainId(ctx0) + 1
+                        if (newChainId == 100L) {
+                            logger.error { "Can't create a system chain ${blockchainInfo.rid}. Max system chain IID exceeded." }
+                            return@forEach
+                        }
+                        withReadWriteConnection(blockBuilderStorage, newChainId) { newCtx ->
+                            db.initializeBlockchain(newCtx, blockchainInfo.rid)
+                        }
+                        newChainId
                     } else {
-                        maxOf(db.getMaxChainId(ctx0) ?: 0, 99) + 1
+                        val newChainId = max(db.getLastChainId(ctx0), 99) + 1
+                        withReadWriteConnection(blockBuilderStorage, newChainId) { newCtx ->
+                            db.initializeBlockchain(newCtx, blockchainInfo.rid)
+                            db.setLastChainId(newCtx)
+                        }
+                        newChainId
                     }
-                    withReadWriteConnection(blockBuilderStorage, calculatedChainId) { newCtx ->
-                        db.initializeBlockchain(newCtx, blockchainInfo.rid)
-                    }
-                    LocalBlockchainInfo(calculatedChainId, blockchainInfo.system, blockchainInfo.state)
+                    LocalBlockchainInfo(newChainId, blockchainInfo.system, blockchainInfo.state)
                 } else {
                     LocalBlockchainInfo(chainId, blockchainInfo.system, blockchainInfo.state)
                 }
