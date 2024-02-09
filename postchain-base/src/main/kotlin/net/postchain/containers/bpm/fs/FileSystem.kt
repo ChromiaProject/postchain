@@ -3,13 +3,11 @@ package net.postchain.containers.bpm.fs
 import mu.KLogging
 import net.postchain.containers.bpm.ContainerName
 import net.postchain.containers.bpm.ContainerResourceLimits
+import net.postchain.containers.bpm.command.DefaultCommandExecutor
 import net.postchain.containers.bpm.fs.FileSystem.Type.EXT4
 import net.postchain.containers.bpm.fs.FileSystem.Type.ZFS
 import net.postchain.containers.infra.ContainerNodeConfig
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.nio.file.Path
-import java.util.concurrent.TimeUnit
 
 /**
  * File system structure:
@@ -34,9 +32,9 @@ interface FileSystem {
 
         fun create(containerConfig: ContainerNodeConfig): FileSystem {
             return when (containerConfig.containerFilesystem) {
-                ZFS.name -> ZfsFileSystem(containerConfig)
-                EXT4.name -> Ext4FileSystem(containerConfig)
-                else -> LocalFileSystem(containerConfig)
+                ZFS.name -> ZfsFileSystem(containerConfig, DefaultCommandExecutor)
+                EXT4.name -> Ext4FileSystem(containerConfig, DefaultCommandExecutor)
+                else -> LocalFileSystem(containerConfig, DefaultCommandExecutor)
             }
         }
     }
@@ -65,40 +63,4 @@ interface FileSystem {
     fun hostPgdataOf(containerName: ContainerName): Path {
         return hostRootOf(containerName).resolve(PGDATA_DIR)
     }
-
-    fun runCommand(cmd: Array<String>): String? {
-        logger.debug("Executing command: ${cmd.contentToString()}")
-        return try {
-            val process = Runtime.getRuntime().exec(cmd)
-            process.waitFor(10, TimeUnit.SECONDS)
-            return if (process.exitValue() != 0) {
-                String(process.errorStream.readAllBytes())
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            logger.error("Unable to run command: ${cmd.contentToString()} Error: $e")
-            e.toString()
-        }
-    }
-
-    fun runCommandWithOutput(cmd: Array<String>): CommandResult {
-        logger.debug("Executing command: ${cmd.contentToString()}")
-        return try {
-            val process = Runtime.getRuntime().exec(cmd)
-            process.waitFor(10, TimeUnit.SECONDS)
-            val inputStream = if (process.exitValue() != 0) {
-                process.errorStream
-            } else {
-                process.inputStream
-            }
-            val reader = BufferedReader(InputStreamReader(inputStream))
-            CommandResult(process.exitValue(), reader.readLines())
-        } catch (e: Exception) {
-            logger.error("Unable to run command: ${cmd.contentToString()} Error: $e")
-            CommandResult(-1, listOf(e.toString()))
-        }
-    }
-
-    data class CommandResult(val exitValue: Int, val output: List<String>)
 }

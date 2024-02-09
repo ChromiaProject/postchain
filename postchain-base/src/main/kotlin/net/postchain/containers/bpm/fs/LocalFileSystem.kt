@@ -3,11 +3,12 @@ package net.postchain.containers.bpm.fs
 import mu.KLogging
 import net.postchain.containers.bpm.ContainerName
 import net.postchain.containers.bpm.ContainerResourceLimits
+import net.postchain.containers.bpm.command.CommandExecutor
 import net.postchain.containers.infra.ContainerNodeConfig
 import java.nio.file.Path
 import java.nio.file.Paths
 
-open class LocalFileSystem(protected val containerConfig: ContainerNodeConfig) : FileSystem {
+open class LocalFileSystem(protected val containerConfig: ContainerNodeConfig, protected val commandExecutor: CommandExecutor) : FileSystem {
 
     companion object : KLogging()
 
@@ -30,7 +31,7 @@ open class LocalFileSystem(protected val containerConfig: ContainerNodeConfig) :
             }
             logger.info("Container dir has been created: $root")
             containerConfig.subnodeUser?.let { subnodeUser ->
-                runCommand(arrayOf("chown", subnodeUser, root.toString()))?.let {
+                commandExecutor.runCommand(arrayOf("chown", subnodeUser, root.toString()))?.let {
                     logger.warn("Unable change owner of $root to $subnodeUser: $it")
                     return null
                 }
@@ -44,7 +45,7 @@ open class LocalFileSystem(protected val containerConfig: ContainerNodeConfig) :
         val hostPgdata = hostPgdataOf(containerName)
         hostPgdata.toFile().mkdirs()
         containerConfig.subnodeUser?.let { subnodeUser ->
-            runCommand(arrayOf("chown", subnodeUser, hostPgdata.toString()))?.let {
+            commandExecutor.runCommand(arrayOf("chown", subnodeUser, hostPgdata.toString()))?.let {
                 logger.warn("Unable change owner of $hostPgdata to $subnodeUser: $it")
                 return false
             }
