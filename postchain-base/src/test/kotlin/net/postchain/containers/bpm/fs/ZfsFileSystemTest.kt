@@ -2,6 +2,8 @@ package net.postchain.containers.bpm.fs
 
 import net.postchain.containers.bpm.ContainerName
 import net.postchain.containers.bpm.ContainerResourceLimits
+import net.postchain.containers.bpm.command.CommandExecutor
+import net.postchain.containers.bpm.command.CommandResult
 import net.postchain.containers.infra.ContainerNodeConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -10,7 +12,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.anyArray
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.spy
 import org.mockito.kotlin.whenever
 
 class ZfsFileSystemTest {
@@ -28,12 +29,12 @@ class ZfsFileSystemTest {
     private val resourceLimits: ContainerResourceLimits = mock {
         on { hasStorage() } doReturn true
     }
-    private lateinit var sut: ZfsFileSystem
+    private val commandExecutor: CommandExecutor = mock()
+    private val sut = ZfsFileSystem(containerConfig, commandExecutor)
 
     @BeforeEach
     fun beforeTest() {
-        sut = spy(ZfsFileSystem(containerConfig))
-        doReturn(FileSystem.CommandResult(0, realResult)).whenever(sut).runCommandWithOutput(anyArray())
+        doReturn(CommandResult(0, realResult, listOf())).whenever(commandExecutor).runCommandWithOutput(anyArray())
     }
 
     @Test
@@ -50,7 +51,7 @@ class ZfsFileSystemTest {
     fun `getCurrentLimitsInfo with missing project should return null`() {
         // setup
         whenever(containerName.name).thenReturn("foo")
-        doReturn(FileSystem.CommandResult(1, listOf("cannot open '/pool1/foo': No such file or directory"))).whenever(sut).runCommandWithOutput(anyArray())
+        doReturn(CommandResult(1, listOf(), listOf("cannot open '/pool1/foo': No such file or directory"))).whenever(commandExecutor).runCommandWithOutput(anyArray())
         // execute & verify
         assertNull(sut.getCurrentLimitsInfo(containerName, resourceLimits))
     }
