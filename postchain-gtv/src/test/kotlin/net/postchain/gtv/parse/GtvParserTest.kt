@@ -2,6 +2,7 @@ package net.postchain.gtv.parse
 
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvString
@@ -68,7 +69,10 @@ internal class GtvParserTest {
         @JvmStatic
         fun correctFormat() = arrayOf(
                 arrayOf("\"räksmörgås\"", GtvString("räksmörgås")),
-                arrayOf("""["räksmörgås": 17]""", gtv(mapOf("räksmörgås" to gtv(17))))
+                arrayOf("'räksmörgås'", GtvString("räksmörgås")),
+                arrayOf("""["räksmörgås": 17]""", gtv(mapOf("räksmörgås" to gtv(17)))),
+                arrayOf("['räksmörgås': 17]", gtv(mapOf("räksmörgås" to gtv(17)))),
+                arrayOf("x'AB'", GtvByteArray("AB".hexStringToByteArray()))
         )
 
         @JvmStatic
@@ -81,7 +85,10 @@ internal class GtvParserTest {
                 arrayOf("""{pubkey=x"03D4C71C2B63F6CE7F4C29D91F651FE9AA3E936CCAD8FA73633A4315CB2CDCACEB";name="provider"}"""),
                 arrayOf("[[][]]"),
                 arrayOf("[nullnull]"),
-                arrayOf("""["a":null"b":null]""")
+                arrayOf("""["a":null"b":null]"""),
+                // Mixing quote types
+                arrayOf("x\"AB'"),
+                arrayOf("\"räksmörgås'")
         )
     }
 }

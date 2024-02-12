@@ -59,6 +59,12 @@ fun lexer(input: String): Sequence<Token> = sequence {
         if (consume() != char) throw IllegalArgumentException("Unexpected input: ${input.substring(index, input.length)}")
     }
 
+    fun expectOneOf(vararg chars: Char): Char {
+        val actual = consume()
+        if (!chars.contains(actual)) throw IllegalArgumentException("Unexpected input: ${input.substring(index, input.length)}")
+        return actual
+    }
+
     while (index < input.length) {
         val c = consume()
         when {
@@ -96,11 +102,11 @@ fun lexer(input: String): Sequence<Token> = sequence {
             }
 
             c == 'x' -> {
-                expect('"')
+                val quote = expectOneOf('"', '\'')
                 val sb = StringBuilder()
                 while (true) {
                     val c2 = consume()
-                    if (c2 == '"') {
+                    if (c2 == quote) {
                         break
                     } else {
                         sb.append(c2)
@@ -109,11 +115,11 @@ fun lexer(input: String): Sequence<Token> = sequence {
                 yield(Token.Companion.ByteArray(sb.toString().hexStringToByteArray()))
             }
 
-            c == '"' -> {
+            c == '"' || c == '\'' -> {
                 val sb = StringBuilder()
                 while (true) {
                     when (val c2 = consume()) {
-                        '"' -> {
+                        c -> {
                             break
                         }
 
