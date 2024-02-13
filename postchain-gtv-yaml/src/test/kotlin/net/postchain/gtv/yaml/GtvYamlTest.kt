@@ -16,7 +16,6 @@ import java.math.BigInteger
 
 internal class GtvYamlTest {
 
-
     @Test
     fun empty() {
         assertThat(GtvYaml().load("---")).isEqualTo(GtvNull)
@@ -68,6 +67,8 @@ internal class GtvYamlTest {
         class AllPrimitives {
             var i: Int? = null
             var l: Long? = null
+            var bi: BigInteger? = null
+            var nobi: String? = null
             var bo: Boolean? = null
             var ba: ByteArray? = null
             var wba: WrappedByteArray? = null
@@ -83,6 +84,8 @@ internal class GtvYamlTest {
         val actual = GtvYaml().load<AllPrimitives>("""
             i: 1
             l: 2
+            bi: 1234L
+            nobi: "1234L"
             bo: true
             ba: x"12"
             wba: x"13"
@@ -101,6 +104,8 @@ internal class GtvYamlTest {
         """.trimIndent())
         assertThat(actual.i).isEqualTo(1)
         assertThat(actual.l).isEqualTo(2L)
+        assertThat(actual.bi).isEqualTo(BigInteger.valueOf(1234L))
+        assertThat(actual.nobi).isEqualTo("1234L")
         assertThat(actual.bo).isEqualTo(true)
         assertThat(actual.ba!!).isContentEqualTo("12".hexStringToByteArray())
         assertThat(actual.wba).isEqualTo("13".hexStringToWrappedByteArray())
@@ -118,6 +123,7 @@ internal class GtvYamlTest {
         val expectedYaml = """
             ---
             ba: x"12"
+            bi: 1234L
             bo: 1
             gtv: 12
             i: 1
@@ -146,6 +152,7 @@ internal class GtvYamlTest {
                 arrayOf("1", gtv(1)),
                 arrayOf("1000000000000000000", gtv(1000000000000000000)),
                 arrayOf("10000000000000000000", gtv(BigInteger("10000000000000000000"))),
+                arrayOf("\"1234L\"", gtv("1234L")),
                 arrayOf("true", gtv(true)),
                 arrayOf("test", gtv("test")),
                 arrayOf("1.2", gtv("1.2")),
