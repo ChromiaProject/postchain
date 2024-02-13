@@ -8,6 +8,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.gtv.Gtv
 import java.io.File
+import java.math.BigInteger
 
 class GtvYaml(init: ObjectMapper.() -> Unit = {}) {
 
@@ -18,9 +19,11 @@ class GtvYaml(init: ObjectMapper.() -> Unit = {}) {
             .registerModule(SimpleModule().apply {
                 addSerializer(Gtv::class.java, GtvSerializer())
                 addSerializer(ByteArray::class.java, ByteArraySerializer())
+                addSerializer(BigInteger::class.java, BigIntegerSerializer())
                 addDeserializer(Gtv::class.java, GtvDeserializer())
                 addDeserializer(ByteArray::class.java, ByteArrayDeserializer())
                 addDeserializer(WrappedByteArray::class.java, WrappedByteArrayDeserializer())
+                addDeserializer(BigInteger::class.java, BigIntegerDeserializer())
             })
             .also(init)
 
