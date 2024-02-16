@@ -4,6 +4,9 @@ package net.postchain.base
 
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Timer
+import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.context.Context
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.configuration.FaultyConfiguration
@@ -45,6 +48,8 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.logging.BLOCK_RID_TAG
 import net.postchain.metrics.BaseBlockchainEngineMetrics
 import net.postchain.metrics.DelayTimer
+import net.postchain.traces.OpenTelemetryFactory
+import java.util.*
 import java.util.concurrent.TimeUnit
 import java.util.stream.Collectors
 import kotlin.math.max
@@ -255,10 +260,27 @@ open class BaseBlockchainEngine(
     }
 
     override fun buildBlock(): Pair<ManagedBlockBuilder, Exception?> {
+
+        val tracer = GlobalOpenTelemetry.getTracer("buildBlock-${UUID.randomUUID()}")
+        OpenTelemetryFactory.tracer = tracer
+        val span: Span = tracer.spanBuilder("buildBlock").setNoParent().startSpan()
+        span.makeCurrent()
+        span.setAttribute("traceId", span.spanContext.traceId)
+        span.setAttribute("spanId", span.spanContext.spanId)
+        span.setAttribute("currentSpanId", Span.current().spanContext.spanId)
+        span.setAttribute("currentTraceId", Span.current().spanContext.traceId)
+
         buildLog("Begin")
         val grossStart = nanoTime()
 
+        val makeBlockBuilderSpan = tracer.spanBuilder("makeBlockBuilder").startSpan()
+        makeBlockBuilderSpan.setAttribute("traceId", makeBlockBuilderSpan.spanContext.traceId)
+        makeBlockBuilderSpan.setAttribute("spanId", makeBlockBuilderSpan.spanContext.spanId)
+        makeBlockBuilderSpan.setAttribute("currentSpanId", Span.current().spanContext.spanId)
+        makeBlockBuilderSpan.setAttribute("currentTraceId", Span.current().spanContext.traceId)
         val blockBuilder = makeBlockBuilder(false)
+        makeBlockBuilderSpan.end()
+
         var exception: Exception? = null
 
         try {
@@ -290,8 +312,11 @@ open class BaseBlockchainEngine(
             }
 
             exception = e
+            span.recordException(e)
         }
         buildLog("End")
+
+        span.end()
 
         return blockBuilder to exception
     }
@@ -307,6 +332,15 @@ open class BaseBlockchainEngine(
     }
 
     private fun buildBlockInternal(blockBuilder: BaseManagedBlockBuilder, grossStart: Long) {
+
+        val tracer = OpenTelemetryFactory.tracer!!
+        val span = tracer.spanBuilder("buildBlockInternal").startSpan()
+        span.makeCurrent()
+        span.setAttribute("traceId", span.spanContext.traceId)
+        span.setAttribute("spanId", span.spanContext.spanId)
+        span.setAttribute("currentSpanId", Span.current().spanContext.spanId)
+        span.setAttribute("currentTraceId", Span.current().spanContext.traceId)
+
         val blockStart = nanoTime()
 
         blockBuilder.begin(null)
@@ -322,11 +356,21 @@ open class BaseBlockchainEngine(
                 logger.debug { "buildBlock() - Block building forcefully stopped" }
                 throw ForceStopBlockBuildingException()
             }
+
+            val takeTxSpan = tracer.spanBuilder("transactionQueue.takeTransaction").startSpan()
+            takeTxSpan.setAttribute("traceId", takeTxSpan.spanContext.traceId)
+            takeTxSpan.setAttribute("spanId", takeTxSpan.spanContext.spanId)
+            takeTxSpan.setAttribute("currentSpanId", Span.current().spanContext.spanId)
+            takeTxSpan.setAttribute("currentTraceId", Span.current().spanContext.traceId)
             logger.trace { "Checking transaction queue" }
             val tx = transactionQueue.takeTransaction(max(20L, mustWaitMinimumBuildBlockTime()).milliseconds)
             if (tx != null) {
                 delayTimer.stop()
                 logger.trace { "Appending transaction ${tx.getRID().toHex()}" }
+
+                takeTxSpan.setAttribute("txID", tx.getRID().toHex())
+                takeTxSpan.end()
+
                 val transactionSample = Timer.start(Metrics.globalRegistry)
                 if (tx.isSpecial()) {
                     rejectedTxs++
@@ -336,8 +380,17 @@ open class BaseBlockchainEngine(
                     )
                     continue
                 }
+
+                val maybeAppendTxSpan = tracer.spanBuilder("blockBuilder.maybeAppendTransaction").startSpan()
+                maybeAppendTxSpan.setAttribute("traceId", maybeAppendTxSpan.spanContext.traceId)
+                maybeAppendTxSpan.setAttribute("spanId", maybeAppendTxSpan.spanContext.spanId)
+                maybeAppendTxSpan.setAttribute("currentSpanId", Span.current().spanContext.spanId)
+                maybeAppendTxSpan.setAttribute("currentTraceId", Span.current().spanContext.traceId)
+                maybeAppendTxSpan.setAttribute("txID", tx.getRID().toHex())
+
                 val txException = blockBuilder.maybeAppendTransaction(tx)
                 if (txException != null) {
+                    maybeAppendTxSpan.recordException(txException)
                     rejectedTxs++
                     transactionSample.stop(metrics.rejectedTransactions)
                     transactionQueue.rejectTransaction(tx, txException)
@@ -352,6 +405,7 @@ open class BaseBlockchainEngine(
                     // tx is fine, consider stopping
                     if (strategy.shouldStopBuildingBlock(blockBuilder.blockBuilder)) {
                         logger.debug { "buildBlock() - Block limit is reached" }
+                        maybeAppendTxSpan.addEvent("buildBlock() - Block limit is reached")
                         val mustWaitTime = mustWaitMinimumBuildBlockTime()
                         if (mustWaitTime > 0) {
                             Thread.sleep(mustWaitTime)
@@ -360,6 +414,7 @@ open class BaseBlockchainEngine(
                         break
                     }
                 }
+                maybeAppendTxSpan.end()
             } else {
                 if (shouldStopWaitingForTxs(acceptedTxs)) { // tx == null
                     delayTimer.stop()
@@ -368,11 +423,19 @@ open class BaseBlockchainEngine(
                     delayTimer.start()
                 }
             }
+            takeTxSpan.end()
         }
 
+        val finalizeBlockSpan = tracer.spanBuilder("blockBuilder.finalizeBlock").startSpan()
+        finalizeBlockSpan.setAttribute("traceId", finalizeBlockSpan.spanContext.traceId)
+        finalizeBlockSpan.setAttribute("spanId", finalizeBlockSpan.spanContext.spanId)
+        finalizeBlockSpan.setAttribute("currentSpanId", Span.current().spanContext.spanId)
+        finalizeBlockSpan.setAttribute("currentTraceId", Span.current().spanContext.traceId)
         val netEnd = nanoTime()
         val blockHeader = blockBuilder.finalizeBlock()
         val grossEnd = nanoTime()
+        finalizeBlockSpan.setAttribute("blockRID", blockHeader.blockRID.toHex())
+        finalizeBlockSpan.end()
 
         withLoggingContext(BLOCK_RID_TAG to blockHeader.blockRID.toHex()) {
             val prettyBlockHeader = prettyBlockHeader(
@@ -394,6 +457,8 @@ open class BaseBlockchainEngine(
 
         val blockEndTime = nanoTime() - blockStart - delayTimer.totalDelayTime
         metrics.blocks.record(blockEndTime, TimeUnit.NANOSECONDS)
+
+        span.end()
     }
 
     private fun shouldStopWaitingForTxs(acceptedTxs: Int) = !strategy.preemptiveBlockBuilding() ||
