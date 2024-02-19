@@ -62,7 +62,7 @@ inline fun <reified T : Any> Gtv.toList(transientMap: Map<String, Any> = mapOf()
  * ```
  *
  * The target class must have a public primary constructor with one or several of the following annotations:
- * [Name], [Nullable], [DefaultValue], [Nested], [RawGtv], [Transient]
+ * [Name], [Nullable], [DefaultValue], [DefaultEmpty], [Nested], [RawGtv], [Transient]
  */
 object GtvObjectMapper {
 
@@ -257,6 +257,11 @@ private fun annotationToValue(gtv: Gtv, param: Parameter, transient: Map<String,
                 param.type.isBigDecimal() -> BigDecimal(default.defaultDecimal)
                 param.type.isByteArray() -> default.defaultByteArray
                 param.type.isWrappedByteArray() -> default.defaultByteArray
+                else -> throw IllegalArgumentException("Default value not accepted for type: ${param.type}, must be Long, BigInteger, BigDecimal, String, Boolean or Bytearray (field $name)")
+            }
+        }
+        if (param.isAnnotationPresent(DefaultEmpty::class.java)) {
+            return when {
                 param.type.isMap() -> mapOf<String, Gtv>()
                 param.type.isList() -> listOf<Gtv>()
                 param.type.isSet() -> setOf<Gtv>()

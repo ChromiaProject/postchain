@@ -203,21 +203,21 @@ internal class GtvObjectMapperTest {
 
     @Test
     fun defaultEmptyMap() {
-        data class DefaultEmptyMap(@Name("map") @DefaultValue val map: Map<String, Gtv>)
+        data class DefaultEmptyMap(@Name("map") @DefaultEmpty val map: Map<String, Gtv>)
 
         assertThat(gtv(mapOf()).toObject<DefaultEmptyMap>().map).isEqualTo(mapOf())
     }
 
     @Test
     fun defaultEmptyList() {
-        data class DefaultEmptyList(@Name("list") @DefaultValue val list: List<Gtv>)
+        data class DefaultEmptyList(@Name("list") @DefaultEmpty val list: List<Gtv>)
 
         assertThat(gtv(mapOf()).toObject<DefaultEmptyList>().list).isEqualTo(listOf())
     }
 
     @Test
     fun defaultEmptySet() {
-        data class DefaultEmptyList(@Name("set") @DefaultValue val set: Set<Gtv>)
+        data class DefaultEmptyList(@Name("set") @DefaultEmpty val set: Set<Gtv>)
 
         assertThat(gtv(mapOf()).toObject<DefaultEmptyList>().set).isEqualTo(setOf())
     }
@@ -225,7 +225,7 @@ internal class GtvObjectMapperTest {
     @Test
     fun defaultObject() {
         data class Obj(@Name("s") @DefaultValue(defaultString = "foo") val s: String)
-        data class DefaultObject(@Name("obj") @DefaultValue val obj: Obj)
+        data class DefaultObject(@Name("obj") @DefaultEmpty val obj: Obj)
 
         assertThat(gtv(mapOf()).toObject<DefaultObject>().obj).isEqualTo(Obj(s = "foo"))
     }
@@ -336,7 +336,7 @@ internal class GtvObjectMapperTest {
     @Test
     fun defaultValueIsNotPrimitive() {
         data class NonPrimitiveDefault(
-                @Name("foo") @DefaultValue val foo: Simple
+                @Name("foo") @DefaultEmpty val foo: Simple
         )
 
         assertThrows<IllegalArgumentException> {

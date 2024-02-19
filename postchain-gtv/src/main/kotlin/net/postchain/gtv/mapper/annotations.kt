@@ -17,7 +17,7 @@ annotation class Name(val name: String)
 annotation class Nullable
 
 /**
- * Set the default value for this property if missing in [Gtv].
+ * For primitive types, set the default value for this property if missing in [Gtv].
  *
  * @param defaultLong Default value if target property is type [Long]
  * @param defaultString Default value if target property is type [String]
@@ -33,6 +33,12 @@ annotation class DefaultValue(val defaultLong: Long = 0,
                               val defaultBoolean: Boolean = false,
                               val defaultBigInteger: String = "0",
                               val defaultDecimal: String = "0.0")
+
+/**
+ * For collection types, set the default value for this property to empty collection if missing in [Gtv].
+ */
+@Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.TYPE_PARAMETER)
+annotation class DefaultEmpty()
 
 /**
  * Sets the path to this property if nested inside several [GtvDictionary].
