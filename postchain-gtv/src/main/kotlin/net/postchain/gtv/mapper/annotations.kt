@@ -35,6 +35,12 @@ annotation class DefaultValue(val defaultLong: Long = 0,
                               val defaultDecimal: String = "0.0")
 
 /**
+ * For collection types, set the default value for this property to empty collection if missing in [Gtv].
+ */
+@Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.TYPE_PARAMETER)
+annotation class DefaultEmpty()
+
+/**
  * Sets the path to this property if nested inside several [GtvDictionary].
  *
  * @param path Path to property as a list of strings
