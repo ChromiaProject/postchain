@@ -17,7 +17,7 @@ annotation class Name(val name: String)
 annotation class Nullable
 
 /**
- * For primitive types, set the default value for this property if missing in [Gtv].
+ * Set the default value for this property if missing in [Gtv].
  *
  * @param defaultLong Default value if target property is type [Long]
  * @param defaultString Default value if target property is type [String]
