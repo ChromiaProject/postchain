@@ -296,10 +296,10 @@ private fun parameterToValue(param: Parameter, gtv: Gtv?, transient: Map<String,
 }
 
 private fun cleanType(typeName: String): String {
-    val dropWildcard = if (typeName.startsWith("? extends ")) typeName.drop("? extends ".length) else typeName
-    val i = dropWildcard.indexOf('<')
-    val dropParameters = if (i > -1) dropWildcard.take(i) else dropWildcard
-    return dropParameters
+    val typeWithoutWildcard = if (typeName.startsWith("? extends ")) typeName.drop("? extends ".length) else typeName
+    val i = typeWithoutWildcard.indexOf('<')
+    val typeWithoutParameters = if (i > -1) typeWithoutWildcard.take(i) else typeWithoutWildcard
+    return typeWithoutParameters
 }
 
 private fun parameterizedTypeArgumentToValue(type: Type, gtv: Gtv?, transient: Map<String, Any>, context: String): Any? {
