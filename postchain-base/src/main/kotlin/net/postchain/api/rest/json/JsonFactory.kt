@@ -4,6 +4,7 @@ package net.postchain.api.rest.json
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import net.postchain.api.rest.BlockSignature
 import net.postchain.api.rest.json.JsonFactory.gsonBuilder
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.base.ConfirmationProof
@@ -26,6 +27,7 @@ object JsonFactory : ConfigurableGson(gsonBuilder(false)) {
             .registerTypeAdapter(ApiStatus::class.java, ApiStatusSerializer())
             .registerTypeAdapter(TransactionInfoExt::class.java, TransactionInfoExtSerializer())
             .registerTypeAdapter(BlockDetail::class.java, BlockDetailSerializer())
+            .registerTypeAdapter(BlockSignature::class.java, BlockSignatureSerializer())
             .apply {
                 if (pretty) setPrettyPrinting()
             }

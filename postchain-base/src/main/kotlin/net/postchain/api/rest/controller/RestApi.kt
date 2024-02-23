@@ -39,6 +39,7 @@ import net.postchain.api.rest.nullBody
 import net.postchain.api.rest.prettyGson
 import net.postchain.api.rest.prettyJsonBody
 import net.postchain.api.rest.proofBody
+import net.postchain.api.rest.signatureBody
 import net.postchain.api.rest.signerQuery
 import net.postchain.api.rest.statusBody
 import net.postchain.api.rest.textBody
@@ -273,6 +274,7 @@ class RestApi(
             "/blocks/{blockchainRid}" bind GET to blockchain.then(volatileResponse).then(::getBlocks),
             "/blocks/{blockchainRid}/{blockRid}" bind GET to blockchain.then(immutableResponse).then(::getBlock),
             "/blocks/{blockchainRid}/height/{height}" bind GET to blockchain.then(immutableResponse).then(::getBlockByHeight),
+            "/blocks/{blockchainRid}/confirm/{blockRid}" bind GET to liveBlockchain.then(::confirmBlock),
 
             "/query/{blockchainRid}" bind GET to liveBlockchain.then(::getQuery),
             "/query/{blockchainRid}" bind POST to liveBlockchain.then(::postQuery),
@@ -386,6 +388,17 @@ class RestApi(
         val txHashesOnly = txsQuery(request) != true
         val block = model.getBlock(height, txHashesOnly)
         return blockResponse(block, request)
+    }
+
+    private fun confirmBlock(request: Request): Response {
+        val model = model(request)
+        val blockRID = blockRidPath(request)
+        val signature = model.confirmBlock(blockRID)
+        return if (signature != null) {
+            Response(OK).with(signatureBody.outbound(request) of signature)
+        } else {
+            Response(OK).with(nullBody.outbound(request) of Unit)
+        }
     }
 
     private fun blockResponse(block: BlockDetail?, request: Request): Response = if (block != null) {
