@@ -6,9 +6,9 @@ import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.infra.DefaultSubSyncInfra.UnarchivingBlockchainProcessType.FORCE_READONLY
-import net.postchain.containers.infra.DefaultSubSyncInfra.UnarchivingBlockchainProcessType.MUTED_FORCE_READONLY
 import net.postchain.containers.infra.DefaultSubSyncInfra.UnarchivingBlockchainProcessType.VALIDATOR_OR_REPLICA
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainProcess
@@ -20,7 +20,7 @@ import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
-import net.postchain.managed.UnarchivingBlockchainNodeInfo
+import net.postchain.managed.MigratingBlockchainNodeInfo
 import net.postchain.network.CommunicationManager
 import net.postchain.network.mastersub.subnode.MutedCommunicationManager
 import net.postchain.network.peer.PeersCommConfigFactory
@@ -34,7 +34,7 @@ class DefaultSubSyncInfra(
     companion object : KLogging()
 
     private enum class UnarchivingBlockchainProcessType {
-        VALIDATOR_OR_REPLICA, FORCE_READONLY, MUTED_FORCE_READONLY
+        VALIDATOR_OR_REPLICA, FORCE_READONLY
     }
 
     override fun buildXCommunicationManager(
@@ -43,12 +43,30 @@ class DefaultSubSyncInfra(
             relevantPeerCommConfig: PeerCommConfiguration,
             blockchainRid: BlockchainRid
     ): CommunicationManager<EbftMessage> {
-        val (_, procType) = getUnarchivingBlockchainInfoAndProcessType(blockchainConfigProvider, blockchainConfig)
-
-        return if (procType == MUTED_FORCE_READONLY)
+        return if (isMigrationWithinNodeToCurrentContainer(blockchainConfigProvider, blockchainConfig))
             MutedCommunicationManager()
         else
             super.buildXCommunicationManager(blockchainConfigProvider, blockchainConfig, relevantPeerCommConfig, blockchainRid)
+    }
+
+    override fun canMovingBlockchainBeForceReadOnly(
+            blockchainConfig: BlockchainConfiguration,
+            blockchainState: BlockchainState,
+            migratingInfo: MigratingBlockchainNodeInfo?
+    ): Boolean {
+        if (migratingInfo == null) return false // bc is not migrating
+        if (blockchainState == BlockchainState.UNARCHIVING) return false // bc is migrating but is not moving
+        return if (migratingInfo.isSourceNode && migratingInfo.isDestinationNode) { // migration within a node
+            if (containerNodeConfig.directoryContainer == migratingInfo.sourceContainer) { // src container
+                migratingInfo.finalHeight != -1L
+            } else { // dst container
+                shouldContinueMigration(blockchainConfig.chainID, migratingInfo.finalHeight)
+            }
+        } else if (migratingInfo.isSourceNode) {
+            migratingInfo.finalHeight != -1L
+        } else {
+            false
+        }
     }
 
     override fun createUnarchivingBlockchainProcess(
@@ -58,40 +76,53 @@ class DefaultSubSyncInfra(
             blockchainState: BlockchainState,
             iAmASigner: Boolean
     ): BlockchainProcess {
-        val (ubcInfo, procType) = getUnarchivingBlockchainInfoAndProcessType(blockchainConfigProvider, blockchainConfig)
+        val info = (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
+                ?.getMigratingBlockchainNodeInfo(blockchainConfig.blockchainRid)
+
+        val type = if (info == null) {
+            VALIDATOR_OR_REPLICA
+        } else {
+            when {
+                info.isSourceNode && !info.isDestinationNode -> FORCE_READONLY
+                !info.isSourceNode && info.isDestinationNode -> VALIDATOR_OR_REPLICA
+                info.isSourceNode && info.isDestinationNode -> {
+                    if (containerNodeConfig.directoryContainer == info.sourceContainer) // src container
+                        FORCE_READONLY
+                    else { // dst container
+                        if (shouldContinueMigration(blockchainConfig.chainID, info.finalHeight))
+                            FORCE_READONLY else VALIDATOR_OR_REPLICA
+                    }
+                }
+
+                else -> throw ProgrammerMistake("Illegal state for node: $info")
+            }
+        }
+
         return when {
-            procType == FORCE_READONLY || procType == MUTED_FORCE_READONLY -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState, ubcInfo?.upToHeight)
+            type == FORCE_READONLY -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState, info?.finalHeight)
             iAmASigner -> ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID), blockchainState)
             else -> ReadOnlyBlockchainProcess(workerContext, blockchainState)
         }
     }
 
-    private fun getUnarchivingBlockchainInfoAndProcessType(
+    private fun isMigrationWithinNodeToCurrentContainer(
             blockchainConfigProvider: BlockchainConfigurationProvider,
             blockchainConfig: BlockchainConfiguration
-    ): Pair<UnarchivingBlockchainNodeInfo?, UnarchivingBlockchainProcessType> {
-        val ubcInfo = (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
-                ?.getUnarchivingBlockchainNodeInfo(blockchainConfig.blockchainRid)
-        logger.error { "ubcInfo: $ubcInfo" }
-        logger.error { "blockchainConfigProvider is ${blockchainConfigProvider.javaClass.name}" }
+    ): Boolean {
+        val info = (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
+                ?.getMigratingBlockchainNodeInfo(blockchainConfig.blockchainRid)
+                ?: return false
 
-        val type = if (ubcInfo == null) {
-            VALIDATOR_OR_REPLICA
-        } else {
-            when {
-                ubcInfo.isSourceNode && !ubcInfo.isDestinationNode -> FORCE_READONLY
-                !ubcInfo.isSourceNode && ubcInfo.isDestinationNode -> VALIDATOR_OR_REPLICA
-                // bcInfo.isSourceNode && bcInfo.isDestinationNode
-                containerNodeConfig.directoryContainer == ubcInfo.sourceContainer -> FORCE_READONLY
-                else -> {
-                    val lastBlockHeight = withReadConnection(postchainContext.sharedStorage, blockchainConfig.chainID) {
-                        DatabaseAccess.of(it).getLastBlockHeight(it)
-                    }
-                    if (lastBlockHeight < ubcInfo.upToHeight) MUTED_FORCE_READONLY else VALIDATOR_OR_REPLICA
-                }
-            }
+        val withinNode = info.isSourceNode && info.isDestinationNode
+        val iAmInDestinationContainer = containerNodeConfig.directoryContainer == info.destinationContainer
+        val continueMigration = shouldContinueMigration(blockchainConfig.chainID, info.finalHeight)
+
+        return withinNode && iAmInDestinationContainer && continueMigration
+    }
+
+    private fun shouldContinueMigration(chainId: Long, finalHeight: Long): Boolean {
+        return finalHeight == -1L || withReadConnection(postchainContext.sharedStorage, chainId) {
+            DatabaseAccess.of(it).getLastBlockHeight(it) < finalHeight
         }
-
-        return ubcInfo to type
     }
 }

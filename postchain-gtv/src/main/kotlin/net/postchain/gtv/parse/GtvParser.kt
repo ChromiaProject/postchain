@@ -1,74 +1,128 @@
 package net.postchain.gtv.parse
 
-import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvBigInteger
-import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvCollection
+import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvString
 
-object GtvParser {
+class GtvParser private constructor(str: String) {
+    private val tokens = lexer(str).toList()
+    private var index = 0
 
-    private val UNESCAPED_EQUAL_SIGN_PATTERN = "(?<!\\\\)=".toRegex()
+    companion object {
+        fun parse(str: String): Gtv {
+            val parser = GtvParser(str)
+            val value = parser.value() ?: throw IllegalArgumentException("Unexpected token: ${parser.consume()}")
+            if (parser.peek() != null) throw IllegalArgumentException("Unexpected token at end: ${parser.consume()}")
+            return value
+        }
+    }
 
-    fun parse(str: String, isDictValue: Boolean = false): Gtv {
-        val s = str.trim()
-        return when {
-            s == "null" -> GtvNull
-            s.startsWith("x\"") && s.endsWith(Typography.quote) -> parseByteArray(s.substring(1))
-            s.startsWith("[") && s.endsWith("]") -> parseArray(s.removeSurrounding("[", "]"))
-            s.startsWith("{") && s.endsWith("}") -> parseDict(s.removeSurrounding("{", "}"))
-            s.endsWith("L") -> {
-                s.substring(0, s.length - 1).toBigIntegerOrNull()?.let { GtvBigInteger(it) }
-                        ?: if (isDictValue) parseDictValueString(s) else GtvString(s)
+    fun peek(n: Int = 0): Token? = if (index + n < tokens.size)
+        tokens[index + n]
+    else
+        null
+
+    fun consume(): Token {
+        val t = peek()
+        index++
+        return t ?: throw IllegalArgumentException("Unexpected end of input")
+    }
+
+    fun expect(token: Token) {
+        val t = consume()
+        if (t != token) throw IllegalArgumentException("Unexpected token: $t}")
+    }
+
+    fun value(): Gtv? = primitive() ?: arrayOrDict()
+
+    fun primitive(): Gtv? = when (val token = peek()) {
+        is Token.Companion.Null -> {
+            consume(); GtvNull
+        }
+
+        is Token.Companion.Integer -> {
+            consume(); GtvInteger(token.v)
+        }
+
+        is Token.Companion.BigInteger -> {
+            consume(); GtvBigInteger(token.v)
+        }
+
+        is Token.Companion.ByteArray -> {
+            consume(); GtvByteArray(token.v)
+        }
+
+        is Token.Companion.String -> {
+            consume(); GtvString(token.v)
+        }
+
+        else -> null
+    }
+
+    private fun arrayOrDict(): GtvCollection? = if (peek() == Token.Companion.LBracket) {
+        when (peek(1)) {
+            Token.Companion.Colon -> {
+                consume()
+                consume()
+                expect(Token.Companion.RBracket)
+                GtvDictionary.build(mapOf())
             }
 
-            else -> s.toLongOrNull()?.let(::GtvInteger)
-                    ?: if (isDictValue) parseDictValueString(s) else GtvString(s.trim(Typography.quote))
-        }
-    }
-
-    private fun parseByteArray(arg: String): Gtv {
-        val bytearray = arg.trim(Typography.quote)
-        return gtv(bytearray.hexStringToByteArray())
-    }
-
-    private fun parseDict(str: String) = gtv(splitArray(str).associate {
-        if (!it.contains("=")) throw IllegalArgumentException("$it must be a key-value pair separated by \"=\"")
-        val (key, value) = it.split("=", limit = 2)
-        key.trim() to parse(value, true)
-    })
-
-    private fun parseDictValueString(arg: String): Gtv {
-        val dictValueString = arg.trim(Typography.quote)
-        if (dictValueString.contains(UNESCAPED_EQUAL_SIGN_PATTERN)) {
-            throw IllegalArgumentException("\"=\" characters inside dict string values must be escaped by a preceding" +
-                    " \"\\\" character. Ensure that you are using the correct separator \",\" for dict key-value pairs.")
-        }
-        return gtv(dictValueString.replace("\\=", "="))
-    }
-
-    private fun parseArray(str: String) = gtv(splitArray(str).map { parse(it) })
-
-    private fun splitArray(str: String) = buildList {
-        var startIndex = 0
-        var bracketCount = 0
-        var isQuote = false
-
-        for (i in str.indices) {
-            when (str[i]) {
-                Typography.quote -> isQuote = !isQuote
-                '[', '{' -> bracketCount++
-                ']', '}' -> bracketCount--
-                ',' -> {
-                    if (bracketCount == 0 && !isQuote) {
-                        add(str.substring(startIndex, i))
-                        startIndex = i + 1
-                    }
+            is Token.Companion.String -> {
+                if (peek(2) == Token.Companion.Colon) {
+                    dict()
+                } else {
+                    array()
                 }
             }
+
+            else -> array()
         }
-        if (startIndex < str.length) add(str.substring(startIndex))
+    } else {
+        null
+    }
+
+    fun array(): GtvArray {
+        expect(Token.Companion.LBracket)
+        val list = buildList {
+            while (true) {
+                if (peek() == Token.Companion.RBracket) break
+                add(value() ?: throw IllegalArgumentException("Unexpected token: ${peek()}}"))
+                if (peek() == Token.Companion.RBracket) break
+                expect(Token.Companion.Comma)
+            }
+        }
+        expect(Token.Companion.RBracket)
+        return GtvArray(list.toTypedArray())
+    }
+
+    fun dict(): GtvDictionary {
+        expect(Token.Companion.LBracket)
+        val map = buildMap {
+            while (true) {
+                if (peek() == Token.Companion.RBracket) break
+                val (key, value) = keyAndValue()
+                put(key, value)
+                if (peek() == Token.Companion.RBracket) break
+                expect(Token.Companion.Comma)
+            }
+        }
+        expect(Token.Companion.RBracket)
+        return GtvDictionary.build(map)
+    }
+
+    private fun keyAndValue(): Pair<String, Gtv> {
+        val key = consume()
+        if (key !is Token.Companion.String)
+            throw IllegalArgumentException("Unexpected token: $key}")
+        expect(Token.Companion.Colon)
+        val value = value() ?: throw IllegalArgumentException("Unexpected token: ${peek()}}")
+        return key.v to value
     }
 }

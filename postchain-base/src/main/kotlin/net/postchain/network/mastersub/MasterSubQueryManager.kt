@@ -17,14 +17,11 @@ import java.util.concurrent.CompletionStage
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.time.Duration.Companion.seconds
 
 @Suppress("UNCHECKED_CAST")
-class MasterSubQueryManager(private val messageSender: (BlockchainRid?, MsMessage) -> Boolean) : MsMessageHandler {
+class MasterSubQueryManager(private val queryTimeoutMs: Long, private val messageSender: (BlockchainRid?, MsMessage) -> Boolean) : MsMessageHandler {
 
-    companion object : KLogging() {
-        val timeout = 10.seconds
-    }
+    companion object : KLogging()
 
     private val requestCounter = AtomicLong(0L)
     private val outstandingRequests = ConcurrentHashMap<Long, CompletableFuture<Any?>>()
@@ -32,8 +29,6 @@ class MasterSubQueryManager(private val messageSender: (BlockchainRid?, MsMessag
     fun query(targetBlockchainRid: BlockchainRid?, name: String, args: Gtv): CompletionStage<Gtv> {
         val requestId = requestCounter.incrementAndGet()
         val future = CompletableFuture<Any?>()
-                .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
-                .whenComplete { _, _ -> outstandingRequests.remove(requestId) }
         outstandingRequests[requestId] = future
 
         if (!messageSender(
@@ -47,14 +42,14 @@ class MasterSubQueryManager(private val messageSender: (BlockchainRid?, MsMessag
                 )) {
             future.completeExceptionally(ProgrammerMistake("Unable to send query"))
         }
-        return future as CompletionStage<Gtv>
+        return future
+                .orTimeout(queryTimeoutMs, TimeUnit.MILLISECONDS)
+                .whenComplete { _, _ -> outstandingRequests.remove(requestId) } as CompletionStage<Gtv>
     }
 
     fun blockAtHeight(targetBlockchainRid: BlockchainRid, height: Long): CompletionStage<BlockDetail?> {
         val requestId = requestCounter.incrementAndGet()
         val future = CompletableFuture<Any?>()
-                .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
-                .whenComplete { _, _ -> outstandingRequests.remove(requestId) }
         outstandingRequests[requestId] = future
 
         if (!messageSender(
@@ -67,8 +62,12 @@ class MasterSubQueryManager(private val messageSender: (BlockchainRid?, MsMessag
                 )) {
             future.completeExceptionally(ProgrammerMistake("Unable to send block at height query"))
         }
-        return future as CompletionStage<BlockDetail?>
+        return future
+                .orTimeout(queryTimeoutMs, TimeUnit.MILLISECONDS)
+                .whenComplete { _, _ -> outstandingRequests.remove(requestId) } as CompletionStage<BlockDetail?>
     }
+
+    fun isRequestOutstanding(requestId: Long) = outstandingRequests.containsKey(requestId)
 
     override fun onMessage(message: MsMessage) {
         when (message) {

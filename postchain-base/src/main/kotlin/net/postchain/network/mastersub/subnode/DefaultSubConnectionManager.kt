@@ -59,7 +59,7 @@ class DefaultSubConnectionManager(
 
     companion object : KLogging()
 
-    override val masterSubQueryManager = MasterSubQueryManager { _, message ->
+    override val masterSubQueryManager = MasterSubQueryManager(containerNodeConfig.masterSubQueryTimeoutMs) { _, message ->
         val connection = queryConnection
         if (connection != null) {
             connection.sendPacket(lazy { MsCodec.encode(message) })

@@ -2,9 +2,11 @@ package net.postchain.base.data
 
 import assertk.assertThat
 import assertk.assertions.containsOnly
+import assertk.assertions.isEqualTo
 import net.postchain.StorageBuilder
 import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.FaultyConfiguration
+import net.postchain.base.data.SQLDatabaseAccess.Companion.TABLE_META_KEY_LAST_CHAIN_IID
 import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
 import net.postchain.base.withWriteConnection
@@ -478,6 +480,121 @@ class UpgradeDatabaseIT {
                         true
                     }
                 }
+    }
+
+    @Test
+    fun testUpgradeFromVersion10to11_no_chains() {
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 10)
+                .use {}
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 11)
+                .use {
+                    withReadConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        assertThat(db.getLastSystemChainId(ctx)).isEqualTo(-1)
+                        assertThat(db.getLastChainId(ctx)).isEqualTo(99)
+                        assertThat(getLastChainIID(ctx, db)).isEqualTo(99L)
+                    }
+                }
+    }
+
+    @Test
+    fun testUpgradeFromVersion10to11_only_system_chains() {
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 10)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
+                        true
+                    }
+                    withWriteConnection(it, 1) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.initializeBlockchain(ctx, BlockchainRid.buildRepeat(1))
+                        true
+                    }
+                }
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 11)
+                .use {
+                    withReadConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        assertThat(db.getLastSystemChainId(ctx)).isEqualTo(1)
+                        assertThat(db.getLastChainId(ctx)).isEqualTo(99)
+                        assertThat(getLastChainIID(ctx, db)).isEqualTo(99L)
+                    }
+                }
+    }
+
+    @Test
+    fun testUpgradeFromVersion10to11_system_and_non_system_chains() {
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 10)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
+                        true
+                    }
+                    withWriteConnection(it, 1) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.initializeBlockchain(ctx, BlockchainRid.buildRepeat(1))
+                        true
+                    }
+                    withWriteConnection(it, 100) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.initializeBlockchain(ctx, BlockchainRid.buildRepeat(2))
+                        true
+                    }
+                    withWriteConnection(it, 101) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.initializeBlockchain(ctx, BlockchainRid.buildRepeat(3))
+                        true
+                    }
+                }
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 11)
+                .use {
+                    withReadConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        assertThat(db.getLastSystemChainId(ctx)).isEqualTo(1)
+                        assertThat(db.getLastChainId(ctx)).isEqualTo(101)
+                        assertThat(getLastChainIID(ctx, db)).isEqualTo(101L)
+                    }
+                }
+    }
+
+    @Test
+    fun testUpgradeFromVersion10to11_only_non_system_chains() {
+        // Subnode has only non-system chains
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 10)
+                .use {
+                    withWriteConnection(it, 100) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.initializeBlockchain(ctx, BlockchainRid.buildRepeat(2))
+                        true
+                    }
+                    withWriteConnection(it, 101) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.initializeBlockchain(ctx, BlockchainRid.buildRepeat(3))
+                        true
+                    }
+                }
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 11)
+                .use {
+                    withReadConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        assertThat(db.getLastSystemChainId(ctx)).isEqualTo(-1)
+                        assertThat(db.getLastChainId(ctx)).isEqualTo(101)
+                        assertThat(getLastChainIID(ctx, db)).isEqualTo(101L)
+                    }
+                }
+    }
+
+    private fun getLastChainIID(ctx: EContext, db: SQLDatabaseAccess): Long {
+        return db.queryRunner.query(
+                ctx.conn,
+                "SELECT value FROM ${db.tableMeta()} WHERE key = ?", ScalarHandler<String>(), TABLE_META_KEY_LAST_CHAIN_IID
+        ).toLong()
     }
 
     private fun addTransaction(db: SQLDatabaseAccess, ctx: EContext, txBase: Byte, blockIid: Long) {

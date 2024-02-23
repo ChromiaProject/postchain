@@ -57,7 +57,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node
         val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)
 
         waitDb(50, 1000, appConfig)
-        runStorageCommand(appConfig) {
+        runStorageCommand(appConfig, allowUpgrade = true) {
             StorageInitializer.setupInitialPeers(appConfig, it)
         }
         val chainIds = loadChainsConfigs(chainsDir, appConfig)

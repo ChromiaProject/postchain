@@ -46,6 +46,13 @@ internal class GtvObjectMapperTest {
     }
 
     @Test
+    fun fromGtvIntIsNotAccepted() {
+        assertThrows<IllegalArgumentException> {
+            GtvObjectMapper.fromGtv(gtv(mapOf("key" to gtv(17L))), IntField::class)
+        }
+    }
+
+    @Test
     fun nullablePropertyIsNull() {
         data class SimpleNullable(@Name("missing") @Nullable val foo: Long?)
         assertThat(GtvObjectMapper.fromGtv(gtv(mapOf()), SimpleNullable::class)).isEqualTo(SimpleNullable(null))
@@ -155,6 +162,75 @@ internal class GtvObjectMapperTest {
     }
 
     @Test
+    fun gtvIsNull() {
+        data class GtvIsNull(
+                @Name("g") val g: Gtv
+        )
+        assertThat(gtv("g" to GtvNull).toObject<GtvIsNull>().g).isEqualTo(GtvNull)
+    }
+
+    @Test
+    fun mapOfGtv() {
+        data class MapOfGtv(@Name("map") val map: Map<String, Gtv>)
+
+        assertThat(gtv(mapOf("map" to gtv("foo" to gtv(1), "bar" to gtv(2))))
+                .toObject<MapOfGtv>().map).isEqualTo(mapOf("foo" to gtv(1), "bar" to gtv(2)))
+    }
+
+    @Test
+    fun mapOfMapOfGtv() {
+        data class MapOfMapOfGtv(@Name("mapMap") val mapMap: Map<String, Map<String, Gtv>>)
+
+        assertThat(gtv(mapOf("mapMap" to gtv("foo" to gtv("ooo" to gtv(1)), "bar" to gtv("boo" to gtv(2)))))
+                .toObject<MapOfMapOfGtv>().mapMap).isEqualTo(mapOf("foo" to mapOf("ooo" to gtv(1)), "bar" to mapOf("boo" to gtv(2))))
+    }
+
+    @Test
+    fun listOfGtv() {
+        data class ListOfGtv(@Name("list") val list: List<Gtv>)
+
+        assertThat(gtv(mapOf("list" to gtv(gtv(1), gtv(2))))
+                .toObject<ListOfGtv>().list).isEqualTo(listOf(gtv(1), gtv(2)))
+    }
+
+    @Test
+    fun setOfGtv() {
+        data class SetOfGtv(@Name("set") val set: Set<Gtv>)
+
+        assertThat(gtv(mapOf("set" to gtv(gtv(1), gtv(2))))
+                .toObject<SetOfGtv>().set).isEqualTo(setOf(gtv(1), gtv(2)))
+    }
+
+    @Test
+    fun defaultEmptyMap() {
+        data class DefaultEmptyMap(@Name("map") @DefaultEmpty val map: Map<String, Gtv>)
+
+        assertThat(gtv(mapOf()).toObject<DefaultEmptyMap>().map).isEqualTo(mapOf())
+    }
+
+    @Test
+    fun defaultEmptyList() {
+        data class DefaultEmptyList(@Name("list") @DefaultEmpty val list: List<Gtv>)
+
+        assertThat(gtv(mapOf()).toObject<DefaultEmptyList>().list).isEqualTo(listOf())
+    }
+
+    @Test
+    fun defaultEmptySet() {
+        data class DefaultEmptyList(@Name("set") @DefaultEmpty val set: Set<Gtv>)
+
+        assertThat(gtv(mapOf()).toObject<DefaultEmptyList>().set).isEqualTo(setOf())
+    }
+
+    @Test
+    fun defaultObject() {
+        data class Obj(@Name("s") @DefaultValue(defaultString = "foo") val s: String)
+        data class DefaultObject(@Name("obj") @DefaultEmpty val obj: Obj)
+
+        assertThat(gtv(mapOf()).toObject<DefaultObject>().obj).isEqualTo(Obj(s = "foo"))
+    }
+
+    @Test
     fun testDict() {
         val inner = Simple(1)
         val outer = BasicDict(inner)
@@ -250,13 +326,17 @@ internal class GtvObjectMapperTest {
         assertThat(actual.b).isContentEqualTo(byteArrayOf(0x2E))
         assertThat(actual.l).isEqualTo(5L)
         assertThat(actual.s).isEqualTo("foo")
-    }
 
+        val default = GtvObjectMapper.default(WithDefaultValue::class)
+        assertThat(default.b).isContentEqualTo(byteArrayOf(0x2E))
+        assertThat(default.l).isEqualTo(5L)
+        assertThat(default.s).isEqualTo("foo")
+    }
 
     @Test
     fun defaultValueIsNotPrimitive() {
         data class NonPrimitiveDefault(
-                @Name("foo") @DefaultValue val foo: Simple
+                @Name("foo") @DefaultEmpty val foo: Simple
         )
 
         assertThrows<IllegalArgumentException> {
@@ -294,6 +374,7 @@ internal class GtvObjectMapperTest {
     @Test
     fun assignGtvTypes() {
         data class SimpleDict(@Name("dict") val dict: GtvDictionary)
+
         val a = gtv(mapOf(
                 "dict" to gtv(mapOf())
         ))
@@ -375,5 +456,13 @@ internal class GtvObjectMapperTest {
     fun javaClass() {
         val dummy = gtv(mapOf("value" to gtv("FOO")))
         assertThat(GtvObjectMapper.fromGtv(dummy, AJavaClass::class)).isEqualTo(AJavaClass("FOO"))
+    }
+
+    @Test
+    fun unsupportedType() {
+        val e = assertThrows<IllegalArgumentException> {
+            GtvObjectMapper.fromGtv(gtv(mapOf("foo" to gtv(17L))), UnsupportedConstructorParamType::class)
+        }
+        assertThat(e.message).isEqualTo("Gtv must be a dictionary, but is: INTEGER with values 17; context: foo")
     }
 }

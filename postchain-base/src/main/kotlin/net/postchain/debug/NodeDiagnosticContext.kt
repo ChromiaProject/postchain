@@ -9,6 +9,7 @@ interface NodeDiagnosticContext : MutableMap<DiagnosticProperty, DiagnosticValue
     fun hasBlockchainErrors(blockchainRid: BlockchainRid): Boolean
     fun blockchainErrorQueue(blockchainRid: BlockchainRid): DiagnosticQueue
     fun blockchainData(blockchainRid: BlockchainRid): DiagnosticData
+    fun blockchainData(): Map<BlockchainRid, DiagnosticData>
     fun removeBlockchainData(blockchainRid: BlockchainRid?): DiagnosticData?
     fun clearBlockchainData()
     fun blockchainBlockStats(blockchainRid: BlockchainRid): DiagnosticQueue

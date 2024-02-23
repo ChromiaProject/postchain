@@ -5,6 +5,8 @@ import net.postchain.gtv.GtvFactory
 
 data class Simple(@Name("key") val value: Long)
 
+data class IntField(@Name("key") val value: Int)
+
 data class BasicDict(@Name("dict") val simple: Simple)
 
 @Suppress("UNUSED")
@@ -33,4 +35,4 @@ enum class CustomEnum: ToGtv {
 
 data class WithCustomEnum(@Name("foo") val foo: String, @Name("bar") val bar: CustomEnum)
 
-data class UnsupportedConstructorParamType(@Name("foo") val foo: Int)
+data class UnsupportedConstructorParamType(@Name("foo") val foo: Short)

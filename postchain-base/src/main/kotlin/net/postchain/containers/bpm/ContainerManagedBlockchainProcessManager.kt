@@ -205,7 +205,7 @@ class ContainerManagedBlockchainProcessManager(
                     startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
                 } else if (chains.size > 1) {
                     val chain = chains.first()
-                    val info = directoryDataSource.getUnarchivingBlockchainNodeInfo(chain.brid)
+                    val info = directoryDataSource.getMigratingBlockchainNodeInfo(chain.brid)
                     if (info != null) {
                         val srcChain = chains.firstOrNull { it.containerName.directoryContainer == info.sourceContainer }
                         val dstChain = chains.firstOrNull { it.containerName.directoryContainer == info.destinationContainer }
@@ -217,7 +217,7 @@ class ContainerManagedBlockchainProcessManager(
                                 dstChain.restApiEnabled = false
                                 startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
                                 blockchainReplicators.getOrPut(chain.chainId) {
-                                    BlockchainReplicator(info.rid, srcChain, dstChain, info.upToHeight, directoryDataSource, ::findPostchainContainer).also {
+                                    BlockchainReplicator(info.rid, srcChain, dstChain, info.finalHeight, directoryDataSource, ::findPostchainContainer).also {
                                         logger.debug { "BlockchainReplicator started: rid: ${info.rid}, srcChain: $srcChain, dstChain: $dstChain" }
                                     }
                                 }
@@ -239,9 +239,9 @@ class ContainerManagedBlockchainProcessManager(
                 containerJobManager.stopChain(replicator.dstChain)
                 completedReplicationDetails[replicator.rid] = replicator.srcChain to replicator.dstChain
             } else if (replicator.upToHeight == -1L) {
-                val info = directoryDataSource.getUnarchivingBlockchainNodeInfo(replicator.srcChain.brid)
-                if (info != null && info.upToHeight != -1L) {
-                    replicator.upToHeight = info.upToHeight
+                val info = directoryDataSource.getMigratingBlockchainNodeInfo(replicator.srcChain.brid)
+                if (info != null && info.finalHeight != -1L) {
+                    replicator.upToHeight = info.finalHeight
                 }
             }
         }

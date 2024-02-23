@@ -54,9 +54,6 @@ data class BlockchainConfigurationData(
         @Name(KEY_GTX)
         @Nullable
         val gtx: Gtv?,
-        @Name(KEY_REVOLT)
-        @Nullable
-        val revoltConfigData: Gtv?,
         @Name(KEY_CONFIG_CONSENSUS_STRATEGY)
         @Nullable
         private val configConsensusStrategyString: String?,

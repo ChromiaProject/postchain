@@ -5,7 +5,7 @@ package net.postchain.ebft.worker
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.NetworkAwareTxQueue
-import net.postchain.base.configuration.BaseBlockchainConfiguration
+import net.postchain.base.configuration.KEY_REVOLT
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainState
@@ -176,10 +176,4 @@ class ValidatorBlockchainProcess(
 }
 
 val BlockchainConfiguration.revoltConfiguration: RevoltConfigurationData
-    get() =
-        if (this is BaseBlockchainConfiguration) {
-            configData.revoltConfigData?.toObject()
-                    ?: RevoltConfigurationData.default
-        } else {
-            RevoltConfigurationData.default
-        }
+    get() = rawConfig[KEY_REVOLT]?.toObject() ?: RevoltConfigurationData.default

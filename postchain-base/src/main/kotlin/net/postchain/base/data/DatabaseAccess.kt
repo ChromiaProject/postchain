@@ -81,8 +81,9 @@ interface DatabaseAccess {
     fun removeBlockchainFromMustSyncUntil(ctx: EContext): Boolean
     fun getBlockchainTables(ctx: EContext): List<String>
     fun getChainId(ctx: AppContext, blockchainRid: BlockchainRid): Long?
-    fun getMaxChainId(ctx: EContext): Long?
-    fun getMaxSystemChainId(ctx: EContext): Long?
+    fun getLastSystemChainId(ctx: EContext): Long
+    fun getLastChainId(ctx: EContext): Long
+    fun setLastChainId(ctx: EContext)
 
     fun getBlockchainRid(ctx: EContext): BlockchainRid?
     fun insertBlock(ctx: EContext, height: Long): Long
@@ -164,7 +165,7 @@ interface DatabaseAccess {
     fun getLeftIndex(ctx: EContext, name: String, pageIids: List<Long>): List<Long>
     fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int
     fun getPrunablePages(ctx: EContext, name: String, nextSnapshotHeight: Long): List<Long>
-    fun getNextPrunableSnapshotHeight(ctx: EContext, name: String, blockHeight: Long, snapshotsToKeep: Int=100): Long?
+    fun getNextPrunableSnapshotHeight(ctx: EContext, name: String, blockHeight: Long, snapshotsToKeep: Int = 100): Long?
 
     // Peers
     fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo>

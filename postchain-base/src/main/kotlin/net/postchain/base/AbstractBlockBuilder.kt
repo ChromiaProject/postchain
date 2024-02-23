@@ -105,7 +105,7 @@ abstract class AbstractBlockBuilder(
         try {
             txctx = store.addTransaction(bctx, tx, nextTransactionNumber)
         } catch (e: Exception) {
-            throw UserMistake("Failed to save tx to database: ${tx.getRID().toHex()}", e)
+            throw UserMistake("Failed to save tx ${tx.getRID().toHex()} to database: $e", e)
         }
         // In case of errors, tx.apply may either return false or throw UserMistake
 

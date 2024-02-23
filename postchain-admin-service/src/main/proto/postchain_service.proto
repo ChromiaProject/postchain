@@ -47,6 +47,7 @@ message AddConfigurationRequest {
     string xml = 4;
     bytes gtv = 5;
   }
+  bool allowUnknownSigners = 6;
 }
 
 message AddConfigurationReply {
@@ -151,6 +152,7 @@ message ImportBlockRequest {
 
 message ImportBlockReply {
   string message = 1;
+  int64 height = 2;
 }
 
 message RemoveBlockchainRequest {

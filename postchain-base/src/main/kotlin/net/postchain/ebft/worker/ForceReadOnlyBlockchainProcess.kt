@@ -30,7 +30,11 @@ open class ForceReadOnlyBlockchainProcess(
     )
 
     private val blockHeight = workerContext.engine.getBlockQueries().getLastBlockHeight().get().let {
-        if (maxExposedHeight != -1L) min(maxExposedHeight, it) else it
+        val actual = if (maxExposedHeight != -1L) min(maxExposedHeight, it) else it
+        withLoggingContext(loggingContext) {
+            logger.debug { "lastBlockHeight: $it, maxExposedHeight: $maxExposedHeight, actualBlockHeight: $actual" }
+        }
+        actual
     }
 
     protected open val forceReadOnlyMessageProcessor = ForceReadOnlyMessageProcessor(workerContext.engine.getBlockQueries(), workerContext.communicationManager, blockHeight)

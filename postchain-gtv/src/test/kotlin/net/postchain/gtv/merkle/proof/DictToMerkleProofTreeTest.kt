@@ -352,9 +352,8 @@ class DictToMerkleProofTreeTest {
 
         val expectedTree = " +   $ln" +
                 "/ \\ $ln" +
-                "02706F66 *{eight=8, seven=7} "
-
-
+                "02706F66 *[\"eight\": 8, \"seven\": 7] "
+        
         val merkleProofTree = orgGtvDict.generateProof(gtvPaths, calculator)
 
         // Print the result tree
@@ -384,10 +383,10 @@ class DictToMerkleProofTreeTest {
                 "  [$ln" +
                 "    101, $ln" + // 101 = value to be proved (in this case an entire dict)
                 "    \"one\", $ln" + // path elem "one"
-                "    {$ln" +  // The value is a GtvDictionary, in it's raw form
-                "      eight=8,$ln" +
-                "      seven=7 $ln" +
-                "    }$ln" +
+                "    [$ln" +  // The value is a GtvDictionary, in it's raw form
+                "      \"eight\":8,$ln" +
+                "      \"seven\":7 $ln" +
+                "    ]$ln" +
                 "  ]$ln" +
                 "]$ln"
 

@@ -24,7 +24,7 @@ class CommandRunServer : CommandRunServerBase("run-server", "Start postchain ser
 
     override fun run() {
         val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
-        runStorageCommand(appConfig) {
+        runStorageCommand(appConfig, allowUpgrade = true) {
             StorageInitializer.setupInitialPeers(appConfig, it)
         }
         val nodeProvider = PostchainNodeProvider(PostchainNode(appConfig, false))

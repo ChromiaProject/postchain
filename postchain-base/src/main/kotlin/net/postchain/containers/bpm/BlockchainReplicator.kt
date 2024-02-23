@@ -61,8 +61,13 @@ class BlockchainReplicator(
             logger.debug { "Destination chain lastBlockHeight: $dstLastBlockHeight" }
 
             if (currentUpToHeight <= dstLastBlockHeight) {
-                logger.info { "Source blockchain has no blocks: upToHeight = $currentUpToHeight, dstLastBlockHeight = $dstLastBlockHeight" }
-                if (upToHeight0 != -1L) done()
+                val log = "Source blockchain has no new blocks: upToHeight = $currentUpToHeight, dstLastBlockHeight = $dstLastBlockHeight"
+                if (upToHeight0 != -1L) {
+                    logger.info { log }
+                    done()
+                } else {
+                    logger.info { "$log. Waiting for new blocks to replicate." }
+                }
                 return
             }
 
@@ -118,7 +123,7 @@ class BlockchainReplicator(
             logger.info { "Source chain has no new blocks" }
             false
         } else {
-            logger.info { "Block replication started" }
+            logger.info { "Block replication started, $newBlocks blocks will be imported" }
             newBlocks.forEach { height ->
                 val block = srcContainer.exportBlock(chainId, height)
                 logger.debug { "Block at height $height exported from source container/chain" }
@@ -133,7 +138,7 @@ class BlockchainReplicator(
     private fun done() {
         executor.shutdown()
         done.set(true)
-        logger.error { "$processName is done" }
+        logger.info { "Replication job $processName is done" }
     }
 
     fun isDone() = upToHeight != -1L && done.get()
