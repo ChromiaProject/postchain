@@ -1,9 +1,11 @@
 package net.postchain.core.framework
 
+import io.opentelemetry.api.GlobalOpenTelemetry
 import mu.NamedKLogging
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainProcess
+import net.postchain.ebft.EbftStateTracer
 import net.postchain.metrics.AbstractBlockchainProcessMetrics
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
@@ -17,6 +19,7 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
     internal val process: Thread = thread(name = processName, start = false) { main() }
 
     val metrics = AbstractBlockchainProcessMetrics(blockchainEngine.getConfiguration().chainID, blockchainEngine.getConfiguration().blockchainRid, this)
+    val ebftTracer = EbftStateTracer(GlobalOpenTelemetry.getTracer(processName))
 
     override fun isProcessRunning() = running.get()
 

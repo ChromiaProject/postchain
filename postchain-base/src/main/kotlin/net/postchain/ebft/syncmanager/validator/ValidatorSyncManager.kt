@@ -12,17 +12,7 @@ import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.NodeRid
 import net.postchain.crypto.Signature
-import net.postchain.ebft.BlockDatabase
-import net.postchain.ebft.BlockIntent
-import net.postchain.ebft.BlockManager
-import net.postchain.ebft.DoNothingIntent
-import net.postchain.ebft.FetchBlockAtHeightIntent
-import net.postchain.ebft.FetchCommitSignatureIntent
-import net.postchain.ebft.FetchUnfinishedBlockIntent
-import net.postchain.ebft.NodeBlockState
-import net.postchain.ebft.NodeStateTracker
-import net.postchain.ebft.NodeStatus
-import net.postchain.ebft.StatusManager
+import net.postchain.ebft.*
 import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.BlockData
 import net.postchain.ebft.message.BlockHeader
@@ -68,6 +58,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            isProcessRunning: () -> Boolean,
                            startInFastSync: Boolean,
                            private val ensureAppliedConfigSenderStarted: () -> Boolean,
+                           private val ebftTracer: EbftStateTracer,
                            private val clock: Clock = Clock.systemUTC()
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker) {
     private val blockchainConfiguration = workerContext.blockchainConfiguration
@@ -129,6 +120,12 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
             logger.trace { "Received message type ${message.javaClass.simpleName} from node $xPeerId ($nodeIndex)" }
 
+            val dispatchMessagesSpan = ebftTracer.tracer.spanBuilder("dispatchMessages").startSpan()
+            dispatchMessagesSpan.setAttribute("message type", message.javaClass.simpleName)
+            dispatchMessagesSpan.setAttribute("xPeerId", xPeerId.toHex())
+            dispatchMessagesSpan.setAttribute("node", nodeIndex.toString())
+            val scope = dispatchMessagesSpan.makeCurrent()
+
             try {
                 when (message) {
                     // same case for replica and validator node
@@ -175,9 +172,13 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                     } else {
                                         logger.warn { "BlockSignature from peer: $xPeerId is invalid for block with with RID: ${smBlockRID.toHex()}" }
                                     }
+
+                                    dispatchMessagesSpan.setAttribute("blockRID", message.blockRID.toHex())
                                 }
 
                                 is CompleteBlock -> {
+                                    dispatchMessagesSpan.setAttribute("height", message.height)
+
                                     messageDurationTracker.receive(xPeerId, message)
                                     blockManager.onReceivedBlockAtHeight(
                                             decodeBlockDataWithWitness(message, blockchainConfiguration),
@@ -190,6 +191,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                             blockchainConfiguration)
                                     messageDurationTracker.receive(xPeerId, message, blockData.header)
                                     blockManager.onReceivedUnfinishedBlock(blockData)
+
+                                    dispatchMessagesSpan.setAttribute("blockRID", blockData.header.blockRID.toHex())
                                 }
 
                                 is BlockRange -> {
@@ -216,8 +219,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                     }
                 }
             } catch (e: Exception) {
+                dispatchMessagesSpan.recordException(e)
                 logger.error("Couldn't handle message $message. Ignoring and continuing", e)
             }
+            dispatchMessagesSpan.end()
+            scope.close()
         }
     }
 
@@ -359,11 +365,20 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      * @param nodes list of nodes we want commit signatures from
      */
     private fun fetchCommitSignatures(blockRID: ByteArray, nodes: Array<Int>) {
+
+        val span = ebftTracer.tracer.spanBuilder("fetchCommitSignatures").startSpan()
+
         val message = GetBlockSignature(blockRID)
         logger.debug { "Fetching commit signature for block with RID ${blockRID.toHex()} from nodes ${nodes.contentToString()}" }
+
+        span.addEvent("Fetching commit signature for block with RID ${blockRID.toHex()} from nodes ${nodes.contentToString()}")
+
         val peers = nodes.map { validatorAtIndex(it) }
         messageDurationTracker.send(peers, message)
         communicationManager.sendPacket(message, peers)
+
+        //TODO: this should be closed during context propagation
+        span.end()
     }
 
     /**
@@ -372,15 +387,24 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      * @param blockRID identifier of the unfinished block
      */
     private fun fetchUnfinishedBlock(blockRID: ByteArray) {
+
+        val span = ebftTracer.tracer.spanBuilder("fetchUnfinishedBlock").startSpan()
+
         val height = statusManager.myStatus.height
         val nodeIndex = selectRandomNode {
             it.height == height && (it.blockRID?.contentEquals(blockRID) ?: false)
         } ?: return
         logger.debug { "Fetching unfinished block with RID ${blockRID.toHex()} from node $nodeIndex " }
+
+        span.addEvent("Fetching unfinished block with RID ${blockRID.toHex()} from node $nodeIndex")
+
         val message = GetUnfinishedBlock(blockRID)
         val peer = validatorAtIndex(nodeIndex)
         messageDurationTracker.send(peer, message)
         communicationManager.sendPacket(message, peer)
+
+        //TODO: this should be ended during context propagation
+        span.end()
     }
 
     /**

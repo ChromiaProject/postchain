@@ -15,6 +15,7 @@ import net.postchain.common.wrap
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionQueue
 import net.postchain.gtx.GTXTransaction
+import net.postchain.trace.TransactionQueueTracer
 import java.io.Closeable
 import java.math.BigDecimal
 import java.time.Clock
@@ -90,6 +91,8 @@ class BaseTransactionQueue(private val queueCapacity: Int,
     @Volatile
     private var executor: ScheduledExecutorService? = null
 
+    val transactionQueueTracer = TransactionQueueTracer()
+
     init {
         if (prioritizer != null && recheckThreadInterval.isFinite()) {
             executor = Executors.newSingleThreadScheduledExecutor(
@@ -136,15 +139,24 @@ class BaseTransactionQueue(private val queueCapacity: Int,
     override fun getTransactionQueueSize(): Int = lock.withLock { queue.size }
 
     override fun enqueue(tx: Transaction): EnqueueTransactionResult {
+
+        val enqueueSpan = transactionQueueTracer.startTxEnqueueSpan(tx.getRID().toHex())
+
         val txEnter = clock.instant()
 
-        if (tx.isSpecial()) return EnqueueTransactionResult.INVALID
+        if (tx.isSpecial()) {
+            enqueueSpan.addEvent("Transaction is invalid")
+            enqueueSpan.end()
+            return EnqueueTransactionResult.INVALID
+        }
 
         val txRid = WrappedByteArray(tx.getRID())
 
         lock.withLock {
             if (queueMap.contains(txRid)) {
                 logger.debug { "Tx $txRid is duplicate (first test)" }
+                enqueueSpan.addEvent("Transaction already in queue")
+                enqueueSpan.end()
                 return EnqueueTransactionResult.DUPLICATE
             }
         }
@@ -163,6 +175,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
             // 2. if tx_cost_points is higher than account_points, tx is immediately rejected.
             if (transactionPriority != null && transactionPriority.txCostPoints > transactionPriority.accountPoints) {
                 logger.debug { "Tx $txRid costs ${transactionPriority.txCostPoints}, but only ${transactionPriority.accountPoints} available" }
+                enqueueSpan.addEvent("Transaction queue is full")
                 return EnqueueTransactionResult.FULL
             }
 
@@ -175,10 +188,13 @@ class BaseTransactionQueue(private val queueCapacity: Int,
             lock.withLock {
                 if (queueMap.contains(txRid)) {
                     logger.debug { "Tx $txRid is duplicate (second test)" }
+                    enqueueSpan.addEvent("Transaction already in queue")
                     return EnqueueTransactionResult.DUPLICATE
                 }
                 if (queue.size < queueCapacity) {
                     enqueueTx(txRid, wrappedTx, accountId)
+                    enqueueSpan.addEvent("Transaction ok")
+                    transactionQueueTracer.startTxInQueueSpan(tx.getRID().toHex(), enqueueSpan)
                     return EnqueueTransactionResult.OK
                 } else {
                     logger.debug { "Queue is overloaded, contains ${queue.size} elements with capacity $queueCapacity" }
@@ -188,6 +204,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
                     val lowestPrioTx = queue.last()
                     if (lowestPrioTx == null || priority <= lowestPrioTx.priority) {
                         logger.debug { "Tx $txRid has too low priority $priority" }
+                        enqueueSpan.addEvent("Transaction queue is full")
                         return EnqueueTransactionResult.FULL
                     }
 
@@ -209,13 +226,18 @@ class BaseTransactionQueue(private val queueCapacity: Int,
                     }
 
                     enqueueTx(txRid, wrappedTx, accountId)
+                    enqueueSpan.addEvent("Transaction ok")
+                    transactionQueueTracer.startTxInQueueSpan(tx.getRID().toHex(), enqueueSpan)
                     return EnqueueTransactionResult.OK
                 }
             }
         } catch (e: UserMistake) {
             logger.debug { "Tx $txRid didn't pass the check: ${e.message}" }
             rejectTransaction(tx, e)
+            enqueueSpan.addEvent("Transaction is invalid")
             return EnqueueTransactionResult.INVALID
+        } finally {
+            enqueueSpan.end()
         }
     }
 

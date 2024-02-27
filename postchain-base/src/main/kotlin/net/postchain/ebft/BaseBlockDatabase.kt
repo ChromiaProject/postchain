@@ -4,6 +4,7 @@ package net.postchain.ebft
 
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Timer
+import io.opentelemetry.api.trace.Span
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.common.exception.ProgrammerMistake
@@ -41,7 +42,8 @@ class BaseBlockDatabase(
         private val engine: BlockchainEngine,
         private val blockQueries: BlockQueries,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
-        val nodeIndex: Int
+        val nodeIndex: Int,
+        private val tracer: EbftStateTracer
 ) : BlockDatabase {
 
     // The executor will only execute one thing at a time, in order
@@ -75,7 +77,7 @@ class BaseBlockDatabase(
         return queuedBlockCount.get()
     }
 
-    private fun <RT> runOpAsync(name: String, op: () -> RT): CompletableFuture<RT> {
+    private fun <RT> runOpAsync(name: String, span: Span, op: () -> RT): CompletableFuture<RT> {
         if (logger.isTraceEnabled) {
             logger.trace("runOpAsync() - $nodeIndex putting job $name on queue")
         }
@@ -93,7 +95,10 @@ class BaseBlockDatabase(
                     res
                 } catch (e: Exception) {
                     logger.debug(e) { "Failed job $name" }
+                    span.recordException(e)
                     throw e
+                } finally {
+                    span.end()
                 }
             }
         }, executor)
@@ -101,6 +106,9 @@ class BaseBlockDatabase(
 
     private fun maybeRollback() {
         logger.trace { "maybeRollback() node: $nodeIndex." }
+
+        val span = tracer.startSpanUnderCurrentNodeBlockState("BaseBlockDatabase.maybeRollback() node: $nodeIndex.")
+
         if (blockBuilder != null) {
             logger.debug { "maybeRollback() node: $nodeIndex, blockBuilder is not null." }
             engine.getTransactionQueue().retryAllTakenTransactions()
@@ -108,6 +116,8 @@ class BaseBlockDatabase(
         blockBuilder?.rollback()
         blockBuilder = null
         witnessBuilder = null
+
+        span.end()
     }
 
     /**
@@ -126,7 +136,9 @@ class BaseBlockDatabase(
     override fun addBlock(block: BlockDataWithWitness, dependsOn: CompletableFuture<Unit>?,
                           existingBTrace: BlockTrace?): CompletableFuture<Unit> {
         queuedBlockCount.incrementAndGet()
-        return runOpAsync("addBlock ${block.header.blockRID.toHex()}") {
+        val span = tracer.startSpanUnderCurrentNodeBlockState("BaseBlockDatabase.addBlock()")
+        span.setAttribute("blockRID", block.header.blockRID.toHex())
+        return runOpAsync("addBlock() ${block.header.blockRID.toHex()}", span) {
             withLoggingContext(BLOCK_RID_TAG to block.header.blockRID.toHex()) {
                 queuedBlockCount.decrementAndGet()
                 if (dependsOn != null) {
@@ -163,7 +175,9 @@ class BaseBlockDatabase(
     }
 
     override fun loadUnfinishedBlock(block: BlockData): CompletionStage<Signature> {
-        return runOpAsync("loadUnfinishedBlock ${block.header.blockRID.toHex()}") {
+        val span = tracer.startSpanUnderCurrentNodeBlockState("BaseBlockDatabase.loadUnfinishedBlock()")
+        span.setAttribute("blockRID", block.header.blockRID.toHex())
+        return runOpAsync("loadUnfinishedBlock ${block.header.blockRID.toHex()}", span) {
             maybeRollback()
             withLoggingContext(BLOCK_RID_TAG to block.header.blockRID.toHex()) {
                 val blockSample = Timer.start(Metrics.globalRegistry)
@@ -187,9 +201,11 @@ class BaseBlockDatabase(
     }
 
     override fun commitBlock(signatures: Array<Signature?>): CompletionStage<Unit> {
-        return runOpAsync("commitBlock") {
+        val span = tracer.startSpanUnderCurrentNodeBlockState("BaseBlockDatabase.commitBlock()")
+        return runOpAsync("commitBlock", span) {
             // TODO: process signatures
             val theBlockBuilder = blockBuilder!!
+            span.setAttribute("blockRID", theBlockBuilder.getBlockData().header.blockRID.toHex())
             withLoggingContext(BLOCK_RID_TAG to theBlockBuilder.getBlockData().header.blockRID.toHex()) {
                 val blockSample = Timer.start(Metrics.globalRegistry)
                 theBlockBuilder.commit(witnessBuilder!!.getWitness())
@@ -202,7 +218,8 @@ class BaseBlockDatabase(
     }
 
     override fun buildBlock(): CompletionStage<Pair<BlockData, Signature>> {
-        return runOpAsync("buildBlock") {
+        val span = tracer.startSpanUnderCurrentNodeBlockState("BaseBlockDatabase.buildBlock()")
+        return runOpAsync("buildBlock", span) {
             maybeRollback()
             val (theBlockBuilder, exception) = engine.buildBlock()
             if (exception != null) {
@@ -210,6 +227,9 @@ class BaseBlockDatabase(
             } else {
                 blockBuilder = theBlockBuilder
                 witnessBuilder = blockBuilder!!.getBlockWitnessBuilder() as MultiSigBlockWitnessBuilder
+
+                span.setAttribute("blockRID", blockBuilder!!.getBlockData().header.blockRID.toHex())
+
                 Pair(blockBuilder!!.getBlockData(), witnessBuilder!!.getMySignature())
             }
         }

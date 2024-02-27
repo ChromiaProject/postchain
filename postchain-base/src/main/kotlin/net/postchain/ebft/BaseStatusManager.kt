@@ -3,6 +3,7 @@
 package net.postchain.ebft
 
 import io.micrometer.core.instrument.Counter
+import io.opentelemetry.api.trace.Span
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.common.toHex
@@ -24,12 +25,14 @@ class BaseStatusManager(
         myNextHeight: Long,
         private val nodeStatusMetrics: NodeStatusMetrics,
         private val stateChangeTracker: StateChangeTracker,
+        private val ebftTracer: EbftStateTracer,
         private val clock: Clock = Clock.systemUTC()
 ) : StatusManager {
     private val nodeCount = nodes.size
     override val nodeStatuses = Array(nodeCount) { NodeStatus() }
     override val commitSignatures: Array<Signature?> = arrayOfNulls(nodeCount)
     override val myStatus: NodeStatus = nodeStatuses[myIndex]
+
     var intent: BlockIntent = DoNothingIntent
     private val quorum = getBFTRequiredSignatureCount(nodeCount)
     private val nodeStatusesTimestamps = Array(nodeCount) { 0L }
@@ -152,6 +155,10 @@ class BaseStatusManager(
         }
         resetCommitSignatures()
         intent = DoNothingIntent
+
+        ebftTracer.toWaitBlock()
+        ebftTracer.toIntent(DoNothingIntent)
+
         recomputeStatus()
     }
 
@@ -228,6 +235,11 @@ class BaseStatusManager(
         commitSignatures[myIndex] = mySignature
         intent = DoNothingIntent
         stateChangeTracker.myStatusChange(myStatus)
+
+        ebftTracer.toHaveBlock()
+        ebftTracer.toIntent(DoNothingIntent)
+        ebftTracer.getActiveSpan().setAttribute("blockRID", blockRID.toHex())
+
         recomputeStatus()
     }
 
@@ -282,6 +294,7 @@ class BaseStatusManager(
             if (!isMyNodePrimary()) {
                 logger.warn("Inconsistent state: building a block while not a primary: blockRid = ${blockRID.toHex()}")
                 intent = DoNothingIntent
+                Span.current().addEvent("set intent to DoNothingIntent")
                 return false
             }
             acceptBlock(blockRID, mySignature)
@@ -318,6 +331,9 @@ class BaseStatusManager(
         myStatus.revolting = true
         myStatus.serial += 1
         logRevolt(myIndex, myStatus)
+
+        ebftTracer.getActiveSpan().addEvent("node $myIndex triggers revolt")
+
         recomputeStatus()
     }
 
@@ -378,6 +394,9 @@ class BaseStatusManager(
             myStatus.blockRID = null
             myStatus.serial += 1
             myStatus.signature = null
+
+            ebftTracer.toWaitBlock()
+
             resetCommitSignatures()
         }
 
@@ -412,6 +431,7 @@ class BaseStatusManager(
                         if (_intent.height == myStatus.height)
                             return FlowStatus.Break
                         intent = FetchBlockAtHeightIntent(myStatus.height)
+                        ebftTracer.toIntent(intent, "height ${myStatus.height}")
                         return FlowStatus.Continue
                     }
 
@@ -422,6 +442,7 @@ class BaseStatusManager(
 
                     // try fetching a block
                     this.intent = FetchBlockAtHeightIntent(myStatus.height)
+                    ebftTracer.toIntent(intent, "height ${myStatus.height}")
                     return FlowStatus.Continue
                 }
             } else if (sameHeightHigherRounds.size >= this.quorum) {
@@ -485,6 +506,10 @@ class BaseStatusManager(
                 myStatus.state = NodeBlockState.Prepared
                 myStatus.serial += 1
                 stateChangeTracker.myStatusChange(myStatus)
+
+                ebftTracer.toPrepared()
+                ebftTracer.getActiveSpan().setAttribute("blockRID", myStatus.blockRID!!.toHex())
+
                 true
             } else {
                 false
@@ -502,6 +527,9 @@ class BaseStatusManager(
                 // check if we have (2f+1) commit signatures including ours, in that case we signal commit intent.
                 intent = CommitBlockIntent
                 logger.debug { "setting CommitBlockIntent for idx: $myIndex " }
+
+                ebftTracer.toIntent(CommitBlockIntent)
+
                 return true
             } else {
                 // otherwise, we set intent to FetchCommitSignatureIntent with current blockRID and list of nodes which
@@ -525,6 +553,7 @@ class BaseStatusManager(
                     return if (newIntent == intent) {
                         false
                     } else {
+                        ebftTracer.toIntent(newIntent, " nodes $unfetchedNodes")
                         intent = newIntent
                         true
                     }
@@ -532,6 +561,7 @@ class BaseStatusManager(
                     return if (intent == DoNothingIntent) {
                         false
                     } else {
+                        ebftTracer.toIntent(DoNothingIntent)
                         intent = DoNothingIntent
                         true
                     }
@@ -550,6 +580,10 @@ class BaseStatusManager(
             if (isMyNodePrimary()) {
                 if (intent !is BuildBlockIntent) {
                     intent = BuildBlockIntent
+
+                    ebftTracer.toIntent(BuildBlockIntent)
+                    ebftTracer.getActiveSpan().setAttribute("isPrimary", true)
+
                     return true
                 }
             } else {
@@ -559,6 +593,7 @@ class BaseStatusManager(
                     if (!(_intent is FetchUnfinishedBlockIntent &&
                                     _intent.isThisTheBlockWeAreWaitingFor(myStatus.blockRID))) {
                         intent = FetchUnfinishedBlockIntent(primaryBlockRID)
+                        ebftTracer.toIntent(intent, "primaryBlockRID ${primaryBlockRID.toHex()}")
                         return true
                     }
                 } else {
@@ -566,6 +601,7 @@ class BaseStatusManager(
                         false
                     } else {
                         intent = DoNothingIntent
+                        ebftTracer.toIntent(DoNothingIntent)
                         true
                     }
                 }

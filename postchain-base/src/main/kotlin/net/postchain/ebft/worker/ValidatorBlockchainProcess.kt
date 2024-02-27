@@ -75,17 +75,19 @@ class ValidatorBlockchainProcess(
                 blockchainConfiguration.blockchainContext.nodeID,
                 blockchainEngine.getBlockQueries().getLastBlockHeight().get() + 1,
                 nodeStatusMetrics,
-                stateChangeTracker
+                stateChangeTracker,
+                ebftTracer
         )
 
         blockDatabase = BaseBlockDatabase(
-                loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeDiagnosticContext, blockchainConfiguration.blockchainContext.nodeID)
+                loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeDiagnosticContext, blockchainConfiguration.blockchainContext.nodeID, ebftTracer)
 
         blockManager = BaseBlockManager(
                 blockDatabase,
                 statusManager,
                 blockchainEngine.getBlockBuildingStrategy(),
-                workerContext
+                workerContext,
+                ebftTracer
         )
 
         val ensureAppliedConfigSender: () -> Boolean = {
@@ -110,7 +112,8 @@ class ValidatorBlockchainProcess(
                 SyncMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid),
                 ::isProcessRunning,
                 startWithFastSync,
-                ensureAppliedConfigSender
+                ensureAppliedConfigSender,
+                ebftTracer
         )
 
         networkAwareTxQueue = NetworkAwareTxQueue(

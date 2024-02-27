@@ -2,6 +2,7 @@
 
 package net.postchain.ebft
 
+import io.opentelemetry.api.trace.Span
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.BaseBlockHeader
@@ -39,7 +40,8 @@ class BaseBlockManager(
         private val blockDB: BlockDatabase,
         private val statusManager: StatusManager,
         private val blockStrategy: BlockBuildingStrategy,
-        private val workerContext: WorkerContext
+        private val workerContext: WorkerContext,
+        private val ebftTracer: EbftStateTracer
 ) : BlockManager {
 
     private val operationSemaphore = Semaphore(1)
@@ -58,7 +60,7 @@ class BaseBlockManager(
     @Volatile
     override var currentBlock: BlockData? = null
 
-    private fun <RT> runDBOp(op: () -> CompletionStage<RT>, onSuccess: (RT) -> Unit, onFailure: (Throwable) -> Unit = {}) {
+    private fun <RT> runDBOp(op: () -> CompletionStage<RT>, onSuccess: (RT) -> Unit, onFailure: (Throwable) -> Unit = {}, runDbOpSpan: Span) {
         if (operationSemaphore.tryAcquire()) {
             try {
                 intent = DoNothingIntent
@@ -66,15 +68,19 @@ class BaseBlockManager(
                         BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex(),
                         CHAIN_IID_TAG to workerContext.blockchainConfiguration.chainID.toString()
                 )
+
                 withLoggingContext(loggingContext) {
                     op().whenCompleteUnwrapped(loggingContext, onSuccess = { res ->
                         try {
+                            runDbOpSpan.end()
                             onSuccessfulOperation(res, onSuccess)
                         } finally {
                             operationSemaphore.release()
                         }
                     }, onError = { error ->
                         try {
+                            runDbOpSpan.recordException(error)
+                            runDbOpSpan.end()
                             onFailedOperation(error, onFailure)
                         } finally {
                             operationSemaphore.release()
@@ -84,6 +90,8 @@ class BaseBlockManager(
             } catch (e: Exception) {
                 operationSemaphore.release()
                 logger.error("Unable to start db operation, releasing semaphore", e)
+                runDbOpSpan.recordException(e)
+                runDbOpSpan.end()
             }
         }
     }
@@ -104,6 +112,10 @@ class BaseBlockManager(
         synchronized(statusManager) {
             val theIntent = intent
             if (theIntent is FetchUnfinishedBlockIntent && theIntent.blockRID.contentEquals(block.header.blockRID)) {
+
+                val span = ebftTracer.startSpanUnderCurrentNodeBlockState("BaseBlockManager.onReceivedUnfinishedBlock()")
+                span.setAttribute("blockRID", block.header.blockRID.toHex())
+
                 runDBOp({
                     blockTrace(theIntent)
                     blockDB.loadUnfinishedBlock(block)
@@ -119,7 +131,7 @@ class BaseBlockManager(
                     val msg = "Can't load unfinished block ${theIntent.blockRID.toHex()}: " +
                             "${exception.message}"
                     handleLoadBlockException(exception, msg, block.header)
-                })
+                }, span)
             }
         }
     }
@@ -128,6 +140,11 @@ class BaseBlockManager(
         synchronized(statusManager) {
             val theIntent = intent
             if (theIntent is FetchBlockAtHeightIntent && theIntent.height == height) {
+
+                val span = ebftTracer.startSpanUnderCurrentNodeBlockState("BaseBlockManager.onReceivedBlockAtHeight()")
+                span.setAttribute("blockRID", block.header.blockRID.toHex())
+                span.setAttribute("height", height)
+
                 runDBOp({
                     val bTrace = if (logger.isTraceEnabled) {
                         logger.trace { "onReceivedBlockAtHeight() - Creating block trace with height: $height " }
@@ -149,7 +166,7 @@ class BaseBlockManager(
                     val msg = "Can't add received block ${block.header.blockRID.toHex()} " +
                             "at height $height: ${exception.message}"
                     handleLoadBlockException(exception, msg, block.header)
-                })
+                }, span)
             }
         }
     }
@@ -252,6 +269,9 @@ class BaseBlockManager(
                         logger.trace("Schedule commit of block ${currentBlock!!.header.blockRID.toHex()}")
                     }
 
+                    val span = ebftTracer.startSpanUnderCurrentNodeBlockState("BaseBlockManager.update() -> is CommitBlockIntent -> runDBOp")
+                    span.setAttribute("blockRID", currentBlock!!.header.blockRID.toHex())
+
                     runDBOp({
                         blockTrace(blockIntent)
                         blockDB.commitBlock(statusManager.commitSignatures)
@@ -262,10 +282,11 @@ class BaseBlockManager(
                         statusManager.onCommittedBlock(currentBlock!!.header.blockRID)
                         lastBlockTimestamp = blockTimestamp(currentBlock!!)
                         currentBlock = null
+
                     }, { exception ->
                         logger.error("Can't commit block ${currentBlock!!.header.blockRID.toHex()}: " +
                                 "${exception.message}")
-                    })
+                    }, span)
                 }
 
                 is BuildBlockIntent -> {
@@ -284,18 +305,23 @@ class BaseBlockManager(
                         logger.trace("Schedule build block. ${statusManager.myStatus.height}")
                     }
 
+                    val span = ebftTracer.startSpanUnderCurrentNodeBlockState("BaseBlockManager.update() -> is BuildBlockIntent -> runDBOp")
+                    span.setAttribute("height", statusManager.myStatus.height)
+
                     runDBOp({
                         blockTrace(blockIntent)
                         blockDB.buildBlock()
                     }, { blockAndSignature ->
                         val block = blockAndSignature.first
                         val signature = blockAndSignature.second
+
                         if (statusManager.onBuiltBlock(block.header.blockRID, signature)) {
                             currentBlock = block
                             lastBlockTimestamp = blockTimestamp(block)
                         }
                     }, { exception ->
                         val msg = "Can't build block at height ${statusManager.myStatus.height}: ${exception.message}"
+
                         when (exception) {
                             is ForceStopBlockBuildingException ->
                                 logger.debug(msg)
@@ -312,7 +338,7 @@ class BaseBlockManager(
                                 blockStrategy.blockFailed()
                             }
                         }
-                    })
+                    }, span)
                 }
 
                 else -> intent = blockIntent

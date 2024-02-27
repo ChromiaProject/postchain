@@ -13,11 +13,7 @@ import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.NodeRid
 import net.postchain.core.block.BlockQueries
-import net.postchain.ebft.BlockDatabase
-import net.postchain.ebft.BlockManager
-import net.postchain.ebft.NodeStateTracker
-import net.postchain.ebft.NodeStatus
-import net.postchain.ebft.StatusManager
+import net.postchain.ebft.*
 import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.MessageDurationTracker
@@ -102,6 +98,7 @@ class ValidatorSyncManagerTest {
     private val nodeStateTracker: NodeStateTracker = mock()
     private val revoltTracker: RevoltTracker = mock()
     private val syncMetrics: SyncMetrics = mock()
+    private val ebftTracer: EbftStateTracer = mock()
     private val clock: Clock = mock()
 
     private lateinit var sut: ValidatorSyncManager
@@ -110,7 +107,7 @@ class ValidatorSyncManagerTest {
     fun beforeEach() {
         ensureAppliedConfigSenderCalled = false
         sut = spy(ValidatorSyncManager(workerContext, loggingContext, statusManager, blockManager, blockDatabase,
-                nodeStateTracker, revoltTracker, syncMetrics, { isProcessRunning }, false, ensureAppliedConfigSender, clock))
+                nodeStateTracker, revoltTracker, syncMetrics, { isProcessRunning }, false, ensureAppliedConfigSender, ebftTracer, clock))
     }
 
     @Nested

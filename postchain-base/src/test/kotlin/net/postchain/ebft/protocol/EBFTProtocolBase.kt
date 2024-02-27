@@ -3,6 +3,7 @@ package net.postchain.ebft.protocol
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import io.micrometer.core.instrument.Counter
+import io.opentelemetry.api.trace.Tracer
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.NetworkNodes
 import net.postchain.base.PeerCommConfiguration
@@ -23,13 +24,7 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.InitialBlockData
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.Signature
-import net.postchain.ebft.BaseBlockManager
-import net.postchain.ebft.BaseStatusManager
-import net.postchain.ebft.BlockDatabase
-import net.postchain.ebft.BlockIntent
-import net.postchain.ebft.BuildBlockIntent
-import net.postchain.ebft.NodeBlockState
-import net.postchain.ebft.NodeStateTracker
+import net.postchain.ebft.*
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.MessageDurationTracker
 import net.postchain.ebft.message.StateChangeTracker
@@ -138,6 +133,7 @@ abstract class EBFTProtocolBase {
         on { blockchainConfiguration } doReturn blockchainConfiguration
         on { messageDurationTracker } doReturn messageDurationTracker
     }
+    protected val ebftTracer: EbftStateTracer = mock()
     protected val clock: Clock = mock()
     protected val revoltTracker: RevoltTracker = mock()
     protected val signature: Signature = mock()
@@ -150,9 +146,9 @@ abstract class EBFTProtocolBase {
     @BeforeEach
     fun setup() {
         doReturn(BaseStatusManager.ZERO_SERIAL_TIME).whenever(clock).millis()
-        statusManager = BaseStatusManager(nodes, myNodeId, 0, nodeStatusMetrics, stateChangeTracker, clock)
-        blockManager = BaseBlockManager(blockDatabase, statusManager, blockStrategy, workerContext)
-        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, syncMetrics, { true }, false, { true }, clock)
+        statusManager = BaseStatusManager(nodes, myNodeId, 0, nodeStatusMetrics, stateChangeTracker, ebftTracer, clock)
+        blockManager = BaseBlockManager(blockDatabase, statusManager, blockStrategy, workerContext, ebftTracer)
+        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, syncMetrics, { true }, false, { true }, ebftTracer, clock)
         statusManager.recomputeStatus()
     }
 

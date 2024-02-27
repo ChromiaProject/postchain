@@ -4,6 +4,7 @@ import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import io.micrometer.core.instrument.Counter
+import io.opentelemetry.api.trace.Tracer
 import net.postchain.common.hexStringToByteArray
 import net.postchain.ebft.message.StateChangeTracker
 import net.postchain.metrics.NodeStatusMetrics
@@ -33,6 +34,7 @@ class BaseStatusManagerTest {
         on { revoltsBetweenOthers } doReturn revoltsBetweenOthersCounter
     }
     private val stateChangeTracker: StateChangeTracker = mock()
+    private val ebftTracer: EbftStateTracer = mock()
     private val clock: Clock = mock {
         on { millis() } doReturn BaseStatusManager.ZERO_SERIAL_TIME
     }
@@ -44,7 +46,7 @@ class BaseStatusManagerTest {
     fun beforeEach() {
         status = NodeStatus(54, 0)
         status.revolting = true
-        sut = BaseStatusManager(nodes, myNodeIndex, myNextHeight, nodeStatusMetrics, stateChangeTracker, clock)
+        sut = BaseStatusManager(nodes, myNodeIndex, myNextHeight, nodeStatusMetrics, stateChangeTracker, ebftTracer, clock)
         sut.myStatus.height = 54
     }
 

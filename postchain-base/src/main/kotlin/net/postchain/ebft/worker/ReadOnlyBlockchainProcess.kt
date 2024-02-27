@@ -43,7 +43,7 @@ class ReadOnlyBlockchainProcess(
     )
 
     private val blockDatabase = BaseBlockDatabase(
-            loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeDiagnosticContext, NODE_ID_READ_ONLY
+            loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeDiagnosticContext, NODE_ID_READ_ONLY, ebftTracer
     )
 
     private val params = SyncParameters.fromAppConfig(workerContext.appConfig)
