@@ -38,6 +38,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected val nodes = mutableListOf<PostchainTestNode>()
     protected val nodeMap = mutableMapOf<NodeSeqNumber, PostchainTestNode>()
     val configOverrides = MapConfiguration(mutableMapOf<String, String>())
+    val nodeConfigOverrides = mutableMapOf<NodeSeqNumber, MapConfiguration>()
 
     // PeerInfos must be shared between all nodes because
     // a listening node will update the PeerInfo port after
@@ -180,7 +181,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
         this.systemSetup = sysSetup
 
         // 1. generate node config for all [NodeSetup]
-        createNodeConfProvidersAndAddToNodeSetup(sysSetup, configOverrides, setupAction)
+        createNodeConfProvidersAndAddToNodeSetup(sysSetup, configOverrides, nodeConfigOverrides, setupAction)
 
         // 2. start all nodes and all chains
         val testNodeMap = startAllTestNodesAndAllChains(sysSetup, preWipeDatabase)
@@ -248,6 +249,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     protected fun createNodeConfProvidersAndAddToNodeSetup(
             sysSetup: SystemSetup,
             confOverrides: MapConfiguration,
+            nodeConfigOverrides: MutableMap<NodeSeqNumber, MapConfiguration>,
             setupAction: (appConfig: AppConfig) -> Unit = { _ -> }
     ) {
         val peerList = sysSetup.toPeerInfoList()
@@ -255,6 +257,11 @@ open class IntegrationTestSetup : AbstractIntegration() {
 
         val testName: String = getTestName()
         for (nodeSetup in sysSetup.nodeMap.values) {
+
+            nodeConfigOverrides[nodeSetup.sequenceNumber].let {
+                it?.map?.forEach { config -> nodeSetup.nodeSpecificConfigs.setProperty(config.key, config.value) }
+            }
+
             val appConfig = AppConfigGenerator.buildFromSetup(
                     testName,
                     confOverrides,
