@@ -3,6 +3,7 @@ package net.postchain.base
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.mapper.Name
+import net.postchain.gtv.mapper.Nullable
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GtxBody
 import net.postchain.managed.query.QueryRunner
@@ -28,6 +29,7 @@ class PrioritizeQueryRequest(
 class TxPriorityStateV1(
         /** id of account which wants to push the tx forward */
         @Name("account_id")
+        @Nullable
         override val accountId: WrappedByteArray?,
 
         /** number of points currently associated with the account */
