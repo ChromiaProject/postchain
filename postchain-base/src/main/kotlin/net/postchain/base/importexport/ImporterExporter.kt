@@ -24,6 +24,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.sha256Digest
+import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_PACKAGE_CONTENT_BYTES
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
@@ -132,12 +133,57 @@ object ImporterExporter : KLogging() {
         return ExportResult(fromHeight = firstBlock, toHeight = lastBlock, numBlocks = numBlocks)
     }
 
-    fun exportBlock(storage: Storage, chainId: Long, height: Long): Gtv = withReadConnection(storage, chainId) { ctx ->
-        var res: Gtv = GtvNull
-        DatabaseAccess.of(ctx).getAllBlocksWithTransactions(ctx, fromHeight = height, upToHeight = height) {
-            res = encodeBlockEntry(it)
+    /**
+     * @param blockCountLimit     Maximum number of blocks to read
+     * @param blocksSizeLimit     Maximum total size of blocks to read
+     */
+    fun exportBlocks(storage: Storage, chainId: Long, height: Long, blockCountLimit: Int?, blocksSizeLimit: Int = MAX_PACKAGE_CONTENT_BYTES): List<Gtv> {
+
+        val blocks: MutableList<Gtv> = mutableListOf()
+
+        val blockchainRid = withReadConnection(storage, chainId) { ctx ->
+            DatabaseAccess.of(ctx).getBlockchainRid(ctx)
+        } ?: throw UserMistake("Can't find blockchain RID for chainIid $chainId")
+
+        withLoggingContext(
+                CHAIN_IID_TAG to chainId.toString(),
+                BLOCKCHAIN_RID_TAG to blockchainRid.toHex()
+        ) {
+
+            logger.debug { "Export blocks from height $height until blockCountList $blockCountLimit or blocksSizeLimit: $blocksSizeLimit is reached" }
+
+            withReadConnection(storage, chainId) { ctx ->
+
+                var totalSize = 0
+                val dbReadBatchLimit = 2000
+                var continueReadBlocks = true
+
+                while (continueReadBlocks) {
+
+                    val heightsOffset = height + blocks.size
+                    val upToHeight = heightsOffset + (blockCountLimit ?: Int.MAX_VALUE).coerceAtMost(dbReadBatchLimit)
+
+                    continueReadBlocks = false
+                    DatabaseAccess.of(ctx).getAllBlocksWithTransactions(ctx, fromHeight = heightsOffset, upToHeight = upToHeight) {
+
+                        val element = encodeBlockEntry(it)
+                        continueReadBlocks = blocksWithinLimit(blocks.size + 1, blockCountLimit, totalSize + element.nrOfBytes(), blocksSizeLimit)
+                        if (continueReadBlocks) {
+
+                            blocks.add(element)
+                            totalSize += element.nrOfBytes()
+                            continueReadBlocks = true
+
+                            logger.debug { "Block ${blocks.size - 1} - size: ${element.nrOfBytes()} - total blocks: ${blocks.size} - totalSize: $totalSize" }
+                        }
+                    }
+                }
+            }
+
+            logger.debug { "${blocks.size} blocks exported" }
         }
-        res
+
+        return blocks
     }
 
     /**
@@ -276,27 +322,58 @@ object ImporterExporter : KLogging() {
                 blockchainRid = blockchainRid)
     }
 
-    fun importBlock(storage: Storage, chainId: Long, blockData: Gtv, nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem): Long {
+    fun importBlocks(storage: Storage, chainId: Long, blockData: List<Gtv>, nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem): LongRange {
+
         val blockchainRid = withReadConnection(storage, chainId) { ctx ->
             DatabaseAccess.of(ctx).getBlockchainRid(ctx)
         } ?: throw UserMistake("Can't find blockchain RID for chainIid $chainId")
 
-        val partialContext = BaseBlockchainContext(chainId, blockchainRid, NODE_ID_READ_ONLY, nodeKeyPair.pubKey.data)
-        val blockSigMaker = cryptoSystem.buildSigMaker(nodeKeyPair)
-        val (blockHeader, blockWitness, transactions) = decodeBlockEntry(blockData)
-        val blockHeight = blockHeader.blockHeaderRec.getHeight()
+        withLoggingContext(
+                CHAIN_IID_TAG to chainId.toString(),
+                BLOCKCHAIN_RID_TAG to blockchainRid.toHex()
+        ) {
 
-        withReadWriteConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
-            val configHeight = DatabaseAccess.of(ctx).findConfigurationHeightForBlock(ctx, blockHeight)
-                    ?: throw UserMistake("Can't find config height for block $blockHeight")
-            val configData = db.getConfigurationData(ctx, configHeight)
-                    ?: throw UserMistake("Can't load config for block $blockHeight")
-            val config = makeBlockchainConfiguration(configData, partialContext, blockSigMaker, ctx, cryptoSystem)
-            importBlock(ctx, config, blockHeader, transactions, blockWitness)
+            logger.debug { "starting importing ${blockData.size} blocks" }
+
+            var startHeight = -1L
+            var endHeight = -1L
+
+            withReadWriteConnection(storage, chainId) { ctx ->
+                val partialContext = BaseBlockchainContext(chainId, blockchainRid, NODE_ID_READ_ONLY, nodeKeyPair.pubKey.data)
+                val blockSigMaker = cryptoSystem.buildSigMaker(nodeKeyPair)
+                var config: BlockchainConfiguration? = null
+                var lastConfigHeight = -1L
+
+                for (blockDatum in blockData) {
+                    val (blockHeader, blockWitness, transactions) = decodeBlockEntry(blockDatum)
+                    val blockHeight = blockHeader.blockHeaderRec.getHeight()
+
+                    if (startHeight == -1L) {
+                        startHeight = blockHeight;
+                    }
+                    endHeight = blockHeight;
+
+                    val configHeight = DatabaseAccess.of(ctx).findConfigurationHeightForBlock(ctx, blockHeight)
+                            ?: throw UserMistake("Can't find config height for block $blockHeight")
+                    if (config == null || configHeight > lastConfigHeight) {
+                        lastConfigHeight = configHeight;
+
+                        val db = DatabaseAccess.of(ctx)
+                        val configData = db.getConfigurationData(ctx, configHeight)
+                                ?: throw UserMistake("Can't load config for block $blockHeight")
+                        config = makeBlockchainConfiguration(configData, partialContext, blockSigMaker, ctx, cryptoSystem)
+
+                        logger.debug { "New configuration at height $configHeight" }
+                    }
+
+                    importBlock(ctx, config, blockHeader, transactions, blockWitness)
+                }
+            }
+
+            logger.debug { "finished importing blocks" }
+
+            return startHeight..endHeight
         }
-
-        return blockHeight
     }
 
     private fun makeBlockchainConfiguration(rawConfigurationData: ByteArray, partialContext: BaseBlockchainContext,
@@ -337,4 +414,9 @@ object ImporterExporter : KLogging() {
             BaseBlockWitness.fromBytes(gtv.asArray()[1].asByteArray()),
             gtv.asArray()[2].asArray().map { it.asByteArray() }
     )
+
+    private fun blocksWithinLimit(blockCount: Int, blockCountLimit: Int?, blocksSize: Int, blocksSizeLimit: Int): Boolean {
+
+        return blockCount <= (blockCountLimit ?: Int.MAX_VALUE) && blocksSize <= blocksSizeLimit.coerceAtMost(MAX_PACKAGE_CONTENT_BYTES)
+    }
 }

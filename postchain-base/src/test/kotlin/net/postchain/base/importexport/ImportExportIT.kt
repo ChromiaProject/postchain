@@ -18,6 +18,8 @@ import net.postchain.base.data.SQLDatabaseAccess
 import net.postchain.base.data.testDbConfig
 import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.base.importexport.ImporterExporter.exportBlocks
+import net.postchain.base.importexport.ImporterExporter.importBlocks
 import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
 import net.postchain.common.BlockchainRid
@@ -442,6 +444,88 @@ class ImportExportIT {
         }
     }
 
+    @Test
+    fun exportBlocksNoLimit() {
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildSimpleBlockchain(storage, 10)
+            val exportBlocks = exportBlocks(storage, chainId, 0, Int.MAX_VALUE, Int.MAX_VALUE);
+            assertThat(exportBlocks.size).isEqualTo(10)
+        }
+    }
+
+    @Test
+    fun exportBlocksCountLimit1() {
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildSimpleBlockchain(storage, 10)
+            val blockExports = List(11) { exportBlocks(storage, chainId, it.toLong(), 1, Int.MAX_VALUE) }
+
+            assertBlockExportRangeSize(blockExports, 0..9, 1)
+            assertBlockExportRangeSize(blockExports, 10, 0)
+        }
+    }
+
+    @Test
+    fun exportBlocksCountLimit3() {
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildSimpleBlockchain(storage, 10)
+            val blockExports = List(5) { exportBlocks(storage, chainId, (it * 3).toLong(), 3, Int.MAX_VALUE) }
+
+            assertThat(blockExports.size).isEqualTo(5)
+            assertBlockExportRangeSize(blockExports, 0..2, 3)
+            assertBlockExportRangeSize(blockExports, 3, 1)
+            assertBlockExportRangeSize(blockExports, 4, 0)
+        }
+    }
+
+    @Test
+    fun exportBlocksSizeLimit1k() {
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildSimpleBlockchain(storage, 10)
+            val blockExports = List(11) { exportBlocks(storage, chainId, it.toLong(), Int.MAX_VALUE, 1000) }
+
+            assertBlockExportRangeSize(blockExports, 0..9, 1)
+            assertBlockExportRangeSize(blockExports, 10, 0)
+        }
+    }
+
+    @Test
+    fun exportBlocksSizeLimit3k() {
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildSimpleBlockchain(storage, 10)
+            val blockExports = List(4) { exportBlocks(storage, chainId, (it * 4).toLong(), Int.MAX_VALUE, 3000) }
+
+            assertThat(blockExports.size).isEqualTo(4)
+            assertBlockExportRangeSize(blockExports, 0..1, 4)
+            assertBlockExportRangeSize(blockExports, 2, 2)
+            assertBlockExportRangeSize(blockExports, 3, 0)
+        }
+    }
+
+    @Test
+    fun exportBlocksAndImportBlocks() {
+
+        val blockExports = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildSimpleBlockchain(storage, 10)
+            val blockExports = List(4) { exportBlocks(storage, chainId, (it * 4).toLong(), Int.MAX_VALUE, 3000) }
+
+            assertThat(blockExports.size).isEqualTo(4)
+
+            blockExports
+        }
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildSimpleBlockchain(storage, 0)
+            blockExports.forEach {
+                importBlocks(storage, chainId, it, KeyPairHelper.keyPair(0), cryptoSystem)
+            }
+        }
+    }
+
     private fun assertImportedTxs(storage: Storage, expectedConfigurations: List<Pair<Long, Gtv>>, expectedBlocks: List<Pair<BaseBlockHeader, List<Transaction>>>) {
         withReadConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
@@ -517,7 +601,6 @@ class ImportExportIT {
         }
     }
 
-
     @Test
     fun importRejectedTransaction(@TempDir tempDir: Path) {
         val configurationsFile = tempDir.resolve("configurations.gtv")
@@ -575,5 +658,22 @@ class ImportExportIT {
                         logNBlocks = 1)
             }
         }
+    }
+
+    private fun buildSimpleBlockchain(storage: Storage, blocks: Int) {
+        buildBlockchain(
+            storage, listOf(0L to configData0, 2L to configData2),
+            List(blocks) { listOf(buildTransaction("transaction-$it")) }
+        )
+    }
+
+    private fun assertBlockExportRangeSize(blockExports: List<List<Gtv>>, range: IntRange, size: Int) {
+
+        range.forEach { assertBlockExportRangeSize(blockExports, it, size) }
+    }
+
+    private fun assertBlockExportRangeSize(blockExports: List<List<Gtv>>, index: Int, size: Int) {
+
+        assertThat(blockExports[index].size).isEqualTo(size)
     }
 }

@@ -20,11 +20,10 @@ import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvNull
 import net.postchain.server.grpc.AddConfigurationRequest
-import net.postchain.server.grpc.ExportBlockRequest
+import net.postchain.server.grpc.ExportBlocksRequest
 import net.postchain.server.grpc.FindBlockchainRequest
-import net.postchain.server.grpc.ImportBlockRequest
+import net.postchain.server.grpc.ImportBlocksRequest
 import net.postchain.server.grpc.InitNodeRequest
 import net.postchain.server.grpc.InitializeBlockchainRequest
 import net.postchain.server.grpc.PeerServiceGrpc
@@ -238,33 +237,39 @@ class DefaultSubnodeAdminClient(
         }
     }
 
-    override fun exportBlock(chainId: Long, height: Long): Gtv {
+    override fun exportBlocks(chainId: Long, fromHeight: Long, blockCountLimit: Int, blocksSizeLimit: Int): List<Gtv> {
         return try {
-            val request = ExportBlockRequest.newBuilder()
+            val request = ExportBlocksRequest.newBuilder()
                     .setChainId(chainId)
-                    .setHeight(height)
+                    .setFromHeight(fromHeight)
+                    .setBlockCountLimit(blockCountLimit)
+                    .setBlocksSizeLimit(blocksSizeLimit)
                     .build()
-            val response = service?.exportBlock(request)
+            val response = service?.exportBlocks(request)
                     ?: throw ProgrammerMistake("subnode admin client not connected")
-            logger.debug { "exportBlock(chainId = $chainId, height = $height)" }
-            GtvDecoder.decodeGtv(response.blockData.toByteArray())
+            logger.debug { "exportBlocks(chainId = $chainId, fromHeight = $fromHeight, blockCountLimit = $blockCountLimit, blocksSizeLimit = $blocksSizeLimit)" }
+            response.blockDataList
+                    .map { GtvDecoder.decodeGtv(it.toByteArray()) }
         } catch (e: Exception) {
-            logger.error { "exportBlock(chainId = $chainId, height = $height) -- exception occurred: ${e.message}" }
-            GtvNull
+            logger.error { "exportBlocks(chainId = $chainId, fromHeight = $fromHeight, blockCountLimit = $blockCountLimit, blocksSizeLimit = $blocksSizeLimit) -- exception occurred: ${e.message}" }
+            listOf()
         }
     }
 
-    override fun importBlock(chainId: Long, blockData: Gtv) {
+    override fun importBlocks(chainId: Long, blockData: List<Gtv>): Long {
         try {
-            val request = ImportBlockRequest.newBuilder()
+            val request = ImportBlocksRequest.newBuilder()
                     .setChainId(chainId)
-                    .setBlockData(ByteString.copyFrom(GtvEncoder.encodeGtv(blockData)))
+                    .addAllBlockData(blockData.map { ByteString.copyFrom(GtvEncoder.encodeGtv(it)) })
                     .build()
-            val response = service?.importBlock(request)
+            val response = service?.importBlocks(request)
                     ?: throw ProgrammerMistake("subnode admin client not connected")
-            logger.debug { "importBlock(chainId = $chainId, height = ${response.height}) -- ${response.message}" }
+            logger.debug { "importBlocks(chainId = $chainId) --  fromHeight = ${response.fromHeight}), upToHeight = ${response.upToHeight} -- ${response.message}" }
+            return response.upToHeight
         } catch (e: Exception) {
-            logger.error { "importBlock(chainId = $chainId) -- exception occurred: ${e.message}" }
+            val errorMessage = "importBlocks(chainId = $chainId) -- exception occurred: ${e.message}"
+            logger.error { errorMessage }
+            throw ProgrammerMistake(errorMessage)
         }
     }
 

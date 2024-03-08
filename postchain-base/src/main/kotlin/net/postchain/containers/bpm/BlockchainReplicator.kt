@@ -3,6 +3,7 @@ package net.postchain.containers.bpm
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import net.postchain.common.types.WrappedByteArray
+import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_PACKAGE_CONTENT_BYTES
 import net.postchain.managed.DirectoryDataSource
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -117,19 +118,30 @@ class BlockchainReplicator(
         }
     }
 
-    private fun replicateBlocks(upToHeight: Long, dstLastBlockHeight: Long, srcContainer: PostchainContainer, dstContainer: PostchainContainer): Boolean {
+    fun replicateBlocks(upToHeight: Long, dstLastBlockHeight: Long, srcContainer: PostchainContainer, dstContainer: PostchainContainer): Boolean {
         val newBlocks = dstLastBlockHeight + 1..upToHeight
         return if (newBlocks.isEmpty()) {
             logger.info { "Source chain has no new blocks" }
             false
         } else {
             logger.info { "Block replication started, $newBlocks blocks will be imported" }
-            newBlocks.forEach { height ->
-                val block = srcContainer.exportBlock(chainId, height)
-                logger.debug { "Block at height $height exported from source container/chain" }
-                dstContainer.importBlock(chainId, block)
-                logger.debug { "Block at height $height imported to destination container/chain" }
+
+            var currentHeight = newBlocks.first
+            while (currentHeight <= newBlocks.last) {
+
+                val blockCountLimit = newBlocks.last.toInt() - currentHeight.toInt() + 1
+                logger.info { "Replicate block range $currentHeight - ${newBlocks.last} with max block limit $blockCountLimit and size limit $MAX_PACKAGE_CONTENT_BYTES" }
+
+                val blocks = srcContainer.exportBlocks(chainId, currentHeight, blockCountLimit, MAX_PACKAGE_CONTENT_BYTES)
+                val blocksSize = blocks.sumOf { it.nrOfBytes() }
+                logger.info { "Exported ${blocks.size} blocks ($currentHeight - ${currentHeight + blocks.size - 1}, $blocksSize bytes) from source container/chain" }
+
+                val importUpToHeight = dstContainer.importBlocks(chainId, blocks)
+                logger.info { "Imported ${blocks.size} blocks to height ${importUpToHeight}to destination container/chain" }
+
+                currentHeight = importUpToHeight + 1
             }
+
             logger.info { "Blockchain replication succeeded, $newBlocks blocks are imported" }
             true
         }

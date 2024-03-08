@@ -40,6 +40,6 @@ interface PostchainContainer {
     fun checkResourceLimits(fileSystem: FileSystem): Boolean
     fun getBlockchainLastBlockHeight(chainId: Long): Long
     fun addBlockchainConfiguration(chainId: Long, height: Long, config: ByteArray)
-    fun exportBlock(chainId: Long, height: Long): Gtv
-    fun importBlock(chainId: Long, blockData: Gtv)
+    fun exportBlocks(chainId: Long, fromHeight: Long, blockCountLimit: Int, blocksSizeLimit: Int): List<Gtv>
+    fun importBlocks(chainId: Long, blockData: List<Gtv>): Long
 }
