@@ -70,7 +70,7 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetAllBlocks() {
+    fun `Get all blocks`() {
         val response = listOf(
                 BlockDetail(
                         "blockRid001".toByteArray(),
@@ -124,7 +124,7 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetTwoLastBlocks_txHashesOnly() {
+    fun `Get two last blocks with txHashesOnly`() {
         val response = listOf(
                 BlockDetail(
                         "blockRid003".toByteArray(),
@@ -163,7 +163,7 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetTwoLastBlocksBeforeHeight_txHashesOnly() {
+    fun `Get two last blocks before height with txHashesOnly`() {
         val response = listOf(
                 BlockDetail(
                         "blockRid003".toByteArray(),
@@ -202,7 +202,7 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetBlocksWithoutParams() {
+    fun `Get blocks without params`() {
         val blocks = listOf(
                 BlockDetail("blockRid001".toByteArray(), blockchainRID2.data, "some header".toByteArray(), 0, listOf(), witness.getRawData(), 1574849700),
                 BlockDetail(
@@ -270,10 +270,22 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetBlockByRID() {
-        whenever(
-                model.getBlock(BlockRid(block.rid), true)
-        ).thenReturn(block)
+    fun `Block by RID endpoint can return JSON`() {
+        whenever(model.getBlock(BlockRid(block.rid), true)).thenReturn(block)
+        restApi.attachModel(blockchainRID, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .header("Accept", ContentType.JSON)
+                .get("/blocks/$blockchainRID/${block.rid.toHex()}")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body("rid", equalTo(block.rid.toHex()))
+    }
+
+    @Test
+    fun `Block by RID endpoint returns JSON by default`() {
+        whenever(model.getBlock(BlockRid(block.rid), true)).thenReturn(block)
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -285,7 +297,7 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun `can get block even when chain is not live`() {
+    fun `Can get block even when chain is not live`() {
         whenever(
                 model.getBlock(BlockRid(block.rid), true)
         ).thenReturn(block)
@@ -303,9 +315,7 @@ class RestApiGetBlockEndpointTest {
 
     @Test
     fun `Block by RID endpoint can return GTV`() {
-        whenever(
-                model.getBlock(BlockRid(block.rid), true)
-        ).thenReturn(block)
+        whenever(model.getBlock(BlockRid(block.rid), true)).thenReturn(block)
         restApi.attachModel(blockchainRID, model)
 
         val body = given().basePath(basePath).port(restApi.actualPort())
@@ -320,10 +330,8 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetBlockByUnknownRID() {
-        whenever(
-                model.getBlock(BlockRid(block.rid), true)
-        ).thenReturn(null)
+    fun `Get block by unknown RID can return JSON null`() {
+        whenever(model.getBlock(BlockRid(block.rid), true)).thenReturn(null)
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -335,22 +343,23 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetBlockByHeight() {
-        whenever(
-                model.getBlock(block.height, true)
-        ).thenReturn(block)
+    fun `Get block by unknown RID can return GTV null`() {
+        whenever(model.getBlock(BlockRid(block.rid), true)).thenReturn(null)
         restApi.attachModel(blockchainRID, model)
 
-        given().basePath(basePath).port(restApi.actualPort())
-                .get("/blocks/$blockchainRID/height/${block.height}")
+        val body = given().basePath(basePath).port(restApi.actualPort())
+                .header("Accept", ContentType.BINARY)
+                .get("/blocks/$blockchainRID/${block.rid.toHex()}")
                 .then()
                 .statusCode(200)
-                .contentType(ContentType.JSON)
-                .body("rid", equalTo(block.rid.toHex()))
+                .contentType(ContentType.BINARY)
+
+        assertThat(body.extract().response().body.asByteArray())
+                .isContentEqualTo(GtvEncoder.encodeGtv(GtvNull))
     }
 
     @Test
-    fun testGetBlockByUnknownHeight() {
+    fun `Block at unknown height can return JSON null`() {
         val height = 0L
         whenever(
                 model.getBlock(height, true)
@@ -366,11 +375,9 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetBlockByUnknownHeightGTV() {
+    fun `Block at unknown height can return GTV null`() {
         val height = 0L
-        whenever(
-                model.getBlock(height, true)
-        ).thenReturn(null)
+        whenever(model.getBlock(height, true)).thenReturn(null)
         restApi.attachModel(blockchainRID, model)
 
         val body = given().basePath(basePath).port(restApi.actualPort())
@@ -400,7 +407,7 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun `Default content type is JSON`() {
+    fun `Block at height endpoint returns JSON by default`() {
         whenever(model.getBlock(0, true)).thenReturn(block)
 
         restApi.attachModel(blockchainRID, model)

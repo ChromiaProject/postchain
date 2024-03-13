@@ -14,6 +14,7 @@ import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.block.BlockDetail
+import net.postchain.crypto.Signature
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
@@ -23,6 +24,7 @@ import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.mapper.GtvObjectMapper
+import net.postchain.gtv.mapper.Name
 import org.http4k.core.Body
 import org.http4k.core.ContentType
 import org.http4k.format.auto
@@ -149,6 +151,19 @@ val blockHeightBody = Body.auto<BlockHeight>().toLens()
 val blockchainNodeStateBody = Body.auto<BlockchainNodeState>().toLens()
 val transactionsCountBody = Body.auto<TransactionsCount>().toLens()
 
+val signatureJsonBody = Body.auto<BlockSignature>().toLens()
+val signatureGtvBody = Body.binary(ContentType.OCTET_STREAM, "signature GTV").map(
+        { inputStream ->
+            val gtv = inputStream.use { GtvDecoder.decodeGtv(it) }
+            GtvObjectMapper.fromGtv(gtv, BlockSignature::class)
+        },
+        {
+            val gtv = it.let { GtvObjectMapper.toGtvDictionary(it) }
+            GtvEncoder.encodeGtv(gtv).inputStream()
+        }
+).toLens()
+val signatureBody = ContentNegotiation.auto(signatureJsonBody, signatureGtvBody)
+
 @Suppress("UNREACHABLE_CODE", "USELESS_CAST")
 val configurationXmlOutBody: BiDiBodyLens<ByteArray> = httpBodyRoot(listOf(Meta(true, location = "body",
         ParamMeta.StringParam, "configuration", "GtvML")), ContentType.TEXT_XML, None)
@@ -189,3 +204,15 @@ data class ErrorBody(val error: String = "")
 data class Version(val version: Int)
 data class BlockchainNodeState(val state: String)
 object Empty
+
+data class BlockSignature(
+        @Name("subjectID") val subjectID: ByteArray,
+        @Name("data") val data: ByteArray
+) {
+    companion object {
+        fun fromSignature(signature: Signature): BlockSignature =
+                BlockSignature(signature.subjectID, signature.data)
+    }
+
+    fun toSignature() = Signature(subjectID, data)
+}

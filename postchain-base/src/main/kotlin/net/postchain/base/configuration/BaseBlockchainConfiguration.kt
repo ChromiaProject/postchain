@@ -56,7 +56,7 @@ open class BaseBlockchainConfiguration(
         val configData: BlockchainConfigurationData,
         val cryptoSystem: CryptoSystem,
         partialContext: BlockchainContext,
-        private val blockSigMaker: SigMaker
+        val blockSigMaker: SigMaker
 ) : BlockchainConfiguration {
 
     companion object : KLogging()

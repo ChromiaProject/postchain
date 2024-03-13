@@ -482,6 +482,39 @@ paths:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
             application/octet-stream: { }
+  /blocks/{blockchainRid}/confirm/{blockRid}:
+    get:
+      tags:
+        - block
+      summary: Confirm block by block RID
+      description: |
+        Sign the block and return block signature if the block is committed. 
+        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        otherwise defaults to JSON.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/blockRid"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/blockSignature"
+                  - $ref: "#/components/schemas/nullValue"
+            application/octet-stream: { }
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
   /query/{blockchainRid}:
     get:
       tags:
@@ -1195,6 +1228,16 @@ components:
         timestamp:
           type: integer
           format: int64
+    blockSignature:
+      type: object
+      required:
+        - subjectID
+        - data
+      properties:
+        subjectID:
+          $ref: "#/components/schemas/hex"
+        data:
+          $ref: "#/components/schemas/hex"
     query:
       description: Named arguments to query as additional properties
       type: object
