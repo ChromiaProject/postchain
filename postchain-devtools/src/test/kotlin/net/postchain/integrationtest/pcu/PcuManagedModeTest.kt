@@ -37,7 +37,7 @@ class PcuManagedModeTest : ManagedModeTest() {
         val chain = startNewBlockchain(chainSigners, setOf(), null)
         val expectedConfigParamValue = 123456L
         val reconfigHeight = 3L
-        addBlockchainConfiguration(
+        addGtxBlockchainConfiguration(
                 chain,
                 chainSigners.associateWith { nodes[it].pubKey.hexStringToByteArray() },
                 null,
@@ -61,7 +61,7 @@ class PcuManagedModeTest : ManagedModeTest() {
         buildBlock(chain, 3)
 
         // Simulate that config update was notified to d1
-        addBlockchainConfiguration(
+        addGtxBlockchainConfiguration(
                 chain,
                 chainSigners.associateWith { nodes[it].pubKey.hexStringToByteArray() },
                 null,
@@ -85,7 +85,7 @@ class PcuManagedModeTest : ManagedModeTest() {
 
         // Add a failing pending configuration
         val reconfigHeight = 3L
-        addBlockchainConfiguration(
+        addGtxBlockchainConfiguration(
                 chain,
                 chainSigners.associateWith { nodes[it].pubKey.hexStringToByteArray() },
                 null,
@@ -110,7 +110,7 @@ class PcuManagedModeTest : ManagedModeTest() {
 
         // Add a new pending config
         val expectedConfigParamValue = 100L
-        addBlockchainConfiguration(
+        addGtxBlockchainConfiguration(
                 chain,
                 chainSigners.associateWith { nodes[it].pubKey.hexStringToByteArray() },
                 null,
@@ -133,7 +133,7 @@ class PcuManagedModeTest : ManagedModeTest() {
         }
 
         // Simulate that config update was notified to d1
-        addBlockchainConfiguration(
+        addGtxBlockchainConfiguration(
                 chain,
                 chainSigners.associateWith { nodes[it].pubKey.hexStringToByteArray() },
                 null,
@@ -157,7 +157,7 @@ class PcuManagedModeTest : ManagedModeTest() {
         val initialConfigHash = nodes.first().getBlockchainInstance(chain).blockchainEngine.getConfiguration().configHash
 
         // Add a faulty pending config and assert that it is reported
-        addBlockchainConfiguration(
+        addGtxBlockchainConfiguration(
                 chain,
                 chainSigners.associateWith { nodes[it].pubKey.hexStringToByteArray() },
                 null,
@@ -175,7 +175,7 @@ class PcuManagedModeTest : ManagedModeTest() {
         assertNotNull(reportPendingFaultyHeader.getFailedConfigHash())
 
         // Fake that we had trouble with a non-pending config and assert that we do not report it
-        addBlockchainConfiguration(
+        addGtxBlockchainConfiguration(
                 chain,
                 chainSigners.associateWith { nodes[it].pubKey.hexStringToByteArray() },
                 null,

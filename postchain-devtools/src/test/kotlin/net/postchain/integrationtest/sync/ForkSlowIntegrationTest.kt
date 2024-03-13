@@ -450,7 +450,7 @@ class ForkSlowIntegrationTest : ManagedModeTest() {
         setChainSigners(signers, chainId)
         setChainReplicas(replicas, chainId)
         val signerKeys = signers.associateWith { nodes[it].pubKey.hexStringToByteArray() }
-        addBlockchainConfiguration(chainId, signerKeys, historicChain, atHeight)
+        addGtxBlockchainConfiguration(chainId, signerKeys, historicChain, atHeight)
         // Build block to trigger changes
         val chain0Nodes = nodes.filterIndexed { i, _ -> !excludeChain0Nodes.contains(i) }
         buildBlock(chain0Nodes, 0)
