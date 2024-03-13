@@ -3,6 +3,7 @@
 package net.postchain.api.rest.controller
 
 import net.postchain.api.rest.BlockHeight
+import net.postchain.api.rest.BlockSignature
 import net.postchain.api.rest.BlockchainNodeState
 import net.postchain.api.rest.TransactionsCount
 import net.postchain.api.rest.model.ApiStatus
@@ -42,6 +43,7 @@ interface Model : ChainModel {
     fun getLastTransactionNumber(): TransactionsCount
     fun getBlock(blockRID: BlockRid, txHashesOnly: Boolean): BlockDetail?
     fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail?
+    fun confirmBlock(blockRID: BlockRid): BlockSignature?
     fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
     fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
     fun getConfirmationProof(txRID: TxRid): ConfirmationProof?

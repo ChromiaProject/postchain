@@ -8,7 +8,7 @@ import net.postchain.gtx.PostchainContextAware
 import net.postchain.managed.ManagedNodeDataSource
 
 open class ManagedBlockchainConfiguration(
-        configuration: GTXBlockchainConfiguration,
+        val configuration: GTXBlockchainConfiguration,
         override val dataSource: ManagedNodeDataSource
 ) : BlockchainConfiguration by configuration, ManagedDataSourceAware, GTXModuleAware {
     override val module = configuration.module

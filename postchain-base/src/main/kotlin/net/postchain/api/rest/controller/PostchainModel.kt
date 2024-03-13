@@ -7,20 +7,25 @@ import io.micrometer.core.instrument.Timer
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.BlockHeight
+import net.postchain.api.rest.BlockSignature
 import net.postchain.api.rest.BlockchainNodeState
 import net.postchain.api.rest.TransactionsCount
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
+import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.ConfirmationProof
+import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.KEY_SIGNERS
+import net.postchain.base.data.BaseBlockWitnessProvider
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.tx.TransactionStatus.CONFIRMED
 import net.postchain.common.tx.TransactionStatus.REJECTED
 import net.postchain.common.tx.TransactionStatus.UNKNOWN
@@ -35,6 +40,7 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.MultiSigBlockWitnessBuilder
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.SigMaker
 import net.postchain.debug.DiagnosticData
@@ -46,6 +52,7 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.UnknownQuery
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
@@ -54,12 +61,13 @@ import net.postchain.logging.FAILURE_RESULT
 import net.postchain.logging.QUERY_NAME_TAG
 import net.postchain.logging.RESULT_TAG
 import net.postchain.logging.SUCCESS_RESULT
+import net.postchain.managed.config.ManagedBlockchainConfiguration
 import net.postchain.metrics.PostchainModelMetrics
 import net.postchain.metrics.QUERIES_METRIC_DESCRIPTION
 import net.postchain.metrics.QUERIES_METRIC_NAME
 
 open class PostchainModel(
-        blockchainConfiguration: BlockchainConfiguration,
+        val blockchainConfiguration: BlockchainConfiguration,
         val txQueue: TransactionQueue,
         val blockQueries: BlockQueries,
         final override val blockchainRid: BlockchainRid,
@@ -105,6 +113,24 @@ open class PostchainModel(
     override fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail? {
         val blockRid = blockQueries.getBlockRid(height).get()
         return blockRid?.let { getBlock(BlockRid(it), txHashesOnly) }
+    }
+
+    override fun confirmBlock(blockRID: BlockRid): BlockSignature? {
+        return blockQueries.getBlock(blockRID.data, true).get()?.let {
+            val blockSigMaker = when (blockchainConfiguration) {
+                is BaseBlockchainConfiguration -> blockchainConfiguration.blockSigMaker
+                is ManagedBlockchainConfiguration -> blockchainConfiguration.configuration.blockSigMaker
+                else -> throw UserMistake("Unknown blockchain configuration detected: " + blockchainConfiguration.javaClass.simpleName)
+            }
+            val witnessProvider = BaseBlockWitnessProvider(
+                    postchainContext.cryptoSystem,
+                    blockSigMaker,
+                    blockchainConfiguration.signers.toTypedArray()
+            )
+            val blockHeader = BaseBlockHeader(it.header, GtvMerkleHashCalculator(postchainContext.cryptoSystem))
+            val witnessBuilder = witnessProvider.createWitnessBuilderWithOwnSignature(blockHeader) as MultiSigBlockWitnessBuilder
+            BlockSignature.fromSignature(witnessBuilder.getMySignature())
+        }
     }
 
     override fun getConfirmationProof(txRID: TxRid): ConfirmationProof? =
