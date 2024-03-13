@@ -41,7 +41,7 @@ class BaseBlockWitnessProvider(
             header: BlockHeader
     ): BlockWitnessBuilder {
         val witnessBuilder = createWitnessBuilderWithoutOwnSignature(header) as BaseBlockWitnessBuilder
-        witnessBuilder.applySignature(blockSigMaker.signDigest(header.blockRID)) // TODO: POS-04_sig
+        witnessBuilder.applySignature(blockSigMaker.signDigest(header.blockRID))
         return witnessBuilder
     }
 
