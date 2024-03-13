@@ -76,7 +76,12 @@ open class ManagedModeTest : AbstractSyncTest() {
         buildBlock(0)
     }
 
+    @Deprecated("Use addGtxBlockchainConfiguration()", ReplaceWith("addGtxBlockchainConfiguration(chainId, signerKeys, historicChain, height, overrides, pending)"))
     fun addBlockchainConfiguration(chainId: Long, signerKeys: Map<Int, ByteArray>, historicChain: Long?, height: Long, overrides: Map<String, Gtv> = emptyMap(), pending: Boolean = false) {
+        addGtxBlockchainConfiguration(chainId, signerKeys, historicChain, height, overrides, pending)
+    }
+
+    fun addGtxBlockchainConfiguration(chainId: Long, signerKeys: Map<Int, ByteArray>, historicChain: Long?, height: Long, overrides: Map<String, Gtv> = emptyMap(), pending: Boolean = false) {
         val brid = ChainUtil.ridOf(chainId)
 
         val signerGtvs = signerKeys.values.map { GtvByteArray(it) }
@@ -115,6 +120,29 @@ open class ManagedModeTest : AbstractSyncTest() {
                 dataSource.addPendingConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
             } else {
                 dataSource.addConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
+            }
+        }
+    }
+
+    fun addDappBlockchainConfiguration(chainId: Long, rawConfig: ByteArray, height: Long) {
+        val brid = ChainUtil.ridOf(chainId)
+        mockDataSources.forEach { (nodeId, dataSource) ->
+            val pubkey = nodes[nodeId].pubKey.hexStringToByteArray()
+            val sigMaker = cryptoSystem.buildSigMaker(KeyPair(pubkey, KeyPairHelper.privKey(pubkey)))
+            val bcConf = BlockchainConfigurationData.fromRaw(rawConfig)
+            val dappBcFactory = DappBlockchainConfigurationFactory(GTXBlockchainConfigurationFactory(), dataSource)
+            val postchainContext = nodes[nodeId].postchainContext
+            withWriteConnection(postchainContext.blockBuilderStorage, chainId) { ctx ->
+                DatabaseAccess.of(ctx).apply { initializeBlockchain(ctx, brid) }
+                val bcConfig = dappBcFactory.makeBlockchainConfiguration(
+                        bcConf,
+                        BaseBlockchainContext(chainId, brid, NODE_ID_AUTO, pubkey),
+                        sigMaker,
+                        ctx,
+                        postchainContext.cryptoSystem
+                )
+                dataSource.addConf(chainId, brid, height, bcConfig, rawConfig)
+                true
             }
         }
     }
@@ -163,11 +191,11 @@ open class ManagedModeTest : AbstractSyncTest() {
         )
     }
 
-    fun startManagedSystem(signers: Int, replicas: Int, infra: String = Infrastructure.Ebft.get()) {
+    fun startManagedSystem(signers: Int, replicas: Int, infra: String = Infrastructure.Ebft.get(), restApi: Boolean = false) {
         setupDataSources(signers + replicas)
         val signerKeys = (0 until signers).associateWith { KeyPairHelper.pubKey(it) }
-        addBlockchainConfiguration(0, signerKeys, null, 0)
-        runNodes(signers, replicas, infra)
+        addGtxBlockchainConfiguration(0, signerKeys, null, 0)
+        runNodes(signers, replicas, infra, restApi)
         mockDataSources.forEach { (nodeId, dataSource) -> dataSource.addNodeSetup(systemSetup.nodeMap, systemSetup.nodeMap[NodeSeqNumber(nodeId)]!!) }
         buildBlock(c0, 0)
     }
@@ -212,7 +240,7 @@ open class ManagedModeTest : AbstractSyncTest() {
             }
         } else {
             val signerKeys = signers.associateWith { nodes[it].pubKey.hexStringToByteArray() }
-            addBlockchainConfiguration(newChainId, signerKeys, historicChain, 0)
+            addGtxBlockchainConfiguration(newChainId, signerKeys, historicChain, 0)
         }
 
         mockDataSources.values.forEach {
