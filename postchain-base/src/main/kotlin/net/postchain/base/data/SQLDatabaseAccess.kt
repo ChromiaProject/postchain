@@ -941,6 +941,17 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return blocksInfo.map { buildBlockInfoExt(it) }
     }
 
+    override fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
+        val sql = """
+            SELECT block_rid, block_height, block_header_data, block_witness, timestamp 
+            FROM ${tableBlocks(ctx)} 
+            WHERE block_height >= ? 
+            ORDER BY block_height ASC LIMIT ?
+        """.trimIndent()
+        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, fromHeight, limit)
+        return blocksInfo.map { buildBlockInfoExt(it) }
+    }
+
     private fun buildBlockInfoExt(blockInfo: MutableMap<String, Any>): DatabaseAccess.BlockInfoExt {
         val blockRid = blockInfo["block_rid"] as ByteArray
         val blockHeight = blockInfo["block_height"] as Long
