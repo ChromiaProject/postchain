@@ -264,7 +264,7 @@ open class BaseBlockchainProcessManager(
             // We need to print full BC RID so that users can see in INFO logs what it is.
             val process = blockchainProcesses[chainId]
             "startBlockchain() - Blockchain has been started: ${process?.javaClass?.simpleName}:${process?.getBlockchainState()}," +
-                    " full blockchain RID: ${blockchainConfig.blockchainRid.toHex()}, signers: ${blockchainConfig.signers.map { it.toHex() }}"
+                    " blockchain RID: ${blockchainConfig.blockchainRid.toHex()}, signers: ${blockchainConfig.signers.map { it.toHex() }}"
         }
     }
 
