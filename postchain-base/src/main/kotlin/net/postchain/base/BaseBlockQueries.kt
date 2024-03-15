@@ -156,6 +156,11 @@ open class BaseBlockQueries(
                 blockStore.getBlocksBeforeHeight(it, beforeHeight, limit, txHashesOnly)
             }
 
+    override fun getBlocksFromHeight(fromHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> =
+        runOpRegardless {
+            blockStore.getBlocksFromHeight(it, fromHeight, limit, txHashesOnly)
+        }
+
     override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): CompletionStage<BlockDetail?> =
             runOpRegardless {
                 blockStore.getBlock(it, blockRID, txHashesOnly)

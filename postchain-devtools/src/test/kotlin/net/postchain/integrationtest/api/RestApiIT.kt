@@ -362,15 +362,7 @@ class RestApiIT : IntegrationTestSetup() {
         val txPerBlockCount = 3
 
         // create blocks
-        var currentId = 0
-        for (blockHeight in 0 until blockCount) {
-            val transactions = mutableListOf<TestOneOpGtxTransaction>()
-            for (txInBlock in 0 until txPerBlockCount) {
-                transactions.add(postGtxTransaction(factory, ++currentId, blockHeight, nodeCount, blockchainRIDBytes))
-            }
-            buildBlockAndCommit(nodes[0])
-            blocks.add(transactions)
-        }
+        createBlocks(blockCount, txPerBlockCount, factory, nodeCount, blockchainRIDBytes, blocks)
 
         // get transactions
         val body = given().port(nodes[0].getRestApiHttpPort())
@@ -407,15 +399,7 @@ class RestApiIT : IntegrationTestSetup() {
         val txPerBlockCount = 3
 
         // create blocks
-        var currentId = 0
-        for (blockHeight in 0 until blockCount) {
-            val transactions = mutableListOf<TestOneOpGtxTransaction>()
-            for (txInBlock in 0 until txPerBlockCount) {
-                transactions.add(postGtxTransaction(factory, ++currentId, blockHeight, nodeCount, blockchainRIDBytes))
-            }
-            buildBlockAndCommit(nodes[0])
-            blocks.add(transactions)
-        }
+        createBlocks(blockCount, txPerBlockCount, factory, nodeCount, blockchainRIDBytes, blocks)
 
         TogglableFaultyGtxModule.shouldFail = true
         val faultyConfig = readBlockchainConfig(
@@ -600,6 +584,18 @@ class RestApiIT : IntegrationTestSetup() {
                 .post(path)
                 .then()
                 .statusCode(expectedStatus)
+    }
+
+    private fun createBlocks(blockCount: Int, txPerBlockCount: Int, factory: GTXTransactionFactory, nodeCount: Int, blockchainRIDBytes: BlockchainRid, blocks: MutableList<List<TestOneOpGtxTransaction>>) {
+        var currentId = 0
+        for (blockHeight in 0 until blockCount) {
+            val transactions = mutableListOf<TestOneOpGtxTransaction>()
+            for (txInBlock in 0 until txPerBlockCount) {
+                transactions.add(postGtxTransaction(factory, ++currentId, blockHeight, nodeCount, blockchainRIDBytes))
+            }
+            buildBlockAndCommit(nodes[0])
+            blocks.add(transactions)
+        }
     }
 }
 
