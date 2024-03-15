@@ -26,7 +26,7 @@ import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 
 
-class TestBlockChainBuilder(
+class TestBlockchainBuilder(
         val storage: Storage,
         configData0: Gtv
 ) {

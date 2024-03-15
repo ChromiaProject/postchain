@@ -4,7 +4,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.StorageBuilder
 import net.postchain.base.BaseBlockQueries
-import net.postchain.base.TestBlockChainBuilder
+import net.postchain.base.TestBlockchainBuilder
 import net.postchain.concurrent.util.get
 import net.postchain.config.app.AppConfig
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -22,7 +22,7 @@ class BaseBlockQueriesTest {
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
                 .use { storage ->
 
-                    val blockChainBuilder = TestBlockChainBuilder(storage, configData0)
+                    val blockChainBuilder = TestBlockchainBuilder(storage, configData0)
 
                     blockChainBuilder.buildBlockchainWithEmptyBlocks(listOf(0L to configData0, 2L to configData2), 4)
 
