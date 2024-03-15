@@ -9,7 +9,7 @@ import assertk.isContentEqualTo
 import net.postchain.StorageBuilder
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockWitness
-import net.postchain.base.TestBlockChainBuilder
+import net.postchain.base.TestBlockchainBuilder
 import net.postchain.base.data.BaseBlockWitnessProvider
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.SQLDatabaseAccess
@@ -65,7 +65,7 @@ class ImportExportIT {
         val configurationsFile = tempDir.resolve("configurations.gtv")
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val testBlockChainBuilder = TestBlockChainBuilder(storage, configData0)
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
             testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
                     listOf("first"),
                     listOf(),
@@ -91,7 +91,7 @@ class ImportExportIT {
         val blocksFile = tempDir.resolve("blocks.gtv")
 
         val blocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val testBlockChainBuilder = TestBlockChainBuilder(storage, configData0)
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
             val blocks = testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
                     listOf("first"),
                     listOf(),
@@ -127,7 +127,7 @@ class ImportExportIT {
         val blocksFile = tempDir.resolve("blocks.gtv")
 
         val blocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val testBlockChainBuilder = TestBlockChainBuilder(storage, configData0)
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
             val blocks = testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
                     listOf("first"),
                     listOf(),
@@ -160,7 +160,7 @@ class ImportExportIT {
         val blocksFile = tempDir.resolve("blocks.gtv")
 
         val blocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val testBlockChainBuilder = TestBlockChainBuilder(storage, configData0)
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
             val blocks = testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
                     listOf("first"),
                     listOf(),
@@ -196,7 +196,7 @@ class ImportExportIT {
         Files.createFile(blocksFile)
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val testBlockChainBuilder = TestBlockChainBuilder(storage, configData0)
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
             testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
                     listOf("first"),
                     listOf(),
@@ -218,7 +218,7 @@ class ImportExportIT {
         Files.createFile(blocksFile)
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val testBlockChainBuilder = TestBlockChainBuilder(storage, configData0)
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
             testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
                     listOf("first"),
                     listOf(),
@@ -256,7 +256,7 @@ class ImportExportIT {
 
         val expectedConfigurations = listOf(0L to configData0, 2L to configData2)
         val expectedBlocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val testBlockChainBuilder = TestBlockChainBuilder(storage, configData0)
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
             val expectedBlocks = testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
                     listOf("first"),
                     listOf(),
@@ -320,7 +320,7 @@ class ImportExportIT {
 
         val expectedConfigurations = listOf(0L to configData0, 2L to configData2)
         val expectedBlocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val testBlockChainBuilder = TestBlockChainBuilder(storage, configData0)
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
             val expectedBlocks = testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
                     listOf("first"),
                     listOf(),
@@ -528,8 +528,8 @@ class ImportExportIT {
         val blocksFile = tempDir.resolve("blocks.gtv")
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val blockChainBuilder = TestBlockChainBuilder(storage, configData0)
-            val expectedBlocks = blockChainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
+            val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
+            val expectedBlocks = blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
                     listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
                             .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
                                     .addOperation(GTX_TEST_OP_NAME, gtv("bogus"))
@@ -558,8 +558,8 @@ class ImportExportIT {
         val blocksFile = tempDir.resolve("blocks.gtv")
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val blockChainBuilder = TestBlockChainBuilder(storage, configData0)
-            val expectedBlocks = blockChainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
+            val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
+            val expectedBlocks = blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
                     listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
                             .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
                                     .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("rejectMe"))
@@ -588,8 +588,8 @@ class ImportExportIT {
         val blocksFile = tempDir.resolve("blocks.gtv")
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val blockChainBuilder = TestBlockChainBuilder(storage, configData0)
-            val expectedBlocks = blockChainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
+            val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
+            val expectedBlocks = blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
                     listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
                             .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
                                     .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("valid"))
@@ -614,7 +614,7 @@ class ImportExportIT {
     }
 
     private fun buildSimpleBlockchain(storage: Storage, blocks: Int) {
-        TestBlockChainBuilder(storage,configData0)
+        TestBlockchainBuilder(storage,configData0)
                 .buildBlockchainWithTestTransactions(
                         listOf(0L to configData0, 2L to configData2),
                         List(blocks) { listOf("transaction-$it") }
