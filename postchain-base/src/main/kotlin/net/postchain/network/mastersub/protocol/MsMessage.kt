@@ -294,7 +294,7 @@ class MsBlocksFromHeightResponse(
     override fun getPayload(): Gtv {
         return gtv(
                 gtv(requestId),
-                GtvObjectMapper.toGtvArray(blocks)
+                gtv(blocks.map { GtvObjectMapper.toGtvDictionary(it) })
         )
     }
 }
