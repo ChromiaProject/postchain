@@ -1,18 +1,18 @@
 This is an attempt to provide a list of possible blockchain configuration (for `BaseBlockChainConfiguration`). For a
 list of _node_ configuration properties see this [page](Node-Configuration-Properties.md).
 
-| Name                             | Description                                                                                                               | Type          | Required           | Default |
-|----------------------------------|---------------------------------------------------------------------------------------------------------------------------|---------------|--------------------|---------|
-| `signers`                        | List of bc signers                                                                                                        | array<bytea>  | :white_check_mark: |         |
-| `sync`                           | Synchronization infrastructure implementation                                                                             | string        |                    | ""      |
-| `sync_ext`                       | Synchronization infrastructure extensions                                                                                 | array<string> |                    | []      |
-| `configurationfactory`           | Configuration factory implementation                                                                                      | string        | :white_check_mark: |         |
-| `txqueuecapacity`                | Maximum size of the transaction queue                                                                                     | int           |                    | 2500    |
-| `historic_brid`                  | Historical brid when forking a blockchain                                                                                 | bytea         |                    |         |
-| `dependencies`                   | Blockchain dependencies in raw format                                                                                     | gtv           |                    |         |
-| `config_consensus_strategy`      | Configuration consensus strategy                                                                                          | string        |                    |         |
-| `query_cache_ttl_seconds`        | How long a query response can be cached, in seconds. 0 means no caching.                                                  | int           |                    | 0       |
-| `max_block_future_time`          | How long time in the future a block timestamp can be, compared to current time, in milliseconds. -1 means disabled check. | int           |                    | 10000   |
+| Name                        | Description                                                                                                               | Type          | Required           | Default |
+|-----------------------------|---------------------------------------------------------------------------------------------------------------------------|---------------|--------------------|---------|
+| `signers`                   | List of bc signers                                                                                                        | array<bytea>  | :white_check_mark: |         |
+| `sync`                      | Synchronization infrastructure implementation                                                                             | string        |                    | ""      |
+| `sync_ext`                  | Synchronization infrastructure extensions                                                                                 | array<string> |                    | []      |
+| `configurationfactory`      | Configuration factory implementation                                                                                      | string        | :white_check_mark: |         |
+| `txqueuecapacity`           | Maximum size of the transaction queue                                                                                     | int           |                    | 2500    |
+| `historic_brid`             | Historical brid when forking a blockchain                                                                                 | bytea         |                    |         |
+| `dependencies`              | Blockchain dependencies in raw format                                                                                     | gtv           |                    |         |
+| `config_consensus_strategy` | Configuration consensus strategy                                                                                          | string        |                    |         |
+| `query_cache_ttl_seconds`   | How long a query response can be cached, in seconds. 0 means no caching.                                                  | int           |                    | 0       |
+| `max_block_future_time`     | How long time in the future a block timestamp can be, compared to current time, in milliseconds. -1 means disabled check. | int           |                    | 60000   |
 
 ## Block strategy
 

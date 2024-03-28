@@ -175,7 +175,7 @@ object GenericBlockHeaderValidator {
         // The "advanced" checks
         return when {
             maxBlockFutureTime > -1 && header.timestamp - currentTimestamp > maxBlockFutureTime ->
-                ValidationResult(ValidationResult.Result.INVALID_TIMESTAMP, "Block timestamp too far in the future")
+                ValidationResult(ValidationResult.Result.INVALID_TIMESTAMP, "Block timestamp ${header.timestamp} is too far in the future")
 
             currentBlockTimestamp >= header.timestamp ->
                 ValidationResult(ValidationResult.Result.INVALID_TIMESTAMP, "Block timestamp >= header.timestamp")
