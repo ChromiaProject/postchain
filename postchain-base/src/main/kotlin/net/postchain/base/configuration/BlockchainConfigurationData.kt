@@ -61,7 +61,7 @@ data class BlockchainConfigurationData(
         @DefaultValue(defaultLong = 0)
         val queryCacheTtlSeconds: Long?,
         @Name(KEY_MAX_BLOCK_FUTURE_TIME)
-        @DefaultValue(defaultLong = 10 * 1000) // 10 seconds
+        @DefaultValue(defaultLong = 60 * 1000) // 1 minute
         val maxBlockFutureTime: Long
 ) {
     val historicBrid = historicBridAsByteArray?.let { BlockchainRid(it) }
