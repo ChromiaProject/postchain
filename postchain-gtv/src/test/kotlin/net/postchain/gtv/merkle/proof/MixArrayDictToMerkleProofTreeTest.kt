@@ -67,7 +67,7 @@ class MixArrayDictToMerkleProofTreeTest {
 
         val expectedTree = " +   $ln" +
                 "/ \\ $ln" +
-                "02706F66 *[1, 2, 3, 4]"
+                "02706F66 *[1,2,3,4]"
 
         val merkleProofTree = gtvDict.generateProof(gtvPaths, calculator)
 

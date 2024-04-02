@@ -56,7 +56,5 @@ data class GtvArray(val array: Array<out Gtv>) : GtvCollection() {
         return result
     }
 
-    override fun toString(): String {
-        return "${array.map { it.toString() }}"
-    }
+    override fun toString() = array.joinToString(separator = ",", prefix = "[", postfix = "]") { it.toString() }
 }

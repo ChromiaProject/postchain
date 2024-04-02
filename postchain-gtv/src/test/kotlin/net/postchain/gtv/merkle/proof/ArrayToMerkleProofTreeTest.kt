@@ -478,7 +478,7 @@ class ArrayToMerkleProofTreeTest {
                 " /   \\          $ln" +
                 " 0103030304   +   .   .   $ln" +
                 "    / \\         $ln" +
-                "- - 0204 *[1, 9, 3] - - - - "
+                "- - 0204 *[1,9,3] - - - - "
 
 
         val merkleProofTree = orgGtvArr.generateProof(gtvPaths, calculator)

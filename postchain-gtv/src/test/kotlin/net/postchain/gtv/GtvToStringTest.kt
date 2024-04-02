@@ -42,7 +42,7 @@ class GtvToStringTest {
     @Test
     fun `arrays are properly formatted`() {
         val gtvArray = GtvArray(arrayOf(GtvString("AAA"), GtvInteger(17)))
-        assertThat(gtvArray.toString()).isEqualTo("""["AAA", 17]""")
+        assertThat(gtvArray.toString()).isEqualTo("""["AAA",17]""")
     }
 
     @Test
@@ -60,13 +60,13 @@ class GtvToStringTest {
     @Test
     fun `dictionaries are properly formatted`() {
         val gtvDictionary = GtvDictionary.build(mapOf("a" to GtvString("AAA"), "b" to GtvInteger(17)))
-        assertThat(gtvDictionary.toString()).isEqualTo("""["a": "AAA", "b": 17]""")
+        assertThat(gtvDictionary.toString()).isEqualTo("""["a":"AAA","b":17]""")
     }
 
     @Test
     fun `singleton dictionaries are properly formatted`() {
         val gtvDictionary = GtvDictionary.build(mapOf("a" to GtvString("AAA")))
-        assertThat(gtvDictionary.toString()).isEqualTo("""["a": "AAA"]""")
+        assertThat(gtvDictionary.toString()).isEqualTo("""["a":"AAA"]""")
     }
 
     @Test
@@ -78,6 +78,6 @@ class GtvToStringTest {
     @Test
     fun `dictionary keys are escaped`() {
         val gtvDictionary = GtvDictionary.build(mapOf("a\"b" to GtvString("AAA")))
-        assertThat(gtvDictionary.toString()).isEqualTo("""["a\"b": "AAA"]""")
+        assertThat(gtvDictionary.toString()).isEqualTo("""["a\"b":"AAA"]""")
     }
 }
