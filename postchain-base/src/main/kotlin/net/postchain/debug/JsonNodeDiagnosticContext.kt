@@ -5,8 +5,9 @@ import com.google.gson.JsonObject
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.core.InfrastructureFactory
+import java.util.Collections
 
-class JsonNodeDiagnosticContext(
+class JsonNodeDiagnosticContext private constructor(
         private val properties: DiagnosticData,
         private val blockchainDiagnosticData: MutableMap<BlockchainRid, DiagnosticData>
 ) : NodeDiagnosticContext,
@@ -20,7 +21,7 @@ class JsonNodeDiagnosticContext(
                     ?: "(unknown)"),
     )
 
-    constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values), mutableMapOf())
+    constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values), Collections.synchronizedMap(mutableMapOf()))
 
     private val json = JsonFactory.makeJson()
 
