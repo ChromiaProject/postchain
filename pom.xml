@@ -39,6 +39,7 @@
         <!-- Kotlin -->
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <kotlin.version>1.9.23</kotlin.version>
+        <kotlinx.version>1.7.3</kotlinx.version>
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
 
@@ -110,7 +111,7 @@
             <dependency> <!-- used by downstream projects -->
                 <groupId>org.jetbrains.kotlinx</groupId>
                 <artifactId>kotlinx-coroutines-bom</artifactId>
-                <version>1.6.4</version>
+                <version>${kotlinx.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
             </dependency>
