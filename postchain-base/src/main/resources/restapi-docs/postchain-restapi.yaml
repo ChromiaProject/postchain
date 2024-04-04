@@ -165,7 +165,7 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
                 txNotFound:
                   value:
-                    error: "Can't find tx with hash <hex-string>"
+                    error: "Can't find transaction with RID: <hex-string>"
             application/octet-stream: { }
   /transactions/{blockchainRid}/{txRid}:
     get:
@@ -195,7 +195,7 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
                 txNotFound:
                   value:
-                    error: "Can't find tx with hash <hex-string>"
+                    error: "Can't find transaction with RID: <hex-string>"
   /transactions/{blockchainRid}:
     get:
       tags:
@@ -298,7 +298,7 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
                 txNotFound:
                   value:
-                    error: "Can't find tx with hash <hex-string>"
+                    error: "Can't find transaction with RID: <hex-string>"
   /tx/{blockchainRid}/{txRid}/status:
     get:
       tags:
@@ -469,6 +469,39 @@ paths:
               schema:
                 oneOf:
                   - $ref: "#/components/schemas/blockInfo"
+                  - $ref: "#/components/schemas/nullValue"
+            application/octet-stream: { }
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
+  /blocks/{blockchainRid}/confirm/{blockRid}:
+    get:
+      tags:
+        - block
+      summary: Confirm block by block RID
+      description: |
+        Sign the block and return block signature if the block is committed. 
+        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        otherwise defaults to JSON.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/blockRid"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/blockSignature"
                   - $ref: "#/components/schemas/nullValue"
             application/octet-stream: { }
         404:
@@ -1195,6 +1228,16 @@ components:
         timestamp:
           type: integer
           format: int64
+    blockSignature:
+      type: object
+      required:
+        - subjectID
+        - data
+      properties:
+        subjectID:
+          $ref: "#/components/schemas/hex"
+        data:
+          $ref: "#/components/schemas/hex"
     query:
       description: Named arguments to query as additional properties
       type: object

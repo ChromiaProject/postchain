@@ -46,6 +46,7 @@ interface BlockStore {
 
     fun getBlocks(ctx: EContext, beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
     fun getBlocksBeforeHeight(ctx: EContext, beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
+    fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
     fun getBlock(ctx: EContext, blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail?
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
     fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt>
@@ -73,6 +74,7 @@ interface BlockQueries : Shutdownable {
     fun getConfirmationProof(txRID: ByteArray): CompletionStage<ConfirmationProof?>
     fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>>
     fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>>
+    fun getBlocksFromHeight(fromHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>>
     fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): CompletionStage<BlockDetail?>
 
     fun getBlockTransactionRids(blockRID: ByteArray): CompletionStage<List<ByteArray>>

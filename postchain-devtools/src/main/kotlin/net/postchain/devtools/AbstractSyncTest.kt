@@ -15,7 +15,11 @@ import net.postchain.core.Infrastructure
 import net.postchain.core.NodeRid
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.devtools.KeyPairHelper
-import net.postchain.devtools.utils.configuration.*
+import net.postchain.devtools.utils.configuration.AppConfigGenerator
+import net.postchain.devtools.utils.configuration.BlockchainSetup
+import net.postchain.devtools.utils.configuration.NodeSeqNumber
+import net.postchain.devtools.utils.configuration.NodeSetup
+import net.postchain.devtools.utils.configuration.SystemSetup
 import net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -38,7 +42,7 @@ open class AbstractSyncTest : IntegrationTestSetup() {
      * @param replicaCount is the number of replicas we need
      * @return the newly created [NodeSetup]s.
      */
-    protected fun runNodes(signerNodeCount: Int, replicaCount: Int, infra: String = Infrastructure.Ebft.get()): Array<NodeSetup> {
+    protected fun runNodes(signerNodeCount: Int, replicaCount: Int, infra: String = Infrastructure.Ebft.get(), restApi: Boolean = false): Array<NodeSetup> {
         signerCount = signerNodeCount
         configOverrides.setProperty("fastsync.exit_delay", "2000")
 
@@ -70,7 +74,8 @@ open class AbstractSyncTest : IntegrationTestSetup() {
                 true,
                 "manual",
                 "unused", // Doesn't matter, not used as of now
-                infra
+                infra,
+                restApi
         )
 
         this.systemSetup = systemSetup

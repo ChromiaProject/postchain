@@ -7,20 +7,17 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.messageContains
 import assertk.isContentEqualTo
 import net.postchain.StorageBuilder
-import net.postchain.base.BaseBlockEContext
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockWitness
-import net.postchain.base.BaseBlockWitnessBuilder
-import net.postchain.base.TxEventSink
+import net.postchain.base.TestBlockchainBuilder
 import net.postchain.base.data.BaseBlockWitnessProvider
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.SQLDatabaseAccess
 import net.postchain.base.data.testDbConfig
-import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.base.importexport.ImporterExporter.exportBlocks
+import net.postchain.base.importexport.ImporterExporter.importBlocks
 import net.postchain.base.withReadConnection
-import net.postchain.base.withReadWriteConnection
-import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.wrap
@@ -28,14 +25,10 @@ import net.postchain.config.app.AppConfig
 import net.postchain.configurations.GTXTestModule
 import net.postchain.configurations.GTX_TEST_OP_NAME
 import net.postchain.configurations.table_gtx_test_value
-import net.postchain.core.EContext
 import net.postchain.core.Storage
 import net.postchain.core.Transaction
 import net.postchain.core.TxDetail
-import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockHeader
-import net.postchain.core.block.InitialBlockData
-import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.crypto.sha256Digest
@@ -45,7 +38,6 @@ import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
-import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
@@ -73,8 +65,12 @@ class ImportExportIT {
         val configurationsFile = tempDir.resolve("configurations.gtv")
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            buildBlockchain(storage, listOf(0L to configData0, 2L to configData2),
-                    listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
+            testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
+                    listOf("first"),
+                    listOf(),
+                    listOf("second", "third")
+            ))
             val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, null,
                     overwrite = false, logNBlocks = 1)
             assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 0, toHeight = Long.MAX_VALUE, numBlocks = 0))
@@ -95,8 +91,13 @@ class ImportExportIT {
         val blocksFile = tempDir.resolve("blocks.gtv")
 
         val blocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val blocks = buildBlockchain(storage, listOf(0L to configData0, 2L to configData2),
-                    listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
+            val blocks = testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
+                    listOf("first"),
+                    listOf(),
+                    listOf("second", "third")
+            ))
+
             val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
                     overwrite = false, logNBlocks = 1)
             assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 0, toHeight = 2, numBlocks = 3))
@@ -126,8 +127,12 @@ class ImportExportIT {
         val blocksFile = tempDir.resolve("blocks.gtv")
 
         val blocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val blocks = buildBlockchain(storage, listOf(0L to configData0, 2L to configData2),
-                    listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
+            val blocks = testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
+                    listOf("first"),
+                    listOf(),
+                    listOf("second", "third")
+            ))
             val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
                     overwrite = false, fromHeight = 1, logNBlocks = 1)
             assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 1, toHeight = 2, numBlocks = 2))
@@ -155,8 +160,12 @@ class ImportExportIT {
         val blocksFile = tempDir.resolve("blocks.gtv")
 
         val blocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val blocks = buildBlockchain(storage, listOf(0L to configData0, 2L to configData2),
-                    listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
+            val blocks = testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
+                    listOf("first"),
+                    listOf(),
+                    listOf("second", "third")
+            ))
             val exportResult = ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
                     overwrite = false, upToHeight = 1, logNBlocks = 1)
             assertThat(exportResult).isEqualTo(ExportResult(fromHeight = 0, toHeight = 1, numBlocks = 2))
@@ -187,8 +196,12 @@ class ImportExportIT {
         Files.createFile(blocksFile)
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            buildBlockchain(storage, listOf(0L to configData0, 2L to configData2),
-                    listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
+            testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
+                    listOf("first"),
+                    listOf(),
+                    listOf("second", "third")
+            ))
             assertFailure {
                 ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
                         overwrite = false, logNBlocks = 1)
@@ -205,77 +218,15 @@ class ImportExportIT {
         Files.createFile(blocksFile)
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            buildBlockchain(storage, listOf(0L to configData0, 2L to configData2),
-                    listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
+            testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
+                    listOf("first"),
+                    listOf(),
+                    listOf("second", "third")
+            ))
             ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile,
                     overwrite = true, logNBlocks = 1)
         }
-    }
-
-    private fun buildBlockchain(storage: Storage, configurations: List<Pair<Long, Gtv>>, blockTransactions: List<List<GTXTransaction>>,
-                                witnesses: List<KeyPair> = (0..3).map { KeyPairHelper.keyPair(it) })
-            : List<Pair<BaseBlockHeader, List<Transaction>>> =
-            withReadWriteConnection(storage, chainId) { ctx ->
-                val db = DatabaseAccess.of(ctx)
-
-                db.initializeBlockchain(ctx, blockchainRid)
-
-                for ((height, configData) in configurations) {
-                    db.addConfigurationData(ctx, height, encodeGtv(configData))
-                }
-
-                var prevBlockRID = blockchainRid.data
-                var height = 0L
-                buildList {
-                    for (transactions in blockTransactions) {
-                        val configData = configurations.filter { it.first <= height }.maxByOrNull { it.first }!!.second
-                        val block = addBlock(ctx, db, blockchainRid, height, prevBlockRID, configData, transactions, witnesses)
-                        prevBlockRID = block.first.blockRID
-                        height++
-                        add(block)
-                    }
-                }
-            }
-
-    private fun buildTransaction(param: String): GTXTransaction =
-            GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
-                    .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
-                            .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv(param))
-                            .finish().buildGtx())
-
-    private fun addBlock(ctx: EContext, db: DatabaseAccess, blockchainRid: BlockchainRid, blockHeight: Long,
-                         prevBlockRID: ByteArray, configData: Gtv, transactions: List<Transaction>,
-                         witnesses: List<KeyPair>): Pair<BaseBlockHeader, List<Transaction>> {
-        val blockIID = db.insertBlock(ctx, blockHeight)
-        val rootHash = gtv(transactions.map { gtv(it.getHash()) }).merkleHash(hashCalculator)
-        val timestamp = 10000L + blockHeight
-        var nextTransactionNumber = db.getLastTransactionNumber(ctx) + 1
-        val blockData =
-                InitialBlockData(blockchainRid, blockIID, ctx.chainID, prevBlockRID, blockHeight, timestamp, null)
-        val blockHeader = BaseBlockHeader.make(hashCalculator, blockData, rootHash, timestamp,
-                mapOf(CONFIG_HASH_EXTRA_HEADER to gtv(GtvToBlockchainRidFactory.calculateBlockchainRid(configData, ::sha256Digest).data)))
-        val blockEContext = BaseBlockEContext(
-                ctx,
-                height = 0,
-                blockIID,
-                timestamp,
-                mapOf(),
-                object : TxEventSink {
-                    override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {}
-                }
-        )
-        for (tx in transactions) {
-            db.insertTransaction(blockEContext, tx, nextTransactionNumber++)
-        }
-        db.finalizeBlock(blockEContext, blockHeader)
-        val witnessBuilder = BaseBlockWitnessProvider(cryptoSystem, cryptoSystem.buildSigMaker(KeyPairHelper.keyPair(0)),
-                witnesses.map { it.pubKey.data }.toTypedArray<ByteArray>()).createWitnessBuilderWithoutOwnSignature(blockHeader) as BaseBlockWitnessBuilder
-        for (witness in witnesses) {
-            witnessBuilder.applySignature(cryptoSystem.buildSigMaker(witness).signDigest(blockHeader.blockRID))
-        }
-
-        db.commitBlock(blockEContext, witnessBuilder.getWitness())
-        return blockHeader to transactions
     }
 
     private fun assertExportedConfiguration(height: Long, configData: Gtv, gtv: Gtv) {
@@ -305,8 +256,12 @@ class ImportExportIT {
 
         val expectedConfigurations = listOf(0L to configData0, 2L to configData2)
         val expectedBlocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val expectedBlocks = buildBlockchain(storage, expectedConfigurations,
-                    listOf(listOf(buildTransaction("first")), listOf(), listOf(buildTransaction("second"), buildTransaction("third"))))
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
+            val expectedBlocks = testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
+                    listOf("first"),
+                    listOf(),
+                    listOf("second", "third")
+            ))
             ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite = false, logNBlocks = 1)
             expectedBlocks
         }
@@ -365,16 +320,13 @@ class ImportExportIT {
 
         val expectedConfigurations = listOf(0L to configData0, 2L to configData2)
         val expectedBlocks = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val expectedBlocks = buildBlockchain(
-                    storage,
-                    expectedConfigurations,
-                    listOf(
-                            listOf(buildTransaction("first")),
-                            listOf(),
-                            listOf(buildTransaction("second"), buildTransaction("third")),
-                            listOf(buildTransaction("fourth")),
-                    )
-            )
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData0)
+            val expectedBlocks = testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData0, 2L to configData2), listOf(
+                    listOf("first"),
+                    listOf(),
+                    listOf("second", "third"),
+                    listOf("fourth")
+            ))
             ImporterExporter.exportBlockchain(storage, chainId, configsFile1, blocksFile1, overwrite = false, upToHeight = 1, logNBlocks = 1)
             ImporterExporter.exportBlockchain(storage, chainId, configsFile2, blocksFile2, overwrite = false, upToHeight = 2, logNBlocks = 1)
             ImporterExporter.exportBlockchain(storage, chainId, configsFile3, blocksFile3, overwrite = false, fromHeight = 3, logNBlocks = 1)
@@ -442,6 +394,88 @@ class ImportExportIT {
         }
     }
 
+    @Test
+    fun exportBlocksNoLimit() {
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildSimpleBlockchain(storage, 10)
+            val exportBlocks = exportBlocks(storage, chainId, 0, Int.MAX_VALUE, Int.MAX_VALUE);
+            assertThat(exportBlocks.size).isEqualTo(10)
+        }
+    }
+
+    @Test
+    fun exportBlocksCountLimit1() {
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildSimpleBlockchain(storage, 10)
+            val blockExports = List(11) { exportBlocks(storage, chainId, it.toLong(), 1, Int.MAX_VALUE) }
+
+            assertBlockExportRangeSize(blockExports, 0..9, 1)
+            assertBlockExportRangeSize(blockExports, 10, 0)
+        }
+    }
+
+    @Test
+    fun exportBlocksCountLimit3() {
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildSimpleBlockchain(storage, 10)
+            val blockExports = List(5) { exportBlocks(storage, chainId, (it * 3).toLong(), 3, Int.MAX_VALUE) }
+
+            assertThat(blockExports.size).isEqualTo(5)
+            assertBlockExportRangeSize(blockExports, 0..2, 3)
+            assertBlockExportRangeSize(blockExports, 3, 1)
+            assertBlockExportRangeSize(blockExports, 4, 0)
+        }
+    }
+
+    @Test
+    fun exportBlocksSizeLimit1k() {
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildSimpleBlockchain(storage, 10)
+            val blockExports = List(11) { exportBlocks(storage, chainId, it.toLong(), Int.MAX_VALUE, 1000) }
+
+            assertBlockExportRangeSize(blockExports, 0..9, 1)
+            assertBlockExportRangeSize(blockExports, 10, 0)
+        }
+    }
+
+    @Test
+    fun exportBlocksSizeLimit3k() {
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildSimpleBlockchain(storage, 10)
+            val blockExports = List(4) { exportBlocks(storage, chainId, (it * 4).toLong(), Int.MAX_VALUE, 3000) }
+
+            assertThat(blockExports.size).isEqualTo(4)
+            assertBlockExportRangeSize(blockExports, 0..1, 4)
+            assertBlockExportRangeSize(blockExports, 2, 2)
+            assertBlockExportRangeSize(blockExports, 3, 0)
+        }
+    }
+
+    @Test
+    fun exportBlocksAndImportBlocks() {
+
+        val blockExports = StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildSimpleBlockchain(storage, 10)
+            val blockExports = List(4) { exportBlocks(storage, chainId, (it * 4).toLong(), Int.MAX_VALUE, 3000) }
+
+            assertThat(blockExports.size).isEqualTo(4)
+
+            blockExports
+        }
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            buildSimpleBlockchain(storage, 0)
+            blockExports.forEach {
+                importBlocks(storage, chainId, it, KeyPairHelper.keyPair(0), cryptoSystem)
+            }
+        }
+    }
+
     private fun assertImportedTxs(storage: Storage, expectedConfigurations: List<Pair<Long, Gtv>>, expectedBlocks: List<Pair<BaseBlockHeader, List<Transaction>>>) {
         withReadConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
@@ -494,7 +528,8 @@ class ImportExportIT {
         val blocksFile = tempDir.resolve("blocks.gtv")
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val expectedBlocks = buildBlockchain(storage, listOf(0L to configData0),
+            val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
+            val expectedBlocks = blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
                     listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
                             .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
                                     .addOperation(GTX_TEST_OP_NAME, gtv("bogus"))
@@ -517,14 +552,14 @@ class ImportExportIT {
         }
     }
 
-
     @Test
     fun importRejectedTransaction(@TempDir tempDir: Path) {
         val configurationsFile = tempDir.resolve("configurations.gtv")
         val blocksFile = tempDir.resolve("blocks.gtv")
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val expectedBlocks = buildBlockchain(storage, listOf(0L to configData0),
+            val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
+            val expectedBlocks = blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
                     listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
                             .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
                                     .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("rejectMe"))
@@ -553,7 +588,8 @@ class ImportExportIT {
         val blocksFile = tempDir.resolve("blocks.gtv")
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val expectedBlocks = buildBlockchain(storage, listOf(0L to configData0),
+            val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
+            val expectedBlocks = blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
                     listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
                             .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
                                     .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("valid"))
@@ -575,5 +611,23 @@ class ImportExportIT {
                         logNBlocks = 1)
             }
         }
+    }
+
+    private fun buildSimpleBlockchain(storage: Storage, blocks: Int) {
+        TestBlockchainBuilder(storage,configData0)
+                .buildBlockchainWithTestTransactions(
+                        listOf(0L to configData0, 2L to configData2),
+                        List(blocks) { listOf("transaction-$it") }
+        )
+    }
+
+    private fun assertBlockExportRangeSize(blockExports: List<List<Gtv>>, range: IntRange, size: Int) {
+
+        range.forEach { assertBlockExportRangeSize(blockExports, it, size) }
+    }
+
+    private fun assertBlockExportRangeSize(blockExports: List<List<Gtv>>, index: Int, size: Int) {
+
+        assertThat(blockExports[index].size).isEqualTo(size)
     }
 }

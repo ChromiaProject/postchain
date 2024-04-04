@@ -14,6 +14,8 @@ import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.mastersub.protocol.MsMessageType.BlockAtHeightRequest
 import net.postchain.network.mastersub.protocol.MsMessageType.BlockAtHeightResponse
+import net.postchain.network.mastersub.protocol.MsMessageType.BlocksFromHeightRequest
+import net.postchain.network.mastersub.protocol.MsMessageType.BlocksFromHeightResponse
 import net.postchain.network.mastersub.protocol.MsMessageType.CommittedBlock
 import net.postchain.network.mastersub.protocol.MsMessageType.ConnectedPeers
 import net.postchain.network.mastersub.protocol.MsMessageType.DataMessage
@@ -51,7 +53,9 @@ enum class MsMessageType {
     QueryResponse,
     QueryFailure,
     BlockAtHeightRequest,
-    BlockAtHeightResponse
+    BlockAtHeightResponse,
+    BlocksFromHeightRequest,
+    BlocksFromHeightResponse
 }
 
 /**
@@ -238,6 +242,59 @@ class MsBlockAtHeightResponse(
         return gtv(
                 gtv(requestId),
                 if (block == null) GtvNull else GtvObjectMapper.toGtvDictionary(block),
+        )
+    }
+}
+
+/**
+ * Request a range of blocks from a chain running on another (sub)node.
+ */
+class MsBlocksFromHeightRequest(
+        val requestId: Long,
+        val targetBlockchainRid: BlockchainRid,
+        val fromHeight: Long,
+        val limit: Long,
+        val txHashesOnly: Boolean
+) : MsMessage {
+    override val type = BlocksFromHeightRequest.ordinal
+
+    constructor(payload: Gtv) : this(
+            payload[0].asInteger(),
+            BlockchainRid(payload[1].asByteArray()),
+            payload[2].asInteger(),
+            payload[3].asInteger(),
+            payload[4].asBoolean(),
+    )
+
+    override fun getPayload(): Gtv {
+        return gtv(
+                gtv(requestId),
+                gtv(targetBlockchainRid),
+                gtv(fromHeight),
+                gtv(limit),
+                gtv(txHashesOnly)
+        )
+    }
+}
+
+/**
+ * Successful response to [MsBlocksFromHeightRequest].
+ */
+class MsBlocksFromHeightResponse(
+        val requestId: Long,
+        val blocks: List<BlockDetail>
+) : MsMessage {
+    override val type = BlocksFromHeightResponse.ordinal
+
+    constructor(payload: Gtv) : this(
+            payload[0].asInteger(),
+            GtvObjectMapper.fromArray(payload[1], BlockDetail::class)
+    )
+
+    override fun getPayload(): Gtv {
+        return gtv(
+                gtv(requestId),
+                gtv(blocks.map { GtvObjectMapper.toGtvDictionary(it) })
         )
     }
 }

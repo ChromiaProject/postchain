@@ -13,8 +13,7 @@ fun createBlockHeader(
     val rootHash = ByteArray(32) { 0 }
     val timestamp = 10000L + height
     val dependencies = createBlockchainDependencies()
-    val blockData =
-            InitialBlockData(blockchainRid, blockIID, chainId, prevBlockRid, height, timestamp, dependencies)
+    val blockData = InitialBlockData(blockchainRid, blockIID, chainId, prevBlockRid, height, timestamp, dependencies)
     return BaseBlockHeader.make(merkeHashCalculator, blockData, rootHash, timestamp, mapOf())
 }
 

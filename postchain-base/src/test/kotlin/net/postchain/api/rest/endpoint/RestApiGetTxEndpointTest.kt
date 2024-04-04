@@ -123,7 +123,7 @@ class RestApiGetTxEndpointTest {
                 .then()
                 .statusCode(404)
                 .contentType(ContentType.JSON)
-                .body("error", equalTo("Can't find tx with hash AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
+                .body("error", equalTo("Can't find transaction with RID: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"))
     }
 
     @Test
@@ -139,7 +139,7 @@ class RestApiGetTxEndpointTest {
                 .statusCode(404)
                 .contentType(ContentType.BINARY)
         assertThat(GtvDecoder.decodeGtv(body.extract().response().body.asByteArray()).asString())
-                .isEqualTo("Can't find tx with hash AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+                .isEqualTo("Can't find transaction with RID: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
     }
 
     @Test

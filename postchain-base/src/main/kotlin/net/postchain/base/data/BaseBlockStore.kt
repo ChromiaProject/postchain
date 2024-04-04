@@ -146,6 +146,12 @@ class BaseBlockStore : BlockStore {
         return blocksInfo.map { buildBlockDetail(it, db, ctx, txHashesOnly) }
     }
 
+    override fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> {
+        val db = DatabaseAccess.of(ctx)
+        val blocksInfo = db.getBlocksFromHeight(ctx, fromHeight, limit)
+        return blocksInfo.map { buildBlockDetail(it, db, ctx, txHashesOnly) }
+    }
+
     private fun buildBlockDetail(blockInfo: DatabaseAccess.BlockInfoExt, db: DatabaseAccess, ctx: EContext, txHashesOnly: Boolean): BlockDetail {
         val txs = db.getBlockTransactions(ctx, blockInfo.blockRid, txHashesOnly)
 

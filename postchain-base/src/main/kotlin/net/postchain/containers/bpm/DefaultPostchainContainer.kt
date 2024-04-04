@@ -88,13 +88,14 @@ class DefaultPostchainContainer(
         setLastUpdated()
     }
 
-    override fun exportBlock(chainId: Long, height: Long): Gtv {
-        return subnodeAdminClient.exportBlock(chainId, height)
+    override fun exportBlocks(chainId: Long, fromHeight: Long, blockCountLimit: Int, blocksSizeLimit: Int): List<Gtv> {
+        return subnodeAdminClient.exportBlocks(chainId, fromHeight, blockCountLimit, blocksSizeLimit)
     }
 
-    override fun importBlock(chainId: Long, blockData: Gtv) {
-        subnodeAdminClient.importBlock(chainId, blockData)
+    override fun importBlocks(chainId: Long, blockData: List<Gtv>): Long {
+        val upToHeight = subnodeAdminClient.importBlocks(chainId, blockData)
         setLastUpdated()
+        return upToHeight
     }
 
     override fun start() {

@@ -220,7 +220,7 @@ class BaseBlockBuilderValidationTest {
         val validation = bbb.validateBlockHeader(header)
 
         assertEquals(INVALID_TIMESTAMP, validation.result)
-        assertEquals("Block timestamp too far in the future", validation.message)
+        assertEquals("Block timestamp $timestamp is too far in the future", validation.message)
     }
 
     private fun buildBaseBlockBuilder(sth: SpecialTransactionHandler, suppressSpecialTransactionValidation: Boolean, maxBlockFutureTime: Long = -1) =

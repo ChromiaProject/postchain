@@ -169,6 +169,10 @@ class RestApiMockForClientManual {
             TODO("Not yet implemented")
         }
 
+        override fun confirmBlock(blockRID: BlockRid): BlockSignature? {
+            TODO("Not yet implemented")
+        }
+
         override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> =
                 blocks.filter { it.timestamp < beforeTime }.subList(0, limit)
 
