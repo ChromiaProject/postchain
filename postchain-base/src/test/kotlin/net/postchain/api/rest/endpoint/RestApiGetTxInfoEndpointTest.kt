@@ -88,7 +88,7 @@ class RestApiGetTxInfoEndpointTest {
                 .contentType(ContentType.JSON)
                 .header("Cache-Control", nullValue())
                 .header("Expires", nullValue())
-                .body("error", equalTo("Can't find tx with hash ${txRID.toHex()}"))
+                .body("error", equalTo("Can't find transaction with RID: ${txRID.toHex()}"))
     }
 
     @Test
