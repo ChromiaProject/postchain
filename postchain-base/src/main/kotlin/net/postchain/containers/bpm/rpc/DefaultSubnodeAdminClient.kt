@@ -5,6 +5,7 @@ import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.ManagedChannel
 import io.grpc.Status.ALREADY_EXISTS
+import io.grpc.Status.DEADLINE_EXCEEDED
 import io.grpc.Status.UNAVAILABLE
 import io.grpc.Status.fromThrowable
 import io.grpc.health.v1.HealthCheckRequest
@@ -153,9 +154,14 @@ class DefaultSubnodeAdminClient(
             logger.debug { "startBlockchain(${chainId}) -- blockchain started ${response.message}" }
             true
         } catch (e: Exception) {
-            nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add(ErrorDiagnosticValue("Can't start blockchain: ${e.message}", System.currentTimeMillis()))
-            logger.error { "startBlockchain(${chainId}:${blockchainRid.toShortHex()}) -- can't start blockchain: ${e.message}" }
-            false
+            if (fromThrowable(e).code == DEADLINE_EXCEEDED.code) {
+                logger.warn { "startBlockchain(${chainId}:${blockchainRid.toShortHex()}) -- timed out waiting for start up" }
+                true
+            } else {
+                nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add(ErrorDiagnosticValue("Can't start blockchain: ${e.message}", System.currentTimeMillis()))
+                logger.error { "startBlockchain(${chainId}:${blockchainRid.toShortHex()}) -- can't start blockchain: ${e.message}" }
+                false
+            }
         }
     }
 
@@ -185,8 +191,13 @@ class DefaultSubnodeAdminClient(
             logger.debug { "isBlockchainRunning($chainId) -- ${response.active}" }
             response.active
         } catch (e: Exception) {
-            logger.error { "isBlockchainRunning($chainId) -- exception occurred: ${e.message}" }
-            false
+            if (fromThrowable(e).code == DEADLINE_EXCEEDED.code) {
+                logger.warn { "isBlockchainRunning($chainId) -- timed out, considered still running" }
+                true
+            } else {
+                logger.error { "isBlockchainRunning($chainId) -- exception occurred: ${e.message}" }
+                false
+            }
         }
     }
 
