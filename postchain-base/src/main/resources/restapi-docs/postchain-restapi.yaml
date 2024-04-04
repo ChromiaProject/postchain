@@ -165,7 +165,7 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
                 txNotFound:
                   value:
-                    error: "Can't find tx with hash <hex-string>"
+                    error: "Can't find transaction with RID: <hex-string>"
             application/octet-stream: { }
   /transactions/{blockchainRid}/{txRid}:
     get:
@@ -195,7 +195,7 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
                 txNotFound:
                   value:
-                    error: "Can't find tx with hash <hex-string>"
+                    error: "Can't find transaction with RID: <hex-string>"
   /transactions/{blockchainRid}:
     get:
       tags:
@@ -298,7 +298,7 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
                 txNotFound:
                   value:
-                    error: "Can't find tx with hash <hex-string>"
+                    error: "Can't find transaction with RID: <hex-string>"
   /tx/{blockchainRid}/{txRid}/status:
     get:
       tags:

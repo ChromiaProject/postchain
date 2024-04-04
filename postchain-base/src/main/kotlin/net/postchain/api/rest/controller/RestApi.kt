@@ -678,7 +678,7 @@ class RestApi(
 
     private fun <T> runTxActionOnModel(model: Model, txRid: TxRid, txAction: (Model, TxRid) -> T?): T =
             txAction(model, txRid)
-                    ?: throw NotFoundError("Can't find tx with hash $txRid")
+                    ?: throw NotFoundError("Can't find transaction with RID: $txRid")
 
     private fun chainModel(blockchainRid: BlockchainRid): Pair<ChainModel, Semaphore> = models[blockchainRid]
             ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRid")
