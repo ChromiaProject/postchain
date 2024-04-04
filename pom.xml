@@ -38,7 +38,7 @@
 
         <!-- Kotlin -->
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
-        <kotlin.version>1.8.21</kotlin.version>
+        <kotlin.version>1.9.23</kotlin.version>
         <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
 
@@ -47,7 +47,7 @@
         <!-- Testing -->
         <junit.version>5.9.1</junit.version>
         <junitparams.version>1.1.1</junitparams.version>
-        <mockito-kotlin.version>4.0.0</mockito-kotlin.version>
+        <mockito-kotlin.version>5.2.1</mockito-kotlin.version>
         <mockito.version>4.9.0</mockito.version>
         <assertk.version>0.26</assertk.version>
         <awaitility.version>3.1.6</awaitility.version>
