@@ -17,6 +17,7 @@ internal interface ContainerJobManager {
     fun stopChain(chain: Chain)
     fun startChain(chain: Chain)
     fun restartChain(chain: Chain)
+    fun hasPendingJobs(containerName: ContainerName): Boolean
 }
 
 internal class DefaultContainerJobManager(
@@ -76,6 +77,8 @@ internal class DefaultContainerJobManager(
     override fun restartChain(chain: Chain) {
         jobOf(chain.containerName).restartChain(chain)
     }
+
+    override fun hasPendingJobs(containerName: ContainerName) = jobOf(containerName).isNotEmpty()
 
     override fun shutdown() {
         jobsExecutor.shutdownNow()

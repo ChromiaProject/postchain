@@ -317,7 +317,7 @@ class ContainerManagedBlockchainProcessManager(
 
     private fun housekeepingHandler() {
         // Stopping idle containers
-        postchainContainers.filterValues { it.isIdle() }.keys
+        postchainContainers.filterValues { it.isIdle() && !containerJobManager.hasPendingJobs(it.containerName) }.keys
                 .forEach { containerName ->
                     logger.info { "Container is idle and will be stopped: $containerName" }
                     postchainContainers.remove(containerName)?.also { psContainer ->
