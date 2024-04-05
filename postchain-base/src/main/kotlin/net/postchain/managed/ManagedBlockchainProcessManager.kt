@@ -380,8 +380,12 @@ open class ManagedBlockchainProcessManager(
                             "and will be loaded into it from managed-mode module"
                 }
                 val config = currentBlockDataSource.getConfiguration(brid.data, nextConfigHeight)!!
-                GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(config), brid)
-                db.addConfigurationData(bctx, nextConfigHeight, config)
+                try {
+                    GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(config), brid)
+                    db.addConfigurationData(bctx, nextConfigHeight, config)
+                } catch (e: Exception) {
+                    logger.error("Configuration for height $nextConfigHeight is invalid and will not be applied", e)
+                }
             }
         }
     }
