@@ -192,7 +192,7 @@ open class BaseBlockchainProcessManager(
                     } catch (e: Exception) {
                         var eContext: EContext? = null
                         try {
-                            eContext = if (initialEContext.conn.isClosed) blockBuilderStorage.openWriteConnection(chainId) else initialEContext
+                            eContext = blockBuilderStorage.openWriteConnection(chainId)
                             val configHash = GtvToBlockchainRidFactory.calculateBlockchainRid(GtvDecoder.decodeGtv(rawConfigurationData), ::sha256Digest).data
                             if (hasBuiltInitialBlock(eContext) && !hasBuiltBlockWithConfig(eContext, blockHeight, configHash)) {
                                 revertConfiguration(chainId, bTrace, eContext, blockHeight, rawConfigurationData)
@@ -288,7 +288,6 @@ open class BaseBlockchainProcessManager(
         logger.info("Reverting faulty configuration at height $blockHeight")
         val failedConfigHash = GtvToBlockchainRidFactory.calculateBlockchainRid(GtvFactory.decodeGtv(failedConfig), ::sha256Digest).data
 
-        eContext.conn.rollback() // rollback any DB updates the new and faulty configuration did
         DatabaseAccess.of(eContext).apply {
             addFaultyConfiguration(eContext, FaultyConfiguration(failedConfigHash.wrap(), blockHeight))
             removeConfiguration(eContext, blockHeight)
