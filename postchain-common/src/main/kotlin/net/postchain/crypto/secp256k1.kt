@@ -6,6 +6,7 @@ import mu.KotlinLogging
 import net.postchain.bitcoinj.forks.crypto.HDKeyDerivation
 import net.postchain.bitcoinj.forks.crypto.MnemonicCode
 import net.postchain.common.data.Hash
+import net.postchain.common.exception.UserMistake
 import org.bouncycastle.asn1.x9.X9ECParameters
 import org.bouncycastle.crypto.digests.SHA256Digest
 import org.bouncycastle.crypto.ec.CustomNamedCurves
@@ -128,6 +129,8 @@ open class Secp256k1SigMaker(val pubKey: ByteArray, val privKey: ByteArray, val 
     }
 
     private fun sign(digest: ByteArray, privateKeyBytes: ByteArray): ByteArray {
+        if (digest.size != 32) throw UserMistake("Digest to sign must be 32 bytes long")
+
         val signer = ECDSASigner(HMacDSAKCalculator(SHA256Digest()))
         val privateKey = BigInteger(1, privateKeyBytes)
         val privKey = ECPrivateKeyParameters(privateKey, CURVE)
