@@ -36,6 +36,7 @@ import net.postchain.api.rest.model.TxRid
 import net.postchain.api.rest.nodeStatusBody
 import net.postchain.api.rest.nodeStatusesBody
 import net.postchain.api.rest.nullBody
+import net.postchain.api.rest.nullJsonBody
 import net.postchain.api.rest.prettyGson
 import net.postchain.api.rest.prettyJsonBody
 import net.postchain.api.rest.proofBody
@@ -521,7 +522,7 @@ class RestApi(
         return if (nextHeight != null) {
             Response(OK).with(blockHeightBody of nextHeight)
         } else {
-            Response(OK).with(nullBody.outbound(request) of Unit)
+            Response(OK).with(nullJsonBody of Unit)
         }
     }
 
