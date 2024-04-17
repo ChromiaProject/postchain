@@ -292,6 +292,7 @@ class RestApi(
 
             "/config/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainConfiguration),
             "/config/{blockchainRid}" bind POST to liveBlockchain.then(::validateBlockchainConfiguration),
+            "/next_config_height/{blockchainRid}" bind GET to liveBlockchain.then(::getNextBlockchainConfigurationHeight),
 
             "/errors/{blockchainRid}" bind GET to blockchain.then(volatileResponse).then(::getErrors),
     )
@@ -510,6 +511,17 @@ class RestApi(
             volatileResponse.then { response }(request)
         } else {
             response
+        }
+    }
+
+    private fun getNextBlockchainConfigurationHeight(request: Request): Response {
+        val model = model(request)
+        val height = heightQuery(request)
+        val nextHeight = model.getNextBlockchainConfigurationHeight(height)
+        return if (nextHeight != null) {
+            Response(OK).with(blockHeightBody of nextHeight)
+        } else {
+            Response(OK).with(nullBody.outbound(request) of Unit)
         }
     }
 
