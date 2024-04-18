@@ -1015,7 +1015,7 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
-  /next_config_height/{blockchainRid}:
+  /config/{blockchainRid}/next_height:
     get:
       tags:
         - configuration
