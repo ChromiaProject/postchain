@@ -803,13 +803,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                required:
-                  - blockHeight
-                properties:
-                  blockHeight:
-                    type: integer
-                    format: int64
+                $ref: "#/components/schemas/blockHeight"
               example:
                 blockHeight: 4711
         404:
@@ -1011,6 +1005,44 @@ paths:
                 invalidConfiguration:
                   value:
                     error: "Invalid configuration"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /config/{blockchainRid}/next_height:
+    get:
+      tags:
+        - configuration
+      summary: Fetch the next blockchain configuration height following the specified height
+      description: |
+        Fetch the next configuration height for a chain following the specified height.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - name: height
+          description: Block height
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+          example: 42
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/blockHeight"
+                  - $ref: "#/components/schemas/nullValue"
+              example:
+                blockHeight: 4711
         404:
           description: Not found
           content:
@@ -1226,6 +1258,14 @@ components:
           items:
             $ref: "#/components/schemas/hex"
         timestamp:
+          type: integer
+          format: int64
+    blockHeight:
+      type: object
+      required:
+        - blockHeight
+      properties:
+        blockHeight:
           type: integer
           format: int64
     blockSignature:
