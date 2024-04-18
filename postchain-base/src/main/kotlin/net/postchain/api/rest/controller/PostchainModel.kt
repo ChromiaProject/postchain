@@ -224,5 +224,9 @@ open class PostchainModel(
         }
     }
 
+    override fun getNextBlockchainConfigurationHeight(height: Long): BlockHeight? = withReadConnection(storage, chainIID) { ctx ->
+        DatabaseAccess.of(ctx).findNextConfigurationHeight(ctx, height)?.let { BlockHeight(it) }
+    }
+
     override fun toString(): String = "${this.javaClass.simpleName}(chainId=$chainIID)"
 }

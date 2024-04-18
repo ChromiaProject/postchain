@@ -220,5 +220,9 @@ class RestApiMockForClientManual {
         override fun validateBlockchainConfiguration(configuration: Gtv) {
             TODO("Not yet implemented")
         }
+
+        override fun getNextBlockchainConfigurationHeight(height: Long): BlockHeight? {
+            TODO("Not yet implemented")
+        }
     }
 }
