@@ -2,6 +2,7 @@
 
 package net.postchain.base
 
+import mu.KLogging
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.ProgrammerMistake
@@ -100,6 +101,11 @@ open class BaseTxEContext(
     override val txIID: Long,
     val tx: Transaction
 ) : BlockEContext by bectx, TxEContext {
+
+    companion object : KLogging()
+
+    private val hooks = mutableListOf<() -> Unit>()
+
     val events = mutableListOf<Pair<String, Gtv>>()
     val eventSink = bectx.getInterface(TxEventSink::class.java)!!
 
@@ -117,6 +123,20 @@ open class BaseTxEContext(
                 eventSink.processEmittedEvent(this, e.first, e.second)
             }
         }
+
+        hooks.forEach {
+            // We can't allow exceptions to bubble here, other hooks must be able to assume that the tx was appended
+            // Hooks should be simple and defensively written, just like after commit hooks
+            try {
+                it()
+            } catch (e: Exception) {
+                logger.error("An after append hook failed for transaction with RID ${tx.getRID()}", e)
+            }
+        }
+    }
+
+    override fun addAfterAppendHook(hook: () -> Unit) {
+        hooks.add(hook)
     }
 }
 

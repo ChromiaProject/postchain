@@ -44,6 +44,7 @@ interface TxEContext : BlockEContext {
     fun emitEvent(type: String, data: Gtv)
     // called after transaction was added to DB
     fun done()
+    fun addAfterAppendHook(hook: () -> Unit)
 }
 
 // TODO: can we generalize conn? We can make it an Object, but then we have to do typecast everywhere...
