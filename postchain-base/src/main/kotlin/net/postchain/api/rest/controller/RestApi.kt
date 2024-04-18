@@ -36,6 +36,7 @@ import net.postchain.api.rest.model.TxRid
 import net.postchain.api.rest.nodeStatusBody
 import net.postchain.api.rest.nodeStatusesBody
 import net.postchain.api.rest.nullBody
+import net.postchain.api.rest.nullJsonBody
 import net.postchain.api.rest.prettyGson
 import net.postchain.api.rest.prettyJsonBody
 import net.postchain.api.rest.proofBody
@@ -292,6 +293,7 @@ class RestApi(
 
             "/config/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainConfiguration),
             "/config/{blockchainRid}" bind POST to liveBlockchain.then(::validateBlockchainConfiguration),
+            "/config/{blockchainRid}/next_height" bind GET to liveBlockchain.then(::getNextBlockchainConfigurationHeight),
 
             "/errors/{blockchainRid}" bind GET to blockchain.then(volatileResponse).then(::getErrors),
     )
@@ -510,6 +512,17 @@ class RestApi(
             volatileResponse.then { response }(request)
         } else {
             response
+        }
+    }
+
+    private fun getNextBlockchainConfigurationHeight(request: Request): Response {
+        val model = model(request)
+        val height = heightQuery(request)
+        val nextHeight = model.getNextBlockchainConfigurationHeight(height)
+        return if (nextHeight != null) {
+            Response(OK).with(blockHeightBody of nextHeight)
+        } else {
+            Response(OK).with(nullJsonBody of Unit)
         }
     }
 

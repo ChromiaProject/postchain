@@ -55,6 +55,7 @@ interface Model : ChainModel {
     fun getBlockchainNodeState(): BlockchainNodeState
     fun getBlockchainConfiguration(height: Long = -1): ByteArray?
     fun validateBlockchainConfiguration(configuration: Gtv)
+    fun getNextBlockchainConfigurationHeight(height: Long): BlockHeight?
 }
 
 class NotSupported(message: String) : Exception(message)
