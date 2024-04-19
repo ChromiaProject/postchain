@@ -37,30 +37,19 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         return res.asArray().map { PeerInfo.fromGtv(it) }.toTypedArray()
     }
 
-    override fun computeBlockchainList(): List<ByteArray> {
+    override fun computeBlockchainInfoList(): List<BlockchainInfo> {
+        if (nmApiVersion < 4) return listOf()
+
         val res = query(
-                "nm_compute_blockchain_list",
+                "nm_compute_blockchain_info_list",
                 buildArgs("node_id" to gtv(appConfig.pubKeyByteArray))
         )
 
-        return res.asArray().map { it.asByteArray() }
-    }
-
-    override fun computeBlockchainInfoList(): List<BlockchainInfo> {
-        return if (nmApiVersion >= 4) {
-            val res = query(
-                    "nm_compute_blockchain_info_list",
-                    buildArgs("node_id" to gtv(appConfig.pubKeyByteArray))
-            )
-            res.asArray().map {
-                BlockchainInfo(
-                        BlockchainRid(it["rid"]!!.asByteArray()),
-                        it["system"]!!.asBoolean(),
-                        BlockchainState.valueOf(it["state"]?.asString() ?: BlockchainState.RUNNING.name))
-            }
-        } else {
-            // Fallback for legacy API versions
-            computeBlockchainList().map { BlockchainInfo(BlockchainRid(it), false, BlockchainState.RUNNING) }
+        return res.asArray().map {
+            BlockchainInfo(
+                    BlockchainRid(it["rid"]!!.asByteArray()),
+                    it["system"]!!.asBoolean(),
+                    BlockchainState.valueOf(it["state"]?.asString() ?: BlockchainState.RUNNING.name))
         }
     }
 
