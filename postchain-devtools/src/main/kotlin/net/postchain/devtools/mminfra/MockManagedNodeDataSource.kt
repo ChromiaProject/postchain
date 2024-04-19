@@ -39,19 +39,12 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     override val nmApiVersion: Int
         get() = TODO("Not yet implemented")
 
-    override fun computeBlockchainList(): List<ByteArray> {
-        return myNode.chainsToRead.union(myNode.chainsToSign).map { ChainUtil.ridOf(it.toLong()).data }
-    }
-
     override fun computeBlockchainInfoList(): List<BlockchainInfo> {
-        return computeBlockchainList()
-                .filter { bridState[BlockchainRid(it)] !in inactiveStates }
+        return myNode.chainsToRead.union(myNode.chainsToSign)
+                .map { ChainUtil.ridOf(it.toLong()) }
+                .filter { bridState[it] !in inactiveStates }
                 .map {
-                    BlockchainInfo(
-                            BlockchainRid(it),
-                            false,
-                            bridState[BlockchainRid(it)] ?: BlockchainState.RUNNING
-                    )
+                    BlockchainInfo(it, false, bridState[it] ?: BlockchainState.RUNNING)
                 }
     }
 
