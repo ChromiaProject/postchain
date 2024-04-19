@@ -17,13 +17,6 @@ interface DirectoryDataSource : ManagedNodeDataSource {
     fun getContainerForBlockchain(brid: BlockchainRid): String
 
     /**
-     * Returns a destination container for node for moving/unarchiving blockchains.
-     * Otherwise, returns getContainerForBlockchain() result.
-     * NM API Version: 12
-     */
-    fun getContainerForBlockchainOnTheNode(brid: BlockchainRid): String
-
-    /**
      * Returns a list of containers running on a node.
      * NM API Version: 14
      */

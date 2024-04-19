@@ -34,26 +34,13 @@ open class BaseDirectoryDataSource(
         }
     }
 
-    override fun getContainerForBlockchainOnTheNode(brid: BlockchainRid): String {
-        return if (nmApiVersion >= 12) {
-            query(
-                    "nm_get_container_for_blockchain_on_node",
-                    buildArgs("pubkey" to gtv(appConfig.pubKeyByteArray), "blockchain_rid" to gtv(brid.data))
-            ).asString()
-        } else {
-            getContainerForBlockchain(brid)
-        }
-    }
-
     override fun getBlockchainContainersForNode(brid: BlockchainRid): List<String> {
-        return if (nmApiVersion >= 14) {
-            query(
-                    "nm_get_blockchain_containers_for_node",
-                    buildArgs("node_id" to gtv(appConfig.pubKeyByteArray), "blockchain_rid" to gtv(brid.data))
-            ).asArray().map { it.asString() }
-        } else {
-            listOf(getContainerForBlockchainOnTheNode(brid))
-        }
+        if (nmApiVersion < 14) return emptyList()
+
+        return query(
+                "nm_get_blockchain_containers_for_node",
+                buildArgs("node_id" to gtv(appConfig.pubKeyByteArray), "blockchain_rid" to gtv(brid.data))
+        ).asArray().map { it.asString() }
     }
 
     // TODO: [et]: directory vs containerId?
