@@ -9,7 +9,7 @@ import net.postchain.core.BlockchainState
 import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.Shutdownable
 import net.postchain.network.mastersub.master.MasterCommunicationManager
-import java.net.URL
+import org.apache.http.client.utils.URIBuilder
 
 interface ContainerBlockchainProcess : RemoteBlockchainProcess, Shutdownable {
     val blockchainState: BlockchainState
@@ -28,11 +28,12 @@ class DefaultContainerBlockchainProcess(
 
     companion object : KLogging()
 
-    override val restApiUrl = URL("http",
-            containerNodeConfig.subnodeHost,
-            restApiPort,
-            RestApiConfig.fromAppConfig(nodeConfig.appConfig).basePath
-    ).toString()
+    override val restApiUrl = URIBuilder()
+            .setScheme("http")
+            .setHost(containerNodeConfig.subnodeHost)
+            .setPort(restApiPort)
+            .setPath(RestApiConfig.fromAppConfig(nodeConfig.appConfig).basePath)
+            .toString()
 
     override fun shutdown() {
         communicationManager.shutdown()

@@ -716,6 +716,5 @@ class RestApi(
     override fun close() {
         server.close()
         System.gc()
-        System.runFinalization()
     }
 }

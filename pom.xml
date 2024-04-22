@@ -40,7 +40,7 @@
         <kotlin.compiler.incremental>true</kotlin.compiler.incremental>
         <kotlin.version>1.9.23</kotlin.version>
         <kotlinx.version>1.7.3</kotlinx.version>
-        <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
+        <kotlin.compiler.jvmTarget>21</kotlin.compiler.jvmTarget>
         <kotlin.code.style>obsolete</kotlin.code.style> <!-- Kotlin obsolete IntelliJ IDEA codestyle -->
 
         <skipSurefireTests>false</skipSurefireTests>
@@ -49,12 +49,12 @@
         <junit.version>5.9.1</junit.version>
         <junitparams.version>1.1.1</junitparams.version>
         <mockito-kotlin.version>5.2.1</mockito-kotlin.version>
-        <mockito.version>4.9.0</mockito.version>
+        <mockito.version>5.7.0</mockito.version>
         <assertk.version>0.26</assertk.version>
         <awaitility.version>3.1.6</awaitility.version>
 
         <!-- Logging -->
-        <kotlin-logging.version>2.1.23</kotlin-logging.version>
+        <kotlin-logging.version>3.0.5</kotlin-logging.version>
         <slf4j.version>1.7.36</slf4j.version>
         <!-- NB! When updating log4j2 version from 2.20.0 check dependency overrides below -->
         <log4j2.version>2.20.0</log4j2.version>
@@ -71,8 +71,8 @@
         <commons-lang3.version>3.12.0</commons-lang3.version>
         <micrometer.version>1.10.1</micrometer.version>
 
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
 
         <gitlab.registry>registry.gitlab.com/chromaway/postchain</gitlab.registry>
     </properties>
@@ -244,7 +244,7 @@
             <dependency>
                 <groupId>org.mockito</groupId>
                 <artifactId>mockito-inline</artifactId>
-                <version>${mockito.version}</version>
+                <version>5.2.0</version>
             </dependency>
             <dependency>
                 <groupId>com.willowtreeapps.assertk</groupId>
