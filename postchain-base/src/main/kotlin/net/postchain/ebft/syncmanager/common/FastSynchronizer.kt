@@ -290,9 +290,6 @@ class FastSynchronizer(
         val legacyPeers = mutableSetOf<NodeRid>()
         for (job in jobs.values) {
             if (job.hasRestartFailed) {
-                if (job.startTime + params.jobTimeout < now) {
-                    peerStatuses.unresponsive(job.peerId, "Sync: Marking peer for restarted job $job unresponsive")
-                }
                 // These are jobs that couldn't be restarted because there
                 // were no peers available at the time. Try again every
                 // time, because there is virtually no cost in doing so.

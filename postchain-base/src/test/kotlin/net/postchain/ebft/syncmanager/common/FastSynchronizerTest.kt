@@ -265,22 +265,6 @@ class FastSynchronizerTest {
         }
 
         @Test
-        fun `with timed out job and job failed restart should restart job and mark peer unresponsive`() {
-            // setup
-            params.jobTimeout = 0
-            whenever(clock.millis()).doReturnConsecutively(listOf(0, 42))
-            val job = addJob(height, nodeRid)
-            job.hasRestartFailed = true
-            doNothing().whenever(sut).restartJob(job)
-            doNothing().whenever(peerStatuses).unresponsive(isA(), anyString())
-            // execute
-            sut.processStaleJobs()
-            // verify
-            verify(sut).restartJob(job)
-            verify(peerStatuses).unresponsive(nodeRid, "Sync: Marking peer for restarted job $job unresponsive")
-        }
-
-        @Test
         fun `with timed out job and missing job block and is confirmed new node should restart job and mark peer unresponsive`() {
             // setup
             params.jobTimeout = 0
