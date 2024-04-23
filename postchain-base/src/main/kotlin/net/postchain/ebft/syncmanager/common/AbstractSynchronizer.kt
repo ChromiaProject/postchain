@@ -133,7 +133,7 @@ abstract class AbstractSynchronizer(
         }
     }
 
-    internal fun handleAddBlockException(exception: Throwable, block: BlockDataWithWitness, bTrace: BlockTrace?, peerStatuses: AbstractPeerStatuses<*>, peerId: NodeRid) {
+    internal fun handleAddBlockException(exception: Throwable, block: BlockDataWithWitness, bTrace: BlockTrace?, peerStatuses: PeerStatuses, peerId: NodeRid) {
         try {
             val height = getHeight(block.header)
             when (exception) {

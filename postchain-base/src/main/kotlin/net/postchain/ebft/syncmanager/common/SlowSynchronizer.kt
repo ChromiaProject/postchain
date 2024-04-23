@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.extension.getConfigHash
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.BadDataException
@@ -48,7 +49,7 @@ class SlowSynchronizer(
         private val isProcessRunning: () -> Boolean,
         val clock: Clock = Clock.systemUTC(),
         slowSyncStateMachineProvider: (Int) -> SlowSyncStateMachine = { chainId -> SlowSyncStateMachine.buildWithChain(chainId, params) },
-        slowSyncPeerStatusesProvider: () -> SlowSyncPeerStatuses = { SlowSyncPeerStatuses(params) },
+        slowSyncPeerStatusesProvider: () -> PeerStatuses = { PeerStatuses(params) },
         val slowSyncSleepDataProvider: () -> SlowSyncSleepData = { SlowSyncSleepData(params) },
         reentrantLockProvider: () -> ReentrantLock = { ReentrantLock() }
 ) : AbstractSynchronizer(workerContext) {
@@ -58,6 +59,9 @@ class SlowSynchronizer(
 
     private val stateMachineLock = reentrantLockProvider()
     private val allBlocksCommitted = stateMachineLock.newCondition()
+    private val replicas = configuredPeers.filterNot { peer ->
+        workerContext.blockchainConfiguration.signers.any { it.contentEquals(peer.data) }
+    }.map { it.data.wrap() }.toSet()
 
     val peerStatuses = slowSyncPeerStatusesProvider() // Don't want to put this in [AbstractSynchronizer] b/c too much generics.
 
@@ -98,7 +102,7 @@ class SlowSynchronizer(
     internal fun sendRequest(now: Long, slowSyncStateMachine: SlowSyncStateMachine, lastPeer: NodeRid? = null) {
         val startAtHeight = slowSyncStateMachine.getStartHeight()
         val peers = configuredPeers.minus(peerStatuses.excludedNonSyncable(startAtHeight, now)).ifEmpty {
-            peerStatuses.reviveAllBlacklisted()
+            peerStatuses.markAllSyncable(startAtHeight)
             configuredPeers.minus(peerStatuses.excludedNonSyncable(startAtHeight, now)).ifEmpty {
                 return
             }
@@ -149,7 +153,14 @@ class SlowSynchronizer(
                     is BlockRange -> {
                         messageDurationTracker.receive(peerId, message)
                         val processedBlocks = handleBlockRange(peerId, message.blocks, message.startAtHeight)
-                        sleepData.updateData(processedBlocks)
+
+                        // We want to avoid drained replicas from affecting our sync rate
+                        val isReplica = replicas.contains(peerId.data.wrap())
+                        if (isReplica && processedBlocks == 0) {
+                            peerStatuses.drained(peerId, message.startAtHeight, currentTimeMillis(), params.slowSyncMaxSleepTime * configuredPeers.size)
+                        } else {
+                            sleepData.updateData(processedBlocks)
+                        }
                     }
 
                     is Status -> if (message.configHash != null && checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return

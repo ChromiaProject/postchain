@@ -16,9 +16,9 @@ import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.rest.contract.StateNodeStatus
-import net.postchain.ebft.syncmanager.common.FastSyncPeerStatuses
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.KnownState
+import net.postchain.ebft.syncmanager.common.PeerStatuses
 import net.postchain.ebft.syncmanager.common.SlowSynchronizer
 import net.postchain.ebft.syncmanager.common.SyncMethod
 import net.postchain.ebft.syncmanager.common.SyncParameters
@@ -52,7 +52,7 @@ class ReadOnlyBlockchainProcess(
             workerContext,
             blockDatabase,
             params,
-            FastSyncPeerStatuses(params),
+            PeerStatuses(params),
             ::isProcessRunning
     )
 

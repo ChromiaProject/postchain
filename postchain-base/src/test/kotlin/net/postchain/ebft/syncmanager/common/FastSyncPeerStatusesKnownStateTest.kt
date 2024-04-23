@@ -9,7 +9,7 @@ class FastSyncPeerStatusesKnownStateTest {
     @Test
     fun test_drained() {
         val params = SyncParameters()
-        val state = FastSyncKnownState(params)
+        val state = KnownState(params)
 
         // Initial state
         assertTrue(state.isSyncable(1))
@@ -31,7 +31,7 @@ class FastSyncPeerStatusesKnownStateTest {
     @Test
     fun test_resurrect_after_unresponsive() {
         val params = SyncParameters()
-        val state = FastSyncKnownState(params)
+        val state = KnownState(params)
 
         // Initial state
         assertTrue(state.isSyncable(1))
@@ -56,7 +56,7 @@ class FastSyncPeerStatusesKnownStateTest {
     @Test
     fun test_blacklist_and_timeout() {
         val params = SyncParameters()
-        val state = FastSyncKnownState(params)
+        val state = KnownState(params)
 
         // Initial state
         assertTrue(state.isSyncable(1))
@@ -89,7 +89,7 @@ class FastSyncPeerStatusesKnownStateTest {
         val params = SyncParameters()
         params.maxErrorsBeforeBlacklisting = 3
         params.blacklistingErrorTimeoutMs = 10
-        val state = FastSyncKnownState(params)
+        val state = KnownState(params)
 
         // Initial state
         assertTrue(state.isSyncable(1))
@@ -120,7 +120,7 @@ class FastSyncPeerStatusesKnownStateTest {
         assertTrue(state.updateAndCheckBlacklisted(1))
     }
 
-    private fun makePeerBlacklisted(state: FastSyncKnownState, startTime: Long = 0L): Long {
+    private fun makePeerBlacklisted(state: KnownState, startTime: Long = 0L): Long {
         // Work up until blacklist
         var timeIter: Long = 1 + startTime
         while (timeIter < (10 + startTime)) {
