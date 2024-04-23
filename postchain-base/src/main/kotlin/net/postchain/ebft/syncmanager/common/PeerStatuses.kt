@@ -11,21 +11,55 @@ import net.postchain.devtools.NameHelper
  * - Unresponsive: We haven't received a timely response from the peer
  * - Responsive: Node should work well
  */
-abstract class AbstractPeerStatuses<StateType : KnownState> {
+class PeerStatuses(val params: SyncParameters) {
 
     companion object : KLogging()
 
-    protected val statuses = HashMap<NodeRid, StateType>()
+    protected val statuses = HashMap<NodeRid, KnownState>()
 
     val peersStates: List<Pair<String, KnownState>>
         get() = statuses.toList().map { it.first.toHex() to it.second }
 
-    abstract fun stateOf(peerId: NodeRid): StateType
+    fun stateOf(peerId: NodeRid): KnownState {
+        return statuses.computeIfAbsent(peerId) { KnownState(params) }
+    }
+
+    fun headerReceived(peerId: NodeRid, height: Long) {
+        val status = stateOf(peerId)
+        if (status.updateAndCheckBlacklisted()) {
+            logger.warn("We got a header from a blacklisted node: ${NameHelper.peerName(peerId)}, was it recently blacklisted?")
+            return
+        }
+        status.headerReceived(height)
+    }
+
+    fun statusReceived(peerId: NodeRid, height: Long) {
+        val status = stateOf(peerId)
+        if (status.updateAndCheckBlacklisted()) {
+            logger.warn("Got status from a blacklisted node: ${NameHelper.peerName(peerId)}, was it recently blacklisted?")
+            return
+        }
+        status.statusReceived(height)
+    }
 
     private fun resurrectPeers(now: Long) {
         statuses.forEach {
             it.value.resurrect(now)
         }
+    }
+
+    fun drained(peerId: NodeRid, height: Long, now: Long, drainedTimeout: Long? = null) {
+        val status = stateOf(peerId)
+        if (status.updateAndCheckBlacklisted()) {
+            logger.warn("We tried to get block from a blacklisted node: ${NameHelper.peerName(peerId)}, was it recently blacklisted?")
+            return
+        }
+        if (logger.isDebugEnabled) {
+            if (!status.isDrained(now)) { // Don't worry about resurrect b/c we drain later
+                logger.debug("Setting new fast sync peer status DRAINED at height: $height")
+            }
+        }
+        if (drainedTimeout != null) status.drained(height, now, drainedTimeout) else status.drained(height, now)
     }
 
     /**
@@ -128,7 +162,7 @@ abstract class AbstractPeerStatuses<StateType : KnownState> {
         statuses.clear()
     }
 
-    fun reviveAllBlacklisted() {
-        statuses.values.filter { it.isBlacklisted() }.forEach { it.whitelist() }
+    fun markAllSyncable(height: Long) {
+        statuses.values.filterNot { it.isSyncable(height) }.forEach { it.markAsSyncable() }
     }
 }

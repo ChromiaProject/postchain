@@ -152,7 +152,7 @@ class AbstractSynchronizerTest {
     private val blockWitness: BlockWitness = mock {
         on { getRawData() } doReturn witness
     }
-    private val peerStatuses: AbstractPeerStatuses<*> = mock()
+    private val peerStatuses: PeerStatuses = mock()
     private val blockWitnessBuilder: BlockWitnessBuilder = mock()
     private val baseBlockWitnessProvider: BaseBlockWitnessProvider = mock {
         on { createWitnessBuilderWithoutOwnSignature(isA()) } doReturn blockWitnessBuilder
