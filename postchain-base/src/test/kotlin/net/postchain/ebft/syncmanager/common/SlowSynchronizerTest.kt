@@ -67,7 +67,6 @@ class SlowSynchronizerTest {
 
     private val currentTimeMillis = 42L
     private val currentSleepMs = 15L
-    private val peerIds = mutableSetOf<NodeRid>()
     private val height = 54L
     private val lastBlockHeight = 10L
     private val startHeight = 4L
@@ -75,7 +74,9 @@ class SlowSynchronizerTest {
     private val blockRID = BlockchainRid.buildFromHex(brid)
     private val node = "0350FE40766BC0CE8D08B3F5B810E49A8352FDD458606BD5FAFE5ACDCDC8FF3F57"
     private val nodeRid = NodeRid.fromHex(node)
-    private val toExcludeNodeRid = NodeRid.fromHex("2".repeat(32))
+    private val replicaNode = "035676109C54B9A16D271ABEB4954316A40A32BCCE023AC14C8E26E958AA68FBA9"
+    private val replicaNodeRid = NodeRid.fromHex(replicaNode)
+    private val peerIds = mutableSetOf<NodeRid>(nodeRid, replicaNodeRid)
     private val header: ByteArray = "header".toByteArray()
     private val witness: ByteArray = "witness".toByteArray()
     private val transactions: List<ByteArray> = listOf("tx1".toByteArray())
@@ -109,6 +110,7 @@ class SlowSynchronizerTest {
         on { getBlockHeaderValidator() } doReturn blockWitnessProvider
         on { blockchainRid } doReturn blockRID
         on { configHash } doReturn configHash
+        on { signers } doReturn listOf(nodeRid.data)
     }
     private val blockchainEngine: BlockchainEngine = mock {
         on { getBlockQueries() } doReturn blockQueries
@@ -134,7 +136,7 @@ class SlowSynchronizerTest {
     private val stateMachine: SlowSyncStateMachine = mock {
         on { getStartHeight() } doReturn startHeight
     }
-    private val peerStatuses: SlowSyncPeerStatuses = mock()
+    private val peerStatuses: PeerStatuses = mock()
     private val slowSyncSleepData: SlowSyncSleepData = mock {
         on { currentSleepMs } doReturn currentSleepMs
     }
@@ -185,6 +187,8 @@ class SlowSynchronizerTest {
     inner class sendRequest {
         @Test
         fun `with no peers should do nothing`() {
+            // setup
+            doReturn(setOf(nodeRid, replicaNodeRid)).whenever(peerStatuses).excludedNonSyncable(4L, currentTimeMillis)
             // execute
             sut.sendRequest(currentTimeMillis, stateMachine, null)
             // verify
@@ -192,15 +196,14 @@ class SlowSynchronizerTest {
         }
 
         @Test
-        fun `with no valid peers should try to revive blacklisted`() {
+        fun `with no valid peers should try to revive non-syncable`() {
             // setup
-            peerIds.add(toExcludeNodeRid)
-            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).excludedNonSyncable(4L, currentTimeMillis)
+            doReturn(setOf(nodeRid, replicaNodeRid)).whenever(peerStatuses).excludedNonSyncable(4L, currentTimeMillis)
             // execute
             sut.sendRequest(currentTimeMillis, stateMachine, null)
             // verify
             verify(stateMachine).getStartHeight()
-            verify(peerStatuses).reviveAllBlacklisted()
+            verify(peerStatuses).markAllSyncable(anyLong())
             verify(peerStatuses, times(2)).excludedNonSyncable(anyLong(), anyLong())
             verify(commManager, never()).sendToRandomPeer(isA(), anySet())
         }
@@ -208,9 +211,7 @@ class SlowSynchronizerTest {
         @Test
         fun `with failed commit should acknowledge failed commit and update state machine`() {
             // setup
-            peerIds.add(toExcludeNodeRid)
-            peerIds.add(nodeRid)
-            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
+            doReturn(setOf(replicaNodeRid)).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
             doReturn(nodeRid to setOf(nodeRid)).whenever(commManager).sendToRandomPeer(isA(), anySet())
             doReturn(true).whenever(stateMachine).hasUnacknowledgedFailedCommit()
             // execute
@@ -225,9 +226,7 @@ class SlowSynchronizerTest {
         @Test
         fun `should update state machine`() {
             // setup
-            peerIds.add(toExcludeNodeRid)
-            peerIds.add(nodeRid)
-            doReturn(setOf(toExcludeNodeRid)).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
+            doReturn(setOf(replicaNodeRid)).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
             doReturn(nodeRid to setOf(nodeRid)).whenever(commManager).sendToRandomPeer(isA(), anySet())
             doReturn(false).whenever(stateMachine).hasUnacknowledgedFailedCommit()
             // execute
@@ -241,8 +240,6 @@ class SlowSynchronizerTest {
         @Test
         fun `with no picked peer should do nothing`() {
             // setup
-            peerIds.add(toExcludeNodeRid)
-            peerIds.add(nodeRid)
             doReturn(setOf<NodeRid>()).whenever(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
             doReturn(null to setOf(nodeRid)).whenever(commManager).sendToRandomPeer(isA(), anySet())
             // execute
@@ -250,7 +247,7 @@ class SlowSynchronizerTest {
             // verify
             verify(stateMachine, never()).acknowledgeFailedCommit()
             verify(stateMachine, never()).updateToWaitForReply(nodeRid, startHeight, currentTimeMillis)
-            verify(commManager).sendToRandomPeer(isA(), eq(setOf(toExcludeNodeRid)))
+            verify(commManager).sendToRandomPeer(isA(), eq(setOf(replicaNodeRid)))
             verify(messageDurationTracker, never()).send(eq(nodeRid), isA())
         }
     }
@@ -372,6 +369,23 @@ class SlowSynchronizerTest {
             verify(messageDurationTracker).receive(nodeRid, message)
             verify(sut).handleBlockRange(nodeRid, blocks, startHeight)
             verify(slowSyncSleepData).updateData(processedBlocks)
+        }
+
+        @Test
+        fun `with message BlockRange from replica without blocks should mark as drained and not update sleep data`() {
+            // setup
+            val processedBlocks = 0
+            val message = BlockRange(startHeight, false, emptyList())
+            doReturn(listOf(ReceivedPacket(replicaNodeRid, 1, message))).whenever(commManager).getPackets()
+            doReturn(processedBlocks).whenever(sut).handleBlockRange(nodeRid, emptyList(), startHeight)
+            // execute
+            sut.processMessages(slowSyncSleepData)
+            // verify
+            verify(peerStatuses, never()).confirmModern(replicaNodeRid)
+            verify(messageDurationTracker).receive(replicaNodeRid, message)
+            verify(sut).handleBlockRange(replicaNodeRid, emptyList(), startHeight)
+            verify(slowSyncSleepData, never()).updateData(processedBlocks)
+            verify(peerStatuses).drained(replicaNodeRid, startHeight, clock.millis(), params.slowSyncMaxSleepTime * 2)
         }
     }
 

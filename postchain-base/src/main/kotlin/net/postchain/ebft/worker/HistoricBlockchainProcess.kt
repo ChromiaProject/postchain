@@ -27,9 +27,9 @@ import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.rest.contract.StateNodeStatus
-import net.postchain.ebft.syncmanager.common.FastSyncPeerStatuses
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.KnownState
+import net.postchain.ebft.syncmanager.common.PeerStatuses
 import net.postchain.ebft.syncmanager.common.SyncMethod
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
@@ -72,7 +72,7 @@ class HistoricBlockchainProcess(
             workerContext,
             blockDatabase,
             syncParams,
-            FastSyncPeerStatuses(syncParams),
+            PeerStatuses(syncParams),
             ::isProcessRunning
     )
 
@@ -147,7 +147,7 @@ class HistoricBlockchainProcess(
                             historicWorkerContext,
                             blockDatabase,
                             params,
-                            FastSyncPeerStatuses(params),
+                            PeerStatuses(params),
                             ::isProcessRunning
                     )
                     isSyncingHistoric = true

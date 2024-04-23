@@ -65,7 +65,7 @@ class FastSynchronizer(
         workerContext: WorkerContext,
         private val blockDatabase: BlockDatabase,
         val params: SyncParameters,
-        val peerStatuses: FastSyncPeerStatuses,
+        val peerStatuses: PeerStatuses,
         val isProcessRunning: () -> Boolean,
         val clock: Clock = Clock.systemUTC(),
 ) : AbstractSynchronizer(workerContext) {
@@ -360,8 +360,8 @@ class FastSynchronizer(
     private fun sendRequest(height: Long): NodeRid? {
         val now = currentTimeMillis()
         val peers = configuredPeers.minus(peerStatuses.excludedNonSyncable(height, now)).ifEmpty {
-            if (params.mustSyncUntilHeight > -1) {
-                peerStatuses.reviveAllBlacklisted()
+            if (params.mustSyncUntilHeight >= height) {
+                peerStatuses.markAllSyncable(height)
                 configuredPeers.minus(peerStatuses.excludedNonSyncable(height, now))
             } else {
                 emptySet()

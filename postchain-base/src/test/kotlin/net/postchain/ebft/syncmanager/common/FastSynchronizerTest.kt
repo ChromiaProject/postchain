@@ -131,7 +131,7 @@ class FastSynchronizerTest {
     private val clock: Clock = mock {
         on { millis() } doReturn currentTimeMillis
     }
-    private val peerStatuses: FastSyncPeerStatuses = mock()
+    private val peerStatuses: PeerStatuses = mock()
     private val params = SyncParameters()
 
     private lateinit var sut: FastSynchronizer
@@ -462,7 +462,7 @@ class FastSynchronizerTest {
             val emptyHeader = "".toByteArray()
             val emptyWitness = "".toByteArray()
             doNothing().whenever(sut).restartJob(isA())
-            doNothing().whenever(peerStatuses).drained(isA(), anyLong(), anyLong())
+            doNothing().whenever(peerStatuses).drained(isA(), anyLong(), anyLong(), any())
             // execute
             assertThat(sut.handleBlockHeader(nodeRid, emptyHeader, emptyWitness, height)).isFalse()
             // verify
@@ -486,7 +486,7 @@ class FastSynchronizerTest {
             // setup
             val job = addJob(height + 1, nodeRid)
             doNothing().whenever(sut).restartJob(isA())
-            doNothing().whenever(peerStatuses).drained(isA(), anyLong(), anyLong())
+            doNothing().whenever(peerStatuses).drained(isA(), anyLong(), anyLong(), any())
             // execute
             assertThat(sut.handleBlockHeader(nodeRid, header, witness, height + 1)).isFalse()
             // verify
@@ -730,7 +730,7 @@ class FastSynchronizerTest {
             // execute
             assertThat(sut.startJob(height)).isFalse()
             // verify
-            verify(peerStatuses, never()).reviveAllBlacklisted()
+            verify(peerStatuses, never()).markAllSyncable(anyLong())
             verify(peerStatuses).excludedNonSyncable(anyLong(), anyLong())
         }
 
@@ -744,7 +744,7 @@ class FastSynchronizerTest {
             // execute
             assertThat(sut.startJob(height)).isFalse()
             // verify
-            verify(peerStatuses).reviveAllBlacklisted()
+            verify(peerStatuses).markAllSyncable(anyLong())
             verify(peerStatuses, times(2)).excludedNonSyncable(anyLong(), anyLong())
         }
 

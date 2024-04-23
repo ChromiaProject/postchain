@@ -43,9 +43,9 @@ import net.postchain.ebft.syncmanager.BlockDataDecoder.decodeBlockDataWithWitnes
 import net.postchain.ebft.syncmanager.StatusLogInterval
 import net.postchain.ebft.syncmanager.common.BlockPacker
 import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
-import net.postchain.ebft.syncmanager.common.FastSyncPeerStatuses
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.Messaging
+import net.postchain.ebft.syncmanager.common.PeerStatuses
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
@@ -101,7 +101,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 workerContext,
                 blockDatabase,
                 params,
-                FastSyncPeerStatuses(params),
+                PeerStatuses(params),
                 isProcessRunning
         )
 
