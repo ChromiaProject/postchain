@@ -61,9 +61,13 @@ open class DefaultMasterCommunicationManager(
                     BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
                     CHAIN_IID_TAG to chainId.toString()
             ) {
-                val peers = connectionManager.getConnectedNodes(chainId)
-                val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.data })
-                masterConnectionManager.sendPacketToSub(blockchainRid, msg)
+                try {
+                    val peers = connectionManager.getConnectedNodes(chainId)
+                    val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.data })
+                    masterConnectionManager.sendPacketToSub(blockchainRid, msg)
+                } catch (e: Exception) {
+                    logger.error("Unexpected error when sending connected peers", e)
+                }
             }
         }, 0, containerNodeConfig.sendMasterConnectedPeersPeriod, TimeUnit.MILLISECONDS)
     }
