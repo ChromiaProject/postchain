@@ -320,12 +320,16 @@ class ContainerManagedBlockchainProcessManager(
         postchainContainers.filterValues { it.isIdle() && !containerJobManager.hasPendingJobs(it.containerName) }.keys
                 .forEach { containerName ->
                     logger.info { "Container is idle and will be stopped: $containerName" }
-                    postchainContainers.remove(containerName)?.also { psContainer ->
-                        psContainer.stop()
-                        dockerClient.stopContainer(psContainer.containerId, 10)
-                        logger.debug { "Docker container stopped: $containerName" }
+                    try {
+                        postchainContainers.remove(containerName)?.also { psContainer ->
+                            psContainer.stop()
+                            dockerClient.stopContainer(psContainer.containerId, 10)
+                            logger.debug { "Docker container stopped: $containerName" }
+                        }
+                        logger.info { "Container stopped: $containerName" }
+                    } catch (e: Exception) {
+                        logger.error("Error when stopping container: $containerName", e)
                     }
-                    logger.info { "Container stopped: $containerName" }
                 }
     }
 
