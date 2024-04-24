@@ -41,15 +41,19 @@ class AppliedConfigSender(
                 BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex(),
                 CHAIN_IID_TAG to workerContext.blockchainConfiguration.chainID.toString()
         ) {
-            val nextHeight = currentHeightProvider() + 1
-            val appliedConfigMessage = AppliedConfig(configHash, nextHeight)
+            try {
+                val nextHeight = currentHeightProvider() + 1
+                val appliedConfigMessage = AppliedConfig(configHash, nextHeight)
 
-            previousMessage = previousMessage
-                    ?.takeIf { it.first.height == nextHeight }
-                    ?.apply {
-                        workerContext.communicationManager.broadcastPacket(appliedConfigMessage, this.second, versionFilter())
-                    }
-                    ?: (appliedConfigMessage to workerContext.communicationManager.broadcastPacket(appliedConfigMessage, null, versionFilter()))
+                previousMessage = previousMessage
+                        ?.takeIf { it.first.height == nextHeight }
+                        ?.apply {
+                            workerContext.communicationManager.broadcastPacket(appliedConfigMessage, this.second, versionFilter())
+                        }
+                        ?: (appliedConfigMessage to workerContext.communicationManager.broadcastPacket(appliedConfigMessage, null, versionFilter()))
+            } catch (e: Exception) {
+                logger.error("Unexpected error while sending applied config", e)
+            }
         }
     }
 

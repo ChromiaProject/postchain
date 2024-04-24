@@ -43,7 +43,11 @@ internal class DefaultContainerJobManager(
                 ThreadFactoryBuilder().setNameFormat("containerJobThread").build()
         ).also {
             it.scheduleAtFixedRate({
-                checkJobs()
+                try {
+                    checkJobs()
+                } catch (e: Exception) {
+                    logger.error("Unexpected exception while checking jobs", e)
+                }
             }, EXECUTION_PERIOD, EXECUTION_PERIOD, TimeUnit.MILLISECONDS)
         }
 
