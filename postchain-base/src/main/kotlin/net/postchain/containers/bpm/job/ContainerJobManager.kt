@@ -42,7 +42,7 @@ internal class DefaultContainerJobManager(
         jobsExecutor = Executors.newSingleThreadScheduledExecutor(
                 ThreadFactoryBuilder().setNameFormat("containerJobThread").build()
         ).also {
-            it.scheduleAtFixedRate({
+            it.scheduleWithFixedDelay({
                 try {
                     checkJobs()
                 } catch (e: Exception) {

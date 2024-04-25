@@ -56,7 +56,7 @@ open class DefaultMasterCommunicationManager(
         masterConnectionManager.initSubChainConnection(subnodeChainConfig)
 
         // Scheduling SendConnectedPeers task
-        sendConnectedPeersTask = peerTaskScheduler.scheduleAtFixedRate({
+        sendConnectedPeersTask = peerTaskScheduler.scheduleWithFixedDelay({
             withLoggingContext(
                     BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
                     CHAIN_IID_TAG to chainId.toString()

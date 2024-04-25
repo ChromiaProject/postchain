@@ -94,7 +94,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
         if (prioritizer != null && recheckThreadInterval.isFinite()) {
             executor = Executors.newSingleThreadScheduledExecutor(
                     ThreadFactoryBuilder().setNameFormat("BaseTransactionQueue-recheckPriorities").setPriority(Thread.MIN_PRIORITY).build()).apply {
-                scheduleAtFixedRate(::recheckPriorities,
+                scheduleWithFixedDelay(::recheckPriorities,
                         recheckThreadInterval.inWholeMilliseconds, recheckThreadInterval.inWholeMilliseconds, TimeUnit.MILLISECONDS)
             }
         }
