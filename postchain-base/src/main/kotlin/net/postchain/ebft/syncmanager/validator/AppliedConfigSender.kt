@@ -31,7 +31,7 @@ class AppliedConfigSender(
     companion object : KLogging()
 
     fun start() {
-        executor.scheduleAtFixedRate(::sendAppliedConfig, 0, interval.toMillis(), TimeUnit.MILLISECONDS)
+        executor.scheduleWithFixedDelay(::sendAppliedConfig, 0, interval.toMillis(), TimeUnit.MILLISECONDS)
         logger.info { "AppliedConfigSender started" }
         isStarted = true
     }
