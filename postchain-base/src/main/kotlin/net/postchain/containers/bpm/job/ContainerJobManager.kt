@@ -82,7 +82,9 @@ internal class DefaultContainerJobManager(
         jobOf(chain.containerName).restartChain(chain)
     }
 
-    override fun hasPendingJobs(containerName: ContainerName) = jobOf(containerName).isNotEmpty()
+    override fun hasPendingJobs(containerName: ContainerName) = jobs[containerName.name]?.let {
+        (it as ContainerJob).isNotEmpty()
+    } ?: false
 
     override fun shutdown() {
         jobsExecutor.shutdownNow()
