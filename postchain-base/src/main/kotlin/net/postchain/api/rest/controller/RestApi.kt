@@ -132,7 +132,7 @@ const val BLOCKCHAIN_RID = "blockchainRid"
  *                                 specify `-1` for no extra limit per chain
  */
 class RestApi(
-        private val listenPort: Int,
+        listenPort: Int,
         val basePath: String,
         private val nodeDiagnosticContext: NodeDiagnosticContext = JsonNodeDiagnosticContext(),
         private val clock: Clock = Clock.systemUTC(),
@@ -586,7 +586,7 @@ class RestApi(
                     NioEventLoopGroup(requestConcurrency, ThreadFactoryBuilder().setNameFormat("REST-API-%d").build()))
             )
             .start().also {
-                logger.info { "Rest API listening on port ${it.port()} and were given $listenPort, attached on $basePath/" }
+                logger.info { "Rest API is listening on port ${it.port()} and is attached on $basePath/" }
             }
 
     private fun onError(error: Exception, request: Request): Response {
