@@ -45,7 +45,7 @@ class ImportBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).importBlockchain(0, BlockchainRid.buildFromHex(brid).data, Path.of(configurationsFile), Path.of(blocksFile), true)
-        testConsole.assertContains("Import of 8 blocks 1..10 to chain $brid completed\n")
+        testConsole.assertContains("Import of 8 blocks 1..10 to chain $brid completed")
     }
 
     @Test
@@ -62,6 +62,6 @@ class ImportBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).importBlockchain(chainId, ByteArray(0), Path.of(configurationsFile), Path.of(blocksFile), true)
-        testConsole.assertContains("Import of 8 blocks 1..10 to chain $brid completed\n")
+        testConsole.assertContains("Import of 8 blocks 1..10 to chain $brid completed")
     }
 }

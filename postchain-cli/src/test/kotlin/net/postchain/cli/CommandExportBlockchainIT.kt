@@ -11,7 +11,16 @@ import java.nio.file.Path
 class CommandExportBlockchainIT : CommandITBase() {
 
     @Test
-    fun `Export blockchain`(@TempDir tempDir: Path) {
+    fun `Export blockchain by cid`(@TempDir tempDir: Path) {
+        testBlockchainExport(tempDir, "-cid", chainId.toString())
+    }
+
+    @Test
+    fun `Export blockchain by brid`(@TempDir tempDir: Path) {
+        testBlockchainExport(tempDir, "-brid", brid)
+    }
+
+    private fun testBlockchainExport(tempDir: Path, chainRefOption: String, chainRefValue: String) {
         // setup
         val command = CommandExportBlockchain()
         command.context { console = testConsole }
@@ -22,7 +31,7 @@ class CommandExportBlockchainIT : CommandITBase() {
         command.parse(
                 listOf(
                         "-nc", nodeConfigFile.absolutePath,
-                        "-cid", chainId.toString(),
+                        chainRefOption, chainRefValue,
                         "--configurations-file", configurationsFile.absolutePath,
                         "--blocks-file", blocksFile.absolutePath,
                         "--overwrite"

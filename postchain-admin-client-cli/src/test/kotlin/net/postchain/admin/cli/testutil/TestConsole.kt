@@ -10,6 +10,10 @@ import java.io.IOException
 open class TestConsole : CliktConsole, AfterEachCallback {
     private val out = mutableListOf<Pair<String, Boolean>>()
 
+    companion object {
+        val EOL: String = System.lineSeparator()
+    }
+
     override fun promptForLine(prompt: String, hideInput: Boolean) = try {
         print(prompt, false)
         readlnOrNull() ?: throw RuntimeException("EOF")
@@ -23,7 +27,7 @@ open class TestConsole : CliktConsole, AfterEachCallback {
 
     override val lineSeparator: String get() = System.lineSeparator()
 
-    fun assertContains(text: String) = assertThat(out.map { it.first }).contains(text)
+    fun assertContains(text: String) = assertThat(out.map { it.first }).contains(text + EOL)
 
     fun assertContains(texts: List<String>) {
         for ((index, text) in texts.withIndex()) {

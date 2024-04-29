@@ -38,7 +38,7 @@ class RemovePeerCommandTest : PeerServiceCommandTestBase() {
         )
         // verify
         verify(peerService).removePeer(PubKey(pubKey))
-        testConsole.assertContains("No peer has been removed\n")
+        testConsole.assertContains("No peer has been removed")
     }
 
     @Test
@@ -54,6 +54,6 @@ class RemovePeerCommandTest : PeerServiceCommandTestBase() {
         )
         // verify
         verify(peerService).removePeer(PubKey(pubKey))
-        testConsole.assertContains("Successfully removed peer: PeerInfo(host='host1', port=1, pubKey=$pubKey)\n")
+        testConsole.assertContains("Successfully removed peer: PeerInfo(host='host1', port=1, pubKey=$pubKey)")
     }
 }

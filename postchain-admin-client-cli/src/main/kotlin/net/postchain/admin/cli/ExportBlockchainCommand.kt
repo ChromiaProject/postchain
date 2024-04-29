@@ -2,15 +2,22 @@ package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.PrintMessage
+import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
+import com.github.ajalt.clikt.parameters.groups.required
+import com.github.ajalt.clikt.parameters.groups.single
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.long
+import com.google.protobuf.ByteString
 import io.grpc.StatusRuntimeException
 import net.postchain.admin.cli.util.ChannelFactory
 import net.postchain.admin.cli.util.DEFAULT_CHANNEL_FACTORY
+import net.postchain.admin.cli.util.blockchainRidOption
 import net.postchain.admin.cli.util.blockingPostchainServiceChannelOption
 import net.postchain.admin.cli.util.chainIdOption
+import net.postchain.admin.cli.util.chainIdOptionNullable
+import net.postchain.common.BlockchainRid
 import net.postchain.server.grpc.ExportBlockchainRequest
 
 class ExportBlockchainCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_FACTORY)
@@ -18,7 +25,11 @@ class ExportBlockchainCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_F
 
     private val channel by blockingPostchainServiceChannelOption(channelFactory)
 
-    private val chainId by chainIdOption()
+    private val chainRef by mutuallyExclusiveOptions(
+            chainIdOptionNullable(),
+            blockchainRidOption(),
+            name = "Chain reference"
+    ).single().required()
 
     private val configurationsFile by option("--configurations-file", help = "File to export blockchain configurations to")
             .required()
@@ -35,8 +46,12 @@ class ExportBlockchainCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_F
 
     override fun run() {
         try {
+            val chainRef0 = chainRef
             val requestBuilder = ExportBlockchainRequest.newBuilder()
-                    .setChainId(chainId)
+                    .apply {
+                        if (chainRef0 is Long) chainId = chainRef0
+                        if (chainRef0 is BlockchainRid) blockchainRid = ByteString.copyFrom(chainRef0.data)
+                    }
                     .setConfigurationsFile(configurationsFile)
                     .setFromHeight(fromHeight)
                     .setUpToHeight(upToHeight)

@@ -2,6 +2,7 @@ package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.context
 import net.postchain.admin.cli.testbase.PostchainServiceCommandTestBase
+import net.postchain.admin.cli.testutil.TestConsole.Companion.EOL
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.PubKey
 import org.junit.jupiter.api.BeforeEach
@@ -39,7 +40,7 @@ class RemoveBlockchainReplicaCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).removeBlockchainReplica(BlockchainRid.buildFromHex(brid), PubKey(pubKey))
-        testConsole.assertContains("message: \"Successfully removed replica: [$brid]\"\n\n")
+        testConsole.assertContains("message: \"Successfully removed replica: [$brid]\"$EOL")
     }
 
     @Test
@@ -56,6 +57,6 @@ class RemoveBlockchainReplicaCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).removeBlockchainReplica(BlockchainRid.buildFromHex(brid), PubKey(pubKey))
-        testConsole.assertContains("message: \"No replica has been removed\"\n\n")
+        testConsole.assertContains("message: \"No replica has been removed\"$EOL")
     }
 }
