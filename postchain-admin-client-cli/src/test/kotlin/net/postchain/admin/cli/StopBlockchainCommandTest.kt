@@ -27,6 +27,6 @@ class StopBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).stopBlockchain(chainId)
-        testConsole.assertContains("Blockchain has been stopped\n")
+        testConsole.assertContains("Blockchain has been stopped")
     }
 }

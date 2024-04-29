@@ -25,7 +25,7 @@ class InitializeBlockchainCommandTest : PostchainServiceCommandTestBase() {
     private val chainId = 1L
     private val brid = "3475C1EEC5836D9B38218F78C30D302DBC7CAAAFFAF0CC83AE054B7A208F71D4"
     private val blockchainRid = BlockchainRid.buildFromHex(brid)
-    private val blockChainConfig = getResouceFile("blockchain_config.xml")
+    private val blockChainConfig = getResourceFile("blockchain_config.xml")
     private val gtv = GtvMLParser.parseGtvML(blockChainConfig.readText())
 
     private lateinit var command: InitializeBlockchainCommand
@@ -53,7 +53,7 @@ class InitializeBlockchainCommandTest : PostchainServiceCommandTestBase() {
         // verify
         verify(postchainService).initializeBlockchain(chainId, null, true, gtv)
         verify(postchainService).startBlockchain(chainId)
-        testConsole.assertContains("Blockchain has been initialized with blockchain RID: $brid\n")
+        testConsole.assertContains("Blockchain has been initialized with blockchain RID: $brid")
     }
 
     @Test

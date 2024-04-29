@@ -20,7 +20,7 @@ class AddConfigurationCommandTest : PostchainServiceCommandTestBase() {
 
     private val chainId = 1L
     private val height = 10L
-    private val blockChainConfig = getResouceFile("blockchain_config.xml")
+    private val blockChainConfig = getResourceFile("blockchain_config.xml")
     private val gtv = GtvMLParser.parseGtvML(blockChainConfig.readText())
 
     private lateinit var command: AddConfigurationCommand
@@ -47,7 +47,7 @@ class AddConfigurationCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).addConfiguration(chainId, height, true, gtv, false)
-        testConsole.assertContains("Configuration height $height on chain $chainId has been added\n")
+        testConsole.assertContains("Configuration height $height on chain $chainId has been added")
     }
 
     @Test

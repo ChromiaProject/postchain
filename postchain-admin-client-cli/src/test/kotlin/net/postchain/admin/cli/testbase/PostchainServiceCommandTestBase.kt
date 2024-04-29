@@ -35,7 +35,7 @@ abstract class PostchainServiceCommandTestBase {
         server.shutdownNow()
     }
 
-    protected fun getResouceFile(name: String): File {
+    protected fun getResourceFile(name: String): File {
         return Paths.get(javaClass.getResource("/net/postchain/admin/cli/${name}")!!.toURI()).toFile()
     }
 

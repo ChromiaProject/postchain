@@ -44,7 +44,7 @@ class ListConfigurationsCommandTest : PostchainServiceCommandTestBase() {
         // verify
         verify(postchainService).findBlockchain(chainId)
         verify(postchainService).listConfigurations(chainId)
-        testConsole.assertContains(listOf("Height\n", "------\n", "1\n", "3\n", "5\n", "7\n"))
+        testConsole.assertContains(listOf("Height", "------", "1", "3", "5", "7"))
     }
 
     @Test

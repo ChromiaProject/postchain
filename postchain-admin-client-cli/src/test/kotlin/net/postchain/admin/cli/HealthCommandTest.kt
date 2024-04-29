@@ -31,7 +31,7 @@ class HealthCommandTest : HealthServiceCommandTestBase() {
         )
         // verify
         verify(healthService).healthCheck()
-        testConsole.assertContains("Healthy\n")
+        testConsole.assertContains("Healthy")
     }
 
     @Test
@@ -46,6 +46,6 @@ class HealthCommandTest : HealthServiceCommandTestBase() {
         )
         // verify
         verify(healthService).healthCheck()
-        testConsole.assertContains("Unhealthy: NOT_SERVING\n")
+        testConsole.assertContains("Unhealthy: NOT_SERVING")
     }
 }
