@@ -2,6 +2,7 @@ package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.context
 import net.postchain.admin.cli.testbase.PostchainServiceCommandTestBase
+import net.postchain.admin.cli.testutil.TestConsole.Companion.EOL
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.PubKey
 import org.junit.jupiter.api.Test
@@ -31,6 +32,6 @@ class AddBlockchainReplicaCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).addBlockchainReplica(BlockchainRid.buildFromHex(brid), PubKey(pubKey))
-        testConsole.assertContains("message: \"Node $pubKey has been added as a replica for chain with brid $brid\"\n\n")
+        testConsole.assertContains("message: \"Node $pubKey has been added as a replica for chain with brid $brid\"$EOL")
     }
 }

@@ -37,7 +37,7 @@ class FindBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).findBlockchain(chainId)
-        testConsole.assertContains("$brid\n")
+        testConsole.assertContains("$brid")
     }
 
     @Test
@@ -53,6 +53,6 @@ class FindBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).findBlockchain(chainId)
-        testConsole.assertContains("\n")
+        testConsole.assertContains("")
     }
 }

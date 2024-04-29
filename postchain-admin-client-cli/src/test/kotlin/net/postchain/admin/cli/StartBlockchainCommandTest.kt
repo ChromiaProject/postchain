@@ -30,6 +30,6 @@ class StartBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).startBlockchain(chainId)
-        testConsole.assertContains("Blockchain with id $chainId started with brid $brid\n")
+        testConsole.assertContains("Blockchain with id $chainId started with brid $brid")
     }
 }

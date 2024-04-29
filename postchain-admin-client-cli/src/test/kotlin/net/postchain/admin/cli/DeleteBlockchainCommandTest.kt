@@ -27,6 +27,6 @@ class DeleteBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).removeBlockchain(chainId)
-        testConsole.assertContains("Blockchain has been removed\n")
+        testConsole.assertContains("Blockchain has been removed")
     }
 }

@@ -208,6 +208,7 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         try {
             val exportResult = postchainService.exportBlockchain(
                     request.chainId,
+                    request.blockchainRid.toByteArray(),
                     Path.of(request.configurationsFile),
                     if (request.blocksFile.isNullOrBlank()) null else Path.of(request.blocksFile),
                     request.overwrite,

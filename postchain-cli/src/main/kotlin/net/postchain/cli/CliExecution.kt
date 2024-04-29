@@ -2,6 +2,7 @@
 
 package net.postchain.cli
 
+import com.github.ajalt.clikt.core.CliktError
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.BlockchainRelatedInfo
@@ -150,5 +151,30 @@ object CliExecution {
         return runStorageCommand(appConfig, chainId) { ctx: EContext ->
             BlockchainApi.listConfigurations(ctx)
         }
+    }
+
+    /**
+     * Resolves the chain ID based on the given chain reference.
+     *
+     * @param appConfig The application configuration.
+     * @param chainRef The chain reference. It can be a chain IID or a blockchain RID.
+     *
+     * @return The resolved chain IID as a Long.
+     *
+     * @throws CliktError If the chain is not found or is undefined.
+     */
+    fun resolveChainId(appConfig: AppConfig, chainRef: Any): Long = when (chainRef) {
+        is Long -> runStorageCommand(appConfig, chainRef) {
+            DatabaseAccess.of(it).getBlockchainRid(it)
+                    ?: throw CliktError("Blockchain not found by IID: $chainRef")
+            chainRef
+        }
+
+        is BlockchainRid -> runStorageCommand(appConfig) {
+            DatabaseAccess.of(it).getChainId(it, chainRef)
+                    ?: throw CliktError("Blockchain not found by RID $chainRef")
+        }
+
+        else -> throw CliktError("Blockchain undefined: $chainRef")
     }
 }

@@ -47,7 +47,7 @@ class AddPeerCommandTest : PeerServiceCommandTestBase() {
         )
         // verify
         verify(peerService).addPeer(PubKey(pubKey), host, port, true)
-        testConsole.assertContains("Peer was added successfully\n")
+        testConsole.assertContains("Peer was added successfully")
     }
 
     @Test

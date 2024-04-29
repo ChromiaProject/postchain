@@ -2,6 +2,7 @@ package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.context
 import net.postchain.admin.cli.testbase.PeerServiceCommandTestBase
+import net.postchain.admin.cli.testutil.TestConsole.Companion.EOL
 import net.postchain.base.PeerInfo
 import net.postchain.common.toHex
 import org.junit.jupiter.api.BeforeEach
@@ -40,7 +41,7 @@ class ListPeersCommandTest : PeerServiceCommandTestBase() {
         )
         // verify
         verify(peerService).listPeers()
-        testConsole.assertContains("No peers found\n")
+        testConsole.assertContains("No peers found")
     }
 
     @Test
@@ -55,10 +56,10 @@ class ListPeersCommandTest : PeerServiceCommandTestBase() {
         )
         // verify
         verify(peerService).listPeers()
-        testConsole.assertContains("Peers (3):\n" +
-                "PeerInfo(host='host1', port=1, pubKey=${pubKey1.toHex()})\n" +
-                "PeerInfo(host='host2', port=2, pubKey=${pubKey2.toHex()})\n" +
-                "PeerInfo(host='host3', port=3, pubKey=${pubKey3.toHex()})\n"
+        testConsole.assertContains("Peers (3):$EOL" +
+                "PeerInfo(host='host1', port=1, pubKey=${pubKey1.toHex()})$EOL" +
+                "PeerInfo(host='host2', port=2, pubKey=${pubKey2.toHex()})$EOL" +
+                "PeerInfo(host='host3', port=3, pubKey=${pubKey3.toHex()})"
         )
     }
 }

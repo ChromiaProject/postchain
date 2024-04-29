@@ -19,7 +19,6 @@ import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
 import net.postchain.debug.ErrorDiagnosticValue
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.GtvDecoder
 import net.postchain.server.NodeProvider
 import java.nio.file.Path
 
@@ -97,10 +96,10 @@ class PostchainService(private val nodeProvider: NodeProvider) {
                 BlockchainApi.removeBlockchainReplica(ctx, brid, pubkey)
             }
 
-    fun exportBlockchain(chainId: Long, configurationFile: Path, blocksFile: Path?, overwrite: Boolean, fromHeight: Long, upToHeight: Long): ExportResult =
+    fun exportBlockchain(chainId: Long, blockchainRidData: ByteArray, configurationFile: Path, blocksFile: Path?, overwrite: Boolean, fromHeight: Long, upToHeight: Long): ExportResult =
             ImporterExporter.exportBlockchain(
                     postchainNode.postchainContext.sharedStorage,
-                    chainId,
+                    getChainId(blockchainRidData) ?: chainId,
                     configurationsFile = configurationFile,
                     blocksFile = blocksFile,
                     overwrite = overwrite,
@@ -115,26 +114,15 @@ class PostchainService(private val nodeProvider: NodeProvider) {
             blocksSizeLimit
     )
 
-    fun importBlockchain(chainId: Long, blockchainRidData: ByteArray, configurationFile: Path, blocksFile: Path, incremental: Boolean): ImportResult {
-        val chainId0 = if (blockchainRidData.isNotEmpty()) {
-            val brid = BlockchainRid(blockchainRidData)
-            postchainNode.postchainContext.sharedStorage.withReadConnection {
-                DatabaseAccess.of(it).getChainId(it, brid)
-                        ?: throw NotFound("Blockchain not found by RID: $brid")
-            }
-        } else {
-            chainId
-        }
-
-        return ImporterExporter.importBlockchain(
-                KeyPair(PubKey(postchainNode.appConfig.pubKey), PrivKey(postchainNode.appConfig.privKey)),
-                postchainNode.postchainContext.cryptoSystem,
-                postchainNode.postchainContext.sharedStorage,
-                chainId0,
-                configurationsFile = configurationFile,
-                blocksFile = blocksFile,
-                incremental)
-    }
+    fun importBlockchain(chainId: Long, blockchainRidData: ByteArray, configurationFile: Path, blocksFile: Path, incremental: Boolean): ImportResult =
+            ImporterExporter.importBlockchain(
+                    KeyPair(PubKey(postchainNode.appConfig.pubKey), PrivKey(postchainNode.appConfig.privKey)),
+                    postchainNode.postchainContext.cryptoSystem,
+                    postchainNode.postchainContext.sharedStorage,
+                    getChainId(blockchainRidData) ?: chainId,
+                    configurationsFile = configurationFile,
+                    blocksFile = blocksFile,
+                    incremental)
 
     fun importBlocks(chainId: Long, blockData: List<Gtv>): LongRange = ImporterExporter.importBlocks(
             postchainNode.postchainContext.sharedStorage,
@@ -155,6 +143,18 @@ class PostchainService(private val nodeProvider: NodeProvider) {
 
             BlockchainApi.deleteBlockchain(ctx)
             true
+        }
+    }
+
+    private fun getChainId(blockchainRidData: ByteArray): Long? {
+        return if (blockchainRidData.isNotEmpty()) {
+            val brid = BlockchainRid(blockchainRidData)
+            postchainNode.postchainContext.sharedStorage.withReadConnection {
+                DatabaseAccess.of(it).getChainId(it, brid)
+                        ?: throw NotFound("Blockchain not found by RID: $brid")
+            }
+        } else {
+            null
         }
     }
 }

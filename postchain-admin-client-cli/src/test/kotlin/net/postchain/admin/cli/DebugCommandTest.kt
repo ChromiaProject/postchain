@@ -25,6 +25,6 @@ class DebugCommandTest : DebugServiceCommandTestBase() {
         )
         // verify
         verify(debugService).debugInfo()
-        testConsole.assertContains("I am alive!\n")
+        testConsole.assertContains("I am alive!")
     }
 }
