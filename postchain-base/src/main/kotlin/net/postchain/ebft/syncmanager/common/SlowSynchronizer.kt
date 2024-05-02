@@ -65,6 +65,8 @@ class SlowSynchronizer(
 
     val peerStatuses = slowSyncPeerStatusesProvider() // Don't want to put this in [AbstractSynchronizer] b/c too much generics.
 
+    private var hasLoggedNoPeers = false
+
     companion object : KLogging()
 
     /**
@@ -118,11 +120,15 @@ class SlowSynchronizer(
         val pickedPeerId = communicationManager.sendToRandomPeer(message, usePeers).first
 
         if (pickedPeerId != null) {
+            hasLoggedNoPeers = false
             messageDurationTracker.send(pickedPeerId, message)
             if (stateMachine.hasUnacknowledgedFailedCommit()) stateMachine.acknowledgeFailedCommit()
             slowSyncStateMachine.updateToWaitForReply(pickedPeerId, startAtHeight, now)
         } else {
-            logger.warn("No nodes to request blocks from. Cannot proceed. Current height: ${startAtHeight - 1}")
+            if (!hasLoggedNoPeers) {
+                logger.info { "No nodes to request blocks from. Cannot proceed. Current height: ${startAtHeight - 1}" }
+            }
+            hasLoggedNoPeers = true
         }
     }
 
