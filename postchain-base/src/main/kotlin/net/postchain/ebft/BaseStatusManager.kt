@@ -557,7 +557,7 @@ class BaseStatusManager(
                 if (primaryBlockRID != null) {
                     val _intent = intent
                     if (!(_intent is FetchUnfinishedBlockIntent &&
-                                    _intent.isThisTheBlockWeAreWaitingFor(myStatus.blockRID))) {
+                                    _intent.isThisTheBlockWeAreWaitingFor(primaryBlockRID))) {
                         intent = FetchUnfinishedBlockIntent(primaryBlockRID)
                         return true
                     }

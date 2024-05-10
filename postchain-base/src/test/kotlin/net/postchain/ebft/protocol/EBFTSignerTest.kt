@@ -245,4 +245,39 @@ class EBFTSignerTest : EBFTProtocolBase() {
         assertThat(statusManager.myStatus.round).isEqualTo(0)
         verifyStatus(blockRID = null, height = 0, serial = 0, round = 0, revolting = false, state = WaitBlock)
     }
+
+    @Test
+    fun `Ensure block to fetch is switched if primary signals new block`() {
+        /**
+         * Input: We receive [Status] from primary with a new block
+         * Expected outcome: Intent should be switched to fetch it
+         * State: [WaitBlock] -> [WaitBlock]
+         * Intent: [DoNothingIntent] -> [FetchUnfinishedBlockIntent]
+         */
+        // setup
+        verifyIntent(DoNothingIntent)
+        // incoming messages
+        messagesToReceive(
+                ReceivedPacket(nodeRid0, 2, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal, Signature(node0, ByteArray(0))))
+        )
+        // execute
+        syncManager.update()
+        // verify
+        verifyIntent(FetchUnfinishedBlockIntent(blockRid0))
+        /**
+         * Input: We receive [Status] from primary with another block
+         * Expected outcome: Intent should be switched to fetch the new block
+         * State: [WaitBlock] -> [WaitBlock]
+         * Intent: [FetchUnfinishedBlockIntent] with previous block RID -> [FetchUnfinishedBlockIntent] with new block RID
+         */
+        // New block signaled by primary
+        val newBlockRid = ByteArray(32) { 1 }
+        messagesToReceive(
+                ReceivedPacket(nodeRid0, 2, Status(newBlockRid, 0, false, 0, 2, HaveBlock.ordinal, Signature(node0, ByteArray(0))))
+        )
+        // execute
+        syncManager.update()
+        // verify
+        verifyIntent(FetchUnfinishedBlockIntent(newBlockRid))
+    }
 }
