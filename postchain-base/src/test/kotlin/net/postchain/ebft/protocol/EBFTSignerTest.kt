@@ -2,6 +2,8 @@ package net.postchain.ebft.protocol
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
 import net.postchain.crypto.Signature
 import net.postchain.ebft.BuildBlockIntent
 import net.postchain.ebft.DoNothingIntent
@@ -40,6 +42,7 @@ class EBFTSignerTest : EBFTProtocolBase() {
          */
         // setup
         verifyIntent(DoNothingIntent)
+        assertThat(statusManager.getAdditionalPrimarySignature()).isNull()
         // incoming messages
         messagesToReceive(
                 ReceivedPacket(nodeRid0, 2, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal, Signature(node0, ByteArray(0))))
@@ -53,6 +56,7 @@ class EBFTSignerTest : EBFTProtocolBase() {
             assertThat(firstValue.blockRID).isEqualTo(blockRid0)
         }
         verifyStatus(blockRID = null, height = 0, serial = 0, round = 0, revolting = false, state = WaitBlock)
+        assertThat(statusManager.getAdditionalPrimarySignature()).isNull()
         reset(commManager)
 
         /**
@@ -75,6 +79,7 @@ class EBFTSignerTest : EBFTProtocolBase() {
         // verify
         verifyIntent(DoNothingIntent)
         verifyStatus(blockRID = blockRid0, height = 0, serial = 1, round = 0, revolting = false, state = HaveBlock, signature = signature)
+        assertThat(statusManager.getAdditionalPrimarySignature()).isNotNull()
         reset(commManager)
 
         /**
