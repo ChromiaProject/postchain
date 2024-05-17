@@ -26,6 +26,7 @@ import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.reflection.newInstanceOf
 import net.postchain.common.tx.TransactionStatus.CONFIRMED
 import net.postchain.common.tx.TransactionStatus.REJECTED
 import net.postchain.common.tx.TransactionStatus.UNKNOWN
@@ -53,6 +54,7 @@ import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.UnknownQuery
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
@@ -61,7 +63,11 @@ import net.postchain.logging.FAILURE_RESULT
 import net.postchain.logging.QUERY_NAME_TAG
 import net.postchain.logging.RESULT_TAG
 import net.postchain.logging.SUCCESS_RESULT
+import net.postchain.managed.ManagedBlockchainProcessManager
+import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
+import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.managed.config.ManagedBlockchainConfiguration
+import net.postchain.managed.config.ManagedDataSourceAware
 import net.postchain.metrics.PostchainModelMetrics
 import net.postchain.metrics.QUERIES_METRIC_DESCRIPTION
 import net.postchain.metrics.QUERIES_METRIC_NAME
@@ -211,7 +217,17 @@ open class PostchainModel(
         withWriteConnection(storage, chainIID) { eContext ->
             val blockchainRid = DatabaseAccess.of(eContext).getBlockchainRid(eContext)!!
             val partialContext = BaseBlockchainContext(chainIID, blockchainRid, NODE_ID_AUTO, postchainContext.appConfig.pubKeyByteArray)
-            val factory = DefaultBlockchainConfigurationFactory().supply(blockConfData.configurationFactory)
+            val factory = if (blockchainConfiguration is ManagedDataSourceAware) {
+                val factory = newInstanceOf<GTXBlockchainConfigurationFactory>(blockConfData.configurationFactory)
+                if (chainIID == ManagedBlockchainProcessManager.CHAIN0) {
+                    Chain0BlockchainConfigurationFactory(factory, postchainContext.appConfig, storage)
+                } else {
+                    DappBlockchainConfigurationFactory(factory, blockchainConfiguration.dataSource)
+                }
+            } else {
+                DefaultBlockchainConfigurationFactory().supply(blockConfData.configurationFactory)
+            }
+
             val blockSigMaker: SigMaker = object : SigMaker {
                 override fun signMessage(msg: ByteArray) = throw NotImplementedError("SigMaker")
                 override fun signDigest(digest: Hash) = throw NotImplementedError("SigMaker")
