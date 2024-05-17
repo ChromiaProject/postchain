@@ -77,13 +77,14 @@ open class ManagedBlockchainProcessManager(
 ) {
 
     protected open lateinit var dataSource: ManagedNodeDataSource
-    protected val CHAIN0 = 0L
     protected val areBlockchainsPruning = AtomicBoolean(false)
 
     @Volatile
     protected var currentInactiveBlockchainsHeight = 0L
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        const val CHAIN0 = 0L
+    }
 
     init {
         executor.scheduleWithFixedDelay(
