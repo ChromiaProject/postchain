@@ -20,7 +20,7 @@ object BlockPacker : KLogging() {
     /**
      * Packs blockchain blocks into the "blocks" list so that it does not go over package size.
      *
-     * @return true if all blocks we had could fit in the block
+     * @return true if all blocks we had could fit in the block range
      */
     fun packBlockRange(
             peerId: NodeRid,
@@ -64,6 +64,6 @@ object BlockPacker : KLogging() {
                 }
             }
         }
-        return true
+        return myHeight <= startAtHeight - 1 + blocksAdded
     }
 }

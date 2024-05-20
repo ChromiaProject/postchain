@@ -46,7 +46,7 @@ class BlockPackerTest {
                 ::dummyBuildFromBlockDataWithWitness,
                 packedBlocks)
 
-        assertTrue(allFit)
+        assertFalse(allFit)
         assertEquals(BlockPacker.MAX_BLOCKS_IN_PACKAGE, packedBlocks.size)
     }
 
