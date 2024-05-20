@@ -10,6 +10,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
+import java.math.BigInteger
 
 class GtvJSONTest {
 
@@ -85,5 +86,21 @@ class GtvJSONTest {
                 { gson.fromJson(number.toString(), Gtv::class.java) },
                 errorMsg(number)
         )
+    }
+
+    @Test
+    fun `big integer should throw exception in strict mode`() {
+        val gson = make_gtv_gson()
+        assertThrows(
+                IllegalStateException::class.java,
+                { gson.toJson(GtvBigInteger(BigInteger.valueOf(17))) },
+                "big_integer cannot be serialized as JSON"
+        )
+    }
+
+    @Test
+    fun `big integer should work in non-strict mode`() {
+        val gson = make_gtv_gson(strict = false)
+        assertEquals("92233720368547758078", gson.toJson(GtvBigInteger(BigInteger("92233720368547758078"))))
     }
 }

@@ -11,7 +11,7 @@ import java.math.BigDecimal
 
 internal fun errorMsg(number: BigDecimal) = "Could not deserialize number '$number' to GtvInteger, valid numbers must be integers and be in range: [-2^63, (2^63)-1]"
 
-class GtvAdapter : JsonDeserializer<Gtv>, JsonSerializer<Gtv> {
+class GtvAdapter(val strict: Boolean = true) : JsonDeserializer<Gtv>, JsonSerializer<Gtv> {
 
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): Gtv {
         if (json.isJsonPrimitive) {
@@ -66,18 +66,21 @@ class GtvAdapter : JsonDeserializer<Gtv>, JsonSerializer<Gtv> {
         GtvType.BYTEARRAY -> JsonPrimitive(v.asByteArray().toHex())
         GtvType.DICT -> encodeDict(v, t, c)
         GtvType.ARRAY -> encodeArray(v, t, c)
-        GtvType.BIGINTEGER -> throw IllegalStateException("big_integer cannot be serialized as JSON")
+        GtvType.BIGINTEGER -> if (strict)
+            throw IllegalStateException("big_integer cannot be serialized as JSON")
+        else
+            JsonPrimitive(v.asBigInteger())
     }
 }
 
-fun make_gtv_gson_builder(): GsonBuilder {
+fun make_gtv_gson_builder(strict: Boolean = true): GsonBuilder {
     return GsonBuilder()
-            .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter())
+            .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter(strict))
             .serializeNulls()
 }
 
-fun make_gtv_gson(): Gson {
-    return make_gtv_gson_builder().create()!!
+fun make_gtv_gson(strict: Boolean = true): Gson {
+    return make_gtv_gson_builder(strict).create()!!
 }
 
 fun gtvToJSON(gtvData: Gtv, gson: Gson): String {
