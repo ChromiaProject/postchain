@@ -61,10 +61,10 @@ class BaseStatusManager(
      * @param blockRID latest block
      * @return the number of nodes at the same state as the local node
      */
-    private fun countNodes(state: NodeBlockState, height: Long, blockRID: ByteArray?): Int {
+    private fun countNodes(state: NodeBlockState, height: Long, blockRID: ByteArray?, round: Long): Int {
         var count = 0
         for (ns in nodeStatuses) {
-            if (ns.height == height && ns.state == state) {
+            if (ns.height == height && ns.state == state && ns.round == round) {
                 if (blockRID == null) {
                     if (ns.blockRID == null) count++
                 } else {
@@ -506,8 +506,8 @@ class BaseStatusManager(
          * Will move to state [Prepared] if enough nodes have reached our BlockRID
          */
         fun handleHaveBlockState(): Boolean {
-            val count = countNodes(NodeBlockState.HaveBlock, myStatus.height, myStatus.blockRID) +
-                    countNodes(NodeBlockState.Prepared, myStatus.height, myStatus.blockRID)
+            val count = countNodes(NodeBlockState.HaveBlock, myStatus.height, myStatus.blockRID, myStatus.round) +
+                    countNodes(NodeBlockState.Prepared, myStatus.height, myStatus.blockRID, myStatus.round)
             return if (count >= this.quorum) {
                 myStatus.state = NodeBlockState.Prepared
                 myStatus.serial += 1
