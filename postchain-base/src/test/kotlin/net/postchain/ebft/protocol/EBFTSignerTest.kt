@@ -228,6 +228,62 @@ class EBFTSignerTest : EBFTProtocolBase() {
     }
 
     @Test
+    fun `If consensus on same height and same round, then transfer to Prepared`() {
+        // setup
+        doReturn(CompletableFuture.completedStage(signature)).whenever(blockDatabase).loadUnfinishedBlock(isA())
+        doReturn(header0).whenever(blockchainConfiguration).decodeBlockHeader(header0.rawData)
+
+        // incoming messages
+        messagesToReceive(
+                ReceivedPacket(nodeRid0, 1, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal)),
+                ReceivedPacket(nodeRid2, 1, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal))
+        )
+        // execute
+        syncManager.update()
+        // verify
+        verifyStatus(blockRID = null, height = 0, serial = 0, round = 0, revolting = false, state = WaitBlock)
+        reset(commManager)
+
+        // incoming messages
+        messagesToReceive(
+                ReceivedPacket(nodeRid0, 1, UnfinishedBlock(header0.rawData, emptyList()))
+        )
+        // execute
+        syncManager.update()
+        // verify
+        verifyStatus(blockRID = blockRid0, height = 0, serial = 2, round = 0, revolting = false, state = Prepared, signature)
+        reset(commManager)
+    }
+
+    @Test
+    fun `If consensus on same height but different round, then keep HaveBlock state`() {
+        // setup
+        doReturn(CompletableFuture.completedStage(signature)).whenever(blockDatabase).loadUnfinishedBlock(isA())
+        doReturn(header0).whenever(blockchainConfiguration).decodeBlockHeader(header0.rawData)
+
+        // incoming messages
+        messagesToReceive(
+                ReceivedPacket(nodeRid0, 1, Status(blockRid0, 0, false, 3, 1, HaveBlock.ordinal)),
+                ReceivedPacket(nodeRid2, 1, Status(blockRid0, 0, false, 4, 1, HaveBlock.ordinal))
+        )
+        // execute
+        syncManager.update()
+        // verify
+        verifyStatus(blockRID = null, height = 0, serial = 0, round = 0, revolting = false, state = WaitBlock)
+        reset(commManager)
+
+        // incoming messages
+        messagesToReceive(
+                ReceivedPacket(nodeRid0, 1, UnfinishedBlock(header0.rawData, emptyList()))
+        )
+        // execute
+        syncManager.update()
+        // verify
+        verifyStatus(blockRID = blockRid0, height = 0, serial = 1, round = 0, revolting = false, state = HaveBlock, signature)
+        reset(commManager)
+    }
+
+    @Test
     fun `If not consensus on same height but higher round, do not update round`() {
         /**
          * Input: We receive [Status] from other nodes with higher rounds, but not enough to form consensus.
