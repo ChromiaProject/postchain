@@ -100,7 +100,7 @@ class GtvJSONTest {
 
     @Test
     fun `big integer should work in non-strict mode`() {
-        val gson = make_gtv_gson(strict = false)
+        val gson = makeLenientGtvGson()
         assertEquals("92233720368547758078", gson.toJson(GtvBigInteger(BigInteger("92233720368547758078"))))
     }
 }
