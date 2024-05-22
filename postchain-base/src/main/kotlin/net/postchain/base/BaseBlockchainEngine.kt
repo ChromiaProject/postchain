@@ -254,7 +254,7 @@ open class BaseBlockchainEngine(
         return blockBuilder to exception
     }
 
-    override fun buildBlock(): Pair<ManagedBlockBuilder, Exception?> {
+    override fun buildBlock(maxBuildTimeMs: Long): Pair<ManagedBlockBuilder, Exception?> {
         buildLog("Begin")
         val grossStart = nanoTime()
 
@@ -262,7 +262,7 @@ open class BaseBlockchainEngine(
         var exception: Exception? = null
 
         try {
-            buildBlockInternal(blockBuilder, grossStart)
+            buildBlockInternal(blockBuilder, grossStart, maxBuildTimeMs)
         } catch (e: Exception) {
             try {
                 blockBuilder.rollback()
@@ -306,7 +306,7 @@ open class BaseBlockchainEngine(
         }
     }
 
-    private fun buildBlockInternal(blockBuilder: BaseManagedBlockBuilder, grossStart: Long) {
+    private fun buildBlockInternal(blockBuilder: BaseManagedBlockBuilder, grossStart: Long, maxBuildTimeMs: Long) {
         val blockStart = nanoTime()
 
         blockBuilder.begin(null)
@@ -337,6 +337,12 @@ open class BaseBlockchainEngine(
                     continue
                 }
                 val txException = blockBuilder.maybeAppendTransaction(tx)
+
+                val elapsedTimeMs = (nanoTime() - netStart) / 1_000_000
+                if (maxBuildTimeMs >= 0 && elapsedTimeMs > maxBuildTimeMs) {
+                    logger.info("Tx ${tx.getRID().toHex()} will not be retried since block building has been running for $elapsedTimeMs ms")
+                    transactionQueue.flushTransaction(tx)
+                }
                 if (txException != null) {
                     rejectedTxs++
                     transactionSample.stop(metrics.rejectedTransactions)

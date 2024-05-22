@@ -278,6 +278,14 @@ class BaseTransactionQueue(private val queueCapacity: Int,
         }
     }
 
+    override fun flushTransaction(tx: Transaction) {
+        lock.withLock {
+            val wrappedTx = WrappedTransaction(tx, null, 0L, BigDecimal.ZERO, 0L, Instant.EPOCH, Instant.EPOCH)
+            taken.remove(wrappedTx)
+            txsToRetry.remove(wrappedTx)
+        }
+    }
+
     internal fun recheckPriorities() {
         if (prioritizer != null) {
             logger.debug { "Rechecking transactions" }

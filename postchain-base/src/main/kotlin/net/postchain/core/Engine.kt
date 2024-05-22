@@ -28,7 +28,7 @@ interface BlockchainEngine : Shutdownable {
     fun isRunning(): Boolean
 
     fun loadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?>
-    fun buildBlock(): Pair<ManagedBlockBuilder, Exception?>
+    fun buildBlock(maxBuildTimeMs: Long = -1): Pair<ManagedBlockBuilder, Exception?>
     fun getTransactionQueue(): TransactionQueue
     fun getBlockBuildingStrategy(): BlockBuildingStrategy
     fun getBlockQueries(): BlockQueries
