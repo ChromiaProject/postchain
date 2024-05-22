@@ -73,16 +73,28 @@ class GtvAdapter(val strict: Boolean = true) : JsonDeserializer<Gtv>, JsonSerial
     }
 }
 
-fun make_gtv_gson_builder(strict: Boolean = true): GsonBuilder {
-    return GsonBuilder()
-            .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter(strict))
-            .serializeNulls()
-}
+/**
+ * Does not support BigInteger.
+ */
+fun make_gtv_gson_builder(): GsonBuilder = GsonBuilder()
+        .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter())
+        .serializeNulls()
 
-fun make_gtv_gson(strict: Boolean = true): Gson {
-    return make_gtv_gson_builder(strict).create()!!
-}
+/**
+ * Supports BigInteger.
+ */
+fun makeLenientGtvGsonBuilder(): GsonBuilder = GsonBuilder()
+        .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter(strict = false))
+        .serializeNulls()
 
-fun gtvToJSON(gtvData: Gtv, gson: Gson): String {
-    return gson.toJson(gtvData, Gtv::class.java)
-}
+/**
+ * Does not support BigInteger.
+ */
+fun make_gtv_gson(): Gson = make_gtv_gson_builder().create()!!
+
+/**
+ * Supports BigInteger.
+ */
+fun makeLenientGtvGson(): Gson = makeLenientGtvGsonBuilder().create()!!
+
+fun gtvToJSON(gtvData: Gtv, gson: Gson): String = gson.toJson(gtvData, Gtv::class.java)
