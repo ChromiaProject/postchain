@@ -19,7 +19,8 @@ import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
 import net.postchain.core.EContext
 import net.postchain.crypto.KeyPair
-import net.postchain.crypto.devtools.KeyPairHelper
+import net.postchain.crypto.devtools.KeyPairHelper.privKey
+import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.RestTools
@@ -164,10 +165,10 @@ class RestApiIT : IntegrationTestSetup() {
         val bcRid = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = bcRid.toHex()
 
-        val builder = GtxBuilder(bcRid, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
+        val builder = GtxBuilder(bcRid, listOf(pubKey(0)), cryptoSystem)
                 .addOperation("gtx_test", gtv(1L), gtv("rejectMe"))
                 .finish()
-                .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))
+                .sign(cryptoSystem.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
                 .buildGtx()
 
         // post transaction
