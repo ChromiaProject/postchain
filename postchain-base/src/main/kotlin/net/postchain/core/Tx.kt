@@ -82,4 +82,5 @@ interface TransactionQueue {
     fun rejectTransaction(tx: Transaction, reason: Exception?)
     fun getRejectionReason(txRID: WrappedByteArray): Exception?
     fun retryAllTakenTransactions()
+    fun flushTransaction(tx: Transaction)
 }

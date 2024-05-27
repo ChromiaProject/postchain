@@ -41,7 +41,8 @@ class BaseBlockDatabase(
         private val engine: BlockchainEngine,
         private val blockQueries: BlockQueries,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
-        val nodeIndex: Int
+        val nodeIndex: Int,
+        private val maxBlockBuildTime: Long = -1
 ) : BlockDatabase {
 
     // The executor will only execute one thing at a time, in order
@@ -204,7 +205,7 @@ class BaseBlockDatabase(
     override fun buildBlock(): CompletionStage<Pair<BlockData, Signature>> {
         return runOpAsync("buildBlock") {
             maybeRollback()
-            val (theBlockBuilder, exception) = engine.buildBlock()
+            val (theBlockBuilder, exception) = engine.buildBlock(maxBlockBuildTime)
             if (exception != null) {
                 throw exception
             } else {

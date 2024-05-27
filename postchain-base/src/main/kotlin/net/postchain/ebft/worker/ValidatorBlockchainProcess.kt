@@ -35,6 +35,7 @@ import net.postchain.metrics.NodeStatusMetrics
 import net.postchain.metrics.SyncMetrics
 import java.lang.Thread.sleep
 import java.time.Duration
+import kotlin.math.max
 
 /**
  * A blockchain instance worker
@@ -70,6 +71,7 @@ class ValidatorBlockchainProcess(
         val nodeStatusMetrics = NodeStatusMetrics(workerContext.blockchainConfiguration.chainID, workerContext.blockchainConfiguration.blockchainRid)
         val stateChangeTracker = StateChangeTracker(workerContext.appConfig, nodeStatusMetrics)
         val blockchainConfiguration = workerContext.blockchainConfiguration
+        val revoltConfiguration = blockchainConfiguration.revoltConfiguration
         statusManager = BaseStatusManager(
                 blockchainConfiguration.signers,
                 blockchainConfiguration.blockchainContext.nodeID,
@@ -78,8 +80,12 @@ class ValidatorBlockchainProcess(
                 stateChangeTracker
         )
 
+        // Other nodes will need at least half the round time to load + some margin for consensus/networking
+        // This won't be an exact time constraint on block building but used to determine if we should retry txs
+        val maxBlockBuildingTime = max((revoltConfiguration.exponentialDelayMax / 2) - revoltConfiguration.timeout, revoltConfiguration.timeout / 2)
         blockDatabase = BaseBlockDatabase(
-                loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeDiagnosticContext, blockchainConfiguration.blockchainContext.nodeID)
+                loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeDiagnosticContext, blockchainConfiguration.blockchainContext.nodeID, maxBlockBuildingTime
+        )
 
         blockManager = BaseBlockManager(
                 blockDatabase,
@@ -106,7 +112,7 @@ class ValidatorBlockchainProcess(
                 blockManager,
                 blockDatabase,
                 nodeStateTracker,
-                RevoltTracker(statusManager, blockchainConfiguration.revoltConfiguration, blockchainEngine),
+                RevoltTracker(statusManager, revoltConfiguration, blockchainEngine),
                 SyncMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid),
                 ::isProcessRunning,
                 startWithFastSync,

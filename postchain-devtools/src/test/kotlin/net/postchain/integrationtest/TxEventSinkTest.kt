@@ -8,12 +8,12 @@ import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.hexStringToByteArray
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.devtools.IntegrationTestSetup
+import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -32,36 +32,34 @@ class TxEventSinkTest : IntegrationTestSetup() {
     fun `tx event sink should not apply changes unless tx is successfully appended`() {
         val nodes = createNodes(1, "/net/postchain/devtools/tx_event_sink/blockchain_config.xml")
 
-        val brid = BlockchainRid("CB01AAF54B3AEA7E7215179AA8986800AF311DF413BC09CF5AE02C969287BDFF".hexStringToByteArray())
+        val brid = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.blockchainRid
 
-        val successEventTx = nodes[0].getBlockchainInstance(1).blockchainEngine.getConfiguration().getTransactionFactory()
-                .decodeTransaction(buildSuccessEventTx(brid))
+        val transactionFactory = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.getConfiguration().getTransactionFactory()
+        val successEventTx = transactionFactory.decodeTransaction(buildSuccessEventTx(brid))
         buildBlock(1, successEventTx)
 
         // Assert event was recorded in header
-        val block = nodes[0].getBlockchainInstance(1).blockchainEngine.getBlockQueries().getBlockAtHeight(0)
+        val block = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.getBlockQueries().getBlockAtHeight(0)
                 .get()!!
         assertThat(BlockHeaderData.fromBinary(block.header.rawData).gtvExtra[SUCCESS_EVENTS_HEADER]!!.asInteger())
                 .isEqualTo(1)
 
-        val successAndFailureEventTx = nodes[0].getBlockchainInstance(1).blockchainEngine.getConfiguration().getTransactionFactory()
+        val successAndFailureEventTx = transactionFactory
                 .decodeTransaction(buildSuccessAndFailureEventTx(brid))
         buildBlock(1, successAndFailureEventTx)
 
         // Assert failing tx did not save any event in header
-        val block2 = nodes[0].getBlockchainInstance(1).blockchainEngine.getBlockQueries().getBlockAtHeight(1)
+        val block2 = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.getBlockQueries().getBlockAtHeight(1)
                 .get()!!
         assertThat(BlockHeaderData.fromBinary(block2.header.rawData).gtvExtra[SUCCESS_EVENTS_HEADER]!!.asInteger())
                 .isEqualTo(0)
 
-        val successEventTx2 = nodes[0].getBlockchainInstance(1).blockchainEngine.getConfiguration().getTransactionFactory()
-                .decodeTransaction(buildSuccessEventTx(brid))
-        val failureEventTx = nodes[0].getBlockchainInstance(1).blockchainEngine.getConfiguration().getTransactionFactory()
-                .decodeTransaction(buildFailureEventTx(brid))
+        val successEventTx2 = transactionFactory.decodeTransaction(buildSuccessEventTx(brid))
+        val failureEventTx = transactionFactory.decodeTransaction(buildFailureEventTx(brid))
         buildBlock(1, successEventTx2, failureEventTx)
 
         // Assert successful tx did save event in header even though another tx failed
-        val block3 = nodes[0].getBlockchainInstance(1).blockchainEngine.getBlockQueries().getBlockAtHeight(2)
+        val block3 = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.getBlockQueries().getBlockAtHeight(2)
                 .get()!!
         assertThat(BlockHeaderData.fromBinary(block3.header.rawData).gtvExtra[SUCCESS_EVENTS_HEADER]!!.asInteger())
                 .isEqualTo(1)
