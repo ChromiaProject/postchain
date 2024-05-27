@@ -215,7 +215,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
     }
 
     override fun isBlockchainProvider(providerPubKey: PubKey, blockchainRid: BlockchainRid): Boolean {
-        if (nmApiVersion < 19) return false
+        if (nmApiVersion < 19) return true
 
         val res = query(
                 "nm_is_blockchain_provider",

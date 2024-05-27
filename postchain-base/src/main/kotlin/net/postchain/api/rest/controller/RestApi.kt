@@ -59,7 +59,6 @@ import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockDetail
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
-import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.debug.ErrorValue
 import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.debug.NodeDiagnosticContext
@@ -132,8 +131,8 @@ import java.util.concurrent.Semaphore
 const val BLOCKCHAIN_RID = "blockchainRid"
 
 const val UNAUTHORIZED_INVALID_SIGNATURE = "Invalid signature"
-const val UNAUTHORIZED_REQUIRE_SIGNATURE_IN_MANAGED_MODE = "Configuration must be signed in managed mode"
-const val UNAUTHORIZED_CONF_NOT_SIGNED_BY_PROVIDER = "Configuration must be signed by blockchain provider"
+const val UNAUTHORIZED_REQUIRE_SIGNATURE_IN_MANAGED_MODE = "Configuration must be signed"
+const val FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER = "Configuration must be signed by blockchain provider"
 
 /**
  * Implements the REST API.
@@ -556,7 +555,7 @@ class RestApi(
             }
 
             if (!signatures.any { managedDataSource.isBlockchainProvider(PubKey(it.subjectID), model.blockchainRid) }) {
-                throw UnauthorizedException(UNAUTHORIZED_CONF_NOT_SIGNED_BY_PROVIDER)
+                throw ForbiddenException(FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER)
             }
         }
 
@@ -652,6 +651,11 @@ class RestApi(
             is UnauthorizedException -> {
                 logger.info { "Unauthorized: ${error.message}" }
                 errorResponse(request, UNAUTHORIZED, error.message!!)
+            }
+
+            is ForbiddenException -> {
+                logger.info { "Forbidden: ${error.message}" }
+                errorResponse(request, FORBIDDEN, error.message!!)
             }
 
             is DuplicateTnxException -> {

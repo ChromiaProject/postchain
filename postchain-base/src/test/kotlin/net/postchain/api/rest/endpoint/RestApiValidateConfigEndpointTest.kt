@@ -6,7 +6,7 @@ import net.postchain.PostchainContext
 import net.postchain.api.rest.X_POSTCHAIN_SIGNATURE_HEADER
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.RestApi
-import net.postchain.api.rest.controller.UNAUTHORIZED_CONF_NOT_SIGNED_BY_PROVIDER
+import net.postchain.api.rest.controller.FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER
 import net.postchain.api.rest.controller.UNAUTHORIZED_INVALID_SIGNATURE
 import net.postchain.api.rest.controller.UNAUTHORIZED_REQUIRE_SIGNATURE_IN_MANAGED_MODE
 import net.postchain.common.BlockchainRid
@@ -29,6 +29,7 @@ import net.postchain.managed.config.ManagedBlockchainConfiguration
 import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.startsWith
 import org.hamcrest.core.IsEqual.equalTo
+import org.http4k.core.Status.Companion.FORBIDDEN
 import org.http4k.core.Status.Companion.UNAUTHORIZED
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -237,9 +238,9 @@ class RestApiValidateConfigEndpointTest {
                 .header(X_POSTCHAIN_SIGNATURE_HEADER, buildValidHeaderAuth(config))
                 .post("/config/$blockchainRID")
                 .then()
-                .statusCode(UNAUTHORIZED.code)
+                .statusCode(FORBIDDEN.code)
                 .contentType(ContentType.JSON)
-                .body(equalTo("{\"error\":\"$UNAUTHORIZED_CONF_NOT_SIGNED_BY_PROVIDER\"}"))
+                .body(equalTo("{\"error\":\"$FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER\"}"))
     }
 
     @Test
