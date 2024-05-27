@@ -6,6 +6,7 @@ import mu.KLogging
 import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
+import net.postchain.managed.ClusterAnchoringChainDataSource
 
 class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationProvider() {
 
@@ -63,4 +64,12 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
     }
 
     override fun getActiveBlockConfigurationOptions(eContext: EContext, chainId: Long) = BlockchainConfigurationOptions.DEFAULT
+
+    override fun getCACBrid(nodePukey: ByteArray): ByteArray? {
+        return null
+    }
+
+    override fun getAnchoringProvider(cacDataSource: ClusterAnchoringChainDataSource): AnchoringProvider{
+        return DummyAnchoringProvider()
+    }
 }

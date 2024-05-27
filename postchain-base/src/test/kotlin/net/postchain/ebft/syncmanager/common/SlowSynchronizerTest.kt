@@ -356,7 +356,7 @@ class SlowSynchronizerTest {
         @Test
         fun `with message BlockRange should call internal method and update sleep data`() {
             // setup
-            val completeBlock = CompleteBlock(blockData, height, witness)
+            val completeBlock = CompleteBlock(blockData, height, witness, blockData.header.blockRID)
             val blocks = listOf(completeBlock)
             val processedBlocks = 37
             val message = BlockRange(startHeight, false, blocks)
@@ -405,7 +405,7 @@ class SlowSynchronizerTest {
         @Test
         fun `with not expected start height should blacklist peer and return 0`() {
             // setup
-            val completeBlock = CompleteBlock(blockData, height, witness)
+            val completeBlock = CompleteBlock(blockData, height, witness, blockData.header.blockRID)
             val blocks = listOf(completeBlock)
             doReturn(SlowSyncStates.WAIT_FOR_REPLY).whenever(stateMachine).state
             doReturn(false).whenever(stateMachine).isHeightWeWaitingFor(anyLong())
@@ -419,7 +419,7 @@ class SlowSynchronizerTest {
         @Test
         fun `with waiting blocks and unacknowledged failed commit should wait for blocks to commit and acknowledge failed commit`() {
             // setup
-            val completeBlock = CompleteBlock(blockData, height, witness)
+            val completeBlock = CompleteBlock(blockData, height, witness, blockData.header.blockRID)
             val blocks = listOf(completeBlock)
             doReturn(SlowSyncStates.WAIT_FOR_REPLY).whenever(stateMachine).state
             doReturn(true).whenever(stateMachine).isHeightWeWaitingFor(anyLong())
@@ -450,7 +450,7 @@ class SlowSynchronizerTest {
         @Test
         fun `with failed to handle block header should give up`() {
             // setup
-            val completeBlock = CompleteBlock(blockData, height, witness)
+            val completeBlock = CompleteBlock(blockData, height, witness, blockData.header.blockRID)
             val blocks = listOf(completeBlock, mock())
             doReturn(SlowSyncStates.WAIT_FOR_REPLY).whenever(stateMachine).state
             doReturn(true).whenever(stateMachine).isHeightWeWaitingFor(anyLong())
@@ -466,7 +466,7 @@ class SlowSynchronizerTest {
         @Test
         fun `should handle blocks`() {
             // setup
-            val completeBlock = CompleteBlock(blockData, height, witness)
+            val completeBlock = CompleteBlock(blockData, height, witness, blockData.header.blockRID)
             val blocks = listOf(completeBlock)
             doReturn(SlowSyncStates.WAIT_FOR_REPLY).whenever(stateMachine).state
             doReturn(true).whenever(stateMachine).isHeightWeWaitingFor(anyLong())

@@ -71,7 +71,7 @@ class MessageDurationTrackerTest {
                 arrayOf(GetBlockHeaderAndBlock(0L), BlockHeader(header0.rawData, "".toByteArray(), 0L)),
                 arrayOf(GetBlockRange(42L), BlockRange(42L, false, emptyList())),
                 arrayOf(GetBlockSignature(baseBlockHeader.blockRID), BlockSignature(baseBlockHeader.blockRID, mock())),
-                arrayOf(GetBlockAtHeight(0L), CompleteBlock(mock(), 0L, "".toByteArray())),
+                arrayOf(GetBlockAtHeight(0L), CompleteBlock(mock(), 0L, "".toByteArray(), blockData.header.blockRID)),
         )
     }
 

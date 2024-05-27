@@ -213,4 +213,18 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
                 res["final_height"]?.asInteger() ?: return null
         )
     }
+
+    override fun nmGetCACBrid(nodePubkey: ByteArray): ByteArray? {
+        if (nmApiVersion < 44) return null
+
+        val res = query(
+                "nm_get_cac_brid",
+                buildArgs(
+                        "node_pubkey" to gtv(nodePubkey)
+                )
+        )
+        if (res.isNull()) return null
+
+        return res.asByteArray()
+    }
 }

@@ -137,6 +137,6 @@ class MessagesTest {
         val data = BlockData(header, transactions)
         val witness = witnessHex.hexStringToByteArray()
 
-        return CompleteBlock(data, height, witness)
+        return CompleteBlock(data, height, witness, blockData.header.blockRID)
     }
 }

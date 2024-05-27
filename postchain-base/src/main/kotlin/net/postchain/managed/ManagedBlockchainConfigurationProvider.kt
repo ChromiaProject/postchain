@@ -8,6 +8,8 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
 import net.postchain.config.blockchain.AbstractBlockchainConfigurationProvider
+import net.postchain.config.blockchain.AnchoringProvider
+import net.postchain.config.blockchain.AnchoringProviderImpl
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.EContext
 
@@ -100,6 +102,14 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
                 throw IllegalStateException("Using managed blockchain configuration provider before it's properly initialized")
             }
         }
+    }
+
+    override fun getCACBrid(nodePukey: ByteArray): ByteArray? {
+        return if (::dataSource.isInitialized) dataSource.nmGetCACBrid(nodePukey) else null
+    }
+
+    override fun getAnchoringProvider(cacDataSource: ClusterAnchoringChainDataSource): AnchoringProvider {
+        return AnchoringProviderImpl(cacDataSource)
     }
 
     fun getMigratingBlockchainNodeInfo(blockchainRid: BlockchainRid): MigratingBlockchainNodeInfo? {

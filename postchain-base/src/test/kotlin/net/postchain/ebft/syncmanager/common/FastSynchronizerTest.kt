@@ -636,7 +636,7 @@ class FastSynchronizerTest {
         @Test
         fun `with new node should do nothing`() {
             // setup
-            val message = CompleteBlock(BlockData(header, transactions), height, witness)
+            val message = CompleteBlock(BlockData(header, transactions), height, witness, blockData.header.blockRID)
             addMessage(message)
             doReturn(false).whenever(peerStatuses).isMaybeLegacy(nodeRid)
             doReturn(false).whenever(sut).handleBlockHeader(isA(), isA(), isA(), anyLong())
@@ -651,7 +651,7 @@ class FastSynchronizerTest {
         @Test
         fun `with legacy node should add header and witness to job`() {
             // setup
-            addMessage(CompleteBlock(BlockData(header, transactions), height, witness))
+            addMessage(CompleteBlock(BlockData(header, transactions), height, witness, blockData.header.blockRID))
             doReturn(true).whenever(peerStatuses).isMaybeLegacy(nodeRid)
             doReturn(false).whenever(sut).handleBlockHeader(isA(), isA(), isA(), anyLong())
             // execute
@@ -665,7 +665,7 @@ class FastSynchronizerTest {
         @Test
         fun `with legacy node and unfinished block should add header and witness to job and handle unfinished block`() {
             // setup
-            addMessage(CompleteBlock(BlockData(header, transactions), height, witness))
+            addMessage(CompleteBlock(BlockData(header, transactions), height, witness, blockData.header.blockRID))
             doReturn(true).whenever(peerStatuses).isMaybeLegacy(nodeRid)
             doReturn(true).whenever(sut).handleBlockHeader(isA(), isA(), isA(), anyLong())
             doNothing().whenever(sut).handleUnfinishedBlock(isA(), isA(), isA(), anyList())

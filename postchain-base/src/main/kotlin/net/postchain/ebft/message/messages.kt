@@ -37,7 +37,7 @@ class GetBlockSignature(val blockRID: ByteArray) : EbftMessage(MessageTopic.GETB
 
 class BlockData(val header: ByteArray, val transactions: List<ByteArray>)
 
-class CompleteBlock(val data: BlockData, val height: Long, val witness: ByteArray) : EbftMessage(MessageTopic.COMPLETEBLOCK) {
+class CompleteBlock(val data: BlockData, val height: Long, val witness: ByteArray, val blockRID: ByteArray) : EbftMessage(MessageTopic.COMPLETEBLOCK) {
 
     companion object {
 
@@ -45,7 +45,8 @@ class CompleteBlock(val data: BlockData, val height: Long, val witness: ByteArra
             return CompleteBlock(
                     BlockData(blockData.header.rawData, blockData.transactions),
                     height,
-                    blockData.witness.getRawData()
+                    blockData.witness.getRawData(),
+                    blockData.header.blockRID
             )
         }
 
@@ -56,7 +57,8 @@ class CompleteBlock(val data: BlockData, val height: Long, val witness: ByteArra
                             data[1 + arrOffset].asArray().map { it.asByteArray() }
                     ),
                     data[2 + arrOffset].asInteger(),
-                    data[3 + arrOffset].asByteArray()
+                    data[3 + arrOffset].asByteArray(),
+                    data[4 + arrOffset].asByteArray()
             )
         }
     }

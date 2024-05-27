@@ -157,15 +157,20 @@ class SlowSynchronizer(
 
                     // But we only expect ranges and status to be sent to us
                     is BlockRange -> {
-                        messageDurationTracker.receive(peerId, message)
-                        val processedBlocks = handleBlockRange(peerId, message.blocks, message.startAtHeight)
+                        val anchored = workerContext.anchoringProvider.isAnchored(blockchainConfiguration.blockchainRid.data, message.blocks.last().data.header)
+                        if(anchored) {
+                            messageDurationTracker.receive(peerId, message)
+                            val processedBlocks = handleBlockRange(peerId, message.blocks, message.startAtHeight)
 
-                        // We want to avoid drained replicas from affecting our sync rate
-                        val isReplica = replicas.contains(peerId.data.wrap())
-                        if (isReplica && processedBlocks == 0) {
-                            peerStatuses.drained(peerId, message.startAtHeight, currentTimeMillis(), params.slowSyncMaxSleepTime * configuredPeers.size)
+                            // We want to avoid drained replicas from affecting our sync rate
+                            val isReplica = replicas.contains(peerId.data.wrap())
+                            if (isReplica && processedBlocks == 0) {
+                                peerStatuses.drained(peerId, message.startAtHeight, currentTimeMillis(), params.slowSyncMaxSleepTime * configuredPeers.size)
+                            } else {
+                                sleepData.updateData(processedBlocks)
+                            }
                         } else {
-                            sleepData.updateData(processedBlocks)
+                            //what to do if not anchored?
                         }
                     }
 

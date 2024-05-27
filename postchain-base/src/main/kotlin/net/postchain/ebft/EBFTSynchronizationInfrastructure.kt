@@ -28,8 +28,10 @@ import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
+import net.postchain.managed.ClusterAnchoringChainDataSourceImpl
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.managed.MigratingBlockchainNodeInfo
+import net.postchain.managed.query.GtxModuleQueryRunner
 import net.postchain.metrics.MessageDurationTrackerMetricsFactory
 import net.postchain.network.CommunicationManager
 import net.postchain.network.peer.DefaultPeerCommunicationManager
@@ -88,6 +90,14 @@ open class EBFTSynchronizationInfrastructure(
         val forceReadOnly = postchainContext.appConfig.readOnly
         if (forceReadOnly) logger.warn("I am running in forced read only mode")
 
+        val managedBlockchainConfigurationProvider = blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
+        val nodePubkey = peerCommConfiguration.myPeerInfo().pubKey
+        val cacBrid = managedBlockchainConfigurationProvider?.getCACBrid(nodePubkey)
+        //how to initialize GTXBlockchainConfiguration for cluster anchoring chain?
+        val cacDataSourceImpl = ClusterAnchoringChainDataSourceImpl(GtxModuleQueryRunner(cacConfiguration, postchainContext.appConfig, postchainContext.blockBuilderStorage))
+        val anchoringProvider = blockchainConfigurationProvider.getAnchoringProvider(cacDataSourceImpl)
+
+
         // worker context
         val buildWorkerContext = { brid: BlockchainRid, peerCommConfig: PeerCommConfiguration ->
             val communicationManager = buildXCommunicationManager(blockchainConfigurationProvider, blockchainConfig, peerCommConfig, brid)
@@ -106,7 +116,8 @@ open class EBFTSynchronizationInfrastructure(
                     restartNotifier,
                     blockchainConfigurationProvider,
                     postchainContext.nodeDiagnosticContext,
-                    messageDurationTracker
+                    messageDurationTracker,
+                    anchoringProvider
             )
         }
 

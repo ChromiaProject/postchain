@@ -5,6 +5,7 @@ package net.postchain.config.blockchain
 import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.EContext
+import net.postchain.managed.ClusterAnchoringChainDataSource
 
 /**
  * Provides configuration of specific blockchain like block-strategy, configuration-factory,
@@ -54,4 +55,8 @@ interface BlockchainConfigurationProvider {
 
 
     fun getActiveBlockConfigurationOptions(eContext: EContext, chainId: Long): BlockchainConfigurationOptions
+
+    fun getCACBrid(nodePukey: ByteArray): ByteArray?
+
+    fun getAnchoringProvider(cacDataSource: ClusterAnchoringChainDataSource): AnchoringProvider
 }

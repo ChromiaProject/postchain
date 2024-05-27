@@ -194,10 +194,15 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                 }
 
                                 is BlockRange -> {
-                                    messageDurationTracker.receive(xPeerId, message)
-                                    // Only replicas should receive BlockRanges (via SlowSync)
-                                    logger.warn("Why did we get a block range from peer: ${xPeerId}? (Starting " +
-                                            "height: ${message.startAtHeight}, blocks: ${message.blocks.size}) ")
+                                    val anchored = workerContext.anchoringProvider.isAnchored(blockchainConfiguration.blockchainRid.data, message.blocks.last().blockRID)
+                                    if (anchored) {
+                                        messageDurationTracker.receive(xPeerId, message)
+                                        // Only replicas should receive BlockRanges (via SlowSync)
+                                        logger.warn("Why did we get a block range from peer: ${xPeerId}? (Starting " +
+                                                "height: ${message.startAtHeight}, blocks: ${message.blocks.size}) ")
+                                    } else {
+                                        //what to do if not anchored?
+                                    }
                                 }
 
                                 is GetUnfinishedBlock -> sendUnfinishedBlock(nodeIndex)

@@ -594,25 +594,30 @@ class FastSynchronizer(
         val height = message.height
         val witness = message.witness
 
-        messageDurationTracker.receive(peerId, message)
+        val anchored = workerContext.anchoringProvider.isAnchored(blockchainConfiguration.blockchainRid.data, message.blockRID)
+        if (anchored) {
+            messageDurationTracker.receive(peerId, message)
 
-        // We expect height to be the requested height. If the peer didn't have the block we wouldn't
-        // get any block at all.
-        if (!peerStatuses.isMaybeLegacy(peerId)) {
-            // We only expect CompleteBlock from legacy nodes.
-            return
-        }
-        val header = blockData.header
-        val saveBlock = handleBlockHeader(peerId, header, witness, height)
-        if (!saveBlock) {
-            return
-        }
+            // We expect height to be the requested height. If the peer didn't have the block we wouldn't
+            // get any block at all.
+            if (!peerStatuses.isMaybeLegacy(peerId)) {
+                // We only expect CompleteBlock from legacy nodes.
+                return
+            }
+            val header = blockData.header
+            val saveBlock = handleBlockHeader(peerId, header, witness, height)
+            if (!saveBlock) {
+                return
+            }
 
-        val decodedHeader = blockchainConfiguration.decodeBlockHeader(header)
-        if (decodedHeader !is BaseBlockHeader) {
-            throw BadMessageException("Expected BaseBlockHeader")
+            val decodedHeader = blockchainConfiguration.decodeBlockHeader(header)
+            if (decodedHeader !is BaseBlockHeader) {
+                throw BadMessageException("Expected BaseBlockHeader")
+            }
+            handleUnfinishedBlock(peerId, header, decodedHeader, blockData.transactions)
+        } else {
+            //what to do if not anchored?
         }
-        handleUnfinishedBlock(peerId, header, decodedHeader, blockData.transactions)
     }
 
     /**
