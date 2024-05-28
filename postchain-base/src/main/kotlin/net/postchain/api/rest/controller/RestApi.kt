@@ -41,6 +41,7 @@ import net.postchain.api.rest.prettyGson
 import net.postchain.api.rest.prettyJsonBody
 import net.postchain.api.rest.proofBody
 import net.postchain.api.rest.signatureBody
+import net.postchain.api.rest.signatureHeader
 import net.postchain.api.rest.signerQuery
 import net.postchain.api.rest.statusBody
 import net.postchain.api.rest.textBody
@@ -56,6 +57,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockDetail
+import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
 import net.postchain.debug.ErrorValue
 import net.postchain.debug.JsonNodeDiagnosticContext
@@ -65,10 +67,14 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvException
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvType
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.managed.ManagedNodeDataSource
+import net.postchain.managed.config.ManagedDataSourceAware
 import org.http4k.core.Body
 import org.http4k.core.ContentType
 import org.http4k.core.Filter
@@ -88,6 +94,7 @@ import org.http4k.core.Status.Companion.NOT_FOUND
 import org.http4k.core.Status.Companion.OK
 import org.http4k.core.Status.Companion.SERVICE_UNAVAILABLE
 import org.http4k.core.Status.Companion.TEMPORARY_REDIRECT
+import org.http4k.core.Status.Companion.UNAUTHORIZED
 import org.http4k.core.maxAge
 import org.http4k.core.public
 import org.http4k.core.queries
@@ -123,6 +130,10 @@ import java.util.concurrent.Semaphore
 
 const val BLOCKCHAIN_RID = "blockchainRid"
 
+const val UNAUTHORIZED_INVALID_SIGNATURE = "Invalid signature"
+const val UNAUTHORIZED_REQUIRE_SIGNATURE_IN_MANAGED_MODE = "Configuration must be signed"
+const val FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER = "Configuration must be signed by blockchain provider"
+
 /**
  * Implements the REST API.
  *
@@ -143,7 +154,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 5
+        const val REST_API_VERSION = 6
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -529,6 +540,32 @@ class RestApi(
     private fun validateBlockchainConfiguration(request: Request): Response {
         val model = model(request)
         val configuration = configurationInBody(request)
+        val signatures = signatureHeader(request)
+
+        // Require signed configuration if in managed mode
+        withManagedDataSource(model) { managedDataSource, cryptoSystem ->
+
+            if (signatures.isNullOrEmpty()) {
+                throw UnauthorizedException(UNAUTHORIZED_REQUIRE_SIGNATURE_IN_MANAGED_MODE)
+            }
+
+            val configHash = configuration.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+            if (!signatures.all { cryptoSystem.verifyDigest(configHash, it) }) {
+                throw UnauthorizedException(UNAUTHORIZED_INVALID_SIGNATURE)
+            }
+
+            if (!signatures.any {
+                        var isProvider = false
+                        try {
+                            isProvider = managedDataSource.isBlockchainProvider(PubKey(it.subjectID), model.blockchainRid)
+                        } catch (e: Exception) {
+                            logger.debug { "Is blockchain provider query failed: ${e.message}" }
+                        }
+                        isProvider
+                    }) {
+                throw ForbiddenException(FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER)
+            }
+        }
 
         try {
             model.validateBlockchainConfiguration(configuration)
@@ -538,6 +575,14 @@ class RestApi(
             throw UserMistake("Invalid configuration: ${e.message}", e)
         }
         return Response(OK).with(emptyBody.outbound(request) of Empty)
+    }
+
+    private fun withManagedDataSource(model: Model, action: (ManagedNodeDataSource, CryptoSystem) -> Unit) {
+
+        if (model is PostchainModel && model.blockchainConfiguration is ManagedDataSourceAware) {
+
+            action(model.blockchainConfiguration.dataSource, model.postchainContext.cryptoSystem)
+        }
     }
 
     private fun getErrors(request: Request): Response {
@@ -609,6 +654,16 @@ class RestApi(
             is InvalidTnxException -> {
                 logger.info { "Invalid transaction: ${error.message}" }
                 errorResponse(request, BAD_REQUEST, error.message!!)
+            }
+
+            is UnauthorizedException -> {
+                logger.info { "Unauthorized: ${error.message}" }
+                errorResponse(request, UNAUTHORIZED, error.message!!)
+            }
+
+            is ForbiddenException -> {
+                logger.info { "Forbidden: ${error.message}" }
+                errorResponse(request, FORBIDDEN, error.message!!)
             }
 
             is DuplicateTnxException -> {

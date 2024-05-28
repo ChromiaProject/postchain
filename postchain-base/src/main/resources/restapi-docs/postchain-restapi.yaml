@@ -958,8 +958,12 @@ paths:
         Check if a configuration is valid for a blockchain in its current state. This operation will not apply the 
         configuration, only verify it. The configuration can be sent either as XML (using `text/xml` content type)
         or GTV (using `application/octet-stream` content type).
+        
+        Nodes running in managed mode requires a signature to be included to only allow the blockchain provider verify
+        the configuration,
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/headerSignature"
       requestBody:
         content:
           text/xml:
@@ -1005,6 +1009,16 @@ paths:
                 invalidConfiguration:
                   value:
                     error: "Invalid configuration"
+        401:
+          description: Signature is required, invalid or not the dapp provider of this blockchain
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                invalidConfiguration:
+                  value:
+                    error: "Configuration must be signed by blockchain provider"
         404:
           description: Not found
           content:
@@ -1129,6 +1143,14 @@ components:
       schema:
         $ref: "#/components/schemas/height"
       example: "123"
+    headerSignature:
+      name: X-Postchain-Signature
+      description: Signature(s) of body data used as authentication for restricted endpoints on format `<pubkey>:<signed data>,...`.
+      in: header
+      required: false
+      schema:
+        $ref: "#/components/schemas/signature"
+      example: "03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070:68FDCFA6E4D075BBF701AFDCA297B288F5477D42414A446234FC7F3910ED78893C9ADCC49C306DB7F2804949D5E63959BEBCA370FB825D5F4F74265D006C89F4"
   schemas:
     tx:
       type: object
@@ -1367,3 +1389,7 @@ components:
         transactionsCount:
           type: integer
           format: int64
+    signature:
+      type: string
+      pattern: "(([0-9a-fA-F]+:[0-9a-fA-F]+)(,|$))+"
+      description: Signature(s) made up of pubkey and signed data

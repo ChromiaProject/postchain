@@ -7,6 +7,7 @@ import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainState
 import net.postchain.core.NodeRid
+import net.postchain.crypto.PubKey
 import net.postchain.devtools.awaitDebug
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSeqNumber
@@ -108,6 +109,10 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
     }
 
     override fun getMigratingBlockchainNodeInfo(blockchainRid: BlockchainRid): MigratingBlockchainNodeInfo? = null
+
+    override fun isBlockchainProvider(providerPubKey: PubKey, blockchainRid: BlockchainRid): Boolean {
+        TODO("Not yet implemented")
+    }
 
     override fun query(name: String, args: Gtv): Gtv {
         TODO("Not yet implemented")

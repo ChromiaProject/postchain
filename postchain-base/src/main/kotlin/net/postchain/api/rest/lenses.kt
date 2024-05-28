@@ -31,6 +31,7 @@ import org.http4k.format.auto
 import org.http4k.lens.BiDiBodyLens
 import org.http4k.lens.ContentNegotiation
 import org.http4k.lens.ContentNegotiation.Companion.None
+import org.http4k.lens.Header
 import org.http4k.lens.Invalid
 import org.http4k.lens.LensFailure
 import org.http4k.lens.Meta
@@ -47,7 +48,18 @@ import org.http4k.lens.string
 import java.io.InputStream
 import net.postchain.api.rest.json.GtvJsonFactory.auto as gtvJson
 
+const val X_POSTCHAIN_SIGNATURE_HEADER = "X-Postchain-Signature"
 const val ridRegex = "([0-9a-fA-F]{64})"
+val signaturePattern = "([a-zA-Z0-9]+):([a-zA-Z0-9]+)".toRegex()
+
+val signatureHeader = Header.string()
+        .map { signaturesParam ->
+            signaturePattern.findAll(signaturesParam).map {
+                Signature(it.groupValues[1].hexStringToByteArray(), it.groupValues[2].hexStringToByteArray())
+            }
+                    .toList()
+        }
+        .optional(X_POSTCHAIN_SIGNATURE_HEADER)
 
 val txRidPath = Path.regex(ridRegex).map { TxRid(it.hexStringToByteArray()) }.of("txRid", "Hex encoded transaction RID")
 val blockRidPath = Path.regex(ridRegex).map { BlockRid(it.hexStringToByteArray()) }.of("blockRid", "Hex encoded block RID")

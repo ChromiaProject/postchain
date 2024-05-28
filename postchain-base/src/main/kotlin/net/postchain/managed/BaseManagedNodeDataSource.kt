@@ -213,4 +213,18 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
                 res["final_height"]?.asInteger() ?: return null
         )
     }
+
+    override fun isBlockchainProvider(providerPubKey: PubKey, blockchainRid: BlockchainRid): Boolean {
+        if (nmApiVersion < 19) return true
+
+        val res = query(
+                "nm_is_blockchain_provider",
+                buildArgs(
+                        "provider_pubkey" to gtv(providerPubKey.data),
+                        "blockchain_rid" to gtv(blockchainRid.data)
+                )
+        )
+
+        return res.asBoolean()
+    }
 }
