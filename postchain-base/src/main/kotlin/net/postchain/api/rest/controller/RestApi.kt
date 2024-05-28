@@ -554,7 +554,15 @@ class RestApi(
                 throw UnauthorizedException(UNAUTHORIZED_INVALID_SIGNATURE)
             }
 
-            if (!signatures.any { managedDataSource.isBlockchainProvider(PubKey(it.subjectID), model.blockchainRid) }) {
+            if (!signatures.any {
+                        var isProvider = false
+                        try {
+                            isProvider = managedDataSource.isBlockchainProvider(PubKey(it.subjectID), model.blockchainRid)
+                        } catch (e: Exception) {
+                            logger.debug { "Is blockchain provider query failed: ${e.message}" }
+                        }
+                        isProvider
+                    }) {
                 throw ForbiddenException(FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER)
             }
         }
