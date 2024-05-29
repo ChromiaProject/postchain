@@ -454,6 +454,7 @@ class BaseStatusManager(
             } else if (sameHeightHigherRounds.size >= this.quorum) {
                 myStatus.serial += 1
                 myStatus.round = sameHeightHigherRounds.sortedDescending()[this.quorum - 1]
+                myStatus.revolting = false
                 if (myStatus.state == NodeBlockState.HaveBlock) {
                     logger.info("Resetting block in HaveBlock state due to new round")
                     resetBlock()
