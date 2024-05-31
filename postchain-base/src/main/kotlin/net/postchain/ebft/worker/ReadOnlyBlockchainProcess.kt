@@ -22,6 +22,7 @@ import net.postchain.ebft.syncmanager.common.PeerStatuses
 import net.postchain.ebft.syncmanager.common.SlowSynchronizer
 import net.postchain.ebft.syncmanager.common.SyncMethod
 import net.postchain.ebft.syncmanager.common.SyncParameters
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 
@@ -53,14 +54,16 @@ class ReadOnlyBlockchainProcess(
             blockDatabase,
             params,
             PeerStatuses(params),
-            ::isProcessRunning
+            ::isProcessRunning,
+            RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
     )
 
     private val slowSynchronizer = SlowSynchronizer(
             workerContext,
             blockDatabase,
             params,
-            ::isProcessRunning
+            ::isProcessRunning,
+            RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
     )
 
     private var syncMethod = SyncMethod.NOT_SYNCING

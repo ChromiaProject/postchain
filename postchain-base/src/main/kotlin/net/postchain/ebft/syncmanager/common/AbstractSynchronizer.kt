@@ -23,6 +23,7 @@ import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.SigMaker
 import net.postchain.ebft.BDBAbortException
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
@@ -34,8 +35,9 @@ import java.util.concurrent.atomic.AtomicLong
 
 abstract class AbstractSynchronizer(
         val workerContext: WorkerContext,
+        rateLimitConfiguration: RateLimitConfiguration,
         val baseBlockWitnessProviderProvider: BaseBlockWitnessProviderProvider = defaultBaseBlockWitnessProviderProvider()
-) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker) {
+) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker, rateLimitConfiguration) {
 
     protected val blockchainConfiguration = workerContext.engine.getConfiguration()
     protected val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()

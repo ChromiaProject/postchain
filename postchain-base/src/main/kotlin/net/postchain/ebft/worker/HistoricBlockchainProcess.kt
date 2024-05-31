@@ -32,6 +32,7 @@ import net.postchain.ebft.syncmanager.common.KnownState
 import net.postchain.ebft.syncmanager.common.PeerStatuses
 import net.postchain.ebft.syncmanager.common.SyncMethod
 import net.postchain.ebft.syncmanager.common.SyncParameters
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import java.lang.Thread.sleep
@@ -73,7 +74,8 @@ class HistoricBlockchainProcess(
             blockDatabase,
             syncParams,
             PeerStatuses(syncParams),
-            ::isProcessRunning
+            ::isProcessRunning,
+            RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
     )
 
     private var syncMethod = SyncMethod.NOT_SYNCING
@@ -148,7 +150,8 @@ class HistoricBlockchainProcess(
                             blockDatabase,
                             params,
                             PeerStatuses(params),
-                            ::isProcessRunning
+                            ::isProcessRunning,
+                            RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
                     )
                     isSyncingHistoric = true
                     historicSynchronizer!!.syncUntilResponsiveNodesDrained()

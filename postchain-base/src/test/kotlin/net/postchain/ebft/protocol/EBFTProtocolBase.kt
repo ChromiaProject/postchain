@@ -34,6 +34,7 @@ import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.MessageDurationTracker
 import net.postchain.ebft.message.StateChangeTracker
 import net.postchain.ebft.message.Status
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.syncmanager.validator.RevoltTracker
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
 import net.postchain.ebft.worker.WorkerContext
@@ -152,7 +153,7 @@ abstract class EBFTProtocolBase {
         doReturn(BaseStatusManager.ZERO_SERIAL_TIME).whenever(clock).millis()
         statusManager = BaseStatusManager(nodes, myNodeId, 0, nodeStatusMetrics, stateChangeTracker, clock)
         blockManager = BaseBlockManager(blockDatabase, statusManager, blockStrategy, workerContext)
-        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, syncMetrics, { true }, false, { true }, clock)
+        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, syncMetrics, { true }, false, { true }, RateLimitConfiguration.fromAppConfig(appConfig), clock)
         statusManager.recomputeStatus()
     }
 

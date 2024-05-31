@@ -15,14 +15,21 @@ import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_BLOCKS_IN_PACKAGE
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.network.CommunicationManager
 
 abstract class Messaging(
         val blockQueries: BlockQueries,
         val communicationManager: CommunicationManager<EbftMessage>,
-        private val blockPacker: BlockPacker
+        private val blockPacker: BlockPacker,
+        val rateLimitConfiguration: RateLimitConfiguration
 ) {
     companion object : KLogging()
+
+    private val servedBlockRanges = mutableMapOf<NodeRid, MutableSet<Long>>()
+    private val servedBlockAtHeight = mutableMapOf<NodeRid, MutableSet<Long>>()
+    private val servedBlockHeaderAndBlock = mutableMapOf<NodeRid, MutableSet<Long>>()
 
     /**
      * We're going to get a lot of requests from peers in fastsync mode. We should cache our tip
@@ -45,6 +52,13 @@ abstract class Messaging(
      * @param height requested block height
      */
     fun sendBlockAtHeight(peerId: NodeRid, height: Long) {
+        if (servedBlockAtHeight[peerId]?.contains(height) == true) {
+            logger.debug { "Already responded to request from peer $peerId for block at height $height. Ignoring." }
+            return
+        }
+        if (isTotalServedBlockRequestLimitReached(peerId)) return
+
+        servedBlockAtHeight.getOrPut(peerId) { mutableSetOf() }.add(height)
         val blockData = blockQueries.getBlockAtHeight(height).get()
         if (blockData == null) {
             logger.debug { "No block at height $height, as requested by $peerId" }
@@ -66,6 +80,13 @@ abstract class Messaging(
      * @param startAtHeight requested block height to start from
      */
     fun sendBlockRangeFromHeight(peerId: NodeRid, startAtHeight: Long, myHeight: Long) {
+        if (servedBlockRanges[peerId]?.contains(startAtHeight) == true) {
+            logger.debug { "Already responded to request from peer $peerId for block range starting at height $startAtHeight. Ignoring." }
+            return
+        }
+        if (isTotalServedBlockRequestLimitReached(peerId)) return
+
+        servedBlockRanges.getOrPut(peerId) { mutableSetOf() }.add(startAtHeight)
         val blocks = mutableListOf<CompleteBlock>()
         val allBlocksFit = blockPacker.packBlockRange(
                 peerId,
@@ -85,6 +106,13 @@ abstract class Messaging(
     }
 
     fun sendBlockHeaderAndBlock(peerID: NodeRid, requestedHeight: Long, myHeight: Long) {
+        if (servedBlockHeaderAndBlock[peerID]?.contains(requestedHeight) == true) {
+            logger.debug { "Already responded to request from peer $peerID for block header and block at height $requestedHeight. Ignoring." }
+            return
+        }
+        if (isTotalServedBlockRequestLimitReached(peerID)) return
+
+        servedBlockHeaderAndBlock.getOrPut(peerID) { mutableSetOf() }.add(requestedHeight)
         logger.trace { "GetBlockHeaderAndBlock from peer $peerID for height $requestedHeight, myHeight is $myHeight" }
 
         if (myHeight == -1L) {
@@ -135,5 +163,21 @@ abstract class Messaging(
                 logger.debug(error) { "Error sending BlockSignature" }
             }
         }
+    }
+
+    private fun isTotalServedBlockRequestLimitReached(peerID: NodeRid): Boolean {
+        val limitReached = rateLimitConfiguration.blockRequestRateLimit > 0 &&
+                (MAX_BLOCKS_IN_PACKAGE * (servedBlockRanges[peerID]?.size ?: 0)) +
+                (servedBlockAtHeight[peerID]?.size ?: 0) +
+                (servedBlockHeaderAndBlock[peerID]?.size ?: 0) >= rateLimitConfiguration.blockRequestRateLimit
+
+        if (limitReached) logger.debug { "Total block requests from peer $peerID exceeds rate limit. Ignoring." }
+        return limitReached
+    }
+
+    fun resetServedRequests() {
+        servedBlockRanges.clear()
+        servedBlockAtHeight.clear()
+        servedBlockHeaderAndBlock.clear()
     }
 }

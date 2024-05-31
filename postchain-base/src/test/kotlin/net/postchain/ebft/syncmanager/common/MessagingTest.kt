@@ -18,6 +18,7 @@ import net.postchain.ebft.message.BlockRange
 import net.postchain.ebft.message.BlockSignature
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.network.CommunicationManager
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -50,6 +51,7 @@ class MessagingTest {
     private val header: ByteArray = "header".toByteArray()
     private val witness: ByteArray = "witness".toByteArray()
     private val transactions: List<ByteArray> = listOf("tx1".toByteArray())
+    private val testBlockRateLimit = 10L
 
     private val commManager: CommunicationManager<EbftMessage> = mock()
     private val blockQueries: BlockQueries = mock {
@@ -68,7 +70,7 @@ class MessagingTest {
 
     @BeforeEach
     fun setup() {
-        sut = object : Messaging(blockQueries, commManager, blockPacker) {}
+        sut = object : Messaging(blockQueries, commManager, blockPacker, RateLimitConfiguration(testBlockRateLimit)) {}
     }
 
     ///// message: sendBlockAtHeight /////
@@ -81,8 +83,10 @@ class MessagingTest {
         doNothing().whenever(commManager).sendPacket(isA(), eq(nodeRid))
         // execute
         sut.sendBlockAtHeight(nodeRid, height)
-        // verify
-        verify(commManager).sendPacket(isA(), eq(nodeRid))
+        // Test a duplicate request
+        sut.sendBlockAtHeight(nodeRid, height)
+        // verify one response
+        verify(commManager, times(1)).sendPacket(isA(), eq(nodeRid))
     }
 
     @Test
@@ -108,10 +112,12 @@ class MessagingTest {
         doReturn(packetVersion).whenever(commManager).getPeerPacketVersion(nodeRid)
         // execute
         sut.sendBlockRangeFromHeight(nodeRid, startAtHeight, myHeight)
-        // verify
+        // Test a duplicate request
+        sut.sendBlockRangeFromHeight(nodeRid, startAtHeight, myHeight)
+        // verify one response
         verify(blockPacker).packBlockRange(eq(nodeRid), eq(packetVersion), eq(startAtHeight), eq(myHeight), any(), any(), anyList())
         argumentCaptor<BlockRange>().apply {
-            verify(commManager).sendPacket(capture(), eq(nodeRid))
+            verify(commManager, times(1)).sendPacket(capture(), eq(nodeRid))
             assertThat(firstValue.startAtHeight).isEqualTo(startAtHeight)
             assertThat(firstValue.isFull).isFalse()
         }
@@ -144,9 +150,11 @@ class MessagingTest {
         val requestedHeight = 1L
         // execute
         sut.sendBlockHeaderAndBlock(nodeRid, requestedHeight, myHeight)
-        // verify
+        // Test a duplicate request
+        sut.sendBlockHeaderAndBlock(nodeRid, requestedHeight, myHeight)
+        // verify one response
         argumentCaptor<BlockHeader>().apply {
-            verify(commManager).sendPacket(capture(), eq(nodeRid))
+            verify(commManager, times(1)).sendPacket(capture(), eq(nodeRid))
             assertThat(firstValue.header).isEmpty()
             assertThat(firstValue.witness).isEmpty()
             assertThat(firstValue.requestedHeight).isEqualTo(requestedHeight)
@@ -239,5 +247,20 @@ class MessagingTest {
         sut.sendBlockSignature(nodeRid, blockRID)
         // verify
         verify(commManager, never()).sendPacket(isA(), eq(nodeRid))
+    }
+
+    @Test
+    fun `verify rate limits`() {
+        // setup
+        val blockDataWithWitness = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
+        val completionStage: CompletionStage<BlockDataWithWitness> = CompletableFuture.completedStage(blockDataWithWitness)
+        doReturn(completionStage).whenever(blockQueries).getBlockAtHeight(anyLong(), anyBoolean())
+        doNothing().whenever(commManager).sendPacket(isA(), eq(nodeRid))
+        // execute
+        (1L..15L).forEach {
+            sut.sendBlockAtHeight(nodeRid, it)
+        }
+        // verify
+        verify(commManager, times(10)).sendPacket(isA(), eq(nodeRid))
     }
 }

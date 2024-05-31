@@ -47,6 +47,7 @@ import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.syncmanager.common.PeerStatuses
 import net.postchain.ebft.syncmanager.common.SyncParameters
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.metrics.SyncMetrics
@@ -68,8 +69,9 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            isProcessRunning: () -> Boolean,
                            startInFastSync: Boolean,
                            private val ensureAppliedConfigSenderStarted: () -> Boolean,
+                           rateLimitConfiguration: RateLimitConfiguration,
                            private val clock: Clock = Clock.systemUTC()
-) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker) {
+) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker, rateLimitConfiguration) {
     private val blockchainConfiguration = workerContext.blockchainConfiguration
     private val statusSender = StatusSender(MAX_STATUS_INTERVAL, workerContext, statusManager, clock)
     private val defaultTimeout = 1000
@@ -102,7 +104,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 blockDatabase,
                 params,
                 PeerStatuses(params),
-                isProcessRunning
+                isProcessRunning,
+                rateLimitConfiguration
         )
 
         // Init useFastSyncAlgorithm
@@ -122,6 +125,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     internal fun dispatchMessages() {
         messageDurationTracker.cleanup()
+        resetServedRequests()
         for ((xPeerId, version, message) in communicationManager.getPackets()) {
             ensureAppliedConfigSender(version)
             val nodeIndex = indexOfValidator(xPeerId)
@@ -140,7 +144,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                             this.statusManager.myStatus.height - 1)
 
                     else -> {
-                        if (!isReadOnlyNode) { // TODO: [POS-90]: Is it necessary here `isReadOnlyNode`?
+                        if (!isReadOnlyNode) { // This check is actually good DOS protection
                             // validator consensus logic
                             when (message) {
                                 is Status -> {

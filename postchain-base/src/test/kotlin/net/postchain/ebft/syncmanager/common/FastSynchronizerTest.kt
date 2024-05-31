@@ -38,6 +38,7 @@ import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.network.CommunicationManager
 import net.postchain.network.ReceivedPacket
@@ -108,6 +109,7 @@ class FastSynchronizerTest {
         on { decodeWitness(witness) } doReturn blockWitness
         on { getBlockHeaderValidator() } doReturn blockWitnessProvider
         on { blockchainRid } doReturn blockRID
+        on { signers } doReturn listOf(nodeRid.data)
     }
     private val blockchainEngine: BlockchainEngine = mock {
         on { getBlockQueries() } doReturn blockQueries
@@ -138,7 +140,7 @@ class FastSynchronizerTest {
 
     @BeforeEach
     fun setup() {
-        sut = spy(FastSynchronizer(workerContext, blockDatabase, params, peerStatuses, { isProcessRunning }, clock))
+        sut = spy(FastSynchronizer(workerContext, blockDatabase, params, peerStatuses, { isProcessRunning }, RateLimitConfiguration(100), clock))
     }
 
     @Nested

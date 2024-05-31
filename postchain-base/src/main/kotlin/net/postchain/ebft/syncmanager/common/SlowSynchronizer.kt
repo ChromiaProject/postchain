@@ -24,6 +24,7 @@ import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.Status
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import java.time.Clock
 import java.util.concurrent.locks.ReentrantLock
@@ -47,12 +48,13 @@ class SlowSynchronizer(
         private val blockDatabase: BlockDatabase,
         val params: SyncParameters,
         private val isProcessRunning: () -> Boolean,
+        rateLimitConfiguration: RateLimitConfiguration,
         val clock: Clock = Clock.systemUTC(),
         slowSyncStateMachineProvider: (Int) -> SlowSyncStateMachine = { chainId -> SlowSyncStateMachine.buildWithChain(chainId, params) },
         slowSyncPeerStatusesProvider: () -> PeerStatuses = { PeerStatuses(params) },
         val slowSyncSleepDataProvider: () -> SlowSyncSleepData = { SlowSyncSleepData(params) },
         reentrantLockProvider: () -> ReentrantLock = { ReentrantLock() }
-) : AbstractSynchronizer(workerContext) {
+) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {
 
     private val stateMachine = slowSyncStateMachineProvider(blockchainConfiguration.chainID.toInt())
     private val messageDurationTracker = workerContext.messageDurationTracker
@@ -140,6 +142,7 @@ class SlowSynchronizer(
      */
     internal fun processMessages(sleepData: SlowSyncSleepData) {
         messageDurationTracker.cleanup()
+        resetServedRequests()
         for ((peerId, _, message) in communicationManager.getPackets()) {
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue
@@ -153,7 +156,6 @@ class SlowSynchronizer(
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight.get())
                     is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight.get()) // A replica might ask us
-                    is GetBlockSignature -> sendBlockSignature(peerId, message.blockRID)
 
                     // But we only expect ranges and status to be sent to us
                     is BlockRange -> {
@@ -169,10 +171,17 @@ class SlowSynchronizer(
                         }
                     }
 
-                    is Status -> if (message.configHash != null && checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
-                    is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
                     is EbftVersion -> logger.debug { "Received EbftVersion from peer $peerId" }
-                    else -> logger.debug { "Unhandled type $message from peer $peerId" }
+                    else -> {
+                        if (!replicas.contains(peerId.data.wrap())) { // Only for signers
+                            when (message) {
+                                is GetBlockSignature -> sendBlockSignature(peerId, message.blockRID)
+                                is Status -> if (message.configHash != null && checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
+                                is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
+                                else -> logger.debug { "Unhandled type $message from peer $peerId" }
+                            }
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 logger.info("Couldn't handle message $message from peer $peerId. Ignoring and continuing", e)
