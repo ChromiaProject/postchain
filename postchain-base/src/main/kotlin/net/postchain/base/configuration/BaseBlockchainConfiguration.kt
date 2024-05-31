@@ -71,7 +71,7 @@ open class BaseBlockchainConfiguration(
     final override val blockchainContext: BlockchainContext = BaseBlockchainContext(
             partialContext.chainID,
             partialContext.blockchainRID,
-            resolveNodeID(partialContext.nodeID, partialContext.nodeRID!!),
+            resolveNodeID(partialContext.nodeID, partialContext.nodeRID),
             partialContext.nodeRID
     )
     final override val chainID = blockchainContext.chainID
@@ -166,7 +166,8 @@ open class BaseBlockchainConfiguration(
                         logger.debug { "suppressSpecialTransactionValidation: $it" }
                     }
                 },
-                configData.maxBlockFutureTime
+                configData.maxBlockFutureTime,
+                blockchainContext.nodeRID
         )
 
         return bb
@@ -193,7 +194,7 @@ open class BaseBlockchainConfiguration(
     }
 
     override fun makeBlockQueries(storage: Storage): BlockQueries =
-            BaseBlockQueries(cryptoSystem, storage, blockStore, chainID, blockchainContext.nodeRID!!)
+            BaseBlockQueries(cryptoSystem, storage, blockStore, chainID, blockchainContext.nodeRID)
 
     override fun hasQuery(name: String): Boolean = false
 

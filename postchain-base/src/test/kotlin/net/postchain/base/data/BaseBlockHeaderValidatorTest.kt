@@ -37,7 +37,8 @@ class BaseBlockHeaderValidatorTest {
 
         val valid = GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(header, myBlockData, ::expectedMerkleHash,
                 ::getBlockRid, myTimestamp - 1, 0, -1, 0,
-                mapOf("eif" to GtvString("this is root hash of eif event and state tree")))
+                mapOf("eif" to GtvString("this is root hash of eif event and state tree")),
+                arrayOf())
         assertThat(valid.result).isEqualTo(ValidationResult.Result.OK)
     }
 

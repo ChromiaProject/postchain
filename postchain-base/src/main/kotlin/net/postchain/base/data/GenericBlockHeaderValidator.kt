@@ -1,7 +1,9 @@
 package net.postchain.base.data
 
 import net.postchain.base.BaseBlockHeader
+import net.postchain.base.data.BaseBlockBuilder.Companion.PRIMARY_HEADER_KEY
 import net.postchain.common.BlockchainRid
+import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.ValidationResult
 import net.postchain.core.block.BlockHeader
@@ -154,7 +156,8 @@ object GenericBlockHeaderValidator {
             currentTimestamp: Long,
             maxBlockFutureTime: Long,
             nrOfDependencies: Int,
-            extraData: Map<String, Gtv>
+            extraData: Map<String, Gtv>,
+            subjects: Array<ByteArray>
     ): ValidationResult {
         val header = blockHeader as BaseBlockHeader
 
@@ -172,6 +175,7 @@ object GenericBlockHeaderValidator {
             return basicResult
         }
 
+        val primaryHeader = extraData[PRIMARY_HEADER_KEY]?.asByteArray()
         // The "advanced" checks
         return when {
             maxBlockFutureTime > -1 && header.timestamp - currentTimestamp > maxBlockFutureTime ->
@@ -185,6 +189,9 @@ object GenericBlockHeaderValidator {
 
             !header.blockHeaderRec.getMerkleRootHash().contentEquals(expectedMerkleRootHash()) -> // Do this last since most expensive check!
                 ValidationResult(ValidationResult.Result.INVALID_ROOT_HASH, "header.blockHeaderRec.rootHash != computeMerkleRootHash()")
+
+            primaryHeader != null && subjects.none { it.contentEquals(primaryHeader) } ->
+                ValidationResult(ValidationResult.Result.INVALID_PRIMARY, "Primary extra header field contains a non-signer public key: ${primaryHeader.toHex()}")
 
             !header.checkExtraData(extraData) ->
                 ValidationResult(ValidationResult.Result.INVALID_EXTRA_DATA, "header extra data do not match: ${header.extraData.keys} vs. ${extraData.keys}")

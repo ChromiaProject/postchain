@@ -16,5 +16,5 @@ interface BlockchainContext {
     val chainID: Long
     val blockchainRID: BlockchainRid
     val nodeID: Int
-    val nodeRID: ByteArray?
+    val nodeRID: ByteArray
 }

@@ -20,7 +20,7 @@ class FailableTestBlockchainConfigurationFactory : GTXBlockchainConfigurationFac
             cryptoSystem: CryptoSystem,
             blockchainConfigurationOptions: BlockchainConfigurationOptions
     ): TestBlockchainConfiguration {
-        val owner = partialContext.nodeRID!!.toHex().uppercase()
+        val owner = partialContext.nodeRID.toHex().uppercase()
 
         /*return TestBlockchainConfiguration(
                 configData,
