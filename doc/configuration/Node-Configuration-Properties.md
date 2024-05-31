@@ -26,7 +26,7 @@ Below is an attempt to document all node properties that can be configured via `
 | `metrics.prometheus.port`                 | Port to expose Prometheus metrics on, or -1 to disable                                     | Int     | -1                                           | `POSTCHAIN_PROMETHEUS_PORT`                         |
 | `fastsync.resurrect_drained_time`         | Time (ms) until a DRAINED node is set to SYNCABLE again.                                   | Long    | 10000                                        | `POSTCHAIN_FASTSYNC_RESURRECT_DRAINED_TIME`         |
 | `fastsync.resurrect_unresponsive_time`    | Time (ms) until a UNRESPONSIVE node is set to SYNCABLE again.                              | Long    | 20000                                        | `POSTCHAIN_FASTSYNC_RESURRECT_UNRESPONSIVE_TIME`    |
-| `fastsync.parallelism`                    | Number of parallel sync jobs.                                                              | Int     | 10                                           | `POSTCHAIN_FASTSYNC_PARALLELISM`                    |
+| `fastsync.parallelism`                    | Number of parallel sync jobs. If set too high it may violate rate limits of peers.         | Int     | 10                                           | `POSTCHAIN_FASTSYNC_PARALLELISM`                    |
 | `fastsync.exit_delay`                     | Do not exit sync for at least this amount of time (ms).                                    | Long    | 60000                                        | `POSTCHAIN_FASTSYNC_EXIT_DELAY`                     |
 | `fastsync.job_timeout`                    | Sync job timeout (ms).                                                                     | Long    | 10000                                        | `POSTCHAIN_FASTSYNC_JOB_TIMEOUT`                    |
 | `fastsync.loop_interval`                  | Sleep time between each iteration of a sync job.                                           | Long    | 100                                          | `POSTCHAIN_FASTSYNC_LOOP_INTERVAL`                  |
@@ -107,3 +107,11 @@ Relevant when `container.filesystem` is configured as `ZFS`.
 | ------ | ------ | ------ | ------ | ------ |
 | `container.zfs.pool-name` | Name of ZFS pool | String | "psvol" | `POSTCHAIN_ZFS_POOL_NAME` |
 | `container.zfs.pool-init-script` | Script for setting up ZFS | String | | `POSTCHAIN_ZFS_POOL_INIT_SCRIPT` |
+
+### Rate limits
+
+Used to rate limit requests from other peers
+
+| Name                | Description                                                                                                                   | Type | Default | Environment Variable        |
+|---------------------|-------------------------------------------------------------------------------------------------------------------------------|------|---------|-----------------------------|
+| `rate-limit.blocks` | Maximum number of unanswered block requests allowed per peer. If exceeded requests will not be answered. Set to 0 to disable. | Int  | 100     | POSTCHAIN_RATE_LIMIT_BLOCKS |

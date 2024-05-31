@@ -22,6 +22,7 @@ import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.MessageDurationTracker
 import net.postchain.ebft.message.Status
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.metrics.SyncMetrics
 import net.postchain.network.CommunicationManager
@@ -110,7 +111,7 @@ class ValidatorSyncManagerTest {
     fun beforeEach() {
         ensureAppliedConfigSenderCalled = false
         sut = spy(ValidatorSyncManager(workerContext, loggingContext, statusManager, blockManager, blockDatabase,
-                nodeStateTracker, revoltTracker, syncMetrics, { isProcessRunning }, false, ensureAppliedConfigSender, clock))
+                nodeStateTracker, revoltTracker, syncMetrics, { isProcessRunning }, false, ensureAppliedConfigSender, RateLimitConfiguration.fromAppConfig(appConfig), clock))
     }
 
     @Nested

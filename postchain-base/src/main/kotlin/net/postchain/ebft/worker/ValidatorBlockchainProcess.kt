@@ -24,6 +24,7 @@ import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.StatusManager
 import net.postchain.ebft.message.StateChangeTracker
 import net.postchain.ebft.rest.contract.toStateNodeStatus
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.syncmanager.validator.AppliedConfigSender
 import net.postchain.ebft.syncmanager.validator.RevoltConfigurationData
 import net.postchain.ebft.syncmanager.validator.RevoltTracker
@@ -116,7 +117,8 @@ class ValidatorBlockchainProcess(
                 SyncMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid),
                 ::isProcessRunning,
                 startWithFastSync,
-                ensureAppliedConfigSender
+                ensureAppliedConfigSender,
+                RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
         )
 
         networkAwareTxQueue = NetworkAwareTxQueue(

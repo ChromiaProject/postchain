@@ -16,6 +16,7 @@ import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.network.CommunicationManager
 import net.postchain.network.ReceivedPacket
 import org.junit.jupiter.api.Test
@@ -41,6 +42,7 @@ class ForceReadOnlyMessageProcessorTest {
     private val blockWitness: BlockWitness = mock {
         on { getRawData() } doReturn "witness".toByteArray()
     }
+    private val rateLimitConfiguration = RateLimitConfiguration(100)
 
     @Test
     fun `GetBlockAtHeight processed where requested height is less or equal to lastBlockHeight`() {
@@ -58,7 +60,7 @@ class ForceReadOnlyMessageProcessorTest {
                     ReceivedPacket(nodeRid, 1L, GetBlockAtHeight(10))
             )
         }
-        val sut = ForceReadOnlyMessageProcessor(blockQueries, commManager, lastBlockHeight)
+        val sut = ForceReadOnlyMessageProcessor(blockQueries, commManager, lastBlockHeight, rateLimitConfiguration)
 
         // action
         sut.processMessages()
@@ -81,7 +83,7 @@ class ForceReadOnlyMessageProcessorTest {
                     ReceivedPacket(nodeRid, 1L, GetBlockAtHeight(10))
             )
         }
-        val sut = ForceReadOnlyMessageProcessor(mock(), commManager, lastBlockHeight)
+        val sut = ForceReadOnlyMessageProcessor(mock(), commManager, lastBlockHeight, rateLimitConfiguration)
 
         // action
         sut.processMessages()
@@ -107,7 +109,7 @@ class ForceReadOnlyMessageProcessorTest {
                     ReceivedPacket(nodeRid, 1L, GetBlockRange(15))
             )
         }
-        val sut = spy(ForceReadOnlyMessageProcessor(blockQueries, commManager, lastBlockHeight))
+        val sut = spy(ForceReadOnlyMessageProcessor(blockQueries, commManager, lastBlockHeight, rateLimitConfiguration))
 
         // action
         sut.processMessages()
@@ -138,7 +140,7 @@ class ForceReadOnlyMessageProcessorTest {
                     ReceivedPacket(nodeRid, 1L, GetBlockHeaderAndBlock(15))
             )
         }
-        val sut = spy(ForceReadOnlyMessageProcessor(blockQueries, commManager, lastBlockHeight))
+        val sut = spy(ForceReadOnlyMessageProcessor(blockQueries, commManager, lastBlockHeight, rateLimitConfiguration))
 
         // action
         sut.processMessages()
@@ -175,7 +177,7 @@ class ForceReadOnlyMessageProcessorTest {
                     ReceivedPacket(nodeRid, 1L, GetBlockSignature(byteArrayOf(2)))
             )
         }
-        val sut = spy(ForceReadOnlyMessageProcessor(blockQueries, commManager, lastBlockHeight))
+        val sut = spy(ForceReadOnlyMessageProcessor(blockQueries, commManager, lastBlockHeight, rateLimitConfiguration))
 
         // action
         sut.processMessages()
@@ -205,7 +207,7 @@ class ForceReadOnlyMessageProcessorTest {
                     ReceivedPacket(nodeRid, 1L, GetBlockSignature(byteArrayOf(2)))
             )
         }
-        val sut = spy(ForceReadOnlyMessageProcessor(blockQueries, commManager, lastBlockHeight))
+        val sut = spy(ForceReadOnlyMessageProcessor(blockQueries, commManager, lastBlockHeight, rateLimitConfiguration))
 
         // action
         sut.processMessages()

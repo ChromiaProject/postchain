@@ -31,6 +31,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.SigMaker
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvNull
@@ -164,7 +165,7 @@ class AbstractSynchronizerTest {
 
     @BeforeEach
     fun setup() {
-        sut = object : AbstractSynchronizer(workerContext, baseBlockWitnessProviderProvider) {}
+        sut = object : AbstractSynchronizer(workerContext, RateLimitConfiguration.fromAppConfig(appConfig), baseBlockWitnessProviderProvider) {}
     }
 
     ///// check pending config  /////

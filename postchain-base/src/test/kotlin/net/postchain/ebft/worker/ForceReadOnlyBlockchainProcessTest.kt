@@ -36,6 +36,7 @@ class ForceReadOnlyBlockchainProcessTest {
             on { engine } doReturn bcEngine
             on { blockchainConfiguration } doReturn bcConfig
             on { communicationManager } doReturn mock()
+            on { appConfig } doReturn mock()
         }
 
         // action

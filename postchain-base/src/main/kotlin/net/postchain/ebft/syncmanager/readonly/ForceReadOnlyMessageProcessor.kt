@@ -10,17 +10,20 @@ import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.syncmanager.common.BlockPacker
 import net.postchain.ebft.syncmanager.common.Messaging
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.network.CommunicationManager
 
 class ForceReadOnlyMessageProcessor(
         blockQueries: BlockQueries,
         communicationManager: CommunicationManager<EbftMessage>,
-        val lastBlockHeight: Long
-) : Messaging(blockQueries, communicationManager, BlockPacker) {
+        val lastBlockHeight: Long,
+        rateLimitConfiguration: RateLimitConfiguration
+) : Messaging(blockQueries, communicationManager, BlockPacker, rateLimitConfiguration) {
 
     companion object : KLogging()
 
     fun processMessages() {
+        resetServedRequests()
         for ((peerId, _, message) in communicationManager.getPackets()) {
             try {
                 when (message) {

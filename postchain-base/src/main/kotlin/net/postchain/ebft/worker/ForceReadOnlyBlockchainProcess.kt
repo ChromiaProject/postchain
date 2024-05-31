@@ -9,6 +9,7 @@ import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DpBlockchainNodeState
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.EagerDiagnosticValue
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.syncmanager.readonly.ForceReadOnlyMessageProcessor
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
@@ -37,7 +38,7 @@ open class ForceReadOnlyBlockchainProcess(
         actual
     }
 
-    protected open val forceReadOnlyMessageProcessor = ForceReadOnlyMessageProcessor(workerContext.engine.getBlockQueries(), workerContext.communicationManager, blockHeight)
+    protected open val forceReadOnlyMessageProcessor = ForceReadOnlyMessageProcessor(workerContext.engine.getBlockQueries(), workerContext.communicationManager, blockHeight, RateLimitConfiguration.fromAppConfig(workerContext.appConfig))
 
     override fun action() {
         withLoggingContext(loggingContext) {

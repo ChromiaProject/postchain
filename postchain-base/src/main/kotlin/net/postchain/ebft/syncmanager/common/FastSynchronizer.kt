@@ -7,6 +7,7 @@ import net.postchain.base.BaseBlockHeader
 import net.postchain.base.extension.getConfigHash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
+import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.BadDataException
@@ -32,6 +33,7 @@ import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.Transaction
 import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import java.time.Clock
 import java.util.TreeMap
@@ -67,12 +69,14 @@ class FastSynchronizer(
         val params: SyncParameters,
         val peerStatuses: PeerStatuses,
         val isProcessRunning: () -> Boolean,
-        val clock: Clock = Clock.systemUTC(),
-) : AbstractSynchronizer(workerContext) {
+        rateLimitConfiguration: RateLimitConfiguration,
+        val clock: Clock = Clock.systemUTC()
+) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {
 
     val jobs = TreeMap<Long, Job>()
     private var lastJob: Job? = null
     private val messageDurationTracker = workerContext.messageDurationTracker
+    private val signers = workerContext.blockchainConfiguration.signers.map { it.wrap() }
 
     // This is the communication mechanism from the async commitBlock callback to the main loop
     val finishedJobs = LinkedBlockingQueue<Job>()
@@ -649,6 +653,7 @@ class FastSynchronizer(
      */
     internal fun processMessages() {
         messageDurationTracker.cleanup()
+        resetServedRequests()
         for ((peerId, _, message) in communicationManager.getPackets()) {
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue
@@ -661,19 +666,26 @@ class FastSynchronizer(
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
                     is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight.get()) // A replica might ask us
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight.get())
-                    is GetBlockSignature -> sendBlockSignature(peerId, message.blockRID)
                     is BlockHeaderMessage -> handleBlockHeader(peerId, message)
                     is UnfinishedBlock -> handleUnfinishedBlock(peerId, message)
                     is CompleteBlock -> handleCompleteBlock(peerId, message)
-                    is Status -> {
-                        peerStatuses.statusReceived(peerId, message.height - 1)
-                        if (message.configHash != null && checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
-                    }
-
-                    is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
-                    is Transaction -> logger.trace { "Got transaction from peer $peerId, ignoring" }
                     is EbftVersion -> logger.debug { "Received EbftVersion from peer $peerId" }
-                    else -> logger.warn { "Unhandled message type: ${message.topic} from peer $peerId" } // WARN b/c this might be buggy?
+                    is Transaction -> logger.trace { "Got transaction from peer $peerId, ignoring" }
+
+                    else -> {
+                        if (signers.contains(peerId)) {
+                            when (message) {
+                                is GetBlockSignature -> sendBlockSignature(peerId, message.blockRID)
+                                is Status -> {
+                                    peerStatuses.statusReceived(peerId, message.height - 1)
+                                    if (message.configHash != null && checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
+                                }
+
+                                is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
+                                else -> logger.warn { "Unhandled message type: ${message.topic} from peer $peerId" } // WARN b/c this might be buggy?
+                            }
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 logger.info("Couldn't handle message $message from peer $peerId. Ignoring and continuing", e)

@@ -30,6 +30,7 @@ import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.MessageDurationTracker
 import net.postchain.ebft.message.Status
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.gtv.Gtv
 import net.postchain.network.CommunicationManager
@@ -162,6 +163,7 @@ class SlowSynchronizerTest {
                 blockDatabase,
                 params,
                 isProcessRunningProvider,
+                RateLimitConfiguration(100),
                 clock,
                 { stateMachine },
                 { peerStatuses },
