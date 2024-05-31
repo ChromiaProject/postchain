@@ -161,7 +161,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                             }.also {
                                                 applyConfig(message.configHash, message.height)
                                                 statusManager.onStatusUpdate(nodeIndex, it)
-                                                statusManager.tryToSetPrimarySignature(nodeIndex, message.signature)
                                             }
 
                                     tryToSwitchToFastSync()
