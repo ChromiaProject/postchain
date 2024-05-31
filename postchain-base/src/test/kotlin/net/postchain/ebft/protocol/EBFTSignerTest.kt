@@ -74,7 +74,7 @@ class EBFTSignerTest : EBFTProtocolBase() {
         syncManager.update()
         // verify
         verifyIntent(DoNothingIntent)
-        verifyStatus(blockRID = blockRid0, height = 0, serial = 1, round = 0, revolting = false, state = HaveBlock, signature = signature)
+        verifyStatus(blockRID = blockRid0, height = 0, serial = 1, round = 0, revolting = false, state = HaveBlock, signature = null)
         reset(commManager)
 
         /**
@@ -196,7 +196,7 @@ class EBFTSignerTest : EBFTProtocolBase() {
         // execute
         syncManager.update()
         // verify
-        verifyStatus(blockRID = blockRid0, height = 0, serial = 1, round = 0, revolting = false, state = HaveBlock, signature)
+        verifyStatus(blockRID = blockRid0, height = 0, serial = 1, round = 0, revolting = false, state = HaveBlock, null)
         reset(commManager)
 
         /**
@@ -274,7 +274,7 @@ class EBFTSignerTest : EBFTProtocolBase() {
         // execute
         syncManager.update()
         // verify
-        verifyStatus(blockRID = blockRid0, height = 0, serial = 1, round = 0, revolting = false, state = HaveBlock, signature)
+        verifyStatus(blockRID = blockRid0, height = 0, serial = 1, round = 0, revolting = false, state = HaveBlock, null)
         reset(commManager)
     }
 

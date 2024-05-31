@@ -224,7 +224,6 @@ class BaseStatusManager(
         myStatus.blockRID = blockRID
         myStatus.serial += 1
         myStatus.state = NodeBlockState.HaveBlock
-        myStatus.signature = mySignature
         commitSignatures[myIndex] = mySignature
         intent = DoNothingIntent
         stateChangeTracker.myStatusChange(myStatus)
@@ -484,6 +483,7 @@ class BaseStatusManager(
                     countNodes(NodeBlockState.Prepared, myStatus.height, myStatus.blockRID, myStatus.round)
             return if (count >= this.quorum) {
                 myStatus.state = NodeBlockState.Prepared
+                myStatus.signature = this.commitSignatures[myIndex]
                 myStatus.serial += 1
                 stateChangeTracker.myStatusChange(myStatus)
                 true
