@@ -4,9 +4,9 @@ package net.postchain.network.netty2
 
 import io.netty.bootstrap.Bootstrap
 import io.netty.channel.ChannelFuture
-import io.netty.channel.ChannelHandler
 import io.netty.channel.ChannelInitializer
 import io.netty.channel.ChannelOption
+import io.netty.channel.ChannelPipeline
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
@@ -14,9 +14,9 @@ import net.postchain.core.Shutdownable
 import java.net.SocketAddress
 
 class NettyClient(
-        channelHandler: ChannelHandler,
         peerAddress: SocketAddress,
-        eventLoopGroup: EventLoopGroup
+        eventLoopGroup: EventLoopGroup,
+        postInitChannelHandler: (ChannelPipeline) -> Unit
 ) : Shutdownable {
 
     val channelFuture: ChannelFuture
@@ -29,12 +29,9 @@ class NettyClient(
                 .handler(object : ChannelInitializer<SocketChannel>() {
                     override fun initChannel(ch: SocketChannel) {
                         ch.pipeline()
-                                // inbound
-                                .addLast(NettyCodecs.lengthFieldPrepender())
-                                // outbound
-                                .addLast(NettyCodecs.lengthFieldBasedFrameDecoder())
-                                // app
-                                .addLast(channelHandler)
+                                .addLast(NettyCodecs.lengthFieldPrepender()) // outbound
+                                .addLast(NettyCodecs.lengthFieldBasedFrameDecoder()) // inbound
+                        postInitChannelHandler(ch.pipeline())
                     }
                 })
 

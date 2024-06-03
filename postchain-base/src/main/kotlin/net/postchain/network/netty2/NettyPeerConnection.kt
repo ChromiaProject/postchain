@@ -8,6 +8,7 @@ import io.netty.handler.timeout.IdleStateHandler
 import mu.KLogging
 import net.postchain.network.XPacketCodec
 import net.postchain.network.peer.PeerConnection
+import java.util.concurrent.CompletableFuture
 
 abstract class NettyPeerConnection<PacketType>(
         protected val packetCodec: XPacketCodec<PacketType>
@@ -20,6 +21,11 @@ abstract class NettyPeerConnection<PacketType>(
 
     private val pingBytes = ByteArray(1) { 1 }
     private var versionMessage: ByteArray? = null
+
+    protected lateinit var context: ChannelHandlerContext
+    protected val channelInactiveFuture = CompletableFuture<Void>()
+    var isConnected = false
+        protected set
 
     protected fun isPing(msg: ByteArray) = pingBytes.contentEquals(msg)
 
@@ -59,4 +65,10 @@ abstract class NettyPeerConnection<PacketType>(
             }
         }
     }
+
+    open fun isChannelActive(): Boolean = ::context.isInitialized && context.channel().isActive
+
+    open fun isChannelInactive(): Boolean = channelInactiveFuture.isDone
+
+    protected fun isContextInitialized() = ::context.isInitialized
 }

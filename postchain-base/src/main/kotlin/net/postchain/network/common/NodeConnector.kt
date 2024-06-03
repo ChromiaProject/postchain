@@ -2,6 +2,7 @@
 
 package net.postchain.network.common
 
+import io.netty.channel.ChannelPipeline
 import net.postchain.base.PeerInfo
 import net.postchain.network.XPacketCodec
 
@@ -28,7 +29,8 @@ interface NodeConnector<PacketType, DescriptorType> {
     fun connectNode(
             connectionDescriptor: DescriptorType,
             peerInfo: PeerInfo,
-            packetCodec: XPacketCodec<PacketType>
+            packetCodec: XPacketCodec<PacketType>,
+            postInitChannelHandler: (ChannelPipeline) -> Unit = {}
     )
 
     /**

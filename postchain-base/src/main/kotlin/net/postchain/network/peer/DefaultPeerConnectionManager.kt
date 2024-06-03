@@ -20,6 +20,7 @@ import net.postchain.network.common.LazyPacket
 import net.postchain.network.common.NetworkTopology
 import net.postchain.network.common.NodeConnector
 import net.postchain.network.common.NodeConnectorEvents
+import net.postchain.network.netty2.ConnectionConfig
 import net.postchain.network.netty2.NettyPeerConnector
 import java.util.concurrent.CompletableFuture
 
@@ -56,10 +57,9 @@ import java.util.concurrent.CompletableFuture
  * @property PacketType is the type of packets that can be handled
  */
 open class DefaultPeerConnectionManager<PacketType>(
-        private val packetCodecFactory: XPacketCodecFactory<PacketType>
-) : NetworkTopology, // Only "Peer" networks need this
-        PeerConnectionManager,  // Methods specific to the "X" connection part
-        NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
+        private val packetCodecFactory: XPacketCodecFactory<PacketType>,
+        private val connectionConfig: ConnectionConfig
+) : NetworkTopology, PeerConnectionManager, NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
 
     companion object : KLogging()
 
@@ -153,7 +153,7 @@ open class DefaultPeerConnectionManager<PacketType>(
 
             val packetCodec = packetCodecFactory.create(chainPeersConfig.commConfiguration, chainPeersConfig.blockchainRid)
             // We have already given away we are using Netty, so skipping the factory
-            connector = NettyPeerConnector<PacketType>(this).apply {
+            connector = NettyPeerConnector<PacketType>(this, connectionConfig).apply {
                 init(myPeerInfo, packetCodec)
             }
         }

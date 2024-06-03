@@ -93,12 +93,12 @@ class EbftNettyConnector3PeersCommunicationIT {
         // Connecting
         // * 1 -> 2
         val peerDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor2, peerInfo2, context1.buildPacketCodec())
+        context1.connector.connectNode(peerDescriptor2, peerInfo2, context1.buildPacketCodec())
         // * 1 -> 3
         val peerDescriptor3 = PeerConnectionDescriptor(blockchainRid, peerInfo3.peerId(), ConnectionDirection.OUTGOING)
-        context1.peer.connectNode(peerDescriptor3, peerInfo3, context2.buildPacketCodec())
+        context1.connector.connectNode(peerDescriptor3, peerInfo3, context2.buildPacketCodec())
         // * 3 -> 2
-        context3.peer.connectNode(peerDescriptor2, peerInfo2, context3.buildPacketCodec())
+        context3.connector.connectNode(peerDescriptor2, peerInfo2, context3.buildPacketCodec())
 
         // Waiting for all connections to be established
         val connection1 = argumentCaptor<PeerConnection>()

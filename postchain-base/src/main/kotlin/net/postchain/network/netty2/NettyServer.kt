@@ -4,8 +4,8 @@ package net.postchain.network.netty2
 
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelFuture
-import io.netty.channel.ChannelHandler
 import io.netty.channel.ChannelInitializer
+import io.netty.channel.ChannelPipeline
 import io.netty.channel.EventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
@@ -14,9 +14,9 @@ import net.postchain.common.exception.UserMistake
 import java.net.BindException
 
 class NettyServer(
-        createChannelHandler: () -> ChannelHandler,
         port: Int,
-        eventLoopGroup: EventLoopGroup
+        eventLoopGroup: EventLoopGroup,
+        postInitChannelHandler: (ChannelPipeline) -> Unit
 ) {
 
     private var channelFuture: ChannelFuture
@@ -32,12 +32,9 @@ class NettyServer(
                 .childHandler(object : ChannelInitializer<SocketChannel>() {
                     override fun initChannel(ch: SocketChannel) {
                         ch.pipeline()
-                                // inbound
-                                .addLast(NettyCodecs.lengthFieldPrepender())
-                                // outbound
-                                .addLast(NettyCodecs.lengthFieldBasedFrameDecoder())
-                                // app
-                                .addLast(createChannelHandler())
+                                .addLast(NettyCodecs.lengthFieldPrepender()) // outbound
+                                .addLast(NettyCodecs.lengthFieldBasedFrameDecoder()) // inbound
+                        postInitChannelHandler(ch.pipeline())
                     }
                 })
 

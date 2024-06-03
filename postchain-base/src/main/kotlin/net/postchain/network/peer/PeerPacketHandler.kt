@@ -6,7 +6,7 @@ import net.postchain.core.NodeRid
 /**
  * Responsible for processing of incoming packets/messages from various peers
  */
-interface PeerPacketHandler {
+fun interface PeerPacketHandler {
 
     /**
      * Handles a packet from a peer

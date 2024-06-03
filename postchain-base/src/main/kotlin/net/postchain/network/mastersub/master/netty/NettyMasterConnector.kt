@@ -19,18 +19,19 @@ class NettyMasterConnector(
 
     companion object : KLogging()
 
-    private val server = NettyServer({
-        NettyMasterConnection().apply {
-            onConnectedHandler = { descriptor, connection ->
-                eventsReceiver.onSubConnected(descriptor, connection)
-                        ?.also { connection.accept(it) }
-            }
-
-            onDisconnectedHandler = { descriptor, connection ->
-                eventsReceiver.onSubDisconnected(descriptor, connection)
-            }
-        }
-    }, port, eventLoopGroup)
+    private val server = NettyServer(port, eventLoopGroup) { pipeline ->
+        pipeline.addLast(
+                NettyMasterConnection().apply {
+                    onConnectedHandler = { descriptor, connection ->
+                        eventsReceiver.onSubConnected(descriptor, connection)
+                                ?.also { connection.accept(it) }
+                    }
+                    onDisconnectedHandler = { descriptor, connection ->
+                        eventsReceiver.onSubDisconnected(descriptor, connection)
+                    }
+                }
+        )
+    }
 
     override fun shutdown() {
         logger.debug { "Shutting down Netty event group" }

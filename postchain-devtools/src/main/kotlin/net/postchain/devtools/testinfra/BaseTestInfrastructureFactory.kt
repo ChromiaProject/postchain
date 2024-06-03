@@ -24,6 +24,7 @@ import net.postchain.core.Storage
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.ebft.EbftPacketCodecFactory
 import net.postchain.network.common.ConnectionManager
+import net.postchain.network.netty2.ConnectionConfig
 import net.postchain.network.peer.DefaultPeerConnectionManager
 
 class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : BlockchainProcess {
@@ -78,7 +79,7 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
     }
 
     override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager =
-            DefaultPeerConnectionManager(EbftPacketCodecFactory())
+            DefaultPeerConnectionManager(EbftPacketCodecFactory(), ConnectionConfig.fromAppConfig(appConfig))
 
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider =
