@@ -67,6 +67,7 @@ import java.time.Clock
  * @property maxSpecialEndTransactionSize
  * @property suppressSpecialTransactionValidation
  * @property maxBlockFutureTime
+ * @property myPubKey Public key to be included in the "primary" header field if we are building the block, set to `null` to disable
  * @property clock
  *
  */
@@ -87,7 +88,7 @@ open class BaseBlockBuilder(
         val maxSpecialEndTransactionSize: Long,
         val suppressSpecialTransactionValidation: Boolean,
         private val maxBlockFutureTime: Long,
-        private val myPubKey: ByteArray,
+        private val myPubKey: ByteArray?,
         val clock: Clock = Clock.systemUTC()
 ) : AbstractBlockBuilder(eContext, blockchainRID, store) {
 
@@ -179,7 +180,7 @@ open class BaseBlockBuilder(
         val safeTimestamp = max(timestamp, initialBlockData.timestamp + 1)
         val rootHash = computeMerkleRootHash()
         val extraData = mutableMapOf<String, Gtv>()
-        if (buildingNewBlock) {
+        if (myPubKey != null && buildingNewBlock) {
             extraData[PRIMARY_HEADER_KEY] = gtv(myPubKey)
         }
         return BaseBlockHeader.make(GtvMerkleHashCalculator(cryptoSystem), initialBlockData, rootHash, safeTimestamp, finalizeExtensions(extraData))
