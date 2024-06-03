@@ -190,11 +190,12 @@ object GenericBlockHeaderValidator {
             !header.blockHeaderRec.getMerkleRootHash().contentEquals(expectedMerkleRootHash()) -> // Do this last since most expensive check!
                 ValidationResult(ValidationResult.Result.INVALID_ROOT_HASH, "header.blockHeaderRec.rootHash != computeMerkleRootHash()")
 
-            primaryHeader != null && subjects.none { it.contentEquals(primaryHeader) } ->
-                ValidationResult(ValidationResult.Result.INVALID_PRIMARY, "Primary extra header field contains a non-signer public key: ${primaryHeader.toHex()}")
-
             !header.checkExtraData(extraData) ->
                 ValidationResult(ValidationResult.Result.INVALID_EXTRA_DATA, "header extra data do not match: ${header.extraData.keys} vs. ${extraData.keys}")
+
+            // Important to do this check after extra data check since config mismatch could also lead to this validation error
+            primaryHeader != null && subjects.none { it.contentEquals(primaryHeader) } ->
+                ValidationResult(ValidationResult.Result.INVALID_PRIMARY, "Primary extra header field contains a non-signer public key: ${primaryHeader.toHex()}")
 
             else -> basicResult // = "OK"
         }
