@@ -7,6 +7,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.ebft.EbftPacketCodec
 import net.postchain.ebft.EbftPacketCodecFactory
 import net.postchain.ebft.message.ebftMessageToString
+import net.postchain.network.netty2.ConnectionConfig
 import org.mockito.kotlin.mock
 import java.io.Closeable
 
@@ -18,7 +19,7 @@ class EbftIntegrationTestContext(
     val chainId = 1L
     //private val connectorFactory = NettyPeerConnectorFactory<Message>()
 
-    val connectionManager = DefaultPeerConnectionManager(EbftPacketCodecFactory())
+    val connectionManager = DefaultPeerConnectionManager(EbftPacketCodecFactory(), ConnectionConfig())
 
     val communicationManager = DefaultPeerCommunicationManager(
             connectionManager,

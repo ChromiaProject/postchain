@@ -18,7 +18,6 @@ class NettyServerPeerConnection<PacketType>(
         packetCodec: XPacketCodec<PacketType>
 ) : NettyPeerConnection<PacketType>(packetCodec) {
 
-    private lateinit var context: ChannelHandlerContext
     private var peerPacketHandler: PeerPacketHandler? = null
     private var peerConnectionDescriptor: PeerConnectionDescriptor? = null
 
@@ -27,8 +26,6 @@ class NettyServerPeerConnection<PacketType>(
 
     private var hasReceivedPing = false
     private var hasReceivedVersion = false
-
-    private val channelInactiveFuture = CompletableFuture<Void>()
 
     companion object : KLogging()
 
@@ -41,7 +38,7 @@ class NettyServerPeerConnection<PacketType>(
     }
 
     override fun remoteAddress(): String {
-        return if (::context.isInitialized)
+        return if (isContextInitialized())
             context.channel().remoteAddress().toString()
         else ""
     }
@@ -101,6 +98,7 @@ class NettyServerPeerConnection<PacketType>(
         if (packetCodec.isIdentPacket(message)) {
             val identPacketInfo = packetCodec.parseIdentPacket(message)
             peerConnectionDescriptor = PeerConnectionDescriptorFactory.createFromIdentPacketInfo(identPacketInfo)
+            isConnected = true
 
             // Notify peer that we have ping capability
             ctx?.let {

@@ -4,6 +4,7 @@ package net.postchain.network.netty2
 
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
+import io.netty.channel.ChannelPipeline
 import io.netty.channel.EventLoopGroup
 import mu.KLogging
 import net.postchain.base.PeerInfo
@@ -25,19 +26,20 @@ class NettyClientPeerConnection<PacketType>(
 
     companion object : KLogging()
 
-    private val channelInactiveFuture = CompletableFuture<Void>()
     private var nettyClient: NettyClient? = null
     private var hasReceivedPing = false
     private var hasReceivedVersion = false
     private var peerPacketHandler: PeerPacketHandler? = null
-    private lateinit var context: ChannelHandlerContext
     private lateinit var onConnected: () -> Unit
 
-    fun open(onConnected: () -> Unit, onDisconnected: () -> Unit) {
+    fun open(onConnected: () -> Unit, onDisconnected: () -> Unit, postInitChannelHandler: (ChannelPipeline) -> Unit) {
         this.onConnected = onConnected
         channelInactiveFuture.thenApply { onDisconnected() }
 
-        nettyClient = NettyClient(this@NettyClientPeerConnection, peerAddress(), eventLoopGroup).also {
+        nettyClient = NettyClient(peerAddress(), eventLoopGroup) { pipeline ->
+            pipeline.addLast(this@NettyClientPeerConnection)
+            postInitChannelHandler(pipeline)
+        }.also {
             it.channelFuture.addListener { future ->
                 if (!future.isSuccess) {
                     logger.info("Connection failed: ${future.cause().message}")
@@ -52,6 +54,7 @@ class NettyClientPeerConnection<PacketType>(
             context = it
             context.writeAndFlush(buildIdentPacket())
             sendVersion(it)
+            isConnected = true
             onConnected()
         }
     }
@@ -106,7 +109,7 @@ class NettyClientPeerConnection<PacketType>(
     }
 
     override fun remoteAddress(): String {
-        return if (::context.isInitialized)
+        return if (isContextInitialized())
             context.channel().remoteAddress().toString()
         else ""
     }

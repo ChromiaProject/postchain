@@ -2,6 +2,7 @@
 
 package net.postchain.network.netty2
 
+import io.netty.channel.ChannelPipeline
 import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.util.concurrent.DefaultThreadFactory
 import mu.KLogging
@@ -15,46 +16,43 @@ import net.postchain.network.peer.PeerPacketHandler
 import java.util.concurrent.TimeUnit
 
 class NettyPeerConnector<PacketType>(
-        private val eventsReceiver: NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor>
+        private val eventsReceiver: NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor>,
+        private val connectionConfig: ConnectionConfig,
+        private val serverChannelHandlerFactory: ServerChannelHandlerFactory = DefaultServerChannelHandlerFactory(connectionConfig)
 ) : NodeConnector<PacketType, PeerConnectionDescriptor> {
 
     companion object : KLogging()
 
     private val eventLoopGroup = NioEventLoopGroup(DefaultThreadFactory("Netty"))
-    private var server: NettyServer? = null
+    var server: NettyServer? = null
 
     override fun init(
             peerInfo: PeerInfo,
             packetCodec: XPacketCodec<PacketType>
     ) {
-        server = NettyServer({
-            NettyServerPeerConnection(packetCodec)
-                    .onConnected { connection ->
-                        eventsReceiver.onNodeConnected(connection)
-                                ?.also { connection.accept(it) }
-                    }
-                    .onDisconnected { connection ->
-                        eventsReceiver.onNodeDisconnected(connection)
-                    }
-        }, peerInfo.port, eventLoopGroup)
+        server = NettyServer(peerInfo.port, eventLoopGroup) { pipeline ->
+            serverChannelHandlerFactory.onPostInitChannelHandler(pipeline, packetCodec, eventsReceiver)
+        }
         logger.info { "Node started listening on messaging port ${peerInfo.port}" }
     }
 
     override fun connectNode(
             connectionDescriptor: PeerConnectionDescriptor,
             peerInfo: PeerInfo,
-            packetCodec: XPacketCodec<PacketType>
+            packetCodec: XPacketCodec<PacketType>,
+            postInitChannelHandler: (ChannelPipeline) -> Unit
     ) {
         with(NettyClientPeerConnection(peerInfo, packetCodec, connectionDescriptor, eventLoopGroup)) {
             try {
                 open(
                         onConnected = {
-                            eventsReceiver.onNodeConnected(this)
-                                    ?.also { this.accept(it) }
+                            eventsReceiver.onNodeConnected(this)?.also { this.accept(it) }
                         },
                         onDisconnected = {
                             eventsReceiver.onNodeDisconnected(this)
-                        })
+                        },
+                        postInitChannelHandler = postInitChannelHandler
+                )
             } catch (e: Exception) {
                 logger.error("Netty Connect Failed, peerId: ${peerInfo.peerId()}, ${connectionDescriptor.loggingPrefix()}, with message: ${e.message}")
                 eventsReceiver.onNodeDisconnected(this) // TODO: [et]: Maybe create different event receiver.

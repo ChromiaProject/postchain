@@ -39,7 +39,9 @@ class NettySubConnection(
         this.onConnected = onConnected
         channelInactiveFuture.thenApply { onDisconnected() }
 
-        nettyClient = NettyClient(this@NettySubConnection, masterAddress(), eventLoopGroup).also {
+        nettyClient = NettyClient(masterAddress(), eventLoopGroup) { pipeline ->
+            pipeline.addLast(this@NettySubConnection)
+        }.also {
             it.channelFuture.addListener { future ->
                 if (!future.isSuccess) {
                     logger.info("Connection failed: ${future.cause().message}")

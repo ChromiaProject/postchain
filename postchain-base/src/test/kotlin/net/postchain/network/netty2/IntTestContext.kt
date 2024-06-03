@@ -26,7 +26,7 @@ class IntTestContext(
         on { onNodeDisconnected(any()) }.doAnswer { } // FYI: Instead of `doNothing` or `doReturn Unit`
     }
 
-    val peer = NettyPeerConnector<Int>(events)
+    val peer = NettyPeerConnector<Int>(events, ConnectionConfig())
 
     val packetCodec = IntMockPacketCodec(ownerPeerInfo, peerInfos)
 
