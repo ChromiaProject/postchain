@@ -8,6 +8,7 @@ import net.postchain.base.BaseEContext
 import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.SpecialTransactionPosition.End
 import net.postchain.base.TxEventSink
+import net.postchain.base.data.BaseBlockBuilder.Companion.PRIMARY_HEADER_KEY
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.TxEContext
@@ -19,6 +20,7 @@ import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.crypto.devtools.MockCryptoSystem
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -45,7 +47,7 @@ class BaseBlockBuilderTest {
     val myMerkleRootHash = "46AF9064F12528CAD6A7C377204ACD0AC38CDC6912903E7DAB3703764C8DD5E5".hexStringToByteArray()
     val myBlockchainRid = BlockchainRid.ZERO_RID
     val dummy = ByteArray(32, { 0 })
-    val subjects = arrayOf("test".toByteArray())
+    val subjects = arrayOf(pubKey(0))
     val signer = cryptoSystem.buildSigMaker(KeyPair(pubKey(0), privKey(0)))
     val validator = BaseBlockWitnessProvider(cryptoSystem, signer, subjects)
     val specialTransactionHandler: SpecialTransactionHandler = mock()
@@ -66,30 +68,30 @@ class BaseBlockBuilderTest {
     fun invalidMonotoneTimestamp() {
         val timestamp = 1L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, mapOf())
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
-        assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header).result)
+        assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0)))).result)
     }
 
     @Test
     fun invalidMonotoneTimestampEquals() {
         val timestamp = 10L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, mapOf())
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
-        assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header).result)
+        assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0)))).result)
     }
 
     @Test
     fun validMonotoneTimestamp() {
         val timestamp = 100L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, mapOf())
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
-        assertEquals(OK, bbb.validateBlockHeader(header).result)
+        assertEquals(OK, bbb.validateBlockHeader(header, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0)))).result)
     }
 
     @Test

@@ -372,7 +372,8 @@ open class BaseBlockBuilder(
                 maxBlockFutureTime,
                 nrOfDependencies,
                 extraData,
-                subjects
+                subjects,
+                myPubKey != null
         )
     }
 
