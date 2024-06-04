@@ -35,7 +35,6 @@ class BaseStatusManager(
     private val nodeStatusesTimestamps = Array(nodeCount) { 0L }
     val nodeReportedRevolt = Array(nodeCount) { false }
     private val nodeRids = nodes.map { NodeRid(it) }
-    private var primarySignature: Signature? = null
 
     companion object : KLogging() {
         const val ZERO_SERIAL_TIME = 1518000000000L
@@ -151,7 +150,6 @@ class BaseStatusManager(
             state = NodeBlockState.WaitBlock
             signature = null
         }
-        primarySignature = null
         resetCommitSignatures()
         intent = DoNothingIntent
         recomputeStatus()
@@ -226,7 +224,6 @@ class BaseStatusManager(
         myStatus.blockRID = blockRID
         myStatus.serial += 1
         myStatus.state = NodeBlockState.HaveBlock
-        myStatus.signature = mySignature
         commitSignatures[myIndex] = mySignature
         intent = DoNothingIntent
         stateChangeTracker.myStatusChange(myStatus)
@@ -350,30 +347,6 @@ class BaseStatusManager(
     override fun shouldApplySignature(state: NodeBlockState): Boolean = state == NodeBlockState.Prepared
 
     /**
-     * Record signature if it comes from primary
-     */
-    override fun tryToSetPrimarySignature(nodeIndex: Int, signature: Signature?) {
-        if (primaryIndex() == nodeIndex) {
-            primarySignature = signature
-        }
-    }
-
-    /**
-     * Check if we have received a signature from primary node (for our current block)
-     * that has not been included in commit signatures
-     */
-    override fun getAdditionalPrimarySignature(): Signature? {
-        return if (commitSignatures[primaryIndex()] == null
-                && nodeStatuses[primaryIndex()].blockRID.contentEquals(myStatus.blockRID)) {
-            primarySignature
-        } else null
-    }
-
-    override fun appendPrimarySignatureToCommitSignatures() {
-        commitSignatures[primaryIndex()] = primarySignature
-    }
-
-    /**
      * Recompute status until no more updates occur.
      */
     fun recomputeStatus() {
@@ -404,7 +377,6 @@ class BaseStatusManager(
             myStatus.blockRID = null
             myStatus.serial += 1
             myStatus.signature = null
-            primarySignature = null
             resetCommitSignatures()
         }
 
@@ -511,6 +483,7 @@ class BaseStatusManager(
                     countNodes(NodeBlockState.Prepared, myStatus.height, myStatus.blockRID, myStatus.round)
             return if (count >= this.quorum) {
                 myStatus.state = NodeBlockState.Prepared
+                myStatus.signature = this.commitSignatures[myIndex]
                 myStatus.serial += 1
                 stateChangeTracker.myStatusChange(myStatus)
                 true

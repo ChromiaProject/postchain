@@ -2,6 +2,7 @@
 
 package net.postchain.base
 
+import net.postchain.base.data.BaseBlockBuilder.Companion.PRIMARY_HEADER_KEY
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
@@ -9,6 +10,7 @@ import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.InitialBlockData
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.generateProof
@@ -50,6 +52,14 @@ class BaseBlockHeader(override val rawData: ByteArray, private val merkleHashCal
 
     fun checkExtraData(expectedExtraData: Map<String, Gtv>): Boolean {
         return extraData == expectedExtraData
+    }
+
+    fun checkPrimaryExtraHeader(subjects: Array<ByteArray>): Boolean {
+        val primaryHeader = extraData[PRIMARY_HEADER_KEY]
+        return if (primaryHeader is GtvByteArray) {
+            val primaryKey = primaryHeader.asByteArray()
+            subjects.any { it.contentEquals(primaryKey) }
+        } else false
     }
 
     companion object Factory {

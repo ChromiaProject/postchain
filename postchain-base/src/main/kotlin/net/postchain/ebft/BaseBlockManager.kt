@@ -252,12 +252,6 @@ class BaseBlockManager(
                         logger.trace("Schedule commit of block ${currentBlock!!.header.blockRID.toHex()}")
                     }
 
-                    // The idea is to always include primary node signature to witness (if we have a valid signature)
-                    val additionalPrimarySignature = statusManager.getAdditionalPrimarySignature()
-                    if (additionalPrimarySignature != null && blockDB.applyAndVerifyBlockSignature(additionalPrimarySignature)) {
-                        statusManager.appendPrimarySignatureToCommitSignatures()
-                    }
-
                     runDBOp({
                         blockTrace(blockIntent)
                         blockDB.commitBlock(statusManager.commitSignatures)

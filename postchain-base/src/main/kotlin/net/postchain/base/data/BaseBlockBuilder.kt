@@ -67,6 +67,7 @@ import java.time.Clock
  * @property maxSpecialEndTransactionSize
  * @property suppressSpecialTransactionValidation
  * @property maxBlockFutureTime
+ * @property myPubKey Public key to be included in the "primary" header field if we are building the block, set to `null` to disable
  * @property clock
  *
  */
@@ -87,10 +88,13 @@ open class BaseBlockBuilder(
         val maxSpecialEndTransactionSize: Long,
         val suppressSpecialTransactionValidation: Boolean,
         private val maxBlockFutureTime: Long,
+        private val myPubKey: ByteArray?,
         val clock: Clock = Clock.systemUTC()
 ) : AbstractBlockBuilder(eContext, blockchainRID, store) {
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        const val PRIMARY_HEADER_KEY = "primary"
+    }
 
     private val eventProcessors = mutableMapOf<String, TxEventSink>()
 
@@ -153,8 +157,8 @@ open class BaseBlockBuilder(
         }
     }
 
-    open fun finalizeExtensions(): Map<String, Gtv> {
-        val m = mutableMapOf<String, Gtv>()
+    open fun finalizeExtensions(defaultExtraData: Map<String, Gtv>): Map<String, Gtv> {
+        val m = defaultExtraData.toMutableMap()
         for (x in extensions) {
             for (kv in x.finalize()) {
                 if (kv.key in m) {
@@ -175,7 +179,11 @@ open class BaseBlockBuilder(
         // If our time is behind the timestamp of most recent block, do a minimal increment
         val safeTimestamp = max(timestamp, initialBlockData.timestamp + 1)
         val rootHash = computeMerkleRootHash()
-        return BaseBlockHeader.make(GtvMerkleHashCalculator(cryptoSystem), initialBlockData, rootHash, safeTimestamp, finalizeExtensions())
+        val extraData = mutableMapOf<String, Gtv>()
+        if (myPubKey != null && buildingNewBlock) {
+            extraData[PRIMARY_HEADER_KEY] = gtv(myPubKey)
+        }
+        return BaseBlockHeader.make(GtvMerkleHashCalculator(cryptoSystem), initialBlockData, rootHash, safeTimestamp, finalizeExtensions(extraData))
     }
 
     /**
@@ -276,7 +284,12 @@ open class BaseBlockBuilder(
     override fun finalizeAndValidate(blockHeader: BlockHeader) {
         if (specialTxHandler.needsSpecialTransaction(End) && !haveSpecialEndTransaction)
             throw BadBlockException("End special transaction is missing")
-        val extraData = finalizeExtensions()
+        val defaultExtraData = mutableMapOf<String, Gtv>()
+        val primaryHeader = (blockHeader as? BaseBlockHeader)?.extraData?.get(PRIMARY_HEADER_KEY)
+        if (primaryHeader != null) {
+            defaultExtraData[PRIMARY_HEADER_KEY] = primaryHeader
+        }
+        val extraData = finalizeExtensions(defaultExtraData)
         val validationResult = validateBlockHeader(blockHeader, extraData)
         when (validationResult.result) {
             OK -> {
@@ -358,7 +371,9 @@ open class BaseBlockBuilder(
                 clock.millis(),
                 maxBlockFutureTime,
                 nrOfDependencies,
-                extraData
+                extraData,
+                subjects,
+                myPubKey != null
         )
     }
 

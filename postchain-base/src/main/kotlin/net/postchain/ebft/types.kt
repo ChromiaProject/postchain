@@ -169,10 +169,6 @@ interface StatusManager {
     fun getLatestStatusTimestamp(nodeIndex: Int): Long
 
     fun shouldApplySignature(state: NodeBlockState): Boolean
-
-    fun tryToSetPrimarySignature(nodeIndex: Int, signature: Signature?)
-    fun getAdditionalPrimarySignature(): Signature?
-    fun appendPrimarySignatureToCommitSignatures()
 }
 
 class BDBAbortException(val block: BlockDataWithWitness) :

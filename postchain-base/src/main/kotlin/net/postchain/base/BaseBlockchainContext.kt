@@ -9,5 +9,5 @@ open class BaseBlockchainContext(
         override val chainID: Long,
         override val blockchainRID: BlockchainRid,
         override val nodeID: Int,
-        override val nodeRID: ByteArray?
+        override val nodeRID: ByteArray
 ) : BlockchainContext

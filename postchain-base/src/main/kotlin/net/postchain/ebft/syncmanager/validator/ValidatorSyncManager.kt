@@ -161,7 +161,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                             }.also {
                                                 applyConfig(message.configHash, message.height)
                                                 statusManager.onStatusUpdate(nodeIndex, it)
-                                                statusManager.tryToSetPrimarySignature(nodeIndex, message.signature)
                                             }
 
                                     tryToSwitchToFastSync()
@@ -298,7 +297,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 throw ProgrammerMistake("status manager block RID (${statusManager.myStatus.blockRID!!.toHex()}) out of sync with current block RID (${currentBlock.header.blockRID.toHex()})")
             }
             val signature = statusManager.getCommitSignature()
-            if (signature != null) {
+            if (signature != null && statusManager.myStatus.state == NodeBlockState.Prepared) {
                 communicationManager.sendPacket(BlockSignature(
                         blockRID,
                         Signature(signature.subjectID, signature.data)),

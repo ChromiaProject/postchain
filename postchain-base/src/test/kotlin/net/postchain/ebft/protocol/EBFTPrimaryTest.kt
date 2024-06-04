@@ -50,7 +50,7 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
         // verify
         verify(blockStrategy).setForceStopBlockBuilding(false)
         verifyIntent(DoNothingIntent)
-        verifyStatus(blockRID = blockRid0, height = 1, serial = 4, round = 0, revolting = false, state = HaveBlock, signature = signature)
+        verifyStatus(blockRID = blockRid0, height = 1, serial = 4, round = 0, revolting = false, state = HaveBlock, signature = null)
         reset(commManager)
 
         /**

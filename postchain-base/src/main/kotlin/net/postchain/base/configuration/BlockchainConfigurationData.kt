@@ -62,7 +62,10 @@ data class BlockchainConfigurationData(
         val queryCacheTtlSeconds: Long?,
         @Name(KEY_MAX_BLOCK_FUTURE_TIME)
         @DefaultValue(defaultLong = 60 * 1000) // 1 minute
-        val maxBlockFutureTime: Long
+        val maxBlockFutureTime: Long,
+        @Name(KEY_ADD_PRIMARY_KEY_TO_HEADER)
+        @DefaultValue(defaultBoolean = false)
+        val addPrimaryKeyToHeader: Boolean
 ) {
     val historicBrid = historicBridAsByteArray?.let { BlockchainRid(it) }
     val blockchainDependencies = blockchainDependenciesRaw?.let { BaseDependencyFactory.build(it) } ?: listOf()
