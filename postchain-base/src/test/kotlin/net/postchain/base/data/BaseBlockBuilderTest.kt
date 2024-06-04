@@ -63,35 +63,36 @@ class BaseBlockBuilderTest {
             maxBlockFutureTime = -1,
             pubKey(0)
     )
+    val primaryExtraHeader = mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0)))
 
     @Test
     fun invalidMonotoneTimestamp() {
         val timestamp = 1L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, primaryExtraHeader)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
-        assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0)))).result)
+        assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header, primaryExtraHeader).result)
     }
 
     @Test
     fun invalidMonotoneTimestampEquals() {
         val timestamp = 10L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, primaryExtraHeader)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
-        assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0)))).result)
+        assertEquals(INVALID_TIMESTAMP, bbb.validateBlockHeader(header, primaryExtraHeader).result)
     }
 
     @Test
     fun validMonotoneTimestamp() {
         val timestamp = 100L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, dummy, 1, timestamp, arrayOf())
-        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, timestamp, primaryExtraHeader)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
-        assertEquals(OK, bbb.validateBlockHeader(header, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0)))).result)
+        assertEquals(OK, bbb.validateBlockHeader(header, primaryExtraHeader).result)
     }
 
     @Test

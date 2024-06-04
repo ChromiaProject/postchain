@@ -80,16 +80,17 @@ class BaseBlockBuilderValidationTest {
             maxBlockFutureTime = -1,
             pubKey(0),
             clock)
+    val primaryExtraHeader = mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0)))
 
     @Test
     fun validateBlockHeader_valid() {
         val timestamp = 100L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, empty32Bytes, 1, timestamp, null)
-        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, rootHash, timestamp, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, rootHash, timestamp, primaryExtraHeader)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
-        val validation = bbb.validateBlockHeader(header, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
+        val validation = bbb.validateBlockHeader(header, primaryExtraHeader)
 
         assertEquals(OK, validation.result)
     }
@@ -98,11 +99,11 @@ class BaseBlockBuilderValidationTest {
     fun validateBlockHeader_invalidMonotoneTimestamp() {
         val timestamp = 1L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, empty32Bytes, 1, timestamp, null)
-        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, rootHash, timestamp, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, rootHash, timestamp, primaryExtraHeader)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
-        val validation = bbb.validateBlockHeader(header, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
+        val validation = bbb.validateBlockHeader(header, primaryExtraHeader)
 
         assertEquals(INVALID_TIMESTAMP, validation.result)
     }
@@ -111,11 +112,11 @@ class BaseBlockBuilderValidationTest {
     fun validateBlockHeader_invalidMonotoneTimestampEquals() {
         val timestamp = 10L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, empty32Bytes, 1, timestamp, null)
-        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, rootHash, timestamp, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, rootHash, timestamp, primaryExtraHeader)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
-        val validation = bbb.validateBlockHeader(header, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
+        val validation = bbb.validateBlockHeader(header, primaryExtraHeader)
 
         assertEquals(INVALID_TIMESTAMP, validation.result)
     }
@@ -124,11 +125,11 @@ class BaseBlockBuilderValidationTest {
     fun validateBlokcHeader_invalidRootHash() {
         val timestamp = 100L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, empty32Bytes, 1, timestamp, null)
-        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, badRootHash, timestamp, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, badRootHash, timestamp, primaryExtraHeader)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
-        val validation = bbb.validateBlockHeader(header, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
+        val validation = bbb.validateBlockHeader(header, primaryExtraHeader)
 
         assertEquals(INVALID_ROOT_HASH, validation.result)
     }
@@ -216,12 +217,12 @@ class BaseBlockBuilderValidationTest {
         doReturn(50L).whenever(clock).millis()
         val timestamp = 100L
         val blockData = InitialBlockData(myBlockchainRid, 2, 2, empty32Bytes, 1, timestamp, null)
-        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, rootHash, timestamp, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, rootHash, timestamp, primaryExtraHeader)
         val bbb = buildBaseBlockBuilder(NullSpecialTransactionHandler(), suppressSpecialTransactionValidation = true, 10)
         bbb.bctx = bctx
         bbb.initialBlockData = blockData
 
-        val validation = bbb.validateBlockHeader(header, mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0))))
+        val validation = bbb.validateBlockHeader(header, primaryExtraHeader)
 
         assertEquals(INVALID_TIMESTAMP, validation.result)
         assertEquals("Block timestamp $timestamp is too far in the future", validation.message)
