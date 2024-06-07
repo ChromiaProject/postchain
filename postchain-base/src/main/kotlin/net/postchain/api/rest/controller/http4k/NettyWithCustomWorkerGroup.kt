@@ -19,7 +19,12 @@ import org.http4k.server.ServerConfig.StopMode
 import java.net.InetSocketAddress
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
-class NettyWithCustomWorkerGroup(val port: Int = 8000, override val stopMode: StopMode, private val workerGroup: NioEventLoopGroup) : ServerConfig {
+class NettyWithCustomWorkerGroup(
+        val port: Int = 8000,
+        override val stopMode: StopMode,
+        private val workerGroup: NioEventLoopGroup,
+        val aggregatorMaxContentLength: Int = 0 // No post data allowed by default
+) : ServerConfig {
 
     val shutdownTimeoutMillis = when (stopMode) {
         is StopMode.Graceful -> stopMode.timeout.toMillis()
@@ -39,7 +44,7 @@ class NettyWithCustomWorkerGroup(val port: Int = 8000, override val stopMode: St
                         public override fun initChannel(ch: SocketChannel) {
                             ch.pipeline().addLast("codec", HttpServerCodec())
                             ch.pipeline().addLast("keepAlive", HttpServerKeepAliveHandler())
-                            ch.pipeline().addLast("aggregator", HttpObjectAggregator(Int.MAX_VALUE))
+                            ch.pipeline().addLast("aggregator", HttpObjectAggregator(aggregatorMaxContentLength))
                             ch.pipeline().addLast("streamer", ChunkedWriteHandler())
                             ch.pipeline().addLast("httpHandler", Http4kChannelHandler(http))
                         }
