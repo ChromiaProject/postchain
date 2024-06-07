@@ -31,6 +31,7 @@ import net.postchain.api.rest.errorBody
 import net.postchain.api.rest.gtvJsonBody
 import net.postchain.api.rest.heightPath
 import net.postchain.api.rest.heightQuery
+import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.api.rest.limitQuery
 import net.postchain.api.rest.model.TxRid
 import net.postchain.api.rest.nodeStatusBody
@@ -150,7 +151,8 @@ class RestApi(
         gracefulShutdown: Boolean = true,
         requestConcurrency: Int = 0,
         private val chainRequestConcurrency: Int = -1,
-        private val subnodeHttpRedirect: Boolean = false
+        private val subnodeHttpRedirect: Boolean = false,
+        val maxRequestBodySize: Int = RestApiConfig.DEFAULT_MAX_REQUEST_BODY_SIZE
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
@@ -628,8 +630,9 @@ class RestApi(
             .asServer(NettyWithCustomWorkerGroup(
                     listenPort,
                     if (gracefulShutdown) ServerConfig.StopMode.Graceful(Duration.ofSeconds(5)) else ServerConfig.StopMode.Immediate,
-                    NioEventLoopGroup(requestConcurrency, ThreadFactoryBuilder().setNameFormat("REST-API-%d").build()))
-            )
+                    NioEventLoopGroup(requestConcurrency, ThreadFactoryBuilder().setNameFormat("REST-API-%d").build()),
+                    maxRequestBodySize
+            ))
             .start().also {
                 logger.info { "Rest API is listening on port ${it.port()} and is attached on $basePath/" }
             }
