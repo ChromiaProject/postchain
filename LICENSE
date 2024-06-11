@@ -18,7 +18,7 @@ This project includes third-party software components that are licensed under th
 
 CLASSPATH EXCEPTION 
 
-Certain source files distributed by Chromia and/or its affiliates are subject to a classpath exception to the GPL. This exception applies only when Chromia has explicitly stated in document (https://docs.google.com/spreadsheets/d/10P8UT8-hw-V5RGSo9Xcb2QocM-H0bKYacRXMCFBcu6g/)  that “Chromia designates this particular source code as subject to the classpath exception”. It is the user's responsibility to consult the document (https://docs.google.com/spreadsheets/d/10P8UT8-hw-V5RGSo9Xcb2QocM-H0bKYacRXMCFBcu6g/9)  for updates, as it is subject to change. 
+Certain source files distributed by Chromia and/or its affiliates are subject to a classpath exception to the GPL. This exception applies only when Chromia has explicitly stated in document (https://docs.google.com/spreadsheets/d/10P8UT8-hw-V5RGSo9Xcb2QocM-H0bKYacRXMCFBcu6g/)  that “Chromia designates this particular source code as subject to the classpath exception”. It is the user's responsibility to consult the document (https://docs.google.com/spreadsheets/d/10P8UT8-hw-V5RGSo9Xcb2QocM-H0bKYacRXMCFBcu6g/)  for updates, as it is subject to change. 
 
 Linking this library statically or dynamically with other modules is making a combined work based on this library. Thus, the terms and conditions of the GNU General Public License cover the whole combination.
 
