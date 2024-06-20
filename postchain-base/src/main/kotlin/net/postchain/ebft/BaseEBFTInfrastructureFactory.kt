@@ -18,7 +18,6 @@ import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.InfrastructureFactory
 import net.postchain.core.Storage
 import net.postchain.network.common.ConnectionManager
-import net.postchain.network.netty2.ConnectionConfig
 import net.postchain.network.peer.DefaultPeerConnectionManager
 
 open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
@@ -26,8 +25,8 @@ open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
     override fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider =
             NodeConfigurationProviderFactory.createProvider(appConfig, storage)
 
-    override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager =
-            DefaultPeerConnectionManager(EbftPacketCodecFactory(), ConnectionConfig.fromAppConfig(appConfig))
+    override fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): ConnectionManager =
+            DefaultPeerConnectionManager(nodeConfigProvider, EbftPacketCodecFactory())
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider =
             ManualBlockchainConfigurationProvider()

@@ -10,7 +10,8 @@ import net.postchain.core.Shutdownable
  * This interface represents a strategy for making sure there is one connection per chain and peer. Its methods
  * will get called from a DefaultXConnectionManager when certain events happen.
  */
-interface PeersConnectionStrategy: Shutdownable {
+interface PeersConnectionStrategy : Shutdownable {
+
     fun connectAll(chainID: Long, blockchainRid: BlockchainRid, peerIds: Set<NodeRid>)
 
     /**
@@ -37,4 +38,6 @@ interface PeersConnectionStrategy: Shutdownable {
     fun duplicateConnectionDetected(chainID: Long, isOriginalOutgoing: Boolean, peerId: NodeRid): Boolean
 
     fun connectionEstablished(chainID: Long, isOutgoing: Boolean, peerId: NodeRid)
+
+    fun isConnectionAllowed(chainID: Long, peerId: NodeRid): Boolean
 }

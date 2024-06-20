@@ -23,7 +23,8 @@ import net.postchain.core.NodeRid
 class NetworkNodes(
         val myself: PeerInfo,
         private val peerInfoMap: Map<NodeRid, PeerInfo>,
-        private val readOnlyNodeContacts: MutableMap<NodeRid, Int>) {
+        private val readOnlyNodeContacts: MutableMap<NodeRid, Int>
+) {
 
     private var nextTimestamp: Long = 0 // Increases once a day
 
@@ -52,11 +53,6 @@ class NetworkNodes(
             } else {
                 return NetworkNodes(me, peerMap.toMap(), mutableMapOf())
             }
-        }
-
-        // Only for testing
-        fun buildNetworkNodesDummy(): NetworkNodes {
-            return NetworkNodes(PeerInfo("abc", 1, byteArrayOf(1)), mapOf(), mutableMapOf())
         }
     }
 

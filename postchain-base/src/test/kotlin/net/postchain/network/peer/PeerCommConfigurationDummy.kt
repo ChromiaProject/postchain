@@ -13,7 +13,7 @@ import net.postchain.crypto.Verifier
  * A stupid stub only used in testing (to avoid the need for mocking)
  */
 open class PeerCommConfigurationDummy: PeerCommConfiguration {
-    override val networkNodes: NetworkNodes = NetworkNodes.buildNetworkNodesDummy()
+    override val networkNodes: NetworkNodes = NetworkNodesHelper.buildDummyNetworkNodes()
     override val pubKey: ByteArray = ByteArray(1)
     override fun resolvePeer(peerID: PeerID): PeerInfo? = null
     override fun myPeerInfo(): PeerInfo = throw NotImplementedError("Not impl")

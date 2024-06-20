@@ -113,7 +113,7 @@ interface BlockchainProcessManagerExtension : BlockchainProcessConnectable, Shut
 interface InfrastructureFactory {
     fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider
 
-    fun makeConnectionManager(appConfig: AppConfig): ConnectionManager
+    fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): ConnectionManager
 
     fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider
 

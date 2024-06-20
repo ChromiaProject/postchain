@@ -26,7 +26,8 @@ class SubEbftInfraFactory : InfrastructureFactory {
         return ManagedNodeConfigurationProvider(appConfig, storage)
     }
 
-    override fun makeConnectionManager(appConfig: AppConfig): SubConnectionManager {
+    override fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): SubConnectionManager {
+        val appConfig = nodeConfigProvider.getConfiguration().appConfig
         val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
         return DefaultSubConnectionManager(appConfig, containerNodeConfig)
     }

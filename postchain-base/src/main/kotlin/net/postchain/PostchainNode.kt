@@ -53,12 +53,13 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
 
         val blockQueriesProvider = BlockQueriesProviderImpl()
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
+        val nodeConfigProvider = infrastructureFactory.makeNodeConfigurationProvider(appConfig, sharedStorage)
         postchainContext = PostchainContext(
                 appConfig,
-                infrastructureFactory.makeNodeConfigurationProvider(appConfig, sharedStorage),
+                nodeConfigProvider,
                 blockBuilderStorage,
                 sharedStorage,
-                infrastructureFactory.makeConnectionManager(appConfig),
+                infrastructureFactory.makeConnectionManager(nodeConfigProvider),
                 blockQueriesProvider,
                 JsonNodeDiagnosticContext(version, appConfig.pubKey, infrastructureFactory),
                 blockchainConfigProvider

@@ -8,6 +8,7 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.NodeRid
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
@@ -37,7 +38,7 @@ import java.util.concurrent.CompletableFuture
  *
  * Example, a cluster of 10 peers where each peer runs 100 chains each, the total number of connections will be:
  *
- *   Nr of Conns = (10 -1) * (100) = 900
+ *   Nr of Conns = (10 - 1) * (100) = 900
  *
  * Also, every replica that connects to a node will get a connection, so there will often be more that this.
  *
@@ -57,11 +58,13 @@ import java.util.concurrent.CompletableFuture
  * @property PacketType is the type of packets that can be handled
  */
 open class DefaultPeerConnectionManager<PacketType>(
-        private val packetCodecFactory: XPacketCodecFactory<PacketType>,
-        private val connectionConfig: ConnectionConfig
+        private val nodeConfigProvider: NodeConfigurationProvider,
+        private val packetCodecFactory: XPacketCodecFactory<PacketType>
 ) : NetworkTopology, PeerConnectionManager, NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
 
     companion object : KLogging()
+
+    private val connectionConfig = ConnectionConfig.fromAppConfig(nodeConfigProvider.getConfiguration().appConfig)
 
     /**
      * A collection of all our connections (sorted and grouped by Chain IID).
@@ -149,7 +152,8 @@ open class DefaultPeerConnectionManager<PacketType>(
         // blockchain started, but not for subsequent ones.
         if (connector == null) {
             myPeerInfo = chainPeersConfig.commConfiguration.myPeerInfo()
-            peersConnectionStrategy = DefaultPeersConnectionStrategy(this, myPeerInfo.peerId())
+            peersConnectionStrategy = DefaultPeersConnectionStrategy(
+                    this, myPeerInfo.peerId(), connectionConfig, nodeConfigProvider)
 
             val packetCodec = packetCodecFactory.create(chainPeersConfig.commConfiguration, chainPeersConfig.blockchainRid)
             // We have already given away we are using Netty, so skipping the factory
@@ -323,17 +327,28 @@ open class DefaultPeerConnectionManager<PacketType>(
                             connection.close()
                             null
                         }
+
+                    } else if (!peersConnectionStrategy.isConnectionAllowed(chainID, descriptor.nodeId)) {
+                        logger.warn {
+                            "Peer connection is not allowed: ${descriptor.nodeId}. " +
+                                    "Check `connection.max_unknown_peer_connections_per_chain` config parameter"
+                        }
+                        connection.close()
+                        null
+
                     } else {
                         chain.setConnection(descriptor.nodeId, connection)
-                        logger.debug {
-                            "onPeerConnected() - Connection accepted: " +
-                                    "peer = ${peerName(descriptor.nodeId)}"
-                        }
                         peersConnectionStrategy.connectionEstablished(
                                 chainID,
                                 connection.descriptor().isOutgoing(),
                                 descriptor.nodeId
                         )
+
+                        logger.debug {
+                            "onPeerConnected() - Connection accepted: " +
+                                    "peer = ${peerName(descriptor.nodeId)}"
+                        }
+
                         chain.getPacketHandler()
                     }
                 }

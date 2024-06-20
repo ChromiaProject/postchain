@@ -56,7 +56,7 @@ class DefaultPeerCommunicationManagerTest {
         // Given
         val connectionManager: PeerConnectionManager = mock()
         val peerCommunicationConfig: PeerCommConfiguration = mock {
-            on { networkNodes } doReturn NetworkNodes.buildNetworkNodesDummy()
+            on { networkNodes } doReturn NetworkNodesHelper.buildDummyNetworkNodes()
             on { myPeerInfo() } doReturn myPeerInfo
         }
         val packetCodec: XPacketCodec<Int> = mock()
