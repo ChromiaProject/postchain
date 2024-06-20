@@ -65,7 +65,7 @@ class ManagedNodeConfigurationProvider(
         // Define pick function
         val peerInfoPicker: (PeerInfo) -> Unit = { peerInfo ->
             peerInfoMap.merge(peerInfo.peerId(), peerInfo) { old, new ->
-                if (old.lastUpdated ?: EPOCH < new.lastUpdated ?: EPOCH) new else old
+                if ((old.lastUpdated ?: EPOCH) < (new.lastUpdated ?: EPOCH)) new else old
             }
         }
 

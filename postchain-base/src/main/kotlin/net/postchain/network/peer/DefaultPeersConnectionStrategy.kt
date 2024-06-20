@@ -4,13 +4,17 @@ package net.postchain.network.peer
 
 import mu.KLogging
 import mu.withLoggingContext
+import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.common.ExponentialDelay
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.NodeRid
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
+import net.postchain.network.netty2.ConnectionConfig
+import org.jetbrains.annotations.TestOnly
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
@@ -28,16 +32,21 @@ import kotlin.random.Random
 class DefaultPeersConnectionStrategy(
         val connectionManager: PeerConnectionManager,
         val me: NodeRid,
+        val connectionConfig: ConnectionConfig,
+        val nodeConfigProvider: NodeConfigurationProvider,
         val clock: Clock = Clock.systemUTC()
 ) : PeersConnectionStrategy {
 
     private val peerToDelayMap: MutableMap<NodeRid, ExponentialDelay> = mutableMapOf()
     private val latestEstablishedConnections: MutableMap<NodeRid, Instant> = ConcurrentHashMap()
     private val timerQueue = ScheduledThreadPoolExecutor(1)
-    private val peersOfInterest = mutableSetOf<NodeRid>()
+    private val peersOfInterest: MutableMap<Long, Set<NodeRid>> = ConcurrentHashMap()
+    private val registeredPeers = nodeConfigProvider.getConfiguration().peerInfoMap.toMutableMap()
+    private var registeredPeersTimestamp = Instant.EPOCH
 
     companion object : KLogging() {
         val SUCCESSFUL_CONNECTION_THRESHOLD: Duration = Duration.ofSeconds(1)
+        val NETWORK_PEERS_UPDATE_INTERVAL: Duration = Duration.ofSeconds(60)
     }
 
     var backupConnTimeMin = 1000
@@ -51,12 +60,14 @@ class DefaultPeersConnectionStrategy(
     }
 
     override fun connectAll(chainID: Long, blockchainRid: BlockchainRid, peerIds: Set<NodeRid>) {
-        peersOfInterest.addAll(peerIds)
+        peersOfInterest[chainID] = peerIds
+
         for (peerId in peerIds) {
             if (shouldIConnect(peerId)) {
                 connectionManager.connectChainPeer(chainID, peerId)
             }
         }
+
         timerQueue.schedule({
             withLoggingContext(
                     BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
@@ -89,10 +100,11 @@ class DefaultPeersConnectionStrategy(
      * for little gain over the simplistic approach chosen.
      */
     override fun connectionLost(chainID: Long, blockchainRid: BlockchainRid, peerId: NodeRid, isOutgoing: Boolean) {
-        if (!peersOfInterest.contains(peerId)) {
+        if (peersOfInterest[chainID]?.contains(peerId) == false) {
             // We are not interested in having a connection to this peer, let them reconnect if necessary
             return
         }
+
         if (connectionManager.isPeerConnected(chainID, peerId)) {
             // There is another connection in use, we should ignore the
             // lost connection
@@ -123,6 +135,7 @@ class DefaultPeersConnectionStrategy(
         }, delay.getDelayMillisAndIncrease(), TimeUnit.MILLISECONDS)
     }
 
+    @TestOnly
     fun isLatestConnectionSuccessful(peerId: NodeRid): Boolean = latestEstablishedConnections[peerId]?.let {
         clock.instant().isAfter(it + SUCCESSFUL_CONNECTION_THRESHOLD)
     } ?: false
@@ -143,6 +156,17 @@ class DefaultPeersConnectionStrategy(
         latestEstablishedConnections[peerId] = clock.instant()
     }
 
+    override fun isConnectionAllowed(chainID: Long, peerId: NodeRid): Boolean {
+        val registeredPeers = getRegisteredPeers().keys
+
+        if (peerId in registeredPeers) return true
+
+        if (connectionConfig.maxUnknownPeerConnectionsPerChain <= 0) return true
+
+        val unknownPeers = connectionManager.getConnectedNodes(chainID).subtract(registeredPeers)
+        return unknownPeers.size < connectionConfig.maxUnknownPeerConnectionsPerChain
+    }
+
     override fun shutdown() {
         try {
             logger.debug("Shutting down DefaultPeersConnectionStrategy")
@@ -160,5 +184,17 @@ class DefaultPeersConnectionStrategy(
      */
     private fun shouldIConnect(peer: NodeRid): Boolean {
         return me.toString() > peer.toString()
+    }
+
+    @Synchronized
+    private fun getRegisteredPeers(): Map<NodeRid, PeerInfo> {
+
+        if (clock.instant().isAfter(registeredPeersTimestamp + NETWORK_PEERS_UPDATE_INTERVAL)) {
+            registeredPeers.clear()
+            registeredPeers.putAll(nodeConfigProvider.getConfiguration().peerInfoMap)
+            registeredPeersTimestamp = clock.instant()
+        }
+
+        return registeredPeers
     }
 }

@@ -78,8 +78,8 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
         return ManualNodeConfigurationProvider(appConfig, storage)
     }
 
-    override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager =
-            DefaultPeerConnectionManager(EbftPacketCodecFactory(), ConnectionConfig.fromAppConfig(appConfig))
+    override fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): ConnectionManager =
+            DefaultPeerConnectionManager(nodeConfigProvider, EbftPacketCodecFactory())
 
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider =

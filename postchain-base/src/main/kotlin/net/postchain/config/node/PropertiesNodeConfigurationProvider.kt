@@ -22,16 +22,15 @@ class PropertiesNodeConfigurationProvider(private val appConfig: AppConfig) : No
      * Retrieves peer information from config, including networking info and public keys
      */
     private fun createPeerInfoCollection(config: AppConfig): Array<PeerInfo> {
-        // Calculating the number of nodes
-        var peerCount = 0
-        config.getKeys("node").forEach { _ -> peerCount++ }
-        peerCount /= 4
+        val nodeIndexes = config.getKeys("node").asSequence()
+                .map { it.split(".")[1].toInt() }
+                .toSortedSet()
 
-        return Array(peerCount) {
+        return nodeIndexes.map {
             val port = config.getInt("node.$it.port")
             val host = config.getString("node.$it.host")
             val pubKey = config.getString("node.$it.pubkey").hexStringToByteArray()
             PeerInfo(host, port, pubKey)
-        }
+        }.toTypedArray()
     }
 }
