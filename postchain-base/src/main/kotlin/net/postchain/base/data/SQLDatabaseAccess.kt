@@ -522,13 +522,31 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      * If we didn't prune the old one then we need to query the snapshot page
      * at highest block height that less than or equal to specific height
      */
-    override fun getPage(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page? {
+    override fun getPageEqualOrLowerThanHeight(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page? {
         val sql = """
             SELECT child_hashes FROM ${tablePages(ctx, name)} 
             WHERE block_height = (SELECT MAX(block_height) FROM ${tablePages(ctx, name)} 
                                     WHERE block_height <= ? AND level = ? AND left_index = ?)
             AND level = ? AND left_index = ?"""
         val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height, level, left, level, left)
+        // if data size is not contain correct length then it regards to error
+        if (data == null || data.size % HASH_LENGTH != 0) return null
+        val length = data.size / HASH_LENGTH
+        val childHashes = Array(length) { ByteArray(HASH_LENGTH) }
+        for (i in 0 until length) {
+            val start = i * HASH_LENGTH
+            val end = start + HASH_LENGTH - 1
+            childHashes[i] = data.sliceArray(start..end)
+        }
+        return Page(height, level, left, childHashes)
+    }
+
+    override fun getPageAtHeight(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page? {
+        val sql = """
+            SELECT child_hashes FROM ${tablePages(ctx, name)} 
+            WHERE block_height = ? AND level = ? AND left_index = ?
+            """
+        val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height, level, left)
         // if data size is not contain correct length then it regards to error
         if (data == null || data.size % HASH_LENGTH != 0) return null
         val length = data.size / HASH_LENGTH
@@ -559,8 +577,13 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdCreateIndexTableState(ctx, prefix, index))
     }
 
-    override fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int {
+    override fun getHighestLevelPageEqualOrLowerThanHeight(ctx: EContext, name: String, height: Long): Int {
         val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, name)} WHERE block_height <= ?"
+        return queryRunner.query(ctx.conn, sql, intRes, height)
+    }
+
+    override fun getHighestLevelPageAtHeight(ctx: EContext, name: String, height: Long): Int {
+        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, name)} WHERE block_height = ?"
         return queryRunner.query(ctx.conn, sql, intRes, height)
     }
 
