@@ -75,6 +75,17 @@ class EventIT : SnapshotBaseIT() {
                 val expected = getMerkleRoot(proofs, it, leafs[it])
                 assertEquals(expected.toHex(), root.toHex())
             }
+
+            // Add event on next height and assert that levels from previous height is not included in proof
+            val nextHeight = blockHeight + 1
+            val data = BigInteger.valueOf(129L).toByteArray()
+            val hash = ds.digest(data)
+            db.insertEvent(txEContext, PREFIX, nextHeight, 0, hash, data)
+            val nextHeightRoot = event.writeEventTree(nextHeight, listOf(hash))
+
+            val proofs = event.getMerkleProof(nextHeight, 0)
+            val expected = getMerkleRoot(proofs, 0, hash)
+            assertEquals(expected.toHex(), nextHeightRoot.toHex())
         }
     }
 }

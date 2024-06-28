@@ -43,16 +43,14 @@ open class BasePageStore(
         db.insertPage(ctx, name, page)
     }
 
-    // read the page with blockHeight equal or lower than given
-    // for a given level and position, if exists
     override fun readPage(blockHeight: Long, level: Int, left: Long): Page? {
         val db = DatabaseAccess.of(ctx)
-        return db.getPage(ctx, name, blockHeight, level, left)
+        return db.getPageAtHeight(ctx, name, blockHeight, level, left)
     }
 
     override fun highestLevelPage(blockHeight: Long): Int {
         val db = DatabaseAccess.of(ctx)
-        return db.getHighestLevelPage(ctx, name, blockHeight)
+        return db.getHighestLevelPageAtHeight(ctx, name, blockHeight)
     }
 
     override fun getMerkleProof(blockHeight: Long, leafPos: Long): List<Hash> {
@@ -120,6 +118,18 @@ open class SnapshotPageStore(
         ds: DigestSystem,
         private val tableNamePrefix: String
 ) : BasePageStore("${tableNamePrefix}_snapshot", ctx, levelsPerPage, ds) {
+
+    // read the page with blockHeight equal or lower than given
+    // for a given level and position, if exists
+    override fun readPage(blockHeight: Long, level: Int, left: Long): Page? {
+        val db = DatabaseAccess.of(ctx)
+        return db.getPageEqualOrLowerThanHeight(ctx, name, blockHeight, level, left)
+    }
+
+    override fun highestLevelPage(blockHeight: Long): Int {
+        val db = DatabaseAccess.of(ctx)
+        return db.getHighestLevelPageEqualOrLowerThanHeight(ctx, name, blockHeight)
+    }
 
     fun updateSnapshot(blockHeight: Long, leafHashes: NavigableMap<Long, Hash>): Hash {
         val entriesPerPage = 1 shl levelsPerPage
