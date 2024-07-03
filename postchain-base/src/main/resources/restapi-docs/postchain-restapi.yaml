@@ -53,7 +53,7 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: "5"
+  version: "7"
 paths:
   /tx/{blockchainRid}:
     post:
@@ -1108,7 +1108,43 @@ paths:
                 version:
                   value:
                     version: 5
-
+  /highest_block_height_anchoring_check/{blockchainRid}:
+    get:
+      tags:
+        - node
+      summary: It takes a BRID as input and returns the highest block height of that chain which has been anchored to CAC, SAC and ETH.
+      description: >
+        Results are computed periodically using a configurable interval of time for each anchoring level: CAC, SAC and EVM.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/highestBlockHeightAnchoringCheck"
+              example:
+                highestBlockHeightAnchoringCheck:
+                  cac:
+                    height: 126
+                    match: true
+                  sac:
+                    height: 126
+                    match: true
+                  evm:
+                    error: "Unable to verify last anchored height on EVM."
+        404:
+          description: Chain not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+            application/octet-stream: { }
 components:
   parameters:
     blockchainRid:
@@ -1393,3 +1429,25 @@ components:
       type: string
       pattern: "(([0-9a-fA-F]+:[0-9a-fA-F]+)(,|$))+"
       description: Signature(s) made up of pubkey and signed data
+    highestBlockHeightAnchoringCheck:
+      type: object
+      properties:
+        cac:
+          $ref: "#/components/schemas/anchoringChainCheck"
+        sac:
+          $ref: "#/components/schemas/anchoringChainCheck"
+        evm:
+          $ref: "#/components/schemas/anchoringChainCheck"
+    anchoringChainCheck:
+      type: object
+      properties:
+        height:
+          type: integer
+          description: Blockchain height that was verified if anchored.
+        match:
+          type: boolean
+          description: Result of matching the blockchain block rid against the anchored block rid.
+        error:
+          type: string
+          description: Error message that occurred during verification process.
+

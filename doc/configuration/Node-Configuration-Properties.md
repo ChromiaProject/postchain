@@ -118,3 +118,15 @@ Used to rate limit requests from other peers
 | Name                | Description                                                                                                                   | Type | Default | Environment Variable        |
 |---------------------|-------------------------------------------------------------------------------------------------------------------------------|------|---------|-----------------------------|
 | `rate-limit.blocks` | Maximum number of unanswered block requests allowed per peer. If exceeded requests will not be answered. Set to 0 to disable. | Int  | 100     | POSTCHAIN_RATE_LIMIT_BLOCKS |
+
+
+### Anchoring check
+
+| Name                                               | Description                                                                                            | Type         | Default | Environment Variable                             |
+|----------------------------------------------------|--------------------------------------------------------------------------------------------------------|--------------|---------|--------------------------------------------------|
+| `anchoring-check.cluster-anchor-check-interval-ms` | Interval at witch to check the highest block height of each blockchain if it has been anchored to CAC. | Int          | 3600000 | ANCHORING_CHECK_CLUSTER_ANCHOR_CHECK_INTERVAL_MS |
+| `anchoring-check.system-anchor-check-interval-ms`  | Interval at witch to check the highest block height of each blockchain if it has been anchored to SAC. | Int          | 3600000 | ANCHORING_CHECK_SYSTEM_ANCHOR_CHECK_INTERVAL_MS  |
+| `anchoring-check.evm-anchor-check-interval-ms`     | Interval at witch to check the highest block height of each blockchain if it has been anchored to EVM. | Int          | -1      | ANCHORING_CHECK_EVM_ANCHOR_CHECK_INTERVAL_MS     |
+| `anchoring-check.rpc-urls`                         | Rpc urls used to check anchoring in EVM.                                                               | List<String> |         | ANCHORING_CHECK_RPC_URLS                         |
+| `anchoring-check.anchoring-contract-address`       | Anchoring smart contract address deployed on EVM.                                                      | String       |         | ANCHORING_ANCHORING_CONTRACT_ADDRESS             |
+

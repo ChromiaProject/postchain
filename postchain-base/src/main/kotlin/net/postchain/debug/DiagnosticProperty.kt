@@ -19,6 +19,9 @@ enum class DiagnosticProperty(val prettyName: String) {
     BLOCKCHAIN_NODE_PEERS("peers"),
     BLOCKCHAIN_NODE_STATUS("node-status"),
     BLOCKCHAIN_NODE_PEERS_STATUSES("node-peers-statuses"),
+    BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_CLUSTER_ANCHORING_CHECK("blockchain-highest-block-height-cluster-anchoring-check"),
+    BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_SYSTEM_ANCHORING_CHECK("blockchain-highest-block-height-system-anchoring-check"),
+    BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_EVM_ANCHORING_CHECK("blockchain-highest-block-height-evm-anchoring-check"),
 
     // Containers
     CONTAINER_NAME("container-name"),

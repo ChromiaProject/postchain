@@ -10,6 +10,7 @@ import net.postchain.api.rest.model.TxRid
 import net.postchain.base.ConfirmationProof
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.rest.HighestBlockHeightAnchoringCheck
 import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
@@ -158,6 +159,7 @@ val binaryBody = Body.binary(ContentType.OCTET_STREAM, "binary").map(
 val gtvJsonBody = Body.gtvJson<Gtv>().toLens()
 val nodeStatusBody = Body.auto<StateNodeStatus>().toLens()
 val nodeStatusesBody = Body.auto<List<StateNodeStatus>>().toLens()
+val highestBlockHeightAnchoringCheckBody = Body.auto<HighestBlockHeightAnchoringCheck>().toLens()
 val textBody = Body.string(ContentType.TEXT_PLAIN).toLens()
 val blockHeightBody = Body.auto<BlockHeight>().toLens()
 val blockchainNodeStateBody = Body.auto<BlockchainNodeState>().toLens()

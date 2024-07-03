@@ -52,6 +52,7 @@ import net.postchain.api.rest.txInfoBody
 import net.postchain.api.rest.txInfosBody
 import net.postchain.api.rest.txRidPath
 import net.postchain.api.rest.txsQuery
+import net.postchain.api.rest.highestBlockHeightAnchoringCheckBody
 import net.postchain.api.rest.versionBody
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
@@ -156,7 +157,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 6
+        const val REST_API_VERSION = 7
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -309,6 +310,8 @@ class RestApi(
             "/config/{blockchainRid}/next_height" bind GET to liveBlockchain.then(::getNextBlockchainConfigurationHeight),
 
             "/errors/{blockchainRid}" bind GET to blockchain.then(volatileResponse).then(::getErrors),
+
+            "/highest_block_height_anchoring_check/{blockchainRid}" bind GET to blockchain.then(::getHighestBlockHeightAnchoringCheck),
     )
 
     @Suppress("UNUSED_PARAMETER")
@@ -496,6 +499,11 @@ class RestApi(
     private fun getNodeStatuses(request: Request): Response {
         val model = model(request)
         return Response(OK).with(nodeStatusesBody of model.nodePeersStatusQuery())
+    }
+
+    private fun getHighestBlockHeightAnchoringCheck(request: Request): Response {
+        val model = model(request)
+        return Response(OK).with(highestBlockHeightAnchoringCheckBody of model.getHighestBlockHeightAnchoringCheckBody(model.blockchainRid))
     }
 
     private fun getBlockchainRid(request: Request): Response {
