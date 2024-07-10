@@ -1,7 +1,7 @@
 image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker:1.1.3
 include:
   - project: "chromaway/core-infra/gitlab-automation"
-    ref: 1.1.6
+    ref: 1.1.17
     file:
       - templates/release.yml
       - templates/maven-dependency-scanning.yml
@@ -143,6 +143,7 @@ variables:
   # when running from the command line.
   # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
   MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -s .gitlab-settings.xml"
+  MAVEN_CLI_NVD_OPTS: "-DnvdDatafeedUrl=https://nvd-data-feeds.chromia.dev/nvdcve-{0}.json.gz"
   POSTCHAIN_DB_URL: jdbc:postgresql://docker/postchain
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
