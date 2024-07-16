@@ -26,14 +26,14 @@ class ContainerHealthcheckHandler(
 
     private fun checkInternal(containersInProgress: Set<String>) {
         val start = System.currentTimeMillis()
-        logger.debug { "BEGIN" }
+        logger.debug { "ContainerHealthcheck: BEGIN" }
 
         val containersToCheck = postchainContainers().keys
                 .associateBy { it.name }
                 .filter { it.key !in containersInProgress }
 
         logger.info {
-            "containersInProgress: $containersInProgress, containersToCheck: ${containersToCheck.keys}"
+            "ContainerHealthcheck: containersInProgress: $containersInProgress, containersToCheck: ${containersToCheck.keys}"
         }
 
         val fixedContainers = mutableSetOf<ContainerName>()
@@ -48,13 +48,13 @@ class ContainerHealthcheckHandler(
         }
 
         if (fixedContainers.isEmpty()) {
-            logger.info { "Ok" }
+            logger.info { "ContainerHealthcheck: Ok" }
         } else {
-            logger.info { "Fixed: $fixedContainers" }
+            logger.info { "ContainerHealthcheck: Fixed: $fixedContainers" }
         }
 
         val elapsed = System.currentTimeMillis() - start
-        logger.debug { "END ($elapsed ms)" }
+        logger.debug { "ContainerHealthcheck: END ($elapsed ms)" }
     }
 
     private fun checkContainer(cname: ContainerName, containerIsRunning: Boolean, fixedContainers: MutableSet<ContainerName>) {
