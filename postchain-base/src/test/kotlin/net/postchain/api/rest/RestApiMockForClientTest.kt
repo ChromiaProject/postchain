@@ -14,7 +14,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
-import net.postchain.common.rest.HighestBlockHeightAnchoringCheck
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.wrap
 import net.postchain.core.BlockRid
@@ -161,8 +160,6 @@ class RestApiMockForClientManual {
         override fun nodeStatusQuery(): StateNodeStatus = TODO()
 
         override fun nodePeersStatusQuery(): List<StateNodeStatus> = TODO()
-
-        override fun getHighestBlockHeightAnchoringCheckBody(blockchainRid: BlockchainRid): HighestBlockHeightAnchoringCheck = TODO()
 
         override fun getBlock(blockRID: BlockRid, txHashesOnly: Boolean): BlockDetail? {
             return (blocks.filter { it.rid.contentEquals(blockRID.data) }).getOrNull(0)
