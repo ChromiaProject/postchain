@@ -27,8 +27,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
-import net.postchain.common.rest.AnchoringChainCheck
-import net.postchain.common.rest.HighestBlockHeightAnchoringCheck
 import net.postchain.common.tx.TransactionStatus.CONFIRMED
 import net.postchain.common.tx.TransactionStatus.REJECTED
 import net.postchain.common.tx.TransactionStatus.UNKNOWN
@@ -192,14 +190,6 @@ open class PostchainModel(
     override fun nodePeersStatusQuery(): List<StateNodeStatus> =
             diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES]?.value as? List<StateNodeStatus>
                     ?: throw NotFoundError("NotFound")
-
-    @Suppress("UNCHECKED_CAST")
-    override fun getHighestBlockHeightAnchoringCheckBody(blockchainRid: BlockchainRid): HighestBlockHeightAnchoringCheck {
-        val cacCheck = postchainContext.nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_CLUSTER_ANCHORING_CHECK]?.value as? MutableMap<BlockchainRid, AnchoringChainCheck>
-        val sacCheck = postchainContext.nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_SYSTEM_ANCHORING_CHECK]?.value as? MutableMap<BlockchainRid, AnchoringChainCheck>
-        val evmCheck = postchainContext.nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_EVM_ANCHORING_CHECK]?.value as? MutableMap<BlockchainRid, AnchoringChainCheck>
-        return HighestBlockHeightAnchoringCheck(cacCheck?.get(blockchainRid), sacCheck?.get(blockchainRid), evmCheck?.get(blockchainRid))
-    }
 
     override fun getCurrentBlockHeight(): BlockHeight = BlockHeight(blockQueries.getLastBlockHeight().get() + 1)
 

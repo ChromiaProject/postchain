@@ -57,10 +57,14 @@ import net.postchain.api.rest.versionBody
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.hexStringToByteArray
+import net.postchain.common.rest.AnchoringChainCheck
+import net.postchain.common.rest.HighestBlockHeightAnchoringCheck
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockDetail
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
+import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.ErrorValue
 import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.debug.NodeDiagnosticContext
@@ -311,7 +315,7 @@ class RestApi(
 
             "/errors/{blockchainRid}" bind GET to blockchain.then(volatileResponse).then(::getErrors),
 
-            "/highest_block_height_anchoring_check/{blockchainRid}" bind GET to blockchain.then(::getHighestBlockHeightAnchoringCheck),
+            "/highest_block_height_anchoring_check/{blockchainRid}" bind GET to ::getHighestBlockHeightAnchoringCheck,
     )
 
     @Suppress("UNUSED_PARAMETER")
@@ -501,9 +505,14 @@ class RestApi(
         return Response(OK).with(nodeStatusesBody of model.nodePeersStatusQuery())
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun getHighestBlockHeightAnchoringCheck(request: Request): Response {
-        val model = model(request)
-        return Response(OK).with(highestBlockHeightAnchoringCheckBody of model.getHighestBlockHeightAnchoringCheckBody(model.blockchainRid))
+        val blockchainRid = request.path(BLOCKCHAIN_RID)?.let { BlockchainRid(it.hexStringToByteArray()) }
+                ?: throw ProgrammerMistake("No blockchain RID in route path")
+        val cacCheck = nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_CLUSTER_ANCHORING_CHECK]?.value as? MutableMap<BlockchainRid, AnchoringChainCheck>
+        val sacCheck = nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_SYSTEM_ANCHORING_CHECK]?.value as? MutableMap<BlockchainRid, AnchoringChainCheck>
+        val evmCheck = nodeDiagnosticContext[DiagnosticProperty.BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_EVM_ANCHORING_CHECK]?.value as? MutableMap<BlockchainRid, AnchoringChainCheck>
+        return Response(OK).with(highestBlockHeightAnchoringCheckBody of HighestBlockHeightAnchoringCheck(cacCheck?.get(blockchainRid), sacCheck?.get(blockchainRid), evmCheck?.get(blockchainRid)))
     }
 
     private fun getBlockchainRid(request: Request): Response {

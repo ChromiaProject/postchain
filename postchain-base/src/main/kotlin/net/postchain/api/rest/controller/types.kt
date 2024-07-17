@@ -10,7 +10,6 @@ import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
 import net.postchain.base.ConfirmationProof
 import net.postchain.common.BlockchainRid
-import net.postchain.common.rest.HighestBlockHeightAnchoringCheck
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.block.BlockDetail
@@ -52,7 +51,6 @@ interface Model : ChainModel {
     fun query(query: GtxQuery): Gtv
     fun nodeStatusQuery(): StateNodeStatus
     fun nodePeersStatusQuery(): List<StateNodeStatus>
-    fun getHighestBlockHeightAnchoringCheckBody(blockchainRid: BlockchainRid): HighestBlockHeightAnchoringCheck
     fun getCurrentBlockHeight(): BlockHeight
     fun getBlockchainNodeState(): BlockchainNodeState
     fun getBlockchainConfiguration(height: Long = -1): ByteArray?

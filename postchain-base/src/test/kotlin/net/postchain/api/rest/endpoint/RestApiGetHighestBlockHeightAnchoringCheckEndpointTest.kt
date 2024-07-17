@@ -9,13 +9,15 @@ import net.postchain.api.rest.json.JsonFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.common.rest.AnchoringChainCheck
 import net.postchain.common.rest.HighestBlockHeightAnchoringCheck
+import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.EagerDiagnosticValue
+import net.postchain.debug.NodeDiagnosticContext
 import org.hamcrest.CoreMatchers.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -27,13 +29,18 @@ class RestApiGetHighestBlockHeightAnchoringCheckEndpointTest {
     private lateinit var model: Model
     private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
     private val gson = JsonFactory.makeJson()
+    private val nodeDiagnosticContextMock = mock<NodeDiagnosticContext> {
+        on { get(DiagnosticProperty.BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_CLUSTER_ANCHORING_CHECK) } doReturn EagerDiagnosticValue(mutableMapOf(blockchainRID to AnchoringChainCheck(1000L, true)))
+        on { get(DiagnosticProperty.BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_SYSTEM_ANCHORING_CHECK) } doReturn EagerDiagnosticValue(mutableMapOf(blockchainRID to AnchoringChainCheck(100L, true)))
+        on { get(DiagnosticProperty.BLOCKCHAIN_HIGHEST_BLOCK_HEIGHT_EVM_ANCHORING_CHECK) } doReturn EagerDiagnosticValue(mutableMapOf(blockchainRID to AnchoringChainCheck(error = "Error message")))
+    }
 
     @BeforeEach
     fun setup() {
         model = mock {
             on { blockchainRid } doReturn blockchainRID
         }
-        restApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
+        restApi = RestApi(0, basePath, nodeDiagnosticContext = nodeDiagnosticContextMock, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
     }
 
     @AfterEach
@@ -43,15 +50,11 @@ class RestApiGetHighestBlockHeightAnchoringCheckEndpointTest {
 
     @Test
     fun testGetVerifiedAnchoredBlockHeights() {
-        val response = HighestBlockHeightAnchoringCheck(
-                cac= AnchoringChainCheck(1000, true),
-                sac= AnchoringChainCheck(100, true),
-                evm= AnchoringChainCheck(error="error message")
+        val expected = HighestBlockHeightAnchoringCheck(
+                cac = AnchoringChainCheck(1000, true, null),
+                sac = AnchoringChainCheck(100, true, null),
+                evm = AnchoringChainCheck(error = "Error message")
         )
-
-        whenever(
-                model.getHighestBlockHeightAnchoringCheckBody(blockchainRID)
-        ).thenReturn(response)
 
         restApi.attachModel(blockchainRID, model)
 
@@ -59,8 +62,6 @@ class RestApiGetHighestBlockHeightAnchoringCheckEndpointTest {
                 .get("/highest_block_height_anchoring_check/$blockchainRID")
                 .then()
                 .statusCode(200)
-                .assertThat().body(equalTo(gson.toJson(response).toString()))
+                .assertThat().body(equalTo(gson.toJson(expected).toString()))
     }
-
-
 }
