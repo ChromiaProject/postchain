@@ -24,9 +24,8 @@ class RestApiVersionEndpointTest {
             DiagnosticProperty.INFRASTRUCTURE_NAME withValue "base-infra",
             DiagnosticProperty.INFRASTRUCTURE_VERSION withValue "3.14.1592",
     )
-    private val diagnosticContext = JsonNodeDiagnosticContext(
-            *properties.map { it.key to it.value }.toTypedArray()
-    )
+
+    private val diagnosticContext = JsonNodeDiagnosticContext(*properties.toList().toTypedArray())
 
     @BeforeEach
     fun setup() {
