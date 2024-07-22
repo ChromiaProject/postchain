@@ -13,6 +13,7 @@ import net.postchain.api.rest.BlockchainRef
 import net.postchain.api.rest.BlockchainRidRef
 import net.postchain.api.rest.Empty
 import net.postchain.api.rest.ErrorBody
+import net.postchain.api.rest.InfraVersion
 import net.postchain.api.rest.Version
 import net.postchain.api.rest.beforeHeightQuery
 import net.postchain.api.rest.beforeTimeQuery
@@ -31,7 +32,9 @@ import net.postchain.api.rest.errorBody
 import net.postchain.api.rest.gtvJsonBody
 import net.postchain.api.rest.heightPath
 import net.postchain.api.rest.heightQuery
+import net.postchain.api.rest.highestBlockHeightAnchoringCheckBody
 import net.postchain.api.rest.infra.RestApiConfig
+import net.postchain.api.rest.infraVersionBody
 import net.postchain.api.rest.limitQuery
 import net.postchain.api.rest.model.TxRid
 import net.postchain.api.rest.nodeStatusBody
@@ -52,7 +55,6 @@ import net.postchain.api.rest.txInfoBody
 import net.postchain.api.rest.txInfosBody
 import net.postchain.api.rest.txRidPath
 import net.postchain.api.rest.txsQuery
-import net.postchain.api.rest.highestBlockHeightAnchoringCheckBody
 import net.postchain.api.rest.versionBody
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
@@ -161,7 +163,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 7
+        const val REST_API_VERSION = 8
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -281,6 +283,7 @@ class RestApi(
             "/_debug" bind static(ResourceLoader.Classpath("/restapi-root/_debug")),
 
             "/version" bind GET to ::getVersion,
+            "/infrastructure_version" bind GET to ::getInfraVersion,
 
             "/tx/{blockchainRid}" bind POST to liveBlockchain.then(::postTransaction),
             "/tx/{blockchainRid}/{txRid}" bind GET to blockchain.then(immutableResponse).then(::getTransaction),
@@ -321,6 +324,16 @@ class RestApi(
     @Suppress("UNUSED_PARAMETER")
     private fun getVersion(request: Request): Response = Response(OK).with(
             versionBody of Version(REST_API_VERSION)
+    )
+
+    @Suppress("UNUSED_PARAMETER")
+    private fun getInfraVersion(request: Request): Response = Response(OK).with(
+            infraVersionBody of InfraVersion(
+                    nodeDiagnosticContext[DiagnosticProperty.VERSION]?.value?.toString().orEmpty(),
+                    nodeDiagnosticContext[DiagnosticProperty.INFRASTRUCTURE_NAME]?.value?.toString().orEmpty(),
+                    nodeDiagnosticContext[DiagnosticProperty.INFRASTRUCTURE_VERSION]?.value?.toString().orEmpty(),
+                    REST_API_VERSION.toString()
+            )
     )
 
     private fun postTransaction(request: Request): Response {

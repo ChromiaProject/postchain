@@ -80,6 +80,7 @@ val heightQuery = Query.long().map {
 val signerQuery = Query.string().regex("([0-9a-fA-F]+)").optional("signer")
 
 val prettyGson = JsonFactory.makePrettyJson()
+val dashedPrettyGson = JsonFactory.makeCustomJson()
 
 val errorJsonBody = Body.auto<ErrorBody>().toLens()
 val errorGtvBody = Body.binary(ContentType.OCTET_STREAM, "error GTV").map(
@@ -206,6 +207,14 @@ val gtvBody = Body.binary(ContentType.OCTET_STREAM, "GTV").map(
 ).toLens()
 val configurationInBody = ContentNegotiation.auto(gtvmlBody, gtvBody)
 val versionBody = Body.auto<Version>().toLens()
+val infraVersionBody = Body.string(ContentType.APPLICATION_JSON, "pretty JSON").map(
+        {
+            dashedPrettyGson.fromJson(it, InfraVersion::class.java)
+        },
+        {
+            dashedPrettyGson.toJson(it)
+        }
+).toLens()
 
 sealed interface BlockchainRef
 data class BlockchainRidRef(val rid: BlockchainRid) : BlockchainRef
@@ -216,6 +225,13 @@ data class TransactionsCount(val transactionsCount: Long)
 data class Tx(val tx: String)
 data class ErrorBody(val error: String = "")
 data class Version(val version: Int)
+data class InfraVersion(
+        val postchain: String,
+        val infrastructure: String,
+        val infrastructureVersion: String,
+        val restApi: String
+)
+
 data class BlockchainNodeState(val state: String)
 object Empty
 

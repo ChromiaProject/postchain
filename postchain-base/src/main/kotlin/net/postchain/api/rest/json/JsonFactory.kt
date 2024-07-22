@@ -2,6 +2,7 @@
 
 package net.postchain.api.rest.json
 
+import com.google.gson.FieldNamingPolicy
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import net.postchain.api.rest.BlockSignature
@@ -14,12 +15,16 @@ import org.http4k.format.ConfigurableGson
 
 object JsonFactory : ConfigurableGson(gsonBuilder(false)) {
 
-    fun makeJson(): Gson = buildGson(false)
+    fun makeJson(): Gson = gsonBuilder(false).create()!!
 
-    fun makePrettyJson(): Gson = buildGson(true)
+    fun makePrettyJson(): Gson = gsonBuilder(true).create()!!
 
-    private fun buildGson(pretty: Boolean): Gson = gsonBuilder(pretty)
-            .create()!!
+    fun makeCustomJson(
+            pretty: Boolean = true,
+            namingConvention: FieldNamingPolicy = FieldNamingPolicy.LOWER_CASE_WITH_DASHES
+    ): Gson = gsonBuilder(pretty).apply {
+        setFieldNamingPolicy(namingConvention)
+    }.create()!!
 
     @JvmStatic
     private fun gsonBuilder(pretty: Boolean): GsonBuilder = GsonBuilder()
