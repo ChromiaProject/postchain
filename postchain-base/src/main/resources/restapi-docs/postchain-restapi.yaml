@@ -53,7 +53,7 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: "7"
+  version: "8"
 paths:
   /tx/{blockchainRid}:
     post:
@@ -1108,6 +1108,25 @@ paths:
                 version:
                   value:
                     version: 5
+  /infrastructure_version:
+    get:
+      tags:
+        - node
+      summary: Get infrastructure version
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/infrastructureVersion"
+              example: | 
+                {
+                  "postchain": "3.16.4",
+                  "infrastructure" : "net.postchain.d1.D1InfrastructureFactory",
+                  "infrastructure-version": "3.16.15",
+                  "rest-api": "8"
+                }
   /highest_block_height_anchoring_check/{blockchainRid}:
     get:
       tags:
@@ -1417,6 +1436,21 @@ components:
           minimum: 1
           format: int32
           description: API version
+    infrastructureVersion:
+      type: object
+      properties:
+        postchain:
+          type: string
+          description: Postchain version
+        infrastructure:
+          type: string
+          description: Infrastructure name
+        infrastructure-version:
+          type: string
+          description: Infrastructure version
+        rest-api:
+          type: string
+          description: REST API version
     transactionsCount:
       type: object
       required:

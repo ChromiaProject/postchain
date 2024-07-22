@@ -10,8 +10,7 @@ import java.util.Collections
 class JsonNodeDiagnosticContext private constructor(
         private val properties: DiagnosticData,
         private val blockchainDiagnosticData: MutableMap<BlockchainRid, DiagnosticData>
-) : NodeDiagnosticContext,
-        MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
+) : NodeDiagnosticContext, MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
 
     constructor(version: String, pubKey: String, infrastructure: InfrastructureFactory) : this(
             DiagnosticProperty.VERSION withValue version,
