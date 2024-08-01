@@ -351,7 +351,6 @@ object ImporterExporter : KLogging() {
                     if (startHeight == -1L) {
                         startHeight = blockHeight;
                     }
-                    endHeight = blockHeight;
 
                     val configHeight = DatabaseAccess.of(ctx).findConfigurationHeightForBlock(ctx, blockHeight)
                             ?: throw UserMistake("Can't find config height for block $blockHeight")
@@ -367,6 +366,7 @@ object ImporterExporter : KLogging() {
                     }
 
                     importBlock(ctx, config, blockHeader, transactions, blockWitness)
+                    endHeight = blockHeight;
                 }
             }
 

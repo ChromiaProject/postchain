@@ -58,7 +58,7 @@ object GenericBlockHeaderValidator {
             headerPrevBlockRid!! != expectedPrevBlockRid!! ->
                 ValidationResult(
                         ValidationResult.Result.PREV_BLOCK_MISMATCH, "header.prevBlockRID != expected previous " +
-                        "BlockRID,( ${headerPrevBlockRid.toHex()} != ${expectedPrevBlockRid.toHex()} ), " +
+                        "BlockRID, (${headerPrevBlockRid.toHex()} != ${expectedPrevBlockRid.toHex()}), " +
                         " height: $headerHeight and $expectedHeight "
                 )
 

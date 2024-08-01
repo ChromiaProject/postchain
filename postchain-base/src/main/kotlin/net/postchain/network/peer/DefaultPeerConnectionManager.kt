@@ -436,7 +436,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                             oldChainID
                         } else {
                             logger.info(
-                                    "getChainIdOnConnected() - Chain ID not found(Could be due to 1) chain not started or 2) we really don't have it)"
+                                    "getChainIdOnConnected() - Chain ID not found (could be due to (1) chain not started or (2) we really don't have it)"
                             )
 
                             connection.close()
