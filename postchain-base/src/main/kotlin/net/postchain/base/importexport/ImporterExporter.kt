@@ -6,7 +6,9 @@ import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.data.BaseBlockBuilder.Companion.PRIMARY_HEADER_KEY
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.extension.FAILED_CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
 import net.postchain.common.BlockchainRid
@@ -393,7 +395,7 @@ object ImporterExporter : KLogging() {
         for (transaction in transactions) {
             blockBuilder.appendTransaction(transaction)
         }
-        blockBuilder.finalizeAndValidate(blockHeader)
+        blockBuilder.finalizeAndValidate(blockHeader, setOf(PRIMARY_HEADER_KEY, FAILED_CONFIG_HASH_EXTRA_HEADER))
         blockBuilder.commit(blockWitness)
     }
 
@@ -417,6 +419,7 @@ object ImporterExporter : KLogging() {
 
     private fun blocksWithinLimit(blockCount: Int, blockCountLimit: Int?, blocksSize: Int, blocksSizeLimit: Int): Boolean {
 
-        return blockCount <= (blockCountLimit ?: Int.MAX_VALUE) && blocksSize <= blocksSizeLimit.coerceAtMost(MAX_PACKAGE_CONTENT_BYTES)
+        return blockCount <= (blockCountLimit
+                ?: Int.MAX_VALUE) && blocksSize <= blocksSizeLimit.coerceAtMost(MAX_PACKAGE_CONTENT_BYTES)
     }
 }

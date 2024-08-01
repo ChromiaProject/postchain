@@ -157,7 +157,8 @@ object GenericBlockHeaderValidator {
             nrOfDependencies: Int,
             extraData: Map<String, Gtv>,
             subjects: Array<ByteArray>,
-            checkPrimaryField: Boolean
+            checkPrimaryField: Boolean,
+            skipExtraDataValidation: Set<String>
     ): ValidationResult {
         val header = blockHeader as BaseBlockHeader
 
@@ -189,11 +190,11 @@ object GenericBlockHeaderValidator {
             !header.blockHeaderRec.getMerkleRootHash().contentEquals(expectedMerkleRootHash()) -> // Do this last since most expensive check!
                 ValidationResult(ValidationResult.Result.INVALID_ROOT_HASH, "header.blockHeaderRec.rootHash != computeMerkleRootHash()")
 
-            !header.checkExtraData(extraData) ->
+            header.extraData.minus(skipExtraDataValidation) != extraData.minus(skipExtraDataValidation) ->
                 ValidationResult(ValidationResult.Result.INVALID_EXTRA_DATA, "header extra data do not match: ${header.extraData.keys} vs. ${extraData.keys}")
 
             // Important to do this check after extra data check since config mismatch could also lead to this validation error
-            checkPrimaryField && !header.checkPrimaryExtraHeader(subjects) ->
+            !skipExtraDataValidation.contains(PRIMARY_HEADER_KEY) && checkPrimaryField && !header.checkPrimaryExtraHeader(subjects) ->
                 ValidationResult(ValidationResult.Result.INVALID_PRIMARY, "Primary extra header field does not contain a signer public key, value is: ${header.extraData[PRIMARY_HEADER_KEY]}")
 
             else -> basicResult // = "OK"
