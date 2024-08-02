@@ -231,7 +231,7 @@ object ImporterExporter : KLogging() {
                 BLOCKCHAIN_RID_TAG to blockchainRid.toHex()
         ) {
             logger.info("Importing blockchain from ${configurationsFile.toAbsolutePath()} and ${blocksFile.toAbsolutePath()}...")
-            val result = importBlocks(blocksFile, logNBlocks, storage, chainId, blockchainRid, nodeKeyPair, cryptoSystem, skipPrimaryFieldValidation)
+            val result = importBlocksFromFile(blocksFile, logNBlocks, storage, chainId, blockchainRid, nodeKeyPair, cryptoSystem, skipPrimaryFieldValidation)
 
             logger.info {
                 if (result.numBlocks > 0) "Import of blocks to chain $chainId with blockchain RID ${blockchainRid.toHex()} completed: $result"
@@ -261,7 +261,7 @@ object ImporterExporter : KLogging() {
                 blockchainRid to heights
             }
 
-    private fun importBlocks(
+    private fun importBlocksFromFile(
             blocksFile: Path,
             logNBlocks: Int,
             storage: Storage,

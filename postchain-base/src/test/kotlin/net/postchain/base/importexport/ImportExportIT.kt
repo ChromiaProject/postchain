@@ -529,13 +529,12 @@ class ImportExportIT {
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
-            val expectedBlocks = blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
+            blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
                     listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
                             .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
                                     .addOperation(GTX_TEST_OP_NAME, gtv("bogus"))
                                     .finish().buildGtx()))))
             ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite = false, logNBlocks = 1)
-            expectedBlocks
         }
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
@@ -559,13 +558,12 @@ class ImportExportIT {
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
-            val expectedBlocks = blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
+            blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
                     listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
                             .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
                                     .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("rejectMe"))
                                     .finish().buildGtx()))))
             ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite = false, logNBlocks = 1)
-            expectedBlocks
         }
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
@@ -589,14 +587,13 @@ class ImportExportIT {
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
-            val expectedBlocks = blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
+            blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
                     listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
                             .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
                                     .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("valid"))
                                     .finish().buildGtx()))),
                     (0..1).map { KeyPairHelper.keyPair(it) })
             ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite = false, logNBlocks = 1)
-            expectedBlocks
         }
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
