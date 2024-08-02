@@ -96,7 +96,7 @@ message ExportBlocksRequest {
 }
 
 message ExportBlocksReply {
-    repeated bytes blockData = 1;
+  repeated bytes blockData = 1;
 }
 
 message AddBlockchainReplicaRequest {
@@ -139,6 +139,7 @@ message ImportBlockchainRequest {
   string configurationsFile = 3;
   string blocksFile = 4;
   bool incremental = 5;
+  bool skipPrimaryFieldValidation = 6;
 }
 
 message ImportBlockchainReply {
@@ -151,6 +152,7 @@ message ImportBlockchainReply {
 message ImportBlocksRequest {
   int64 chainId = 1;
   repeated bytes blockData = 2;
+  bool skipPrimaryFieldValidation = 3;
 }
 
 message ImportBlocksReply {

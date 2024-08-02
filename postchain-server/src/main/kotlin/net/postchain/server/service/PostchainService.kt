@@ -114,22 +114,31 @@ class PostchainService(private val nodeProvider: NodeProvider) {
             blocksSizeLimit
     )
 
-    fun importBlockchain(chainId: Long, blockchainRidData: ByteArray, configurationFile: Path, blocksFile: Path, incremental: Boolean): ImportResult =
-            ImporterExporter.importBlockchain(
-                    KeyPair(PubKey(postchainNode.appConfig.pubKey), PrivKey(postchainNode.appConfig.privKey)),
-                    postchainNode.postchainContext.cryptoSystem,
-                    postchainNode.postchainContext.sharedStorage,
-                    getChainId(blockchainRidData) ?: chainId,
-                    configurationsFile = configurationFile,
-                    blocksFile = blocksFile,
-                    incremental)
+    fun importBlockchain(
+            chainId: Long,
+            blockchainRidData: ByteArray,
+            configurationFile: Path,
+            blocksFile: Path,
+            incremental: Boolean,
+            skipPrimaryFieldValidation: Boolean
+    ): ImportResult = ImporterExporter.importBlockchain(
+            KeyPair(PubKey(postchainNode.appConfig.pubKey), PrivKey(postchainNode.appConfig.privKey)),
+            postchainNode.postchainContext.cryptoSystem,
+            postchainNode.postchainContext.sharedStorage,
+            getChainId(blockchainRidData) ?: chainId,
+            configurationsFile = configurationFile,
+            blocksFile = blocksFile,
+            incremental = incremental,
+            skipPrimaryFieldValidation = skipPrimaryFieldValidation
+    )
 
-    fun importBlocks(chainId: Long, blockData: List<Gtv>): LongRange = ImporterExporter.importBlocks(
+    fun importBlocks(chainId: Long, blockData: List<Gtv>, skipPrimaryFieldValidation: Boolean): LongRange = ImporterExporter.importBlocks(
             postchainNode.postchainContext.sharedStorage,
             chainId,
             blockData,
             KeyPair(PubKey(postchainNode.appConfig.pubKey), PrivKey(postchainNode.appConfig.privKey)),
-            postchainNode.postchainContext.cryptoSystem
+            postchainNode.postchainContext.cryptoSystem,
+            skipPrimaryFieldValidation
     )
 
     fun removeBlockchain(chainId: Long) {

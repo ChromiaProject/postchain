@@ -281,7 +281,7 @@ open class BaseBlockBuilder(
      *
      * @param blockHeader is the header for the block we are working on.
      */
-    override fun finalizeAndValidate(blockHeader: BlockHeader, skipExtraDataValidation: Set<String>) {
+    override fun finalizeAndValidate(blockHeader: BlockHeader, skipValidationFields: Set<String>) {
         if (specialTxHandler.needsSpecialTransaction(End) && !haveSpecialEndTransaction)
             throw BadBlockException("End special transaction is missing")
         val defaultExtraData = mutableMapOf<String, Gtv>()
@@ -290,7 +290,7 @@ open class BaseBlockBuilder(
             defaultExtraData[PRIMARY_HEADER_KEY] = primaryHeader
         }
         val extraData = finalizeExtensions(defaultExtraData)
-        val validationResult = validateBlockHeader(blockHeader, extraData, skipExtraDataValidation)
+        val validationResult = validateBlockHeader(blockHeader, extraData, skipValidationFields)
         when (validationResult.result) {
             OK -> {
                 store.finalizeBlock(bctx, blockHeader)
@@ -360,7 +360,7 @@ open class BaseBlockBuilder(
     /**
      * (Note: don't call this. We only keep this as a public function for legacy tests to work)
      */
-    internal fun validateBlockHeader(blockHeader: BlockHeader, extraData: Map<String, Gtv> = mapOf(), skipExtraDataValidation: Set<String> = emptySet()): ValidationResult {
+    internal fun validateBlockHeader(blockHeader: BlockHeader, extraData: Map<String, Gtv> = mapOf(), skipValidationFields: Set<String> = emptySet()): ValidationResult {
         val nrOfDependencies = blockchainDependencies?.all()?.size ?: 0
         return GenericBlockHeaderValidator.advancedValidateAgainstKnownBlocks(
                 blockHeader,
@@ -374,7 +374,7 @@ open class BaseBlockBuilder(
                 extraData,
                 subjects,
                 myPubKey != null,
-                skipExtraDataValidation
+                skipValidationFields
         )
     }
 

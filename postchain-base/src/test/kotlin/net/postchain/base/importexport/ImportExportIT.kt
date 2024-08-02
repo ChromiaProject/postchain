@@ -471,7 +471,7 @@ class ImportExportIT {
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             buildSimpleBlockchain(storage, 0)
             blockExports.forEach {
-                importBlocks(storage, chainId, it, KeyPairHelper.keyPair(0), cryptoSystem)
+                importBlocks(storage, chainId, it, KeyPairHelper.keyPair(0), cryptoSystem, false)
             }
         }
     }
@@ -614,11 +614,11 @@ class ImportExportIT {
     }
 
     private fun buildSimpleBlockchain(storage: Storage, blocks: Int) {
-        TestBlockchainBuilder(storage,configData0)
+        TestBlockchainBuilder(storage, configData0)
                 .buildBlockchainWithTestTransactions(
                         listOf(0L to configData0, 2L to configData2),
                         List(blocks) { listOf("transaction-$it") }
-        )
+                )
     }
 
     private fun assertBlockExportRangeSize(blockExports: List<List<Gtv>>, range: IntRange, size: Int) {
