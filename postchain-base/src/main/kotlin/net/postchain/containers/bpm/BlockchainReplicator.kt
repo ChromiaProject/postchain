@@ -130,14 +130,14 @@ class BlockchainReplicator(
             while (currentHeight <= newBlocks.last) {
 
                 val blockCountLimit = newBlocks.last.toInt() - currentHeight.toInt() + 1
-                logger.info { "Replicate block range $currentHeight - ${newBlocks.last} with max block limit $blockCountLimit and size limit $MAX_PACKAGE_CONTENT_BYTES" }
+                logger.info { "Replicate block range $currentHeight..${newBlocks.last} with max block limit $blockCountLimit and size limit $MAX_PACKAGE_CONTENT_BYTES" }
 
                 val blocks = srcContainer.exportBlocks(chainId, currentHeight, blockCountLimit, MAX_PACKAGE_CONTENT_BYTES)
                 val blocksSize = blocks.sumOf { it.nrOfBytes() }
-                logger.info { "Exported ${blocks.size} blocks ($currentHeight - ${currentHeight + blocks.size - 1}, $blocksSize bytes) from source container/chain" }
+                logger.info { "Exported ${blocks.size} blocks ($currentHeight..${currentHeight + blocks.size - 1}, $blocksSize bytes) from source container/chain" }
 
                 val importUpToHeight = dstContainer.importBlocks(chainId, blocks)
-                logger.info { "Imported ${blocks.size} blocks to height ${importUpToHeight}to destination container/chain" }
+                logger.info { "Imported ${importUpToHeight - currentHeight + 1} blocks ($currentHeight..$importUpToHeight) to destination container/chain" }
 
                 currentHeight = importUpToHeight + 1
             }
