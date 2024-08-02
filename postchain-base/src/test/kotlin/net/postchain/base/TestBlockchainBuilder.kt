@@ -28,7 +28,8 @@ import net.postchain.gtx.GtxBuilder
 
 class TestBlockchainBuilder(
         val storage: Storage,
-        configData0: Gtv
+        configData0: Gtv,
+        val extraData: Map<String, Gtv> = emptyMap()
 ) {
     private val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configData0, ::sha256Digest)
     val cryptoSystem = Secp256K1CryptoSystem()
@@ -37,7 +38,7 @@ class TestBlockchainBuilder(
 
     // Build blocks with given list of test transactions (only name needed as input)
     fun buildBlockchainWithEmptyBlocks(configurations: List<Pair<Long, Gtv>>, blocks: Long,
-                                            witnesses: List<KeyPair> = (0..3).map { KeyPairHelper.keyPair(it) })
+                                       witnesses: List<KeyPair> = (0..3).map { KeyPairHelper.keyPair(it) })
             : List<Pair<BaseBlockHeader, List<Transaction>>> {
 
         val txs = (0 until blocks).map { listOf(buildTransaction("$it")) }
@@ -95,10 +96,12 @@ class TestBlockchainBuilder(
         val rootHash = GtvFactory.gtv(transactions.map { GtvFactory.gtv(it.getHash()) }).merkleHash(hashCalculator)
         val timestamp = 10000L + blockHeight
         var nextTransactionNumber = db.getLastTransactionNumber(ctx) + 1
-        val blockData =
-                InitialBlockData(blockchainRid, blockIID, ctx.chainID, prevBlockRID, blockHeight, timestamp, null)
-        val blockHeader = BaseBlockHeader.make(hashCalculator, blockData, rootHash, timestamp,
-                mapOf(CONFIG_HASH_EXTRA_HEADER to GtvFactory.gtv(GtvToBlockchainRidFactory.calculateBlockchainRid(configData, ::sha256Digest).data)))
+        val blockData = InitialBlockData(blockchainRid, blockIID, ctx.chainID, prevBlockRID, blockHeight, timestamp, null)
+        val extraData0: Map<String, Gtv> = buildMap {
+            putAll(extraData)
+            put(CONFIG_HASH_EXTRA_HEADER, GtvFactory.gtv(GtvToBlockchainRidFactory.calculateBlockchainRid(configData, ::sha256Digest).data))
+        }
+        val blockHeader = BaseBlockHeader.make(hashCalculator, blockData, rootHash, timestamp, extraData0)
         val blockEContext = BaseBlockEContext(
                 ctx,
                 height = 0,
