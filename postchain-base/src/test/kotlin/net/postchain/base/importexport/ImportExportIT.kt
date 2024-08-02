@@ -10,14 +10,17 @@ import net.postchain.StorageBuilder
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.TestBlockchainBuilder
+import net.postchain.base.configuration.KEY_ADD_PRIMARY_KEY_TO_HEADER
 import net.postchain.base.data.BaseBlockWitnessProvider
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.SQLDatabaseAccess
 import net.postchain.base.data.testDbConfig
+import net.postchain.base.extension.FAILED_CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.importexport.ImporterExporter.exportBlocks
 import net.postchain.base.importexport.ImporterExporter.importBlocks
 import net.postchain.base.withReadConnection
+import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.wrap
@@ -25,6 +28,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.configurations.GTXTestModule
 import net.postchain.configurations.GTX_TEST_OP_NAME
 import net.postchain.configurations.table_gtx_test_value
+import net.postchain.core.BadBlockException
 import net.postchain.core.Storage
 import net.postchain.core.Transaction
 import net.postchain.core.TxDetail
@@ -313,6 +317,61 @@ class ImportExportIT {
     }
 
     @Test
+    fun importBlocks_with_FailedConfigHash_and_MisconfiguredPrimaryField(@TempDir tempDir: Path) {
+        val configurationsFile = tempDir.resolve("configurations.gtv")
+        val blocksFile = tempDir.resolve("blocks.gtv")
+
+        // config requires `primary` to be added
+        val configData = configData0.run {
+            val config = asDict().toMutableMap()
+            config[KEY_ADD_PRIMARY_KEY_TO_HEADER] = gtv(true)
+            gtv(config)
+        }
+        val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configData, ::sha256Digest)
+        // but extraData doesn't contain `primary`
+        val extraData = mapOf(
+                FAILED_CONFIG_HASH_EXTRA_HEADER to gtv(BlockchainRid.buildRepeat(1))
+        )
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData, extraData)
+            testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData), listOf(listOf("tx1")))
+            ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite = false, logNBlocks = 1)
+        }
+
+        // Import fails due to the absence of the `primary` field
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            val e = assertThrows<BadBlockException> {
+                ImporterExporter.importBlockchain(
+                        KeyPairHelper.keyPair(0),
+                        cryptoSystem,
+                        storage,
+                        chainId,
+                        configurationsFile,
+                        blocksFile,
+                        logNBlocks = 1)
+            }
+            assertThat(e.message).isEqualTo("Primary extra header field does not contain a signer public key, value is: null")
+        }
+
+        // Import succeeds if `primary` validation is skipped
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            val importResult = ImporterExporter.importBlockchain(
+                    KeyPairHelper.keyPair(0),
+                    cryptoSystem,
+                    storage,
+                    chainId,
+                    configurationsFile,
+                    blocksFile,
+                    logNBlocks = 1,
+                    skipPrimaryFieldValidation = true)
+
+            assertThat(importResult).isEqualTo(
+                    ImportResult(fromHeight = 0, toHeight = 0, lastSkippedBlock = -1, firstImportedBlock = 0, numBlocks = 1, blockchainRid = blockchainRid)
+            )
+        }
+    }
+
+    @Test
     fun importIncremental(@TempDir tempDir: Path) {
         val (configsFile1, blocksFile1) = tempDir.resolve("configurations1.gtv") to tempDir.resolve("blocks1.gtv")
         val (configsFile2, blocksFile2) = tempDir.resolve("configurations2.gtv") to tempDir.resolve("blocks2.gtv")
@@ -471,7 +530,7 @@ class ImportExportIT {
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             buildSimpleBlockchain(storage, 0)
             blockExports.forEach {
-                importBlocks(storage, chainId, it, KeyPairHelper.keyPair(0), cryptoSystem)
+                importBlocks(storage, chainId, it, KeyPairHelper.keyPair(0), cryptoSystem, false)
             }
         }
     }
@@ -529,13 +588,12 @@ class ImportExportIT {
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
-            val expectedBlocks = blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
+            blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
                     listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
                             .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
                                     .addOperation(GTX_TEST_OP_NAME, gtv("bogus"))
                                     .finish().buildGtx()))))
             ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite = false, logNBlocks = 1)
-            expectedBlocks
         }
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
@@ -559,13 +617,12 @@ class ImportExportIT {
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
-            val expectedBlocks = blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
+            blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
                     listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
                             .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
                                     .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("rejectMe"))
                                     .finish().buildGtx()))))
             ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite = false, logNBlocks = 1)
-            expectedBlocks
         }
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
@@ -589,14 +646,13 @@ class ImportExportIT {
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
-            val expectedBlocks = blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
+            blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
                     listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
                             .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
                                     .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("valid"))
                                     .finish().buildGtx()))),
                     (0..1).map { KeyPairHelper.keyPair(it) })
             ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite = false, logNBlocks = 1)
-            expectedBlocks
         }
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
@@ -614,11 +670,11 @@ class ImportExportIT {
     }
 
     private fun buildSimpleBlockchain(storage: Storage, blocks: Int) {
-        TestBlockchainBuilder(storage,configData0)
+        TestBlockchainBuilder(storage, configData0)
                 .buildBlockchainWithTestTransactions(
                         listOf(0L to configData0, 2L to configData2),
                         List(blocks) { listOf("transaction-$it") }
-        )
+                )
     }
 
     private fun assertBlockExportRangeSize(blockExports: List<List<Gtv>>, range: IntRange, size: Int) {

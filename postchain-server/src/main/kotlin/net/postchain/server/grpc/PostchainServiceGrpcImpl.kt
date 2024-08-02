@@ -255,7 +255,8 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
                     request.blockchainRid.toByteArray(),
                     Path.of(request.configurationsFile),
                     Path.of(request.blocksFile),
-                    request.incremental
+                    request.incremental,
+                    request.skipPrimaryFieldValidation
             )
             responseObserver.onNext(ImportBlockchainReply.newBuilder()
                     .setFromHeight(importResult.fromHeight)
@@ -275,8 +276,11 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
 
     override fun importBlocks(request: ImportBlocksRequest, responseObserver: StreamObserver<ImportBlocksReply>) {
         try {
-            val importBlocks = postchainService.importBlocks(request.chainId, request.blockDataList
-                    .map { GtvDecoder.decodeGtv(it.toByteArray()) })
+            val importBlocks = postchainService.importBlocks(
+                    request.chainId,
+                    request.blockDataList.map { GtvDecoder.decodeGtv(it.toByteArray()) },
+                    request.skipPrimaryFieldValidation
+            )
 
             responseObserver.onNext(ImportBlocksReply.newBuilder()
                     .setMessage("OK")

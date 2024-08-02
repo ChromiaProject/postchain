@@ -11,6 +11,7 @@ import net.postchain.base.data.BaseBlockBuilder.Companion.PRIMARY_HEADER_KEY
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.BaseBlockWitnessProvider
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.extension.FAILED_CONFIG_HASH_EXTRA_HEADER
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.BadBlockException
@@ -252,6 +253,35 @@ class BaseBlockBuilderValidationTest {
         val validation = bbb.validateBlockHeader(header)
 
         assertEquals(INVALID_PRIMARY, validation.result)
+    }
+
+    @Test
+    fun validateBlockHeader_skip_validation_for_some_fields() {
+        val timestamp = 100L
+        val blockData = InitialBlockData(myBlockchainRid, 2, 2, empty32Bytes, 1, timestamp, null)
+
+        // Provide a wrong primary
+        val extraData = mapOf(
+                "correct_field" to gtv(true),
+                PRIMARY_HEADER_KEY to gtv(pubKey(1))
+        )
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, rootHash, timestamp, extraData)
+        bbb.bctx = bctx
+        bbb.initialBlockData = blockData
+
+        // Provide a wrong expected primary and unexpected field
+        val expectedExtraData = mapOf(
+                "correct_field" to gtv(true),
+                PRIMARY_HEADER_KEY to gtv(pubKey(1)),
+                FAILED_CONFIG_HASH_EXTRA_HEADER to gtv(BlockchainRid.ZERO_RID)
+        )
+
+        // validate ignoring `primary` and `failed_config_hash`
+        val validation = bbb.validateBlockHeader(header, expectedExtraData, setOf(
+                PRIMARY_HEADER_KEY, FAILED_CONFIG_HASH_EXTRA_HEADER
+        ))
+
+        assertEquals(OK, validation.result)
     }
 
     private fun buildBaseBlockBuilder(sth: SpecialTransactionHandler, suppressSpecialTransactionValidation: Boolean, maxBlockFutureTime: Long = -1) =

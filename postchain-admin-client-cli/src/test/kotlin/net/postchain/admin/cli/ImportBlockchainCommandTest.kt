@@ -26,7 +26,7 @@ class ImportBlockchainCommandTest : PostchainServiceCommandTestBase() {
 
     @BeforeEach
     fun beforeEach() {
-        doReturn(importResult).whenever(postchainService).importBlockchain(anyLong(), anyOrNull(), anyOrNull(), anyOrNull(), anyBoolean())
+        doReturn(importResult).whenever(postchainService).importBlockchain(anyLong(), anyOrNull(), anyOrNull(), anyOrNull(), anyBoolean(), anyBoolean())
         command = ImportBlockchainCommand { _, _ -> setupChannel(postchainService) }
         command.context { console = testConsole }
     }
@@ -44,7 +44,7 @@ class ImportBlockchainCommandTest : PostchainServiceCommandTestBase() {
                 )
         )
         // verify
-        verify(postchainService).importBlockchain(0, BlockchainRid.buildFromHex(brid).data, Path.of(configurationsFile), Path.of(blocksFile), true)
+        verify(postchainService).importBlockchain(0, BlockchainRid.buildFromHex(brid).data, Path.of(configurationsFile), Path.of(blocksFile), incremental = true, skipPrimaryFieldValidation = false)
         testConsole.assertContains("Import of 8 blocks 1..10 to chain $brid completed")
     }
 
@@ -61,7 +61,7 @@ class ImportBlockchainCommandTest : PostchainServiceCommandTestBase() {
                 )
         )
         // verify
-        verify(postchainService).importBlockchain(chainId, ByteArray(0), Path.of(configurationsFile), Path.of(blocksFile), true)
+        verify(postchainService).importBlockchain(chainId, ByteArray(0), Path.of(configurationsFile), Path.of(blocksFile), incremental = true, skipPrimaryFieldValidation = false)
         testConsole.assertContains("Import of 8 blocks 1..10 to chain $brid completed")
     }
 }

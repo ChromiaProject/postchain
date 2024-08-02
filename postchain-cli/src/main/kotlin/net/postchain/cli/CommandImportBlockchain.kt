@@ -34,6 +34,9 @@ class CommandImportBlockchain : CliktCommand(name = "import", help = "Import a b
     private val incremental by option("--incremental", help = "Import new configurations and blocks to existing blockchain")
             .flag()
 
+    private val skipPrimaryFieldValidation by option("--skip-primary-field-validation", help = "Skips the 'primary' extra field validation during the import of blocks")
+            .flag()
+
     private val chainRef by mutuallyExclusiveOptions(
             chainIdOption(),
             blockchainRidOption(),
@@ -51,7 +54,9 @@ class CommandImportBlockchain : CliktCommand(name = "import", help = "Import a b
                     chainId,
                     configurationsFile,
                     blocksFile,
-                    incremental)
+                    incremental = incremental,
+                    skipPrimaryFieldValidation = skipPrimaryFieldValidation
+            )
         }
     }
 }
