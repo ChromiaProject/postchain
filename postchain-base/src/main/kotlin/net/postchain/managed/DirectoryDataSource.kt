@@ -1,6 +1,7 @@
 package net.postchain.managed
 
 import net.postchain.common.BlockchainRid
+import net.postchain.containers.bpm.ContainerImageInfo
 import net.postchain.containers.bpm.ContainerResourceLimits
 
 interface DirectoryDataSource : ManagedNodeDataSource {
@@ -26,4 +27,9 @@ interface DirectoryDataSource : ManagedNodeDataSource {
      * What is the resource limits for this container?
      */
     fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits
+
+    /**
+     * Returns the Docker image required to run subnode for container.
+     */
+    fun getImageForContainer(containerId: String): ContainerImageInfo?
 }

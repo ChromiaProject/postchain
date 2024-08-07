@@ -37,7 +37,23 @@ class ContainerJobHandler(
         private val createBlockchainProcess: (Chain, PostchainContainer) -> ContainerBlockchainProcess?
 ) {
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        internal fun getDefaultContainerImage(config: ContainerNodeConfig): String =
+                when (val expectedTag = config.imageVersionTag) {
+                    "" -> config.containerImage
+                    else -> {
+                        when (val actualTag = config.containerImage.substringAfter(":", "")) {
+                            "" -> config.containerImage.substringBefore(":") + ":" + expectedTag
+                            else -> {
+                                if (expectedTag != actualTag) {
+                                    logger.warn { "Container image version tag ($actualTag) is not equal to the environment image version tag ($expectedTag)" }
+                                }
+                                config.containerImage
+                            }
+                        }
+                    }
+                }
+    }
 
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
 
@@ -168,10 +184,11 @@ class ContainerJobHandler(
     }
 
     private fun createDockerContainer(psContainer: PostchainContainer, containerName: ContainerName): String {
-        val config = ContainerConfigFactory.createConfig(fileSystem, appConfig, containerNodeConfig, psContainer)
-        val imageName = ContainerConfigFactory.getContainerImage(containerNodeConfig)
-        logger.debug("Pulling image $imageName...")
-        dockerClient.pull(imageName)
+        val image = directoryDataSource().getImageForContainer(psContainer.containerName.directoryContainer)?.let { "${it.name}@${it.digest}" }
+                ?: getDefaultContainerImage(containerNodeConfig)
+        logger.debug("Pulling image $image...")
+        dockerClient.pull(image)
+        val config = ContainerConfigFactory.createConfig(fileSystem, appConfig, containerNodeConfig, psContainer, image)
         return dockerClient.createContainer(config, containerName.toString()).id()!!.also {
             logger.debug { dcLog(containerName, "created", psContainer) }
         }
