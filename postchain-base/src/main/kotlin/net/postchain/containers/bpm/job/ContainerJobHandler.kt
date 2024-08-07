@@ -169,6 +169,9 @@ class ContainerJobHandler(
 
     private fun createDockerContainer(psContainer: PostchainContainer, containerName: ContainerName): String {
         val config = ContainerConfigFactory.createConfig(fileSystem, appConfig, containerNodeConfig, psContainer)
+        val imageName = ContainerConfigFactory.getContainerImage(containerNodeConfig)
+        logger.debug("Pulling image $imageName...")
+        dockerClient.pull(imageName)
         return dockerClient.createContainer(config, containerName.toString()).id()!!.also {
             logger.debug { dcLog(containerName, "created", psContainer) }
         }
