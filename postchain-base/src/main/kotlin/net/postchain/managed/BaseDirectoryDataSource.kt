@@ -60,9 +60,11 @@ open class BaseDirectoryDataSource(
     override fun getImageForContainer(containerId: String): ContainerImageInfo? {
         if (nmApiVersion < 20) return null
 
-        return query(
+        val response = query(
                 "nm_get_container_image",
                 buildArgs("name" to gtv(containerId))
-        ).toObject<ContainerImageInfo>()
+        )
+        return if (response.isNull()) null else
+            response.toObject<ContainerImageInfo>()
     }
 }
