@@ -3,9 +3,11 @@ package net.postchain.managed
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
+import net.postchain.containers.bpm.ContainerImageInfo
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.resources.ResourceLimitFactory
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.mapper.toObject
 import net.postchain.managed.query.QueryRunner
 
 open class BaseDirectoryDataSource(
@@ -53,5 +55,16 @@ open class BaseDirectoryDataSource(
         }.toTypedArray()
 
         return ContainerResourceLimits(*resourceLimits)
+    }
+
+    override fun getImageForContainer(containerId: String): ContainerImageInfo? {
+        if (nmApiVersion < 20) return null
+
+        val response = query(
+                "nm_get_container_image",
+                buildArgs("name" to gtv(containerId))
+        )
+        return if (response.isNull()) null else
+            response.toObject<ContainerImageInfo>()
     }
 }

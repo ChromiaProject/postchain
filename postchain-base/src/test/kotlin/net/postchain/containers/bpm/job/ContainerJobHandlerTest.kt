@@ -1,4 +1,4 @@
-package net.postchain.containers.bpm
+package net.postchain.containers.bpm.job
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
@@ -9,7 +9,7 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 
-class ContainerConfigFactoryTest {
+class ContainerJobHandlerTest {
 
     @Test
     fun `image version tag is not set`() {
@@ -19,9 +19,9 @@ class ContainerConfigFactoryTest {
         doReturn("chromaway/chromia-subnode:3.13.1")
                 .doReturn("chromaway/chromia-subnode").whenever(config).containerImage
 
-        assertThat(ContainerConfigFactory.getContainerImage(config))
+        assertThat(ContainerJobHandler.getDefaultContainerImage(config))
                 .isEqualTo("chromaway/chromia-subnode:3.13.1")
-        assertThat(ContainerConfigFactory.getContainerImage(config))
+        assertThat(ContainerJobHandler.getDefaultContainerImage(config))
                 .isEqualTo("chromaway/chromia-subnode")
     }
 
@@ -33,7 +33,7 @@ class ContainerConfigFactoryTest {
             on { imageVersionTag } doReturn "3.13.1"
         }
 
-        val actual = ContainerConfigFactory.getContainerImage(config)
+        val actual = ContainerJobHandler.getDefaultContainerImage(config)
         assertThat(actual).isEqualTo(subnodeImage)
     }
 
@@ -45,8 +45,8 @@ class ContainerConfigFactoryTest {
             on { imageVersionTag } doReturn "3.13.2"
         }
 
-        val appender = createLogCaptor(ContainerConfigFactory::class.java, "List")
-        val actual = ContainerConfigFactory.getContainerImage(config)
+        val appender = createLogCaptor(ContainerJobHandler::class.java, "List")
+        val actual = ContainerJobHandler.getDefaultContainerImage(config)
         assertThat(actual).isEqualTo(subnodeImage)
         assertThat(appender.events.first().message.toString()).isEqualTo(
                 "Container image version tag (3.13.1) is not equal to the environment image version tag (3.13.2)"
@@ -61,7 +61,7 @@ class ContainerConfigFactoryTest {
             on { imageVersionTag } doReturn "3.13.2"
         }
 
-        val actual = ContainerConfigFactory.getContainerImage(config)
+        val actual = ContainerJobHandler.getDefaultContainerImage(config)
         val expected = subnodeImage + ":" + config.imageVersionTag
         assertThat(actual).isEqualTo(expected)
     }

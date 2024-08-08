@@ -17,7 +17,7 @@ object ContainerConfigFactory : KLogging() {
 
     private const val REMOTE_DEBUG_PORT = 8000
 
-    fun createConfig(fs: FileSystem, appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer): ContainerConfig {
+    fun createConfig(fs: FileSystem, appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer, image: String): ContainerConfig {
         // Container volumes
         val volumes = mutableListOf<HostConfig.Bind>()
 
@@ -160,29 +160,13 @@ object ContainerConfigFactory : KLogging() {
                 .apply {
                     containerNodeConfig.subnodeUser?.let { user(it) }
                 }
-                .image(getContainerImage(containerNodeConfig))
+                .image(image)
                 .hostConfig(hostConfig)
                 .exposedPorts(portBindings.keys)
                 .env(createNodeConfigEnv(appConfig, containerNodeConfig, container))
                 .labels(containerNodeConfig.labels + (POSTCHAIN_MASTER_PUBKEY to containerNodeConfig.masterPubkey))
                 .build()
     }
-
-    fun getContainerImage(config: ContainerNodeConfig): String =
-            when (val expectedTag = config.imageVersionTag) {
-                "" -> config.containerImage
-                else -> {
-                    when (val actualTag = config.containerImage.substringAfter(":", "")) {
-                        "" -> config.containerImage.substringBefore(":") + ":" + expectedTag
-                        else -> {
-                            if (expectedTag != actualTag) {
-                                logger.warn { "Container image version tag ($actualTag) is not equal to the environment image version tag ($expectedTag)" }
-                            }
-                            config.containerImage
-                        }
-                    }
-                }
-            }
 
     private fun createNodeConfigEnv(appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer) = buildList {
         val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
