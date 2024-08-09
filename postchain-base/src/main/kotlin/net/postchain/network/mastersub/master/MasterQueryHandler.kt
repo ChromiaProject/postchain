@@ -92,9 +92,9 @@ class MasterQueryHandler(
                         {
                             masterSubQueryManager.blocksFromHeight(
                                     message.targetBlockchainRid,
-                                message.fromHeight,
-                                message.limit,
-                                message.txHashesOnly)
+                                    message.fromHeight,
+                                    message.limit,
+                                    message.txHashesOnly)
                         }
                 )
             }

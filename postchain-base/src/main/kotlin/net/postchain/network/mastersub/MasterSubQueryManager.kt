@@ -9,6 +9,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.network.mastersub.protocol.MsBlockAtHeightRequest
 import net.postchain.network.mastersub.protocol.MsBlockAtHeightResponse
 import net.postchain.network.mastersub.protocol.MsBlocksFromHeightRequest
+import net.postchain.network.mastersub.protocol.MsBlocksFromHeightResponse
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.protocol.MsQueryFailure
 import net.postchain.network.mastersub.protocol.MsQueryRequest
@@ -38,24 +39,24 @@ class MasterSubQueryManager(private val queryTimeoutMs: Long, private val messag
             }, "Unable to send query")
 
     fun blockAtHeight(targetBlockchainRid: BlockchainRid, height: Long): CompletionStage<BlockDetail?> =
-        sendRequest(targetBlockchainRid, { requestId ->
-            MsBlockAtHeightRequest(
-                    requestId,
-                    targetBlockchainRid,
-                    height
-            )
-        }, "Unable to send block at height query")
+            sendRequest(targetBlockchainRid, { requestId ->
+                MsBlockAtHeightRequest(
+                        requestId,
+                        targetBlockchainRid,
+                        height
+                )
+            }, "Unable to send block at height query")
 
     fun blocksFromHeight(targetBlockchainRid: BlockchainRid, fromHeight: Long, limit: Long, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> =
-        sendRequest(targetBlockchainRid, { requestId ->
-            MsBlocksFromHeightRequest(
-                    requestId,
-                    targetBlockchainRid,
-                    fromHeight,
-                    limit,
-                    txHashesOnly
-            )
-        }, "Unable to send blocks from height query")
+            sendRequest(targetBlockchainRid, { requestId ->
+                MsBlocksFromHeightRequest(
+                        requestId,
+                        targetBlockchainRid,
+                        fromHeight,
+                        limit,
+                        txHashesOnly
+                )
+            }, "Unable to send blocks from height query")
 
     private fun <T> sendRequest(targetBlockchainRid: BlockchainRid?, requestProducer: (requestId: Long) -> MsMessage, errorMessage: String): CompletionStage<T> {
         val requestId = requestCounter.incrementAndGet()
@@ -85,6 +86,11 @@ class MasterSubQueryManager(private val queryTimeoutMs: Long, private val messag
             is MsBlockAtHeightResponse -> {
                 outstandingRequests[message.requestId]?.complete(message.block)
                         ?: logger.debug { "Got BlockAtHeightResponse for unknown requestId: ${message.requestId}" }
+            }
+
+            is MsBlocksFromHeightResponse -> {
+                outstandingRequests[message.requestId]?.complete(message.blocks)
+                        ?: logger.debug { "Got BlocksFromHeightResponse for unknown requestId: ${message.requestId}" }
             }
 
             is MsQueryFailure -> {
