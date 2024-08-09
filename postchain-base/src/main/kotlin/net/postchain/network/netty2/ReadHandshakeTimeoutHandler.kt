@@ -1,12 +1,13 @@
 package net.postchain.network.netty2
 
+import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.handler.timeout.ReadTimeoutException
 import java.util.concurrent.TimeUnit
 
 class ReadHandshakeTimeoutHandler(
-        private val connectionConfig: ConnectionConfig,
+        connectionConfig: ConnectionConfig,
         private val isHandshaked: () -> Boolean
 ) : ChannelInboundHandlerAdapter() {
 
@@ -20,7 +21,10 @@ class ReadHandshakeTimeoutHandler(
     }
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
-        if (closed) return
+        if (closed) {
+            (msg as ByteBuf).release()
+            return
+        }
 
         if (isHandshaked()) {
             super.channelRead(ctx, msg)
@@ -28,6 +32,7 @@ class ReadHandshakeTimeoutHandler(
         }
 
         if (ticksInNanos() - channelActivatedTime > timeoutNanos) {
+            (msg as ByteBuf).release()
             ctx?.close()
             closed = true
             ctx?.fireExceptionCaught(ReadTimeoutException("Handshake timeout"))
