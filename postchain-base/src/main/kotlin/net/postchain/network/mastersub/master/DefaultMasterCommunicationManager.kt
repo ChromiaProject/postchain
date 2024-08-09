@@ -13,6 +13,7 @@ import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.MsBlockAtHeightResponse
+import net.postchain.network.mastersub.protocol.MsBlocksFromHeightResponse
 import net.postchain.network.mastersub.protocol.MsCommittedBlockMessage
 import net.postchain.network.mastersub.protocol.MsConnectedPeersMessage
 import net.postchain.network.mastersub.protocol.MsDataMessage
@@ -109,7 +110,7 @@ open class DefaultMasterCommunicationManager(
                             }
                         }
 
-                        is MsQueryResponse, is MsBlockAtHeightResponse, is MsQueryFailure -> {
+                        is MsQueryResponse, is MsBlockAtHeightResponse, is MsBlocksFromHeightResponse, is MsQueryFailure -> {
                             masterConnectionManager.masterSubQueryManager.onMessage(message)
                         }
                     }
