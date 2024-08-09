@@ -184,7 +184,7 @@ class ContainerJobHandler(
     }
 
     private fun createDockerContainer(psContainer: PostchainContainer, containerName: ContainerName): String {
-        val image = directoryDataSource().getImageForContainer(psContainer.containerName.directoryContainer)?.let { "${it.name}@${it.digest}" }
+        val image = directoryDataSource().getImageForContainer(psContainer.containerName.directoryContainer)?.let { "${it.url}@${it.digest}" }
                 ?: getDefaultContainerImage(containerNodeConfig)
         logger.debug("Pulling image $image...")
         dockerClient.pull(image)
