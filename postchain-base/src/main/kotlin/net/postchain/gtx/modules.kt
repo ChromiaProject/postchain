@@ -137,7 +137,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
 
     override fun initializeDB(ctx: EContext) {
         for (module in modules) {
-            logger.debug { "Initialize DB for module: $module" } // TODO: Should probably write the module name here
+            logger.debug { "Initialize DB for module: $module" }
             module.initializeDB(ctx)
         }
         val _wrappingOpMap = mutableMapOf<String, GTXModule>()
@@ -147,15 +147,15 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         for (m in modules) {
             for (op in m.getOperations()) {
                 if (m is OperationWrapper && op in m.getWrappingOperations()) {
-                    if (!allowOverrides && op in _wrappingOpMap) throw UserMistake("Duplicated wrapping operation")
+                    if (!allowOverrides && op in _wrappingOpMap) throw UserMistake("Duplicated wrapping operation: $op")
                     _wrappingOpMap[op] = m
                 } else {
-                    if (!allowOverrides && op in _opmap) throw UserMistake("Duplicated operation")
+                    if (!allowOverrides && op in _opmap) throw UserMistake("Duplicated operation: $op")
                     _opmap[op] = m
                 }
             }
             for (q in m.getQueries()) {
-                if (!allowOverrides && q in _qmap) throw UserMistake("Duplicated query")
+                if (!allowOverrides && q in _qmap) throw UserMistake("Duplicated query: $q")
                 _qmap[q] = m
             }
             _stxs.addAll(m.getSpecialTxExtensions())
