@@ -14,6 +14,7 @@ interface PostchainContainer {
     var state: ContainerState
     var containerId: String?
     val resourceLimits: ContainerResourceLimits
+    val image: ContainerImageInfo?
     val containerPortMapping: MutableMap<Int, Int>
     val readOnly: AtomicBoolean
 
@@ -35,6 +36,9 @@ interface PostchainContainer {
 
     /** @return `true` if there are updates */
     fun updateResourceLimits(): Boolean
+
+    /** @return `true` if there are updates */
+    fun updateImage(): Boolean
 
     /** @return `false` if a limit is reached and state has changed */
     fun checkResourceLimits(fileSystem: FileSystem): Boolean
