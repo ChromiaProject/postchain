@@ -60,14 +60,26 @@ class ContainerHealthcheckHandler(
     private fun checkContainer(cname: ContainerName, containerIsRunning: Boolean, fixedContainers: MutableSet<ContainerName>) {
         val psContainer = postchainContainers()[cname]!!
         val currentResourceLimits = psContainer.resourceLimits
+        val currentImage = psContainer.image
         val updatedResourceLimits = try {
             psContainer.updateResourceLimits()
         } catch (e: UserMistake) {
             logger.warn { "Unable to fetch current container limits for container '${psContainer.containerName.directoryContainer}' from directory chain: ${e.message}" }
             false
         }
-        val chainsToTerminate = if (updatedResourceLimits) {
-            logger.info { "Resource limits for container ${cname.name} have been changed from $currentResourceLimits to ${psContainer.resourceLimits} and will be restarted" }
+        val updatedImage = try {
+            psContainer.updateImage()
+        } catch (e: UserMistake) {
+            logger.warn { "Unable to fetch current image for container '${psContainer.containerName.directoryContainer}' from directory chain: ${e.message}" }
+            false
+        }
+        val chainsToTerminate = if (updatedResourceLimits || updatedImage) {
+            if (updatedResourceLimits) {
+                logger.info { "Resource limits for container ${cname.name} have been changed from $currentResourceLimits to ${psContainer.resourceLimits}, container will be restarted" }
+            }
+            if (updatedImage) {
+                logger.info { "Image for container ${cname.name} has been changed from $currentImage to ${psContainer.image}, container will be restarted" }
+            }
             fixedContainers.add(cname)
             psContainer.reset()
             if (containerIsRunning) dockerClient.stopContainer(cname.name, 10)

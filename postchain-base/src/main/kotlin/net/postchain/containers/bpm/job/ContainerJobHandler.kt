@@ -171,6 +171,7 @@ class ContainerJobHandler(
         logger.debug { dcLog(containerName, "not found", null) }
         updateResourceLimits(psContainer)
         psContainer.checkResourceLimits(fileSystem)
+        psContainer.updateImage()
         val containerId = createDockerContainer(psContainer, containerName)
         dockerClient.startContainer(containerId)
         psContainer.containerId = containerId
@@ -184,7 +185,7 @@ class ContainerJobHandler(
     }
 
     private fun createDockerContainer(psContainer: PostchainContainer, containerName: ContainerName): String {
-        val containerImageInfo = directoryDataSource().getImageForContainer(psContainer.containerName.directoryContainer)
+        val containerImageInfo = psContainer.image
         val image = if (containerImageInfo != null) {
             val imageSpec = "${containerImageInfo.url}@${containerImageInfo.digest}"
             logger.debug("Pulling image $imageSpec...")
