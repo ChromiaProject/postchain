@@ -797,6 +797,13 @@ paths:
       summary: Fetch height of next block to be built/synced
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
+        - name: container
+          description: Directory Chain container name. Used during blockchain migration when source and destination containers run on a node.
+          in: query
+          required: false
+          schema:
+            type: string
+          example: my_container
       responses:
         200:
           description: OK
