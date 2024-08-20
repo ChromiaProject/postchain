@@ -23,6 +23,7 @@ class DefaultContainerBlockchainProcess(
         override val chainId: Long,
         override val blockchainRid: BlockchainRid,
         override val blockchainState: BlockchainState,
+        override val directoryContainer: String,
         private val communicationManager: MasterCommunicationManager
 ) : ContainerBlockchainProcess {
 

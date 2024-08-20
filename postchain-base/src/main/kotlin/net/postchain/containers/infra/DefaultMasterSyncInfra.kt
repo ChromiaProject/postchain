@@ -58,6 +58,7 @@ open class DefaultMasterSyncInfra(
                 chainId,
                 blockchainRid,
                 blockchainState,
+                targetContainer.containerName.directoryContainer,
                 communicationManager
         )
     }

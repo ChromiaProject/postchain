@@ -59,10 +59,10 @@ interface BlockchainProcess {
     fun isProcessRunning(): Boolean
 }
 
-// TODO: [POS-358]: Should we add chainId and brid to BlockchainProcess?
 interface RemoteBlockchainProcess {
     val chainId: Long
     val blockchainRid: BlockchainRid
+    val directoryContainer: String
     val restApiEnabled: Boolean
     val restApiUrl: String
 }

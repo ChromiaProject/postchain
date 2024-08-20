@@ -25,6 +25,7 @@ import net.postchain.api.rest.blockchainNodeStateBody
 import net.postchain.api.rest.blocksBody
 import net.postchain.api.rest.configurationInBody
 import net.postchain.api.rest.configurationOutBody
+import net.postchain.api.rest.containerQuery
 import net.postchain.api.rest.controller.http4k.NettyWithCustomWorkerGroup
 import net.postchain.api.rest.controller.http4k.expires
 import net.postchain.api.rest.emptyBody
@@ -173,22 +174,23 @@ class RestApi(
         private val chainIidPattern = Regex("iid_([0-9]+)")
     }
 
-    private val models = mutableMapOf<BlockchainRid, Pair<ChainModel, Semaphore>>()
+    private val models = mutableMapOf<Pair<BlockchainRid, String>, Pair<ChainModel, Semaphore>>() // (blockchainRid, container) -> (chainModel, semaphore)
     private val bridByIID = mutableMapOf<Long, BlockchainRid>()
 
-    override fun attachModel(blockchainRid: BlockchainRid, chainModel: ChainModel) {
-        models[blockchainRid] = chainModel to Semaphore(if (chainRequestConcurrency < 0) Int.MAX_VALUE else chainRequestConcurrency)
+    override fun attachModel(blockchainRid: BlockchainRid, chainModel: ChainModel, container: String) {
+        models[blockchainRid to container] = chainModel to Semaphore(if (chainRequestConcurrency < 0) Int.MAX_VALUE else chainRequestConcurrency)
         bridByIID[chainModel.chainIID] = blockchainRid
     }
 
-    override fun detachModel(blockchainRid: BlockchainRid) {
-        val model = models.remove(blockchainRid)
+    override fun detachModel(blockchainRid: BlockchainRid, container: String) {
+        val model = models.remove(blockchainRid to container)
         if (model != null) {
             bridByIID.remove(model.first.chainIID)
         } else throw ProgrammerMistake("Blockchain $blockchainRid not attached")
     }
 
-    override fun retrieveModel(blockchainRid: BlockchainRid): ChainModel? = models[blockchainRid]?.first
+    override fun retrieveModels(blockchainRid: BlockchainRid): List<ChainModel> =
+            models.filterKeys { it.first == blockchainRid }.map { it.value.first }
 
     fun actualPort(): Int = server.port()
 
@@ -197,7 +199,8 @@ class RestApi(
             val ref = request.path(BLOCKCHAIN_RID)?.let { parseBlockchainRid(it) }
             if (ref != null) {
                 val blockchainRid = resolveBlockchain(ref)
-                val (chainModel, semaphore) = chainModel(blockchainRid)
+                val container = containerQuery(request)
+                val (chainModel, semaphore) = chainModel(blockchainRid, container)
                 if (failOnNonLive && !chainModel.live) throw UnavailableException("Blockchain is unavailable")
                 withLoggingContext(
                         BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
@@ -205,7 +208,8 @@ class RestApi(
                     if (semaphore.tryAcquire()) {
                         try {
                             if (subnodeHttpRedirect && chainModel is ExternalModel) {
-                                Response(TEMPORARY_REDIRECT).header("Location", chainModel.path + request.uri.toString().substring(basePath.length))
+                                val request0 = request.removeQuery("container")
+                                Response(TEMPORARY_REDIRECT).header("Location", chainModel.path + request0.uri.toString().substring(basePath.length))
                             } else {
                                 next(request.with(chainModelKey of chainModel, blockchainRidKey of blockchainRid))
                             }
@@ -256,7 +260,7 @@ class RestApi(
 
                 is ExternalModel -> {
                     logger.trace { "External REST API model found: $chainModel" }
-                    chainModel(request)
+                    chainModel(request.removeQuery("container"))
                 }
             }
             if (logger.isDebugEnabled) {
@@ -781,8 +785,15 @@ class RestApi(
             txAction(model, txRid)
                     ?: throw NotFoundError("Can't find transaction with RID: $txRid")
 
-    private fun chainModel(blockchainRid: BlockchainRid): Pair<ChainModel, Semaphore> = models[blockchainRid]
-            ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRid")
+    private fun chainModel(blockchainRid: BlockchainRid, container: String): Pair<ChainModel, Semaphore> {
+        return if (container.isEmpty()) {
+            models.asSequence().firstOrNull { it.key.first == blockchainRid }?.value
+                    ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRid")
+        } else {
+            models[blockchainRid to container]
+                    ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRid in the container '$container'")
+        }
+    }
 
     /**
      * We allow two different syntax for finding the blockchain.

@@ -214,7 +214,6 @@ class ContainerManagedBlockchainProcessManager(
                             if (completedReplicationDetails[info.rid]?.first == srcChain) {
                                 startSubnodeChains(bcInfo, listOf(dstChain), subnodeLaunched[chains.first().chainId])
                             } else {
-                                dstChain.restApiEnabled = false
                                 startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
                                 blockchainReplicators.getOrPut(chain.chainId) {
                                     BlockchainReplicator(info.rid, srcChain, dstChain, info.finalHeight, directoryDataSource, ::findPostchainContainer).also {
