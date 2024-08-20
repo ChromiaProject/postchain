@@ -164,7 +164,7 @@ class PostchainTestNode(
 
     fun getRestApiModel(blockchainRid: BlockchainRid): Model? {
         return ((blockchainInfrastructure as BaseBlockchainInfrastructure).apiInfrastructure as BaseApiInfrastructure)
-                .restApi?.retrieveModels(blockchainRid) as Model?
+                .restApi?.retrieveModels(blockchainRid)?.firstOrNull() as Model?
     }
 
     fun overrideRestApiModel(blockchainRid: BlockchainRid, chainModel: Model) {
