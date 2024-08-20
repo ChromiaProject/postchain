@@ -798,7 +798,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: container
-          description: Directory Chain container name. Used during blockchain migration when source and destination containers run on a node.
+          description: Container name. Used during blockchain migration when source and destination containers run on a node.
           in: query
           required: false
           schema:
