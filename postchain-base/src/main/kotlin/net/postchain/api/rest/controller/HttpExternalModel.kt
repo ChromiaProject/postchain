@@ -14,7 +14,8 @@ import org.http4k.core.Uri
 data class HttpExternalModel(
         val basePath: String,
         override val path: String,
-        override val chainIID: Long
+        override val chainIID: Long,
+        override val directoryContainer: String
 ) : ExternalModel {
 
     companion object : KLogging()

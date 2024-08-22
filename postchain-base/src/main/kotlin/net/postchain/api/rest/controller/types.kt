@@ -27,6 +27,7 @@ sealed interface ChainModel {
 }
 
 interface ExternalModel : ChainModel, HttpHandler {
+    val directoryContainer: String
     val path: String
     override fun invoke(request: Request): Response
 }

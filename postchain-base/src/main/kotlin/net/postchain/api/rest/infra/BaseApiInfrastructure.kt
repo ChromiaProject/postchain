@@ -64,7 +64,7 @@ open class BaseApiInfrastructure(
     }
 
     override fun restartProcess(process: BlockchainProcess) {
-        restApi?.retrieveModel(bridOf(process))?.live = false
+        restApi?.retrieveModels(bridOf(process))?.forEach { it.live = false }
     }
 
     override fun connectProcess(process: BlockchainProcess) {

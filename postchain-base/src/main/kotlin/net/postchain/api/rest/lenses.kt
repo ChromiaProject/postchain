@@ -44,6 +44,7 @@ import org.http4k.lens.boolean
 import org.http4k.lens.httpBodyRoot
 import org.http4k.lens.int
 import org.http4k.lens.long
+import org.http4k.lens.nonEmptyString
 import org.http4k.lens.regex
 import org.http4k.lens.string
 import java.io.InputStream
@@ -78,6 +79,7 @@ val heightQuery = Query.long().map {
                 Invalid(Meta(false, "query", ParamMeta.IntegerParam, "height", "Height must be -1 (current height) or a non-negative integer"))))
 }.defaulted("height", -1)
 val signerQuery = Query.string().regex("([0-9a-fA-F]+)").optional("signer")
+val containerQuery = Query.string().defaulted("container", "")
 
 val prettyGson = JsonFactory.makePrettyJson()
 val dashedPrettyGson = JsonFactory.makeCustomJson()

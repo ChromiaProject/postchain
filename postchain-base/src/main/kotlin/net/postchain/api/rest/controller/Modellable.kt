@@ -9,16 +9,15 @@ interface Modellable {
     /**
      * Attaches a [chainModel] associated with key [blockchainRid]
      */
-    fun attachModel(blockchainRid: BlockchainRid, chainModel: ChainModel)
+    fun attachModel(blockchainRid: BlockchainRid, chainModel: ChainModel, container: String = "")
 
     /**
      * Detaches a model associated with key [blockchainRid]
      */
-    fun detachModel(blockchainRid: BlockchainRid)
+    fun detachModel(blockchainRid: BlockchainRid, container: String = "")
 
     /**
-     * Retrieves a model associated with key [blockchainRid]
+     * Retrieves models associated with key [blockchainRid]
      */
-    fun retrieveModel(blockchainRid: BlockchainRid): ChainModel?
-
+    fun retrieveModels(blockchainRid: BlockchainRid): List<ChainModel>
 }

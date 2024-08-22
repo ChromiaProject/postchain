@@ -48,7 +48,7 @@ class RestApiRedirectEndpointTest {
 
     @BeforeEach
     fun setup() {
-        model = HttpExternalModel(basePath, "http://localhost:${MockPostchainRestApi.port}", 1L)
+        model = HttpExternalModel(basePath, "http://localhost:${MockPostchainRestApi.port}", 1L, "")
         restApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
         httpRedirectRestApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC), subnodeHttpRedirect = true)
         apisToTest = listOf(restApi, httpRedirectRestApi)
