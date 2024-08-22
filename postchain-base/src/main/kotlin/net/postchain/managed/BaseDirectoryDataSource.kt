@@ -37,19 +37,20 @@ open class BaseDirectoryDataSource(
     }
 
     override fun getBlockchainContainersForNode(brid: BlockchainRid): List<String> {
-        if (nmApiVersion < 14) return emptyList()
-
-        return query(
-                "nm_get_blockchain_containers_for_node",
-                buildArgs("node_id" to gtv(appConfig.pubKeyByteArray), "blockchain_rid" to gtv(brid.data))
-        ).asArray().map { it.asString() }
+        return if (nmApiVersion >= 14) {
+            query(
+                    "nm_get_blockchain_containers_for_node",
+                    buildArgs("node_id" to gtv(appConfig.pubKeyByteArray), "blockchain_rid" to gtv(brid.data))
+            ).asArray().map { it.asString() }
+        } else {
+            listOf(getContainerForBlockchain(brid))
+        }
     }
 
-    // TODO: [et]: directory vs containerId?
-    override fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits {
+    override fun getResourceLimitForContainer(container: String): ContainerResourceLimits {
         val resourceLimits = query(
                 "nm_get_container_limits",
-                buildArgs("name" to gtv(containerId))
+                buildArgs("name" to gtv(container))
         ).asDict().mapValues { (_, v) -> v.asInteger() }.mapNotNull {
             ResourceLimitFactory.fromPair(it.toPair())
         }.toTypedArray()
@@ -57,12 +58,12 @@ open class BaseDirectoryDataSource(
         return ContainerResourceLimits(*resourceLimits)
     }
 
-    override fun getImageForContainer(containerId: String): ContainerImageInfo? {
+    override fun getImageForContainer(container: String): ContainerImageInfo? {
         if (nmApiVersion < 20) return null
 
         val response = query(
                 "nm_get_container_image",
-                buildArgs("name" to gtv(containerId))
+                buildArgs("name" to gtv(container))
         )
         return if (response.isNull()) null else
             response.toObject<ContainerImageInfo>()

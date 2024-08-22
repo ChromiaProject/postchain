@@ -13,6 +13,7 @@ import net.postchain.core.BlockchainState
 import net.postchain.core.NodeRid
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvEncoder
@@ -121,7 +122,7 @@ class BaseManagedNodeDataSourceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("getBlockchainConfigurationOptionsData")
+    @MethodSource("getBlockchainConfigurationOptionsTestData")
     fun testGetBlockchainConfigurationOptions(gtvResult: Gtv, expected: BlockchainConfigurationOptions?) {
         val appConfig: AppConfig = mock {
             on { pubKeyByteArray } doReturn byteArrayOf(0)
@@ -135,7 +136,7 @@ class BaseManagedNodeDataSourceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("findNextInactiveBlockchainsData")
+    @MethodSource("findNextInactiveBlockchainsTestData")
     fun testFindNextInactiveBlockchains(gtvResult: Gtv, expected: List<InactiveBlockchainInfo>?) {
         val queryRunner: QueryRunner = mock {
             on { query(eq("nm_api_version"), any()) } doReturn gtv(11)
@@ -146,7 +147,7 @@ class BaseManagedNodeDataSourceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("testGetMigratingBlockchainNodeInfoData")
+    @MethodSource("getMigratingBlockchainNodeInfoTestData")
     fun testGetMigratingBlockchainInfo(apiVersion: Long, gtvResult: Gtv, expected: MigratingBlockchainNodeInfo?) {
         val queryRunner: QueryRunner = mock {
             on { query(eq("nm_api_version"), any()) } doReturn gtv(apiVersion)
@@ -156,6 +157,19 @@ class BaseManagedNodeDataSourceTest {
             on { pubKeyByteArray } doReturn byteArrayOf()
         })
         assertEquals(expected, sut.getMigratingBlockchainNodeInfo(ZERO_RID))
+    }
+
+    @ParameterizedTest
+    @MethodSource("isBlockchainProviderTestData")
+    fun testIsBlockchainProvider(apiVersion: Long, gtvResult: Gtv, expected: Boolean) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(apiVersion)
+            on { query(eq("nm_is_blockchain_provider"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock {
+            on { pubKeyByteArray } doReturn byteArrayOf()
+        })
+        assertEquals(expected, sut.isBlockchainProvider(KeyPairHelper.keyPair(0).pubKey, ZERO_RID))
     }
 
 
@@ -283,7 +297,7 @@ class BaseManagedNodeDataSourceTest {
         }
 
         @JvmStatic
-        fun getBlockchainConfigurationOptionsData(): List<Array<Any?>> {
+        fun getBlockchainConfigurationOptionsTestData(): List<Array<Any?>> {
             return listOf(
                     arrayOf(GtvNull, null),
                     arrayOf(
@@ -298,7 +312,7 @@ class BaseManagedNodeDataSourceTest {
         }
 
         @JvmStatic
-        fun findNextInactiveBlockchainsData(): List<Array<Any?>> {
+        fun findNextInactiveBlockchainsTestData(): List<Array<Any?>> {
             val brid0 = ZERO_RID
             val brid1 = BlockchainRid.buildRepeat(1)
 
@@ -318,7 +332,7 @@ class BaseManagedNodeDataSourceTest {
         }
 
         @JvmStatic
-        fun testGetMigratingBlockchainNodeInfoData(): List<Array<Any?>> {
+        fun getMigratingBlockchainNodeInfoTestData(): List<Array<Any?>> {
             return listOf(
                     arrayOf(15, GtvNull, null),
                     arrayOf(16,
@@ -355,6 +369,16 @@ class BaseManagedNodeDataSourceTest {
                                     isDestinationNode = false,
                                     finalHeight = 100L)
                     ),
+            )
+        }
+
+        @JvmStatic
+        fun isBlockchainProviderTestData(): List<Array<Any>> {
+            return listOf(
+                    arrayOf(18, gtv(true), true),
+                    arrayOf(18, gtv(false), true), // both are true
+                    arrayOf(19, gtv(true), true),
+                    arrayOf(19, gtv(false), false),
             )
         }
     }
