@@ -188,11 +188,11 @@ class ContainerJobHandler(
         val containerImageInfo = psContainer.image
         val image = if (containerImageInfo != null) {
             val imageSpec = "${containerImageInfo.url}@${containerImageInfo.digest}"
-            logger.debug("Pulling image $imageSpec...")
+            logger.info("Pulling image $imageSpec...")
             dockerClient.pull(imageSpec)
             imageSpec
         } else {
-            logger.debug("Using default image")
+            logger.info("Using default image")
             getDefaultContainerImage(containerNodeConfig)
         }
         val config = ContainerConfigFactory.createConfig(fileSystem, appConfig, containerNodeConfig, psContainer, image)
