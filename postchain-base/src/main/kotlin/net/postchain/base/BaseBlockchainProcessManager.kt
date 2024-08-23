@@ -162,7 +162,7 @@ open class BaseBlockchainProcessManager(
                 startDebug("Begin by stopping blockchain", bTrace)
                 stopBlockchain(chainId, bTrace, true)
 
-                logger.info("Starting of blockchain")
+                logger.info("Starting of blockchain: $chainId")
 
                 var initialEContext: EContext? = null
                 try {
@@ -391,7 +391,7 @@ open class BaseBlockchainProcessManager(
             blockchainRid?.let { nodeDiagnosticContext.blockchainErrorQueue(it).clear() }
         }
         blockchainProcesses.remove(chainId)?.also {
-            stopInfoDebug("Stopping of blockchain", bTrace)
+            stopInfoDebug("Stopping of blockchain: $chainId", bTrace)
             extensions.forEach { ext -> ext.disconnectProcess(it) }
             if (restart) {
                 blockchainInfrastructure.restartBlockchainProcess(it)
@@ -399,7 +399,7 @@ open class BaseBlockchainProcessManager(
                 blockchainInfrastructure.exitBlockchainProcess(it)
             }
             it.shutdown()
-            stopInfoDebug("Stopping blockchain, shutdown complete", bTrace)
+            stopInfoDebug("Stopping blockchain: $chainId, shutdown complete", bTrace)
         }
     }
 
