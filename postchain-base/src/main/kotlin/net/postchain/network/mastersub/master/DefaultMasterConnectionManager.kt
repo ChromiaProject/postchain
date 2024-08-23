@@ -8,6 +8,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.block.BlockQueriesProvider
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.network.common.ChainsWithOneConnection
 import net.postchain.network.mastersub.MasterSubQueryManager
@@ -117,7 +118,10 @@ class DefaultMasterConnectionManager(
                     masterSubQueryManager, dataSource, blockQueriesProvider)
         } else {
             val chain = chainsWithOneSubConnection.get(descriptor.blockchainRid)
-            withLoggingContext(BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex()) {
+            withLoggingContext(buildMap {
+                put(BLOCKCHAIN_RID_TAG, descriptor.blockchainRid.toHex())
+                if (chain != null) put(CHAIN_IID_TAG, chain.config.chainId.toString())
+            }) {
                 return when {
                     chain == null -> {
                         logger.warn("Sub chain not found")
@@ -151,10 +155,12 @@ class DefaultMasterConnectionManager(
             logger.debug { "Disconnected query runner for container: ${descriptor.containerIID}" }
             queryConnections.remove(descriptor.containerIID)?.close()
         } else {
-            withLoggingContext(BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex()) {
+            val chain = chainsWithOneSubConnection.get(descriptor.blockchainRid)
+            withLoggingContext(buildMap {
+                put(BLOCKCHAIN_RID_TAG, descriptor.blockchainRid.toHex())
+                if (chain != null) put(CHAIN_IID_TAG, chain.config.chainId.toString())
+            }) {
                 logger.debug("Subnode disconnected")
-
-                val chain = chainsWithOneSubConnection.get(descriptor.blockchainRid)
                 if (chain == null) {
                     connection.close()
                     logger.warn("Subnode chain not found")
