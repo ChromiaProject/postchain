@@ -118,10 +118,10 @@ class DefaultMasterConnectionManager(
                     masterSubQueryManager, dataSource, blockQueriesProvider)
         } else {
             val chain = chainsWithOneSubConnection.get(descriptor.blockchainRid)
-            withLoggingContext(buildMap {
-                put(BLOCKCHAIN_RID_TAG, descriptor.blockchainRid.toHex())
-                if (chain != null) put(CHAIN_IID_TAG, chain.config.chainId.toString())
-            }) {
+            withLoggingContext(
+                    BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex(),
+                    CHAIN_IID_TAG to chain?.config?.chainId?.toString()
+            ) {
                 return when {
                     chain == null -> {
                         logger.warn("Sub chain not found")
@@ -156,10 +156,10 @@ class DefaultMasterConnectionManager(
             queryConnections.remove(descriptor.containerIID)?.close()
         } else {
             val chain = chainsWithOneSubConnection.get(descriptor.blockchainRid)
-            withLoggingContext(buildMap {
-                put(BLOCKCHAIN_RID_TAG, descriptor.blockchainRid.toHex())
-                if (chain != null) put(CHAIN_IID_TAG, chain.config.chainId.toString())
-            }) {
+            withLoggingContext(
+                    BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex(),
+                    CHAIN_IID_TAG to chain?.config?.chainId?.toString()
+            ) {
                 logger.debug("Subnode disconnected")
                 if (chain == null) {
                     connection.close()

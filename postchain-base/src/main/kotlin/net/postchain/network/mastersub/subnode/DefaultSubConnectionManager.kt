@@ -217,10 +217,10 @@ class DefaultSubConnectionManager(
             masterSubQueryManager
         } else {
             val chain = chains.get(descriptor.blockchainRid)
-            withLoggingContext(buildMap {
-                put(BLOCKCHAIN_RID_TAG, descriptor.blockchainRid.toHex())
-                if (chain != null) put(CHAIN_IID_TAG, chain.config.chainId.toString())
-            }) {
+            withLoggingContext(
+                    BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex(),
+                    CHAIN_IID_TAG to chain?.config?.chainId?.toString()
+            ) {
                 when {
                     chain == null -> {
                         logger.warn("Master chain not found")
@@ -256,10 +256,10 @@ class DefaultSubConnectionManager(
             scheduleQueryReconnection()
         } else {
             val chain = chains.get(descriptor.blockchainRid)
-            withLoggingContext(buildMap {
-                put(BLOCKCHAIN_RID_TAG, descriptor.blockchainRid.toHex())
-                if (chain != null) put(CHAIN_IID_TAG, chain.config.chainId.toString())
-            }) {
+            withLoggingContext(
+                    BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex(),
+                    CHAIN_IID_TAG to chain?.config?.chainId?.toString()
+            ) {
                 logger.info("Master node disconnected")
                 if (chain == null) {
                     logger.warn("Master chain not found")
