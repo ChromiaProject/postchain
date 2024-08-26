@@ -82,7 +82,7 @@ internal class DefaultContainerJobManager(
         jobOf(chain.containerName).restartChain(chain)
     }
 
-    override fun hasPendingJobs(containerName: ContainerName) = jobs[containerName.name]?.let {
+    override fun hasPendingJobs(containerName: ContainerName) = jobs[containerName.dockerContainer]?.let {
         (it as ContainerJob).isNotEmpty()
     } ?: false
 
@@ -148,7 +148,7 @@ internal class DefaultContainerJobManager(
 
     private fun jobOf(containerName: ContainerName): ContainerJob {
         lockJobs.withLock {
-            return jobs.computeIfAbsent(containerName.name) {
+            return jobs.computeIfAbsent(containerName.dockerContainer) {
                 ContainerJob(containerName)
             } as ContainerJob
         }

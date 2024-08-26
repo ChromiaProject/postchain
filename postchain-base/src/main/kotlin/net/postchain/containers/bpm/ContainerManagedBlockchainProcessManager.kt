@@ -81,7 +81,7 @@ class ContainerManagedBlockchainProcessManager(
                     shutdown()
                     logger.info("Stopping subnode containers...")
                     for ((name, psContainer) in postchainContainers) {
-                        withLoggingContext(CONTAINER_NAME_TAG to psContainer.containerName.name) {
+                        withLoggingContext(CONTAINER_NAME_TAG to psContainer.containerName.dockerContainer) {
                             logger.info("Stopping subnode $name...")
                             psContainer.stop()
                             dockerClient.stopContainer(psContainer.containerId, 10)

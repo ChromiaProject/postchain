@@ -55,6 +55,8 @@ class DefaultPostchainContainer(
                 .toSet()
     }
 
+    override fun isBlockchainRunning(chainId: Long): Boolean = subnodeAdminClient.isBlockchainRunning(chainId)
+
     override fun startProcess(process: ContainerBlockchainProcess): Boolean {
         subnodeAdminClient.startBlockchain(process.chainId, process.blockchainRid).also {
             if (it) processes[process.chainId] = process

@@ -6,8 +6,8 @@ import com.github.ajalt.clikt.completion.completionOption
 import com.github.ajalt.clikt.core.NoOpCliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.versionOption
-import net.postchain.cli.PostchainNodeCommand
 import net.postchain.admin.cli.PostchainAdminClientCommand
+import net.postchain.cli.PostchainNodeCommand
 import net.postchain.server.cli.CommandRunNode
 import net.postchain.server.cli.CommandRunNodeAuto
 import net.postchain.server.cli.CommandRunServer
@@ -22,7 +22,7 @@ class PostchainServerCommand : NoOpCliktCommand(name = "postchain") {
 
 fun main(args: Array<String>) {
     if (args.isNotEmpty() && args[0] !in setOf("--generate-completion", "--version")) {
-        println("${args[0]} will be executed with: ${args.toList().subList(1, args.size).joinToString(" ", "", "")}")
+        println("${args[0]} will be executed ${args.toList().subList(1, args.size).joinToString(prefix = if (args.size > 1) "with: " else "")}")
     }
     return PostchainServerCommand()
             .subcommands(

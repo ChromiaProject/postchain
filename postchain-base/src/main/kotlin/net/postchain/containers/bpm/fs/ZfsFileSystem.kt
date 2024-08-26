@@ -105,7 +105,7 @@ class ZfsFileSystem(private val containerConfig: ContainerNodeConfig, private va
         return null
     }
 
-    private fun getFs(containerName: ContainerName) = "${containerConfig.zfsPoolName}/${containerName.name}"
+    private fun getFs(containerName: ContainerName) = "${containerConfig.zfsPoolName}/${containerName.dockerContainer}"
 
     private fun getQuotaBytes(resourceLimits: ContainerResourceLimits) = miB2B(resourceLimits.storageMb())
 
@@ -116,5 +116,5 @@ class ZfsFileSystem(private val containerConfig: ContainerNodeConfig, private va
     override fun rootOf(containerName: ContainerName): Path = hostRootOf(containerName)
 
     override fun hostRootOf(containerName: ContainerName): Path =
-            Paths.get(File.separator, containerConfig.zfsPoolName, containerName.name)
+            Paths.get(File.separator, containerConfig.zfsPoolName, containerName.dockerContainer)
 }

@@ -24,7 +24,7 @@ class ZfsFileSystemTest {
         on { zfsPoolName } doReturn zfsPool
     }
     private val containerName: ContainerName = mock {
-        on { name } doReturn contName
+        on { dockerContainer } doReturn contName
     }
     private val resourceLimits: ContainerResourceLimits = mock {
         on { hasStorage() } doReturn true
@@ -50,7 +50,7 @@ class ZfsFileSystemTest {
     @Test
     fun `getCurrentLimitsInfo with missing project should return null`() {
         // setup
-        whenever(containerName.name).thenReturn("foo")
+        whenever(containerName.dockerContainer).thenReturn("foo")
         doReturn(CommandResult(1, listOf(), listOf("cannot open '/pool1/foo': No such file or directory"))).whenever(commandExecutor).runCommandWithOutput(anyArray())
         // execute & verify
         assertNull(sut.getCurrentLimitsInfo(containerName, resourceLimits))

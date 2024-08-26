@@ -40,7 +40,8 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 appConfig.databaseBlockBuilderMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
                 appConfig.databaseBlockBuilderWriteConcurrency,
                 wipeDb)
-        val sharedStorage = StorageBuilder.buildStorage(appConfig,
+        val sharedStorage = StorageBuilder.buildStorage(
+                appConfig,
                 appConfig.databaseSharedMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
                 appConfig.databaseSharedWriteConcurrency,
                 wipeDb)

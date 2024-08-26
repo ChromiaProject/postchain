@@ -29,7 +29,7 @@ class ContainerHealthcheckHandler(
         logger.debug { "ContainerHealthcheck: BEGIN" }
 
         val containersToCheck = postchainContainers().keys
-                .associateBy { it.name }
+                .associateBy { it.dockerContainer }
                 .filter { it.key !in containersInProgress }
 
         logger.info {
@@ -40,8 +40,8 @@ class ContainerHealthcheckHandler(
         if (containersToCheck.isNotEmpty()) {
             val running = dockerClient.listContainers() // running containers only
             containersToCheck.values.forEach { cname ->
-                withLoggingContext(CONTAINER_NAME_TAG to cname.name) {
-                    val containerIsRunning = running.any { it.hasName(cname.name) }
+                withLoggingContext(CONTAINER_NAME_TAG to cname.dockerContainer) {
+                    val containerIsRunning = running.any { it.hasName(cname.dockerContainer) }
                     checkContainer(cname, containerIsRunning, fixedContainers)
                 }
             }
@@ -75,34 +75,34 @@ class ContainerHealthcheckHandler(
         }
         val chainsToTerminate = if (updatedResourceLimits || updatedImage) {
             if (updatedResourceLimits) {
-                logger.info { "Resource limits for container ${cname.name} have been changed from $currentResourceLimits to ${psContainer.resourceLimits}, container will be restarted" }
+                logger.info { "Resource limits for container ${cname.dockerContainer} have been changed from $currentResourceLimits to ${psContainer.resourceLimits}, container will be restarted" }
             }
             if (updatedImage) {
-                logger.info { "Image for container ${cname.name} has been changed from $currentImage to ${psContainer.image}, container will be restarted" }
+                logger.info { "Image for container ${cname.dockerContainer} has been changed from $currentImage to ${psContainer.image}, container will be restarted" }
             }
             fixedContainers.add(cname)
             psContainer.reset()
-            if (containerIsRunning) dockerClient.stopContainer(cname.name, 10)
-            dockerClient.removeContainer(cname.name)
+            if (containerIsRunning) dockerClient.stopContainer(cname.dockerContainer, 10)
+            dockerClient.removeContainer(cname.dockerContainer)
             psContainer.getAllChains().toSet()
         } else if (!containerIsRunning) {
-            logger.warn { "Subnode container is not running and will be restarted: ${cname.name}" }
+            logger.warn { "Subnode container is not running and will be restarted: ${cname.dockerContainer}" }
             fixedContainers.add(cname)
             psContainer.getAllChains().toSet()
         } else if (!psContainer.isSubnodeHealthy()) {
-            logger.warn { "Subnode container is unhealthy and will be restarted: ${cname.name}" }
+            logger.warn { "Subnode container is unhealthy and will be restarted: ${cname.dockerContainer}" }
             fixedContainers.add(cname)
-            dockerClient.stopContainer(cname.name, 10)
+            dockerClient.stopContainer(cname.dockerContainer, 10)
             psContainer.getAllChains().toSet()
         } else if (!psContainer.checkResourceLimits(fileSystem)) {
-            logger.warn { "Subnode container has reached resource limits and will be restarted: ${cname.name}" }
+            logger.warn { "Subnode container has reached resource limits and will be restarted: ${cname.dockerContainer}" }
             fixedContainers.add(cname)
             psContainer.reset()
-            if (containerIsRunning) dockerClient.stopContainer(cname.name, 10)
-            dockerClient.removeContainer(cname.name)
+            if (containerIsRunning) dockerClient.stopContainer(cname.dockerContainer, 10)
+            dockerClient.removeContainer(cname.dockerContainer)
             psContainer.getAllChains().toSet()
         } else {
-            logger.debug { "Subnode container is running and healthy: ${cname.name}" }
+            logger.debug { "Subnode container is running and healthy: ${cname.dockerContainer}" }
             psContainer.getStoppedChains().toSet()
         }
 
