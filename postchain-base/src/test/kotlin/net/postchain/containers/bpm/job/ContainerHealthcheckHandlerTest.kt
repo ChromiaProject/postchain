@@ -57,7 +57,7 @@ class ContainerHealthcheckHandlerTest {
     @Test
     fun `container in progress should not be checked`() {
         // execute
-        sut.check(setOf(cname.name))
+        sut.check(setOf(cname.dockerContainer))
         // verify
         verify(dockerClient, never()).listContainers()
     }
@@ -175,7 +175,7 @@ class ContainerHealthcheckHandlerTest {
 
     private fun mockContainerIsRunning() {
         val container: Container = mock()
-        doReturn(listOf("/${cname.name}")).`when`(container).names()
+        doReturn(listOf("/${cname.dockerContainer}")).`when`(container).names()
         `when`(dockerClient.listContainers()).thenReturn(listOf(container))
     }
 }

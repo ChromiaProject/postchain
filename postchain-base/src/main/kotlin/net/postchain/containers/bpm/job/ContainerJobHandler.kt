@@ -13,7 +13,7 @@ import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.containers.bpm.docker.DockerTools.findHostPorts
 import net.postchain.containers.bpm.docker.DockerTools.hasName
 import net.postchain.containers.bpm.fs.FileSystem
-import net.postchain.containers.bpm.rpc.SubnodeAdminClient
+import net.postchain.containers.bpm.rpc.DefaultSubnodeAdminClient
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.crypto.PrivKey
 import net.postchain.debug.NodeDiagnosticContext
@@ -58,7 +58,7 @@ class ContainerJobHandler(
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
 
     fun handleJob(job: ContainerJob) {
-        withLoggingContext(CONTAINER_NAME_TAG to job.containerName.name) {
+        withLoggingContext(CONTAINER_NAME_TAG to job.containerName.dockerContainer) {
             handleJobInternal(job)
         }
     }
@@ -203,7 +203,7 @@ class ContainerJobHandler(
 
     private fun findDockerContainer(containerName: ContainerName): Container? {
         val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-        return all.firstOrNull { it.hasName(containerName.name) }
+        return all.firstOrNull { it.hasName(containerName.dockerContainer) }
     }
 
     private fun ensurePostchainContainer(containerName: ContainerName): PostchainContainer? {
@@ -228,7 +228,7 @@ class ContainerJobHandler(
 
     private fun createPostchainContainer(containerName: ContainerName): PostchainContainer {
         val containerPortMapping = ConcurrentHashMap<Int, Int>()
-        val subnodeAdminClient = SubnodeAdminClient.create(containerNodeConfig, containerPortMapping, nodeDiagnosticContext)
+        val subnodeAdminClient = DefaultSubnodeAdminClient(containerName, containerNodeConfig, containerPortMapping, nodeDiagnosticContext)
         return DefaultPostchainContainer(containerNodeConfig, directoryDataSource(), containerName, containerPortMapping, ContainerState.STARTING, subnodeAdminClient)
     }
 

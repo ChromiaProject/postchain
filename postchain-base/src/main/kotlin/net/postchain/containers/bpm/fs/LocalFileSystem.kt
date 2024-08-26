@@ -57,8 +57,8 @@ open class LocalFileSystem(protected val containerConfig: ContainerNodeConfig, p
     override fun getCurrentLimitsInfo(containerName: ContainerName, resourceLimits: ContainerResourceLimits): ResourceLimitsInfo? = null
 
     override fun rootOf(containerName: ContainerName): Path =
-            Paths.get(containerConfig.masterMountDir, containerName.name)
+            Paths.get(containerConfig.masterMountDir, containerName.dockerContainer)
 
     override fun hostRootOf(containerName: ContainerName): Path =
-            Paths.get(containerConfig.hostMountDir, containerName.name)
+            Paths.get(containerConfig.hostMountDir, containerName.dockerContainer)
 }
