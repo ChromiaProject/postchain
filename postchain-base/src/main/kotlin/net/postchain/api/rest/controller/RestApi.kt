@@ -143,6 +143,10 @@ const val UNAUTHORIZED_INVALID_SIGNATURE = "Invalid signature"
 const val UNAUTHORIZED_REQUIRE_SIGNATURE_IN_MANAGED_MODE = "Configuration must be signed"
 const val FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER = "Configuration must be signed by blockchain provider"
 
+const val DATA_TRUNCATED_HEADER = "X-Data-Truncated"
+const val REMAINING_TRANSACTION_COUNT_HEADER = "X-Remaining-Transaction-Count"
+const val REMAINING_BLOCKS_COUNT = "X-Remaining-Blocks-Count"
+
 /**
  * Implements the REST API.
  *
@@ -160,7 +164,8 @@ class RestApi(
         requestConcurrency: Int = 0,
         private val chainRequestConcurrency: Int = -1,
         private val subnodeHttpRedirect: Boolean = false,
-        val maxRequestBodySize: Int = RestApiConfig.DEFAULT_MAX_REQUEST_BODY_SIZE
+        val maxRequestBodySize: Int = RestApiConfig.DEFAULT_MAX_REQUEST_BODY_SIZE,
+        val maxDataSize: Int = RestApiConfig.DEFAULT_MAX_DATA_SIZE,
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
@@ -367,12 +372,14 @@ class RestApi(
                 ?: DEFAULT_ENTRY_RESULTS_REQUEST
         val beforeTime = beforeTimeQuery(request) ?: Long.MAX_VALUE
         val signer = signerQuery(request)
-        val txInfos = if (signer != null) {
-            model.getTransactionsInfoBySigner(beforeTime, limit, PubKey(signer))
+        val (transactionInfoExts, remainingTruncatedCount) = if (signer != null) {
+            model.getTransactionsInfoBySigner(beforeTime, limit, PubKey(signer), maxDataSize)
         } else {
-            model.getTransactionsInfo(beforeTime, limit)
+            model.getTransactionsInfo(beforeTime, limit, maxDataSize)
         }
-        return Response(OK).with(txInfosBody of txInfos)
+        return Response(OK).with(txInfosBody of transactionInfoExts)
+                .header(DATA_TRUNCATED_HEADER, (remainingTruncatedCount != 0L).toString())
+                .header(REMAINING_TRANSACTION_COUNT_HEADER, remainingTruncatedCount.toString())
     }
 
     private fun getTransactionsCount(request: Request): Response {
@@ -405,12 +412,15 @@ class RestApi(
         val limit = limitQuery(request)?.coerceIn(0, MAX_NUMBER_OF_BLOCKS_PER_REQUEST)
                 ?: DEFAULT_ENTRY_RESULTS_REQUEST
         val txHashesOnly = txsQuery(request) != true
-        val blocks = if (beforeHeight != null) {
-            model.getBlocksBeforeHeight(beforeHeight, limit, txHashesOnly)
+
+        val (blockDetails, remainingTruncatedCount) = if (beforeHeight != null) {
+            model.getBlocksBeforeHeight(beforeHeight, limit, txHashesOnly, maxDataSize)
         } else {
-            model.getBlocks(beforeTime ?: Long.MAX_VALUE, limit, txHashesOnly)
+            model.getBlocks(beforeTime ?: Long.MAX_VALUE, limit, txHashesOnly, maxDataSize)
         }
-        return Response(OK).with(blocksBody of blocks)
+        return Response(OK).with(blocksBody of blockDetails)
+                .header(DATA_TRUNCATED_HEADER, (remainingTruncatedCount != 0L).toString())
+                .header(REMAINING_BLOCKS_COUNT, remainingTruncatedCount.toString())
     }
 
     private fun getBlock(request: Request): Response {

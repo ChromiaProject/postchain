@@ -12,7 +12,9 @@ import net.postchain.base.ConfirmationProof
 import net.postchain.common.BlockchainRid
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.block.BlockDetail
+import net.postchain.core.block.BlockDetailsTruncated
 import net.postchain.crypto.PubKey
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
@@ -39,14 +41,14 @@ interface Model : ChainModel {
     fun postTransaction(tx: ByteArray)
     fun getTransaction(txRID: TxRid): ByteArray?
     fun getTransactionInfo(txRID: TxRid): TransactionInfoExt?
-    fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt>
-    fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey): List<TransactionInfoExt>
+    fun getTransactionsInfo(beforeTime: Long, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated
+    fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated
     fun getLastTransactionNumber(): TransactionsCount
     fun getBlock(blockRID: BlockRid, txHashesOnly: Boolean): BlockDetail?
     fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail?
     fun confirmBlock(blockRID: BlockRid): BlockSignature?
-    fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
-    fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
+    fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated
+    fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated
     fun getConfirmationProof(txRID: TxRid): ConfirmationProof?
     fun getStatus(txRID: TxRid): ApiStatus
     fun query(query: GtxQuery): Gtv

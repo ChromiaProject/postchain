@@ -10,8 +10,10 @@ import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.Storage
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockDetail
+import net.postchain.core.block.BlockDetailsTruncated
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockStore
@@ -132,28 +134,28 @@ open class BaseBlockQueries(
         blockStore.getTransactionInfo(it, txRID)
     }
 
-    override fun getTransactionsInfo(beforeTime: Long, limit: Int): CompletionStage<List<TransactionInfoExt>> =
+    override fun getTransactionsInfo(beforeTime: Long, limit: Int, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated> =
             runOpRegardless {
-                blockStore.getTransactionsInfo(it, beforeTime, limit)
+                blockStore.getTransactionsInfo(it, beforeTime, limit, maxDataSize)
             }
 
-    override fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey): CompletionStage<List<TransactionInfoExt>> =
-        runOpRegardless {
-            blockStore.getTransactionsInfoBySigner(it, beforeTime, limit, signer)
-        }
+    override fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated> =
+            runOpRegardless {
+                blockStore.getTransactionsInfoBySigner(it, beforeTime, limit, signer, maxDataSize)
+            }
 
     override fun getLastTransactionNumber(): CompletionStage<Long> = runOpRegardless {
         blockStore.getLastTransactionNumber(it)
     }
 
-    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> =
+    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated> =
             runOpRegardless {
-                blockStore.getBlocks(it, beforeTime, limit, txHashesOnly)
+                blockStore.getBlocks(it, beforeTime, limit, txHashesOnly, maxDataSize)
             }
 
-    override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> =
+    override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated> =
             runOpRegardless {
-                blockStore.getBlocksBeforeHeight(it, beforeHeight, limit, txHashesOnly)
+                blockStore.getBlocksBeforeHeight(it, beforeHeight, limit, txHashesOnly, maxDataSize)
             }
 
     override fun getBlocksFromHeight(fromHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> =

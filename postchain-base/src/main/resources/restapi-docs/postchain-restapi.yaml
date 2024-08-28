@@ -235,6 +235,17 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/txInfo"
+          headers:
+            X-Data-Truncated:
+              description: Indicates if the response data was truncated due to size limitations.
+              required: true
+              schema:
+                type: boolean
+            X-Remaining-Transaction-Count:
+              description: The number of transactions left out of the response due to size limitations.
+              required: true
+              schema:
+                type: integer
         404:
           description: Not found
           content:
@@ -386,6 +397,17 @@ paths:
       responses:
         200:
           description: Found
+          headers:
+            X-Data-Truncated:
+              description: Indicates if the response data was truncated due to size limitations.
+              required: true
+              schema:
+                type: boolean
+            X-Remaining-Blocks-Count:
+              description: The number of blocks left out of the response due to size limitations.
+              required: true
+              schema:
+                type: integer
           content:
             application/json:
               schema:

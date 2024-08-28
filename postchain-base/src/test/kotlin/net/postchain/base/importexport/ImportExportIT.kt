@@ -7,6 +7,7 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.messageContains
 import assertk.isContentEqualTo
 import net.postchain.StorageBuilder
+import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.TestBlockchainBuilder
@@ -290,7 +291,7 @@ class ImportExportIT {
                 val configurations = db.getAllConfigurations(ctx)
                 assertThat(configurations).isEqualTo(expectedConfigurations.map { it.first to encodeGtv(it.second).wrap() })
 
-                val blocks = db.getBlocks(ctx, Long.MAX_VALUE, 1000).sortedBy { it.blockHeight }
+                val blocks = db.getBlocks(ctx, Long.MAX_VALUE, 1000, RestApiConfig.DEFAULT_MAX_DATA_SIZE).blockInfoExts.sortedBy { it.blockHeight }
                 assertThat(blocks.size).isEqualTo(expectedBlocks.size)
                 for ((block, expectedBlock) in blocks.zip(expectedBlocks)) {
                     val (expectedBlockHeader, expectedTransactions) = expectedBlock
@@ -543,7 +544,7 @@ class ImportExportIT {
             val configurations = db.getAllConfigurations(ctx)
             assertThat(configurations).isEqualTo(expectedConfigurations.map { it.first to encodeGtv(it.second).wrap() })
 
-            val blocks = db.getBlocks(ctx, Long.MAX_VALUE, 1000).sortedBy { it.blockHeight }
+            val blocks = db.getBlocks(ctx, Long.MAX_VALUE, 1000, RestApiConfig.DEFAULT_MAX_DATA_SIZE).blockInfoExts.sortedBy { it.blockHeight }
             assertThat(blocks.size).isEqualTo(expectedBlocks.size)
             for ((block, expectedBlock) in blocks.zip(expectedBlocks)) {
                 val (expectedBlockHeader, expectedTransactions) = expectedBlock

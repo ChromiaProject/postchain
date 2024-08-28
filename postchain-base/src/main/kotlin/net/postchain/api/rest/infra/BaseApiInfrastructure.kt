@@ -36,7 +36,8 @@ open class BaseApiInfrastructure(
                         requestConcurrency = restApiConfig.requestConcurrency,
                         chainRequestConcurrency = restApiConfig.chainRequestConcurrency,
                         subnodeHttpRedirect = restApiConfig.subnodeHttpRedirect,
-                        maxRequestBodySize = restApiConfig.maxRequestBodySize
+                        maxRequestBodySize = restApiConfig.maxRequestBodySize,
+                        maxDataSize = restApiConfig.maxDataSize
                 )
             } catch (e: Exception) {
                 logger.error("Unable to start REST API on port $port", e)

@@ -22,6 +22,11 @@ open class TransactionInfoExt(
     val txData: ByteArray?
 )
 
+data class TransactionInfoExtsTruncated(
+        val transactionInfoExts: List<TransactionInfoExt>,
+        val remainingTruncatedCount: Long
+)
+
 data class ValidationResult(
         val result: Result,
         val message: String = "") {

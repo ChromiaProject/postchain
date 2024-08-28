@@ -11,6 +11,7 @@ import net.postchain.core.EContext
 import net.postchain.core.Shutdownable
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.TxEContext
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
@@ -44,13 +45,13 @@ interface BlockStore {
     //    fun getBlockData(ctx: EContext, blockRID: ByteArray): BlockData
     fun getWitnessData(ctx: EContext, blockRID: ByteArray): ByteArray
 
-    fun getBlocks(ctx: EContext, beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
-    fun getBlocksBeforeHeight(ctx: EContext, beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
+    fun getBlocks(ctx: EContext, beforeTime: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated
+    fun getBlocksBeforeHeight(ctx: EContext, beforeHeight: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated
     fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail>
     fun getBlock(ctx: EContext, blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail?
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
-    fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt>
-    fun getTransactionsInfoBySigner(ctx: EContext, beforeTime: Long, limit: Int, signer: PubKey): List<TransactionInfoExt>
+    fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated
+    fun getTransactionsInfoBySigner(ctx: EContext, beforeTime: Long, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated
     fun getLastTransactionNumber(ctx: EContext): Long
     fun getBlockHeader(ctx: EContext, blockRID: ByteArray): ByteArray
     fun getTxRIDsAtHeight(ctx: EContext, height: Long): Array<ByteArray>
@@ -72,8 +73,8 @@ interface BlockQueries : Shutdownable {
     fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): CompletionStage<BlockDataWithWitness?>
     fun getBlockHeader(blockRID: ByteArray): CompletionStage<BlockHeader>
     fun getConfirmationProof(txRID: ByteArray): CompletionStage<ConfirmationProof?>
-    fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>>
-    fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>>
+    fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated>
+    fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated>
     fun getBlocksFromHeight(fromHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>>
     fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): CompletionStage<BlockDetail?>
 
@@ -81,8 +82,8 @@ interface BlockQueries : Shutdownable {
     fun getTransaction(txRID: ByteArray): CompletionStage<Transaction?>
     fun getTransactionRawData(txRID: ByteArray): CompletionStage<ByteArray?>
     fun getTransactionInfo(txRID: ByteArray): CompletionStage<TransactionInfoExt?>
-    fun getTransactionsInfo(beforeTime: Long, limit: Int): CompletionStage<List<TransactionInfoExt>>
-    fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey): CompletionStage<List<TransactionInfoExt>>
+    fun getTransactionsInfo(beforeTime: Long, limit: Int, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated>
+    fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated>
     fun getLastTransactionNumber(): CompletionStage<Long>
     fun query(name: String, args: Gtv): CompletionStage<Gtv>
     fun isTransactionConfirmed(txRID: ByteArray): CompletionStage<Boolean>

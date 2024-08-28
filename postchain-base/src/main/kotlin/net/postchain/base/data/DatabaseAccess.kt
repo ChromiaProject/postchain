@@ -15,6 +15,7 @@ import net.postchain.core.EContext
 import net.postchain.core.NodeRid
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.TxDetail
 import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockHeader
@@ -36,6 +37,11 @@ interface DatabaseAccess {
             val blockHeader: ByteArray,
             val witness: ByteArray,
             val timestamp: Long)
+
+    data class BlockInfoExtsTruncated(
+            val blockInfoExts: List<BlockInfoExt>,
+            val remainingTruncatedCount: Long
+    )
 
     class EventInfo(
             val pos: Long,
@@ -108,12 +114,12 @@ interface DatabaseAccess {
     fun getTxBytes(ctx: EContext, txRID: ByteArray): ByteArray?
     fun isTransactionConfirmed(ctx: EContext, txRID: ByteArray): Boolean
     fun getBlock(ctx: EContext, blockRID: ByteArray): BlockInfoExt?
-    fun getBlocks(ctx: EContext, blockTime: Long, limit: Int): List<BlockInfoExt>
-    fun getBlocksBeforeHeight(ctx: EContext, blockHeight: Long, limit: Int): List<BlockInfoExt>
+    fun getBlocks(ctx: EContext, blockTime: Long, limit: Int, maxDataSize: Int): BlockInfoExtsTruncated
+    fun getBlocksBeforeHeight(ctx: EContext, blockHeight: Long, limit: Int, maxDataSize: Int): BlockInfoExtsTruncated
     fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int): List<BlockInfoExt>
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
-    fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt>
-    fun getTransactionsInfoBySigner(ctx: EContext, beforeTime: Long, limit: Int, signer: PubKey): List<TransactionInfoExt>
+    fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated
+    fun getTransactionsInfoBySigner(ctx: EContext, beforeTime: Long, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated
     fun getLastTransactionNumber(ctx: EContext): Long
 
     /**

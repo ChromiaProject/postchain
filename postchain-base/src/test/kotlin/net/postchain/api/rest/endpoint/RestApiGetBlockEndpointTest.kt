@@ -8,6 +8,7 @@ import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
+import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.cryptoSystem
@@ -17,6 +18,7 @@ import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
+import net.postchain.core.block.BlockDetailsTruncated
 import net.postchain.crypto.Signature
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvNull
@@ -110,8 +112,8 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocks(Long.MAX_VALUE, 25, false)
-        ).thenReturn(response)
+                model.getBlocks(Long.MAX_VALUE, 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
+        ).thenReturn(BlockDetailsTruncated(response, 0))
 
         restApi.attachModel(blockchainRID, model)
 
@@ -120,6 +122,37 @@ class RestApiGetBlockEndpointTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
+                .header("X-Data-Truncated", equalTo("false"))
+                .header("X-Remaining-Blocks-Count", equalTo("0"))
+                .body(equalTo(gson.toJson(response).toString()))
+    }
+
+    @Test
+    fun `Get all blocks with remaining blocks`() {
+        val response = listOf(
+                BlockDetail(
+                        "blockRid001".toByteArray(),
+                        blockchainRID2.data,
+                        "some header".toByteArray(),
+                        0,
+                        listOf(),
+                        witness.getRawData(),
+                        1574849700),
+        )
+
+        whenever(
+                model.getBlocks(Long.MAX_VALUE, 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
+        ).thenReturn(BlockDetailsTruncated(response, 2))
+
+        restApi.attachModel(blockchainRID, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/blocks/$blockchainRID?before-time=${Long.MAX_VALUE}&limit=${25}&txs=true")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .header("X-Data-Truncated", equalTo("true"))
+                .header("X-Remaining-Blocks-Count", equalTo("2"))
                 .body(equalTo(gson.toJson(response).toString()))
     }
 
@@ -149,8 +182,8 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocks(1574849940, 2, true)
-        ).thenReturn(response)
+                model.getBlocks(1574849940, 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
+        ).thenReturn(BlockDetailsTruncated(response, 0))
 
         restApi.attachModel(blockchainRID, model)
 
@@ -188,8 +221,8 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocksBeforeHeight(4, 2, true)
-        ).thenReturn(response)
+                model.getBlocksBeforeHeight(4, 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
+        ).thenReturn(BlockDetailsTruncated(response, 0))
 
         restApi.attachModel(blockchainRID, model)
 
@@ -257,8 +290,8 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocks(Long.MAX_VALUE, 25, true)
-        ).thenReturn(blocks)
+                model.getBlocks(Long.MAX_VALUE, 25, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
+        ).thenReturn(BlockDetailsTruncated(blocks, 0))
 
         restApi.attachModel(blockchainRID, model)
 

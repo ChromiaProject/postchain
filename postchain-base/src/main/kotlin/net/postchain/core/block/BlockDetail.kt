@@ -16,3 +16,8 @@ data class BlockDetail(
         @Name("witness") val witness: ByteArray,
         @Name("timestamp") val timestamp: Long
 )
+
+data class BlockDetailsTruncated(
+        val blockDetails: List<BlockDetail>,
+        val remainingTruncatedCount: Long
+)
