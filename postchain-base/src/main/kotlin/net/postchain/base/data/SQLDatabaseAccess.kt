@@ -25,6 +25,7 @@ import net.postchain.core.NodeRid
 import net.postchain.core.SignableTransaction
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.TxDetail
 import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockHeader
@@ -321,29 +322,67 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return buildTransactionInfoExt(txInfo)
     }
 
-    override fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt> {
+    override fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated {
         val sql = """
-            SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_rid, t.tx_hash, t.tx_data 
-                    FROM ${tableBlocks(ctx)} as b 
-                    JOIN ${tableTransactions(ctx)} as t ON (t.block_iid = b.block_iid) 
-                    WHERE b.timestamp < ? 
-                    ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?;
+            WITH TransactionInfo AS (
+                SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_rid, t.tx_hash, t.tx_data, t.tx_iid, 
+                    SUM(
+                        LENGTH(b.block_rid) + 
+                        LENGTH(CAST(b.block_height AS TEXT)) + 
+                        LENGTH(b.block_header_data) + 
+                        LENGTH(b.block_witness) + 
+                        LENGTH(CAST(b.timestamp AS TEXT)) + 
+                        LENGTH(CAST(t.tx_iid AS TEXT)) + 
+                        LENGTH(t.tx_rid) + 
+                        LENGTH(t.tx_hash) + 
+                        LENGTH(t.tx_data) 
+                    ) OVER (ORDER BY b.block_height DESC, t.tx_iid DESC) AS cumulative_size
+                FROM ${tableBlocks(ctx)} AS b 
+                JOIN ${tableTransactions(ctx)} AS t ON (t.block_iid = b.block_iid) 
+                WHERE b.timestamp < ? 
+                ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?
+            )
+            SELECT block_rid, block_height, block_header_data, block_witness, timestamp, tx_rid, tx_hash, tx_data,
+            (SELECT COUNT(*) FROM TransactionInfo) - (SELECT COUNT(*) FROM TransactionInfo WHERE cumulative_size <= ?) AS remaining_truncated_count
+            FROM TransactionInfo
+            WHERE cumulative_size <= ?;
         """.trimIndent()
-        val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, beforeTime, limit)
-        return transactions.map(::buildTransactionInfoExt)
+        val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, beforeTime, limit, maxDataSize, maxDataSize)
+        val transactionInfoExts = transactions.map(::buildTransactionInfoExt)
+        val remainingTruncatedCount = transactions.map(::remainingTruncatedCount).firstOrNull() ?: 0
+        return TransactionInfoExtsTruncated(transactionInfoExts, remainingTruncatedCount)
     }
 
-    override fun getTransactionsInfoBySigner(ctx: EContext, beforeTime: Long, limit: Int, signer: PubKey): List<TransactionInfoExt> {
+    override fun getTransactionsInfoBySigner(ctx: EContext, beforeTime: Long, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated {
         val sql = """
-            SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_rid, t.tx_hash, t.tx_data 
-                    FROM ${tableBlocks(ctx)} as b 
-                    JOIN ${tableTransactions(ctx)} as t ON (t.block_iid = b.block_iid) 
-                    WHERE t.tx_iid IN (SELECT tx_iid FROM ${tableTransactionSigners(ctx)} WHERE signer = ?) 
-                    AND b.timestamp < ? 
-                    ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?;
+            WITH TransactionInfo AS (
+                SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_iid, t.tx_rid, t.tx_hash, t.tx_data, 
+                    SUM(
+                        LENGTH(b.block_rid) + 
+                        LENGTH(CAST(b.block_height AS TEXT)) + 
+                        LENGTH(b.block_header_data) + 
+                        LENGTH(b.block_witness) + 
+                        LENGTH(CAST(b.timestamp AS TEXT)) + 
+                        LENGTH(CAST(t.tx_iid AS TEXT)) + 
+                        LENGTH(t.tx_rid) + 
+                        LENGTH(t.tx_hash) + 
+                        LENGTH(t.tx_data) 
+                    ) OVER (ORDER BY b.block_height DESC, t.tx_iid DESC) AS cumulative_size
+                FROM ${tableBlocks(ctx)} AS b
+                JOIN ${tableTransactions(ctx)} AS t ON (t.block_iid = b.block_iid)
+                WHERE t.tx_iid IN (SELECT tx_iid FROM ${tableTransactionSigners(ctx)} WHERE signer = ?) 
+                AND b.timestamp < ? 
+                ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?
+            )
+            SELECT block_rid, block_height, block_header_data, block_witness, timestamp, tx_rid, tx_hash, tx_data,
+                (SELECT COUNT(*) FROM TransactionInfo) - (SELECT COUNT(*) FROM TransactionInfo WHERE cumulative_size <= ?) AS remaining_truncated_count
+            FROM TransactionInfo
+            WHERE cumulative_size <= ?;
         """.trimIndent()
-        val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, signer.data, beforeTime, limit)
-        return transactions.map(::buildTransactionInfoExt)
+        val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, signer.data, beforeTime, limit, maxDataSize, maxDataSize)
+        val transactionInfoExts = transactions.map(::buildTransactionInfoExt)
+        val remainingTruncatedCount = transactions.map(::remainingTruncatedCount).firstOrNull() ?: 0
+        return TransactionInfoExtsTruncated(transactionInfoExts, remainingTruncatedCount)
     }
 
     private fun buildTransactionInfoExt(txInfo: MutableMap<String, Any>): TransactionInfoExt {
@@ -357,6 +396,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val txData = txInfo["tx_data"] as ByteArray
         return TransactionInfoExt(
                 blockRID, blockHeight, blockHeader, blockWitness, blockTimestamp, resultTxRID, txHash, txData)
+    }
+
+    private fun remainingTruncatedCount(result: MutableMap<String, Any>): Long {
+        return result["remaining_truncated_count"] as Long
     }
 
     override fun getLastTransactionNumber(ctx: EContext): Long {
@@ -942,26 +985,56 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return buildBlockInfoExt(blockInfo)
     }
 
-    override fun getBlocks(ctx: EContext, blockTime: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
+    override fun getBlocks(ctx: EContext, blockTime: Long, limit: Int, maxDataSize: Int): DatabaseAccess.BlockInfoExtsTruncated {
         val sql = """
-            SELECT block_rid, block_height, block_header_data, block_witness, timestamp 
-            FROM ${tableBlocks(ctx)} 
-            WHERE timestamp < ? 
-            ORDER BY timestamp DESC LIMIT ?
+            WITH BlockInfo AS (
+                SELECT block_rid, block_height, block_header_data, block_witness, timestamp,
+                    SUM(
+                        LENGTH(block_rid) + 
+                        LENGTH(CAST(block_height AS TEXT)) + 
+                        LENGTH(block_header_data) + 
+                        LENGTH(block_witness) +
+                        LENGTH(CAST(timestamp AS TEXT))
+                    ) OVER (ORDER BY timestamp DESC) AS cumulative_size
+                FROM ${tableBlocks(ctx)} 
+                WHERE timestamp < ? 
+                ORDER BY timestamp DESC LIMIT ?
+            ) 
+            SELECT block_rid, block_height, block_header_data, block_witness, timestamp,
+            (SELECT COUNT(*) FROM BlockInfo) - (SELECT COUNT(*) FROM BlockInfo WHERE cumulative_size <= ?) AS remaining_truncated_count
+            FROM BlockInfo
+            WHERE cumulative_size <= ?;
         """.trimIndent()
-        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, blockTime, limit)
-        return blocksInfo.map { buildBlockInfoExt(it) }
+        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, blockTime, limit, maxDataSize, maxDataSize)
+        val blockInfoExts = blocksInfo.map { buildBlockInfoExt(it) }
+        val remainingTruncatedCount = blocksInfo.map(::remainingTruncatedCount).firstOrNull() ?: 0
+        return DatabaseAccess.BlockInfoExtsTruncated(blockInfoExts, remainingTruncatedCount)
     }
 
-    override fun getBlocksBeforeHeight(ctx: EContext, blockHeight: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
+    override fun getBlocksBeforeHeight(ctx: EContext, blockHeight: Long, limit: Int, maxDataSize: Int): DatabaseAccess.BlockInfoExtsTruncated {
         val sql = """
-            SELECT block_rid, block_height, block_header_data, block_witness, timestamp 
-            FROM ${tableBlocks(ctx)} 
-            WHERE block_height < ? 
-            ORDER BY block_height DESC LIMIT ?
+            WITH BlockInfo AS (
+                SELECT block_rid, block_height, block_header_data, block_witness, timestamp,
+                    SUM(
+                        LENGTH(block_rid) + 
+                        LENGTH(CAST(block_height AS TEXT)) + 
+                        LENGTH(block_header_data) + 
+                        LENGTH(block_witness) +
+                        LENGTH(CAST(timestamp AS TEXT))
+                    ) OVER (ORDER BY block_height DESC) AS cumulative_size
+                FROM ${tableBlocks(ctx)} 
+                WHERE block_height < ? 
+                ORDER BY block_height DESC LIMIT ?
+            ) 
+            SELECT block_rid, block_height, block_header_data, block_witness, timestamp,
+            (SELECT COUNT(*) FROM BlockInfo) - (SELECT COUNT(*) FROM BlockInfo WHERE cumulative_size <= ?) AS remaining_truncated_count
+            FROM BlockInfo
+            WHERE cumulative_size <= ?
         """.trimIndent()
-        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, limit)
-        return blocksInfo.map { buildBlockInfoExt(it) }
+        val blockInfos = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, limit, maxDataSize, maxDataSize)
+        val blockInfoExts = blockInfos.map { buildBlockInfoExt(it) }
+        val remainingTruncatedCount = blockInfos.map(::remainingTruncatedCount).firstOrNull() ?: 0
+        return DatabaseAccess.BlockInfoExtsTruncated(blockInfoExts, remainingTruncatedCount)
     }
 
     override fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
