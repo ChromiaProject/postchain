@@ -144,8 +144,7 @@ const val UNAUTHORIZED_REQUIRE_SIGNATURE_IN_MANAGED_MODE = "Configuration must b
 const val FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER = "Configuration must be signed by blockchain provider"
 
 const val DATA_TRUNCATED_HEADER = "X-Data-Truncated"
-const val REMAINING_TRANSACTION_COUNT_HEADER = "X-Remaining-Transaction-Count"
-const val REMAINING_BLOCKS_COUNT = "X-Remaining-Blocks-Count"
+const val REMAINING_TRUNCATED_COUNT_HEADER = "X-Remaining-Truncated-Count"
 
 /**
  * Implements the REST API.
@@ -379,7 +378,7 @@ class RestApi(
         }
         return Response(OK).with(txInfosBody of transactionInfoExts)
                 .header(DATA_TRUNCATED_HEADER, (remainingTruncatedCount != 0L).toString())
-                .header(REMAINING_TRANSACTION_COUNT_HEADER, remainingTruncatedCount.toString())
+                .header(REMAINING_TRUNCATED_COUNT_HEADER, remainingTruncatedCount.toString())
     }
 
     private fun getTransactionsCount(request: Request): Response {
@@ -420,7 +419,7 @@ class RestApi(
         }
         return Response(OK).with(blocksBody of blockDetails)
                 .header(DATA_TRUNCATED_HEADER, (remainingTruncatedCount != 0L).toString())
-                .header(REMAINING_BLOCKS_COUNT, remainingTruncatedCount.toString())
+                .header(REMAINING_TRUNCATED_COUNT_HEADER, remainingTruncatedCount.toString())
     }
 
     private fun getBlock(request: Request): Response {

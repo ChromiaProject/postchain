@@ -4,7 +4,9 @@ package net.postchain.api.rest.endpoint
 
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
+import net.postchain.api.rest.controller.DATA_TRUNCATED_HEADER
 import net.postchain.api.rest.controller.Model
+import net.postchain.api.rest.controller.REMAINING_TRUNCATED_COUNT_HEADER
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.infra.RestApiConfig.Companion.DEFAULT_MAX_DATA_SIZE
 import net.postchain.api.rest.json.JsonFactory
@@ -113,8 +115,8 @@ class RestApiGetTxInfoEndpointTest {
                 .contentType(ContentType.JSON)
                 .header("Cache-Control", equalTo("private, must-revalidate"))
                 .header("Expires", equalTo("0"))
-                .header("X-Data-Truncated", equalTo("false"))
-                .header("X-Remaining-Transaction-Count", equalTo("0"))
+                .header(DATA_TRUNCATED_HEADER, equalTo("false"))
+                .header(REMAINING_TRUNCATED_COUNT_HEADER, equalTo("0"))
                 .body(equalTo(gson.toJson(response).toString()))
     }
 
@@ -139,8 +141,8 @@ class RestApiGetTxInfoEndpointTest {
                 .contentType(ContentType.JSON)
                 .header("Cache-Control", equalTo("private, must-revalidate"))
                 .header("Expires", equalTo("0"))
-                .header("X-Data-Truncated", equalTo("true"))
-                .header("X-Remaining-Transaction-Count", equalTo("2"))
+                .header(DATA_TRUNCATED_HEADER, equalTo("true"))
+                .header(REMAINING_TRUNCATED_COUNT_HEADER, equalTo("2"))
                 .body(equalTo(gson.toJson(response).toString()))
     }
 
