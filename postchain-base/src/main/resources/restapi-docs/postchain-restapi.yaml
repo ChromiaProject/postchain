@@ -241,7 +241,7 @@ paths:
               required: true
               schema:
                 type: boolean
-            X-Remaining-Transaction-Count:
+            X-Remaining-Truncated-Count:
               description: The number of transactions left out of the response due to size limitations.
               required: true
               schema:
@@ -403,7 +403,7 @@ paths:
               required: true
               schema:
                 type: boolean
-            X-Remaining-Blocks-Count:
+            X-Remaining-Truncated-Count:
               description: The number of blocks left out of the response due to size limitations.
               required: true
               schema:

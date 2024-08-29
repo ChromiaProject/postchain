@@ -6,7 +6,9 @@ import assertk.assertThat
 import assertk.isContentEqualTo
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
+import net.postchain.api.rest.controller.DATA_TRUNCATED_HEADER
 import net.postchain.api.rest.controller.Model
+import net.postchain.api.rest.controller.REMAINING_TRUNCATED_COUNT_HEADER
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.api.rest.json.JsonFactory
@@ -122,8 +124,8 @@ class RestApiGetBlockEndpointTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
-                .header("X-Data-Truncated", equalTo("false"))
-                .header("X-Remaining-Blocks-Count", equalTo("0"))
+                .header(DATA_TRUNCATED_HEADER, equalTo("false"))
+                .header(REMAINING_TRUNCATED_COUNT_HEADER, equalTo("0"))
                 .body(equalTo(gson.toJson(response).toString()))
     }
 
@@ -151,8 +153,8 @@ class RestApiGetBlockEndpointTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
-                .header("X-Data-Truncated", equalTo("true"))
-                .header("X-Remaining-Blocks-Count", equalTo("2"))
+                .header(DATA_TRUNCATED_HEADER, equalTo("true"))
+                .header(REMAINING_TRUNCATED_COUNT_HEADER, equalTo("2"))
                 .body(equalTo(gson.toJson(response).toString()))
     }
 
