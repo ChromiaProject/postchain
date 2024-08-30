@@ -23,6 +23,7 @@ import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockStore
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.InitialBlockData
+import net.postchain.core.block.size
 import net.postchain.crypto.PubKey
 
 /**
@@ -138,16 +139,28 @@ class BaseBlockStore : BlockStore {
 
     override fun getBlocks(ctx: EContext, beforeTime: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated {
         val db = DatabaseAccess.of(ctx)
-        val blockInfoExtsTruncated = db.getBlocks(ctx, beforeTime, limit, maxDataSize)
-        val blockDetails = blockInfoExtsTruncated.blockInfoExts.map { buildBlockDetail(it, db, ctx, txHashesOnly) }
-        return BlockDetailsTruncated(blockDetails, blockInfoExtsTruncated.remainingTruncatedCount)
+        val blockInfoExts = db.getBlocks(ctx, beforeTime, limit)
+        return getBlockDetails(blockInfoExts, db, ctx, txHashesOnly, maxDataSize)
     }
 
     override fun getBlocksBeforeHeight(ctx: EContext, beforeHeight: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated {
         val db = DatabaseAccess.of(ctx)
-        val blockInfoExtsTruncated = db.getBlocksBeforeHeight(ctx, beforeHeight, limit, maxDataSize)
-        val blockDetails = blockInfoExtsTruncated.blockInfoExts.map { buildBlockDetail(it, db, ctx, txHashesOnly) }
-        return BlockDetailsTruncated(blockDetails, blockInfoExtsTruncated.remainingTruncatedCount)
+        val blockInfoExts = db.getBlocksBeforeHeight(ctx, beforeHeight, limit)
+        return getBlockDetails(blockInfoExts, db, ctx, txHashesOnly, maxDataSize)
+    }
+
+    private fun getBlockDetails(blockInfoExts: List<DatabaseAccess.BlockInfoExt>, db: DatabaseAccess, ctx: EContext, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated {
+        val blockDetails = mutableListOf<BlockDetail>()
+        var cumulativeSize = 0
+        for (blockInfoExt in blockInfoExts) {
+            val blockDetail = buildBlockDetail(blockInfoExt, db, ctx, txHashesOnly)
+            cumulativeSize += blockDetail.size()
+            if (cumulativeSize <= maxDataSize)
+                blockDetails.add(blockDetail)
+            else
+                break
+        }
+        return BlockDetailsTruncated(blockDetails, (blockInfoExts.size - blockDetails.size).toLong())
     }
 
     override fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> {

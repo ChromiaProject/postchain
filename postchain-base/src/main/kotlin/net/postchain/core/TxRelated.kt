@@ -2,6 +2,7 @@
 
 package net.postchain.core
 
+import net.postchain.core.block.hexStringLength
 import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.mapper.Nullable
 
@@ -10,6 +11,14 @@ data class TxDetail(
         @Name("hash") val hash: ByteArray,
         @Name("data") @Nullable val data: ByteArray?
 )
+
+fun TxDetail.hexStringLength(): Int {
+    val ridSize = rid.hexStringLength()
+    val hashSize = hash.hexStringLength()
+    val dataSize = data.hexStringLength()
+
+    return ridSize + hashSize + dataSize
+}
 
 open class TransactionInfoExt(
     val blockRID: ByteArray,

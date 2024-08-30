@@ -114,8 +114,8 @@ interface DatabaseAccess {
     fun getTxBytes(ctx: EContext, txRID: ByteArray): ByteArray?
     fun isTransactionConfirmed(ctx: EContext, txRID: ByteArray): Boolean
     fun getBlock(ctx: EContext, blockRID: ByteArray): BlockInfoExt?
-    fun getBlocks(ctx: EContext, blockTime: Long, limit: Int, maxDataSize: Int): BlockInfoExtsTruncated
-    fun getBlocksBeforeHeight(ctx: EContext, blockHeight: Long, limit: Int, maxDataSize: Int): BlockInfoExtsTruncated
+    fun getBlocks(ctx: EContext, blockTime: Long, limit: Int): List<BlockInfoExt>
+    fun getBlocksBeforeHeight(ctx: EContext, blockHeight: Long, limit: Int): List<BlockInfoExt>
     fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int): List<BlockInfoExt>
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
     fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated
