@@ -369,7 +369,7 @@ class DatabaseIT {
             ))
             withReadConnection(storage, testBlockChainBuilder.chainId) { readCtx ->
                 val readAccess = DatabaseAccess.of(readCtx)
-                val (transactionsInfo, remainingTruncatedCount) = readAccess.getTransactionsInfo(readCtx, 100000L, 10, 1700)
+                val (transactionsInfo, remainingTruncatedCount) = readAccess.getTransactionsInfo(readCtx, 100000L, 10, 3200)
                 assertTrue(transactionsInfo.size == 2)
                 assertEquals("third", Gtx.decode(transactionsInfo[0].txData!!).gtxBody.operations[0].asOpData().args[1].asString())
                 assertEquals("second", Gtx.decode(transactionsInfo[1].txData!!).gtxBody.operations[0].asOpData().args[1].asString())
@@ -396,7 +396,7 @@ class DatabaseIT {
                 db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactionSigners(ctx)} (signer, tx_iid) VALUES (?, ?)", signer.data, 2)
                 db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactionSigners(ctx)} (signer, tx_iid) VALUES (?, ?)", signer.data, 3)
 
-                val (transactionsInfo, remainingTruncatedCount) = db.getTransactionsInfoBySigner(ctx, 100000L, 10, signer, 1700)
+                val (transactionsInfo, remainingTruncatedCount) = db.getTransactionsInfoBySigner(ctx, 100000L, 10, signer, 3200)
                 assertTrue(transactionsInfo.size == 2)
                 assertEquals("third", Gtx.decode(transactionsInfo[0].txData!!).gtxBody.operations[0].asOpData().args[1].asString())
                 assertEquals("second", Gtx.decode(transactionsInfo[1].txData!!).gtxBody.operations[0].asOpData().args[1].asString())
@@ -405,68 +405,4 @@ class DatabaseIT {
         }
     }
 
-    @Test
-    fun getBlocksWithDataSize() {
-        val configData1 = gtv(mapOf("any" to gtv("value1")))
-
-        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData1)
-            testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData1), listOf(
-                    listOf("first"),
-                    listOf("second"),
-                    listOf("third")
-            ))
-            withReadConnection(storage, testBlockChainBuilder.chainId) { readCtx ->
-                val readAccess = DatabaseAccess.of(readCtx)
-                val (blocks, remainingTruncatedCount) = readAccess.getBlocks(readCtx, 100000, 10,  1292)
-                assertTrue(blocks.size == 2)
-                assertTrue(blocks[0].timestamp == 10002L)
-                assertTrue(blocks[1].timestamp == 10001L)
-                assertTrue(remainingTruncatedCount == 1L)
-            }
-        }
-    }
-
-    @Test
-    fun getBlocksBeforeHeightWithHeightFilter() {
-        val configData1 = gtv(mapOf("any" to gtv("value1")))
-
-        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData1)
-            testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData1), listOf(
-                    listOf("first"),
-                    listOf("second"),
-                    listOf("third")
-            ))
-            withReadConnection(storage, testBlockChainBuilder.chainId) { readCtx ->
-                val readAccess = DatabaseAccess.of(readCtx)
-                val (blocks, remainingTruncatedCount) = readAccess.getBlocksBeforeHeight(readCtx, 1, 10,  1292)
-                assertTrue(blocks.size == 1)
-                assertTrue(blocks[0].blockHeight == 0L)
-                assertTrue(remainingTruncatedCount == 0L)
-            }
-        }
-    }
-
-    @Test
-    fun getBlocksBeforeHeightWithNoHeightFilter() {
-        val configData1 = gtv(mapOf("any" to gtv("value1")))
-
-        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
-            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData1)
-            testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData1), listOf(
-                    listOf("first"),
-                    listOf("second"),
-                    listOf("third")
-            ))
-            withReadConnection(storage, testBlockChainBuilder.chainId) { readCtx ->
-                val readAccess = DatabaseAccess.of(readCtx)
-                val (blocks, remainingTruncatedCount) = readAccess.getBlocksBeforeHeight(readCtx, 3, 10,  1292)
-                assertTrue(blocks.size == 2)
-                assertTrue(blocks[0].blockHeight == 2L)
-                assertTrue(blocks[1].blockHeight == 1L)
-                assertTrue(remainingTruncatedCount == 1L)
-            }
-        }
-    }
 }

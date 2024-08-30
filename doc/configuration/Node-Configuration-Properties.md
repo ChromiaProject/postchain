@@ -66,6 +66,7 @@ It is possible to configure peers via node configuration with these properties.
 | `api.chain-request-concurrency` | Number of incoming HTTP requests to handle concurrently per blockchain. Unlimited by default. If exceeded, `503 Service Unavailable` will be returned. | Int     | `-1`                    | `POSTCHAIN_API_CHAIN_REQUEST_CONCURRENCY` |
 | `api.subnode-http-redirect`     | Enable to make master node respond with 307 redirect when requests are made to subnodes instead of routing the request internally.                     | Boolean | false                   | `POSTCHAIN_API_SUBNODE_HTTP_REDIRECT`     |
 | `api.max-request-body-size`     | Request body limit in bytes. If request exceeds limit it is closed with a 413 (content too large).                                                     | Int     | 1024 * 1024 * 55 (55mb) | `POSTCHAIN_API_MAX_REQUEST_BODY_SIZE`     |
+| `api.max-data-size`             | The maximum size of transactions and blocks REST API endpoints response.                                                                               | Int     | 1024 * 1024 * 55 (55mb) | `POSTCHAIN_API_MAX_DATA_SIZE`             |
 | `debug.port`                    | Debug API port.                                                                                                                                        | Int     | 7750                    | `POSTCHAIN_DEBUG_PORT`                    |
 
 ## Containers (subnodes)
