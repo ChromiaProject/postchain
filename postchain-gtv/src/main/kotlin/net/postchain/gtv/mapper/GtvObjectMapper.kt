@@ -9,7 +9,9 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvString
 import net.postchain.gtv.GtvTypeException
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -320,7 +322,7 @@ private fun classToValue(classType: KType, gtv: Gtv?, transient: Map<String, Any
     if (gtv == null) return null
     return when {
         classType.classifier.isGtv() -> gtv
-        classType.classifier.isEnum() -> getEnumValue(classType, gtv.asString(), context)
+        classType.classifier.isEnum() -> getEnumValue(classType, gtv, context)
         classType.classifier.isInteger() -> throw IllegalArgumentException("Int is too small to represent GTV integer, please use Long; context: $context")
         classType.classifier.isLong() -> gtv.asInteger()
         classType.classifier.isString() -> gtv.asString()
@@ -395,9 +397,19 @@ private fun KClassifier?.isGtv() = (this as? KClass<*>)?.isSubclassOf(Gtv::class
 
 private fun KClassifier?.isEnum(): Boolean = (this as? KClass<*>)?.java?.isEnum == true
 
-private fun getEnumValue(classType: KType, enumValue: String, context: String): Any {
+private fun getEnumValue(classType: KType, enumValue: Gtv, context: String): Any {
     @Suppress("UNCHECKED_CAST") val enum = (classType.classifier as? KClass<*>)?.java?.enumConstants as? Array<Enum<*>>
             ?: throw IllegalArgumentException("Invalid enum type ${classType.classifier}; context: $context")
-    return enum.firstOrNull { it.name == enumValue }
-            ?: throw IllegalArgumentException("invalid value '$enumValue' for enum ${classType.classifier}; context: $context")
+    return when (enumValue) {
+        is GtvString -> enum.firstOrNull { it.name == enumValue.asString() }
+                ?: throw IllegalArgumentException("invalid value '${enumValue.asString()}' for enum ${classType.classifier}; context: $context")
+
+        is GtvInteger -> try {
+            enum[enumValue.asInteger().toInt()]
+        } catch (e: ArrayIndexOutOfBoundsException) {
+            throw IllegalArgumentException("invalid value index ${enumValue.asInteger()} for enum ${classType.classifier}; context: $context")
+        }
+
+        else -> throw IllegalArgumentException("Enum value has to be string or integer, was ${enumValue.type}; context: $context")
+    }
 }

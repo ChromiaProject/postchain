@@ -141,6 +141,29 @@ internal class GtvObjectMapperTest {
     }
 
     @Test
+    fun testEnumAsInteger() {
+        data class WithEnumValue(
+                @Name("enum") val e: SimpleEnum,
+        )
+
+        val actual = gtv(mapOf("enum" to gtv(1))).toObject<WithEnumValue>()
+        assertThat(actual.e).isEqualTo(SimpleEnum.B)
+    }
+
+    @Test
+    fun testMissingIntegerEnumValue() {
+        data class MissingIntegerEnumValue(
+                @Name("enum") val e: SimpleEnum,
+        )
+
+        assertFailure {
+            gtv(mapOf(
+                    "enum" to gtv(3)
+            )).toObject<MissingIntegerEnumValue>()
+        }.isInstanceOf(IllegalArgumentException::class)
+    }
+
+    @Test
     fun bigIntegerType() {
         data class SimpleBigInteger(@Name("myBigInt") @DefaultValue(defaultBigInteger = "15") val myBigInteger: BigInteger)
         assertThat(gtv(mapOf("myBigInt" to gtv(BigInteger("9999209385237856329573295739345354354354353")))).toObject<SimpleBigInteger>())
