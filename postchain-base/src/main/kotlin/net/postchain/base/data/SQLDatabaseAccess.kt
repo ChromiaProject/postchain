@@ -527,7 +527,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     override fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, heightMustBeHigherThan: Long) {
         if (left > right) {
-            throw ProgrammerMistake("Why is left value lower than right? $left < $right")
+            throw ProgrammerMistake("Invalid range: left value ($left) is greater than right value ($right)")
         }
         queryRunner.update(ctx.conn, cmdPruneStates(ctx, prefix), left, right, heightMustBeHigherThan)
     }
@@ -543,7 +543,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      */
     override fun safePruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, nextSnapshotHeight: Long) {
         if (left > right) {
-            throw ProgrammerMistake("Why is left value lower than right? $left < $right")
+            throw ProgrammerMistake("Invalid range: left value ($left) is greater than right value ($right).")
         }
         val sql = """
             DELETE FROM ${tableStateLeafs(ctx, prefix)} 
