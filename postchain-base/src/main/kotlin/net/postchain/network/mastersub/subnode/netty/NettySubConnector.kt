@@ -20,8 +20,8 @@ class NettySubConnector(
     private val eventLoopGroup = NioEventLoopGroup(DefaultThreadFactory("NettySubClient"))
 
     override fun connectMaster(
-        masterNode: PeerInfo,
-        connectionDescriptor: SubConnectionDescriptor
+            masterNode: PeerInfo,
+            connectionDescriptor: SubConnectionDescriptor
     ) {
         val connection = NettySubConnection(masterNode, connectionDescriptor, eventLoopGroup)
         try {

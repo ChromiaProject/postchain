@@ -14,9 +14,9 @@ internal class BlockDetailSerializer : JsonSerializer<BlockDetail> {
     val gson = make_gtv_gson()
 
     override fun serialize(
-        src: BlockDetail?,
-        typeOfSrc: Type?,
-        context: JsonSerializationContext?
+            src: BlockDetail?,
+            typeOfSrc: Type?,
+            context: JsonSerializationContext?
     ): JsonElement {
         if (src == null) {
             return JsonNull.INSTANCE
@@ -32,8 +32,8 @@ internal class BlockDetailSerializer : JsonSerializer<BlockDetail> {
             val tx = JsonObject()
             tx.add("rid", JsonPrimitive(it.rid.toHex()))
             tx.add("hash", JsonPrimitive(it.hash.toHex()))
-            if (it.data != null) {
-                tx.add("data", JsonPrimitive(it.data.toHex()))
+            it.data?.let { data ->
+                tx.add("data", JsonPrimitive(data.toHex()))
             }
             transactions.add(tx)
         }

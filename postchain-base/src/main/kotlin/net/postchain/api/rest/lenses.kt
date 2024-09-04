@@ -44,7 +44,6 @@ import org.http4k.lens.boolean
 import org.http4k.lens.httpBodyRoot
 import org.http4k.lens.int
 import org.http4k.lens.long
-import org.http4k.lens.nonEmptyString
 import org.http4k.lens.regex
 import org.http4k.lens.string
 import java.io.InputStream

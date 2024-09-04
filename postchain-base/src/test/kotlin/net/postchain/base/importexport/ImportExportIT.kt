@@ -7,7 +7,6 @@ import assertk.assertions.isInstanceOf
 import assertk.assertions.messageContains
 import assertk.isContentEqualTo
 import net.postchain.StorageBuilder
-import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.TestBlockchainBuilder
@@ -459,7 +458,11 @@ class ImportExportIT {
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             buildSimpleBlockchain(storage, 10)
-            val exportBlocks = exportBlocks(storage, chainId, 0, Int.MAX_VALUE, Int.MAX_VALUE);
+            val exportBlocks = exportBlocks(storage,
+                    chainId,
+                    0,
+                    Int.MAX_VALUE,
+                    Int.MAX_VALUE)
             assertThat(exportBlocks.size).isEqualTo(10)
         }
     }

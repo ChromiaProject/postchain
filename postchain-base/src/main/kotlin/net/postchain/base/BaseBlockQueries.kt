@@ -22,29 +22,10 @@ import net.postchain.crypto.Digester
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
-import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import java.sql.SQLException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
-
-/**
- * Encapsulating a proof of a transaction hash in a block header
- *
- * @param hash The transaction hash the proof applies to
- * @param blockHeader The block header the [hash] is supposedly in
- * @param witness The block witness
- * @param merkleProofTree a proof including [hash] (in its raw form)
- * @param txIndex is the index of the proven transaction in the block (i.e. our "path").
- */
-class ConfirmationProof(
-        @Name("hash") val hash: ByteArray,
-        @Name("blockHeader") val blockHeader: ByteArray,
-        @Name("witness") val witness: BaseBlockWitness,
-        @Name("merkleProofTree") val merkleProofTree: GtvMerkleProofTree,
-        @Name("txIndex") val txIndex: Long
-)
 
 /**
  * A collection of methods for various blockchain-related queries. Each query is called with the wrapping method [runOp]

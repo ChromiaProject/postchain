@@ -10,7 +10,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
-import net.postchain.core.BaseInfrastructureFactoryProvider
+import net.postchain.base.BaseInfrastructureFactoryProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.Shutdownable
