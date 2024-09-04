@@ -9,10 +9,12 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import uk.org.webcompere.systemstubs.environment.EnvironmentVariables
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.assertThrows
 
 class CollationIT {
     @Test
+    @Tag("docker")
     fun testCollationTestPass() {
         PostgreSQLContainer(DockerImageName.parse("postgres:14.9-alpine3.18")).apply {
             withUsername("postchain")
@@ -26,6 +28,7 @@ class CollationIT {
     }
 
     @Test
+    @Tag("docker")
     fun testCollationTestFail() {
         PostgreSQLContainer(DockerImageName.parse("postgres:14.9")).apply {
             withUsername("postchain")
