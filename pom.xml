@@ -18,6 +18,7 @@
         <module>postchain-gtv</module>
         <module>postchain-gtv-yaml</module>
         <module>postchain-gtx-data</module>
+        <module>postchain-spi</module>
         <module>postchain-base</module>
         <module>postchain-devtools</module>
         <module>postchain-cli</module>
@@ -135,6 +136,11 @@
             <dependency>
                 <groupId>net.postchain</groupId>
                 <artifactId>postchain-gtx-data</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain-spi</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

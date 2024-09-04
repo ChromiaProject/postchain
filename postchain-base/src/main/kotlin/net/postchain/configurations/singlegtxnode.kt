@@ -9,7 +9,6 @@ import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.GtvNull
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.GTXSchemaManager
 import net.postchain.gtx.SimpleGTXModule

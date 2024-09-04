@@ -29,6 +29,10 @@
         </dependency>
         <dependency>
             <groupId>net.postchain</groupId>
+            <artifactId>postchain-spi</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
             <artifactId>postchain-admin-service</artifactId>
         </dependency>
 
@@ -192,6 +196,13 @@
         <dependency>
             <groupId>net.postchain</groupId>
             <artifactId>postchain-common</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.postchain</groupId>
+            <artifactId>postchain-spi</artifactId>
             <type>test-jar</type>
             <scope>test</scope>
             <version>${project.version}</version>

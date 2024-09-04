@@ -29,8 +29,8 @@ internal class TransactionInfoExtSerializer : JsonSerializer<TransactionInfoExt>
         json.add("timestamp", JsonPrimitive(src.timestamp))
         json.add("txRID", JsonPrimitive(src.txRID.toHex()))
         json.add("txHash", JsonPrimitive(src.txHash.toHex()))
-        if (src.txData != null) {
-            json.add("txData", JsonPrimitive(src.txData.toHex()))
+        src.txData?.let { txData ->
+            json.add("txData", JsonPrimitive(txData.toHex()))
         }
         return json
     }

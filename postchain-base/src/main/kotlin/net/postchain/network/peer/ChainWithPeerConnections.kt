@@ -14,9 +14,9 @@ import java.util.concurrent.ConcurrentHashMap
  * and [NodeRid].
  */
 class ChainWithPeerConnections(
-    val iid: Long,
-    val peerConfig: XChainPeersConfiguration,
-    private val connectAll: Boolean
+        val iid: Long,
+        val peerConfig: XChainPeersConfiguration,
+        private val connectAll: Boolean
 ) : ChainWithConnections<PeerConnection, PeerPacketHandler> {
 
     val bcRid = peerConfig.blockchainRid // Just take it from the config

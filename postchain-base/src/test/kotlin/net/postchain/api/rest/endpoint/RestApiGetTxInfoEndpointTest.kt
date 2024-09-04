@@ -11,7 +11,6 @@ import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.infra.RestApiConfig.Companion.DEFAULT_MAX_DATA_SIZE
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.model.TxRid
-import net.postchain.base.cryptoSystem
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.BlockRid

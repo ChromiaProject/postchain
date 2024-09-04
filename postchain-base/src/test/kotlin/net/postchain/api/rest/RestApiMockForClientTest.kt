@@ -9,7 +9,6 @@ import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.ConfirmationProof
-import net.postchain.base.cryptoSystem
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -23,6 +22,7 @@ import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockDetailsTruncated
 import net.postchain.crypto.PubKey
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.Signature
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
@@ -35,6 +35,8 @@ import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+
+val cryptoSystem = Secp256K1CryptoSystem()
 
 class RestApiMockForClientManual {
     val listenPort = 49545

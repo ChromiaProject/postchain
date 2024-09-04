@@ -16,7 +16,6 @@ import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.BaseBlockWitnessBuilder
 import net.postchain.base.configuration.BaseBlockchainConfiguration
-import net.postchain.base.cryptoSystem
 import net.postchain.base.data.BaseBlockWitnessProvider
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray

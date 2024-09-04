@@ -8,7 +8,6 @@ import net.postchain.base.TestBlockchainBuilder
 import net.postchain.base.configuration.KEY_CONFIGURATIONFACTORY
 import net.postchain.base.configuration.KEY_DEPENDENCIES
 import net.postchain.base.configuration.KEY_SIGNERS
-import net.postchain.base.cryptoSystem
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.base.withReadConnection
