@@ -11,6 +11,7 @@ import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.Transaction
 import net.postchain.core.TxDetail
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.crypto.PubKey
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
@@ -50,13 +51,13 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
 
     @Test
     fun test_get_all_transactions_info() {
-        val transactions = nodes[0].getRestApiModel().getTransactionsInfo(Long.MAX_VALUE, 300, RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
+        val transactions = nodes[0].getRestApiModel().getTransactionsInfo(BlockQueryTimeFilter(), 300, RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
         assertThat(transactions).hasSize(8)
     }
 
     @Test
     fun test_get_last_2_transactions_info() {
-        val transactions = nodes[0].getRestApiModel().getTransactionsInfo(Long.MAX_VALUE, 2, RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
+        val transactions = nodes[0].getRestApiModel().getTransactionsInfo(BlockQueryTimeFilter(), 2, RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
         assertThat(transactions).hasSize(2)
         assertThat(transactions[0].blockHeight == 2L)
         assertThat(transactions[1].blockHeight == 2L)
@@ -64,13 +65,13 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
 
     @Test
     fun test_get_the_first_2_transactions() {
-        val last6Txs = nodes[0].getRestApiModel().getTransactionsInfo(Long.MAX_VALUE, 6, RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts // get one tx at block_height = 1
+        val last6Txs = nodes[0].getRestApiModel().getTransactionsInfo(BlockQueryTimeFilter(), 6, RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts // get one tx at block_height = 1
         assertThat(last6Txs).hasSize(6)
         val block1 = last6Txs[5]
         assertThat(block1.blockHeight).isEqualTo(1L) // get block n. 1
 
         // get 2 txs from blocks before block1 => block0
-        val first2Transactions = nodes[0].getRestApiModel().getTransactionsInfo(block1.timestamp, 2, RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
+        val first2Transactions = nodes[0].getRestApiModel().getTransactionsInfo(BlockQueryTimeFilter(block1.timestamp), 2, RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
         assertThat(first2Transactions).hasSize(2)
         assertThat(first2Transactions.map { tx -> tx.blockHeight }.all { it == 0L }).isTrue()
     }
@@ -78,7 +79,7 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
     @Test
     fun test_get_all_blocks() {
         // Asserting blocks and txs
-        val blocks = nodes[0].getRestApiModel().getBlocks(Long.MAX_VALUE, 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE).blockDetails
+        val blocks = nodes[0].getRestApiModel().getBlocks(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE).blockDetails
         assertThat(blocks).hasSize(3)
 
         // Block #2
@@ -104,7 +105,7 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
 
     @Test
     fun test_get_last_2_blocks() {
-        val blocks = nodes[0].getRestApiModel().getBlocks(Long.MAX_VALUE, 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE).blockDetails
+        val blocks = nodes[0].getRestApiModel().getBlocks(BlockQueryTimeFilter(), 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE).blockDetails
         assertThat(blocks).hasSize(2)
 
         assertThat(blocks[0].height).isEqualTo(2L)
@@ -114,7 +115,7 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
     @Test
     fun test_get_one_block() {
         // get a random block and save blockRID
-        val randomBlock = nodes[0].getRestApiModel().getBlocks(Long.MAX_VALUE, 1, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE).blockDetails[0]
+        val randomBlock = nodes[0].getRestApiModel().getBlocks(BlockQueryTimeFilter(), 1, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE).blockDetails[0]
 
         val block = nodes[0].getRestApiModel().getBlock(BlockRid(randomBlock.rid), true)
         assertThat(block).isNotNull()
@@ -138,10 +139,10 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
 
     @Test
     fun test_get_txs_by_signer() {
-        val signer1Txs = nodes[0].getRestApiModel().getTransactionsInfoBySigner(Long.MAX_VALUE, Int.MAX_VALUE, PubKey(signer1), RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
+        val signer1Txs = nodes[0].getRestApiModel().getTransactionsInfoBySigner(BlockQueryTimeFilter(), Int.MAX_VALUE, PubKey(signer1), RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
         assertThat(signer1Txs.size).isEqualTo(3)
 
-        val signer2Txs = nodes[0].getRestApiModel().getTransactionsInfoBySigner(Long.MAX_VALUE, Int.MAX_VALUE, PubKey(signer2), RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
+        val signer2Txs = nodes[0].getRestApiModel().getTransactionsInfoBySigner(BlockQueryTimeFilter(), Int.MAX_VALUE, PubKey(signer2), RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
         assertThat(signer2Txs.size).isEqualTo(2)
 
         // Assert one common multi-sig tx

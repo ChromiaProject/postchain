@@ -19,12 +19,14 @@ import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockDetailsTruncated
+import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockQueryHeightFilter
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.core.block.BlockStore
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.InitialBlockData
 import net.postchain.core.block.size
 import net.postchain.crypto.PubKey
-import net.postchain.core.block.BlockHeader
 
 /**
  * Provides database access to the location where the blockchain with related metadata and transactions
@@ -105,12 +107,12 @@ class BaseBlockStore : BlockStore {
         return DatabaseAccess.of(ctx).getTransactionInfo(ctx, txRID)
     }
 
-    override fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated {
-        return DatabaseAccess.of(ctx).getTransactionsInfo(ctx, beforeTime, limit, maxDataSize)
+    override fun getTransactionsInfo(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated {
+        return DatabaseAccess.of(ctx).getTransactionsInfo(ctx, timeFilter, limit, maxDataSize)
     }
 
-    override fun getTransactionsInfoBySigner(ctx: EContext, beforeTime: Long, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated {
-        return DatabaseAccess.of(ctx).getTransactionsInfoBySigner(ctx, beforeTime, limit, signer, maxDataSize)
+    override fun getTransactionsInfoBySigner(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated {
+        return DatabaseAccess.of(ctx).getTransactionsInfoBySigner(ctx, timeFilter, limit, signer, maxDataSize)
     }
 
     override fun getLastTransactionNumber(ctx: EContext): Long {
@@ -137,15 +139,15 @@ class BaseBlockStore : BlockStore {
                 blockInfo.timestamp)
     }
 
-    override fun getBlocks(ctx: EContext, beforeTime: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated {
+    override fun getBlocks(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated {
         val db = DatabaseAccess.of(ctx)
-        val blockInfoExts = db.getBlocks(ctx, beforeTime, limit)
+        val blockInfoExts = db.getBlocks(ctx, timeFilter, limit)
         return getBlockDetails(blockInfoExts, db, ctx, txHashesOnly, maxDataSize)
     }
 
-    override fun getBlocksBeforeHeight(ctx: EContext, beforeHeight: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated {
+    override fun getBlocksBetweenHeights(ctx: EContext, heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated {
         val db = DatabaseAccess.of(ctx)
-        val blockInfoExts = db.getBlocksBeforeHeight(ctx, beforeHeight, limit)
+        val blockInfoExts = db.getBlocksBetweenHeights(ctx, heightFilter, limit)
         return getBlockDetails(blockInfoExts, db, ctx, txHashesOnly, maxDataSize)
     }
 

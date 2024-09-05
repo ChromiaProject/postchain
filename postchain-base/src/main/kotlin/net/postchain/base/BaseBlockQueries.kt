@@ -16,6 +16,8 @@ import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockDetailsTruncated
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockQueryHeightFilter
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.core.block.BlockStore
 import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.crypto.Digester
@@ -115,28 +117,28 @@ open class BaseBlockQueries(
         blockStore.getTransactionInfo(it, txRID)
     }
 
-    override fun getTransactionsInfo(beforeTime: Long, limit: Int, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated> =
+    override fun getTransactionsInfo(timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated> =
             runOpRegardless {
-                blockStore.getTransactionsInfo(it, beforeTime, limit, maxDataSize)
+                blockStore.getTransactionsInfo(it, timeFilter, limit, maxDataSize)
             }
 
-    override fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated> =
+    override fun getTransactionsInfoBySigner(timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated> =
             runOpRegardless {
-                blockStore.getTransactionsInfoBySigner(it, beforeTime, limit, signer, maxDataSize)
+                blockStore.getTransactionsInfoBySigner(it, timeFilter, limit, signer, maxDataSize)
             }
 
     override fun getLastTransactionNumber(): CompletionStage<Long> = runOpRegardless {
         blockStore.getLastTransactionNumber(it)
     }
 
-    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated> =
+    override fun getBlocks(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated> =
             runOpRegardless {
-                blockStore.getBlocks(it, beforeTime, limit, txHashesOnly, maxDataSize)
+                blockStore.getBlocks(it, timeFilter, limit, txHashesOnly, maxDataSize)
             }
 
-    override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated> =
+    override fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated> =
             runOpRegardless {
-                blockStore.getBlocksBeforeHeight(it, beforeHeight, limit, txHashesOnly, maxDataSize)
+                blockStore.getBlocksBetweenHeights(it, heightFilter, limit, txHashesOnly, maxDataSize)
             }
 
     override fun getBlocksFromHeight(fromHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> =

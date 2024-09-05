@@ -16,6 +16,7 @@ import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionInfoExtsTruncated
+import net.postchain.core.block.BlockQueryTimeFilter
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.nullValue
 import org.junit.jupiter.api.AfterEach
@@ -103,7 +104,7 @@ class RestApiGetTxInfoEndpointTest {
                 TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx4".toByteArray()), "tx4 - 004".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx4".toByteArray())
         )
         whenever(
-                model.getTransactionsInfo(Long.MAX_VALUE, 300, DEFAULT_MAX_DATA_SIZE)
+                model.getTransactionsInfo(BlockQueryTimeFilter(), 300, DEFAULT_MAX_DATA_SIZE)
         ).thenReturn(TransactionInfoExtsTruncated(response, 0))
         restApi.attachModel(blockchainRID, model)
 
@@ -128,7 +129,7 @@ class RestApiGetTxInfoEndpointTest {
                 TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx4".toByteArray()), "tx4 - 004".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx4".toByteArray())
         )
         whenever(
-                model.getTransactionsInfo(Long.MAX_VALUE, 300, DEFAULT_MAX_DATA_SIZE)
+                model.getTransactionsInfo(BlockQueryTimeFilter(), 300, DEFAULT_MAX_DATA_SIZE)
         ).thenReturn(TransactionInfoExtsTruncated(response, 2))
 
         restApi.attachModel(blockchainRID, model)
@@ -154,7 +155,7 @@ class RestApiGetTxInfoEndpointTest {
                 TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx4".toByteArray()), "tx4 - 004".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx4".toByteArray())
         )
         whenever(
-                model.getTransactionsInfo(Long.MAX_VALUE, 25, DEFAULT_MAX_DATA_SIZE)
+                model.getTransactionsInfo(BlockQueryTimeFilter(), 25, DEFAULT_MAX_DATA_SIZE)
         ).thenReturn(TransactionInfoExtsTruncated(response, 0))
         restApi.attachModel(blockchainRID, model)
 
@@ -170,7 +171,7 @@ class RestApiGetTxInfoEndpointTest {
     fun testGetTransactionsEmpty() {
         val response = listOf<TransactionInfoExt>()
         whenever(
-                model.getTransactionsInfo(Long.MAX_VALUE, 25, DEFAULT_MAX_DATA_SIZE)
+                model.getTransactionsInfo(BlockQueryTimeFilter(), 25, DEFAULT_MAX_DATA_SIZE)
         ).thenReturn(TransactionInfoExtsTruncated(response, 0))
         restApi.attachModel(blockchainRID, model)
 

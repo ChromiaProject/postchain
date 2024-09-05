@@ -21,6 +21,8 @@ import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockDetailsTruncated
+import net.postchain.core.block.BlockQueryHeightFilter
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.Signature
@@ -177,12 +179,15 @@ class RestApiMockForClientManual {
             TODO("Not yet implemented")
         }
 
-        override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
-                BlockDetailsTruncated(blocks.filter { it.timestamp < beforeTime }.subList(0, limit), 0)
+        override fun getBlocks(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
+                BlockDetailsTruncated(blocks.filter {
+                    it.timestamp < timeFilter.beforeTime && it.timestamp > timeFilter.afterTime
+                }.subList(0, limit), 0)
 
-        override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
-                BlockDetailsTruncated(blocks.filter { it.height < beforeHeight }.subList(0, limit), 0)
-
+        override fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
+                BlockDetailsTruncated(blocks.filter {
+                    it.height < heightFilter.beforeHeight && it.height > heightFilter.afterHeight
+                }.subList(0, limit), 0)
 
         override fun getCurrentBlockHeight(): BlockHeight {
             TODO("Not yet implemented")
@@ -198,7 +203,7 @@ class RestApiMockForClientManual {
             return TransactionInfoExt(block.rid, block.height, block.header, block.witness, block.timestamp, cryptoSystem.digest(tx.data!!), tx.data!!.slice(IntRange(0, 4)).toByteArray(), tx.data!!)
         }
 
-        override fun getTransactionsInfo(beforeTime: Long, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated {
+        override fun getTransactionsInfo(timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated {
             var queryBlocks = blocks
             val transactionsInfo: MutableList<TransactionInfoExt> = mutableListOf()
             queryBlocks = queryBlocks.sortedByDescending { blockDetail -> blockDetail.height }
@@ -210,7 +215,7 @@ class RestApiMockForClientManual {
             return TransactionInfoExtsTruncated(transactionsInfo.toList(), 0)
         }
 
-        override fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated {
+        override fun getTransactionsInfoBySigner(timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated {
             TODO("Not yet implemented")
         }
 

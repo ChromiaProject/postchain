@@ -29,6 +29,8 @@ import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.TxDetail
 import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockQueryHeightFilter
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.core.block.BlockWitness
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.sha256Digest
@@ -322,7 +324,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return buildTransactionInfoExt(txInfo)
     }
 
-    override fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated {
+    override fun getTransactionsInfo(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated {
         val sql = """
             WITH TransactionInfo AS (
                 SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_rid, t.tx_hash, t.tx_data, t.tx_iid, 
@@ -338,7 +340,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                     ) OVER (ORDER BY b.block_height DESC, t.tx_iid DESC) AS cumulative_size
                 FROM ${tableBlocks(ctx)} AS b 
                 JOIN ${tableTransactions(ctx)} AS t ON (t.block_iid = b.block_iid) 
-                WHERE b.timestamp < ? 
+                WHERE b.timestamp < ? AND b.timestamp > ?
                 ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?
             )
             SELECT block_rid, block_height, block_header_data, block_witness, timestamp, tx_rid, tx_hash, tx_data,
@@ -346,13 +348,13 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             FROM TransactionInfo
             WHERE cumulative_size <= ?;
         """.trimIndent()
-        val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, beforeTime, limit, maxDataSize, maxDataSize)
+        val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, timeFilter.beforeTime, timeFilter.afterTime, limit, maxDataSize, maxDataSize)
         val transactionInfoExts = transactions.map(::buildTransactionInfoExt)
         val remainingTruncatedCount = transactions.map(::remainingTruncatedCount).firstOrNull() ?: 0
         return TransactionInfoExtsTruncated(transactionInfoExts, remainingTruncatedCount)
     }
 
-    override fun getTransactionsInfoBySigner(ctx: EContext, beforeTime: Long, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated {
+    override fun getTransactionsInfoBySigner(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated {
         val sql = """
             WITH TransactionInfo AS (
                 SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_iid, t.tx_rid, t.tx_hash, t.tx_data, 
@@ -369,7 +371,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 FROM ${tableBlocks(ctx)} AS b
                 JOIN ${tableTransactions(ctx)} AS t ON (t.block_iid = b.block_iid)
                 WHERE t.tx_iid IN (SELECT tx_iid FROM ${tableTransactionSigners(ctx)} WHERE signer = ?) 
-                AND b.timestamp < ? 
+                AND b.timestamp < ? AND b.timestamp > ?
                 ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?
             )
             SELECT block_rid, block_height, block_header_data, block_witness, timestamp, tx_rid, tx_hash, tx_data,
@@ -377,7 +379,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             FROM TransactionInfo
             WHERE cumulative_size <= ?;
         """.trimIndent()
-        val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, signer.data, beforeTime, limit, maxDataSize, maxDataSize)
+        val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, signer.data, timeFilter.beforeTime, timeFilter.afterTime, limit, maxDataSize, maxDataSize)
         val transactionInfoExts = transactions.map(::buildTransactionInfoExt)
         val remainingTruncatedCount = transactions.map(::remainingTruncatedCount).firstOrNull() ?: 0
         return TransactionInfoExtsTruncated(transactionInfoExts, remainingTruncatedCount)
@@ -983,25 +985,27 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return buildBlockInfoExt(blockInfo)
     }
 
-    override fun getBlocks(ctx: EContext, blockTime: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
+    override fun getBlocks(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int): List<DatabaseAccess.BlockInfoExt> {
         val sql = """
             SELECT block_rid, block_height, block_header_data, block_witness, timestamp 
-            FROM ${tableBlocks(ctx)} 
-            WHERE timestamp < ? 
+            FROM ${tableBlocks(ctx)}  
+            WHERE timestamp < ? AND timestamp > ? 
             ORDER BY timestamp DESC LIMIT ?
         """.trimIndent()
-        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, blockTime, limit)
+
+        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, timeFilter.beforeTime, timeFilter.afterTime, limit)
         return blocksInfo.map { buildBlockInfoExt(it) }
     }
 
-    override fun getBlocksBeforeHeight(ctx: EContext, blockHeight: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
+    override fun getBlocksBetweenHeights(ctx: EContext, heightFilter: BlockQueryHeightFilter, limit: Int): List<DatabaseAccess.BlockInfoExt> {
         val sql = """
             SELECT block_rid, block_height, block_header_data, block_witness, timestamp 
             FROM ${tableBlocks(ctx)} 
-            WHERE block_height < ? 
+            WHERE block_height < ? AND block_height > ? 
             ORDER BY block_height DESC LIMIT ?
         """.trimIndent()
-        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, limit)
+
+        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, heightFilter.beforeHeight, heightFilter.afterHeight, limit)
         return blocksInfo.map { buildBlockInfoExt(it) }
     }
 

@@ -68,7 +68,9 @@ val heightPath = Path.long().of("height", "Block height")
 
 val limitQuery = Query.int().optional("limit")
 val beforeTimeQuery = Query.long().optional("before-time")
+val afterTimeQuery = Query.long().optional("after-time")
 val beforeHeightQuery = Query.long().optional("before-height")
+val afterHeightQuery = Query.long().optional("after-height")
 val txsQuery = Query.boolean().optional("txs")
 val heightQuery = Query.long().map {
     if (it >= -1)
