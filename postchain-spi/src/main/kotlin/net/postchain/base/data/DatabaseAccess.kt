@@ -19,6 +19,8 @@ import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.TxDetail
 import net.postchain.core.TxEContext
 import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockQueryHeightFilter
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.core.block.BlockWitness
 import net.postchain.crypto.PubKey
 import java.sql.Connection
@@ -114,12 +116,12 @@ interface DatabaseAccess {
     fun getTxBytes(ctx: EContext, txRID: ByteArray): ByteArray?
     fun isTransactionConfirmed(ctx: EContext, txRID: ByteArray): Boolean
     fun getBlock(ctx: EContext, blockRID: ByteArray): BlockInfoExt?
-    fun getBlocks(ctx: EContext, blockTime: Long, limit: Int): List<BlockInfoExt>
-    fun getBlocksBeforeHeight(ctx: EContext, blockHeight: Long, limit: Int): List<BlockInfoExt>
+    fun getBlocks(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int): List<BlockInfoExt>
+    fun getBlocksBetweenHeights(ctx: EContext, heightFilter: BlockQueryHeightFilter, limit: Int): List<BlockInfoExt>
     fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int): List<BlockInfoExt>
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
-    fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated
-    fun getTransactionsInfoBySigner(ctx: EContext, beforeTime: Long, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated
+    fun getTransactionsInfo(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated
+    fun getTransactionsInfoBySigner(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated
     fun getLastTransactionNumber(ctx: EContext): Long
 
     /**

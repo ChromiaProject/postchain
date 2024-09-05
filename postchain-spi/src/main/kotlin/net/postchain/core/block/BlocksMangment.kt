@@ -34,8 +34,8 @@ interface BlockQueries : Shutdownable {
     fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): CompletionStage<BlockDataWithWitness?>
     fun getBlockHeader(blockRID: ByteArray): CompletionStage<BlockHeader>
     fun getConfirmationProof(txRID: ByteArray): CompletionStage<ConfirmationProof?>
-    fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated>
-    fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated>
+    fun getBlocks(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated>
+    fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated>
     fun getBlocksFromHeight(fromHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>>
     fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): CompletionStage<BlockDetail?>
 
@@ -43,8 +43,8 @@ interface BlockQueries : Shutdownable {
     fun getTransaction(txRID: ByteArray): CompletionStage<Transaction?>
     fun getTransactionRawData(txRID: ByteArray): CompletionStage<ByteArray?>
     fun getTransactionInfo(txRID: ByteArray): CompletionStage<TransactionInfoExt?>
-    fun getTransactionsInfo(beforeTime: Long, limit: Int, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated>
-    fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated>
+    fun getTransactionsInfo(timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated>
+    fun getTransactionsInfoBySigner(timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated>
     fun getLastTransactionNumber(): CompletionStage<Long>
     fun query(name: String, args: Gtv): CompletionStage<Gtv>
     fun isTransactionConfirmed(txRID: ByteArray): CompletionStage<Boolean>

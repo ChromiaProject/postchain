@@ -7,6 +7,8 @@ import net.postchain.base.BaseBlockQueries
 import net.postchain.base.TestBlockchainBuilder
 import net.postchain.concurrent.util.get
 import net.postchain.config.app.AppConfig
+import net.postchain.core.block.BlockQueryHeightFilter
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.gtv.gtvml.GtvMLParser
 import org.junit.jupiter.api.Test
 
@@ -65,11 +67,11 @@ class BaseBlockQueriesTest {
                             "".toByteArray()
                     )
 
-                    val blockDetailsTruncated = baseBlockQueries.getBlocks(Long.MAX_VALUE, 10000, false,1658).get()
+                    val blockDetailsTruncated = baseBlockQueries.getBlocks(BlockQueryTimeFilter(), 10000, false, 1658).get()
                     assertThat(blockDetailsTruncated.blockDetails.size).isEqualTo(1)
                     assertThat(blockDetailsTruncated.remainingTruncatedCount).isEqualTo(2)
 
-                    val allBlockDetails = baseBlockQueries.getBlocks(Long.MAX_VALUE, 10000, false,5000).get()
+                    val allBlockDetails = baseBlockQueries.getBlocks(BlockQueryTimeFilter(), 10000, false, 5000).get()
                     assertThat(allBlockDetails.blockDetails.size).isEqualTo(3)
                     assertThat(allBlockDetails.remainingTruncatedCount).isEqualTo(0)
                 }
@@ -97,11 +99,11 @@ class BaseBlockQueriesTest {
                             "".toByteArray()
                     )
 
-                    val blockDetailsTruncated = baseBlockQueries.getBlocksBeforeHeight(Long.MAX_VALUE, 10000, false,1658).get()
+                    val blockDetailsTruncated = baseBlockQueries.getBlocksBetweenHeights(BlockQueryHeightFilter(), 10000, false, 1658).get()
                     assertThat(blockDetailsTruncated.blockDetails.size).isEqualTo(1)
                     assertThat(blockDetailsTruncated.remainingTruncatedCount).isEqualTo(2)
 
-                    val allBlockDetails = baseBlockQueries.getBlocksBeforeHeight(Long.MAX_VALUE, 10000, false,5000).get()
+                    val allBlockDetails = baseBlockQueries.getBlocksBetweenHeights(BlockQueryHeightFilter(), 10000, false, 5000).get()
                     assertThat(allBlockDetails.blockDetails.size).isEqualTo(3)
                     assertThat(allBlockDetails.remainingTruncatedCount).isEqualTo(0)
                 }

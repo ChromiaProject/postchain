@@ -43,6 +43,8 @@ import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockDetailsTruncated
 import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockQueryHeightFilter
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.core.block.MultiSigBlockWitnessBuilder
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.SigMaker
@@ -100,21 +102,21 @@ open class PostchainModel(
 
     override fun getTransactionInfo(txRID: TxRid): TransactionInfoExt? = blockQueries.getTransactionInfo(txRID.bytes).get()
 
-    override fun getTransactionsInfo(beforeTime: Long, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated =
-            blockQueries.getTransactionsInfo(beforeTime, limit, maxDataSize).get()
+    override fun getTransactionsInfo(timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated =
+            blockQueries.getTransactionsInfo(timeFilter, limit, maxDataSize).get()
 
-    override fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated =
-            blockQueries.getTransactionsInfoBySigner(beforeTime, limit, signer, maxDataSize).get()
+    override fun getTransactionsInfoBySigner(timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated =
+            blockQueries.getTransactionsInfoBySigner(timeFilter, limit, signer, maxDataSize).get()
 
 
     override fun getLastTransactionNumber(): TransactionsCount =
             TransactionsCount(blockQueries.getLastTransactionNumber().get())
 
-    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
-            blockQueries.getBlocks(beforeTime, limit, txHashesOnly, maxDataSize).get()
+    override fun getBlocks(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
+            blockQueries.getBlocks(timeFilter, limit, txHashesOnly, maxDataSize).get()
 
-    override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
-            blockQueries.getBlocksBeforeHeight(beforeHeight, limit, txHashesOnly, maxDataSize).get()
+    override fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
+            blockQueries.getBlocksBetweenHeights(heightFilter, limit, txHashesOnly, maxDataSize).get()
 
     override fun getBlock(blockRID: BlockRid, txHashesOnly: Boolean): BlockDetail? =
             blockQueries.getBlock(blockRID.data, txHashesOnly).get()

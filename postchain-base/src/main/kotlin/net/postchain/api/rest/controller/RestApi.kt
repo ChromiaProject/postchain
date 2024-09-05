@@ -15,6 +15,8 @@ import net.postchain.api.rest.Empty
 import net.postchain.api.rest.ErrorBody
 import net.postchain.api.rest.InfraVersion
 import net.postchain.api.rest.Version
+import net.postchain.api.rest.afterHeightQuery
+import net.postchain.api.rest.afterTimeQuery
 import net.postchain.api.rest.beforeHeightQuery
 import net.postchain.api.rest.beforeTimeQuery
 import net.postchain.api.rest.binaryBody
@@ -65,6 +67,8 @@ import net.postchain.common.rest.AnchoringChainCheck
 import net.postchain.common.rest.HighestBlockHeightAnchoringCheck
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.block.BlockDetail
+import net.postchain.core.block.BlockQueryHeightFilter
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
 import net.postchain.debug.DiagnosticProperty
@@ -168,7 +172,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 8
+        const val REST_API_VERSION = 9
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -369,12 +373,15 @@ class RestApi(
         val model = model(request)
         val limit = limitQuery(request)?.coerceIn(0, MAX_NUMBER_OF_TXS_PER_REQUEST)
                 ?: DEFAULT_ENTRY_RESULTS_REQUEST
-        val beforeTime = beforeTimeQuery(request) ?: Long.MAX_VALUE
+        val timeFilter = BlockQueryTimeFilter(
+                beforeTimeQuery(request) ?: Long.MAX_VALUE,
+                afterTimeQuery(request) ?: -1
+        )
         val signer = signerQuery(request)
         val (transactionInfoExts, remainingTruncatedCount) = if (signer != null) {
-            model.getTransactionsInfoBySigner(beforeTime, limit, PubKey(signer), maxDataSize)
+            model.getTransactionsInfoBySigner(timeFilter, limit, PubKey(signer), maxDataSize)
         } else {
-            model.getTransactionsInfo(beforeTime, limit, maxDataSize)
+            model.getTransactionsInfo(timeFilter, limit, maxDataSize)
         }
         return Response(OK).with(txInfosBody of transactionInfoExts)
                 .header(DATA_TRUNCATED_HEADER, (remainingTruncatedCount != 0L).toString())
@@ -404,18 +411,28 @@ class RestApi(
     private fun getBlocks(request: Request): Response {
         val model = model(request)
         val beforeTime = beforeTimeQuery(request)
+        val afterTime = afterTimeQuery(request)
         val beforeHeight = beforeHeightQuery(request)
-        if (beforeTime != null && beforeHeight != null) {
-            throw UserMistake("Cannot specify both before-time and before-height")
+        val afterHeight = afterHeightQuery(request)
+        if ((afterTime != null || beforeTime != null) && (afterHeight != null || beforeHeight != null)) {
+            throw UserMistake("Cannot filter on both time and height at the same time")
         }
         val limit = limitQuery(request)?.coerceIn(0, MAX_NUMBER_OF_BLOCKS_PER_REQUEST)
                 ?: DEFAULT_ENTRY_RESULTS_REQUEST
         val txHashesOnly = txsQuery(request) != true
 
-        val (blockDetails, remainingTruncatedCount) = if (beforeHeight != null) {
-            model.getBlocksBeforeHeight(beforeHeight, limit, txHashesOnly, maxDataSize)
+        val (blockDetails, remainingTruncatedCount) = if (beforeHeight != null || afterHeight != null) {
+            val heightFilter = BlockQueryHeightFilter(
+                    beforeHeight ?: Long.MAX_VALUE,
+                    afterHeight ?: -1,
+            )
+            model.getBlocksBetweenHeights(heightFilter, limit, txHashesOnly, maxDataSize)
         } else {
-            model.getBlocks(beforeTime ?: Long.MAX_VALUE, limit, txHashesOnly, maxDataSize)
+            val timeFilter = BlockQueryTimeFilter(
+                    beforeTime ?: Long.MAX_VALUE,
+                    afterTime ?: -1,
+            )
+            model.getBlocks(timeFilter, limit, txHashesOnly, maxDataSize)
         }
         return Response(OK).with(blocksBody of blockDetails)
                 .header(DATA_TRUNCATED_HEADER, (remainingTruncatedCount != 0L).toString())

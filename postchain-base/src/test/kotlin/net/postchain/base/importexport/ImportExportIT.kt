@@ -33,6 +33,7 @@ import net.postchain.core.Storage
 import net.postchain.core.Transaction
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.crypto.sha256Digest
@@ -290,7 +291,7 @@ class ImportExportIT {
                 val configurations = db.getAllConfigurations(ctx)
                 assertThat(configurations).isEqualTo(expectedConfigurations.map { it.first to encodeGtv(it.second).wrap() })
 
-                val blocks = db.getBlocks(ctx, Long.MAX_VALUE, 1000).sortedBy { it.blockHeight }
+                val blocks = db.getBlocks(ctx, BlockQueryTimeFilter(), 1000).sortedBy { it.blockHeight }
                 assertThat(blocks.size).isEqualTo(expectedBlocks.size)
                 for ((block, expectedBlock) in blocks.zip(expectedBlocks)) {
                     val (expectedBlockHeader, expectedTransactions) = expectedBlock
@@ -547,7 +548,7 @@ class ImportExportIT {
             val configurations = db.getAllConfigurations(ctx)
             assertThat(configurations).isEqualTo(expectedConfigurations.map { it.first to encodeGtv(it.second).wrap() })
 
-            val blocks = db.getBlocks(ctx, Long.MAX_VALUE, 1000).sortedBy { it.blockHeight }
+            val blocks = db.getBlocks(ctx, BlockQueryTimeFilter(), 1000).sortedBy { it.blockHeight }
             assertThat(blocks.size).isEqualTo(expectedBlocks.size)
             for ((block, expectedBlock) in blocks.zip(expectedBlocks)) {
                 val (expectedBlockHeader, expectedTransactions) = expectedBlock

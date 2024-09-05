@@ -20,6 +20,8 @@ import net.postchain.core.BlockRid
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockDetailsTruncated
+import net.postchain.core.block.BlockQueryHeightFilter
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.crypto.Signature
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvNull
@@ -113,7 +115,7 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocks(Long.MAX_VALUE, 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
+                model.getBlocks(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
         ).thenReturn(BlockDetailsTruncated(response, 0))
 
         restApi.attachModel(blockchainRID, model)
@@ -142,7 +144,7 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocks(Long.MAX_VALUE, 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
+                model.getBlocks(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
         ).thenReturn(BlockDetailsTruncated(response, 2))
 
         restApi.attachModel(blockchainRID, model)
@@ -183,13 +185,13 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocks(1574849940, 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
+                model.getBlocks(BlockQueryTimeFilter(1574849940, 1574849870), 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
         ).thenReturn(BlockDetailsTruncated(response, 0))
 
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
-                .get("/blocks/$blockchainRID?before-time=${1574849940}&limit=${2}&txs=false")
+                .get("/blocks/$blockchainRID?before-time=${1574849940}&after-time=${1574849870}&limit=${2}&txs=false")
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
@@ -222,13 +224,13 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocksBeforeHeight(4, 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
+                model.getBlocksBetweenHeights(BlockQueryHeightFilter(4, 1), 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
         ).thenReturn(BlockDetailsTruncated(response, 0))
 
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
-                .get("/blocks/$blockchainRID?before-height=${4}&limit=${2}&txs=false")
+                .get("/blocks/$blockchainRID?before-height=${4}&after-height=${1}&limit=${2}&txs=false")
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
@@ -291,7 +293,7 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocks(Long.MAX_VALUE, 25, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
+                model.getBlocks(BlockQueryTimeFilter(), 25, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
         ).thenReturn(BlockDetailsTruncated(blocks, 0))
 
         restApi.attachModel(blockchainRID, model)
