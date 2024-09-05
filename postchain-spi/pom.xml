@@ -11,7 +11,8 @@
     <artifactId>postchain-spi</artifactId>
     <packaging>jar</packaging>
 
-    <name>Postchain SPI</name>
+    <name>Postchain Service Provider Interface</name>
+    <description>Depend on this module when implementing GTX modules and other extensions.</description>
 
     <dependencies>
         <!-- Postchain -->
