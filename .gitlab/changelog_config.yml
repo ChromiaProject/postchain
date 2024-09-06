@@ -1,0 +1,10 @@
+---
+template: |
+  {% if categories %}
+  {% each categories %}
+  - {{ title }} {% each entries %}{{ commit.web_url }} {% end %}
+
+  {% end %}
+  {% else %}
+  No changes.
+  {% end %}
