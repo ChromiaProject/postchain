@@ -44,6 +44,7 @@ stages:
   - slow-integration-tests
   - deploy
   - dependency-check
+  - prepare_release
   - release
 
 # Triggered by that something was merged into or pushed onto main
@@ -75,17 +76,31 @@ deploy:
       -Drevision=$CI_COMMIT_TAG
       clean source:jar deploy
 
+prepare_release:
+  stage: prepare_release
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+$/'
+  script:
+    - 'curl -H "PRIVATE-TOKEN: $TMP_CI_API_TOKEN" "$CI_API_V4_URL/projects/$CI_PROJECT_ID/repository/changelog?version=$CI_COMMIT_TAG" | jq -r .notes > release_notes.md'
+  artifacts:
+    paths:
+      - release_notes.md
+
+
 gitlab-release:
   stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs:
+    - job: prepare_release
+      artifacts: true
   rules:
-    - if: $CI_COMMIT_TAG =~ /^[0-9]+\.[0-9]+\.[0-9]+$/
+    - if: '$CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+$/'
   script:
     - echo "Running the release job."
   release:
-    tag_name: $CI_COMMIT_TAG
     name: 'Release $CI_COMMIT_TAG'
-    description: 'Release created using the release-cli.' # Consider setting `doc/release-notes/$CI_COMMIT_TAG.md`
+    description: release_notes.md
+    tag_name: '$CI_COMMIT_TAG'
 
 build:
   extends:
