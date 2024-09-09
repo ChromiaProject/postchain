@@ -167,6 +167,7 @@ abstract class AbstractSynchronizer(
                             peerStatuses.maybeBlacklist(peerId, "Received a block with mismatching config but we could not apply any new config")
                         }
                     } else if (exception is BadDataException) {
+                        peerStatuses.maybeBlacklist(peerId, "Received a block that could not be loaded due to: ${exception.message}")
                         logger.warn(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
                     } else {
                         logger.error(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
