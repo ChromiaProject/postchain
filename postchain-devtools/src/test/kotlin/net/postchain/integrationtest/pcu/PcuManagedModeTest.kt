@@ -10,17 +10,27 @@ import net.postchain.base.withWriteConnection
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
+import net.postchain.configurations.GTXTestModule
+import net.postchain.configurations.GTX_TEST_OP_NAME
 import net.postchain.devtools.ManagedModeTest
+import net.postchain.devtools.getModules
 import net.postchain.devtools.mminfra.TestManagedEBFTInfrastructureFactory
+import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSetup
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.gtx.GTXTransactionFactory
+import net.postchain.gtx.GtxBuilder
 import org.awaitility.Awaitility
 import org.awaitility.Duration
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 class PcuManagedModeTest : ManagedModeTest() {
 
@@ -199,6 +209,47 @@ class PcuManagedModeTest : ManagedModeTest() {
         buildBlock(chain, 4)
         val reportNonPendingFaultyHeader = node.getBlockchainInstance(chain).blockchainEngine.getBlockQueries().getBlockAtHeight(4).get()!!.header
         assertNull(reportNonPendingFaultyHeader.getFailedConfigHash())
+    }
+
+    @Test
+    fun verifyReplicasCanLoadIncompatiblePendingConfig() {
+        startManagedSystem(3, 1)
+
+        val chainSigners = setOf(0, 1, 2)
+        val chainReplicas = setOf(3)
+        val initialConfig = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/pcu/blockchain_config_3.xml")!!.readText())
+        val chain = startNewBlockchain(chainSigners, chainReplicas, null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(initialConfig), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
+        buildBlock(chain, 0)
+
+        val reconfigHeight = 3L
+        val configWithTestModule = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/pcu/blockchain_config_with_test_module_3.xml")!!.readText())
+        addDappBlockchainConfiguration(chain, GtvEncoder.encodeGtv(configWithTestModule), reconfigHeight, true)
+
+        buildBlockNoWait(nodes, chain, 2)
+
+        // asserting that pending config was loaded
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            nodes.subList(0, 3).forEach { node ->
+                assertTrue(node.getModules(chain).any { it is GTXTestModule })
+            }
+        }
+
+        // Build a block with pending config calling new tx in test module
+        val blockchainRid = ChainUtil.ridOf(chain)
+        val transaction = GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
+                .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
+                        .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("bogus"))
+                        .finish().buildGtx())
+        buildBlockNoWait(nodes, chain, 3, transaction)
+
+        // Assert that replica node manages to load the new block with new op
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            nodes.forEach {
+                val blockQueries = it.blockQueries(chain)
+                assertNotNull(blockQueries)
+                assertEquals(3, blockQueries.getLastBlockHeight().get())
+            }
+        }
     }
 
     private fun getTxQueueSize(chainId: Long): Long =

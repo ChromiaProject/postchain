@@ -124,7 +124,7 @@ open class ManagedModeTest : AbstractSyncTest() {
         }
     }
 
-    fun addDappBlockchainConfiguration(chainId: Long, rawConfig: ByteArray, height: Long) {
+    fun addDappBlockchainConfiguration(chainId: Long, rawConfig: ByteArray, height: Long, pending: Boolean = false) {
         val brid = ChainUtil.ridOf(chainId)
         mockDataSources.forEach { (nodeId, dataSource) ->
             val pubkey = nodes[nodeId].pubKey.hexStringToByteArray()
@@ -141,7 +141,11 @@ open class ManagedModeTest : AbstractSyncTest() {
                         ctx,
                         postchainContext.cryptoSystem
                 )
-                dataSource.addConf(chainId, brid, height, bcConfig, rawConfig)
+                if (pending) {
+                    dataSource.addPendingConf(chainId, brid, height, bcConfig, rawConfig)
+                } else {
+                    dataSource.addConf(chainId, brid, height, bcConfig, rawConfig)
+                }
                 true
             }
         }
