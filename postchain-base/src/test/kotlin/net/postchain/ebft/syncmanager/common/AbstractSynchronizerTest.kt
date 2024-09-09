@@ -14,6 +14,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
+import net.postchain.core.BadBlockException
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainRestartNotifier
@@ -397,5 +398,16 @@ class AbstractSynchronizerTest {
         verify(baseBlockWitnessProvider).validateWitness(blockWitness, blockWitnessBuilder)
         verify(peerStatuses, never()).maybeBlacklist(isA(), anyString())
         verify(restartNotifier).notifyRestart(true)
+    }
+
+    @Test
+    fun `handle Add block exception with BadDataException should blacklist peer`() {
+        // setup
+        val exception = BadBlockException("Failure")
+        val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
+        // execute
+        sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
+        // verify
+        verify(peerStatuses).maybeBlacklist(isA(), anyString())
     }
 }
