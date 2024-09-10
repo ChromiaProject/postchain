@@ -985,7 +985,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return buildBlockInfoExt(blockInfo)
     }
 
-    override fun getBlocks(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int): List<DatabaseAccess.BlockInfoExt> {
+    override fun getBlocksBetweenTimes(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int): List<DatabaseAccess.BlockInfoExt> {
         val sql = """
             SELECT block_rid, block_height, block_header_data, block_witness, timestamp 
             FROM ${tableBlocks(ctx)}  

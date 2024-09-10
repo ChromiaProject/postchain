@@ -1,6 +1,7 @@
 package net.postchain.network.mastersub
 
 import mu.KLogging
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -47,14 +48,13 @@ class MasterSubQueryManager(private val queryTimeoutMs: Long, private val messag
                 )
             }, "Unable to send block at height query")
 
-    fun blocksFromHeight(targetBlockchainRid: BlockchainRid, fromHeight: Long, limit: Long, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> =
+    fun blocksFromHeight(targetBlockchainRid: BlockchainRid, fromHeight: Long, limit: Long): CompletionStage<List<DatabaseAccess.BlockInfoExt>> =
             sendRequest(targetBlockchainRid, { requestId ->
                 MsBlocksFromHeightRequest(
                         requestId,
                         targetBlockchainRid,
                         fromHeight,
                         limit,
-                        txHashesOnly
                 )
             }, "Unable to send blocks from height query")
 

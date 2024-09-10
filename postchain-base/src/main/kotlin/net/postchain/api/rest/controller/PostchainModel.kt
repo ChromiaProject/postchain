@@ -112,8 +112,8 @@ open class PostchainModel(
     override fun getLastTransactionNumber(): TransactionsCount =
             TransactionsCount(blockQueries.getLastTransactionNumber().get())
 
-    override fun getBlocks(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
-            blockQueries.getBlocks(timeFilter, limit, txHashesOnly, maxDataSize).get()
+    override fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
+            blockQueries.getBlocksBetweenTimes(timeFilter, limit, txHashesOnly, maxDataSize).get()
 
     override fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
             blockQueries.getBlocksBetweenHeights(heightFilter, limit, txHashesOnly, maxDataSize).get()

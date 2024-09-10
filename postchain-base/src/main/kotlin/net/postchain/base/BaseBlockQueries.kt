@@ -3,6 +3,7 @@
 package net.postchain.base
 
 import mu.KLogging
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
@@ -131,9 +132,9 @@ open class BaseBlockQueries(
         blockStore.getLastTransactionNumber(it)
     }
 
-    override fun getBlocks(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated> =
+    override fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated> =
             runOpRegardless {
-                blockStore.getBlocks(it, timeFilter, limit, txHashesOnly, maxDataSize)
+                blockStore.getBlocksBeteenTimes(it, timeFilter, limit, txHashesOnly, maxDataSize)
             }
 
     override fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated> =
@@ -141,9 +142,9 @@ open class BaseBlockQueries(
                 blockStore.getBlocksBetweenHeights(it, heightFilter, limit, txHashesOnly, maxDataSize)
             }
 
-    override fun getBlocksFromHeight(fromHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> =
+    override fun getBlocksFromHeight(fromHeight: Long, limit: Int): CompletionStage<List<DatabaseAccess.BlockInfoExt>> =
         runOpRegardless {
-            blockStore.getBlocksFromHeight(it, fromHeight, limit, txHashesOnly)
+            blockStore.getBlocksFromHeight(it, fromHeight, limit)
         }
 
     override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): CompletionStage<BlockDetail?> =

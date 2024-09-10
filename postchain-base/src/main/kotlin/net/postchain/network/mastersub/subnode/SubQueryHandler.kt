@@ -50,7 +50,7 @@ class SubQueryHandler(private val chainId: Long,
 
             is MsBlocksFromHeightRequest -> {
                 buildQuery(message.requestId, message.targetBlockchainRid, ::MsBlocksFromHeightResponse) { blockQueries ->
-                    blockQueries.getBlocksFromHeight(message.fromHeight, message.limit.toInt(), message.txHashesOnly)
+                    blockQueries.getBlocksFromHeight(message.fromHeight, message.limit.toInt())
                 }
             }
         }

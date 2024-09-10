@@ -179,7 +179,7 @@ class RestApiMockForClientManual {
             TODO("Not yet implemented")
         }
 
-        override fun getBlocks(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
+        override fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
                 BlockDetailsTruncated(blocks.filter {
                     it.timestamp < timeFilter.beforeTime && it.timestamp > timeFilter.afterTime
                 }.subList(0, limit), 0)
