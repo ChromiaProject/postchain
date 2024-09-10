@@ -88,13 +88,12 @@ class MasterQueryHandler(
                         message.requestId,
                         message.targetBlockchainRid,
                         ::MsBlocksFromHeightResponse,
-                        { it.getBlocksFromHeight(message.fromHeight, message.limit.toInt(), message.txHashesOnly) },
+                        { it.getBlocksFromHeight(message.fromHeight, message.limit.toInt()) },
                         {
                             masterSubQueryManager.blocksFromHeight(
                                     message.targetBlockchainRid,
                                     message.fromHeight,
-                                    message.limit,
-                                    message.txHashesOnly)
+                                    message.limit)
                         }
                 )
             }

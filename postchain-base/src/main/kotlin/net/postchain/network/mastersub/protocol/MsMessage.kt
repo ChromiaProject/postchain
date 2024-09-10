@@ -1,5 +1,6 @@
 package net.postchain.network.mastersub.protocol
 
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockQueries
@@ -253,8 +254,7 @@ class MsBlocksFromHeightRequest(
         val requestId: Long,
         val targetBlockchainRid: BlockchainRid,
         val fromHeight: Long,
-        val limit: Long,
-        val txHashesOnly: Boolean
+        val limit: Long
 ) : MsMessage {
     override val type = BlocksFromHeightRequest.ordinal
 
@@ -263,7 +263,6 @@ class MsBlocksFromHeightRequest(
             BlockchainRid(payload[1].asByteArray()),
             payload[2].asInteger(),
             payload[3].asInteger(),
-            payload[4].asBoolean(),
     )
 
     override fun getPayload(): Gtv {
@@ -272,7 +271,6 @@ class MsBlocksFromHeightRequest(
                 gtv(targetBlockchainRid),
                 gtv(fromHeight),
                 gtv(limit),
-                gtv(txHashesOnly)
         )
     }
 }
@@ -282,13 +280,13 @@ class MsBlocksFromHeightRequest(
  */
 class MsBlocksFromHeightResponse(
         val requestId: Long,
-        val blocks: List<BlockDetail>
+        val blocks: List<DatabaseAccess.BlockInfoExt>
 ) : MsMessage {
     override val type = BlocksFromHeightResponse.ordinal
 
     constructor(payload: Gtv) : this(
             payload[0].asInteger(),
-            GtvObjectMapper.fromArray(payload[1], BlockDetail::class)
+            GtvObjectMapper.fromArray(payload[1], DatabaseAccess.BlockInfoExt::class)
     )
 
     override fun getPayload(): Gtv {

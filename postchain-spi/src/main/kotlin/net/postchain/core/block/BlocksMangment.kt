@@ -3,6 +3,7 @@
 package net.postchain.core.block
 
 import net.postchain.base.ConfirmationProof
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.Shutdownable
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
@@ -34,9 +35,9 @@ interface BlockQueries : Shutdownable {
     fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): CompletionStage<BlockDataWithWitness?>
     fun getBlockHeader(blockRID: ByteArray): CompletionStage<BlockHeader>
     fun getConfirmationProof(txRID: ByteArray): CompletionStage<ConfirmationProof?>
-    fun getBlocks(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated>
+    fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated>
     fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated>
-    fun getBlocksFromHeight(fromHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>>
+    fun getBlocksFromHeight(fromHeight: Long, limit: Int): CompletionStage<List<DatabaseAccess.BlockInfoExt>>
     fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): CompletionStage<BlockDetail?>
 
     fun getBlockTransactionRids(blockRID: ByteArray): CompletionStage<List<ByteArray>>

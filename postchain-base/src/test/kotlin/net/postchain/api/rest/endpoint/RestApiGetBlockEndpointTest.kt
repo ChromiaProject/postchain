@@ -115,7 +115,7 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocks(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
+                model.getBlocksBetweenTimes(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
         ).thenReturn(BlockDetailsTruncated(response, 0))
 
         restApi.attachModel(blockchainRID, model)
@@ -144,7 +144,7 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocks(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
+                model.getBlocksBetweenTimes(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
         ).thenReturn(BlockDetailsTruncated(response, 2))
 
         restApi.attachModel(blockchainRID, model)
@@ -185,7 +185,7 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocks(BlockQueryTimeFilter(1574849940, 1574849870), 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
+                model.getBlocksBetweenTimes(BlockQueryTimeFilter(1574849940, 1574849870), 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
         ).thenReturn(BlockDetailsTruncated(response, 0))
 
         restApi.attachModel(blockchainRID, model)
@@ -293,7 +293,7 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocks(BlockQueryTimeFilter(), 25, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
+                model.getBlocksBetweenTimes(BlockQueryTimeFilter(), 25, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
         ).thenReturn(BlockDetailsTruncated(blocks, 0))
 
         restApi.attachModel(blockchainRID, model)

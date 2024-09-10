@@ -432,7 +432,7 @@ class RestApi(
                     beforeTime ?: Long.MAX_VALUE,
                     afterTime ?: -1,
             )
-            model.getBlocks(timeFilter, limit, txHashesOnly, maxDataSize)
+            model.getBlocksBetweenTimes(timeFilter, limit, txHashesOnly, maxDataSize)
         }
         return Response(OK).with(blocksBody of blockDetails)
                 .header(DATA_TRUNCATED_HEADER, (remainingTruncatedCount != 0L).toString())

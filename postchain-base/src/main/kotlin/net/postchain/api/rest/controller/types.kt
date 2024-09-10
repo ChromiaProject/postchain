@@ -49,7 +49,7 @@ interface Model : ChainModel {
     fun getBlock(blockRID: BlockRid, txHashesOnly: Boolean): BlockDetail?
     fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail?
     fun confirmBlock(blockRID: BlockRid): BlockSignature?
-    fun getBlocks(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated
+    fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated
     fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated
     fun getConfirmationProof(txRID: TxRid): ConfirmationProof?
     fun getStatus(txRID: TxRid): ApiStatus

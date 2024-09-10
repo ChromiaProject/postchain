@@ -37,11 +37,11 @@ class BaseBlockQueriesTest {
                     )
 
                     // Get 2 blocks, 0-1 - limit is hit
-                    var blockDetails = baseBlockQueries.getBlocksFromHeight(0, 2, true).get()
+                    var blockDetails = baseBlockQueries.getBlocksFromHeight(0, 2).get()
                     assertThat(blockDetails.size).isEqualTo(2)
 
                     // Get 2 blocks, 0-4 (the end) - limit is not hit
-                    blockDetails = baseBlockQueries.getBlocksFromHeight(2, 10000, true).get()
+                    blockDetails = baseBlockQueries.getBlocksFromHeight(2, 10000).get()
                     assertThat(blockDetails.size).isEqualTo(2)
                 }
     }
@@ -67,11 +67,11 @@ class BaseBlockQueriesTest {
                             "".toByteArray()
                     )
 
-                    val blockDetailsTruncated = baseBlockQueries.getBlocks(BlockQueryTimeFilter(), 10000, false, 1658).get()
+                    val blockDetailsTruncated = baseBlockQueries.getBlocksBetweenTimes(BlockQueryTimeFilter(), 10000, false, 1658).get()
                     assertThat(blockDetailsTruncated.blockDetails.size).isEqualTo(1)
                     assertThat(blockDetailsTruncated.remainingTruncatedCount).isEqualTo(2)
 
-                    val allBlockDetails = baseBlockQueries.getBlocks(BlockQueryTimeFilter(), 10000, false, 5000).get()
+                    val allBlockDetails = baseBlockQueries.getBlocksBetweenTimes(BlockQueryTimeFilter(), 10000, false, 5000).get()
                     assertThat(allBlockDetails.blockDetails.size).isEqualTo(3)
                     assertThat(allBlockDetails.remainingTruncatedCount).isEqualTo(0)
                 }

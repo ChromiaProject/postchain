@@ -79,7 +79,7 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
     @Test
     fun test_get_all_blocks() {
         // Asserting blocks and txs
-        val blocks = nodes[0].getRestApiModel().getBlocks(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE).blockDetails
+        val blocks = nodes[0].getRestApiModel().getBlocksBetweenTimes(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE).blockDetails
         assertThat(blocks).hasSize(3)
 
         // Block #2
@@ -105,7 +105,7 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
 
     @Test
     fun test_get_last_2_blocks() {
-        val blocks = nodes[0].getRestApiModel().getBlocks(BlockQueryTimeFilter(), 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE).blockDetails
+        val blocks = nodes[0].getRestApiModel().getBlocksBetweenTimes(BlockQueryTimeFilter(), 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE).blockDetails
         assertThat(blocks).hasSize(2)
 
         assertThat(blocks[0].height).isEqualTo(2L)
@@ -115,7 +115,7 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
     @Test
     fun test_get_one_block() {
         // get a random block and save blockRID
-        val randomBlock = nodes[0].getRestApiModel().getBlocks(BlockQueryTimeFilter(), 1, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE).blockDetails[0]
+        val randomBlock = nodes[0].getRestApiModel().getBlocksBetweenTimes(BlockQueryTimeFilter(), 1, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE).blockDetails[0]
 
         val block = nodes[0].getRestApiModel().getBlock(BlockRid(randomBlock.rid), true)
         assertThat(block).isNotNull()

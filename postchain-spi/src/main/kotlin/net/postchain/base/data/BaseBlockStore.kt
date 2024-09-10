@@ -139,9 +139,9 @@ class BaseBlockStore : BlockStore {
                 blockInfo.timestamp)
     }
 
-    override fun getBlocks(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated {
+    override fun getBlocksBeteenTimes(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated {
         val db = DatabaseAccess.of(ctx)
-        val blockInfoExts = db.getBlocks(ctx, timeFilter, limit)
+        val blockInfoExts = db.getBlocksBetweenTimes(ctx, timeFilter, limit)
         return getBlockDetails(blockInfoExts, db, ctx, txHashesOnly, maxDataSize)
     }
 
@@ -165,12 +165,6 @@ class BaseBlockStore : BlockStore {
         return BlockDetailsTruncated(blockDetails, (blockInfoExts.size - blockDetails.size).toLong())
     }
 
-    override fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> {
-        val db = DatabaseAccess.of(ctx)
-        val blocksInfo = db.getBlocksFromHeight(ctx, fromHeight, limit)
-        return blocksInfo.map { buildBlockDetail(it, db, ctx, txHashesOnly) }
-    }
-
     private fun buildBlockDetail(blockInfo: DatabaseAccess.BlockInfoExt, db: DatabaseAccess, ctx: EContext, txHashesOnly: Boolean): BlockDetail {
         val txs = db.getBlockTransactions(ctx, blockInfo.blockRid, txHashesOnly)
 
@@ -184,6 +178,10 @@ class BaseBlockStore : BlockStore {
                 txs,
                 blockInfo.witness,
                 blockInfo.timestamp)
+    }
+
+    override fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
+        return DatabaseAccess.of(ctx).getBlocksFromHeight(ctx, fromHeight, limit)
     }
 
     override fun getLastBlockHeight(ctx: EContext): Long {
