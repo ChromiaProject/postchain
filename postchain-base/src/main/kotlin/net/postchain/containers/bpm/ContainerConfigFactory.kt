@@ -113,6 +113,7 @@ object ContainerConfigFactory : KLogging() {
                 .binds(*volumes.toTypedArray())
                 .portBindings(portBindings)
                 .publishAllPorts(false)
+                .capDrop("ALL")
                 .apply {
                     if (resources.hasRam()) memory(resources.ramBytes())
                 }.apply {
