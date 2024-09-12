@@ -12,6 +12,7 @@ import net.postchain.server.cli.CommandRunNode
 import net.postchain.server.cli.CommandRunNodeAuto
 import net.postchain.server.cli.CommandRunServer
 import net.postchain.server.cli.CommandRunSubNode
+import net.postchain.server.cli.CommandConfigTest
 
 class PostchainServerCommand : NoOpCliktCommand(name = "postchain") {
     init {
@@ -31,7 +32,8 @@ fun main(args: Array<String>) {
                     CommandRunNode(),
                     CommandRunNodeAuto(),
                     CommandRunServer(),
-                    CommandRunSubNode()
+                    CommandRunSubNode(),
+                    CommandConfigTest()
             )
             .main(args)
 }
