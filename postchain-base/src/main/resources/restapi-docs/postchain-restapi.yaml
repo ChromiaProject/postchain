@@ -322,7 +322,9 @@ paths:
       tags:
         - transaction
       summary: Fetch transaction status
-      description: Fetch the status of a transaction from a chain
+      description: |
+        Fetch the status of a transaction from a chain
+        **Note**: The node stores up to 1000 rejected transaction statuses in memory. Once this limit is reached, the oldest entry is discarded to make room for a new one.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
