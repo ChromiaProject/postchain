@@ -8,7 +8,6 @@ import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.DATA_TRUNCATED_HEADER
 import net.postchain.api.rest.controller.Model
-import net.postchain.api.rest.controller.REMAINING_TRUNCATED_COUNT_HEADER
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.api.rest.json.JsonFactory
@@ -115,8 +114,8 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocksBetweenTimes(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
-        ).thenReturn(BlockDetailsTruncated(response, 0))
+                model.getBlocksBetweenTimes(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE, false)
+        ).thenReturn(BlockDetailsTruncated(response, false))
 
         restApi.attachModel(blockchainRID, model)
 
@@ -126,7 +125,6 @@ class RestApiGetBlockEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON)
                 .header(DATA_TRUNCATED_HEADER, equalTo("false"))
-                .header(REMAINING_TRUNCATED_COUNT_HEADER, equalTo("0"))
                 .body(equalTo(gson.toJson(response).toString()))
     }
 
@@ -144,8 +142,8 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocksBetweenTimes(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
-        ).thenReturn(BlockDetailsTruncated(response, 2))
+                model.getBlocksBetweenTimes(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE, false)
+        ).thenReturn(BlockDetailsTruncated(response, true))
 
         restApi.attachModel(blockchainRID, model)
 
@@ -155,7 +153,6 @@ class RestApiGetBlockEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON)
                 .header(DATA_TRUNCATED_HEADER, equalTo("true"))
-                .header(REMAINING_TRUNCATED_COUNT_HEADER, equalTo("2"))
                 .body(equalTo(gson.toJson(response).toString()))
     }
 
@@ -185,8 +182,8 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocksBetweenTimes(BlockQueryTimeFilter(1574849940, 1574849870), 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
-        ).thenReturn(BlockDetailsTruncated(response, 0))
+                model.getBlocksBetweenTimes(BlockQueryTimeFilter(1574849940, 1574849870), 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE, false)
+        ).thenReturn(BlockDetailsTruncated(response, false))
 
         restApi.attachModel(blockchainRID, model)
 
@@ -224,8 +221,8 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocksBetweenHeights(BlockQueryHeightFilter(4, 1), 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
-        ).thenReturn(BlockDetailsTruncated(response, 0))
+                model.getBlocksBetweenHeights(BlockQueryHeightFilter(4, 1), 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE, false)
+        ).thenReturn(BlockDetailsTruncated(response, false))
 
         restApi.attachModel(blockchainRID, model)
 
@@ -293,8 +290,8 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocksBetweenTimes(BlockQueryTimeFilter(), 25, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE)
-        ).thenReturn(BlockDetailsTruncated(blocks, 0))
+                model.getBlocksBetweenHeights(BlockQueryHeightFilter(), 25, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE, false)
+        ).thenReturn(BlockDetailsTruncated(blocks, false))
 
         restApi.attachModel(blockchainRID, model)
 

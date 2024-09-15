@@ -36,9 +36,8 @@ class TestBlockchainBuilder(
     val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
     val chainId = 1L
 
-    // Build blocks with given list of test transactions (only name needed as input)
-    fun buildBlockchainWithEmptyBlocks(configurations: List<Pair<Long, Gtv>>, blocks: Long,
-                                       witnesses: List<KeyPair> = (0..3).map { KeyPairHelper.keyPair(it) })
+    fun buildBlockchain(configurations: List<Pair<Long, Gtv>>, blocks: Long,
+                        witnesses: List<KeyPair> = (0..3).map { KeyPairHelper.keyPair(it) })
             : List<Pair<BaseBlockHeader, List<Transaction>>> {
 
         val txs = (0 until blocks).map { listOf(buildTransaction("$it")) }

@@ -179,15 +179,15 @@ class RestApiMockForClientManual {
             TODO("Not yet implemented")
         }
 
-        override fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
+        override fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated =
                 BlockDetailsTruncated(blocks.filter {
-                    it.timestamp < timeFilter.beforeTime && it.timestamp > timeFilter.afterTime
-                }.subList(0, limit), 0)
+                    it.timestamp < timeFilter.beforeTime && it.timestamp > timeFilter.afterTime && (!excludeEmpty || it.transactions.isNotEmpty())
+                }.subList(0, limit), false)
 
-        override fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated =
+        override fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated =
                 BlockDetailsTruncated(blocks.filter {
-                    it.height < heightFilter.beforeHeight && it.height > heightFilter.afterHeight
-                }.subList(0, limit), 0)
+                    it.height < heightFilter.beforeHeight && it.height > heightFilter.afterHeight && (!excludeEmpty || it.transactions.isNotEmpty())
+                }.subList(0, limit), false)
 
         override fun getCurrentBlockHeight(): BlockHeight {
             TODO("Not yet implemented")
@@ -212,7 +212,7 @@ class RestApiMockForClientManual {
                     transactionsInfo.add(TransactionInfoExt(block.rid, block.height, block.header, block.witness, block.timestamp, cryptoSystem.digest(tx.data!!), tx.data!!.slice(IntRange(0, 4)).toByteArray(), tx.data!!))
                 }
             }
-            return TransactionInfoExtsTruncated(transactionsInfo.toList(), 0)
+            return TransactionInfoExtsTruncated(transactionsInfo.toList(), false)
         }
 
         override fun getTransactionsInfoBySigner(timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated {

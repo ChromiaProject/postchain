@@ -32,6 +32,7 @@ import net.postchain.api.rest.controller.http4k.NettyWithCustomWorkerGroup
 import net.postchain.api.rest.controller.http4k.expires
 import net.postchain.api.rest.emptyBody
 import net.postchain.api.rest.errorBody
+import net.postchain.api.rest.excludeEmptyQuery
 import net.postchain.api.rest.gtvJsonBody
 import net.postchain.api.rest.heightPath
 import net.postchain.api.rest.heightQuery
@@ -148,7 +149,6 @@ const val UNAUTHORIZED_REQUIRE_SIGNATURE_IN_MANAGED_MODE = "Configuration must b
 const val FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER = "Configuration must be signed by blockchain provider"
 
 const val DATA_TRUNCATED_HEADER = "X-Data-Truncated"
-const val REMAINING_TRUNCATED_COUNT_HEADER = "X-Remaining-Truncated-Count"
 
 /**
  * Implements the REST API.
@@ -378,14 +378,13 @@ class RestApi(
                 afterTimeQuery(request) ?: -1
         )
         val signer = signerQuery(request)
-        val (transactionInfoExts, remainingTruncatedCount) = if (signer != null) {
+        val (transactionInfoExts, truncated) = if (signer != null) {
             model.getTransactionsInfoBySigner(timeFilter, limit, PubKey(signer), maxDataSize)
         } else {
             model.getTransactionsInfo(timeFilter, limit, maxDataSize)
         }
         return Response(OK).with(txInfosBody of transactionInfoExts)
-                .header(DATA_TRUNCATED_HEADER, (remainingTruncatedCount != 0L).toString())
-                .header(REMAINING_TRUNCATED_COUNT_HEADER, remainingTruncatedCount.toString())
+                .header(DATA_TRUNCATED_HEADER, truncated.toString())
     }
 
     private fun getTransactionsCount(request: Request): Response {
@@ -417,26 +416,29 @@ class RestApi(
         if ((afterTime != null || beforeTime != null) && (afterHeight != null || beforeHeight != null)) {
             throw UserMistake("Cannot filter on both time and height at the same time")
         }
+        val excludeEmpty = excludeEmptyQuery(request) == true
+        if (excludeEmpty && (beforeHeight == null || afterHeight == null) && (beforeTime == null || afterTime == null)) {
+            throw UserMistake("exclude-empty can only be used with height or time filter")
+        }
         val limit = limitQuery(request)?.coerceIn(0, MAX_NUMBER_OF_BLOCKS_PER_REQUEST)
                 ?: DEFAULT_ENTRY_RESULTS_REQUEST
         val txHashesOnly = txsQuery(request) != true
 
-        val (blockDetails, remainingTruncatedCount) = if (beforeHeight != null || afterHeight != null) {
-            val heightFilter = BlockQueryHeightFilter(
-                    beforeHeight ?: Long.MAX_VALUE,
-                    afterHeight ?: -1,
-            )
-            model.getBlocksBetweenHeights(heightFilter, limit, txHashesOnly, maxDataSize)
-        } else {
+        val (blockDetails, truncated) = if (beforeTime != null || afterTime != null) {
             val timeFilter = BlockQueryTimeFilter(
                     beforeTime ?: Long.MAX_VALUE,
                     afterTime ?: -1,
             )
-            model.getBlocksBetweenTimes(timeFilter, limit, txHashesOnly, maxDataSize)
+            model.getBlocksBetweenTimes(timeFilter, limit, txHashesOnly, maxDataSize, excludeEmpty)
+        } else {
+            val heightFilter = BlockQueryHeightFilter(
+                    beforeHeight ?: Long.MAX_VALUE,
+                    afterHeight ?: -1,
+            )
+            model.getBlocksBetweenHeights(heightFilter, limit, txHashesOnly, maxDataSize, excludeEmpty)
         }
         return Response(OK).with(blocksBody of blockDetails)
-                .header(DATA_TRUNCATED_HEADER, (remainingTruncatedCount != 0L).toString())
-                .header(REMAINING_TRUNCATED_COUNT_HEADER, remainingTruncatedCount.toString())
+                .header(DATA_TRUNCATED_HEADER, truncated.toString())
     }
 
     private fun getBlock(request: Request): Response {

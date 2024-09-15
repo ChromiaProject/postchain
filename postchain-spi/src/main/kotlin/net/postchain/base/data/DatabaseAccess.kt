@@ -18,6 +18,7 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.TxDetail
 import net.postchain.core.TxEContext
+import net.postchain.core.block.BlockDetailsTruncated
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockQueryHeightFilter
 import net.postchain.core.block.BlockQueryTimeFilter
@@ -39,11 +40,6 @@ interface DatabaseAccess {
             val blockHeader: ByteArray,
             val witness: ByteArray,
             val timestamp: Long)
-
-    data class BlockInfoExtsTruncated(
-            val blockInfoExts: List<BlockInfoExt>,
-            val remainingTruncatedCount: Long
-    )
 
     class EventInfo(
             val pos: Long,
@@ -116,8 +112,8 @@ interface DatabaseAccess {
     fun getTxBytes(ctx: EContext, txRID: ByteArray): ByteArray?
     fun isTransactionConfirmed(ctx: EContext, txRID: ByteArray): Boolean
     fun getBlock(ctx: EContext, blockRID: ByteArray): BlockInfoExt?
-    fun getBlocksBetweenTimes(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int): List<BlockInfoExt>
-    fun getBlocksBetweenHeights(ctx: EContext, heightFilter: BlockQueryHeightFilter, limit: Int): List<BlockInfoExt>
+    fun getBlocksBetweenTimes(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated
+    fun getBlocksBetweenHeights(ctx: EContext, heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated
     fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int): List<BlockInfoExt>
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
     fun getTransactionsInfo(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated

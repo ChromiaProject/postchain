@@ -72,6 +72,7 @@ val afterTimeQuery = Query.long().optional("after-time")
 val beforeHeightQuery = Query.long().optional("before-height")
 val afterHeightQuery = Query.long().optional("after-height")
 val txsQuery = Query.boolean().optional("txs")
+val excludeEmptyQuery = Query.boolean().optional("exclude-empty")
 val heightQuery = Query.long().map {
     if (it >= -1)
         it

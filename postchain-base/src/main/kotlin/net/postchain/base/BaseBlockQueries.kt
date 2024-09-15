@@ -132,14 +132,14 @@ open class BaseBlockQueries(
         blockStore.getLastTransactionNumber(it)
     }
 
-    override fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated> =
+    override fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): CompletionStage<BlockDetailsTruncated> =
             runOpRegardless {
-                blockStore.getBlocksBeteenTimes(it, timeFilter, limit, txHashesOnly, maxDataSize)
+                blockStore.getBlocksBetweenTimes(it, timeFilter, limit, txHashesOnly, maxDataSize, excludeEmpty)
             }
 
-    override fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): CompletionStage<BlockDetailsTruncated> =
+    override fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): CompletionStage<BlockDetailsTruncated> =
             runOpRegardless {
-                blockStore.getBlocksBetweenHeights(it, heightFilter, limit, txHashesOnly, maxDataSize)
+                blockStore.getBlocksBetweenHeights(it, heightFilter, limit, txHashesOnly, maxDataSize, excludeEmpty)
             }
 
     override fun getBlocksFromHeight(fromHeight: Long, limit: Int): CompletionStage<List<DatabaseAccess.BlockInfoExt>> =

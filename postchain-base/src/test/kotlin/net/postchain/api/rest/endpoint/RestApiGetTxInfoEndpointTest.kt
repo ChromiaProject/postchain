@@ -6,7 +6,6 @@ import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.DATA_TRUNCATED_HEADER
 import net.postchain.api.rest.controller.Model
-import net.postchain.api.rest.controller.REMAINING_TRUNCATED_COUNT_HEADER
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.infra.RestApiConfig.Companion.DEFAULT_MAX_DATA_SIZE
 import net.postchain.api.rest.json.JsonFactory
@@ -105,7 +104,7 @@ class RestApiGetTxInfoEndpointTest {
         )
         whenever(
                 model.getTransactionsInfo(BlockQueryTimeFilter(), 300, DEFAULT_MAX_DATA_SIZE)
-        ).thenReturn(TransactionInfoExtsTruncated(response, 0))
+        ).thenReturn(TransactionInfoExtsTruncated(response, false))
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -116,7 +115,6 @@ class RestApiGetTxInfoEndpointTest {
                 .header("Cache-Control", equalTo("private, must-revalidate"))
                 .header("Expires", equalTo("0"))
                 .header(DATA_TRUNCATED_HEADER, equalTo("false"))
-                .header(REMAINING_TRUNCATED_COUNT_HEADER, equalTo("0"))
                 .body(equalTo(gson.toJson(response).toString()))
     }
 
@@ -130,7 +128,7 @@ class RestApiGetTxInfoEndpointTest {
         )
         whenever(
                 model.getTransactionsInfo(BlockQueryTimeFilter(), 300, DEFAULT_MAX_DATA_SIZE)
-        ).thenReturn(TransactionInfoExtsTruncated(response, 2))
+        ).thenReturn(TransactionInfoExtsTruncated(response, true))
 
         restApi.attachModel(blockchainRID, model)
 
@@ -142,7 +140,6 @@ class RestApiGetTxInfoEndpointTest {
                 .header("Cache-Control", equalTo("private, must-revalidate"))
                 .header("Expires", equalTo("0"))
                 .header(DATA_TRUNCATED_HEADER, equalTo("true"))
-                .header(REMAINING_TRUNCATED_COUNT_HEADER, equalTo("2"))
                 .body(equalTo(gson.toJson(response).toString()))
     }
 
@@ -156,7 +153,7 @@ class RestApiGetTxInfoEndpointTest {
         )
         whenever(
                 model.getTransactionsInfo(BlockQueryTimeFilter(), 25, DEFAULT_MAX_DATA_SIZE)
-        ).thenReturn(TransactionInfoExtsTruncated(response, 0))
+        ).thenReturn(TransactionInfoExtsTruncated(response, false))
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -172,7 +169,7 @@ class RestApiGetTxInfoEndpointTest {
         val response = listOf<TransactionInfoExt>()
         whenever(
                 model.getTransactionsInfo(BlockQueryTimeFilter(), 25, DEFAULT_MAX_DATA_SIZE)
-        ).thenReturn(TransactionInfoExtsTruncated(response, 0))
+        ).thenReturn(TransactionInfoExtsTruncated(response, false))
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())

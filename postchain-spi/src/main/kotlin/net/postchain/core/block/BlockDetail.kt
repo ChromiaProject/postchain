@@ -16,7 +16,35 @@ data class BlockDetail(
         @Name("transactions") val transactions: List<TxDetail>,
         @Name("witness") val witness: ByteArray,
         @Name("timestamp") val timestamp: Long
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as BlockDetail
+
+        if (!rid.contentEquals(other.rid)) return false
+        if (!prevBlockRID.contentEquals(other.prevBlockRID)) return false
+        if (!header.contentEquals(other.header)) return false
+        if (height != other.height) return false
+        if (transactions != other.transactions) return false
+        if (!witness.contentEquals(other.witness)) return false
+        if (timestamp != other.timestamp) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = rid.contentHashCode()
+        result = 31 * result + prevBlockRID.contentHashCode()
+        result = 31 * result + header.contentHashCode()
+        result = 31 * result + height.hashCode()
+        result = 31 * result + transactions.hashCode()
+        result = 31 * result + witness.contentHashCode()
+        result = 31 * result + timestamp.hashCode()
+        return result
+    }
+}
 
 fun BlockDetail.size(): Int {
     val ridSize = rid.hexStringLength()
@@ -36,5 +64,5 @@ fun ByteArray?.hexStringLength(): Int {
 
 data class BlockDetailsTruncated(
         val blockDetails: List<BlockDetail>,
-        val remainingTruncatedCount: Long
+        val truncated: Boolean
 )
