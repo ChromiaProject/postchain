@@ -28,8 +28,8 @@ interface BlockStore {
     //    fun getBlockData(ctx: EContext, blockRID: ByteArray): BlockData
     fun getWitnessData(ctx: EContext, blockRID: ByteArray): ByteArray
 
-    fun getBlocksBeteenTimes(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated
-    fun getBlocksBetweenHeights(ctx: EContext, heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated
+    fun getBlocksBetweenTimes(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated
+    fun getBlocksBetweenHeights(ctx: EContext, heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated
     fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int): List<DatabaseAccess.BlockInfoExt>
     fun getBlock(ctx: EContext, blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail?
     fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?

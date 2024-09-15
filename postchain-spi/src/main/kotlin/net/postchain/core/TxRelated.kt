@@ -10,7 +10,30 @@ data class TxDetail(
         @Name("rid") val rid: ByteArray,
         @Name("hash") val hash: ByteArray,
         @Name("data") @Nullable val data: ByteArray?
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as TxDetail
+
+        if (!rid.contentEquals(other.rid)) return false
+        if (!hash.contentEquals(other.hash)) return false
+        if (data != null) {
+            if (other.data == null) return false
+            if (!data.contentEquals(other.data)) return false
+        } else if (other.data != null) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = rid.contentHashCode()
+        result = 31 * result + hash.contentHashCode()
+        result = 31 * result + (data?.contentHashCode() ?: 0)
+        return result
+    }
+}
 
 fun TxDetail.hexStringLength(): Int {
     val ridSize = rid.hexStringLength()
@@ -33,7 +56,7 @@ open class TransactionInfoExt(
 
 data class TransactionInfoExtsTruncated(
         val transactionInfoExts: List<TransactionInfoExt>,
-        val remainingTruncatedCount: Long
+        val truncated: Boolean
 )
 
 data class ValidationResult(

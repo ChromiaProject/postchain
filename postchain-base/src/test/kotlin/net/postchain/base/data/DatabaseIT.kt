@@ -369,11 +369,11 @@ class DatabaseIT {
             ))
             withReadConnection(storage, testBlockChainBuilder.chainId) { readCtx ->
                 val readAccess = DatabaseAccess.of(readCtx)
-                val (transactionsInfo, remainingTruncatedCount) = readAccess.getTransactionsInfo(readCtx, BlockQueryTimeFilter(100000L), 10, 3200)
+                val (transactionsInfo, truncated) = readAccess.getTransactionsInfo(readCtx, BlockQueryTimeFilter(100000L), 10, 3200)
                 assertTrue(transactionsInfo.size == 2)
                 assertEquals("third", Gtx.decode(transactionsInfo[0].txData!!).gtxBody.operations[0].asOpData().args[1].asString())
                 assertEquals("second", Gtx.decode(transactionsInfo[1].txData!!).gtxBody.operations[0].asOpData().args[1].asString())
-                assertTrue(remainingTruncatedCount == 1L)
+                assertTrue(truncated)
             }
         }
     }
@@ -396,11 +396,11 @@ class DatabaseIT {
                 db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactionSigners(ctx)} (signer, tx_iid) VALUES (?, ?)", signer.data, 2)
                 db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactionSigners(ctx)} (signer, tx_iid) VALUES (?, ?)", signer.data, 3)
 
-                val (transactionsInfo, remainingTruncatedCount) = db.getTransactionsInfoBySigner(ctx, BlockQueryTimeFilter(100000L), 10, signer, 3200)
+                val (transactionsInfo, truncated) = db.getTransactionsInfoBySigner(ctx, BlockQueryTimeFilter(100000L), 10, signer, 3200)
                 assertTrue(transactionsInfo.size == 2)
                 assertEquals("third", Gtx.decode(transactionsInfo[0].txData!!).gtxBody.operations[0].asOpData().args[1].asString())
                 assertEquals("second", Gtx.decode(transactionsInfo[1].txData!!).gtxBody.operations[0].asOpData().args[1].asString())
-                assertTrue(remainingTruncatedCount == 1L)
+                assertTrue(truncated)
             }
         }
     }

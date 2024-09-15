@@ -6,6 +6,7 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.SqlUtils.isUniqueViolation
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
@@ -28,10 +29,14 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.TxDetail
 import net.postchain.core.TxEContext
+import net.postchain.core.block.BlockDetail
+import net.postchain.core.block.BlockDetailsTruncated
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockQueryHeightFilter
 import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.core.block.BlockWitness
+import net.postchain.core.block.Filter
+import net.postchain.core.block.size
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.GtvDecoder
@@ -40,6 +45,7 @@ import org.apache.commons.dbutils.handlers.ColumnListHandler
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.apache.commons.dbutils.handlers.ScalarHandler
 import java.sql.Connection
+import java.sql.ResultSet
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
@@ -351,7 +357,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, timeFilter.beforeTime, timeFilter.afterTime, limit, maxDataSize, maxDataSize)
         val transactionInfoExts = transactions.map(::buildTransactionInfoExt)
         val remainingTruncatedCount = transactions.map(::remainingTruncatedCount).firstOrNull() ?: 0
-        return TransactionInfoExtsTruncated(transactionInfoExts, remainingTruncatedCount)
+        return TransactionInfoExtsTruncated(transactionInfoExts, remainingTruncatedCount != 0L)
     }
 
     override fun getTransactionsInfoBySigner(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated {
@@ -382,7 +388,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, signer.data, timeFilter.beforeTime, timeFilter.afterTime, limit, maxDataSize, maxDataSize)
         val transactionInfoExts = transactions.map(::buildTransactionInfoExt)
         val remainingTruncatedCount = transactions.map(::remainingTruncatedCount).firstOrNull() ?: 0
-        return TransactionInfoExtsTruncated(transactionInfoExts, remainingTruncatedCount)
+        return TransactionInfoExtsTruncated(transactionInfoExts, remainingTruncatedCount != 0L)
     }
 
     private fun buildTransactionInfoExt(txInfo: MutableMap<String, Any>): TransactionInfoExt {
@@ -985,28 +991,102 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return buildBlockInfoExt(blockInfo)
     }
 
-    override fun getBlocksBetweenTimes(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int): List<DatabaseAccess.BlockInfoExt> {
+    override fun getBlocksBetweenTimes(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int,
+                                       txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated =
+            getBlocksWithFilter(ctx, "timestamp", timeFilter, limit, txHashesOnly, maxDataSize, excludeEmpty)
+
+    override fun getBlocksBetweenHeights(ctx: EContext, heightFilter: BlockQueryHeightFilter, limit: Int,
+                                         txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated =
+            getBlocksWithFilter(ctx, "block_height", heightFilter, limit, txHashesOnly, maxDataSize, excludeEmpty)
+
+    private fun getBlocksWithFilter(ctx: EContext, filterColumn: String, filter: Filter, limit: Int,
+                                    txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated {
         val sql = """
-            SELECT block_rid, block_height, block_header_data, block_witness, timestamp 
-            FROM ${tableBlocks(ctx)}  
-            WHERE timestamp < ? AND timestamp > ? 
-            ORDER BY timestamp DESC LIMIT ?
+            WITH Blocks AS (
+                SELECT block_iid, block_rid, block_height, block_header_data, block_witness, timestamp 
+                FROM ${tableBlocks(ctx)} 
+                WHERE $filterColumn < ? AND $filterColumn > ? 
+                ORDER BY $filterColumn DESC LIMIT ?
+            )
+            SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_rid, t.tx_hash${if (txHashesOnly) "" else ", t.tx_data"} 
+            FROM Blocks b ${if (excludeEmpty) "INNER" else "LEFT"} JOIN ${tableTransactions(ctx)} t ON t.block_iid=b.block_iid 
+            ORDER BY b.$filterColumn DESC, tx_iid ASC
         """.trimIndent()
 
-        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, timeFilter.beforeTime, timeFilter.afterTime, limit)
-        return blocksInfo.map { buildBlockInfoExt(it) }
+        return ctx.conn.prepareStatement(sql).use {
+            it.setLong(1, filter.before)
+            it.setLong(2, filter.after)
+            it.setInt(3, limit)
+            it.fetchSize = 100
+            it.executeQuery().use { resultSet -> buildBlockDetails(resultSet, txHashesOnly, maxDataSize) }
+        }
     }
 
-    override fun getBlocksBetweenHeights(ctx: EContext, heightFilter: BlockQueryHeightFilter, limit: Int): List<DatabaseAccess.BlockInfoExt> {
-        val sql = """
-            SELECT block_rid, block_height, block_header_data, block_witness, timestamp 
-            FROM ${tableBlocks(ctx)} 
-            WHERE block_height < ? AND block_height > ? 
-            ORDER BY block_height DESC LIMIT ?
-        """.trimIndent()
-
-        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, heightFilter.beforeHeight, heightFilter.afterHeight, limit)
-        return blocksInfo.map { buildBlockInfoExt(it) }
+    private fun buildBlockDetails(resultSet: ResultSet, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated {
+        var blockHeight: Long = -1
+        var blockRid: ByteArray = byteArrayOf()
+        var blockHeader: ByteArray = byteArrayOf()
+        var blockWitness: ByteArray = byteArrayOf()
+        var timestamp: Long = -1
+        var transactions = mutableListOf<TxDetail>()
+        var cumulativeSize = 0
+        var truncated = false
+        val blockDetails = buildList {
+            while (resultSet.next()) {
+                val thisBlockHeight = resultSet.getLong("block_height")
+                if (thisBlockHeight != blockHeight) {
+                    if (blockHeight > -1) {
+                        val blockDetail = BlockDetail(
+                                rid = blockRid,
+                                prevBlockRID = BlockHeaderData.fromBinary(blockHeader).getPreviousBlockRid(),
+                                header = blockHeader,
+                                height = blockHeight,
+                                transactions = transactions,
+                                witness = blockWitness,
+                                timestamp = timestamp)
+                        transactions = mutableListOf()
+                        cumulativeSize += blockDetail.size()
+                        if (cumulativeSize <= maxDataSize)
+                            add(blockDetail)
+                        else {
+                            truncated = true
+                            break
+                        }
+                    }
+                    blockHeight = thisBlockHeight
+                    blockRid = resultSet.getBytes("block_rid")
+                    blockHeader = resultSet.getBytes("block_header_data")
+                    blockWitness = resultSet.getBytes("block_witness")
+                    timestamp = resultSet.getLong("timestamp")
+                }
+                val txRid = resultSet.getBytes("tx_rid")
+                if (!resultSet.wasNull()) {
+                    transactions.add(TxDetail(
+                            txRid,
+                            resultSet.getBytes("tx_hash"),
+                            if (txHashesOnly) null else (resultSet.getBytes("tx_data"))
+                    ))
+                }
+            }
+            if (blockHeight > -1 && !truncated) {
+                val blockDetail = BlockDetail(
+                        rid = blockRid,
+                        prevBlockRID = BlockHeaderData.fromBinary(blockHeader).getPreviousBlockRid(),
+                        header = blockHeader,
+                        height = blockHeight,
+                        transactions = transactions,
+                        witness = blockWitness,
+                        timestamp = timestamp)
+                transactions = mutableListOf()
+                cumulativeSize += blockDetail.size()
+                if (cumulativeSize <= maxDataSize)
+                    add(blockDetail)
+                else {
+                    truncated = true
+                }
+            }
+        }
+        return BlockDetailsTruncated(blockDetails, truncated)
     }
 
     override fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
