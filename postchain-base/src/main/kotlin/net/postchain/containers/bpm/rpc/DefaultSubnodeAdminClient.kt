@@ -79,33 +79,35 @@ class DefaultSubnodeAdminClient(
 
     override fun connect() {
         withLoggingContext(CONTAINER_NAME_TAG to containerName.dockerContainer) {
-            connectJob = executor.submit {
-                val target = "${containerNodeConfig.subnodeHost}:${containerPortMapping[containerNodeConfig.subnodeAdminRpcPort]}"
-                repeat(MAX_RETRIES) {
-                    try {
-                        logger.debug { "connect() -- Connecting to subnode container on $target ..." }
-                        val creds = InsecureChannelCredentials.create()
-                        channel = Grpc.newChannelBuilder(target, creds).build()
-                        service = PostchainServiceGrpc.newBlockingStub(channel)
-                                .withInterceptors(SubnodeAdminClientTimeoutInterceptor(containerNodeConfig))
-                        peerService = PeerServiceGrpc.newBlockingStub(channel)
-                                .withInterceptors(SubnodeAdminClientTimeoutInterceptor(containerNodeConfig))
-                        healthcheckService = HealthGrpc.newBlockingStub(channel)
-                                .withInterceptors(SubnodeAdminClientTimeoutInterceptor(containerNodeConfig))
-                        subnodeService = SubnodeServiceGrpc.newBlockingStub(channel)
-                                .withInterceptors(SubnodeAdminClientTimeoutInterceptor(containerNodeConfig))
-                        logger.info { "connect() -- Subnode container connection established on $target" }
-                        return@submit
-                    } catch (e: Exception) {
-                        logger.warn(e) { "connect() -- Can't connect to subnode on $target, attempt $it of $MAX_RETRIES" }
-                    }
+            connectJob = executor.submit(::connectBlocking)
+        }
+    }
 
-                    if (it == MAX_RETRIES - 1) {
-                        logger.error { "connect() -- Can't connect to subnode on $target, $MAX_RETRIES failed attempts" }
-                    } else {
-                        Thread.sleep(RETRY_INTERVAL.toLong())
-                    }
-                }
+    fun connectBlocking() {
+        val target = "${containerNodeConfig.subnodeHost}:${containerPortMapping[containerNodeConfig.subnodeAdminRpcPort]}"
+        repeat(MAX_RETRIES) {
+            try {
+                logger.debug { "connect() -- Connecting to subnode container on $target ..." }
+                val creds = InsecureChannelCredentials.create()
+                channel = Grpc.newChannelBuilder(target, creds).build()
+                service = PostchainServiceGrpc.newBlockingStub(channel)
+                        .withInterceptors(SubnodeAdminClientTimeoutInterceptor(containerNodeConfig))
+                peerService = PeerServiceGrpc.newBlockingStub(channel)
+                        .withInterceptors(SubnodeAdminClientTimeoutInterceptor(containerNodeConfig))
+                healthcheckService = HealthGrpc.newBlockingStub(channel)
+                        .withInterceptors(SubnodeAdminClientTimeoutInterceptor(containerNodeConfig))
+                subnodeService = SubnodeServiceGrpc.newBlockingStub(channel)
+                        .withInterceptors(SubnodeAdminClientTimeoutInterceptor(containerNodeConfig))
+                logger.info { "connect() -- Subnode container connection established on $target" }
+                return
+            } catch (e: Exception) {
+                logger.warn(e) { "connect() -- Can't connect to subnode on $target, attempt $it of $MAX_RETRIES" }
+            }
+
+            if (it == MAX_RETRIES - 1) {
+                logger.error { "connect() -- Can't connect to subnode on $target, $MAX_RETRIES failed attempts" }
+            } else {
+                Thread.sleep(RETRY_INTERVAL.toLong())
             }
         }
     }
