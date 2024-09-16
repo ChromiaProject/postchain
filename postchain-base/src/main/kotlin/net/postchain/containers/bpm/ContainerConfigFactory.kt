@@ -115,6 +115,7 @@ object ContainerConfigFactory : KLogging() {
                 .portBindings(portBindings)
                 .publishAllPorts(false)
                 .capDrop("ALL")
+                .securityOpt("no-new-privileges:true")
                 .apply {
                     if (resourceLimits.hasRam()) memory(resourceLimits.ramBytes())
                 }.apply {
