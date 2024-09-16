@@ -5,13 +5,11 @@ import mu.withLoggingContext
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.Chain
 import net.postchain.containers.bpm.ContainerBlockchainProcess
-import net.postchain.containers.bpm.ContainerConfigFactory
+import net.postchain.containers.bpm.ContainerHandler
 import net.postchain.containers.bpm.ContainerName
 import net.postchain.containers.bpm.ContainerState
 import net.postchain.containers.bpm.DefaultPostchainContainer
 import net.postchain.containers.bpm.PostchainContainer
-import net.postchain.containers.bpm.docker.DockerTools.findHostPorts
-import net.postchain.containers.bpm.docker.DockerTools.hasName
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.bpm.rpc.DefaultSubnodeAdminClient
 import net.postchain.containers.infra.ContainerNodeConfig
@@ -29,13 +27,13 @@ import java.util.concurrent.ConcurrentHashMap
 class ContainerJobHandler(
         private val appConfig: AppConfig,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
-        private val dockerClient: DockerClient,
+        dockerClient: DockerClient,
         private val fileSystem: FileSystem,
         private val directoryDataSource: () -> DirectoryDataSource,
         private val postchainContainers: () -> MutableMap<ContainerName, PostchainContainer>,
         private val terminateBlockchainProcess: (Long, PostchainContainer) -> ContainerBlockchainProcess?,
         private val createBlockchainProcess: (Chain, PostchainContainer) -> ContainerBlockchainProcess?
-) {
+) : ContainerHandler(dockerClient, appConfig, fileSystem) {
 
     companion object : KLogging() {
         internal fun getDefaultContainerImage(config: ContainerNodeConfig): String =
@@ -54,8 +52,6 @@ class ContainerJobHandler(
                     }
                 }
     }
-
-    private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
 
     fun handleJob(job: ContainerJob) {
         withLoggingContext(CONTAINER_NAME_TAG to job.containerName.dockerContainer) {
@@ -84,15 +80,15 @@ class ContainerJobHandler(
         val psContainer = ensurePostchainContainer(containerName) ?: return result(false)
 
         // 2. Start Docker container
-        val dockerContainer = findDockerContainer(job.containerName)
+        val dockerContainer = findContainer(job.containerName.dockerContainer)
         if (dockerContainer == null && job.chainsToStart.isNotEmpty()) {
-            startDockerContainer(containerName, psContainer, job)
+            startDockerContainer(psContainer, job)
             return result(false)
         }
 
         // 3. Assert subnode is connected and running
         if (dockerContainer != null && job.chainsToStart.isNotEmpty()) {
-            if (!ensureSubNode(psContainer, dockerContainer, containerName, job)) return result(false)
+            if (!ensureSubNode(psContainer, dockerContainer, job)) return result(false)
         } else {
             logger.debug { "DockerContainer is not running, 'is subnode connected' check will be skipped, container: ${job.containerName}" }
         }
@@ -107,39 +103,39 @@ class ContainerJobHandler(
         return result(true)
     }
 
-    private fun ensureSubNode(psContainer: PostchainContainer, dockerContainer: Container, containerName: ContainerName, job: ContainerJob): Boolean {
+    private fun ensureSubNode(psContainer: PostchainContainer, dockerContainer: Container, job: ContainerJob): Boolean {
         psContainer.containerId = dockerContainer.id()
         val dcState = dockerContainer.state()
         if (dcState in listOf("exited", "created", "paused")) {
-            logger.info { dcLog(containerName, "$dcState and will be started", psContainer) }
+            logger.info { dcLog(psContainer.containerName, "$dcState and will be started", psContainer) }
             updateResourceLimits(psContainer)
-            dockerClient.startContainer(dockerContainer.id())
+            startContainer(dockerContainer.id())
 
             // We may have new ports so let's ensure we re-connect with those
             if (psContainer.state == ContainerState.RUNNING) psContainer.reset()
-            logger.info { dcLog(containerName, "restarted", psContainer) }
+            logger.info { dcLog(psContainer.containerName, "restarted", psContainer) }
 
             job.postponeWithBackoff()
             return false
         }
         if (psContainer.state != ContainerState.RUNNING) {
-            psContainer.containerPortMapping.putAll(dockerClient.findHostPorts(dockerContainer.id(), containerNodeConfig.subnodePorts))
+            psContainer.containerPortMapping.putAll(findHostPorts(dockerContainer.id(), containerNodeConfig.subnodePorts))
             psContainer.start()
             job.postpone(5_000)
             return false
         }
         if (!psContainer.initializePostchainNode(PrivKey(appConfig.privKey))) {
-            logger.warn { "Failed to initialize Postchain node, container: $containerName" }
+            logger.warn { "Failed to initialize Postchain node, container: ${psContainer.containerName}" }
             job.postpone(5_000)
             return false
         }
         if (!psContainer.isSubnodeHealthy()) {
-            logger.warn { "Subnode is unhealthy, container: $containerName" }
+            logger.warn { "Subnode is unhealthy, container: ${psContainer.containerName}" }
             job.postpone(5_000)
             return false
         }
         job.resetFailedStartCount()
-        logger.info { "Subnode is healthy, container: $containerName" }
+        logger.info { "Subnode is healthy, container: ${psContainer.containerName}" }
         return true
     }
 
@@ -167,15 +163,15 @@ class ContainerJobHandler(
         }
     }
 
-    private fun startDockerContainer(containerName: ContainerName, psContainer: PostchainContainer, job: ContainerJob) {
-        logger.debug { dcLog(containerName, "not found", null) }
+    private fun startDockerContainer(psContainer: PostchainContainer, job: ContainerJob) {
+        logger.debug { dcLog(psContainer.containerName, "not found", null) }
         updateResourceLimits(psContainer)
         psContainer.checkResourceLimits(fileSystem)
         psContainer.updateImage()
-        val containerId = createDockerContainer(psContainer, containerName)
-        dockerClient.startContainer(containerId)
+        val containerId = pullAndCreateDockerContainer(psContainer)
+        startContainer(containerId)
         psContainer.containerId = containerId
-        logger.info { dcLog(containerName, "started", psContainer) }
+        logger.info { dcLog(psContainer.containerName, "started", psContainer) }
         job.postpone(1_000)
     }
 
@@ -184,26 +180,20 @@ class ContainerJobHandler(
         fileSystem.applyLimits(psContainer.containerName, psContainer.resourceLimits)
     }
 
-    private fun createDockerContainer(psContainer: PostchainContainer, containerName: ContainerName): String {
+    private fun pullAndCreateDockerContainer(psContainer: PostchainContainer): String {
         val containerImageInfo = psContainer.image
         val image = if (containerImageInfo != null) {
             val imageSpec = "${containerImageInfo.url}@${containerImageInfo.digest}"
             logger.info("Pulling image $imageSpec...")
-            dockerClient.pull(imageSpec)
+            pullImage(imageSpec)
             imageSpec
         } else {
             logger.info("Using default image")
             getDefaultContainerImage(containerNodeConfig)
         }
-        val config = ContainerConfigFactory.createConfig(fileSystem, appConfig, containerNodeConfig, psContainer, image)
-        return dockerClient.createContainer(config, containerName.toString()).id()!!.also {
-            logger.debug { dcLog(containerName, "created", psContainer) }
+        return createDockerContainer(psContainer.containerName, psContainer.resourceLimits, psContainer.readOnly.get(), image).also {
+            logger.debug { dcLog(psContainer.containerName, "created", psContainer) }
         }
-    }
-
-    private fun findDockerContainer(containerName: ContainerName): Container? {
-        val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-        return all.firstOrNull { it.hasName(containerName.dockerContainer) }
     }
 
     private fun ensurePostchainContainer(containerName: ContainerName): PostchainContainer? {

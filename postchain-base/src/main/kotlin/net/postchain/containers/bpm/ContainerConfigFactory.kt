@@ -17,7 +17,9 @@ object ContainerConfigFactory : KLogging() {
 
     private const val REMOTE_DEBUG_PORT = 8000
 
-    fun createConfig(fs: FileSystem, appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer, image: String): ContainerConfig {
+    fun createConfig(fs: FileSystem, appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig,
+                     containerName: ContainerName, resourceLimits: ContainerResourceLimits,
+                     readOnly: Boolean, image: String): ContainerConfig {
         // Container volumes
         val volumes = mutableListOf<HostConfig.Bind>()
 
@@ -38,7 +40,7 @@ object ContainerConfigFactory : KLogging() {
 
         // target volume
         val targetVol = HostConfig.Bind.builder()
-                .from(fs.hostRootOf(container.containerName).toString())
+                .from(fs.hostRootOf(containerName).toString())
                 .to(FileSystem.CONTAINER_TARGET_PATH)
                 .build()
         volumes.add(targetVol)
@@ -46,7 +48,7 @@ object ContainerConfigFactory : KLogging() {
         // pgdata volume
         if (containerNodeConfig.bindPgdataVolume) {
             val pgdataVol = HostConfig.Bind.builder()
-                    .from(fs.hostPgdataOf(container.containerName).toString())
+                    .from(fs.hostPgdataOf(containerName).toString())
                     .to(FileSystem.CONTAINER_PGDATA_PATH)
                     .build()
             volumes.add(pgdataVol)
@@ -96,7 +98,7 @@ object ContainerConfigFactory : KLogging() {
         }
 
         if (containerNodeConfig.jmxBasePort > -1) {
-            val calculatedJmxPort = calculateJmxPort(containerNodeConfig, container)
+            val calculatedJmxPort = calculateJmxPort(containerNodeConfig, containerName)
             val jmxPort = "$calculatedJmxPort/tcp"
             portBindings[jmxPort] = listOf(PortBinding.of(containerNodeConfig.subnodeHost, calculatedJmxPort))
         }
@@ -108,36 +110,35 @@ object ContainerConfigFactory : KLogging() {
          */
 
         // Host config
-        val resources = container.resourceLimits
         val hostConfig = HostConfig.builder()
                 .binds(*volumes.toTypedArray())
                 .portBindings(portBindings)
                 .publishAllPorts(false)
                 .capDrop("ALL")
                 .apply {
-                    if (resources.hasRam()) memory(resources.ramBytes())
+                    if (resourceLimits.hasRam()) memory(resourceLimits.ramBytes())
                 }.apply {
-                    if (resources.hasCpu()) {
-                        cpuPeriod(resources.cpuPeriod())
-                        cpuQuota(resources.cpuQuota())
+                    if (resourceLimits.hasCpu()) {
+                        cpuPeriod(resourceLimits.cpuPeriod())
+                        cpuQuota(resourceLimits.cpuQuota())
                     }
                 }
                 .apply {
-                    if (resources.hasIoRead()) {
+                    if (resourceLimits.hasIoRead()) {
                         blkioDeviceReadBps(listOf(
                                 HostConfig.BlkioDeviceRate.builder()
                                         .path(containerNodeConfig.hostMountDevice)
-                                        .rate(resources.ioReadBytes().toInt())
+                                        .rate(resourceLimits.ioReadBytes().toInt())
                                         .build()
                         ))
                     }
                 }
                 .apply {
-                    if (resources.hasIoWrite()) {
+                    if (resourceLimits.hasIoWrite()) {
                         blkioDeviceWriteBps(listOf(
                                 HostConfig.BlkioDeviceRate.builder()
                                         .path(containerNodeConfig.hostMountDevice)
-                                        .rate(resources.ioWriteBytes().toInt())
+                                        .rate(resourceLimits.ioWriteBytes().toInt())
                                         .build()
                         ))
                     }
@@ -164,12 +165,12 @@ object ContainerConfigFactory : KLogging() {
                 .image(image)
                 .hostConfig(hostConfig)
                 .exposedPorts(portBindings.keys)
-                .env(createNodeConfigEnv(appConfig, containerNodeConfig, container))
+                .env(createNodeConfigEnv(appConfig, containerNodeConfig, containerName, readOnly))
                 .labels(containerNodeConfig.labels + (POSTCHAIN_MASTER_PUBKEY to containerNodeConfig.masterPubkey))
                 .build()
     }
 
-    private fun createNodeConfigEnv(appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, container: PostchainContainer) = buildList {
+    private fun createNodeConfigEnv(appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, containerName: ContainerName, readOnly: Boolean) = buildList {
         val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
 
         add("POSTCHAIN_INFRASTRUCTURE=${Infrastructure.EbftContainerSub.get()}")
@@ -177,7 +178,7 @@ object ContainerConfigFactory : KLogging() {
         val subnodeDatabaseUrl = appConfig.getEnvOrString("POSTCHAIN_SUBNODE_DATABASE_URL", ContainerNodeConfig.fullKey(ContainerNodeConfig.KEY_SUBNODE_DATABASE_URL))
                 ?: appConfig.databaseUrl
         add("POSTCHAIN_DB_URL=${subnodeDatabaseUrl}")
-        val scheme = "${appConfig.databaseSchema}_${container.containerName.directoryContainer}"
+        val scheme = "${appConfig.databaseSchema}_${containerName.directoryContainer}"
         add("POSTCHAIN_DB_SCHEMA=${scheme}")
         add("POSTCHAIN_DB_USERNAME=${appConfig.databaseUsername}")
         add("POSTCHAIN_DB_PASSWORD=${appConfig.databasePassword}")
@@ -218,11 +219,11 @@ object ContainerConfigFactory : KLogging() {
         add("POSTCHAIN_SUBNODE_DOCKER_IMAGE=${containerNodeConfig.containerImage}")
         add("POSTCHAIN_SUBNODE_HOST=${containerNodeConfig.subnodeHost}")
         add("POSTCHAIN_SUBNODE_NETWORK=${containerNodeConfig.network}")
-        add("POSTCHAIN_READ_ONLY=${container.readOnly}")
+        add("POSTCHAIN_READ_ONLY=$readOnly")
 
         add("POSTCHAIN_EXIT_ON_FATAL_ERROR=true")
-        add("POSTCHAIN_CONTAINER_ID=${container.containerName.containerIID}")
-        add("POSTCHAIN_DIRECTORY_CONTAINER=${container.containerName.directoryContainer}")
+        add("POSTCHAIN_CONTAINER_ID=${containerName.containerIID}")
+        add("POSTCHAIN_DIRECTORY_CONTAINER=${containerName.directoryContainer}")
 
         add("POSTCHAIN_PROMETHEUS_PORT=${containerNodeConfig.prometheusPort}")
 
@@ -234,7 +235,7 @@ object ContainerConfigFactory : KLogging() {
 
         add("POSTCHAIN_MASTERSUB_QUERY_TIMEOUT_MS=${containerNodeConfig.masterSubQueryTimeoutMs}")
 
-        val javaToolOptions = createJavaToolOptions(containerNodeConfig, container)
+        val javaToolOptions = createJavaToolOptions(containerNodeConfig, containerName)
         if (javaToolOptions.isNotEmpty()) {
             add("JAVA_TOOL_OPTIONS=${javaToolOptions.joinToString(" ")}")
         }
@@ -245,7 +246,7 @@ object ContainerConfigFactory : KLogging() {
         }
     }
 
-    private fun createJavaToolOptions(containerNodeConfig: ContainerNodeConfig, container: PostchainContainer): List<String> {
+    private fun createJavaToolOptions(containerNodeConfig: ContainerNodeConfig, containerName: ContainerName): List<String> {
         val options = mutableListOf<String>()
         if (containerNodeConfig.remoteDebugEnabled) {
             val suspend = if (containerNodeConfig.remoteDebugSuspend) "y" else "n"
@@ -253,7 +254,7 @@ object ContainerConfigFactory : KLogging() {
         }
 
         if (containerNodeConfig.jmxBasePort > -1) {
-            val jmxPort = calculateJmxPort(containerNodeConfig, container)
+            val jmxPort = calculateJmxPort(containerNodeConfig, containerName)
             options.add("-Dcom.sun.management.jmxremote")
             options.add("-Dcom.sun.management.jmxremote.authenticate=false")
             options.add("-Dcom.sun.management.jmxremote.ssl=false")
@@ -270,6 +271,6 @@ object ContainerConfigFactory : KLogging() {
      * To make ports unique per subnode we use the scheme JMX_BASE_PORT + CONTAINER_IID.
      * Should be a good enough workaround for debugging purposes.
      */
-    private fun calculateJmxPort(containerNodeConfig: ContainerNodeConfig, container: PostchainContainer) =
-            containerNodeConfig.jmxBasePort + container.containerName.containerIID
+    private fun calculateJmxPort(containerNodeConfig: ContainerNodeConfig, containerName: ContainerName) =
+            containerNodeConfig.jmxBasePort + containerName.containerIID
 }

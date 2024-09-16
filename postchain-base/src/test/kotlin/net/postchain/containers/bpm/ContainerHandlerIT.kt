@@ -1,0 +1,102 @@
+package net.postchain.containers.bpm
+
+import assertk.assertThat
+import assertk.assertions.isTrue
+import mu.KLogging
+import net.postchain.config.app.AppConfig
+import net.postchain.containers.bpm.command.DefaultCommandExecutor
+import net.postchain.containers.bpm.fs.LocalFileSystem
+import net.postchain.containers.bpm.rpc.DefaultSubnodeAdminClient
+import net.postchain.containers.infra.ContainerNodeConfig
+import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_HOST_MOUNT_DIR
+import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_MASTER_HOST
+import net.postchain.containers.infra.ContainerNodeConfig.Companion.KEY_SUBNODE_HOST
+import net.postchain.containers.infra.ContainerNodeConfig.Companion.fullKey
+import net.postchain.crypto.PrivKey
+import net.postchain.debug.NodeDiagnosticContext
+import org.awaitility.Awaitility.await
+import org.awaitility.Duration
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import org.mandas.docker.client.DockerClient
+import org.mockito.Mockito.mock
+import java.io.File
+import java.net.InetAddress
+import java.net.URI
+import java.nio.file.Path
+import kotlin.text.Charsets.UTF_8
+
+internal class ContainerHandlerIT {
+    companion object: KLogging()
+
+    private lateinit var sut: ContainerHandler
+    private var containerId: String? = null
+
+    @Test
+    @Tag("docker")
+    fun `create and start container`(@TempDir tempDir: Path) {
+        val dockerHost = getResolvedDockerHost()?.host ?: System.getProperty("DOCKER_HOST_MASTER", "172.17.0.1")
+        val appConfig = AppConfig.fromPropertiesFile(
+                File(javaClass.getResource("/net/postchain/containers/bpm/job/node.properties")!!.toURI()),
+                mapOf(
+                        fullKey(KEY_MASTER_HOST) to dockerHost,
+                        fullKey(KEY_SUBNODE_HOST) to System.getProperty("DOCKER_HOST_SUBNODE", dockerHost),
+                        fullKey(KEY_HOST_MOUNT_DIR) to (System.getenv("TEST_MOUNT_DIRECTORY") ?: tempDir.toAbsolutePath().toString()),
+                )
+        )
+        val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
+        ContainerEnvironment.init(appConfig)
+        val fileSystem = LocalFileSystem(containerNodeConfig, DefaultCommandExecutor)
+
+        sut = ContainerHandler(ContainerEnvironment.dockerClient, appConfig, fileSystem)
+
+        sut.pullImage(containerNodeConfig.containerImage)
+        val containerName = ContainerName.create(appConfig, "the_container", 1)
+        val resourceLimits = ContainerResourceLimits.default()
+        fileSystem.createContainerRoot(containerName, resourceLimits)
+        containerId = sut.createDockerContainer(
+                containerName,
+                resourceLimits,
+                false,
+                containerNodeConfig.containerImage)
+        logger.debug { ContainerEnvironment.dockerClient.inspectContainer(containerId!!).toString() }
+        sut.startContainer(containerId!!)
+        await().atMost(Duration.TEN_SECONDS).untilAsserted {
+            assertThat(ContainerEnvironment.dockerClient.inspectContainer(containerId!!).state().running()).isTrue()
+        }
+        val containerPortMapping = sut.findHostPorts(containerId!!, containerNodeConfig.subnodePorts)
+        val nodeDiagnosticContext: NodeDiagnosticContext = mock()
+        val subnodeAdminClient = DefaultSubnodeAdminClient(containerName, containerNodeConfig, containerPortMapping, nodeDiagnosticContext)
+        subnodeAdminClient.connectBlocking()
+        await().atMost(Duration.TEN_SECONDS).untilAsserted {
+            assertThat(subnodeAdminClient.initializePostchainNode(PrivKey(appConfig.privKeyByteArray))).isTrue()
+        }
+        subnodeAdminClient.disconnect()
+    }
+
+    @AfterEach
+    fun tearDown() {
+        containerId?.let {
+            logger.info("Stopping container $it...")
+            sut.stopContainer(it)
+            logger.info("Collecting logs from container $it...")
+            ContainerEnvironment.dockerClient.logs(it, DockerClient.LogsParam.stdout(), DockerClient.LogsParam.stderr()).use { logs ->
+                logs.forEach { log -> logger.info("[Subnode] " + UTF_8.decode(log.content()).toString().trim()) }
+            }
+            logger.info("Removing container $it...")
+            ContainerEnvironment.dockerClient.removeContainer(it, DockerClient.RemoveContainerParam.forceKill())
+        }
+    }
+
+    private fun getResolvedDockerHost(): URI? {
+        return if (System.getenv("DOCKER_HOST") != null) {
+            val dockerUri = URI(System.getenv("DOCKER_HOST"))
+            // Pass docker host to master container with hostname resolved
+            URI("${dockerUri.scheme}://${InetAddress.getByName(dockerUri.host).hostAddress}:${dockerUri.port}")
+        } else {
+            null
+        }
+    }
+}
