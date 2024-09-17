@@ -51,6 +51,7 @@ import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
+import net.postchain.managed.ManagedBlockchainProcessManager.Companion.CHAIN0
 import net.postchain.metrics.SyncMetrics
 import java.time.Clock
 import java.util.Date
@@ -571,7 +572,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      */
     private fun unloadNonAppliedPendingConfiguration(): Boolean {
         val bcConfigProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
-        if (bcConfigProvider != null) {
+        if (bcConfigProvider != null && blockchainConfiguration.chainID != CHAIN0) {
             val isMyConfigPending = withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
                 bcConfigProvider.isConfigPending(
                         ctx, blockchainConfiguration.blockchainRid, statusManager.myStatus.height, blockchainConfiguration.configHash
