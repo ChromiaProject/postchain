@@ -50,6 +50,7 @@ import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
+import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.metrics.SyncMetrics
 import java.time.Clock
 import java.util.Date
@@ -499,6 +500,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     fun update() {
         if (useFastSyncAlgorithm) {
             logger.debug("Using fast sync") // Doesn't happen very often
+            if (unloadNonAppliedPendingConfiguration()) return
             // Wait for any queued blocks to commit/fail before starting sync
             blockManager.waitForRunningOperationsToComplete()
             fastSynchronizer.syncUntilResponsiveNodesDrained()
@@ -560,6 +562,29 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         if (liveSigners < getBFTRequiredSignatureCount(statusManager.nodeStatuses.size)) {
             restartWithNewConfigIfPossible()
         }
+    }
+
+    /**
+     * Unloads any non-applied pending configuration before entering fast-sync to ensure we are not early adopters
+     *
+     * @return true if any configuration was unloaded
+     */
+    private fun unloadNonAppliedPendingConfiguration(): Boolean {
+        val bcConfigProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
+        if (bcConfigProvider != null) {
+            val isMyConfigPending = withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
+                bcConfigProvider.isConfigPending(
+                        ctx, blockchainConfiguration.blockchainRid, statusManager.myStatus.height, blockchainConfiguration.configHash
+                )
+            }
+
+            if (isMyConfigPending) {
+                workerContext.restartNotifier.notifyRestart(false)
+                return true
+            }
+        }
+
+        return false
     }
 
     fun isInFastSync(): Boolean {

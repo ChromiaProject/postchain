@@ -135,9 +135,6 @@ abstract class AbstractSynchronizer(
         }
     }
 
-    private fun isConfigurationMismatch(block: BlockDataWithWitness) =
-            !block.header.getConfigHash().contentEquals(blockchainConfiguration.configHash)
-
     internal fun handleAddBlockException(exception: Throwable, block: BlockDataWithWitness, bTrace: BlockTrace?, peerStatuses: PeerStatuses, peerId: NodeRid) {
         try {
             val height = getHeight(block.header)
@@ -161,18 +158,12 @@ abstract class AbstractSynchronizer(
                     }
                 }
 
-                else -> {
-                    if (isConfigurationMismatch(block)) {
-                        if (!checkIfNewConfigurationCanBeLoaded(block)) {
-                            peerStatuses.maybeBlacklist(peerId, "Received a block with mismatching config but we could not apply any new config")
-                        }
-                    } else if (exception is BadDataException) {
-                        peerStatuses.maybeBlacklist(peerId, "Received a block that could not be loaded due to: ${exception.message}")
-                        logger.warn(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
-                    } else {
-                        logger.error(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
-                    }
+                is BadDataException -> {
+                    peerStatuses.maybeBlacklist(peerId, "Received a block that could not be loaded due to: ${exception.message}")
+                    logger.warn(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
                 }
+
+                else -> logger.error(exception) { "Exception committing block height $height from peer: $peerId: ${exception.message}${bTrace?.let { ", from bTrace: $it" } ?: ""}" }
             }
         } catch (e: Exception) {
             logger.error("Could not handle add block exception: ${e.message}", e)
