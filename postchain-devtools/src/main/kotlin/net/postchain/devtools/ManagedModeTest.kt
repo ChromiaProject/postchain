@@ -124,9 +124,9 @@ open class ManagedModeTest : AbstractSyncTest() {
         }
     }
 
-    fun addDappBlockchainConfiguration(chainId: Long, rawConfig: ByteArray, height: Long, pending: Boolean = false, dataSources: Map<Int, MockManagedNodeDataSource> = mockDataSources) {
+    fun addDappBlockchainConfiguration(chainId: Long, rawConfig: ByteArray, height: Long, pending: Boolean = false) {
         val brid = ChainUtil.ridOf(chainId)
-        dataSources.forEach { (nodeId, dataSource) ->
+        mockDataSources.forEach { (nodeId, dataSource) ->
             val pubkey = nodes[nodeId].pubKey.hexStringToByteArray()
             val sigMaker = cryptoSystem.buildSigMaker(KeyPair(pubkey, KeyPairHelper.privKey(pubkey)))
             val bcConf = BlockchainConfigurationData.fromRaw(rawConfig)

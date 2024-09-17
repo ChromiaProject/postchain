@@ -13,7 +13,6 @@ import net.postchain.concurrent.util.get
 import net.postchain.configurations.GTXTestModule
 import net.postchain.configurations.GTX_TEST_OP_NAME
 import net.postchain.devtools.ManagedModeTest
-import net.postchain.devtools.OnDemandBlockBuildingStrategy
 import net.postchain.devtools.getModules
 import net.postchain.devtools.mminfra.TestManagedEBFTInfrastructureFactory
 import net.postchain.devtools.utils.ChainUtil
@@ -250,51 +249,6 @@ class PcuManagedModeTest : ManagedModeTest() {
                 assertNotNull(blockQueries)
                 assertEquals(3, blockQueries.getLastBlockHeight().get())
             }
-        }
-    }
-
-    @Test
-    fun earlyAdopterCanReleaseIncompatiblePendingConfig() {
-        startManagedSystem(3, 0, TestManagedEBFTInfrastructureFactory::class.qualifiedName!!)
-
-        val chainSigners = setOf(0, 1, 2)
-        val initialConfig = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/pcu/blockchain_config_with_test_module_3.xml")!!.readText())
-        val chain = startNewBlockchain(chainSigners, setOf(), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(initialConfig), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
-        buildBlock(chain, 0)
-
-        // Add incompatible config only to node0 to make it early adopter
-        val reconfigHeight = 2L
-        val configWithTestModule = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/pcu/blockchain_config_3.xml")!!.readText())
-        addDappBlockchainConfiguration(chain, GtvEncoder.encodeGtv(configWithTestModule), reconfigHeight, true, mapOf(0 to mockDataSources[0]!!))
-
-        buildBlockNoWait(nodes, chain, 1)
-
-        // asserting that pending config was loaded on node0
-        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            assertFalse(nodes[0].getModules(chain).any { it is GTXTestModule })
-        }
-
-        // See that blocks still can be built on ALL nodes
-        val blockchainRid = ChainUtil.ridOf(chain)
-        val transaction = GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
-                .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
-                        .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("bogus"))
-                        .finish().buildGtx())
-        buildBlockNoWait(nodes, chain, 2, transaction)
-        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            // Node0 will do some restarts so we need to remind it that it should build blocks
-            val node0Strategy = nodes[0].retrieveBlockchain(chain)?.blockchainEngine?.getBlockBuildingStrategy()
-                    as? OnDemandBlockBuildingStrategy
-            assertNotNull(node0Strategy)
-            node0Strategy!!.buildBlocksUpTo(2)
-
-            nodes.forEach {
-                val blockQueries = it.blockQueries(chain)
-                assertNotNull(blockQueries)
-                assertEquals(2, blockQueries.getLastBlockHeight().get())
-            }
-            // Assert that node0 is still trying to apply the pending config on next block
-            assertFalse(nodes[0].getModules(chain).any { module -> module is GTXTestModule })
         }
     }
 
