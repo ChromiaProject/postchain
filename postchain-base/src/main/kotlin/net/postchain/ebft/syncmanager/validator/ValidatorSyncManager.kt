@@ -50,6 +50,8 @@ import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
+import net.postchain.managed.ManagedBlockchainConfigurationProvider
+import net.postchain.managed.ManagedBlockchainProcessManager.Companion.CHAIN0
 import net.postchain.metrics.SyncMetrics
 import java.time.Clock
 import java.util.Date
@@ -81,6 +83,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private var lastStatusLogged: Long
     private val messageDurationTracker = workerContext.messageDurationTracker
     private var appliedConfigSenderEnsured = false
+    private var hasRunInitialSync: Boolean
 
     @Volatile
     private var useFastSyncAlgorithm: Boolean
@@ -114,6 +117,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             lastHeight < params.mustSyncUntilHeight -> true
             else -> startInFastSync
         }
+        hasRunInitialSync = !useFastSyncAlgorithm
     }
 
     private val signersIds = workerContext.blockchainConfiguration.signers.map { NodeRid(it) }
@@ -499,11 +503,13 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     fun update() {
         if (useFastSyncAlgorithm) {
             logger.debug("Using fast sync") // Doesn't happen very often
+            if (hasRunInitialSync && unloadNonAppliedPendingConfiguration()) return
             // Wait for any queued blocks to commit/fail before starting sync
             blockManager.waitForRunningOperationsToComplete()
             fastSynchronizer.syncUntilResponsiveNodesDrained()
             // turn off fast sync, reset current block to null, and query for the last known state from db to prevent
             // possible race conditions
+            hasRunInitialSync = true
             useFastSyncAlgorithm = false
             val currentBlockHeight = blockQueries.getLastBlockHeight().get()
             statusManager.fastForwardHeight(currentBlockHeight)
@@ -560,6 +566,29 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         if (liveSigners < getBFTRequiredSignatureCount(statusManager.nodeStatuses.size)) {
             restartWithNewConfigIfPossible()
         }
+    }
+
+    /**
+     * Unloads any non-applied pending configuration before entering fast-sync to ensure we are not early adopters
+     *
+     * @return true if any configuration was unloaded
+     */
+    private fun unloadNonAppliedPendingConfiguration(): Boolean {
+        val bcConfigProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
+        if (bcConfigProvider != null && blockchainConfiguration.chainID != CHAIN0) {
+            val isMyConfigPending = withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
+                bcConfigProvider.isConfigPending(
+                        ctx, blockchainConfiguration.blockchainRid, statusManager.myStatus.height, blockchainConfiguration.configHash
+                )
+            }
+
+            if (isMyConfigPending) {
+                workerContext.restartNotifier.notifyRestart(false)
+                return true
+            }
+        }
+
+        return false
     }
 
     fun isInFastSync(): Boolean {
