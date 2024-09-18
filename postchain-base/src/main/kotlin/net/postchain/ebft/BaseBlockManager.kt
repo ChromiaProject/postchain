@@ -7,13 +7,11 @@ import mu.withLoggingContext
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.ForceStopBlockBuildingException
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.extension.getConfigHash
 import net.postchain.base.extension.getFailedConfigHash
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.toHex
 import net.postchain.common.wrap
-import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.BadDataException
 import net.postchain.core.ConfigurationMismatchException
@@ -157,7 +155,7 @@ class BaseBlockManager(
     private fun handleLoadBlockException(exception: Throwable, msg: String, blockHeader: BlockHeader) {
         when (exception) {
             is PmEngineIsAlreadyClosed -> logger.debug(msg)
-            is ConfigurationMismatchException -> handleConfigurationMismatch(blockHeader)
+            is ConfigurationMismatchException -> handleConfigurationMismatch()
             is FailedConfigurationMismatchException -> handleFailedConfigurationMismatch(blockHeader)
             is BadDataException -> logger.warn(msg)
             else -> logger.error(msg)
@@ -200,11 +198,10 @@ class BaseBlockManager(
         }
     }
 
-    private fun handleConfigurationMismatch(blockHeader: BlockHeader) {
+    private fun handleConfigurationMismatch() {
         val bcConfigProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
         if (bcConfigProvider != null) {
             val bcConfig = workerContext.blockchainConfiguration
-            val incomingBlockConfigHash = blockHeader.getConfigHash()?.wrap()
 
             val isMyConfigPending = withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
                 bcConfigProvider.isConfigPending(
@@ -212,11 +209,7 @@ class BaseBlockManager(
                 )
             }
 
-            val lastBlockHeight = statusManager.myStatus.height - 1
-            val lastBlockConfigHash = blockDB.getBlockAtHeight(lastBlockHeight, false).get()
-                    ?.header?.getConfigHash()?.wrap()
-
-            if (isMyConfigPending && incomingBlockConfigHash == lastBlockConfigHash) {
+            if (isMyConfigPending) {
                 // early adopter
                 logger.info("Wrong config used. Chain will be restarted")
                 workerContext.restartNotifier.notifyRestart(false)

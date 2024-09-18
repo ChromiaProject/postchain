@@ -47,4 +47,11 @@
             </entry>
         </dict>
     </entry>
+    <entry key="revolt">
+        <dict>
+            <entry key="revolt_when_should_build_block">
+                <int>1</int>
+            </entry>
+        </dict>
+    </entry>
 </dict>

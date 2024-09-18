@@ -11,6 +11,7 @@ import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.data.BaseManagedBlockBuilderProvider
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.extension.getConfigHash
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
@@ -24,6 +25,7 @@ import net.postchain.core.BeforeCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainRestartNotifier
+import net.postchain.core.ConfigurationMismatchException
 import net.postchain.core.EContext
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.Storage
@@ -200,6 +202,8 @@ open class BaseBlockchainEngine(
             isSyncing: Boolean,
             transactionsDecoder: (List<ByteArray>) -> List<Transaction>
     ): Pair<ManagedBlockBuilder, Exception?> {
+        if (hasMismatchingConfiguration(block.header)) throw ConfigurationMismatchException("")
+
         val grossStart = nanoTime()
         val blockBuilder = makeBlockBuilder(isSyncing)
         var exception: Exception? = null
@@ -295,6 +299,9 @@ open class BaseBlockchainEngine(
 
         return blockBuilder to exception
     }
+
+    private fun hasMismatchingConfiguration(blockHeader: BlockHeader) =
+            blockHeader.getConfigHash()?.contentEquals(blockchainConfiguration.configHash)?.not() ?: false
 
     private fun checkForNewConfiguration() {
         withReadConnection(blockBuilderStorage, chainID) { ctx ->
