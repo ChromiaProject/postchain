@@ -27,7 +27,6 @@ const val KEY_GTX = "gtx"
 const val KEY_GTX_MODULES = "modules"
 const val KEY_GTX_TX_SIZE = "max_transaction_size"
 const val KEY_GTX_ALLOWOVERRIDES = "allowoverrides"
-const val KEY_GTX_SQL_MODULES = "sqlmodules"
 
 const val KEY_DEPENDENCIES = "dependencies"
 
