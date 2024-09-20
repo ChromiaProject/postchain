@@ -58,6 +58,7 @@ object ContainerConfigFactory : KLogging() {
             val log4jConfigFile = HostConfig.Bind.builder()
                     .from(containerNodeConfig.log4jConfigurationFile)
                     .to(FileSystem.CONTAINER_LOG4J_PATH)
+                    .readOnly(true)
                     .build()
             volumes.add(log4jConfigFile)
         }
