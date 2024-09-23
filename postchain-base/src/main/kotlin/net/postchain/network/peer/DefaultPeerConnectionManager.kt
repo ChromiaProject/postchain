@@ -97,7 +97,7 @@ open class DefaultPeerConnectionManager<PacketType>(
     // Used by connection strategy, connector and loggers (to distinguish nodes in tests' logs).
     private lateinit var myPeerInfo: PeerInfo
 
-    var networkNodesTimestamp = clock.instant()
+    internal var networkNodesTimestamp = clock.instant()
         private set
 
     override fun shutdown() {
@@ -537,26 +537,27 @@ open class DefaultPeerConnectionManager<PacketType>(
     }
 
     private fun resolvePeerInfo(commConfiguration: PeerCommConfiguration, nodeId: NodeRid): PeerInfo? {
-        updateNetworkNodes()
+        maybeUpdateNetworkNodes()
         return commConfiguration.networkNodes[nodeId]
     }
 
     internal fun getNetworkNodeRids(chain: ChainWithPeerConnections): Set<NodeRid> {
-        updateNetworkNodes()
+        maybeUpdateNetworkNodes()
         return chain.peerConfig.commConfiguration.networkNodes.getPeerIds()
     }
 
     /**
-     * Reload [PeerInfo] from configuration/DC and update each chains [NetworkNodes]
+     * Reload [PeerInfo] from configuration/DC and update each chains [NetworkNodes] if enough time has passed
+     * since last reload.
      */
-    private fun updateNetworkNodes() {
+    private fun maybeUpdateNetworkNodes() {
         if (clock.instant().isAfter(networkNodesTimestamp + NETWORK_NODES_UPDATE_INTERVAL)) {
             val nodes = nodeConfigProvider.getConfiguration().peerInfoMap.values
-            chainsWithConnections.getAllChains().forEach {
-                val networkNodes = it.peerConfig.commConfiguration.networkNodes
-                nodes.forEach {
-                        if (it.peerId() in networkNodes) {
-                            networkNodes[it.peerId()] = it
+            chainsWithConnections.getAllChains().forEach { chain ->
+                val networkNodes = chain.peerConfig.commConfiguration.networkNodes
+                nodes.forEach { node ->
+                        if (node.peerId() in networkNodes) {
+                            networkNodes[node.peerId()] = node
                         }
                     }
             }
