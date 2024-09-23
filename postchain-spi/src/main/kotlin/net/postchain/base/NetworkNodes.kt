@@ -7,6 +7,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
+import java.util.Collections
 
 /**
  * Network nodes can be either signers/block builders or nodes that just want to read your data (= replicas).
@@ -22,10 +23,11 @@ import net.postchain.core.NodeRid
  */
 class NetworkNodes(
         val myself: PeerInfo,
-        private val peerInfoMap: Map<NodeRid, PeerInfo>,
+        peerInfoMap: Map<NodeRid, PeerInfo>,
         private val readOnlyNodeContacts: MutableMap<NodeRid, Int>
 ) {
 
+    private val peerInfoMap: MutableMap<NodeRid, PeerInfo> = Collections.synchronizedMap(peerInfoMap.toMutableMap())
     private var nextTimestamp: Long = 0 // Increases once a day
 
     companion object : KLogging() {
@@ -51,7 +53,7 @@ class NetworkNodes(
             if (me == null) {
                 throw UserMistake("We didn't find our peer ID (${myKey.toHex()}) in the list of given peers. Check the configuration for the node.")
             } else {
-                return NetworkNodes(me, peerMap.toMap(), mutableMapOf())
+                return NetworkNodes(me, peerMap, mutableMapOf())
             }
         }
     }
@@ -62,9 +64,17 @@ class NetworkNodes(
 
     operator fun get(key: NodeRid): PeerInfo? = peerInfoMap[key]
     operator fun get(key: ByteArray): PeerInfo? = peerInfoMap[WrappedByteArray(key)]
+    operator fun set(key: NodeRid, peerInfo: PeerInfo) {
+        peerInfoMap[key] = peerInfo
+    }
+    operator fun contains(key: NodeRid): Boolean = peerInfoMap.containsKey(key)
 
     fun getPeerIds(): Set<NodeRid> {
         return peerInfoMap.keys
+    }
+
+    fun getPeerMap(): Map<NodeRid, PeerInfo> {
+        return peerInfoMap.toMap()
     }
 
     /**

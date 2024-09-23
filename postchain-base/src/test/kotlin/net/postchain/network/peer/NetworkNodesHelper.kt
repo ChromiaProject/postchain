@@ -6,6 +6,6 @@ import net.postchain.base.PeerInfo
 object NetworkNodesHelper {
 
     fun buildDummyNetworkNodes(): NetworkNodes {
-        return NetworkNodes(PeerInfo("abc", 1, byteArrayOf(1)), mapOf(), mutableMapOf())
+        return NetworkNodes(PeerInfo("abc", 1, byteArrayOf(1)), mutableMapOf(), mutableMapOf())
     }
 }
