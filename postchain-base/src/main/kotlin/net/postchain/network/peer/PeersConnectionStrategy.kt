@@ -39,5 +39,5 @@ interface PeersConnectionStrategy : Shutdownable {
 
     fun connectionEstablished(chainID: Long, isOutgoing: Boolean, peerId: NodeRid)
 
-    fun isConnectionAllowed(chainID: Long, peerId: NodeRid): Boolean
+    fun isConnectionAllowed(chainID: Long, networkNodes: Set<NodeRid>, peerId: NodeRid): Boolean
 }

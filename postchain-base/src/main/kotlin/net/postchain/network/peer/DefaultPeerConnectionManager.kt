@@ -4,6 +4,8 @@ package net.postchain.network.peer
 
 import mu.KLogging
 import mu.withLoggingContext
+import net.postchain.base.NetworkNodes
+import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
@@ -23,6 +25,8 @@ import net.postchain.network.common.NodeConnector
 import net.postchain.network.common.NodeConnectorEvents
 import net.postchain.network.netty2.ConnectionConfig
 import net.postchain.network.netty2.NettyPeerConnector
+import java.time.Clock
+import java.time.Duration
 import java.util.concurrent.CompletableFuture
 
 /**
@@ -59,10 +63,13 @@ import java.util.concurrent.CompletableFuture
  */
 open class DefaultPeerConnectionManager<PacketType>(
         private val nodeConfigProvider: NodeConfigurationProvider,
-        private val packetCodecFactory: XPacketCodecFactory<PacketType>
+        private val packetCodecFactory: XPacketCodecFactory<PacketType>,
+        private val clock: Clock = Clock.systemUTC()
 ) : NetworkTopology, PeerConnectionManager, NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        val NETWORK_NODES_UPDATE_INTERVAL: Duration = Duration.ofSeconds(60)
+    }
 
     private val connectionConfig = ConnectionConfig.fromAppConfig(nodeConfigProvider.getConfiguration().appConfig)
 
@@ -89,6 +96,9 @@ open class DefaultPeerConnectionManager<PacketType>(
 
     // Used by connection strategy, connector and loggers (to distinguish nodes in tests' logs).
     private lateinit var myPeerInfo: PeerInfo
+
+    var networkNodesTimestamp = clock.instant()
+        private set
 
     override fun shutdown() {
         connector?.shutdown()
@@ -181,8 +191,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                 peerId,
                 ConnectionDirection.OUTGOING
         )
-
-        val peerInfo = chainPeersConfig.commConfiguration.resolvePeer(peerId.data)
+        val peerInfo = resolvePeerInfo(chainPeersConfig.commConfiguration, peerId)
                 ?: throw ProgrammerMistake("Peer ID not found: ${peerId.toHex()}")
         if (peerInfo.peerId() != peerId) {
             // Have to add this check since I see strange things
@@ -328,7 +337,10 @@ open class DefaultPeerConnectionManager<PacketType>(
                             null
                         }
 
-                    } else if (!peersConnectionStrategy.isConnectionAllowed(chainID, descriptor.nodeId)) {
+                    } else if (!peersConnectionStrategy.isConnectionAllowed(
+                                    chainID,
+                                    getNetworkNodeRids(chain),
+                                    descriptor.nodeId)) {
                         logger.warn {
                             "Peer connection is not allowed: ${descriptor.nodeId}. " +
                                     "Check `connection.max_unknown_peer_connections_per_chain` config parameter"
@@ -513,7 +525,6 @@ open class DefaultPeerConnectionManager<PacketType>(
                 }
     }
 
-
     /**
      * [NetworkTopology] impl
      */
@@ -523,5 +534,34 @@ open class DefaultPeerConnectionManager<PacketType>(
 
     override fun getNodesTopology(chainIid: Long): Map<NodeRid, String> {
         return chainsWithConnections.getNodesTopology(chainIid)
+    }
+
+    private fun resolvePeerInfo(commConfiguration: PeerCommConfiguration, nodeId: NodeRid): PeerInfo? {
+        updateNetworkNodes()
+        return commConfiguration.networkNodes[nodeId]
+    }
+
+    internal fun getNetworkNodeRids(chain: ChainWithPeerConnections): Set<NodeRid> {
+        updateNetworkNodes()
+        return chain.peerConfig.commConfiguration.networkNodes.getPeerIds()
+    }
+
+    /**
+     * Reload [PeerInfo] from configuration/DC and update each chains [NetworkNodes]
+     */
+    private fun updateNetworkNodes() {
+        if (clock.instant().isAfter(networkNodesTimestamp + NETWORK_NODES_UPDATE_INTERVAL)) {
+            val nodes = nodeConfigProvider.getConfiguration().peerInfoMap.values
+            chainsWithConnections.getAllChains().forEach {
+                val networkNodes = it.peerConfig.commConfiguration.networkNodes
+                nodes.forEach {
+                        if (it.peerId() in networkNodes) {
+                            networkNodes[it.peerId()] = it
+                        }
+                    }
+            }
+
+            networkNodesTimestamp = clock.instant()
+        }
     }
 }

@@ -4,7 +4,6 @@ package net.postchain.network.peer
 
 import mu.KLogging
 import mu.withLoggingContext
-import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid
 import net.postchain.common.ExponentialDelay
 import net.postchain.common.exception.ProgrammerMistake
@@ -41,12 +40,9 @@ class DefaultPeersConnectionStrategy(
     private val latestEstablishedConnections: MutableMap<NodeRid, Instant> = ConcurrentHashMap()
     private val timerQueue = ScheduledThreadPoolExecutor(1)
     private val peersOfInterest: MutableMap<Long, Set<NodeRid>> = ConcurrentHashMap()
-    private val registeredPeers = nodeConfigProvider.getConfiguration().peerInfoMap.toMutableMap()
-    private var registeredPeersTimestamp = Instant.EPOCH
 
     companion object : KLogging() {
         val SUCCESSFUL_CONNECTION_THRESHOLD: Duration = Duration.ofSeconds(1)
-        val NETWORK_PEERS_UPDATE_INTERVAL: Duration = Duration.ofSeconds(60)
     }
 
     var backupConnTimeMin = 1000
@@ -156,14 +152,13 @@ class DefaultPeersConnectionStrategy(
         latestEstablishedConnections[peerId] = clock.instant()
     }
 
-    override fun isConnectionAllowed(chainID: Long, peerId: NodeRid): Boolean {
-        val registeredPeers = getRegisteredPeers().keys
+    override fun isConnectionAllowed(chainID: Long, registeredPeerIds: Set<NodeRid>, peerId: NodeRid): Boolean {
 
-        if (peerId in registeredPeers) return true
+        if (peerId in registeredPeerIds) return true
 
         if (connectionConfig.maxUnknownPeerConnectionsPerChain <= 0) return true
 
-        val unknownPeers = connectionManager.getConnectedNodes(chainID).subtract(registeredPeers)
+        val unknownPeers = connectionManager.getConnectedNodes(chainID).subtract(registeredPeerIds)
         return unknownPeers.size < connectionConfig.maxUnknownPeerConnectionsPerChain
     }
 
@@ -184,17 +179,5 @@ class DefaultPeersConnectionStrategy(
      */
     private fun shouldIConnect(peer: NodeRid): Boolean {
         return me.toString() > peer.toString()
-    }
-
-    @Synchronized
-    private fun getRegisteredPeers(): Map<NodeRid, PeerInfo> {
-
-        if (clock.instant().isAfter(registeredPeersTimestamp + NETWORK_PEERS_UPDATE_INTERVAL)) {
-            registeredPeers.clear()
-            registeredPeers.putAll(nodeConfigProvider.getConfiguration().peerInfoMap)
-            registeredPeersTimestamp = clock.instant()
-        }
-
-        return registeredPeers
     }
 }

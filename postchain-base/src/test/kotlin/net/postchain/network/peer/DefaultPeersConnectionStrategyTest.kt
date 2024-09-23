@@ -3,7 +3,6 @@
 package net.postchain.network.peer
 
 import mu.KLogging
-import net.postchain.DynamicValueAnswer
 import net.postchain.base.PeerInfo
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.hexStringToByteArray
@@ -11,7 +10,6 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.NodeRid
 import net.postchain.network.netty2.ConnectionConfig
-import net.postchain.network.peer.DefaultPeersConnectionStrategy.Companion.NETWORK_PEERS_UPDATE_INTERVAL
 import net.postchain.network.peer.DefaultPeersConnectionStrategy.Companion.SUCCESSFUL_CONNECTION_THRESHOLD
 import org.awaitility.Awaitility
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -19,7 +17,6 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.argumentCaptor
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.doReturnConsecutively
 import org.mockito.kotlin.mock
@@ -32,7 +29,6 @@ import java.lang.Thread.sleep
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
-import java.time.ZoneOffset
 import java.util.concurrent.TimeUnit
 
 class DefaultPeersConnectionStrategyTest {
@@ -213,44 +209,35 @@ class DefaultPeersConnectionStrategyTest {
             on { getConfiguration() } doReturn nodeConfig
         }
 
-        val currentMillis = DynamicValueAnswer(Clock.fixed(Instant.EPOCH, ZoneOffset.UTC).instant())
-        val clock: Clock = mock {
-            on { instant() } doAnswer currentMillis
-        }
-
         val strategy = sut(
                 peer1,
                 ConnectionConfig(maxUnknownPeerConnectionsPerChain = 3),
                 nodeConfigProvider = nodeConfigProvider,
-                clock = clock
         )
 
         // only 3 unknown peers can connect
         (0 until 3).forEach {
             reset(connMan)
             whenever(connMan.getConnectedNodes(0)).thenReturn(unknownPeers.subList(0, it))
-            assertTrue(strategy.isConnectionAllowed(0, unknownPeers[it]))
+            assertTrue(strategy.isConnectionAllowed(0, emptySet(), unknownPeers[it]))
         }
 
         reset(connMan)
         whenever(connMan.getConnectedNodes(0)).thenReturn(unknownPeers.subList(0, 3))
 
         // the 4th unknown peer can't connect
-        assertFalse(strategy.isConnectionAllowed(0, unknownPeers[3]))
+        assertFalse(strategy.isConnectionAllowed(0, emptySet(), unknownPeers[3]))
 
         // known peers still can connect
-        assertTrue(strategy.isConnectionAllowed(0, peer2))
+        assertTrue(strategy.isConnectionAllowed(0, setOf(peer2), peer2))
 
         // but 4th can connect after being registered
         registeredPeers[unknownPeers[3]] = PeerInfo("host3", 0, unknownPeers[3].data)
-        currentMillis.value = currentMillis.value.plus(NETWORK_PEERS_UPDATE_INTERVAL).plusSeconds(1)
-        assertTrue(strategy.isConnectionAllowed(0, unknownPeers[3]))
+        assertTrue(strategy.isConnectionAllowed(0, registeredPeers.keys.map { NodeRid(it.data) }.toSet(), unknownPeers[3]))
 
-        // 4th peer has been removed but still can connect
+        // 4th peer has been removed and can no longer connect
         registeredPeers.remove(unknownPeers[3])
-        assertTrue(strategy.isConnectionAllowed(0, unknownPeers[3]))
-        currentMillis.value = currentMillis.value.plus(NETWORK_PEERS_UPDATE_INTERVAL).plusSeconds(1)
-        assertFalse(strategy.isConnectionAllowed(0, unknownPeers[3]))
+        assertFalse(strategy.isConnectionAllowed(0, registeredPeers.keys.map { NodeRid(it.data) }.toSet(), unknownPeers[3]))
     }
 
     @Test
@@ -275,10 +262,10 @@ class DefaultPeersConnectionStrategyTest {
         (0 until 10).forEach {
             reset(connMan)
             whenever(connMan.getConnectedNodes(0)).thenReturn(unknownPeers.subList(0, it))
-            assertTrue(strategy.isConnectionAllowed(0, unknownPeers[it]))
+            assertTrue(strategy.isConnectionAllowed(0, emptySet(), unknownPeers[it]))
         }
 
         // known peers still can connect
-        assertTrue(strategy.isConnectionAllowed(0, peer2))
+        assertTrue(strategy.isConnectionAllowed(0, emptySet(), peer2))
     }
 }

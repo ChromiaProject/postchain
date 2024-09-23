@@ -6,6 +6,8 @@ import assertk.assertThat
 import assertk.assertions.containsExactly
 import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotEqualTo
 import assertk.isContentEqualTo
 import net.postchain.base.NetworkNodes
 import net.postchain.base.PeerCommConfiguration
@@ -16,12 +18,14 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.config.node.NodeConfig
 import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.core.NodeRid
 import net.postchain.network.XPacketCodec
 import net.postchain.network.XPacketCodecFactory
 import net.postchain.network.common.ChainsWithConnections
 import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.netty2.NettyPeerConnection
+import net.postchain.network.peer.DefaultPeerConnectionManager.Companion.NETWORK_NODES_UPDATE_INTERVAL
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.apache.commons.lang3.reflect.FieldUtils
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -29,15 +33,20 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.atLeast
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.CompletableFuture
 
 class DefaultPeerConnectionManagerTest {
@@ -184,7 +193,12 @@ class DefaultPeerConnectionManagerTest {
     @Test
     fun connectChainPeer_connects_unknown_peer_with_exception() {
         // Given
-        val communicationConfig: PeerCommConfiguration = emptyCommConf()
+        val nodes = NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), appConfig1)
+        val communicationConfig: PeerCommConfiguration =
+                mock {
+                    on { myPeerInfo() } doReturn peerInfo1
+                    on { networkNodes } doReturn nodes
+                }
         val chainPeerConf = XChainPeersConfiguration(1L, blockchainRid, communicationConfig, mock())
 
         // Mocks
@@ -260,7 +274,7 @@ class DefaultPeerConnectionManagerTest {
 
         // Then
         verify(chainPeerConfig, atLeast(3)).chainId
-        verify(chainPeerConfig, times(6)).commConfiguration
+        verify(chainPeerConfig, times(7)).commConfiguration
 
         connectionManager.shutdown()
     }
@@ -402,12 +416,6 @@ class DefaultPeerConnectionManagerTest {
 
     private fun emptyManager() = DefaultPeerConnectionManager<Int>(nodeConfigProvider, mock())
 
-    private fun emptyCommConf(): PeerCommConfiguration {
-        return mock {
-            on { myPeerInfo() } doReturn peerInfo1
-        }
-    }
-
     @Test
     fun broadcastPacket_sends_packet_to_all_receivers_successfully() {
         // Given
@@ -450,10 +458,109 @@ class DefaultPeerConnectionManagerTest {
         connectionManager.shutdown()
     }
 
+    @Test
+    fun `refresh node info and connect to new host`() {
+        // Given one peer
+        val nodes = NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), appConfig1)
+        val communicationConfig: PeerCommConfiguration = mock {
+            on { pubKey } doReturn peerInfo1.pubKey
+            on { myPeerInfo() } doReturn peerInfo1
+            on { networkNodes } doReturn nodes
+        }
+        val chainPeerConfig: XChainPeersConfiguration = mock {
+            on { chainId } doReturn 1L
+            on { blockchainRid } doReturn blockchainRid
+            on { commConfiguration } doReturn communicationConfig
+        }
+        val clock: Clock = mockClock()
+        Mockito.`when`(nodeConfig.peerInfoMap).doReturn(nodes.getPeerMap())
+
+        // When connecting a chain
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, clock).apply {
+            connectChain(chainPeerConfig, false)
+            connectChainPeer(chainPeerConfig.chainId, peerInfo2.peerId())
+        }
+
+        // Then try to connect to that one peer
+        argumentCaptor<PeerCommConfiguration>().apply {
+            verify(packetCodecFactory, times(2)).create(capture(), any())
+            assertThat(allValues.size).isEqualTo(2)
+            allValues.forEach {
+                assertThat(firstValue.networkNodes[peerInfo2.pubKey]!!.host).isEqualTo(peerInfo2.host)
+            }
+        }
+
+        // Given the peer host is updated
+        val updatedPeerInfo2 = PeerInfo("new-host", peerInfo2.port, peerInfo2.pubKey)
+        Mockito.`when`(nodeConfig.peerInfoMap).doReturn(mapOf(NodeRid(peerInfo2.pubKey) to updatedPeerInfo2))
+        Mockito.`when`(clock.instant().isAfter(any())).doReturn(true)
+
+        // When
+        connectionManager.connectChainPeer(chainPeerConfig.chainId, updatedPeerInfo2.peerId())
+
+        // Then connect to new host
+        assertThat(updatedPeerInfo2.host).isNotEqualTo(peerInfo2.host)
+        argumentCaptor<PeerCommConfiguration>().apply {
+            verify(packetCodecFactory, times(3)).create(capture(), any())
+            assertThat(lastValue.networkNodes[peerInfo2.pubKey]!!.host).isEqualTo(updatedPeerInfo2.host)
+        }
+    }
+
+    @Test
+    fun `node info update interval`() {
+        // Given
+        val nodes = NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), appConfig1)
+        val communicationConfig: PeerCommConfiguration = mock {
+            on { pubKey } doReturn peerInfo1.pubKey
+            on { myPeerInfo() } doReturn peerInfo1
+            on { networkNodes } doReturn nodes
+            on { resolvePeer(peerInfo2.pubKey) } doReturn peerInfo2
+        }
+        val xChainPeersConfiguration = mock<XChainPeersConfiguration> {
+            on { commConfiguration } doReturn communicationConfig
+        }
+        val chainWithPeerConnections = mock<ChainWithPeerConnections> {
+            on { peerConfig } doReturn xChainPeersConfiguration
+        }
+
+        val initialNetworkNodeTimestamp = Instant.ofEpochSecond(0)
+        val clock: Clock = mock {
+            on { instant() } doReturn initialNetworkNodeTimestamp
+        }
+
+        // When
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, clock).apply {
+            getNetworkNodeRids(chainWithPeerConnections)
+            getNetworkNodeRids(chainWithPeerConnections)
+        }
+
+        // Then timestamp is unchanged since no update took place
+        assertThat(connectionManager.networkNodesTimestamp).isEqualTo(initialNetworkNodeTimestamp)
+
+        // Given time interval passed
+        Mockito.`when`(clock.instant()).doReturn(initialNetworkNodeTimestamp.plus(NETWORK_NODES_UPDATE_INTERVAL).plus(Duration.ofSeconds(1)))
+
+        // When
+        connectionManager.getNetworkNodeRids(chainWithPeerConnections)
+
+        // Then timestamp is changed due to update
+        assertThat(connectionManager.networkNodesTimestamp).isNotEqualTo(initialNetworkNodeTimestamp)
+    }
+
     fun mockConnection(descriptor: PeerConnectionDescriptor): NettyPeerConnection<Int> {
         val m: NettyPeerConnection<Int> = mock()
         whenever(m.descriptor()).thenReturn(descriptor)
         whenever(m.close()).thenReturn(CompletableFuture.completedFuture(null))
         return m
+    }
+
+    private fun mockClock(): Clock {
+        val instant = mock<Instant> {
+            on { isAfter(any()) } doReturn false
+        }
+        Mockito.`when`(instant.plus(any())).doReturn(instant)
+        return mock {
+            on { instant() } doReturn instant
+        }
     }
 }
