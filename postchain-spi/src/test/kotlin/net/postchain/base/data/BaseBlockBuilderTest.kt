@@ -61,7 +61,8 @@ class BaseBlockBuilderTest {
             maxSpecialEndTransactionSize = maxSpecialEndTransactionSize,
             suppressSpecialTransactionValidation = false,
             maxBlockFutureTime = -1,
-            pubKey(0)
+            pubKey(0),
+            false
     )
     val primaryExtraHeader = mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0)))
 

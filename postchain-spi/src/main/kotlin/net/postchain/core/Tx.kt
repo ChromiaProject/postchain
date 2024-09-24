@@ -21,6 +21,15 @@ interface Transactor {
     fun isSpecial(): Boolean
 
     /**
+     * Check if correct given that transactor is applied during syncing.
+     * This check should be less restrictive than `checkCorrectness`.
+     *
+     * @return if correct
+     * @throws UserMistake if not correct
+     */
+    fun checkCorrectnessWhileSyncing() = checkCorrectness()
+
+    /**
      * Check if correct.
      * @return if correct
      * @throws UserMistake if not correct */

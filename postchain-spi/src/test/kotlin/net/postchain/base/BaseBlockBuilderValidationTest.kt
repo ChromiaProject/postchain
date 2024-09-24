@@ -80,6 +80,7 @@ class BaseBlockBuilderValidationTest {
             suppressSpecialTransactionValidation = false,
             maxBlockFutureTime = -1,
             pubKey(0),
+            false,
             clock)
     val primaryExtraHeader = mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0)))
 
@@ -293,5 +294,6 @@ class BaseBlockBuilderValidationTest {
                     suppressSpecialTransactionValidation,
                     maxBlockFutureTime,
                     pubKey(0),
+                    false,
                     clock)
 }

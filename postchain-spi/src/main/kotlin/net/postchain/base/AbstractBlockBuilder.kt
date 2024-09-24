@@ -34,7 +34,8 @@ import net.postchain.core.block.InitialBlockData
 abstract class AbstractBlockBuilder(
         val ectx: EContext,               // a general DB context (use bctx when possible)
         val blockchainRID: BlockchainRid, // is the RID of the chain
-        val store: BlockStore
+        val store: BlockStore,
+        val isSyncing: Boolean
 ) : BlockBuilder, TxEventSink {
 
     companion object : KLogging()
@@ -100,7 +101,7 @@ abstract class AbstractBlockBuilder(
      */
     override fun appendTransaction(tx: Transaction) {
         if (finalized) throw ProgrammerMistake("Block is already finalized")
-        tx.checkCorrectness()
+        if (isSyncing) tx.checkCorrectnessWhileSyncing() else tx.checkCorrectness()
         val txctx: TxEContext
         try {
             txctx = store.addTransaction(bctx, tx, nextTransactionNumber)

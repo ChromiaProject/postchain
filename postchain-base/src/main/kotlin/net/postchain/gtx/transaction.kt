@@ -40,6 +40,7 @@ class GTXTransaction(
 
     var cachedRawData: ByteArray? = null // We are not sure we have the rawData, and if ever need to calculate it it will be cache here.
     var isChecked: Boolean = false
+    var isCheckedWhileSyncing: Boolean = false
 
     override fun getHash(): ByteArray {
         return myHash
@@ -51,9 +52,28 @@ class GTXTransaction(
         }
     }
 
+    override fun checkCorrectnessWhileSyncing() {
+        if (isChecked || isCheckedWhileSyncing) return
+
+        checkSignatures()
+        checkOperations(true)
+
+        isCheckedWhileSyncing = true
+    }
+
     override fun checkCorrectness() {
         if (isChecked) return
 
+        if (!isCheckedWhileSyncing) {
+            checkSignatures()
+        }
+
+        checkOperations(false)
+
+        isChecked = true
+    }
+
+    private fun checkSignatures() {
         if (signatures.size != signers.size) {
             throw TransactionIncorrect(myRID, "${signatures.size} signatures != ${signers.size} signers")
         }
@@ -64,10 +84,6 @@ class GTXTransaction(
                 throw TransactionIncorrect(myRID, "Signature by ${signer.toHex()} is not valid")
             }
         }
-
-        checkOperations()
-
-        isChecked = true
     }
 
     /**
@@ -77,7 +93,7 @@ class GTXTransaction(
      * We still have one attack vector where the Dapp developer creates custom operation where no signer check is
      * included, b/c this opens up to anonymous attacks.
      */
-    private fun checkOperations() {
+    private fun checkOperations(isSyncing: Boolean) {
         var hasCustomOperation = false
         var totalOps = 0
         var specialOps = 0
@@ -111,7 +127,7 @@ class GTXTransaction(
             }
 
             try {
-                op.checkCorrectness()
+                if (isSyncing) op.checkCorrectnessWhileSyncing() else op.checkCorrectness()
             } catch (e: UserMistake) {
                 throw TransactionIncorrect(myRID, e.message)
             }

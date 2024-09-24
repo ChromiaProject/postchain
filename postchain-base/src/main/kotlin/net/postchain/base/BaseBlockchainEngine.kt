@@ -193,7 +193,7 @@ open class BaseBlockchainEngine(
             tx = enqueuedTx
         }
 
-        tx.checkCorrectness()
+        tx.checkCorrectnessWhileSyncing()
         return tx
     }
 

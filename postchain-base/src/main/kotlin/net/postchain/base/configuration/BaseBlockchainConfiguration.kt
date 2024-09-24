@@ -167,7 +167,8 @@ open class BaseBlockchainConfiguration(
                     }
                 },
                 configData.maxBlockFutureTime,
-                if (configData.addPrimaryKeyToHeader) blockchainContext.nodeRID else null
+                if (configData.addPrimaryKeyToHeader) blockchainContext.nodeRID else null,
+                isSyncing
         )
 
         return bb
