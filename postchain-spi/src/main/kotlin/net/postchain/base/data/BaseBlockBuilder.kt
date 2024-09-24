@@ -89,8 +89,9 @@ open class BaseBlockBuilder(
         val suppressSpecialTransactionValidation: Boolean,
         private val maxBlockFutureTime: Long,
         private val myPubKey: ByteArray?,
+        isSyncing: Boolean,
         val clock: Clock = Clock.systemUTC()
-) : AbstractBlockBuilder(eContext, blockchainRID, store) {
+) : AbstractBlockBuilder(eContext, blockchainRID, store, isSyncing) {
 
     companion object : KLogging() {
         const val PRIMARY_HEADER_KEY = "primary"

@@ -435,7 +435,7 @@ object ImporterExporter : KLogging() {
 
     private fun decodeTransaction(blockchainConfiguration: BlockchainConfiguration, txData: ByteArray): Transaction {
         val tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(txData)
-        tx.checkCorrectness()
+        tx.checkCorrectnessWhileSyncing()
         return tx
     }
 
