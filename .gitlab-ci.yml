@@ -98,7 +98,7 @@ gitlab-release:
   script:
     - echo "Running the release job."
   release:
-    name: 'Release $CI_COMMIT_TAG'
+    name: 'Postchain $CI_COMMIT_TAG'
     description: release_notes.md
     tag_name: '$CI_COMMIT_TAG'
 
