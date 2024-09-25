@@ -2,7 +2,7 @@
 template: |
   {% if categories %}
   {% each categories %}
-  - {{ title }} {% each entries %}{{ commit.web_url }} {% end %}
+  - {{ title }} {% each entries %}[commit]({{ commit.web_url }}) {% end %}
 
   {% end %}
   {% else %}
