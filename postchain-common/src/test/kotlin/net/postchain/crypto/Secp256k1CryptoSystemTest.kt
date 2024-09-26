@@ -22,8 +22,22 @@ class Secp256k1CryptoSystemTest {
             val signature = sigMaker.signMessage(data) // TODO: POS-04_sig ???
             val verifier = sut.makeVerifier()
             assertThat(verifier(data, signature), "Positive test failed for privkey ${keyPair.privKey.data.toHex()}").isTrue()
+            assertThat(sut.verifyDigest(sut.digest(data), signature), "Positive test failed for privkey ${keyPair.privKey.data.toHex()}").isTrue()
             assertThat(verifier("Hell0".toByteArray(), signature), "Negative test failed for privkey ${keyPair.privKey.data.toHex()}").isFalse()
+            assertThat(sut.verifyDigest(sut.digest("Hell0".toByteArray()), signature), "Negative test failed for privkey ${keyPair.privKey.data.toHex()}").isFalse()
         }
+    }
+
+    @Test
+    fun `should not accept signatures with redundant data`() {
+        val keyPair = sut.generateKeyPair()
+        val sigMaker = sut.buildSigMaker(keyPair)
+        val data = "Hello".toByteArray()
+        val signature = sigMaker.signMessage(data)
+        val bogusSignature = Signature(signature.subjectID, signature.data + byteArrayOf(1, 2, 3, 4))
+        val verifier = sut.makeVerifier()
+        assertThat(verifier(data, bogusSignature)).isFalse()
+        assertThat(sut.verifyDigest(sut.digest(data), bogusSignature)).isFalse()
     }
 
     @Test
@@ -111,7 +125,9 @@ class Secp256k1CryptoSystemTest {
             val signature = sigMaker.signMessage(data) // TODO: POS-04_sig ???
             val verifier = sut.makeVerifier()
             assertThat(verifier(data, signature), "Positive test failed for privkey ${keyPair.privKey.data.toHex()}").isTrue()
+            assertThat(sut.verifyDigest(sut.digest(data), signature), "Positive test failed for privkey ${keyPair.privKey.data.toHex()}").isTrue()
             assertThat(verifier("Hell0".toByteArray(), signature), "Negative test failed for privkey ${keyPair.privKey.data.toHex()}").isFalse()
+            assertThat(sut.verifyDigest(sut.digest("Hell0".toByteArray()), signature), "Negative test failed for privkey ${keyPair.privKey.data.toHex()}").isFalse()
         }
     }
 }
