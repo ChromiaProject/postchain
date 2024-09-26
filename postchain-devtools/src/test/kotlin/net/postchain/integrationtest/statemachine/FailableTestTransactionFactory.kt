@@ -22,7 +22,7 @@ open class FailableTestTransactionFactory(private val failable: Boolean) : Trans
                 correct = !failable || (id % 2 == 0))
     }
 
-    override fun validateTransaction(data: ByteArray) {}
+    override fun decodeAndValidateTransaction(data: ByteArray) = decodeTransaction(data)
 }
 
 /**

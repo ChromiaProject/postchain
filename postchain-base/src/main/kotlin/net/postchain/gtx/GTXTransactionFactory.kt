@@ -10,7 +10,6 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 
@@ -26,26 +25,24 @@ class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXMod
         if (data.size > maxTransactionSize) {
             throw UserMistake("Transaction size exceeds max transaction size $maxTransactionSize bytes")
         }
-        return internalBuild(data)
+        val decoded = GtvDecoder.decodeGtv(data)
+        return internalBuild(data, decoded)
     }
 
-    override fun validateTransaction(data: ByteArray) {
+    override fun decodeAndValidateTransaction(data: ByteArray): Transaction {
         if (data.size > maxTransactionSize) {
             throw UserMistake("Transaction size exceeds max transaction size $maxTransactionSize bytes")
         }
-        val encoded = GtvEncoder.encodeGtv(GtvDecoder.decodeGtv(data))
-        if (!data.contentEquals(encoded)) throw UserMistake("Transaction is not encoded with valid encoding.")
+        val decoded = GtvDecoder.decodeGtv(data)
+        val reEncoded = GtvEncoder.encodeGtv(decoded)
+        if (!data.contentEquals(reEncoded)) throw UserMistake("Transaction is not encoded with valid encoding.")
+        return internalBuild(data, decoded)
     }
 
     // Meant to be used in tests, could be deleted if not needed
     fun build(gtx: Gtx) = internalMainBuild(null, gtx.toGtv(), gtx)
 
     // ----------------- Internal workings -------------------
-
-    private fun internalBuild(rawData: ByteArray): GTXTransaction {
-        val gtvData = GtvFactory.decodeGtv(rawData)
-        return internalBuild(rawData, gtvData)
-    }
 
     private fun internalBuild(rawData: ByteArray?, gtvData: Gtv): GTXTransaction {
         val gtxData = Gtx.fromGtv(gtvData)

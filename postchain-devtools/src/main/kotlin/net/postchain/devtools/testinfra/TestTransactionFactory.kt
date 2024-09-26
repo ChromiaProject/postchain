@@ -32,5 +32,5 @@ class TestTransactionFactory : TransactionFactory {
         return result
     }
 
-    override fun validateTransaction(data: ByteArray) {}
+    override fun decodeAndValidateTransaction(data: ByteArray) = decodeTransaction(data)
 }
