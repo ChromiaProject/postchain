@@ -96,11 +96,19 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
         }
 
         fun decodePrivateKey(privKey: PrivKey): PrivateKey = PKCS8EncodedKeySpec(privKey.data).let {
-            KeyFactory.getInstance(ALGORITHM, PROVIDER).generatePrivate(it)
+            try {
+                KeyFactory.getInstance(ALGORITHM, PROVIDER).generatePrivate(it)
+            } catch (e: InvalidKeySpecException) {
+                throw e.cause ?: throw IllegalArgumentException("Could not generate private key: ${e.message}")
+            }
         }
 
         private fun decodePublicKey(pubKey: PubKey): PublicKey = X509EncodedKeySpec(pubKey.data).let {
-            KeyFactory.getInstance(ALGORITHM, PROVIDER).generatePublic(it)
+            try {
+                KeyFactory.getInstance(ALGORITHM, PROVIDER).generatePublic(it)
+            } catch (e: InvalidKeySpecException) {
+                throw e.cause ?: throw IllegalArgumentException("Could not generate public key: ${e.message}")
+            }
         }
     }
 }

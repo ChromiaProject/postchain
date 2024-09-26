@@ -29,6 +29,18 @@ class Secp256k1CryptoSystemTest {
     }
 
     @Test
+    fun `should not accept signers with redundant data`() {
+        val keyPair = sut.generateKeyPair()
+        val sigMaker = sut.buildSigMaker(keyPair)
+        val data = "Hello".toByteArray()
+        val signature = sigMaker.signMessage(data)
+        val bogusSignature = Signature(signature.subjectID + byteArrayOf(1, 2, 3, 4), signature.data)
+        val verifier = sut.makeVerifier()
+        assertThrows<IllegalArgumentException> { verifier(data, bogusSignature) }
+        assertThrows<IllegalArgumentException> { sut.verifyDigest(sut.digest(data), bogusSignature) }
+    }
+
+    @Test
     fun `should not accept signatures with redundant data`() {
         val keyPair = sut.generateKeyPair()
         val sigMaker = sut.buildSigMaker(keyPair)
