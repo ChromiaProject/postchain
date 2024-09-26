@@ -54,10 +54,13 @@ fun encodeSignature(r: BigInteger, s: BigInteger): ByteArray {
     )
 }
 
-const val SIGNATURE_SIZE = 64
+const val STANDARD_SIGNATURE_SIZE = 64
+const val MAX_SIGNATURE_SIZE = 65
 
 fun secp256k1_decodeSignature(bytes: ByteArray): Array<BigInteger> {
-    require(bytes.size == SIGNATURE_SIZE) { "Secp256k1 signature should be 64 bytes" }
+    require(bytes.size == STANDARD_SIGNATURE_SIZE || bytes.size == MAX_SIGNATURE_SIZE) {
+        "Secp256k1 signature should be $STANDARD_SIGNATURE_SIZE or $MAX_SIGNATURE_SIZE bytes"
+    }
     val r = BigInteger(1, bytes.sliceArray(0..31))
     val s = BigInteger(1, bytes.sliceArray(32..63))
     return arrayOf(r, s)
@@ -91,7 +94,7 @@ fun secp256k1_decodeSignature(bytes: ByteArray): Array<BigInteger> {
 }*/
 
 fun secp256k1_verify(digest: ByteArray, pubKey: ByteArray, signature: ByteArray): Boolean {
-    if (signature.size != SIGNATURE_SIZE) return false
+    if (signature.size > MAX_SIGNATURE_SIZE) return false
     val signer = ECDSASigner()
     val params = ECPublicKeyParameters(CURVE.curve.decodePoint(pubKey), CURVE)
     signer.init(false, params)
