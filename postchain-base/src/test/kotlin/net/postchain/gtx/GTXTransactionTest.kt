@@ -106,4 +106,18 @@ class GTXTransactionTest {
             tx.checkCorrectness()
         }
     }
+
+    @Test
+    fun `validation works`() {
+        val gtxBody = GtxBody(ZERO_RID, listOf(GtxOp(GtxSpecNop.OP_NAME, gtv(42))), listOf(pubKey(0)))
+        val signature = cs.buildSigMaker(KeyPair(pubKey(0), privKey(0))).signDigest(gtxBody.calculateTxRid(GtvMerkleHashCalculator(cs))).data
+        val factory = GTXTransactionFactory(ZERO_RID, StandardOpsGTXModule(), cs)
+        val gtxData = Gtx(
+                gtxBody,
+                listOf(signature)).encode()
+        val tx = factory.decodeAndValidateTransaction(gtxData) as GTXTransaction
+        assertDoesNotThrow {
+            tx.checkCorrectness()
+        }
+    }
 }

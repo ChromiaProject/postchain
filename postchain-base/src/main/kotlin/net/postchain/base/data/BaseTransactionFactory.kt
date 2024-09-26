@@ -8,10 +8,10 @@ import net.postchain.core.TransactionFactory
 
 class BaseTransactionFactory : TransactionFactory {
     override fun decodeTransaction(data: ByteArray): Transaction {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        TODO("not implemented")
     }
 
-    override fun validateTransaction(data: ByteArray) {
-        TODO("Not yet implemented")
+    override fun decodeAndValidateTransaction(data: ByteArray): Transaction {
+        TODO("not implemented")
     }
 }

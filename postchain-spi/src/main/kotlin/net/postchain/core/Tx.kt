@@ -67,7 +67,7 @@ interface SignableTransaction : Transaction {
 
 interface TransactionFactory {
     fun decodeTransaction(data: ByteArray): Transaction
-    fun validateTransaction(data: ByteArray)
+    fun decodeAndValidateTransaction(data: ByteArray): Transaction
 }
 
 interface TransactionQueue {
