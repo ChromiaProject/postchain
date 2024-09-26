@@ -29,6 +29,30 @@ class Secp256k1CryptoSystemTest {
     }
 
     @Test
+    fun `should accept standard signature`() {
+        val keyPair = sut.generateKeyPair()
+        val sigMaker = sut.buildSigMaker(keyPair)
+        val data = "Hello".toByteArray()
+        val signature = sigMaker.signMessage(data)
+        val bogusSignature = Signature(signature.subjectID, signature.data)
+        val verifier = sut.makeVerifier()
+        assertThat(verifier(data, bogusSignature)).isTrue()
+        assertThat(sut.verifyDigest(sut.digest(data), bogusSignature)).isTrue()
+    }
+
+    @Test
+    fun `should accept signature with one extra byte at end`() {
+        val keyPair = sut.generateKeyPair()
+        val sigMaker = sut.buildSigMaker(keyPair)
+        val data = "Hello".toByteArray()
+        val signature = sigMaker.signMessage(data)
+        val largerSignature = Signature(signature.subjectID, signature.data + byteArrayOf(27))
+        val verifier = sut.makeVerifier()
+        assertThat(verifier(data, largerSignature)).isTrue()
+        assertThat(sut.verifyDigest(sut.digest(data), largerSignature)).isTrue()
+    }
+
+    @Test
     fun `should not accept signers with redundant data`() {
         val keyPair = sut.generateKeyPair()
         val sigMaker = sut.buildSigMaker(keyPair)
