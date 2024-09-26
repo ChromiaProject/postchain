@@ -6,6 +6,7 @@ import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import net.postchain.crypto.Signature
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class DilithiumCryptoSystemTest {
 
@@ -40,6 +41,20 @@ class DilithiumCryptoSystemTest {
         val wrongSignature = Signature(signature.subjectID, signature2.data)
         assertThat(verifier(message, wrongSignature)).isFalse()
         assertThat(sut.verifyDigest(sut.digest(message), wrongSignature)).isFalse()
+    }
+
+    @Test
+    fun `should not accept signers with redundant data`() {
+        val sut = DilithiumCryptoSystem()
+
+        val keyPair = sut.generateKeyPair()
+        val sigMaker = sut.buildSigMaker(keyPair)
+        val data = "Hello".toByteArray()
+        val signature = sigMaker.signMessage(data)
+        val bogusSignature = Signature(signature.subjectID + byteArrayOf(1, 2, 3, 4), signature.data)
+        val verifier = sut.makeVerifier()
+        assertThrows<IllegalArgumentException> { verifier(data, bogusSignature) }
+        assertThrows<IllegalArgumentException> { sut.verifyDigest(sut.digest(data), bogusSignature) }
     }
 
     @Test
