@@ -1,0 +1,18 @@
+Configuration:
+  name: Default
+
+  Appenders:
+    Console:
+      name: ConsoleAppender
+      PatternLayout:
+        pattern: "%-5level %d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %c{1} -%replace{%notEmpty{ [%notEmpty{bc-rid=%.-2X{blockchainRID}:%.4X{blockchainRID}}%notEmpty{, chain-id=%X{chainIID}}%notEmpty{, block-rid=%.-2X{blockRID}:%.4X{blockRID}}]:}}{\\[, }{[} %msg%n"
+
+  Loggers:
+    Root:
+      level: info
+      AppenderRef:
+        - ref: ConsoleAppender
+
+    Logger:
+    - name: net.postchain
+      level: debug
