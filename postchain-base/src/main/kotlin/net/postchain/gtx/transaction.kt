@@ -6,6 +6,8 @@ import net.postchain.common.data.Hash
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.common.wrap
 import net.postchain.core.SignableTransaction
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
@@ -76,6 +78,14 @@ class GTXTransaction(
     private fun checkSignatures() {
         if (signatures.size != signers.size) {
             throw TransactionIncorrect(myRID, "${signatures.size} signatures != ${signers.size} signers")
+        }
+
+        if (signers.size > 1) {
+            val set = HashSet<WrappedByteArray>(signers.size)
+            for (signer in signers) { set.add(signer.wrap()) }
+            if (set.size != signers.size) {
+                throw TransactionIncorrect(myRID, "Duplicate signers")
+            }
         }
 
         for ((idx, signer) in signers.withIndex()) {
