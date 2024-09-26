@@ -44,6 +44,8 @@ interface Transactor {
     fun isCorrect(): Boolean = throw NotImplementedError("isCorrect() is no longer supported, use checkCorrectness() instead")
 
     fun apply(ctx: TxEContext): Boolean
+
+    fun applyWhileSyncing(ctx: TxEContext): Boolean = apply(ctx)
 }
 
 interface Transaction : Transactor {

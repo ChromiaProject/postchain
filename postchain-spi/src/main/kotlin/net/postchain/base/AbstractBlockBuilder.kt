@@ -108,9 +108,10 @@ abstract class AbstractBlockBuilder(
         } catch (e: Exception) {
             throw UserMistake("Failed to save tx ${tx.getRID().toHex()} to database: $e", e)
         }
-        // In case of errors, tx.apply may either return false or throw UserMistake
 
-        if (tx.apply(txctx)) {
+        // In case of errors, tx.apply may either return false or throw UserMistake
+        val applied = if (isSyncing) tx.applyWhileSyncing(txctx) else tx.apply(txctx)
+        if (applied) {
             nextTransactionNumber++
             txctx.done()
             transactions.add(tx)

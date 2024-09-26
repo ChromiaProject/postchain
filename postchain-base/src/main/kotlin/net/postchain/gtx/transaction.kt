@@ -38,7 +38,7 @@ class GTXTransaction(
         val cs: CryptoSystem
 ) : SignableTransaction {
 
-    var cachedRawData: ByteArray? = null // We are not sure we have the rawData, and if ever need to calculate it it will be cache here.
+    var cachedRawData: ByteArray? = null // We are not sure if we have the rawData, and if we ever need to calculate it, it will be cached here.
     var isChecked: Boolean = false
     var isCheckedWhileSyncing: Boolean = false
 
@@ -113,14 +113,17 @@ class GTXTransaction(
                     if (foundSpecNop) throw TransactionIncorrect(myRID, "contains more than one '__nop'")
                     foundSpecNop = true
                 }
+
                 is GtxNop -> {
                     if (foundNop) throw TransactionIncorrect(myRID, "contains more than one 'nop'")
                     foundNop = true
                 }
+
                 is GtxTimeB -> {
                     if (foundTimeB) throw TransactionIncorrect(myRID, "contains more than one 'timeb'")
                     foundTimeB = true
                 }
+
                 else -> {
                     hasCustomOperation = true
                 }
@@ -161,6 +164,15 @@ class GTXTransaction(
         checkCorrectness()
         for (op in ops) {
             if (!op.apply(ctx))
+                throw UserMistake("Operation failed")
+        }
+        return true
+    }
+
+    override fun applyWhileSyncing(ctx: TxEContext): Boolean {
+        checkCorrectnessWhileSyncing()
+        for (op in ops) {
+            if (!op.applyWhileSyncing(ctx))
                 throw UserMistake("Operation failed")
         }
         return true
