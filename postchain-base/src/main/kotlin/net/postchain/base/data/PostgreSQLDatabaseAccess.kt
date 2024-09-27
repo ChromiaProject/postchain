@@ -340,12 +340,16 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                     val blockHeader = resultSet.getBytes("block_header_data")
                     val witness = resultSet.getBytes("block_witness")
                     val array = resultSet.getArray("transactions")
-                    val transactions = buildList<ByteArray> {
-                        array.resultSet.use {
-                            while (it.next()) {
-                                add(it.getBytes(2))
+                    val transactions = try {
+                        buildList<ByteArray> {
+                            array.resultSet.use {
+                                while (it.next()) {
+                                    add(it.getBytes(2))
+                                }
                             }
                         }
+                    } finally {
+                        array.free()
                     }
 
                     blockHandler(DatabaseAccess.BlockWithTransactions(blockHeight, blockHeader, witness, transactions))
