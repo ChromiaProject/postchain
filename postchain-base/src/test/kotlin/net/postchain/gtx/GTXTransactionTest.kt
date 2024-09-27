@@ -13,6 +13,7 @@ import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.data.ExtOpData
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.assertThrows
 class GTXTransactionTest {
 
     private val cs = Secp256K1CryptoSystem()
+    private val hashCalculator = GtvMerkleHashCalculator(cs)
 
     @Test
     fun `tx with only nop op is invalid`() {
@@ -65,9 +67,22 @@ class GTXTransactionTest {
     }
 
     @Test
+    fun `no signer is allowed`() {
+        val gtxBody = GtxBody(ZERO_RID, listOf(GtxOp(GtxSpecNop.OP_NAME, gtv(42))), listOf())
+        val factory = GTXTransactionFactory(ZERO_RID, StandardOpsGTXModule(), cs)
+        val gtxData = Gtx(
+                gtxBody,
+                listOf()).encode()
+        val tx = factory.decodeTransaction(gtxData) as GTXTransaction
+        assertDoesNotThrow {
+            tx.checkCorrectness()
+        }
+    }
+
+    @Test
     fun `single signer is allowed`() {
         val gtxBody = GtxBody(ZERO_RID, listOf(GtxOp(GtxSpecNop.OP_NAME, gtv(42))), listOf(pubKey(0)))
-        val signature = cs.buildSigMaker(KeyPair(pubKey(0), privKey(0))).signDigest(gtxBody.calculateTxRid(GtvMerkleHashCalculator(cs))).data
+        val signature = cs.buildSigMaker(KeyPair(pubKey(0), privKey(0))).signDigest(gtxBody.calculateTxRid(hashCalculator)).data
         val factory = GTXTransactionFactory(ZERO_RID, StandardOpsGTXModule(), cs)
         val gtxData = Gtx(
                 gtxBody,
@@ -79,10 +94,24 @@ class GTXTransactionTest {
     }
 
     @Test
+    fun `invalid single signature is rejected`() {
+        val gtxBody = GtxBody(ZERO_RID, listOf(GtxOp(GtxSpecNop.OP_NAME, gtv(42))), listOf(pubKey(0)))
+        val signature = cs.buildSigMaker(KeyPair(pubKey(0), privKey(0))).signDigest(gtv("bogus").merkleHash(hashCalculator)).data
+        val factory = GTXTransactionFactory(ZERO_RID, StandardOpsGTXModule(), cs)
+        val gtxData = Gtx(
+                gtxBody,
+                listOf(signature)).encode()
+        val tx = factory.decodeTransaction(gtxData) as GTXTransaction
+        assertThrows<TransactionIncorrect> {
+            tx.checkCorrectness()
+        }
+    }
+
+    @Test
     fun `multiple signers are allowed`() {
         val gtxBody = GtxBody(ZERO_RID, listOf(GtxOp(GtxSpecNop.OP_NAME, gtv(42))), listOf(pubKey(0), pubKey(1)))
-        val signature1 = cs.buildSigMaker(KeyPair(pubKey(0), privKey(0))).signDigest(gtxBody.calculateTxRid(GtvMerkleHashCalculator(cs))).data
-        val signature2 = cs.buildSigMaker(KeyPair(pubKey(1), privKey(1))).signDigest(gtxBody.calculateTxRid(GtvMerkleHashCalculator(cs))).data
+        val signature1 = cs.buildSigMaker(KeyPair(pubKey(0), privKey(0))).signDigest(gtxBody.calculateTxRid(hashCalculator)).data
+        val signature2 = cs.buildSigMaker(KeyPair(pubKey(1), privKey(1))).signDigest(gtxBody.calculateTxRid(hashCalculator)).data
         val factory = GTXTransactionFactory(ZERO_RID, StandardOpsGTXModule(), cs)
         val gtxData = Gtx(
                 gtxBody,
@@ -94,9 +123,24 @@ class GTXTransactionTest {
     }
 
     @Test
+    fun `invalid multiple signature is rejected`() {
+        val gtxBody = GtxBody(ZERO_RID, listOf(GtxOp(GtxSpecNop.OP_NAME, gtv(42))), listOf(pubKey(0), pubKey(1)))
+        val signature1 = cs.buildSigMaker(KeyPair(pubKey(0), privKey(0))).signDigest(gtxBody.calculateTxRid(hashCalculator)).data
+        val signature2 = cs.buildSigMaker(KeyPair(pubKey(1), privKey(1))).signDigest(gtv("bogus").merkleHash(hashCalculator)).data
+        val factory = GTXTransactionFactory(ZERO_RID, StandardOpsGTXModule(), cs)
+        val gtxData = Gtx(
+                gtxBody,
+                listOf(signature1, signature2)).encode()
+        val tx = factory.decodeTransaction(gtxData) as GTXTransaction
+        assertThrows<TransactionIncorrect> {
+            tx.checkCorrectness()
+        }
+    }
+
+    @Test
     fun `duplicate signers are not allowed`() {
         val gtxBody = GtxBody(ZERO_RID, listOf(GtxOp(GtxSpecNop.OP_NAME, gtv(42))), listOf(pubKey(0), pubKey(0)))
-        val signature = cs.buildSigMaker(KeyPair(pubKey(0), privKey(0))).signDigest(gtxBody.calculateTxRid(GtvMerkleHashCalculator(cs))).data
+        val signature = cs.buildSigMaker(KeyPair(pubKey(0), privKey(0))).signDigest(gtxBody.calculateTxRid(hashCalculator)).data
         val factory = GTXTransactionFactory(ZERO_RID, StandardOpsGTXModule(), cs)
         val gtxData = Gtx(
                 gtxBody,
@@ -110,7 +154,7 @@ class GTXTransactionTest {
     @Test
     fun `validation works`() {
         val gtxBody = GtxBody(ZERO_RID, listOf(GtxOp(GtxSpecNop.OP_NAME, gtv(42))), listOf(pubKey(0)))
-        val signature = cs.buildSigMaker(KeyPair(pubKey(0), privKey(0))).signDigest(gtxBody.calculateTxRid(GtvMerkleHashCalculator(cs))).data
+        val signature = cs.buildSigMaker(KeyPair(pubKey(0), privKey(0))).signDigest(gtxBody.calculateTxRid(hashCalculator)).data
         val factory = GTXTransactionFactory(ZERO_RID, StandardOpsGTXModule(), cs)
         val gtxData = Gtx(
                 gtxBody,

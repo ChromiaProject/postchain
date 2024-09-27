@@ -57,7 +57,7 @@ class GTXTransaction(
     override fun checkCorrectnessWhileSyncing() {
         if (isChecked || isCheckedWhileSyncing) return
 
-        checkSignatures()
+        checkSignatures(parallel = false)
         checkOperations(true)
 
         isCheckedWhileSyncing = true
@@ -67,7 +67,7 @@ class GTXTransaction(
         if (isChecked) return
 
         if (!isCheckedWhileSyncing) {
-            checkSignatures()
+            checkSignatures(parallel = true)
         }
 
         checkOperations(false)
@@ -75,7 +75,7 @@ class GTXTransaction(
         isChecked = true
     }
 
-    private fun checkSignatures() {
+    private fun checkSignatures(parallel: Boolean) {
         if (signatures.size != signers.size) {
             throw TransactionIncorrect(myRID, "${signatures.size} signatures != ${signers.size} signers")
         }
@@ -88,10 +88,20 @@ class GTXTransaction(
             }
         }
 
-        for ((idx, signer) in signers.withIndex()) {
-            val signature = signatures[idx]
-            if (!cs.verifyDigest(myRID, Signature(signer, signature))) {
-                throw TransactionIncorrect(myRID, "Signature by ${signer.toHex()} is not valid")
+        if (signers.size == 1) {
+            if (!cs.verifyDigest(myRID, Signature(signers.first(), signatures.first()))) {
+                throw TransactionIncorrect(myRID, "Signature by ${signers.first().toHex()} is not valid")
+            }
+        } else if (signers.size > 1) {
+            val signersAndSignatures = if (parallel)
+                signers.zip(signatures).parallelStream()
+            else
+                signers.zip(signatures).stream()
+
+            signersAndSignatures.forEach { (signer, signature) ->
+                if (!cs.verifyDigest(myRID, Signature(signer, signature))) {
+                    throw TransactionIncorrect(myRID, "Signature by ${signer.toHex()} is not valid")
+                }
             }
         }
     }
