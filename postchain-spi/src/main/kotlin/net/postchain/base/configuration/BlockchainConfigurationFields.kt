@@ -26,6 +26,7 @@ const val KEY_SIGNERS = "signers"
 const val KEY_GTX = "gtx"
 const val KEY_GTX_MODULES = "modules"
 const val KEY_GTX_TX_SIZE = "max_transaction_size"
+const val KEY_GTX_MAX_TX_SIGNATURES = "max_transaction_signatures"
 const val KEY_GTX_ALLOWOVERRIDES = "allowoverrides"
 
 const val KEY_DEPENDENCIES = "dependencies"
