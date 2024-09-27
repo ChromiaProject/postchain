@@ -17,7 +17,8 @@ import net.postchain.gtv.merkleHash
  * Idea is that we can build a [GTXTransaction] from different layers.
  * The most normal way would be to build from binary, but sometimes we might have deserialized the binary data already
  */
-class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXModule, val cs: CryptoSystem, val maxTransactionSize: Long = 1024 * 1024) : TransactionFactory {
+class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXModule, val cs: CryptoSystem,
+                            val maxTransactionSize: Long = 1024 * 1024, val maxTransactionSignatures: Long = 100) : TransactionFactory {
 
     val gtvMerkleHashCalculator = GtvMerkleHashCalculator(cs) // Here we are using the standard cache
 
@@ -53,11 +54,14 @@ class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXMod
      * Does the heavy lifting of creating the TX
      */
     private fun internalMainBuild(rawData: ByteArray?, gtvData: Gtv, gtxData: Gtx): GTXTransaction {
-
         val body = gtxData.gtxBody
 
         if (body.blockchainRid != blockchainRID) {
-            throw UserMistake("Transaction has wrong blockchainRID: Should be: ${blockchainRID.toHex()}, but was: ${body.blockchainRid.toHex()} ")
+            throw UserMistake("Transaction has wrong blockchainRID: Should be: ${blockchainRID.toHex()}, but was: ${body.blockchainRid.toHex()}")
+        }
+
+        if (body.signers.size > maxTransactionSignatures || gtxData.signatures.size > maxTransactionSignatures) {
+            throw UserMistake("Transaction contains too many signatures, only $maxTransactionSignatures allowed")
         }
 
         // We wait until after validation before doing (expensive) merkle root calculation

@@ -4,6 +4,7 @@ package net.postchain.gtx
 
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.exception.TransactionIncorrect
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
 import net.postchain.crypto.KeyPair
@@ -162,6 +163,20 @@ class GTXTransactionTest {
         val tx = factory.decodeAndValidateTransaction(gtxData) as GTXTransaction
         assertDoesNotThrow {
             tx.checkCorrectness()
+        }
+    }
+
+    @Test
+    fun `too many signatures are not allowed`() {
+        val gtxBody = GtxBody(ZERO_RID, listOf(GtxOp(GtxSpecNop.OP_NAME, gtv(42))), listOf(pubKey(0), pubKey(1)))
+        val signature1 = cs.buildSigMaker(KeyPair(pubKey(0), privKey(0))).signDigest(gtxBody.calculateTxRid(hashCalculator)).data
+        val signature2 = cs.buildSigMaker(KeyPair(pubKey(1), privKey(1))).signDigest(gtxBody.calculateTxRid(hashCalculator)).data
+        val factory = GTXTransactionFactory(ZERO_RID, StandardOpsGTXModule(), cs, maxTransactionSignatures = 1)
+        val gtxData = Gtx(
+                gtxBody,
+                listOf(signature1, signature2)).encode()
+        assertThrows<UserMistake> {
+            factory.decodeTransaction(gtxData) as GTXTransaction
         }
     }
 }
