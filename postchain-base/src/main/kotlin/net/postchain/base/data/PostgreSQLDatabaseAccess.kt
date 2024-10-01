@@ -332,6 +332,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
             ORDER BY b.block_height ASC
                 """.trimIndent()
         ctx.conn.prepareStatement(sql).use { statement ->
+            statement.fetchSize = 10
             statement.setLong(1, fromHeight)
             statement.setLong(2, upToHeight)
             statement.executeQuery().use { resultSet ->
