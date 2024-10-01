@@ -17,6 +17,22 @@ import net.postchain.network.mastersub.master.DefaultMasterConnectionManager
 
 open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
 
+    companion object {
+        fun validateSubnodeUser(subnodeUser: String?) {
+            if (subnodeUser == null) {
+                throw UserMistake("POSTCHAIN_SUBNODE_USER must be specified")
+            } else {
+                val values = subnodeUser.split(":")
+                if (!values.all { it.matches("\\d+".toRegex()) }) {
+                    throw UserMistake("POSTCHAIN_SUBNODE_USER requires format <uid> or <uid>:<gid>")
+                }
+                if (values.contains("0")) {
+                    throw UserMistake("POSTCHAIN_SUBNODE_USER can't be set to root")
+                }
+            }
+        }
+    }
+
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
             ContainerEnvironment.init(appConfig)
@@ -48,15 +64,7 @@ open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
 
     fun loadContainerNodeConfig(appConfig: AppConfig): ContainerNodeConfig {
         val config = ContainerNodeConfig.fromAppConfig(appConfig)
-
-        if (config.subnodeUser == null) {
-            throw UserMistake("POSTCHAIN_SUBNODE_USER must be specified")
-        } else {
-            val values = config.subnodeUser.split(":")
-            if (values.contains("root") || values.contains("0")) {
-                throw UserMistake("POSTCHAIN_SUBNODE_USER can't be set to root")
-            }
-        }
+        validateSubnodeUser(config.subnodeUser)
 
         return config
     }
