@@ -131,11 +131,12 @@ open class SnapshotPageStore(
         return db.getHighestLevelPageEqualOrLowerThanHeight(ctx, name, blockHeight)
     }
 
-    fun updateSnapshot(blockHeight: Long, leafHashes: NavigableMap<Long, Hash>): Hash {
+    fun updateSnapshot(blockHeight: Long, leafHashes: NavigableMap<Long, Hash>, compatVersion: Int = 1): Hash {
         val entriesPerPage = 1 shl levelsPerPage
         val prevHighestLevelPage = highestLevelPage(blockHeight - 1)
 
         if (leafHashes.size == 0) {
+            if (compatVersion == 1) return EMPTY_HASH
             val page = readPage(blockHeight - 1, prevHighestLevelPage, 0)
             return page?.getChildHash(levelsPerPage, ds::hash, 0) ?: EMPTY_HASH
         }
