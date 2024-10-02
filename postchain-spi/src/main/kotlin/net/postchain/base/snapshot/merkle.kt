@@ -137,7 +137,7 @@ open class SnapshotPageStore(
 
         if (leafHashes.size == 0) {
             if (compatVersion == 1) return EMPTY_HASH
-            val page = readPage(blockHeight - 1, prevHighestLevelPage, 0)
+            val page = readPage(blockHeight, prevHighestLevelPage, 0)
             return page?.getChildHash(levelsPerPage, ds::hash, 0) ?: EMPTY_HASH
         }
 
