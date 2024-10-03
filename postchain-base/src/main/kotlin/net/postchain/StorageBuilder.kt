@@ -21,9 +21,11 @@ object StorageBuilder {
      */
     fun getCurrentDbVersion() = DB_VERSION
 
-    fun buildStorage(appConfig: AppConfig, maxWaitWrite: Duration = Duration.ZERO, maxWriteTotal: Int = 2,
-                     wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION, allowUpgrade: Boolean = true,
-                     name: String? = null): Storage {
+    fun buildStorage(appConfig: AppConfig, maxWaitWrite: Duration = Duration.ZERO,
+                     maxWriteTotal: Int = 2, maxReadTotal: Int = 10,
+                     wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION,
+                     allowUpgrade: Boolean = true, name: String? = null
+    ): Storage {
         val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
         initStorage(appConfig, wipeDatabase, db, expectedDbVersion, allowUpgrade)
 
@@ -31,7 +33,7 @@ object StorageBuilder {
         val readDataSource = createBasicDataSource(appConfig, connectionName = (name?.let { "$it " } ?: "") + "read").apply {
             defaultAutoCommit = false
             defaultTransactionIsolation = TRANSACTION_REPEATABLE_READ
-            maxTotal = appConfig.databaseReadConcurrency
+            maxTotal = maxReadTotal
             defaultReadOnly = true
         }
 
@@ -46,7 +48,7 @@ object StorageBuilder {
                 readDataSource,
                 writeDataSource,
                 db,
-                appConfig.databaseReadConcurrency,
+                maxReadTotal,
                 appConfig.exitOnFatalError,
                 db.isSavepointSupported())
     }

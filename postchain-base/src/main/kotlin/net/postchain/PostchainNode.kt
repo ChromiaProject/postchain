@@ -37,15 +37,17 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
 
         val blockBuilderStorage = StorageBuilder.buildStorage(
                 appConfig,
-                appConfig.databaseBlockBuilderMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
-                appConfig.databaseBlockBuilderWriteConcurrency,
-                wipeDb,
+                maxWaitWrite = appConfig.databaseBlockBuilderMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
+                maxWriteTotal = appConfig.databaseBlockBuilderWriteConcurrency,
+                maxReadTotal = appConfig.databaseBlockBuilderReadConcurrency,
+                wipeDatabase = wipeDb,
                 name = "block builder")
         val sharedStorage = StorageBuilder.buildStorage(
                 appConfig,
-                appConfig.databaseSharedMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
-                appConfig.databaseSharedWriteConcurrency,
-                wipeDb,
+                maxWaitWrite = appConfig.databaseSharedMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
+                maxWriteTotal = appConfig.databaseSharedWriteConcurrency,
+                maxReadTotal = appConfig.databaseSharedReadConcurrency,
+                wipeDatabase = wipeDb,
                 name = "shared")
 
         sharedStorage.withReadConnection { ctx ->

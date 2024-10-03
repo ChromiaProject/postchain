@@ -114,8 +114,17 @@ class AppConfig(private val config: Configuration) : Config {
     val databasePassword: String
         get() = config.getEnvOrStringProperty("POSTCHAIN_DB_PASSWORD", "database.password", "")
 
+    @Deprecated("use databaseBlockBuilderReadConcurrency and databaseSharedReadConcurrency instead")
     val databaseReadConcurrency: Int
         get() = config.getEnvOrIntProperty("POSTCHAIN_DB_READ_CONCURRENCY", "database.readConcurrency", 10)
+
+    @Suppress("DEPRECATION")
+    val databaseBlockBuilderReadConcurrency: Int
+        get() = config.getEnvOrIntProperty("POSTCHAIN_DB_BLOCK_BUILDER_READ_CONCURRENCY", "database.blockBuilderReadConcurrency", databaseReadConcurrency)
+
+    @Suppress("DEPRECATION")
+    val databaseSharedReadConcurrency: Int
+        get() = config.getEnvOrIntProperty("POSTCHAIN_DB_SHARED_READ_CONCURRENCY", "database.sharedReadConcurrency", databaseReadConcurrency)
 
     val databaseBlockBuilderWriteConcurrency: Int
         get() = config.getEnvOrIntProperty("POSTCHAIN_DB_BLOCK_BUILDER_WRITE_CONCURRENCY", "database.blockBuilderWriteConcurrency", 8)

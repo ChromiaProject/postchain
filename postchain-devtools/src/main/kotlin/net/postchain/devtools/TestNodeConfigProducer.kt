@@ -134,8 +134,10 @@ object TestNodeConfigProducer {
         baseConfig.setProperty("database.schema", dbSchema.replace("-", "replica_"))
         // This is to support 4 nodes without exceeding 100 connections (if tests use more nodes they need to override)
         // Shared storage 2 + 8, bb storage 6 + 8 -> 4 * 24 = 96
+        baseConfig.setProperty("database.sharedWriteConcurrency", 2)
+        baseConfig.setProperty("database.sharedReadConcurrency", 8)
         baseConfig.setProperty("database.blockBuilderWriteConcurrency", 6)
-        baseConfig.setProperty("database.readConcurrency", 8)
+        baseConfig.setProperty("database.blockBuilderReadConcurrency", 8)
     }
 
 

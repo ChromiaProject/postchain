@@ -18,7 +18,8 @@ fun testDbConfig(dbSchema: String, readConcurrency: Int = 10): AppConfig {
         on { databaseUsername } doReturn "postchain"
         on { databasePassword } doReturn "postchain"
         on { databaseSchema } doReturn dbSchema
-        on { databaseReadConcurrency } doReturn readConcurrency
+        on { databaseBlockBuilderReadConcurrency } doReturn readConcurrency
+        on { databaseSharedReadConcurrency } doReturn readConcurrency
     }
 }
 
