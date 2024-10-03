@@ -39,12 +39,14 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 appConfig,
                 appConfig.databaseBlockBuilderMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
                 appConfig.databaseBlockBuilderWriteConcurrency,
-                wipeDb)
+                wipeDb,
+                name = "block builder")
         val sharedStorage = StorageBuilder.buildStorage(
                 appConfig,
                 appConfig.databaseSharedMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
                 appConfig.databaseSharedWriteConcurrency,
-                wipeDb)
+                wipeDb,
+                name = "shared")
 
         sharedStorage.withReadConnection { ctx ->
             DatabaseAccess.of(ctx).checkCollation(ctx.conn, suppressError = appConfig.databaseSuppressCollationCheck)
