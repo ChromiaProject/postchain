@@ -15,6 +15,7 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.rest.model.PostchainEBFTModel
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
+import java.lang.Integer.min
 
 open class BaseApiInfrastructure(
         restApiConfig: RestApiConfig,
@@ -33,7 +34,7 @@ open class BaseApiInfrastructure(
                         basePath = basePath,
                         nodeDiagnosticContext = nodeDiagnosticContext,
                         gracefulShutdown = restApiConfig.gracefulShutdown,
-                        requestConcurrency = restApiConfig.requestConcurrency,
+                        requestConcurrency = calcRequestConcurrency(restApiConfig),
                         chainRequestConcurrency = restApiConfig.chainRequestConcurrency,
                         subnodeHttpRedirect = restApiConfig.subnodeHttpRedirect,
                         maxRequestBodySize = restApiConfig.maxRequestBodySize,
@@ -47,6 +48,12 @@ open class BaseApiInfrastructure(
             null
         }
     }
+
+    private fun calcRequestConcurrency(restApiConfig: RestApiConfig) =
+            if (restApiConfig.requestConcurrency > 0)
+                restApiConfig.requestConcurrency
+            else
+                min(postchainContext.appConfig.databaseSharedReadConcurrency, Runtime.getRuntime().availableProcessors() * 2)
 
     val debugApi: DebugApi? = if (restApiConfig.debugPort != -1) {
         logger.info { "Starting Debug API on port ${restApiConfig.debugPort}" }
