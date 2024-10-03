@@ -322,8 +322,10 @@ class ForkSlowIntegrationTest : ManagedModeTest() {
             extraNodeProperties[nodeIndex] = buildMap {
                 // Modify max concurrent connections to stay under 100 when we run with 7 nodes
                 // Shared storage 2 + 4, bb storage 2 + 4 -> 7 * 12 = 84
+                put("database.sharedWriteConcurrency", 2)
+                put("database.sharedReadConcurrency", 4)
                 put("database.blockBuilderWriteConcurrency", 2)
-                put("database.readConcurrency", 4)
+                put("database.blockBuilderReadConcurrency", 4)
                 // ancestors for chain 5 are 3 and 4
                 if (nodeIndex == 5) put("blockchain_ancestors.${ChainUtil.ridOf(5)}", listOf(ancestor(4, 4)))
             }
