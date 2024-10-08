@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.option
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.runStorageCommand
@@ -14,7 +15,8 @@ import net.postchain.cli.util.portOption
 import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 
-class CommandPeerInfoFind : CliktCommand(name = "find", help = "Find peer info") {
+class CommandPeerInfoFind : CliktCommand(name = "find") { 
+    override fun help(context: Context) = "Find peer info"
 
     private val nodeConfigFile by nodeConfigOption()
 

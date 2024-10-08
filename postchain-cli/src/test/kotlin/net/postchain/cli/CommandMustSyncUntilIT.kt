@@ -3,6 +3,8 @@ package net.postchain.cli
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import org.junit.jupiter.api.BeforeEach
@@ -15,7 +17,7 @@ class CommandMustSyncUntilIT : CommandITBase() {
     @BeforeEach
     fun setup() {
         command = CommandMustSyncUntil()
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
         addBlockchain()
     }
 
@@ -24,7 +26,7 @@ class CommandMustSyncUntilIT : CommandITBase() {
         // execute & verify
         mustSyncUntilIsUpdated(20L)
         // verify
-        testConsole.assertContains("Successfully set must sync until 20\n")
+        testTerminal.assertContains("Successfully set must sync until 20\n")
     }
 
     @Test
@@ -34,10 +36,10 @@ class CommandMustSyncUntilIT : CommandITBase() {
         // execute
         mustSyncUntilIsUpdated(30L)
         // verify
-        testConsole.assertContains(
+        testTerminal.assertContains(
                 listOf(
-                        "Successfully set must sync until 20\n",
-                        "Successfully set must sync until 30\n"
+                        "Successfully set must sync until 20",
+                        "Successfully set must sync until 30"
                 )
         )
     }

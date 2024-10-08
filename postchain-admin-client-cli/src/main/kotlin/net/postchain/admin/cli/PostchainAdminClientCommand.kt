@@ -2,6 +2,7 @@ package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.completion.completionOption
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
@@ -9,10 +10,9 @@ import com.github.ajalt.clikt.parameters.options.versionOption
 import com.github.ajalt.clikt.parameters.types.file
 import net.postchain.admin.cli.util.TlsConfig
 
-class PostchainAdminClientCommand : CliktCommand(
-        name = "admin",
-        help = "Client for communicating with postchain running in server mode.",
-) {
+class PostchainAdminClientCommand : CliktCommand(name = "admin") {
+    override fun help(context: Context) = "Client for communicating with postchain running in server mode."
+
     init {
         completionOption()
         versionOption(this::class.java.`package`.implementationVersion ?: "(unknown)")

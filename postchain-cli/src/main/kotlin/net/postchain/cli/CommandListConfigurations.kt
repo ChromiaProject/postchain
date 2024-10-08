@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.SafeExecutor.runOnChain
 import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
@@ -10,7 +11,8 @@ import net.postchain.cli.util.chainIdOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.config.app.AppConfig
 
-class CommandListConfigurations : CliktCommand(name = "list-configurations", help = "Lists configurations for a blockchain.") {
+class CommandListConfigurations : CliktCommand(name = "list-configurations") { 
+    override fun help(context: Context) = "Lists configurations for a blockchain."
 
     private val nodeConfigFile by nodeConfigOption()
 

@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
@@ -11,7 +12,8 @@ import net.postchain.cli.util.heightOption
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.config.app.AppConfig
 
-class CommandMustSyncUntil : CliktCommand(name = "must-sync-until", help = "Set this to ensure that chain is not split after a database loss.") {
+class CommandMustSyncUntil : CliktCommand(name = "must-sync-until") { 
+    override fun help(context: Context) = "Set this to ensure that chain is not split after a database loss."
 
     private val nodeConfigFile by nodeConfigOption()
 

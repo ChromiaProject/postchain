@@ -3,6 +3,7 @@
 package net.postchain.server.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.groups.cooccurring
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
@@ -16,7 +17,8 @@ import net.postchain.server.config.TlsConfig
 import net.postchain.server.grpc.DebugServiceGrpcImpl
 import net.postchain.server.service.DebugService
 
-abstract class CommandRunServerBase(name: String?, help: String) : CliktCommand(name = name, help = help) {
+abstract class CommandRunServerBase(name: String?, private val helpText: String) : CliktCommand(name = name) {
+    override fun help(context: Context) = helpText
 
     companion object : KLogging()
 

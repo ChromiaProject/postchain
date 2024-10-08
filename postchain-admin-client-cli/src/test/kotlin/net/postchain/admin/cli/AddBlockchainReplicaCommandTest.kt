@@ -1,8 +1,9 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.PostchainServiceCommandTestBase
-import net.postchain.admin.cli.testutil.TestConsole.Companion.EOL
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.PubKey
 import org.junit.jupiter.api.Test
@@ -21,7 +22,7 @@ class AddBlockchainReplicaCommandTest : PostchainServiceCommandTestBase() {
         // setup
         doReturn(true).whenever(postchainService).addBlockchainReplica(any(), any())
         val command = AddBlockchainReplicaCommand { _, _ -> setupChannel(postchainService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
         // execute
         command.parse(
                 arrayOf(
@@ -32,6 +33,6 @@ class AddBlockchainReplicaCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).addBlockchainReplica(BlockchainRid.buildFromHex(brid), PubKey(pubKey))
-        testConsole.assertContains("message: \"Node $pubKey has been added as a replica for chain with brid $brid\"$EOL")
+        testTerminal.assertContains("message: \"Node $pubKey has been added as a replica for chain with brid $brid\"${System.lineSeparator()}")
     }
 }

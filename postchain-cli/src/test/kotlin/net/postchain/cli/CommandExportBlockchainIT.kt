@@ -4,6 +4,8 @@ import assertk.assertThat
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isTrue
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
@@ -23,7 +25,7 @@ class CommandExportBlockchainIT : CommandITBase() {
     private fun testBlockchainExport(tempDir: Path, chainRefOption: String, chainRefValue: String) {
         // setup
         val command = CommandExportBlockchain()
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
         addBlockchain()
         val configurationsFile = tempDir.resolve("configurations.gtv").toFile()
         val blocksFile = tempDir.resolve("blocks.gtv").toFile()

@@ -3,6 +3,7 @@
 package net.postchain.devtools.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
@@ -11,10 +12,9 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import java.io.File
 
-class EncodeBlockchainConfigurationCommand : CliktCommand(
-        name = "encode-blockchain-config",
-        help = "Encodes blockchain configuration in GtxML format into binary format (GTV)"
-) {
+class EncodeBlockchainConfigurationCommand : CliktCommand(name = "encode-blockchain-config") {
+
+    override fun help(context: Context) = "Encodes blockchain configuration in GtxML format into binary format (GTV)"
 
     private val blockchainConfigFilename by option(
             "-bc", "--blockchain-config",

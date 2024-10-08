@@ -1,6 +1,8 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.DebugServiceCommandTestBase
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
@@ -16,7 +18,7 @@ class DebugCommandTest : DebugServiceCommandTestBase() {
         // setup
         doReturn(debugMessage).whenever(debugService).debugInfo()
         val command = DebugCommand { _, _ -> setupChannel(debugService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
         // execute
         command.parse(
                 arrayOf(
@@ -25,6 +27,6 @@ class DebugCommandTest : DebugServiceCommandTestBase() {
         )
         // verify
         verify(debugService).debugInfo()
-        testConsole.assertContains("I am alive!")
+        testTerminal.assertContains("I am alive!")
     }
 }

@@ -2,6 +2,7 @@
 
 package net.postchain.devtools
 
+import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
 import net.postchain.devtools.cli.CalculateBlockchainRidCommand
 import net.postchain.devtools.cli.Cli

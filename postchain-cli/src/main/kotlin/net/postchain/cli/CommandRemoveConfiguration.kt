@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
@@ -17,7 +18,8 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.core.EContext
 
-class CommandRemoveConfiguration : CliktCommand(name = "remove-configuration", help = "Remove configuration at a given height for a blockchain.") {
+class CommandRemoveConfiguration : CliktCommand(name = "remove-configuration") { 
+    override fun help(context: Context) = "Remove configuration at a given height for a blockchain."
 
     private val nodeConfigFile by nodeConfigOption()
 
@@ -38,7 +40,7 @@ class CommandRemoveConfiguration : CliktCommand(name = "remove-configuration", h
                         } catch (e: UserMistake) {
                             throw PrintMessage(e.message ?: "User error")
                         } catch (e: Exception) {
-                            throw PrintMessage("Can't remove configuration at height $height due to: ${e.message}", true)
+                            throw PrintMessage("Can't remove configuration at height $height due to: ${e.message}", printError = true)
                         }
                     } else {
                         echo("Can't find configuration at height: $height")

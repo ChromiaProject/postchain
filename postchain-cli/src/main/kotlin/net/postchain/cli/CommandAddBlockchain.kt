@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.required
@@ -15,7 +16,8 @@ import net.postchain.cli.util.validationOption
 import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvFileReader
 
-class CommandAddBlockchain : CliktCommand(name = "add", help = "Add blockchain") {
+class CommandAddBlockchain : CliktCommand(name = "add") { 
+    override fun help(context: Context) = "Add blockchain"
 
     private val nodeConfigFile by nodeConfigOption()
 
@@ -32,7 +34,7 @@ class CommandAddBlockchain : CliktCommand(name = "add", help = "Add blockchain")
             val gtv = try {
                 GtvFileReader.readFile(blockchainConfigFile)
             } catch (e: Exception) {
-                throw PrintMessage("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}", true)
+                throw PrintMessage("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}", printError = true)
             }
 
             val appConfig = AppConfig.fromPropertiesFileOrEnvironment(nodeConfigFile)
@@ -40,7 +42,7 @@ class CommandAddBlockchain : CliktCommand(name = "add", help = "Add blockchain")
                 CliExecution.addBlockchain(appConfig, chainId, gtv, force, validate = validation)
                 echo("Blockchain has been added successfully")
             } catch (e: Exception) {
-                throw PrintMessage("Can't add blockchain: ${e.message}", true)
+                throw PrintMessage("Can't add blockchain: ${e.message}", printError = true)
             }
         }
     }

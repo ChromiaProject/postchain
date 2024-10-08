@@ -1,6 +1,7 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
 import com.github.ajalt.clikt.parameters.groups.required
@@ -20,7 +21,8 @@ import net.postchain.common.BlockchainRid
 import net.postchain.server.grpc.ImportBlockchainRequest
 
 class ImportBlockchainCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_FACTORY)
-    : CliktCommand(name = "import", help = "Import a blockchain from file") {
+    : CliktCommand(name = "import") { 
+    override fun help(context: Context) = "Import a blockchain from file"
 
     private val channel by blockingPostchainServiceChannelOption(channelFactory)
 
@@ -58,7 +60,7 @@ class ImportBlockchainCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_F
                 "No blocks to import to chain ${reply.blockchainRid.toByteArray().toHex()}"
             echo(message)
         } catch (e: StatusRuntimeException) {
-            throw PrintMessage("Failed with: ${e.message}", true)
+            throw PrintMessage("Failed with: ${e.message}", printError = true)
         }
     }
 }

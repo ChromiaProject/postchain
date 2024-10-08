@@ -4,6 +4,8 @@ import assertk.assertThat
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.config.app.AppConfig
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -15,7 +17,7 @@ class CommandRemoveConfigurationIT : CommandITBase() {
     @BeforeEach
     fun setup() {
         command = CommandRemoveConfiguration()
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
         addBlockchain(multiSignersBlockchainConfig)
     }
 
@@ -34,7 +36,7 @@ class CommandRemoveConfigurationIT : CommandITBase() {
         )
         // verify
         assertThat(CliExecution.getConfiguration(AppConfig.fromPropertiesFile(nodeConfigFile), chainId, heightSecondConfig)).isNull()
-        testConsole.assertContains("Removed configuration at height $heightSecondConfig\n")
+        testTerminal.assertContains("Removed configuration at height $heightSecondConfig\n")
     }
 
     @Test
@@ -50,7 +52,7 @@ class CommandRemoveConfigurationIT : CommandITBase() {
                 )
         )
         // verify
-        testConsole.assertContains("Can't find configuration at height: $heightSecondConfig\n")
+        testTerminal.assertContains("Can't find configuration at height: $heightSecondConfig\n")
     }
 
     private fun addConfiguration() {

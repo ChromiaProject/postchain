@@ -4,6 +4,8 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -15,7 +17,7 @@ class CommandCheckBlockchainIT : CommandITBase() {
     @BeforeEach
     fun setup() {
         command = CommandCheckBlockchain()
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
         addBlockchain()
     }
 
@@ -30,7 +32,7 @@ class CommandCheckBlockchainIT : CommandITBase() {
                 )
         )
         // verify
-        testConsole.assertContains("OK: blockchain with specified chainId and blockchainRid exists\n")
+        testTerminal.assertContains("OK: blockchain with specified chainId and blockchainRid exists\n")
     }
 
     @Test

@@ -4,6 +4,7 @@ package net.postchain.server
 
 import com.github.ajalt.clikt.completion.completionOption
 import com.github.ajalt.clikt.core.NoOpCliktCommand
+import com.github.ajalt.clikt.core.main
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.versionOption
 import net.postchain.admin.cli.PostchainAdminClientCommand

@@ -6,6 +6,8 @@ import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.config.app.AppConfig
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -18,7 +20,7 @@ class CommandAddBlockchainIT : CommandITBase() {
     @BeforeEach
     fun setup() {
         command = CommandAddBlockchain()
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
     }
 
     @Test
@@ -33,7 +35,7 @@ class CommandAddBlockchainIT : CommandITBase() {
         )
         // verify
         assertThat(CliExecution.findBlockchainRid(AppConfig.fromPropertiesFile(nodeConfigFile), chainId)).isNotNull()
-        testConsole.assertContains("Blockchain has been added successfully\n")
+        testTerminal.assertContains("Blockchain has been added successfully\n")
     }
 
     @Test
