@@ -1,6 +1,8 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.HealthServiceCommandTestBase
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -16,7 +18,7 @@ class HealthCommandTest : HealthServiceCommandTestBase() {
     @BeforeEach
     fun beforeEach() {
         command = HealthCommand { _, _ -> setupChannel(healthService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
     }
 
     @Test
@@ -31,7 +33,7 @@ class HealthCommandTest : HealthServiceCommandTestBase() {
         )
         // verify
         verify(healthService).healthCheck()
-        testConsole.assertContains("Healthy")
+        testTerminal.assertContains("Healthy")
     }
 
     @Test
@@ -46,6 +48,6 @@ class HealthCommandTest : HealthServiceCommandTestBase() {
         )
         // verify
         verify(healthService).healthCheck()
-        testConsole.assertContains("Unhealthy: NOT_SERVING")
+        testTerminal.assertContains("Unhealthy: NOT_SERVING")
     }
 }

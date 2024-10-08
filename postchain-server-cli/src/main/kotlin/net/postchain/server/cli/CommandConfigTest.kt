@@ -17,7 +17,7 @@ class CommandConfigTest : CommandRunServerBase("config-test", "Test if provided 
                 .map { it.test(appConfig) }
                 .toList().sum()
         if (result != 0)
-            throw PrintMessage("Configuration test failed!", true)
+            throw PrintMessage("Configuration test failed!", printError = true)
     }
 }
 

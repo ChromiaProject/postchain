@@ -4,6 +4,8 @@ import assertk.assertThat
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import org.junit.jupiter.api.Test
 
 class CommandWipeDbIT : CommandITBase() {
@@ -12,7 +14,7 @@ class CommandWipeDbIT : CommandITBase() {
     fun `Remove configuration`() {
         // setup
         val command = CommandWipeDb()
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
         addBlockchain()
         assertThat(CliExecution.findBlockchainRid(appConfig, chainId)).isNotNull()
         // execute
@@ -23,6 +25,6 @@ class CommandWipeDbIT : CommandITBase() {
         )
         // verify
         assertThat(CliExecution.findBlockchainRid(appConfig, chainId)).isNull()
-        testConsole.assertContains("Database has been wiped successfully\n")
+        testTerminal.assertContains("Database has been wiped successfully\n")
     }
 }

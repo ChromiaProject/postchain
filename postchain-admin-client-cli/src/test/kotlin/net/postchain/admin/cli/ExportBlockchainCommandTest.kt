@@ -1,10 +1,11 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.PostchainServiceCommandTestBase
 import net.postchain.base.importexport.ExportResult
 import net.postchain.common.BlockchainRid
-import org.http4k.base64DecodedArray
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyBoolean
@@ -33,7 +34,7 @@ class ExportBlockchainCommandTest : PostchainServiceCommandTestBase() {
     fun beforeEach() {
         doReturn(exportResult).whenever(postchainService).exportBlockchain(anyLong(), anyOrNull(), anyOrNull(), anyOrNull(), anyBoolean(), anyLong(), anyLong())
         command = ExportBlockchainCommand { _, _ -> setupChannel(postchainService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
     }
 
     @Test
@@ -51,7 +52,7 @@ class ExportBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).exportBlockchain(chainId, ByteArray(0), Path.of(configurationsFile), Path.of(blocksFile), false, fromHeight, upToHeight)
-        testConsole.assertContains("Export of 10 blocks 10..20 to configurationsFile and blocksFile completed")
+        testTerminal.assertContains("Export of 10 blocks 10..20 to configurationsFile and blocksFile completed")
     }
 
     @Test
@@ -69,7 +70,7 @@ class ExportBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).exportBlockchain(0, BlockchainRid.buildFromHex(brid).data, Path.of(configurationsFile), Path.of(blocksFile), false, fromHeight, upToHeight)
-        testConsole.assertContains("Export of 10 blocks 10..20 to configurationsFile and blocksFile completed")
+        testTerminal.assertContains("Export of 10 blocks 10..20 to configurationsFile and blocksFile completed")
     }
 
     @Test
@@ -86,7 +87,7 @@ class ExportBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).exportBlockchain(chainId, ByteArray(0), Path.of(configurationsFile), null, false, fromHeight, upToHeight)
-        testConsole.assertContains("Export of configurations to configurationsFile completed")
+        testTerminal.assertContains("Export of configurations to configurationsFile completed")
     }
 
     @Test
@@ -101,7 +102,7 @@ class ExportBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).exportBlockchain(chainId, ByteArray(0), Path.of(configurationsFile), null, false, 0L, Long.MAX_VALUE)
-        testConsole.assertContains("Export of configurations to configurationsFile completed")
+        testTerminal.assertContains("Export of configurations to configurationsFile completed")
     }
 
     @Test
@@ -117,6 +118,6 @@ class ExportBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).exportBlockchain(chainId, ByteArray(0), Path.of(configurationsFile), Path.of(blocksFile), false, 0L, Long.MAX_VALUE)
-        testConsole.assertContains("Export of 10 blocks 10..20 to configurationsFile and blocksFile completed")
+        testTerminal.assertContains("Export of 10 blocks 10..20 to configurationsFile and blocksFile completed")
     }
 }

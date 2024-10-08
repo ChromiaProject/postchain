@@ -4,6 +4,8 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.PostchainServiceCommandTestBase
 import net.postchain.common.BlockchainRid
 import org.junit.jupiter.api.BeforeEach
@@ -25,7 +27,7 @@ class ListConfigurationsCommandTest : PostchainServiceCommandTestBase() {
     @BeforeEach
     fun beforeEach() {
         command = ListConfigurationsCommand { _, _ -> setupChannel(postchainService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
     }
 
     @Test
@@ -44,7 +46,7 @@ class ListConfigurationsCommandTest : PostchainServiceCommandTestBase() {
         // verify
         verify(postchainService).findBlockchain(chainId)
         verify(postchainService).listConfigurations(chainId)
-        testConsole.assertContains(listOf("Height", "------", "1", "3", "5", "7"))
+        testTerminal.assertContains(listOf("Height", "------", "1", "3", "5", "7"))
     }
 
     @Test

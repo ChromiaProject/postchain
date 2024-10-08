@@ -3,12 +3,14 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.completion.completionOption
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.NoOpCliktCommand
 import com.github.ajalt.clikt.core.subcommands
 import com.github.ajalt.clikt.parameters.options.versionOption
 
 
-class PostchainNodeCommand : NoOpCliktCommand(name = "node", help = "Commands to interact directly with the nodes database") {
+class PostchainNodeCommand : NoOpCliktCommand(name = "node") { 
+    override fun help(context: Context) = "Commands to interact directly with the nodes database"
     init {
         completionOption()
         versionOption(this::class.java.`package`.implementationVersion ?: "(unknown)")

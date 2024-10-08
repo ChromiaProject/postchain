@@ -4,6 +4,8 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.PostchainServiceCommandTestBase
 import net.postchain.common.BlockchainRid
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -33,7 +35,7 @@ class InitializeBlockchainCommandTest : PostchainServiceCommandTestBase() {
     @BeforeEach
     fun beforeEach() {
         command = InitializeBlockchainCommand { _, _ -> setupChannel(postchainService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
     }
 
     @Test
@@ -53,7 +55,7 @@ class InitializeBlockchainCommandTest : PostchainServiceCommandTestBase() {
         // verify
         verify(postchainService).initializeBlockchain(chainId, null, true, gtv)
         verify(postchainService).startBlockchain(chainId)
-        testConsole.assertContains("Blockchain has been initialized with blockchain RID: $brid")
+        testTerminal.assertContains("Blockchain has been initialized with blockchain RID: $brid")
     }
 
     @Test

@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
 import com.github.ajalt.clikt.parameters.groups.required
@@ -28,11 +29,10 @@ import net.postchain.cli.util.validationOption
 import net.postchain.config.app.AppConfig
 import net.postchain.gtv.GtvFileReader
 
-class CommandAddConfiguration : CliktCommand(
-        name = "add-configuration",
-        help = "Adds a blockchain configuration. All signers in the new configuration must " +
-                "exist in the list of added peerInfos. Else flag --allow-unknown-signers must be set."
-) {
+class CommandAddConfiguration : CliktCommand(name = "add-configuration") {
+
+    override fun help(context: Context) = "Adds a blockchain configuration. All signers in the new configuration must " +
+            "exist in the list of added peerInfos. Else flag --allow-unknown-signers must be set."
 
     private enum class Height {
         Absolute, Relative
@@ -75,7 +75,7 @@ class CommandAddConfiguration : CliktCommand(
             val gtv = try {
                 GtvFileReader.readFile(blockchainConfigFile)
             } catch (e: Exception) {
-                throw PrintMessage("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}", true)
+                throw PrintMessage("Configuration can not be loaded from the file: ${blockchainConfigFile.path}, an error occurred: ${e.message}", printError = true)
             }
 
             runOnChain(appConfig, chainId) {
@@ -83,7 +83,7 @@ class CommandAddConfiguration : CliktCommand(
                     CliExecution.addConfiguration(appConfig, gtv, chainId, height0, force, allowUnknownSigners, validation)
                     echo("Configuration has been added successfully")
                 } catch (e: Exception) {
-                    throw PrintMessage("Can't add configuration: ${e.message}", true)
+                    throw PrintMessage("Can't add configuration: ${e.message}", printError = true)
                 }
             }
         }

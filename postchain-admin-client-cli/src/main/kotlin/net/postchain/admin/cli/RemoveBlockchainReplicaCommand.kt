@@ -1,6 +1,7 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
@@ -12,7 +13,8 @@ import net.postchain.admin.cli.util.pubkeyOption
 import net.postchain.server.grpc.RemoveBlockchainReplicaRequest
 
 class RemoveBlockchainReplicaCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_FACTORY)
-    : CliktCommand(name = "remove", help = "Remove a replica for a blockchain") {
+    : CliktCommand(name = "remove") { 
+    override fun help(context: Context) = "Remove a replica for a blockchain"
 
     private val channel by blockingPostchainServiceChannelOption(channelFactory)
 
@@ -28,7 +30,7 @@ class RemoveBlockchainReplicaCommand(channelFactory: ChannelFactory = DEFAULT_CH
             val reply = channel.removeBlockchainReplica(request)
             echo(reply)
         } catch (e: StatusRuntimeException) {
-            throw PrintMessage("Failed with: ${e.message}", true)
+            throw PrintMessage("Failed with: ${e.message}", printError = true)
         }
     }
 }

@@ -3,10 +3,12 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import net.postchain.containers.infra.ContainerNodeConfig
 import java.io.File
 
-class CommandGenerateContainerZfsInitScript : CliktCommand(name = "generate-container-zfs-init-script", help = "Generates container-zfs-init-script.sh file") {
+class CommandGenerateContainerZfsInitScript : CliktCommand(name = "generate-container-zfs-init-script") { 
+    override fun help(context: Context) = "Generates container-zfs-init-script.sh file"
 
     override fun run() {
         val body = """

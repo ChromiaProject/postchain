@@ -4,7 +4,7 @@ import assertk.assertThat
 import assertk.assertions.isTrue
 import assertk.fail
 import net.postchain.StorageBuilder
-import net.postchain.cli.testutil.TestConsole
+import net.postchain.cli.testutil.TestTerminal
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
@@ -22,7 +22,7 @@ import java.nio.file.Paths
 abstract class CommandITBase {
 
     @ExtendWith
-    val testConsole = TestConsole()
+    val testTerminal = TestTerminal()
 
     protected val nodeConfigFile = getFileFromPath("node-config.properties")
     protected val appConfig = AppConfig.fromPropertiesFile(nodeConfigFile)

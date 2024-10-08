@@ -1,6 +1,7 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.PrintMessage
 import io.grpc.StatusRuntimeException
 import net.postchain.admin.cli.util.ChannelFactory
@@ -10,7 +11,8 @@ import net.postchain.admin.cli.util.chainIdOption
 import net.postchain.server.grpc.RemoveBlockchainRequest
 
 class DeleteBlockchainCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_FACTORY)
-    : CliktCommand(name = "delete", help = "Delete a blockchain") {
+    : CliktCommand(name = "delete") { 
+    override fun help(context: Context) = "Delete a blockchain"
 
     private val channel by blockingPostchainServiceChannelOption(channelFactory)
 
@@ -22,7 +24,7 @@ class DeleteBlockchainCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_F
             val reply = channel.removeBlockchain(requestBuilder.build())
             echo(reply.message)
         } catch (e: StatusRuntimeException) {
-            throw PrintMessage("Failed with: ${e.message}", true)
+            throw PrintMessage("Failed with: ${e.message}", printError = true)
         }
     }
 }

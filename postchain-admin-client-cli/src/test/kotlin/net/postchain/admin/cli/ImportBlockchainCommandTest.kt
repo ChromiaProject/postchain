@@ -1,6 +1,8 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.PostchainServiceCommandTestBase
 import net.postchain.base.importexport.ImportResult
 import net.postchain.common.BlockchainRid
@@ -28,7 +30,7 @@ class ImportBlockchainCommandTest : PostchainServiceCommandTestBase() {
     fun beforeEach() {
         doReturn(importResult).whenever(postchainService).importBlockchain(anyLong(), anyOrNull(), anyOrNull(), anyOrNull(), anyBoolean(), anyBoolean())
         command = ImportBlockchainCommand { _, _ -> setupChannel(postchainService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
     }
 
     @Test
@@ -45,7 +47,7 @@ class ImportBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).importBlockchain(0, BlockchainRid.buildFromHex(brid).data, Path.of(configurationsFile), Path.of(blocksFile), incremental = true, skipPrimaryFieldValidation = false)
-        testConsole.assertContains("Import of 8 blocks 1..10 to chain $brid completed")
+        testTerminal.assertContains("Import of 8 blocks 1..10 to chain $brid completed")
     }
 
     @Test
@@ -62,6 +64,6 @@ class ImportBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).importBlockchain(chainId, ByteArray(0), Path.of(configurationsFile), Path.of(blocksFile), incremental = true, skipPrimaryFieldValidation = false)
-        testConsole.assertContains("Import of 8 blocks 1..10 to chain $brid completed")
+        testTerminal.assertContains("Import of 8 blocks 1..10 to chain $brid completed")
     }
 }

@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.PeerInfo
 import net.postchain.base.runStorageCommand
@@ -13,7 +14,8 @@ import net.postchain.config.app.AppConfig
 import net.postchain.config.node.PropertiesNodeConfigurationProvider
 import java.io.File
 
-class CommandPeerInfoImport : CliktCommand(name = "import", help = "Import peer information") {
+class CommandPeerInfoImport : CliktCommand(name = "import") { 
+    override fun help(context: Context) = "Import peer information"
 
     private val nodeConfigFile by nodeConfigOption()
 

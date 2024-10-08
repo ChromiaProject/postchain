@@ -3,6 +3,7 @@
 package net.postchain.server.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.option
 import mu.KLogging
@@ -21,7 +22,8 @@ import net.postchain.gtv.GtvFileReader
 import java.io.File
 import java.nio.file.Paths
 
-class CommandRunNodeAuto : CliktCommand(name = "run-node-auto", help = "Run Node Auto") {
+class CommandRunNodeAuto : CliktCommand(name = "run-node-auto") { 
+    override fun help(context: Context) = "Run Node Auto"
 
     companion object : KLogging()
 

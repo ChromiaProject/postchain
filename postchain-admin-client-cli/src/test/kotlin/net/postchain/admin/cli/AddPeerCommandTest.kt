@@ -4,6 +4,8 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.PeerServiceCommandTestBase
 import net.postchain.crypto.PubKey
 import org.junit.jupiter.api.BeforeEach
@@ -28,7 +30,7 @@ class AddPeerCommandTest : PeerServiceCommandTestBase() {
     @BeforeEach
     fun beforeEach() {
         command = AddPeerCommand { _, _ -> setupChannel(peerService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
     }
 
     @Test
@@ -47,7 +49,7 @@ class AddPeerCommandTest : PeerServiceCommandTestBase() {
         )
         // verify
         verify(peerService).addPeer(PubKey(pubKey), host, port, true)
-        testConsole.assertContains("Peer was added successfully")
+        testTerminal.assertContains("Peer was added successfully")
     }
 
     @Test

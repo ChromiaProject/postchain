@@ -1,6 +1,8 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.PostchainServiceCommandTestBase
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyLong
@@ -17,7 +19,7 @@ class StopBlockchainCommandTest : PostchainServiceCommandTestBase() {
         // setup
         doNothing().whenever(postchainService).stopBlockchain(anyLong())
         val command = StopBlockchainCommand { _, _ -> setupChannel(postchainService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
         // execute
         command.parse(
                 arrayOf(
@@ -27,6 +29,6 @@ class StopBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).stopBlockchain(chainId)
-        testConsole.assertContains("Blockchain has been stopped")
+        testTerminal.assertContains("Blockchain has been stopped")
     }
 }

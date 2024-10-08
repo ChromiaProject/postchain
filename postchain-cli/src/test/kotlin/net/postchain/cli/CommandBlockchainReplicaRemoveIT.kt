@@ -4,6 +4,8 @@ import assertk.assertThat
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
@@ -21,7 +23,7 @@ class CommandBlockchainReplicaRemoveIT : CommandITBase() {
     @BeforeEach
     fun setup() {
         command = CommandBlockchainReplicaRemove()
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
         addBlockchain(multiSignersBlockchainConfig)
         addSignersAsPeers()
     }
@@ -42,7 +44,7 @@ class CommandBlockchainReplicaRemoveIT : CommandITBase() {
         withReadConnection(storage, chainId) {
             assertThat(DatabaseAccess.of(it).existsBlockchainReplica(it, blockchainRID, PubKey(signer3PubKey.hexStringToByteArray()))).isFalse()
         }
-        testConsole.assertContains("Replica $signer3PubKey removed from brid (1):\n$brid\n")
+        testTerminal.assertContains("Replica $signer3PubKey removed from brid (1):\n$brid\n")
     }
 
     @Test
@@ -56,7 +58,7 @@ class CommandBlockchainReplicaRemoveIT : CommandITBase() {
                 )
         )
         // verify
-        testConsole.assertContains("No replica has been removed\n")
+        testTerminal.assertContains("No replica has been removed\n")
     }
 
     private fun addReplica() {

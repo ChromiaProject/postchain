@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.groups.mutuallyExclusiveOptions
 import com.github.ajalt.clikt.parameters.groups.required
 import com.github.ajalt.clikt.parameters.groups.single
@@ -21,7 +22,8 @@ import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
 
-class CommandImportBlockchain : CliktCommand(name = "import", help = "Import a blockchain from file") {
+class CommandImportBlockchain : CliktCommand(name = "import") { 
+    override fun help(context: Context) = "Import a blockchain from file"
 
     private val nodeConfigFile by nodeConfigOption()
 

@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.PeerInfo
 import net.postchain.base.runStorageCommand
@@ -13,7 +14,8 @@ import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 import java.io.File
 
-class CommandPeerInfoList : CliktCommand(name = "list", help = "List peer information") {
+class CommandPeerInfoList : CliktCommand(name = "list") { 
+    override fun help(context: Context) = "List peer information"
 
     private val nodeConfigFile by nodeConfigOption()
 

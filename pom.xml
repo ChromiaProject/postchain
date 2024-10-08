@@ -472,7 +472,12 @@
             <dependency>
                 <groupId>com.github.ajalt.clikt</groupId>
                 <artifactId>clikt-jvm</artifactId>
-                <version>3.5.0</version>
+                <version>5.0.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.ajalt.mordant</groupId>
+                <artifactId>mordant-core-jvm</artifactId>
+                <version>3.0.0</version>
             </dependency>
 
             <dependency>

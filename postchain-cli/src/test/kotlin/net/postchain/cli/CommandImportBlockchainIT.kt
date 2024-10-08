@@ -3,6 +3,8 @@ package net.postchain.cli
 import assertk.assertThat
 import assertk.assertions.isNotNull
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
@@ -23,7 +25,7 @@ class CommandImportBlockchainIT : CommandITBase() {
     private fun testImportBlockchain(tempDir: Path, chainRefKey: String, chainRefVal: String) {
         // setup
         val command = CommandImportBlockchain()
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
         addBlockchain()
         val configurationsFile = tempDir.resolve("configurations.gtv").toFile()
         val blocksFile = tempDir.resolve("blocks.gtv").toFile()

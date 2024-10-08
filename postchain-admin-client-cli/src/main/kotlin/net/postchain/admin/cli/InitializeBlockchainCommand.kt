@@ -1,6 +1,7 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
@@ -16,7 +17,8 @@ import net.postchain.server.grpc.InitializeBlockchainRequest
 import kotlin.io.path.extension
 
 class InitializeBlockchainCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_FACTORY)
-    : CliktCommand(name = "initialize", help = "Add and start blockchain from configuration") {
+    : CliktCommand(name = "initialize") { 
+    override fun help(context: Context) = "Add and start blockchain from configuration"
 
     private val channel by blockingPostchainServiceChannelOption(channelFactory)
 
@@ -42,7 +44,7 @@ class InitializeBlockchainCommand(channelFactory: ChannelFactory = DEFAULT_CHANN
             val reply = channel.initializeBlockchain(requestBuilder.build())
             echo(reply.message)
         } catch (e: StatusRuntimeException) {
-            throw PrintMessage("Failed with: ${e.message}", true)
+            throw PrintMessage("Failed with: ${e.message}", printError = true)
         }
     }
 }
