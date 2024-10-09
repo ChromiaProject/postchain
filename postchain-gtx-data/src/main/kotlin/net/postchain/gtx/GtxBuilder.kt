@@ -23,12 +23,19 @@ open class GtxBuilder(
         private val blockchainRid: BlockchainRid,
         private val signers: List<ByteArray>,
         private val cryptoSystem: CryptoSystem,
-        val maxTxSize: Int = -1
+        val maxTxSize: Int = -1,
+        operations: List<GtxOp> = listOf()
 ) {
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
     private val operations = mutableListOf<GtxOp>()
 
     internal var totalSize: Int = TX_SIZE_OVERHEAD
+
+    init {
+        operations.forEach { op ->
+            addOperation(op.opName, *op.args)
+        }
+    }
 
     fun isEmpty() = operations.isEmpty()
 
@@ -63,6 +70,13 @@ open class GtxBuilder(
         return GtxSignBuilder(body)
     }
 
+    /**
+     * Marks this transaction as sign-able but the signatures won't be checked.
+     */
+    fun uncheckedSignBuilder(): GtxSignBuilder {
+        val body = GtxBody(blockchainRid, operations, signers)
+        return GtxSignBuilder(body,false)
+    }
 
     inner class GtxSignBuilder(private val body: GtxBody, private val check: Boolean = true) {
 
@@ -88,6 +102,36 @@ open class GtxBuilder(
                 throw TransactionIncorrect(txRid, "Signature by ${signature.subjectID.toHex()} is not valid")
             }
             signatures.add(signature)
+        }
+
+        /**
+         * Add empty signature for subjectID. Only successful if [check] = false
+         */
+        fun emptySign(subjectID: ByteArray) = apply {
+            sign(Signature(subjectID, ByteArray(64)))
+        }
+
+        /**
+         * Replace empty signature.
+         */
+        fun signOverEmptySignature(sigMaker: SigMaker) = apply {
+            val newSignature = sigMaker.signDigest(txRid)
+            val index = signatures.indexOfFirst { it.subjectID.contentEquals(newSignature.subjectID) && it.data.contentEquals(ByteArray(64)) }
+
+            if (index == -1) {
+                throw UserMistake("No empty signature found for the given subject ID")
+            }
+
+            signatures[index] = newSignature
+        }
+
+        /**
+         * Add signatures for [signers].
+         *
+         * @param signatures List of respective signatures for all [signers]
+         */
+        fun addSignatures(signatures: List<ByteArray>) = apply {
+            signatures.forEachIndexed{index, signature -> sign(Signature(signers[index], signature))}
         }
 
         /**
