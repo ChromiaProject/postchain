@@ -49,11 +49,11 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
         val blockchainRid = nodes[0].getBlockchainInstance().blockchainEngine.getConfiguration().blockchainRid
 
         // over 2mb
-        val largeTx = buildTransaction(blockchainRid, "${RandomStringUtils.randomAlphanumeric(1024 * 1024 * 2)}-test")
+        val largeTx = buildTransaction(blockchainRid, "${RandomStringUtils.secure().nextAlphanumeric(1024 * 1024 * 2)}-test")
         buildBlockNoWait(listOf(nodes[0]), 1L, 0, largeTx)
 
         // less than 2mb
-        val okTx = buildTransaction(blockchainRid, RandomStringUtils.randomAlphanumeric(1024 * 1024))
+        val okTx = buildTransaction(blockchainRid, RandomStringUtils.secure().nextAlphanumeric(1024 * 1024))
         buildBlockNoWait(listOf(nodes[1]), 1L, 0, okTx)
         awaitHeight(1L, 0)
 
