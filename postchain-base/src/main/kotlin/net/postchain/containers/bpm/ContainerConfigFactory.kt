@@ -247,6 +247,16 @@ object ContainerConfigFactory : KLogging() {
             val configProvider = newInstanceOf<ContainerConfigProvider>(configProviderClass)
             configProvider.getConfig(appConfig).forEach { add("${it.key}=${it.value}") }
         }
+
+        // Custom extensions can inject config this way
+        appConfig.getKeys("extension").forEach {
+            add("POSTCHAIN_${it.replace(".", "_").uppercase()}=${appConfig.getProperty(it)}")
+        }
+        addAll(
+                System.getenv()
+                        .filterKeys { it.startsWith("POSTCHAIN_EXTENSION_") }
+                        .map { (key, value) -> "$key=$value" }
+        )
     }
 
     private fun createJavaToolOptions(containerNodeConfig: ContainerNodeConfig, containerName: ContainerName): List<String> {
