@@ -176,7 +176,7 @@ class RestApiQueryEndpointTest {
     }
 
     @Test
-    fun test_web_query() {
+    fun test_web_query_with_cache() {
         val queryName = "web_resource"
 
         val query = GtxQuery(queryName, gtv(mapOf(
@@ -184,8 +184,9 @@ class RestApiQueryEndpointTest {
                 "query_params" to gtv(mapOf())
         )))
 
+        val cacheTtl = 57
         val answerString = "Hello, world!"
-        val answer = gtv(gtv("text/plain"), gtv(answerString))
+        val answer = gtv(gtv("text/plain"), gtv(answerString), gtv(cacheTtl.toLong()))
 
         whenever(model.query(query)).thenReturn(answer)
         whenever(model.queryCacheTtlSeconds).thenReturn(17L)
@@ -197,8 +198,8 @@ class RestApiQueryEndpointTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.TEXT)
-                .header("Cache-Control", equalTo("public, max-age=17"))
-                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+                .header("Cache-Control", equalTo("public, max-age=$cacheTtl"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:$cacheTtl GMT"))
                 .body(equalTo(answerString))
     }
 

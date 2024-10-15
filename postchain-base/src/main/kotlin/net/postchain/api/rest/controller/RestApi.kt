@@ -516,11 +516,11 @@ class RestApi(
     private fun webQueryResponse(query: GtxQuery, model: Model): Response {
         val array = model.query(query).asArray()
         if (array.size < 2) {
-            throw UserMistake("Response should have two parts: content-type and content")
+            throw UserMistake("Response should have at least two parts: content-type and content (and optionally cache TTL in seconds)")
         }
-        // first element is content-type
         val contentType = array[0].asString()
         val content = array[1]
+        val cacheTtlSeconds = if (array.size > 2) array[2].asInteger() else -1
         val response = when (content.type) {
             GtvType.STRING -> Response(OK)
                     .with(Header.CONTENT_TYPE.of(ContentType(contentType)))
@@ -532,7 +532,7 @@ class RestApi(
 
             else -> throw UserMistake("Unexpected content")
         }
-        return getQueryResponse(model, response)
+        return getQueryResponse(model, response, cacheTtlSeconds)
     }
 
     private fun getQueryGtv(request: Request): Response {
@@ -554,8 +554,11 @@ class RestApi(
         return Response(OK).with(binaryBody of GtvEncoder.encodeGtv(response))
     }
 
-    private fun getQueryResponse(model: Model, response: Response): Response = if (model.queryCacheTtlSeconds > 0) {
-        val ttl = Duration.ofSeconds(model.queryCacheTtlSeconds)
+    private fun getQueryResponse(model: Model, response: Response, cacheTtlSeconds: Long = -1): Response =
+            getQueryResponse(response, if (cacheTtlSeconds > 0) cacheTtlSeconds else model.queryCacheTtlSeconds)
+
+    private fun getQueryResponse(response: Response, cacheTtlSeconds: Long): Response = if (cacheTtlSeconds > 0) {
+        val ttl = Duration.ofSeconds(cacheTtlSeconds)
         response.public().maxAge(ttl).expires(ttl, clock)
     } else {
         response
