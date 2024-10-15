@@ -175,6 +175,120 @@ class RestApiQueryEndpointTest {
                 .body(equalTo(answerString))
     }
 
+    @Test
+    fun test_web_query() {
+        val queryName = "web_resource"
+
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(listOf()),
+                "query_params" to gtv(mapOf())
+        )))
+
+        val answerString = "Hello, world!"
+        val answer = gtv(gtv("text/plain"), gtv(answerString))
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/web_query/$blockchainRID/$queryName")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.TEXT)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+                .body(equalTo(answerString))
+    }
+
+    @Test
+    fun test_web_query_with_path() {
+        val queryName = "web_resource"
+
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(listOf(gtv("path1"), gtv("path2"))),
+                "query_params" to gtv(mapOf())
+        )))
+
+        val answerString = "Hello, world!"
+        val answer = gtv(gtv("text/plain"), gtv(answerString))
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/web_query/$blockchainRID/$queryName/path1/path2")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.TEXT)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+                .body(equalTo(answerString))
+    }
+
+    @Test
+    fun test_web_query_with_query() {
+        val queryName = "web_resource"
+
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(listOf()),
+                "query_params" to gtv(mapOf("q1" to gtv(gtv("Q1")), "q2" to gtv(gtv("Q2a"), gtv("Q2b"))))
+        )))
+
+        val answerString = "Hello, world!"
+        val answer = gtv(gtv("text/plain"), gtv(answerString))
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .param("q1", "Q1")
+                .param("q2", "Q2a")
+                .param("q2", "Q2b")
+                .get("/web_query/$blockchainRID/$queryName")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.TEXT)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+                .body(equalTo(answerString))
+    }
+
+    @Test
+    fun test_web_query_with_path_and_query() {
+        val queryName = "web_resource"
+
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(listOf(gtv("path1"), gtv("path2"))),
+                "query_params" to gtv(mapOf("q1" to gtv(gtv("Q1")), "q2" to gtv(gtv("Q2a"), gtv("Q2b"))))
+        )))
+
+        val answerString = "Hello, world!"
+        val answer = gtv(gtv("text/plain"), gtv(answerString))
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .param("q1", "Q1")
+                .param("q2", "Q2a")
+                .param("q2", "Q2b")
+                .get("/web_query/$blockchainRID/$queryName/path1/path2")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.TEXT)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+                .body(equalTo(answerString))
+    }
+
     /**
      * The idea here is to test that RestApi can handle when the model throws an exception during "query()" execution.
      *

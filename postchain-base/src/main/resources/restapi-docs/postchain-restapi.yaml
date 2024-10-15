@@ -53,7 +53,7 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: "9"
+  version: "10"
 paths:
   /tx/{blockchainRid}:
     post:
@@ -664,6 +664,49 @@ paths:
           schema:
             type: string
           example: get_picture
+      responses:
+        200:
+          description: OK
+        400:
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                missingQueryType:
+                  value:
+                    error: "Missing query type"
+                unknownQuery:
+                  value:
+                    error: "Unknown query: the_query"
+        404:
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /web_query/{blockchainRid}/{type}:
+    get:
+      tags:
+        - query
+      summary: Make web query
+      description: |
+        Make a web query to a chain. Additional path segments and query parameters will be passed to query.
+        The query result will be served directly with appropriate content type, with no JSON wrapping.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - name: type
+          in: path
+          description: Query name
+          required: true
+          schema:
+            type: string
+          example: web_resource
       responses:
         200:
           description: OK

@@ -128,6 +128,31 @@ class RestApiIT : IntegrationTestSetup() {
     }
 
     @Test
+    fun testWebQueryApi() {
+        val nodeCount = 1
+
+        val sysSetup = doSystemSetup(nodeCount, "/net/postchain/devtools/api/blockchain_config_web_query.xml")
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+
+        buildBlockAndCommit(nodes[0])
+
+        val text = given().port(nodes[0].getRestApiHttpPort())
+                .get("/web_query/$blockchainRID/get_page/front")
+                .then()
+                .statusCode(200)
+                .extract().asString()
+        assertEquals("<h1>it works!</h1>", text)
+
+        val byteArray = given().port(nodes[0].getRestApiHttpPort())
+                .get("/web_query/$blockchainRID/get_picture?id=1234")
+                .then()
+                .statusCode(200)
+                .extract().asByteArray()
+        assertEquals("abcd", String(byteArray))
+    }
+
+    @Test
     fun testGetQuery() {
         val nodesCount = 1
         configOverrides.setProperty("testpeerinfos", createPeerInfos(nodesCount))
