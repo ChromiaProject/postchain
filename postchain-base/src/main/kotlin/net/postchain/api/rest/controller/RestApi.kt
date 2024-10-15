@@ -45,6 +45,7 @@ import net.postchain.api.rest.nodeStatusBody
 import net.postchain.api.rest.nodeStatusesBody
 import net.postchain.api.rest.nullBody
 import net.postchain.api.rest.nullJsonBody
+import net.postchain.api.rest.pathPath
 import net.postchain.api.rest.prettyGson
 import net.postchain.api.rest.prettyJsonBody
 import net.postchain.api.rest.proofBody
@@ -172,7 +173,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 9
+        const val REST_API_VERSION = 10
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -314,6 +315,8 @@ class RestApi(
             "/query/{blockchainRid}" bind POST to liveBlockchain.then(::postQuery),
             // Direct query. That should be used as example: <img src="http://node/dquery/brid?type=get_picture&id=4555" />
             "/dquery/{blockchainRid}" bind GET to liveBlockchain.then(::directQuery),
+            // Web query. That should be used as example: <img src="http://node/web_query/brid/get_picture?id=4555" />
+            "/web_query/{blockchainRid}/{path:.*}" bind GET to liveBlockchain.then(::webQuery),
             "/query_gtv/{blockchainRid}" bind GET to liveBlockchain.then(::getQueryGtv),
             "/query_gtv/{blockchainRid}" bind POST to liveBlockchain.then(::postQueryGtv),
 
@@ -493,6 +496,24 @@ class RestApi(
     private fun directQuery(request: Request): Response {
         val model = model(request)
         val query = extractGetQuery(request.uri.queries().toParametersMap())
+        return webQueryResponse(query, model)
+    }
+
+    private fun webQuery(request: Request): Response {
+        val model = model(request)
+        val path = pathPath(request).split('/')
+        val queryName = path.firstOrNull() ?: throw UserMistake("Missing query type")
+        val queryParams = gtv(request.uri.queries().toParametersMap().mapValues {
+            gtv(it.value.filterNotNull().map { v -> gtv(v) })
+        })
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(path.drop(1).map { gtv(it) }),
+                "query_params" to queryParams
+        )))
+        return webQueryResponse(query, model)
+    }
+
+    private fun webQueryResponse(query: GtxQuery, model: Model): Response {
         val array = model.query(query).asArray()
         if (array.size < 2) {
             throw UserMistake("Response should have two parts: content-type and content")

@@ -220,6 +220,8 @@ val infraVersionBody = Body.string(ContentType.APPLICATION_JSON, "pretty JSON").
         }
 ).toLens()
 
+val pathPath = Path.of("path", "Path")
+
 sealed interface BlockchainRef
 data class BlockchainRidRef(val rid: BlockchainRid) : BlockchainRef
 data class BlockchainIidRef(val iid: Long) : BlockchainRef
