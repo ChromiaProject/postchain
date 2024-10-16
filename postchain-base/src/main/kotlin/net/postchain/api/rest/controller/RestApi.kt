@@ -496,7 +496,14 @@ class RestApi(
     private fun directQuery(request: Request): Response {
         val model = model(request)
         val query = extractGetQuery(request.uri.queries().toParametersMap())
-        return webQueryResponse(query, model)
+        val array = model.query(query).asArray()
+        if (array.size < 2) {
+            throw UserMistake("Response should have at least two parts: content-type and content (and optionally cache TTL in seconds)")
+        }
+        val contentType = array[0].asString()
+        val content = array[1]
+        val cacheTtlSeconds = if (array.size > 2) array[2].asInteger() else -1
+        return webQueryResponse(model, content, contentType, cacheTtlSeconds)
     }
 
     private fun webQuery(request: Request): Response {
@@ -510,17 +517,17 @@ class RestApi(
                 "path" to gtv(path.drop(1).map { gtv(it) }),
                 "query_params" to queryParams
         )))
-        return webQueryResponse(query, model)
+        val res = model.query(query)
+        if (res.type != GtvType.DICT)
+            throw UserMistake("web_query response must be a dict with at least 'content_type' and 'content' (and optionally 'cache_ttl_seconds')")
+        val dict = res.asDict()
+        val contentType = dict["content_type"]?.asString() ?: throw UserMistake("web_query response must have content_type")
+        val content = dict["content"] ?: throw UserMistake("web_query response must have content")
+        val cacheTtlSeconds = dict["cache_ttl_seconds"]?.asInteger() ?: -1
+        return webQueryResponse(model, content, contentType, cacheTtlSeconds)
     }
 
-    private fun webQueryResponse(query: GtxQuery, model: Model): Response {
-        val array = model.query(query).asArray()
-        if (array.size < 2) {
-            throw UserMistake("Response should have at least two parts: content-type and content (and optionally cache TTL in seconds)")
-        }
-        val contentType = array[0].asString()
-        val content = array[1]
-        val cacheTtlSeconds = if (array.size > 2) array[2].asInteger() else -1
+    private fun webQueryResponse(model: Model, content: Gtv, contentType: String, cacheTtlSeconds: Long): Response {
         val response = when (content.type) {
             GtvType.STRING -> Response(OK)
                     .with(Header.CONTENT_TYPE.of(ContentType(contentType)))
@@ -530,7 +537,7 @@ class RestApi(
                     .with(Header.CONTENT_TYPE.of(ContentType(contentType)))
                     .body(Body.invoke(ByteBuffer.wrap(content.asByteArray())))
 
-            else -> throw UserMistake("Unexpected content")
+            else -> throw UserMistake("Unexpected content: ${content.type}")
         }
         return getQueryResponse(model, response, cacheTtlSeconds)
     }
