@@ -11,6 +11,9 @@ import java.math.BigDecimal
 
 internal fun errorMsg(number: BigDecimal) = "Could not deserialize number '$number' to GtvInteger, valid numbers must be integers and be in range: [-2^63, (2^63)-1]"
 
+/**
+ * @param strict  serialize big_integer as string if true, as number if false
+ */
 class GtvAdapter(val strict: Boolean = true) : JsonDeserializer<Gtv>, JsonSerializer<Gtv> {
 
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): Gtv {
@@ -30,7 +33,7 @@ class GtvAdapter(val strict: Boolean = true) : JsonDeserializer<Gtv>, JsonSerial
             else throw ProgrammerMistake("Can't deserialize JSON primitive")
         } else if (json.isJsonArray) {
             val arr = json.asJsonArray
-            return gtv(*arr.map({ deserialize(it, typeOfT, context) }).toTypedArray())
+            return gtv(*arr.map { deserialize(it, typeOfT, context) }.toTypedArray())
         } else if (json.isJsonNull) {
             return GtvNull
         } else if (json.isJsonObject) {
@@ -67,33 +70,33 @@ class GtvAdapter(val strict: Boolean = true) : JsonDeserializer<Gtv>, JsonSerial
         GtvType.DICT -> encodeDict(v, t, c)
         GtvType.ARRAY -> encodeArray(v, t, c)
         GtvType.BIGINTEGER -> if (strict)
-            throw IllegalStateException("big_integer cannot be serialized as JSON")
+            JsonPrimitive(v.asBigInteger().toString())
         else
             JsonPrimitive(v.asBigInteger())
     }
 }
 
 /**
- * Does not support BigInteger.
+ * Serialize BigInteger as string.
  */
 fun make_gtv_gson_builder(): GsonBuilder = GsonBuilder()
         .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter())
         .serializeNulls()
 
 /**
- * Supports BigInteger.
+ * Serialize BigInteger as number.
  */
 fun makeLenientGtvGsonBuilder(): GsonBuilder = GsonBuilder()
         .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter(strict = false))
         .serializeNulls()
 
 /**
- * Does not support BigInteger.
+ * Serialize BigInteger as string.
  */
 fun make_gtv_gson(): Gson = make_gtv_gson_builder().create()!!
 
 /**
- * Supports BigInteger.
+ * Serialize BigInteger as number.
  */
 fun makeLenientGtvGson(): Gson = makeLenientGtvGsonBuilder().create()!!
 

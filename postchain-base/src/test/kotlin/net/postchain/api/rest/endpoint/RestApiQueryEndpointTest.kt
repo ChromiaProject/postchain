@@ -28,6 +28,7 @@ import org.junit.jupiter.api.fail
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.math.BigInteger
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -99,8 +100,8 @@ class RestApiQueryEndpointTest {
         val queryString = queryMap.map { "${it.key}=${it.value.toString().trim('"')}" }.joinToString("&")
         val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
-        val answerString = """{"d":0}"""
-        val answer = gtv(mapOf("d" to gtv(false)))
+        val answerString = """{"bi":"92233720368547758079","d":0,"i":17}"""
+        val answer = gtv(mapOf("d" to gtv(false), "i" to gtv(17), "bi" to gtv(BigInteger("92233720368547758079"))))
 
         whenever(model.query(query)).thenReturn(answer)
         whenever(model.queryCacheTtlSeconds).thenReturn(0L)

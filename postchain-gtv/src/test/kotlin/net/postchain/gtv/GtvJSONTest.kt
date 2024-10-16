@@ -89,17 +89,13 @@ class GtvJSONTest {
     }
 
     @Test
-    fun `big integer should throw exception in strict mode`() {
+    fun `big integer should serialize as string in strict mode`() {
         val gson = make_gtv_gson()
-        assertThrows(
-                IllegalStateException::class.java,
-                { gson.toJson(GtvBigInteger(BigInteger.valueOf(17))) },
-                "big_integer cannot be serialized as JSON"
-        )
+        assertEquals(""""92233720368547758078"""", gson.toJson(GtvBigInteger(BigInteger("92233720368547758078"))))
     }
 
     @Test
-    fun `big integer should work in non-strict mode`() {
+    fun `big integer should serialize as number in non-strict mode`() {
         val gson = makeLenientGtvGson()
         assertEquals("92233720368547758078", gson.toJson(GtvBigInteger(BigInteger("92233720368547758078"))))
     }
