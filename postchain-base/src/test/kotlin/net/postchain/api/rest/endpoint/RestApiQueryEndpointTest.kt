@@ -186,7 +186,7 @@ class RestApiQueryEndpointTest {
 
         val cacheTtl = 57
         val answerString = "Hello, world!"
-        val answer = gtv(gtv("text/plain"), gtv(answerString), gtv(cacheTtl.toLong()))
+        val answer = gtv(mapOf("content_type" to gtv("text/plain"), "content" to gtv(answerString), "cache_ttl_seconds" to gtv(cacheTtl.toLong())))
 
         whenever(model.query(query)).thenReturn(answer)
         whenever(model.queryCacheTtlSeconds).thenReturn(17L)
@@ -213,7 +213,7 @@ class RestApiQueryEndpointTest {
         )))
 
         val answerString = "Hello, world!"
-        val answer = gtv(gtv("text/plain"), gtv(answerString))
+        val answer = gtv(mapOf("content_type" to gtv("text/plain"), "content" to gtv(answerString)))
 
         whenever(model.query(query)).thenReturn(answer)
         whenever(model.queryCacheTtlSeconds).thenReturn(17L)
@@ -240,7 +240,7 @@ class RestApiQueryEndpointTest {
         )))
 
         val answerString = "Hello, world!"
-        val answer = gtv(gtv("text/plain"), gtv(answerString))
+        val answer = gtv(mapOf("content_type" to gtv("text/plain"), "content" to gtv(answerString)))
 
         whenever(model.query(query)).thenReturn(answer)
         whenever(model.queryCacheTtlSeconds).thenReturn(17L)
@@ -270,7 +270,7 @@ class RestApiQueryEndpointTest {
         )))
 
         val answerString = "Hello, world!"
-        val answer = gtv(gtv("text/plain"), gtv(answerString))
+        val answer = gtv(mapOf("content_type" to gtv("text/plain"), "content" to gtv(answerString)))
 
         whenever(model.query(query)).thenReturn(answer)
         whenever(model.queryCacheTtlSeconds).thenReturn(17L)
