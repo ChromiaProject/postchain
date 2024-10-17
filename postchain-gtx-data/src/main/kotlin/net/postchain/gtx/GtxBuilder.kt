@@ -27,7 +27,7 @@ open class GtxBuilder(
         operations: List<GtxOp> = listOf()
 ) {
     companion object {
-        val EMPTY_SIGNATURE = ByteArray(64)
+        val EMPTY_SIGNATURE = ByteArray(0)
     }
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
     private val operations = mutableListOf<GtxOp>()
