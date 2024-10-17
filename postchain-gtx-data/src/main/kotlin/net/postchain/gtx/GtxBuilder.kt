@@ -26,6 +26,9 @@ open class GtxBuilder(
         val maxTxSize: Int = -1,
         operations: List<GtxOp> = listOf()
 ) {
+    companion object {
+        val EMPTY_SIGNATURE = ByteArray(64)
+    }
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
     private val operations = mutableListOf<GtxOp>()
 
@@ -98,17 +101,23 @@ open class GtxBuilder(
         fun sign(signature: Signature) = apply {
             if (signatures.contains(signature)) throw UserMistake("Signature already exists")
             if (signers.find { it.contentEquals(signature.subjectID) } == null) throw UserMistake("Signature belongs to unknown signer")
-            if (check && !cryptoSystem.verifyDigest(txRid, signature)) {
-                throw TransactionIncorrect(txRid, "Signature by ${signature.subjectID.toHex()} is not valid")
+            if (check) {
+                check(signature)
             }
             signatures.add(signature)
+        }
+
+        private fun check(signature: Signature) {
+            if (!cryptoSystem.verifyDigest(txRid, signature)) {
+                throw TransactionIncorrect(txRid, "Signature by ${signature.subjectID.toHex()} is not valid")
+            }
         }
 
         /**
          * Add empty signature for subjectID. Only successful if [check] = false
          */
         fun emptySign(subjectID: ByteArray) = apply {
-            sign(Signature(subjectID, ByteArray(64)))
+            sign(Signature(subjectID, EMPTY_SIGNATURE))
         }
 
         /**
@@ -116,7 +125,8 @@ open class GtxBuilder(
          */
         fun signOverEmptySignature(sigMaker: SigMaker) = apply {
             val newSignature = sigMaker.signDigest(txRid)
-            val index = signatures.indexOfFirst { it.subjectID.contentEquals(newSignature.subjectID) && it.data.contentEquals(ByteArray(64)) }
+            check(newSignature)
+            val index = signatures.indexOfFirst { it.subjectID.contentEquals(newSignature.subjectID) && it.data.contentEquals(EMPTY_SIGNATURE) }
 
             if (index == -1) {
                 throw UserMistake("No empty signature found for the given subject ID")
