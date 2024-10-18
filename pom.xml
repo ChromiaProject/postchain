@@ -27,6 +27,7 @@
         <module>postchain-server</module>
         <module>postchain-server-cli</module>
         <module>postchain-dilithium</module>
+        <module>postchain-web-static</module>
         <module>postchain-coverage-report-aggregate</module>
     </modules>
     <packaging>pom</packaging>
@@ -182,6 +183,11 @@
             <dependency>
                 <groupId>net.postchain</groupId>
                 <artifactId>postchain-dilithium</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.postchain</groupId>
+                <artifactId>postchain-web-static</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

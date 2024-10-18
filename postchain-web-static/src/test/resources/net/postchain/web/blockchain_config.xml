@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<dict>
+    <entry key="add_primary_key_to_header">
+        <int>1</int>
+    </entry>
+    <entry key="blockstrategy">
+        <dict>
+            <entry key="mininterblockinterval">
+                <int>1000</int>
+            </entry>
+            <entry key="name">
+                <string>net.postchain.base.BaseBlockBuildingStrategy</string>
+            </entry>
+        </dict>
+    </entry>
+    <entry key="config_consensus_strategy">
+        <string>HEADER_HASH</string>
+    </entry>
+    <entry key="configurationfactory">
+        <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
+    </entry>
+    <entry key="gtx">
+        <dict>
+            <entry key="modules">
+                <array>
+                    <string>net.postchain.gtx.StandardOpsGTXModule</string>
+                    <string>net.postchain.web.WebStaticGTXModuleFactory</string>
+                </array>
+            </entry>
+        </dict>
+    </entry>
+    <entry key="revolt">
+        <dict>
+            <entry key="fast_revolt_status_timeout">
+                <int>2000</int>
+            </entry>
+            <entry key="revolt_when_should_build_block">
+                <int>1</int>
+            </entry>
+        </dict>
+    </entry>
+    <entry key="web_static">
+        <dict>
+            <entry key="cache_ttl_seconds">
+                <int>3600</int>
+            </entry>
+            <entry key="content">
+                <dict>
+                    <entry key="css/style.css">
+                        <dict>
+                            <entry key="content">
+                                <string>h1 {
+  text-color: green;
+}
+</string>
+                            </entry>
+                            <entry key="content_type">
+                                <string>text/css</string>
+                            </entry>
+                        </dict>
+                    </entry>
+                    <entry key="img/image.png">
+                        <dict>
+                            <entry key="content">
+                                <bytea>1234ABCD</bytea>
+                            </entry>
+                            <entry key="content_type">
+                                <string>image/png</string>
+                            </entry>
+                        </dict>
+                    </entry>
+                    <entry key="index.html">
+                        <dict>
+                            <entry key="content">
+                                <string>&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+  &lt;head&gt;
+    &lt;link rel="stylesheet" href="css/style.css"&gt;
+    &lt;title&gt;My Rell Dapp&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;h1&gt;My Rell Dapp&lt;/h1&gt;
+    &lt;p&gt;&lt;image src="img/image.png"&gt;&lt;/p&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+</string>
+                            </entry>
+                            <entry key="content_type">
+                                <string>text/html</string>
+                            </entry>
+                        </dict>
+                    </entry>
+                </dict>
+            </entry>
+        </dict>
+    </entry>
+    <entry key="signers">
+        <array>
+            <bytea>03a301697bdfcd704313ba48e51d567543f2a182031efd6915ddc07bbcc4e16070</bytea>
+        </array>
+    </entry>
+</dict>
