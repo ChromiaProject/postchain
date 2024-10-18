@@ -12,4 +12,4 @@ val ESCAPE_GTV = AggregateTranslator(LookupTranslator(mapOf<CharSequence, CharSe
         "\n" to "\\n",
         "\t" to "\\t",
         "\r" to "\\r"
-)), JavaUnicodeEscaper.outsideOf(32, 0x7f))
+)), JavaUnicodeEscaper.outsideOf(0x0020, 0xFFEF))
