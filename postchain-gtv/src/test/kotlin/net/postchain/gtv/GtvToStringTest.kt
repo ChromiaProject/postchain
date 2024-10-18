@@ -80,4 +80,14 @@ class GtvToStringTest {
         val gtvDictionary = GtvDictionary.build(mapOf("a\"b" to GtvString("AAA")))
         assertThat(gtvDictionary.toString()).isEqualTo("""["a\"b": "AAA"]""")
     }
+
+    @Test
+    fun `Unicode characters in Basic Multilingual Plane are not escaped`() {
+        assertThat(GtvString("Räksmörgås").toString()).isEqualTo(""""Räksmörgås"""")
+    }
+
+    @Test
+    fun `Unicode characters outside of Basic Multilingual Plane are escaped`() {
+        assertThat(GtvString("""😀""").toString()).isEqualTo(""""\uD83D\uDE00"""")
+    }
 }
