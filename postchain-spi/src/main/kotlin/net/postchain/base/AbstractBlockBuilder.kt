@@ -3,6 +3,7 @@
 package net.postchain.base
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.TransactionFailed
@@ -21,6 +22,7 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.BlockWitnessBuilder
 import net.postchain.core.block.InitialBlockData
+import net.postchain.logging.TRANSACTION_RID_TAG
 
 /**
  * The abstract block builder has only a vague concept about the core procedures of a block builder, for example:
@@ -38,7 +40,9 @@ abstract class AbstractBlockBuilder(
         val isSyncing: Boolean
 ) : BlockBuilder, TxEventSink {
 
-    companion object : KLogging()
+    companion object : KLogging(){
+        const val APPEND_TRANSACTION = "appendTransaction() -- {}"
+    }
 
     // ----------------------------------
     // functions which need to be implemented in a concrete BlockBuilder:
@@ -100,24 +104,28 @@ abstract class AbstractBlockBuilder(
      * @throws UserMistake failed to apply transaction and update database state
      */
     override fun appendTransaction(tx: Transaction) {
-        if (finalized) throw ProgrammerMistake("Block is already finalized")
-        if (isSyncing) tx.checkCorrectnessWhileSyncing() else tx.checkCorrectness()
-        val txctx: TxEContext
-        try {
-            txctx = store.addTransaction(bctx, tx, nextTransactionNumber)
-        } catch (e: Exception) {
-            throw UserMistake("Failed to save tx ${tx.getRID().toHex()} to database: $e", e)
-        }
+        withLoggingContext(TRANSACTION_RID_TAG to tx.getRID().toHex()) {
+            logger.trace(APPEND_TRANSACTION, "Begin")
+            if (finalized) throw ProgrammerMistake("Block is already finalized")
+            if (isSyncing) tx.checkCorrectnessWhileSyncing() else tx.checkCorrectness()
+            val txctx: TxEContext
+            try {
+                txctx = store.addTransaction(bctx, tx, nextTransactionNumber)
+            } catch (e: Exception) {
+                throw UserMistake("Failed to save tx ${tx.getRID().toHex()} to database: $e", e)
+            }
 
-        // In case of errors, tx.apply may either return false or throw UserMistake
-        val applied = if (isSyncing) tx.applyWhileSyncing(txctx) else tx.apply(txctx)
-        if (applied) {
-            nextTransactionNumber++
-            txctx.done()
-            transactions.add(tx)
-            rawTransactions.add(tx.getRawData())
-        } else {
-            throw TransactionFailed(tx.getRID())
+            // In case of errors, tx.apply may either return false or throw UserMistake
+            val applied = if (isSyncing) tx.applyWhileSyncing(txctx) else tx.apply(txctx)
+            if (applied) {
+                nextTransactionNumber++
+                txctx.done()
+                transactions.add(tx)
+                rawTransactions.add(tx.getRawData())
+            } else {
+                throw TransactionFailed(tx.getRID())
+            }
+            logger.trace(APPEND_TRANSACTION, "End")
         }
     }
 

@@ -3,6 +3,7 @@
 package net.postchain.base.data
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.base.AbstractBlockBuilder
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.BaseBlockHeader
@@ -45,6 +46,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
+import net.postchain.logging.TRANSACTION_RID_TAG
 import java.lang.Long.max
 import java.time.Clock
 
@@ -95,6 +97,8 @@ open class BaseBlockBuilder(
 
     companion object : KLogging() {
         const val PRIMARY_HEADER_KEY = "primary"
+        const val APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE = "Append special transaction -- {}, position: {}"
+        const val FINALIZE_AND_VALIDATE = "finalizeAndValidate() -- {}"
     }
 
     private val eventProcessors = mutableMapOf<String, TxEventSink>()
@@ -154,7 +158,11 @@ open class BaseBlockBuilder(
         for (x in extensions) x.init(this.bctx, this)
         if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(Begin)) {
             val stx = specialTxHandler.createSpecialTransaction(Begin, bctx)
-            appendTransaction(stx)
+            withLoggingContext(TRANSACTION_RID_TAG to stx.getRID().toHex()) {
+                logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "Begin", Begin)
+                appendTransaction(stx)
+                logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "End", Begin)
+            }
         }
     }
 
@@ -271,7 +279,12 @@ open class BaseBlockBuilder(
     override fun finalizeBlock(timestamp: Long): BlockHeader {
         if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(End)) {
             isSpecialEndTransaction = true
-            appendTransaction(specialTxHandler.createSpecialTransaction(End, bctx))
+            val stx = specialTxHandler.createSpecialTransaction(End, bctx)
+            withLoggingContext(TRANSACTION_RID_TAG to stx.getRID().toHex()) {
+                logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "Begin", End)
+                appendTransaction(stx)
+                logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "End", End)
+            }
         }
         return super.finalizeBlock(timestamp)
     }
@@ -283,6 +296,7 @@ open class BaseBlockBuilder(
      * @param blockHeader is the header for the block we are working on.
      */
     override fun finalizeAndValidate(blockHeader: BlockHeader, skipValidationFields: Set<String>) {
+        logger.trace(FINALIZE_AND_VALIDATE, "Begin")
         if (specialTxHandler.needsSpecialTransaction(End) && !haveSpecialEndTransaction)
             throw BadBlockException("End special transaction is missing")
         val defaultExtraData = mutableMapOf<String, Gtv>()
@@ -312,6 +326,7 @@ open class BaseBlockBuilder(
 
             else -> throw BadBlockException(validationResult.message)
         }
+        logger.trace(FINALIZE_AND_VALIDATE, "End")
     }
 
     private fun checkSpecialTransaction(tx: Transaction) {
@@ -385,4 +400,5 @@ open class BaseBlockBuilder(
         val currentSize = blockSize + if (needsSpecialEndTransaction) maxSpecialEndTransactionSize else 0
         return transactionsSize >= maxBlockTransactions || currentSize >= maxBlockSize
     }
+
 }
