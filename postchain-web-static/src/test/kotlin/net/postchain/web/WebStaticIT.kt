@@ -17,66 +17,134 @@ class WebStaticIT : IntegrationTestSetup() {
 
     private val chainIid = 1
 
-    private fun doSystemSetup(nodeCount: Int, bcConfFileName: String): SystemSetup {
-        configOverrides.setProperty("testpeerinfos", createPeerInfos(nodeCount))
-        val bcConfFileMap = mapOf(chainIid to bcConfFileName)
+    private fun doSystemSetup(): SystemSetup {
+        configOverrides.setProperty("testpeerinfos", createPeerInfos(1))
+        val bcConfFileMap = mapOf(chainIid to "/net/postchain/web/blockchain_config.xml")
         val sysSetup = SystemSetupFactory.buildSystemSetup(bcConfFileMap)
-        assertEquals(nodeCount, sysSetup.nodeMap.size, "We didn't get the nodes we expected, check BC config file")
+        assertEquals(1, sysSetup.nodeMap.size, "We didn't get the nodes we expected, check BC config file")
         sysSetup.needRestApi = true // NOTE!! This is important in this test!!
 
         createNodesFromSystemSetup(sysSetup)
         return sysSetup
     }
 
+    private val mainIndexHtml = """          
+          <!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <link rel="stylesheet" href="css/style.css">
+              <title>My Rell Dapp</title>
+            </head>
+            <body>
+              <h1>My Rell Dapp</h1>
+              <p><image src="img/image.png"></p>
+            </body>
+          </html>
+          
+          """.trimIndent()
+
+    private val otherIndexHtml = """          
+          <!DOCTYPE html>
+          <html lang="en">
+            <head>
+              <link rel="stylesheet" href="css/style.css">
+              <title>Something else</title>
+            </head>
+            <body>
+              <h1>Whatever</h1>
+            </body>
+          </html>
+          
+          """.trimIndent()
+
+    private val mainCss = """          
+          h1 {
+            text-color: green;
+          }
+          
+          """.trimIndent()
+
     @Test
     fun testWebStatic() {
-        val sysSetup = doSystemSetup(1, "/net/postchain/web/blockchain_config.xml")
+        val sysSetup = doSystemSetup()
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
 
-        val html = given().port(nodes[0].getRestApiHttpPort())
+        assertThat(given().port(nodes[0].getRestApiHttpPort())
                 .get("/web_query/$blockchainRID/web_static/index.html")
                 .then()
                 .statusCode(200)
                 .contentType("text/html")
                 .header("Cache-Control", IsEqual.equalTo("public, max-age=3600"))
-                .extract().asString()
-        assertThat(html).isEqualTo("""          
-              <!DOCTYPE html>
-              <html lang="en">
-                <head>
-                  <link rel="stylesheet" href="css/style.css">
-                  <title>My Rell Dapp</title>
-                </head>
-                <body>
-                  <h1>My Rell Dapp</h1>
-                  <p><image src="img/image.png"></p>
-                </body>
-              </html>
-              
-              """.trimIndent())
+                .extract().asString())
+                .isEqualTo(mainIndexHtml)
 
-        val css = given().port(nodes[0].getRestApiHttpPort())
+        assertThat(given().port(nodes[0].getRestApiHttpPort())
+                .get("/web_query/$blockchainRID/web_static/")
+                .then()
+                .statusCode(200)
+                .contentType("text/html")
+                .header("Cache-Control", IsEqual.equalTo("public, max-age=3600"))
+                .extract().asString())
+                .isEqualTo(mainIndexHtml)
+
+        assertThat(given().port(nodes[0].getRestApiHttpPort())
+                .get("/web_query/$blockchainRID/web_static")
+                .then()
+                .statusCode(200)
+                .contentType("text/html")
+                .header("Cache-Control", IsEqual.equalTo("public, max-age=3600"))
+                .extract().asString())
+                .isEqualTo(mainIndexHtml)
+
+        assertThat(given().port(nodes[0].getRestApiHttpPort())
+                .get("/web_query/$blockchainRID/web_static/other/index.html")
+                .then()
+                .statusCode(200)
+                .contentType("text/html")
+                .header("Cache-Control", IsEqual.equalTo("public, max-age=3600"))
+                .extract().asString())
+                .isEqualTo(otherIndexHtml)
+
+        assertThat(given().port(nodes[0].getRestApiHttpPort())
+                .get("/web_query/$blockchainRID/web_static/other/")
+                .then()
+                .statusCode(200)
+                .contentType("text/html")
+                .header("Cache-Control", IsEqual.equalTo("public, max-age=3600"))
+                .extract().asString())
+                .isEqualTo(otherIndexHtml)
+
+        assertThat(given().port(nodes[0].getRestApiHttpPort())
+                .get("/web_query/$blockchainRID/web_static/other")
+                .then()
+                .statusCode(200)
+                .contentType("text/html")
+                .header("Cache-Control", IsEqual.equalTo("public, max-age=3600"))
+                .extract().asString())
+                .isEqualTo(otherIndexHtml)
+
+        assertThat(given().port(nodes[0].getRestApiHttpPort())
                 .get("/web_query/$blockchainRID/web_static/css/style.css")
                 .then()
                 .statusCode(200)
                 .contentType("text/css")
                 .header("Cache-Control", IsEqual.equalTo("public, max-age=3600"))
-                .extract().asString()
-        assertThat(css).isEqualTo("""          
-              h1 {
-                text-color: green;
-              }
-              
-              """.trimIndent())
+                .extract().asString())
+                .isEqualTo(mainCss)
 
-        val image = given().port(nodes[0].getRestApiHttpPort())
+        assertThat(given().port(nodes[0].getRestApiHttpPort())
                 .get("/web_query/$blockchainRID/web_static/img/image.png")
                 .then()
                 .statusCode(200)
                 .contentType("image/png")
                 .header("Cache-Control", IsEqual.equalTo("public, max-age=3600"))
-                .extract().asByteArray()
-        assertThat(image).isEqualTo("1234ABCD".hexStringToByteArray())
+                .extract().asByteArray())
+                .isEqualTo("1234ABCD".hexStringToByteArray())
+
+        given().port(nodes[0].getRestApiHttpPort())
+                .get("/web_query/$blockchainRID/web_static/bogus")
+                .then()
+                .statusCode(400)
     }
 }
