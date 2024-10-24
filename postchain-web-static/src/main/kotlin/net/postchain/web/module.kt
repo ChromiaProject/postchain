@@ -30,6 +30,8 @@ class WebStaticGTXModuleFactory : GTXModuleFactory {
 
 const val QUERY_NAME = "web_static"
 
+const val INDEX_FILE = "index.html"
+
 class WebStaticGTXModule(private val contentMap: Map<String, Gtv>) : GTXModule {
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = listOf()
 
@@ -50,6 +52,8 @@ class WebStaticGTXModule(private val contentMap: Map<String, Gtv>) : GTXModule {
 
         val path = args.asDict()["path"]?.asArray()?.map { it.asString() } ?: throw UserMistake("path is missing")
         val key = path.joinToString(separator = "/")
-        return contentMap[key] ?: throw UserMistake("$key not found")
+        return contentMap[key]
+                ?: contentMap[if (key.isEmpty()) INDEX_FILE else "$key/$INDEX_FILE"]
+                ?: throw UserMistake("$key not found")
     }
 }

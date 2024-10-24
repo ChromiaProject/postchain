@@ -1,6 +1,6 @@
 # Web static GTX module
 
-An GTX module to serve static web content from the blockchain.
+An GTX module to serve static web content from the blockchain. Accessing the root will give you `index.html`.
 
 Enable and configure it by putting this into `chromia.yml`:
 

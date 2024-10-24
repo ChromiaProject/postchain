@@ -90,6 +90,26 @@
                             </entry>
                         </dict>
                     </entry>
+                    <entry key="other/index.html">
+                        <dict>
+                            <entry key="content">
+                                <string>&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+  &lt;head&gt;
+    &lt;link rel="stylesheet" href="css/style.css"&gt;
+    &lt;title&gt;Something else&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;body&gt;
+    &lt;h1&gt;Whatever&lt;/h1&gt;
+  &lt;/body&gt;
+&lt;/html&gt;
+</string>
+                            </entry>
+                            <entry key="content_type">
+                                <string>text/html</string>
+                            </entry>
+                        </dict>
+                    </entry>
                 </dict>
             </entry>
         </dict>
