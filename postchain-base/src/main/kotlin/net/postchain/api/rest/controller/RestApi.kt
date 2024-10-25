@@ -82,6 +82,7 @@ import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvException
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvStream
 import net.postchain.gtv.GtvString
 import net.postchain.gtv.GtvType
@@ -514,7 +515,7 @@ class RestApi(
         val path = pathPath(request).split('/')
         val queryName = path.firstOrNull() ?: throw UserMistake("Missing query type")
         val queryParams = gtv(request.uri.queries().toParametersMap().mapValues {
-            gtv(it.value.filterNotNull().map { v -> gtv(v) })
+            gtv(it.value.map { v -> if (v == null) GtvNull else gtv(v) })
         })
         val query = GtxQuery(queryName, gtv(mapOf(
                 "path" to gtv(path.drop(1).map { gtv(it) }),
