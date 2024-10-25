@@ -150,6 +150,13 @@ class RestApiIT : IntegrationTestSetup() {
                 .statusCode(200)
                 .extract().asByteArray()
         assertEquals("abcd", String(byteArray))
+
+        val stream = given().port(nodes[0].getRestApiHttpPort())
+                .get("/web_query/$blockchainRID/get_stream")
+                .then()
+                .statusCode(200)
+                .extract().asByteArray()
+        assertEquals("1234567890", String(stream))
     }
 
     @Test

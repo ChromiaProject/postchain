@@ -2,7 +2,9 @@ package net.postchain.integrationtest.api
 
 import net.postchain.core.EContext
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvStream
 import net.postchain.gtx.SimpleGTXModule
+import java.io.ByteArrayInputStream
 
 class TestWebQueryModule : SimpleGTXModule<Unit>(Unit,
         mapOf(),
@@ -22,6 +24,14 @@ class TestWebQueryModule : SimpleGTXModule<Unit>(Unit,
                     gtv(mapOf(
                             "content_type" to gtv("image/png"),
                             "content" to gtv("abcd".toByteArray())
+                    ))
+                },
+
+                "get_stream" to { _, _, args ->
+                    require(args.asDict()["path"]?.asArray()?.isEmpty() == true)
+                    gtv(mapOf(
+                            "content_type" to gtv("application/octet-stream"),
+                            "content" to GtvStream(ByteArrayInputStream("1234567890".toByteArray()), null)
                     ))
                 }
         )

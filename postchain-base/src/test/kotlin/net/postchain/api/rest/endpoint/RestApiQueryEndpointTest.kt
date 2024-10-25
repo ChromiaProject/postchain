@@ -14,12 +14,14 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvStream
 import net.postchain.gtv.gtvToJSON
 import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
 import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.nullValue
+import org.hamcrest.Matchers.greaterThan
 import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -28,6 +30,7 @@ import org.junit.jupiter.api.fail
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.io.ByteArrayInputStream
 import java.math.BigInteger
 import java.time.Clock
 import java.time.Instant
@@ -202,6 +205,91 @@ class RestApiQueryEndpointTest {
                 .header("Cache-Control", equalTo("public, max-age=$cacheTtl"))
                 .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:$cacheTtl GMT"))
                 .body(equalTo(answerString))
+    }
+
+    @Test
+    fun test_web_query_with_byte_array() {
+        val queryName = "web_resource"
+
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(listOf()),
+                "query_params" to gtv(mapOf())
+        )))
+
+        val answerBytes = byteArrayOf(1, 2, 3, 4)
+        val answer = gtv(mapOf("content_type" to gtv("application/octet-stream"), "content" to gtv(answerBytes)))
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/web_query/$blockchainRID/$queryName")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+                .header("Content-Length", Integer::parseInt, greaterThan(0))
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(answerBytes)
+    }
+
+    @Test
+    fun test_web_query_with_stream_of_unknown_length() {
+        val queryName = "web_resource"
+
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(listOf()),
+                "query_params" to gtv(mapOf())
+        )))
+
+        val answerBytes = byteArrayOf(1, 2, 3, 4)
+        val answer = gtv(mapOf("content_type" to gtv("application/octet-stream"),
+                "content" to GtvStream(ByteArrayInputStream(answerBytes), null)))
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/web_query/$blockchainRID/$queryName")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(answerBytes)
+    }
+
+    @Test
+    fun test_web_query_with_stream_of_known_length() {
+        val queryName = "web_resource"
+
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(listOf()),
+                "query_params" to gtv(mapOf())
+        )))
+
+        val answerBytes = byteArrayOf(1, 2, 3, 4)
+        val answer = gtv(mapOf("content_type" to gtv("application/octet-stream"),
+                "content" to GtvStream(ByteArrayInputStream(answerBytes), answerBytes.size.toLong())))
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/web_query/$blockchainRID/$queryName")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+                .header("Content-Length", Integer::parseInt, greaterThan(0))
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(answerBytes)
     }
 
     @Test
