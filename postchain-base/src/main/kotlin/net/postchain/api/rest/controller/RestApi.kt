@@ -78,9 +78,12 @@ import net.postchain.debug.ErrorValue
 import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvException
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvStream
+import net.postchain.gtv.GtvString
 import net.postchain.gtv.GtvType
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtv.merkleHash
@@ -528,16 +531,20 @@ class RestApi(
     }
 
     private fun webQueryResponse(model: Model, content: Gtv, contentType: String, cacheTtlSeconds: Long): Response {
-        val response = when (content.type) {
-            GtvType.STRING -> Response(OK)
+        val response = when (content) {
+            is GtvString -> Response(OK)
                     .with(Header.CONTENT_TYPE.of(ContentType(contentType)))
                     .body(content.asString())
 
-            GtvType.BYTEARRAY -> Response(OK)
+            is GtvByteArray -> Response(OK)
                     .with(Header.CONTENT_TYPE.of(ContentType(contentType)))
-                    .body(Body.invoke(ByteBuffer.wrap(content.asByteArray())))
+                    .body(Body(ByteBuffer.wrap(content.asByteArray())))
 
-            else -> throw UserMistake("Unexpected content: ${content.type}")
+            is GtvStream -> Response(OK)
+                    .with(Header.CONTENT_TYPE.of(ContentType(contentType)))
+                    .body(Body(content.stream, content.length))
+
+            else -> throw UserMistake("Unexpected content: ${content.javaClass.name}")
         }
         return getQueryResponse(model, response, cacheTtlSeconds)
     }
