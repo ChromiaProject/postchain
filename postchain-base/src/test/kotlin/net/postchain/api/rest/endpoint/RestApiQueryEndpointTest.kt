@@ -325,7 +325,11 @@ class RestApiQueryEndpointTest {
 
         val query = GtxQuery(queryName, gtv(mapOf(
                 "path" to gtv(listOf()),
-                "query_params" to gtv(mapOf("q1" to gtv(gtv("Q1")), "q2" to gtv(gtv("Q2a"), gtv("Q2b"))))
+                "query_params" to gtv(mapOf(
+                        "q1" to gtv(gtv("Q1")),
+                        "q2" to gtv(gtv("Q2a"), gtv("Q2b")),
+                        "q3" to gtv(gtv("")),
+                        "q4" to gtv(GtvNull)))
         )))
 
         val answerString = "Hello, world!"
@@ -340,6 +344,8 @@ class RestApiQueryEndpointTest {
                 .param("q1", "Q1")
                 .param("q2", "Q2a")
                 .param("q2", "Q2b")
+                .param("q3", "")
+                .param("q4")
                 .get("/web_query/$blockchainRID/$queryName")
                 .then()
                 .statusCode(200)
