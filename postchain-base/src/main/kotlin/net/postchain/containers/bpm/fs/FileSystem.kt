@@ -63,4 +63,6 @@ interface FileSystem {
     fun hostPgdataOf(containerName: ContainerName): Path {
         return hostRootOf(containerName).resolve(PGDATA_DIR)
     }
+
+    fun supportsQuotas() = false
 }

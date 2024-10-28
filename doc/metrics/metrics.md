@@ -34,6 +34,11 @@ nodes in a cluster.
 | validatorFastSyncSwitch                 | counter | Number of fast syncs started by validator.                                                                                                                                                                           | chainIID, blockchainRID, nodeBlockState                         | 
 | ebftResponseTime                        | timer   | EBFT message response time. (Disabled unless tracked_ebft_message_max_keep_time_ms is set in node config)                                                                                                            | chainIID, blockchainRID, sourceNode, targetNode, messageType    |
 | statusChangeTime                        | timer   | Time for status changes for different nodes. (Disabled unless tracked_ebft_message_max_keep_time_ms is set in node config)                                                                                           | chainIID, blockchainRID, sourceNode, targetNode, nodeBlockState |
+| sub_container,memory_usage              | gauge   | A sub containers memory usage in bytes                                                                                                                                                                               | containerName                                                   |
+| sub_container,memory_usage_percent      | gauge   | A sub containers memory usage in percent                                                                                                                                                                             | containerName                                                   |
+| sub_container,cpu_usage_percent         | gauge   | A sub containers CPU usage in percent                                                                                                                                                                                | containerName                                                   |
+| sub_container,space_usage_mib           | gauge   | A sub containers space usage in MiB                                                                                                                                                                                  | containerName                                                   |
+| sub_container,space_usage_percent       | gauge   | A sub containers space usage in percent                                                                                                                                                                              | containerName                                                   |
 
 All those metrics also have `node_pubkey` tag.
 
@@ -51,3 +56,5 @@ In addition to this, a standard set of JVM and machine metrics are also exposed.
 | messageType    | EBFT message type                       |
 | sourceNode     | Node public key of source node          |
 | targetNode     | Node public key of target node          |
+| containerName  | Name of container                       |
+

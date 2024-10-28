@@ -105,9 +105,11 @@ class ZfsFileSystem(private val containerConfig: ContainerNodeConfig, private va
         return null
     }
 
+    override fun supportsQuotas() = true
+
     private fun getFs(containerName: ContainerName) = "${containerConfig.zfsPoolName}/${containerName.dockerContainer}"
 
-    private fun getQuotaBytes(resourceLimits: ContainerResourceLimits) = miB2B(resourceLimits.storageMb())
+    private fun getQuotaBytes(resourceLimits: ContainerResourceLimits) = miB2B(resourceLimits.storageMiB())
 
     private fun miB2B(value: Long) = value * 1024 * 1024
 

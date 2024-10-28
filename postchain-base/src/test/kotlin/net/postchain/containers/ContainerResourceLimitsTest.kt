@@ -60,7 +60,7 @@ class ContainerResourceLimitsTest {
     fun testStorage() {
         val sut = ContainerResourceLimits(Storage(123))
         assertTrue { sut.hasStorage() }
-        assertEquals(123L, sut.storageMb())
+        assertEquals(123L, sut.storageMiB())
     }
 
     @Test

@@ -193,6 +193,18 @@ class AppConfig(private val config: Configuration) : Config {
     val trackedEbftMessageMaxKeepTimeMs
         get() = config.getEnvOrLongProperty("POSTCHAIN_TRACKED_EBFT_MESSAGE_MAX_KEEP_TIME_MS", "tracked_ebft_message_max_keep_time_ms", -1)
 
+    val prometheusPort
+        get() = getEnvOrInt("POSTCHAIN_PROMETHEUS_PORT", "metrics.prometheus.port", -1)
+
+    val subContainerResourceUsageMetricIntervalMs
+        get() = getEnvOrLong("POSTCHAIN_METRICS_SUB_CONTAINER_RESOURCE_INTERVAL_MS", "metrics.sub_container_resource_interval_ms", -1)
+
+    val subContainerResourceSpaceUsageMetricIntervalMs
+        get(): Long {
+            val value = getEnvOrLong("POSTCHAIN_METRICS_SUB_CONTAINER_SPACE_RESOURCE_INTERVAL_MS", "metrics.sub_container_space_resource_interval_ms", -1)
+            require(value >= subContainerResourceUsageMetricIntervalMs) { "Sub container space resource interval must be greater than or equal to sub container resource usage metric interval" }
+            return value
+        }
 
     /**
      * Wrappers for [Configuration] getters and other functionalities

@@ -43,8 +43,8 @@ class ZfsFileSystemTest {
         val result = sut.getCurrentLimitsInfo(containerName, resourceLimits)
         // verify
         checkNotNull(result)
-        assertEquals(15414L, result.spaceUsedMB)
-        assertEquals(16384L, result.spaceHardLimitMB)
+        assertEquals(15414L, result.spaceUsedMiB)
+        assertEquals(16384L, result.spaceHardLimitMiB)
     }
 
     @Test
