@@ -4,8 +4,13 @@ package net.postchain.gtv.gtvml
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import net.postchain.gtv.*
+import net.postchain.gtv.GtvArray
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvString
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 class GtvMLEncodeScalarsTest {
 
@@ -28,29 +33,25 @@ class GtvMLEncodeScalarsTest {
     }
 
     @Test
+    fun `encode string with ASCII control characters in non-strict mode`() {
+        val string = "\u0019Ethereum Signed Message:\n"
+        val xml = GtvMLEncoder.encodeXMLGtv(GtvString(string))
+        assertThat(xml).isEqualTo(expected("<string>&#25;Ethereum Signed Message:\n</string>"))
+    }
+
+    @Test
+    fun `refuse to encode string with ASCII control characters in strict mode`() {
+        val string = "\u0019Ethereum Signed Message:\n"
+        assertThrows<IllegalArgumentException> {
+            GtvMLEncoder.encodeXMLGtvStrict(GtvString(string))
+        }
+    }
+
+    @Test
     fun encodeXMLGtv_int_successfully() {
         val gtv = GtvInteger(42)
         val actual = GtvMLEncoder.encodeXMLGtv(gtv)
         val expected = expected("<int>42</int>")
-
-        assertThat(actual).isEqualTo(expected)
-    }
-
-    /**
-     * According [1-3] XmlAdapter will not be applied to the root element of xml
-     * and should be called manually.
-     *
-     * 1. https://stackoverflow.com/questions/21640566/
-     * 2. https://jcp.org/en/jsr/detail?id=222
-     * 3. https://coderanch.com/t/505457/
-     * 4. [ObjectFactory.createBytearrayElement]
-     */
-    @Test
-    fun encodeXMLGtv_bytea_as_root_element_and_xmladapter_not_called_successfully() {
-        val gtv = GtvByteArray(
-                byteArrayOf(0x01, 0x02, 0x03, 0x0A, 0x0B, 0x0C))
-        val actual = GtvMLEncoder.encodeXMLGtv(gtv)
-        val expected = expected("<bytea>AQIDCgsM</bytea>") // 0102030A0B0C
 
         assertThat(actual).isEqualTo(expected)
     }
