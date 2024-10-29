@@ -6,13 +6,13 @@ import net.postchain.gtv.builder.GtvBuilder.GtvArrayMerge
 import net.postchain.gtv.builder.GtvBuilder.GtvArrayNode
 import net.postchain.gtv.builder.GtvBuilder.GtvDictMerge
 import net.postchain.gtv.builder.GtvBuilder.GtvDictNode
-import net.postchain.gtv.make_gtv_gson
+import net.postchain.gtv.makeStrictGtvGson
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.Assertions.assertEquals
 
 class GtvBuilderTest {
-    val gson = make_gtv_gson()
+    val gson = makeStrictGtvGson()
 
     @Test
     fun testBuilder() {

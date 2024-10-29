@@ -10,12 +10,12 @@ import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
 import net.postchain.api.rest.BlockSignature
 import net.postchain.common.toHex
-import net.postchain.gtv.make_gtv_gson
+import net.postchain.gtv.makeStrictGtvGson
 import java.lang.reflect.Type
 
 internal class BlockSignatureSerializer : JsonSerializer<BlockSignature> {
 
-    val gson = make_gtv_gson()
+    val gson = makeStrictGtvGson()
 
     override fun serialize(src: BlockSignature?, typeOfSrc: Type?, context: JsonSerializationContext?): JsonElement {
         return if (src == null) {

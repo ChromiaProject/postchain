@@ -2,7 +2,17 @@
 
 package net.postchain.gtv
 
-import com.google.gson.*
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonArray
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.JsonNull
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
+import com.google.gson.JsonSerializationContext
+import com.google.gson.JsonSerializer
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.gtv.GtvFactory.gtv
@@ -14,7 +24,8 @@ internal fun errorMsg(number: BigDecimal) = "Could not deserialize number '$numb
 /**
  * @param strict  serialize big_integer as string if true, as number if false
  */
-class GtvAdapter(val strict: Boolean = true) : JsonDeserializer<Gtv>, JsonSerializer<Gtv> {
+class GtvAdapter(val strict: Boolean = true, val supportBigInteger: Boolean = true) : JsonDeserializer<Gtv>, JsonSerializer<Gtv> {
+    constructor(strict: Boolean = true): this(strict, supportBigInteger = false)
 
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): Gtv {
         if (json.isJsonPrimitive) {
@@ -69,31 +80,47 @@ class GtvAdapter(val strict: Boolean = true) : JsonDeserializer<Gtv>, JsonSerial
         GtvType.BYTEARRAY -> JsonPrimitive(v.asByteArray().toHex())
         GtvType.DICT -> encodeDict(v, t, c)
         GtvType.ARRAY -> encodeArray(v, t, c)
-        GtvType.BIGINTEGER -> if (strict)
-            JsonPrimitive(v.asBigInteger().toString())
-        else
-            JsonPrimitive(v.asBigInteger())
+        GtvType.BIGINTEGER -> if (supportBigInteger) {
+            if (strict)
+                JsonPrimitive(v.asBigInteger().toString())
+            else
+                JsonPrimitive(v.asBigInteger())
+        } else {
+            throw IllegalStateException("big_integer cannot be serialized as JSON")
+        }
     }
 }
 
 /**
- * Serialize BigInteger as string.
+ * Does not support BigInteger.
  */
 fun make_gtv_gson_builder(): GsonBuilder = GsonBuilder()
-        .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter())
+        .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter(strict = true, supportBigInteger = false))
+        .serializeNulls()
+
+/**
+ * Serialize BigInteger as string.
+ */
+fun makeStrictGvtGsonBuilder(): GsonBuilder = GsonBuilder()
+        .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter(strict = true, supportBigInteger = true))
         .serializeNulls()
 
 /**
  * Serialize BigInteger as number.
  */
 fun makeLenientGtvGsonBuilder(): GsonBuilder = GsonBuilder()
-        .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter(strict = false))
+        .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter(strict = false, supportBigInteger = true))
         .serializeNulls()
+
+/**
+ * Does not support BigInteger.
+ */
+fun make_gtv_gson(): Gson = make_gtv_gson_builder().create()!!
 
 /**
  * Serialize BigInteger as string.
  */
-fun make_gtv_gson(): Gson = make_gtv_gson_builder().create()!!
+fun makeStrictGtvGson(): Gson = makeStrictGvtGsonBuilder().create()!!
 
 /**
  * Serialize BigInteger as number.

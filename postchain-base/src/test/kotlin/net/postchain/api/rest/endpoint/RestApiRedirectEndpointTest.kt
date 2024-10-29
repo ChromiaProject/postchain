@@ -12,7 +12,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.make_gtv_gson
+import net.postchain.gtv.makeStrictGtvGson
 import net.postchain.gtv.mapper.GtvObjectMapper
 import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterAll
@@ -125,7 +125,7 @@ class RestApiRedirectEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON)
 
-        assertThat(body.extract().body().asString()).isEqualTo(make_gtv_gson().toJson(MockPostchainRestApi.gtvQueryResponse))
+        assertThat(body.extract().body().asString()).isEqualTo(makeStrictGtvGson().toJson(MockPostchainRestApi.gtvQueryResponse))
     }
 
     @Test

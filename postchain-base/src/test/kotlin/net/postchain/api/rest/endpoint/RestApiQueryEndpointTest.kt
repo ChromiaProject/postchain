@@ -16,7 +16,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvStream
 import net.postchain.gtv.gtvToJSON
-import net.postchain.gtv.make_gtv_gson
+import net.postchain.gtv.makeStrictGtvGson
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
 import org.hamcrest.CoreMatchers.containsString
@@ -45,7 +45,7 @@ class RestApiQueryEndpointTest {
 
     private val basePath = "/api/v1"
     private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
-    private val gson = make_gtv_gson()
+    private val gson = makeStrictGtvGson()
     private lateinit var restApi: RestApi
     private lateinit var model: Model
 
