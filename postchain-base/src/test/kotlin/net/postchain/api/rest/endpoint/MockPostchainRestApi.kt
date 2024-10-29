@@ -8,7 +8,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.make_gtv_gson
+import net.postchain.gtv.makeStrictGtvGson
 import net.postchain.gtv.mapper.GtvObjectMapper
 import org.http4k.asString
 import org.http4k.core.ContentType
@@ -41,7 +41,7 @@ object MockPostchainRestApi : HttpHandler, Closeable {
     val gtvQueryResponse = gtv("answer")
 
     private val gson = JsonFactory.makeJson()
-    private val gtvGson = make_gtv_gson()
+    private val gtvGson = makeStrictGtvGson()
 
     private val app = ServerFilters.CatchLensFailure.then(
             routes(

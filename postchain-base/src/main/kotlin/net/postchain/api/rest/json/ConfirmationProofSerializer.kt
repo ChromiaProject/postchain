@@ -9,13 +9,13 @@ import com.google.gson.JsonSerializer
 import net.postchain.base.ConfirmationProof
 import net.postchain.common.toHex
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.make_gtv_gson
+import net.postchain.gtv.makeStrictGtvGson
 import net.postchain.gtv.mapper.GtvObjectMapper
 import java.lang.reflect.Type
 
 internal class ConfirmationProofSerializer : JsonSerializer<ConfirmationProof> {
 
-    val gson = make_gtv_gson()
+    val gson = makeStrictGtvGson()
 
     override fun serialize(src: ConfirmationProof?, typeOfSrc: Type?, context: JsonSerializationContext?): JsonElement {
         val proof = JsonObject()

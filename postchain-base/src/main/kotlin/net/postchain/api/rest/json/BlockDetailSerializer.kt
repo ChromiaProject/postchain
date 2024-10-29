@@ -2,16 +2,22 @@
 
 package net.postchain.api.rest.json
 
-import com.google.gson.*
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonNull
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
+import com.google.gson.JsonSerializationContext
+import com.google.gson.JsonSerializer
 import net.postchain.base.BaseBlockWitness
 import net.postchain.common.toHex
 import net.postchain.core.block.BlockDetail
-import net.postchain.gtv.make_gtv_gson
+import net.postchain.gtv.makeStrictGtvGson
 import java.lang.reflect.Type
 
 internal class BlockDetailSerializer : JsonSerializer<BlockDetail> {
 
-    val gson = make_gtv_gson()
+    val gson = makeStrictGtvGson()
 
     override fun serialize(
             src: BlockDetail?,
