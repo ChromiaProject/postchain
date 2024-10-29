@@ -2,6 +2,9 @@ package net.postchain.containers.bpm
 
 import assertk.assertThat
 import assertk.assertions.isTrue
+import com.github.dockerjava.api.async.ResultCallback
+import com.github.dockerjava.api.command.LogContainerCmd
+import com.github.dockerjava.api.model.Frame
 import mu.KLogging
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.command.DefaultCommandExecutor
@@ -20,13 +23,12 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.mandas.docker.client.DockerClient
 import org.mockito.Mockito.mock
 import java.io.File
 import java.net.InetAddress
 import java.net.URI
 import java.nio.file.Path
-import kotlin.text.Charsets.UTF_8
+
 
 internal class ContainerHandlerIT {
     companion object: KLogging()
@@ -61,10 +63,10 @@ internal class ContainerHandlerIT {
                 resourceLimits,
                 false,
                 containerNodeConfig.containerImage)
-        logger.debug { ContainerEnvironment.dockerClient.inspectContainer(containerId!!).toString() }
+        logger.debug { ContainerEnvironment.dockerClient.inspectContainerCmd(containerId!!).exec().toString() }
         sut.startContainer(containerId!!)
         await().atMost(Duration.TEN_SECONDS).untilAsserted {
-            assertThat(ContainerEnvironment.dockerClient.inspectContainer(containerId!!).state().running()).isTrue()
+            assertThat(ContainerEnvironment.dockerClient.inspectContainerCmd(containerId!!).exec().state.running!!).isTrue()
         }
         val containerPortMapping = sut.findHostPorts(containerId!!, containerNodeConfig.subnodePorts)
         val nodeDiagnosticContext: NodeDiagnosticContext = mock()
@@ -82,11 +84,19 @@ internal class ContainerHandlerIT {
             logger.info("Stopping container $it...")
             sut.stopContainer(it)
             logger.info("Collecting logs from container $it...")
-            ContainerEnvironment.dockerClient.logs(it, DockerClient.LogsParam.stdout(), DockerClient.LogsParam.stderr()).use { logs ->
-                logs.forEach { log -> logger.info("[Subnode] " + UTF_8.decode(log.content()).toString().trim()) }
-            }
+
+            val logContainerCmd: LogContainerCmd = ContainerEnvironment.dockerClient.logContainerCmd(it)
+                .withStdOut(true)
+                .withStdErr(true)
+
+            logContainerCmd.exec(object : ResultCallback.Adapter<Frame>() {
+                override fun onNext(item: Frame) {
+                    logger.info("[Subnode] " + String(item.payload).trim()) }
+                }
+            ).awaitCompletion()
+
             logger.info("Removing container $it...")
-            ContainerEnvironment.dockerClient.removeContainer(it, DockerClient.RemoveContainerParam.forceKill())
+            ContainerEnvironment.dockerClient.killContainerCmd(it)
         }
     }
 

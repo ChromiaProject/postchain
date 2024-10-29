@@ -1,9 +1,10 @@
 package net.postchain.containers.infra
 
+import com.github.dockerjava.api.model.LogConfig
 import net.postchain.common.config.Config
 import net.postchain.common.exception.UserMistake
 
-data class DockerLogConfig(val driver: String = "", val opts: Map<String, String> = mapOf()) : Config {
+data class DockerLogConfig(val driver: LogConfig.LoggingType? = null, val opts: Map<String, String> = mapOf()) : Config {
     companion object {
         fun fromStrings(driver: String, opts: String): DockerLogConfig? {
             if (driver.isBlank()) return null
@@ -25,7 +26,14 @@ data class DockerLogConfig(val driver: String = "", val opts: Map<String, String
             } else {
                 mapOf()
             }
-            return DockerLogConfig(driver, optsMap)
+
+            if (driver.isNotEmpty()) {
+                val loggingType = LogConfig.LoggingType.fromValue(driver)
+                        ?: throw UserMistake("Invalid docker log option. Incorrect driver type: $driver")
+                return DockerLogConfig(loggingType, optsMap)
+            }
+
+            return null
         }
     }
 }

@@ -1,5 +1,6 @@
 package net.postchain.containers.bpm
 
+import com.github.dockerjava.api.DockerClient
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
@@ -37,7 +38,6 @@ import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.metrics.ContainerMetrics
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
-import org.mandas.docker.client.DockerClient
 import java.util.Collections
 
 const val POSTCHAIN_MASTER_PUBKEY = "postchain-master-pubkey"
