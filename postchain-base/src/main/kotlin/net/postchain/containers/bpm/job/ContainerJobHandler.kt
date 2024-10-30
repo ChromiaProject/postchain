@@ -1,5 +1,7 @@
 package net.postchain.containers.bpm.job
 
+import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.model.Container
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.config.app.AppConfig
@@ -19,8 +21,6 @@ import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.logging.CONTAINER_NAME_TAG
 import net.postchain.managed.DirectoryDataSource
-import org.mandas.docker.client.DockerClient
-import org.mandas.docker.client.messages.Container
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
@@ -104,12 +104,12 @@ class ContainerJobHandler(
     }
 
     private fun ensureSubNode(psContainer: PostchainContainer, dockerContainer: Container, job: ContainerJob): Boolean {
-        psContainer.containerId = dockerContainer.id()
-        val dcState = dockerContainer.state()
+        psContainer.containerId = dockerContainer.id
+        val dcState = dockerContainer.state
         if (dcState in listOf("exited", "created", "paused")) {
             logger.info { dcLog(psContainer.containerName, "$dcState and will be started", psContainer) }
             updateResourceLimits(psContainer)
-            startContainer(dockerContainer.id())
+            startContainer(dockerContainer.id)
 
             // We may have new ports so let's ensure we re-connect with those
             if (psContainer.state == ContainerState.RUNNING) psContainer.reset()
@@ -119,7 +119,7 @@ class ContainerJobHandler(
             return false
         }
         if (psContainer.state != ContainerState.RUNNING) {
-            psContainer.containerPortMapping.putAll(findHostPorts(dockerContainer.id(), containerNodeConfig.subnodePorts))
+            psContainer.containerPortMapping.putAll(findHostPorts(dockerContainer.id, containerNodeConfig.subnodePorts))
             psContainer.start()
             job.postpone(5_000)
             return false

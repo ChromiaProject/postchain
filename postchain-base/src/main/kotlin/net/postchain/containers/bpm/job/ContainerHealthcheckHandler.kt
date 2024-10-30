@@ -1,5 +1,6 @@
 package net.postchain.containers.bpm.job
 
+import com.github.dockerjava.api.DockerClient
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.common.exception.UserMistake
@@ -9,7 +10,6 @@ import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.containers.bpm.docker.DockerTools.hasName
 import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.logging.CONTAINER_NAME_TAG
-import org.mandas.docker.client.DockerClient
 
 class ContainerHealthcheckHandler(
         private val dockerClient: DockerClient,
@@ -38,7 +38,10 @@ class ContainerHealthcheckHandler(
 
         val fixedContainers = mutableSetOf<ContainerName>()
         if (containersToCheck.isNotEmpty()) {
-            val running = dockerClient.listContainers() // running containers only
+            val running = dockerClient.listContainersCmd()
+                    .withShowAll(true)
+                    .withStatusFilter(listOf("running"))
+                    .exec() // running containers only
             containersToCheck.values.forEach { cname ->
                 withLoggingContext(CONTAINER_NAME_TAG to cname.dockerContainer) {
                     val containerIsRunning = running.any { it.hasName(cname.dockerContainer) }
@@ -82,8 +85,8 @@ class ContainerHealthcheckHandler(
             }
             fixedContainers.add(cname)
             psContainer.reset()
-            if (containerIsRunning) dockerClient.stopContainer(cname.dockerContainer, 10)
-            dockerClient.removeContainer(cname.dockerContainer)
+            if (containerIsRunning) dockerClient.stopContainerCmd(cname.dockerContainer).withTimeout(10).exec()
+            dockerClient.removeContainerCmd(cname.dockerContainer).exec()
             psContainer.getAllChains().toSet()
         } else if (!containerIsRunning) {
             logger.warn { "Subnode container is not running and will be restarted: ${cname.dockerContainer}" }
@@ -92,14 +95,14 @@ class ContainerHealthcheckHandler(
         } else if (!psContainer.isSubnodeHealthy()) {
             logger.warn { "Subnode container is unhealthy and will be restarted: ${cname.dockerContainer}" }
             fixedContainers.add(cname)
-            dockerClient.stopContainer(cname.dockerContainer, 10)
+            dockerClient.stopContainerCmd(cname.dockerContainer).withTimeout(10).exec()
             psContainer.getAllChains().toSet()
         } else if (!psContainer.checkResourceLimits(fileSystem)) {
             logger.warn { "Subnode container has reached resource limits and will be restarted: ${cname.dockerContainer}" }
             fixedContainers.add(cname)
             psContainer.reset()
-            if (containerIsRunning) dockerClient.stopContainer(cname.dockerContainer, 10)
-            dockerClient.removeContainer(cname.dockerContainer)
+            if (containerIsRunning) dockerClient.stopContainerCmd(cname.dockerContainer).withTimeout(10).exec()
+            dockerClient.removeContainerCmd(cname.dockerContainer).exec()
             psContainer.getAllChains().toSet()
         } else {
             logger.debug { "Subnode container is running and healthy: ${cname.dockerContainer}" }

@@ -1,5 +1,16 @@
 package net.postchain.containers.bpm
 
+import com.github.dockerjava.api.command.CreateContainerCmd
+import com.github.dockerjava.api.model.AccessMode
+import com.github.dockerjava.api.model.Bind
+import com.github.dockerjava.api.model.BlkioRateDevice
+import com.github.dockerjava.api.model.Capability
+import com.github.dockerjava.api.model.ExposedPort
+import com.github.dockerjava.api.model.HostConfig
+import com.github.dockerjava.api.model.LogConfig
+import com.github.dockerjava.api.model.PortBinding
+import com.github.dockerjava.api.model.Ports
+import com.github.dockerjava.api.model.Volume
 import mu.KLogging
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.common.reflection.newInstanceOf
@@ -8,20 +19,122 @@ import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.Infrastructure
 import net.postchain.ebft.syncmanager.common.SyncParameters
-import org.mandas.docker.client.messages.ContainerConfig
-import org.mandas.docker.client.messages.HostConfig
-import org.mandas.docker.client.messages.LogConfig
-import org.mandas.docker.client.messages.PortBinding
 
 object ContainerConfigFactory : KLogging() {
 
     private const val REMOTE_DEBUG_PORT = 8000
 
-    fun createConfig(fs: FileSystem, appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig,
-                     containerName: ContainerName, resourceLimits: ContainerResourceLimits,
-                     readOnly: Boolean, image: String): ContainerConfig {
-        // Container volumes
-        val volumes = mutableListOf<HostConfig.Bind>()
+    fun setConfig(createContainerCmd: CreateContainerCmd, fs: FileSystem, appConfig: AppConfig,
+                  containerNodeConfig: ContainerNodeConfig, containerName: ContainerName,
+                  resourceLimits: ContainerResourceLimits, readOnly: Boolean) {
+
+        val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
+        val volumes = createVolumes(fs, containerName, containerNodeConfig)
+        val portBindings = createPortBindings(restApiConfig, containerNodeConfig, containerName)
+        val hostConfig = createHostConfig(volumes, portBindings, resourceLimits, containerNodeConfig)
+
+        createContainerCmd
+                .apply {
+                    containerNodeConfig.subnodeUser?.let { withUser(it) }
+                }
+                .withName(containerName.dockerContainer)
+                .withHostConfig(hostConfig)
+                .withExposedPorts(portBindings.map { it.exposedPort })
+                .withEnv(createNodeConfigEnv(appConfig, containerNodeConfig, containerName, readOnly))
+                .withLabels(containerNodeConfig.labels + (POSTCHAIN_MASTER_PUBKEY to containerNodeConfig.masterPubkey))
+    }
+
+    private fun createHostConfig(volumes: MutableList<Bind>, portBindings: MutableList<PortBinding>, resourceLimits: ContainerResourceLimits, containerNodeConfig: ContainerNodeConfig): HostConfig? {
+
+        /**
+         * CPU:
+         * $ docker run -it --cpu-period=100000 --cpu-quota=50000 ubuntu /bin/bash.
+         * Here we leave cpu-period to its default value (100 ms) and control cpu-quota via the dataSource.
+         */
+
+        return HostConfig.newHostConfig()
+                .withBinds(volumes)
+                .withPortBindings(portBindings)
+                .withPublishAllPorts(false)
+                .withCapDrop(Capability.ALL)
+                .withSecurityOpts(listOf("no-new-privileges:true"))
+                .apply {
+                    if (resourceLimits.hasRam()) withMemory(resourceLimits.ramBytes())
+                }
+                .apply {
+                    if (resourceLimits.hasCpu()) {
+                        withCpuPeriod(resourceLimits.cpuPeriod())
+                        withCpuQuota(resourceLimits.cpuQuota())
+                    }
+                }
+                .apply {
+                    if (resourceLimits.hasIoRead()) {
+                        withBlkioDeviceReadBps(listOf(
+                                BlkioRateDevice()
+                                        .withPath(containerNodeConfig.hostMountDevice)
+                                        .withRate(resourceLimits.ioReadBytes())
+                        ))
+                    }
+                }
+                .apply {
+                    if (resourceLimits.hasIoWrite()) {
+                        withBlkioDeviceWriteBps(listOf(
+                                BlkioRateDevice()
+                                        .withPath(containerNodeConfig.hostMountDevice)
+                                        .withRate(resourceLimits.ioWriteBytes())
+                        ))
+                    }
+                }
+                .apply {
+                    if (containerNodeConfig.network != null) {
+                        logger.info("Setting container network to ${containerNodeConfig.network}")
+                        withNetworkMode(containerNodeConfig.network)
+                    }
+                }
+                .apply {
+                    val dockerLogConf = containerNodeConfig.dockerLogConf
+                    if (dockerLogConf != null) {
+                        logger.info("Setting docker log configuration to $dockerLogConf")
+                        withLogConfig(LogConfig(dockerLogConf.driver, dockerLogConf.opts))
+                    }
+                }
+    }
+
+    private fun createPortBindings(restApiConfig: RestApiConfig, containerNodeConfig: ContainerNodeConfig, containerName: ContainerName): MutableList<PortBinding> {
+        /**
+         * Rest API port binding.
+         * If restApiConfig.restApiPort == -1 => no communication with API => no binding needed.
+         * If restApiConfig.restApiPort > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
+         * control here and know that it is always free.
+         * DockerPort must be both node and container specific and cannot be -1 or 0 (at least not allowed in Ubuntu.)
+         * Therefore, use random port selection
+         */
+        val portBindings = mutableListOf<PortBinding>()
+        // rest-api-port
+        if (restApiConfig.port > -1) {
+            portBindings.add(PortBinding(Ports.Binding.bindIp(containerNodeConfig.subnodeHost), ExposedPort(containerNodeConfig.subnodeRestApiPort)))
+        }
+        // debug-api-port
+        if (restApiConfig.debugPort > -1) {
+            portBindings.add(PortBinding(Ports.Binding.bindIp(containerNodeConfig.subnodeHost), ExposedPort(containerNodeConfig.subnodeDebugApiPort)))
+        }
+        // admin-rpc-port
+        portBindings.add(PortBinding(Ports.Binding.bindIp(containerNodeConfig.subnodeHost), ExposedPort(containerNodeConfig.subnodeAdminRpcPort)))
+
+        if (containerNodeConfig.remoteDebugEnabled) {
+            portBindings.add(PortBinding(Ports.Binding.bindIp(containerNodeConfig.subnodeHost), ExposedPort(REMOTE_DEBUG_PORT)))
+        }
+
+        if (containerNodeConfig.jmxBasePort > -1) {
+            val calculatedJmxPort = calculateJmxPort(containerNodeConfig, containerName)
+            portBindings.add(PortBinding(Ports.Binding.bindIp(containerNodeConfig.subnodeHost), ExposedPort(calculatedJmxPort)))
+        }
+        return portBindings
+    }
+
+    private fun createVolumes(fs: FileSystem, containerName: ContainerName, containerNodeConfig: ContainerNodeConfig): MutableList<Bind> {
+
+        val volumes = mutableListOf<Bind>()
 
         /**
          *  Bindings:
@@ -39,137 +152,23 @@ object ContainerConfigFactory : KLogging() {
          */
 
         // target volume
-        val targetVol = HostConfig.Bind.builder()
-                .from(fs.hostRootOf(containerName).toString())
-                .to(FileSystem.CONTAINER_TARGET_PATH)
-                .build()
-        volumes.add(targetVol)
+        volumes.add(Bind(fs.hostRootOf(containerName).toString(), Volume(FileSystem.CONTAINER_TARGET_PATH)))
 
         // pgdata volume
         if (containerNodeConfig.bindPgdataVolume) {
-            val pgdataVol = HostConfig.Bind.builder()
-                    .from(fs.hostPgdataOf(containerName).toString())
-                    .to(FileSystem.CONTAINER_PGDATA_PATH)
-                    .build()
-            volumes.add(pgdataVol)
+            volumes.add(Bind(fs.hostPgdataOf(containerName).toString(), Volume(FileSystem.CONTAINER_PGDATA_PATH)))
         }
 
         if (containerNodeConfig.log4jConfigurationFile != null) {
-            val log4jConfigFile = HostConfig.Bind.builder()
-                    .from(containerNodeConfig.log4jConfigurationFile)
-                    .to(FileSystem.CONTAINER_LOG4J_PATH)
-                    .readOnly(true)
-                    .build()
-            volumes.add(log4jConfigFile)
+            volumes.add(Bind(containerNodeConfig.log4jConfigurationFile, Volume(FileSystem.CONTAINER_LOG4J_PATH), AccessMode.ro))
         }
 
         if (containerNodeConfig.subnodeUser != null) {
-            volumes.add(HostConfig.Bind.builder().from("/etc/passwd").to("/etc/passwd").readOnly(true).build())
-            volumes.add(HostConfig.Bind.builder().from("/etc/group").to("/etc/group").readOnly(true).build())
+            volumes.add(Bind("/etc/passwd", Volume("/etc/passwd"), AccessMode.ro))
+            volumes.add(Bind("/etc/group", Volume("/etc/group"), AccessMode.ro))
         }
 
-        val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
-
-        /**
-         * Rest API port binding.
-         * If restApiConfig.restApiPort == -1 => no communication with API => no binding needed.
-         * If restApiConfig.restApiPort > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
-         * control here and know that it is always free.
-         * DockerPort must be both node and container specific and cannot be -1 or 0 (at least not allowed in Ubuntu.)
-         * Therefore, use random port selection
-         */
-        val portBindings = mutableMapOf<String, List<PortBinding>>() // { dockerPort -> hostIp:hostPort }
-        // rest-api-port
-        val restApiPort = "${containerNodeConfig.subnodeRestApiPort}/tcp"
-        if (restApiConfig.port > -1) {
-            portBindings[restApiPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
-        }
-        // debug-api-port
-        val debugApiPort = "${containerNodeConfig.subnodeDebugApiPort}/tcp"
-        if (restApiConfig.debugPort > -1) {
-            portBindings[debugApiPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
-        }
-        // admin-rpc-port
-        val adminRpcPort = "${containerNodeConfig.subnodeAdminRpcPort}/tcp"
-        portBindings[adminRpcPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
-
-        if (containerNodeConfig.remoteDebugEnabled) {
-            val remoteDebugPort = "$REMOTE_DEBUG_PORT/tcp"
-            portBindings[remoteDebugPort] = listOf(PortBinding.randomPort(containerNodeConfig.subnodeHost))
-        }
-
-        if (containerNodeConfig.jmxBasePort > -1) {
-            val calculatedJmxPort = calculateJmxPort(containerNodeConfig, containerName)
-            val jmxPort = "$calculatedJmxPort/tcp"
-            portBindings[jmxPort] = listOf(PortBinding.of(containerNodeConfig.subnodeHost, calculatedJmxPort))
-        }
-
-        /**
-         * CPU:
-         * $ docker run -it --cpu-period=100000 --cpu-quota=50000 ubuntu /bin/bash.
-         * Here we leave cpu-period to its default value (100 ms) and control cpu-quota via the dataSource.
-         */
-
-        // Host config
-        val hostConfig = HostConfig.builder()
-                .binds(*volumes.toTypedArray())
-                .portBindings(portBindings)
-                .publishAllPorts(false)
-                .capDrop("ALL")
-                .securityOpt("no-new-privileges:true")
-                .apply {
-                    if (resourceLimits.hasRam()) memory(resourceLimits.ramBytes())
-                }.apply {
-                    if (resourceLimits.hasCpu()) {
-                        cpuPeriod(resourceLimits.cpuPeriod())
-                        cpuQuota(resourceLimits.cpuQuota())
-                    }
-                }
-                .apply {
-                    if (resourceLimits.hasIoRead()) {
-                        blkioDeviceReadBps(listOf(
-                                HostConfig.BlkioDeviceRate.builder()
-                                        .path(containerNodeConfig.hostMountDevice)
-                                        .rate(resourceLimits.ioReadBytes().toInt())
-                                        .build()
-                        ))
-                    }
-                }
-                .apply {
-                    if (resourceLimits.hasIoWrite()) {
-                        blkioDeviceWriteBps(listOf(
-                                HostConfig.BlkioDeviceRate.builder()
-                                        .path(containerNodeConfig.hostMountDevice)
-                                        .rate(resourceLimits.ioWriteBytes().toInt())
-                                        .build()
-                        ))
-                    }
-                }
-                .apply {
-                    if (containerNodeConfig.network != null) {
-                        logger.info("Setting container network to ${containerNodeConfig.network}")
-                        networkMode(containerNodeConfig.network)
-                    }
-                }
-                .apply {
-                    val dockerLogConf = containerNodeConfig.dockerLogConf
-                    if (dockerLogConf != null) {
-                        logger.info("Setting docker log configuration to $dockerLogConf")
-                        logConfig(LogConfig.create(dockerLogConf.driver, dockerLogConf.opts))
-                    }
-                }
-                .build()
-
-        return ContainerConfig.builder()
-                .apply {
-                    containerNodeConfig.subnodeUser?.let { user(it) }
-                }
-                .image(image)
-                .hostConfig(hostConfig)
-                .exposedPorts(portBindings.keys)
-                .env(createNodeConfigEnv(appConfig, containerNodeConfig, containerName, readOnly))
-                .labels(containerNodeConfig.labels + (POSTCHAIN_MASTER_PUBKEY to containerNodeConfig.masterPubkey))
-                .build()
+        return volumes
     }
 
     private fun createNodeConfigEnv(appConfig: AppConfig, containerNodeConfig: ContainerNodeConfig, containerName: ContainerName, readOnly: Boolean) = buildList {
