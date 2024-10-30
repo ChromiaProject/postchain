@@ -9,7 +9,7 @@ import net.postchain.core.BlockchainState
 import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.Shutdownable
 import net.postchain.network.mastersub.master.MasterCommunicationManager
-import org.apache.http.client.utils.URIBuilder
+import org.apache.hc.core5.net.URIBuilder
 
 interface ContainerBlockchainProcess : RemoteBlockchainProcess, Shutdownable {
     val blockchainState: BlockchainState

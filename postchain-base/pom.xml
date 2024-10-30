@@ -159,7 +159,7 @@
         <!-- Docker Client -->
         <dependency>
             <groupId>com.github.docker-java</groupId>
-            <artifactId>docker-java</artifactId>
+            <artifactId>docker-java-core</artifactId>
         </dependency>
         <dependency>
             <groupId>com.github.docker-java</groupId>
