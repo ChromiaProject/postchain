@@ -20,6 +20,7 @@ import net.postchain.gtv.mapper.DefaultValue
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.mapper.Nullable
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
@@ -120,6 +121,7 @@ internal class GtvYamlTest {
                 nf: "false"
                 ba: x"12"
                 wba: x"13"
+                noba: "x\"1234ABCD\""
                 s: foo
                 n: null
                 nn: "null"
@@ -149,6 +151,7 @@ internal class GtvYamlTest {
                 @Name("nf") val nf: String,
                 @Name("ba") val ba: ByteArray,
                 @Name("wba") val wba: WrappedByteArray,
+                @Name("noba") val noba: String,
                 @Name("s") val s: String,
                 @Name("n") @Nullable val n: String?,
                 @Name("nn") val nn: String,
@@ -171,6 +174,7 @@ internal class GtvYamlTest {
         assertThat(actual.nf).isEqualTo("false")
         assertThat(actual.ba).isContentEqualTo("12".hexStringToByteArray())
         assertThat(actual.wba).isEqualTo("13".hexStringToWrappedByteArray())
+        assertThat(actual.noba).isEqualTo("x\"1234ABCD\"")
         assertThat(actual.s).isEqualTo("foo")
         assertThat(actual.n).isNull()
         assertThat(actual.nn).isEqualTo("null")
@@ -236,6 +240,8 @@ internal class GtvYamlTest {
             ma:
               k1: v1
               k2: 5
+            noba: 'x"1234ABCD"'
+            nobi: '17L'
             s: foo
             se:
             - a
@@ -246,6 +252,34 @@ internal class GtvYamlTest {
         val gtvData = GtvYaml().load(expectedYaml)
         val actual = GtvYaml().dump(gtvData)
         assertThat(actual).isEqualTo(expectedYaml)
+    }
+
+    @Test
+    fun gtvRoundTrip() {
+        val expectedGtv = gtv(mapOf(
+                "int" to gtv(17),
+                "no_int" to gtv("17"),
+                "bigint" to gtv(BigInteger("170000000000000000000000000000000000000")),
+                "no_bigint" to gtv("17L"),
+                "string" to gtv("foo bar"),
+                "null" to GtvNull,
+                "no_null" to gtv("null"),
+                "bytearray" to gtv(byteArrayOf(1, 2, 3, 4)),
+                "no_bytearray" to gtv("x\"1234ABCD\""),
+                "array" to gtv(gtv(1), gtv(2), gtv(3)),
+        ))
+        val yaml = GtvYaml().dump(expectedGtv)
+        val actual = GtvYaml().load(yaml)
+        assertThat(actual).isEqualTo(expectedGtv)
+    }
+
+    @Disabled // this doesn't work properly
+    @Test
+    fun gtvControlCharInString() {
+        val expectedGtv = gtv("\u0019Ethereum Signed Message:\n")
+        val yaml = GtvYaml().dump(expectedGtv)
+        val actual = GtvYaml().load(yaml)
+        assertThat(actual).isEqualTo(expectedGtv)
     }
 
     companion object {
