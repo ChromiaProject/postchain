@@ -46,15 +46,18 @@ object ContainerEnvironment : KLogging() {
 
             toStop.forEach {
                 withLoggingContext(CONTAINER_NAME_TAG to DockerTools.containerName(it).drop(1)) {
-                    try {
-                        dockerClient.stopContainerCmd(it.id).withTimeout(20).exec()
-                        logger.info { "Container has been stopped: ${DockerTools.containerName(it)} / ${DockerTools.shortContainerId(it.id)}" }
-                    } catch (e: Exception) {
-                        logger.error("Can't stop container: " + it.id, e)
+
+                    if ("running".equals(it.state, ignoreCase = true)) {
+                        try {
+                            dockerClient.stopContainerCmd(it.id).withTimeout(20).exec()
+                            logger.info { "Container has been stopped: ${DockerTools.containerName(it)} / ${DockerTools.shortContainerId(it.id)}" }
+                        } catch (e: Exception) {
+                            logger.error("Can't stop container: " + it.id, e)
+                        }
                     }
 
                     try {
-                        dockerClient.killContainerCmd(it.id).withSignal("SIGKILL").exec()
+                        dockerClient.removeContainerCmd(it.id).withForce(true).exec()
                         logger.info { "Container has been removed: ${DockerTools.containerName(it)} / ${DockerTools.shortContainerId(it.id)}" }
                     } catch (e: Exception) {
                         logger.error("Can't remove container: " + it.id, e)
@@ -63,5 +66,4 @@ object ContainerEnvironment : KLogging() {
             }
         }
     }
-
 }
