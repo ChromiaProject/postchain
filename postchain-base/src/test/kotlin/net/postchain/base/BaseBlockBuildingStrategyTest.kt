@@ -154,6 +154,18 @@ class BaseBlockBuildingStrategyTest {
         sut.blockCommitted(committedBlockData())
     }
 
+    @Test
+    @Order(7)
+    fun test_max_backoff_does_not_overflow() {
+        assertThat(sut.mustWaitBeforeBuildBlock()).isEqualTo(false)
+        // 2^63 (should overflow a Long)
+        repeat(63) {
+            sut.blockFailed()
+        }
+        assertThat(sut.getBackoffTime()).isEqualTo(MAX_BACKOFF_TIME)
+        sut.blockCommitted(committedBlockData())
+    }
+
     private fun failCommit(times: Int) {
         var failTime = 1
         for (i in 1..times) {
