@@ -8,7 +8,7 @@ import net.postchain.containers.bpm.ContainerResourceUsage
 import java.io.Closeable
 import java.time.Instant
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 import kotlin.reflect.KProperty1
 
 const val SUB_CONTAINER_METRICS_MEMORY_USAGE = "sub_container,memory_usage"
@@ -53,47 +53,38 @@ class SubContainerResourceMetrics(
                 SubContainerResourceMetricData(SUB_CONTAINER_METRICS_SPACE_USAGE_PERCENTAGE, "Space usage in percent", ContainerResourceUsage::spaceUsagePercentage, true),
                 SubContainerResourceMetricData(SUB_CONTAINER_METRICS_SPACE_LEFT_MB, "Space left in MB", ContainerResourceUsage::spaceLeftMib, true),
         )
-
-        private val metricJobExecutor = Executors.newVirtualThreadPerTaskExecutor()
     }
 
-    private var running = true
     private var metrics = mutableListOf<Meter>()
     private var lastResourceUsage: ContainerResourceUsage? = null
     private var lastSpaceCheckTime: Instant? = null
-
-    private var metricsJob: Future<*> = metricJobExecutor.submit {
-        while (running) {
-
-            try {
-                val includeSpaceUsage = checkSpaceUsage()
-
-                val start = System.currentTimeMillis()
-                val resourceUsage = getContainerResourceUsage(includeSpaceUsage)
-                if (resourceUsage != null) {
-                    if (!includeSpaceUsage && lastResourceUsage != null) {
-                        resourceUsage.copySpacePropertiesFrom(lastResourceUsage!!)
-                    }
-                    lastResourceUsage = resourceUsage
-                }
-
-                logger.debug { "Fetching resource usage for container $directoryContainer took ${System.currentTimeMillis() - start} ms, with space check: $includeSpaceUsage" }
-            } catch (e: Exception) {
-                logger.error { "Failed to update container resource metrics for container $directoryContainer: ${e.message}" }
-            }
-
-            try {
-                Thread.sleep(refreshInterval)
-            } catch (e: InterruptedException) {
-                logger.debug { "Virtual metric thread was interrupted" }
-            }
-        }
-    }
+    private val scheduledExecutorService = Executors.newScheduledThreadPool(100, Thread.ofVirtual().factory())
 
     init {
         metricDefinitions
                 .filter { enableSpaceMetrics || !it.isSpaceMetric }
                 .forEach(this::gaugeMetric)
+
+        scheduledExecutorService.scheduleWithFixedDelay(this::updateMetrics, 0, refreshInterval, TimeUnit.MILLISECONDS)
+    }
+
+    private fun updateMetrics() {
+        try {
+            val includeSpaceUsage = checkSpaceUsage()
+
+            val start = System.currentTimeMillis()
+            val resourceUsage = getContainerResourceUsage(includeSpaceUsage)
+            if (resourceUsage != null) {
+                if (!includeSpaceUsage && lastResourceUsage != null) {
+                    resourceUsage.copySpacePropertiesFrom(lastResourceUsage!!)
+                }
+                lastResourceUsage = resourceUsage
+            }
+
+            logger.debug { "Fetching resource usage for container $directoryContainer took ${System.currentTimeMillis() - start} ms, with space check: $includeSpaceUsage" }
+        } catch (e: Exception) {
+            logger.error { "Failed to update container resource metrics for container $directoryContainer: ${e.message}" }
+        }
     }
 
     private fun checkSpaceUsage(): Boolean {
@@ -121,9 +112,8 @@ class SubContainerResourceMetrics(
     }
 
     override fun close() {
+        scheduledExecutorService.shutdownNow()
         metrics.forEach(Metrics.globalRegistry::remove)
-        running = false
-        metricsJob.cancel(true)
     }
 }
 

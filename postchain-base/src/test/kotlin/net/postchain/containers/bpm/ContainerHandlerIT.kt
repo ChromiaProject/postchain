@@ -55,7 +55,6 @@ internal class ContainerHandlerIT {
         ContainerEnvironment.init(appConfig)
         val fileSystem = LocalFileSystem(containerNodeConfig, DefaultCommandExecutor)
 
-//        val containers: () -> Map<ContainerName, PostchainContainer> = { mutableMapOf() }
         sut = ContainerHandler(ContainerEnvironment.dockerClient, appConfig, fileSystem)
 
         sut.pullImage(containerNodeConfig.containerImage)
