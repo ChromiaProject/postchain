@@ -45,8 +45,8 @@ class Ext4FileSystemTest {
         val result = sut.getCurrentLimitsInfo(containerName, resourceLimits)
         // verify
         checkNotNull(result)
-        assertEquals(51L, result.spaceUsedMB)
-        assertEquals(16384L, result.spaceHardLimitMB)
+        assertEquals(51L, result.spaceUsedMiB)
+        assertEquals(16384L, result.spaceHardLimitMiB)
     }
 
     @Test

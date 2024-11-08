@@ -109,7 +109,7 @@ class ContainerJobHandler(
         if (dcState in listOf("exited", "created", "paused")) {
             logger.info { dcLog(psContainer.containerName, "$dcState and will be started", psContainer) }
             updateResourceLimits(psContainer)
-            startContainer(dockerContainer.id)
+            startContainer(psContainer)
 
             // We may have new ports so let's ensure we re-connect with those
             if (psContainer.state == ContainerState.RUNNING) psContainer.reset()
@@ -168,9 +168,8 @@ class ContainerJobHandler(
         updateResourceLimits(psContainer)
         psContainer.checkResourceLimits(fileSystem)
         psContainer.updateImage()
-        val containerId = pullAndCreateDockerContainer(psContainer)
-        startContainer(containerId)
-        psContainer.containerId = containerId
+        psContainer.containerId = pullAndCreateDockerContainer(psContainer)
+        startContainer(psContainer)
         logger.info { dcLog(psContainer.containerName, "started", psContainer) }
         job.postpone(1_000)
     }

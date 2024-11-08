@@ -162,12 +162,12 @@ class DefaultPostchainContainer(
     override fun checkResourceLimits(fileSystem: FileSystem): Boolean {
         val readOnlyBeforeCheck = readOnly.get()
         fileSystem.getCurrentLimitsInfo(containerName, resourceLimits)?.let {
-            readOnly.set(it.spaceUsedMB + containerNodeConfig.minSpaceQuotaBufferMB >= it.spaceHardLimitMB)
+            readOnly.set(it.spaceUsedMiB + containerNodeConfig.minSpaceQuotaBufferMB >= it.spaceHardLimitMiB)
             if (readOnlyBeforeCheck != readOnly.get()) {
                 if (readOnly.get())
-                    logger.warn("Space used is too close to hard limit. Switching to read only mode. (used space: ${it.spaceUsedMB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceHardLimitMB}MB)")
+                    logger.warn("Space used is too close to hard limit. Switching to read only mode. (used space: ${it.spaceUsedMiB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceHardLimitMiB}MB)")
                 else
-                    logger.info("Space used is no longer too close to hard limit. (used space: ${it.spaceUsedMB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceHardLimitMB}MB)")
+                    logger.info("Space used is no longer too close to hard limit. (used space: ${it.spaceUsedMiB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceHardLimitMiB}MB)")
                 setLastUpdated()
             }
         }
