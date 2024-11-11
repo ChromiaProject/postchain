@@ -11,6 +11,7 @@ import net.postchain.api.rest.controller.RestApi
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.toHex
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -536,6 +537,29 @@ class RestApiQueryEndpointTest {
         )
         val queryString = queryMap.map { "${it.key}=${it.value.toString().trim('"')}" }.joinToString("&")
         val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
+        val answer = gtv("answer")
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .header("Accept", ContentType.BINARY)
+                .get("/query_gtv/${blockchainRID}?$queryString")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(answer))
+    }
+
+    @Test
+    fun `GET query_gtv with GTV args`() {
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3))))
+        val queryString = "type=${query.name}&~args=${GtvEncoder.encodeGtv(query.args).toHex()}"
         val answer = gtv("answer")
 
         whenever(model.query(query)).thenReturn(answer)

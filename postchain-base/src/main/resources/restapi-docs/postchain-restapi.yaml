@@ -53,7 +53,7 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: "10"
+  version: "11"
 paths:
   /tx/{blockchainRid}:
     post:
@@ -737,14 +737,13 @@ paths:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
   /query_gtv/{blockchainRid}:
     description: |
-      The GET method enable caching of query responses, while the POST method has more robust and efficient encoding of query parameters.
+      The GET method enable caching of query responses, while the POST method has more efficient encoding of query parameters.
     get:
       tags:
         - query
       summary: Make a query with GTV encoded response
       description: |
         Make a query with GTV encoded response to a chain. 
-        Named arguments to query as additional query parameters.
         Response body contains binary GTV value.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
@@ -755,6 +754,12 @@ paths:
           schema:
             type: string
           example: my_query
+        - name: ~args
+          in: query
+          description: Query args as hex encoded GTV dictionary
+          required: true
+          schema:
+            $ref: "#/components/schemas/hex"
       responses:
         200:
           description: OK
@@ -1578,4 +1583,3 @@ components:
         error:
           type: string
           description: Error message that occurred during verification process.
-
