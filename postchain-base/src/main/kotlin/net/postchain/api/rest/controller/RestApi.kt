@@ -79,6 +79,7 @@ import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvException
 import net.postchain.gtv.GtvFactory.gtv
@@ -155,6 +156,9 @@ const val FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER = "Configuration must be signe
 
 const val DATA_TRUNCATED_HEADER = "X-Data-Truncated"
 
+const val QUERY_TYPE = "type"
+const val QUERY_ARGS = "~args"
+
 /**
  * Implements the REST API.
  *
@@ -177,7 +181,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 10
+        const val REST_API_VERSION = 11
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -828,24 +832,25 @@ class RestApi(
 
     private fun parseQuery(gtxQuery: Gtv): GtxQuery {
         val queryDict = gtxQuery.asDict()
-        val type = queryDict["type"] ?: throw UserMistake("Missing query type")
-        val args = gtv(queryDict.filterKeys { key -> key != "type" } + (NON_STRICT_QUERY_ARGUMENT to gtv(true)))
+        val type = queryDict[QUERY_TYPE] ?: throw UserMistake("Missing query type")
+        val args = gtv(queryDict.filterKeys { key -> key != QUERY_TYPE } + (NON_STRICT_QUERY_ARGUMENT to gtv(true)))
         return GtxQuery(type.asString(), args)
     }
 
     private fun extractGetQuery(queryMap: Map<String, List<String?>>): GtxQuery {
-        val type = queryMap["type"]?.singleOrNull() ?: throw UserMistake("Missing query type")
-        val args = queryMap.filterKeys { it != "type" }.mapValues {
-            val paramValue = requireNotNull(it.value.single())
-            if (paramValue == "true" || paramValue == "false") {
-                gtv(paramValue.toBoolean())
-            } else if (paramValue.toLongOrNull() != null) {
-                gtv(paramValue.toLong())
-            } else {
-                gtv(paramValue)
-            }
-        } + (NON_STRICT_QUERY_ARGUMENT to gtv(true))
-        return GtxQuery(type, gtv(args))
+        val type = queryMap[QUERY_TYPE]?.singleOrNull() ?: throw UserMistake("Missing query type")
+        val args = queryMap[QUERY_ARGS]?.singleOrNull()?.let { GtvDecoder.decodeGtv(it.hexStringToByteArray()) }
+                ?: gtv(queryMap.filterKeys { it != QUERY_TYPE }.mapValues {
+                    val paramValue = requireNotNull(it.value.single())
+                    if (paramValue == "true" || paramValue == "false") {
+                        gtv(paramValue.toBoolean())
+                    } else if (paramValue.toLongOrNull() != null) {
+                        gtv(paramValue.toLong())
+                    } else {
+                        gtv(paramValue)
+                    }
+                } + (NON_STRICT_QUERY_ARGUMENT to gtv(true)))
+        return GtxQuery(type, args)
     }
 
     private fun <T> runTxActionOnModel(model: Model, txRid: TxRid, txAction: (Model, TxRid) -> T?): T =
