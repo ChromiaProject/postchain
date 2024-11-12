@@ -6,6 +6,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import net.postchain.gtv.GtvFactory.gtv
 import org.junit.jupiter.api.Test
+import java.io.ByteArrayInputStream
 
 class GtvDecoderTest {
     private val validGtv: ByteArray = GtvEncoder.encodeGtv(gtv("valid"))
@@ -29,6 +30,26 @@ class GtvDecoderTest {
     fun empty() {
         assertFailure {
             GtvDecoder.decodeGtv(emptyGtv)
+        }.isInstanceOf(GtvException::class)
+    }
+
+    @Test
+    fun validStream() {
+        val result = GtvDecoder.decodeGtv(ByteArrayInputStream(validGtv))
+        assertThat(result.asString()).isEqualTo("valid")
+    }
+
+    @Test
+    fun invalidStream() {
+        assertFailure {
+            GtvDecoder.decodeGtv(ByteArrayInputStream(invalidGtv))
+        }.isInstanceOf(GtvException::class)
+    }
+
+    @Test
+    fun emptyStream() {
+        assertFailure {
+            GtvDecoder.decodeGtv(ByteArrayInputStream(emptyGtv))
         }.isInstanceOf(GtvException::class)
     }
 }
