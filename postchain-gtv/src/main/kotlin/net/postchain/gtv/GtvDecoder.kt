@@ -6,24 +6,31 @@ import net.postchain.gtv.gtvmessages.RawGtv
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.io.InterruptedIOException
+import java.net.SocketException
+import javax.net.ssl.SSLException
 
 object GtvDecoder {
 
     fun decodeGtv(b: ByteArray): Gtv {
         val byteArray = ByteArrayInputStream(b)
-        return try {
-            decodeGtv(byteArray)
-        } catch (e: GtvException) {
-            throw e
-        } catch (e: IOException) {
-            throw GtvException(e.message ?: "")
-        }
+        return decodeGtv(byteArray)
     }
 
-    fun decodeGtv(inputStream: InputStream): Gtv {
+    fun decodeGtv(inputStream: InputStream): Gtv = try {
         val gtv = RawGtv()
         gtv.decode(inputStream)
-        return fromRawGtv(gtv)
+        fromRawGtv(gtv)
+    } catch (e: GtvException) {
+        throw e
+    } catch (e: InterruptedIOException) {
+        throw e
+    } catch (e: SocketException) {
+        throw e
+    } catch (e: SSLException) {
+        throw e
+    } catch (e: IOException) {
+        throw GtvException(e.message ?: "")
     }
 
     fun fromRawGtv(r: RawGtv): Gtv {
@@ -46,7 +53,7 @@ object GtvDecoder {
             return GtvArray((r.array.seqOf.map { fromRawGtv(it) }).toTypedArray())
         }
         if (r.dict != null) {
-            return GtvDictionary.build(r.dict.seqOf.map { it.name.toString() to fromRawGtv(it.value) }.toMap())
+            return GtvDictionary.build(r.dict.seqOf.associate { it.name.toString() to fromRawGtv(it.value) })
         }
         throw GtvException("Unknown type identifier")
     }

@@ -567,7 +567,8 @@ class RestApi(
         val gtvQuery = try {
             GtxQuery.decode(query)
         } catch (e: GtvException) {
-            throw IllegalArgumentException(e.message ?: "")
+            logger.debug { "Invalid GTV data in POST /query_gtv: $e" }
+            throw IllegalArgumentException("Invalid GTV data")
         }
         val response = model.query(gtvQuery)
         return Response(OK).with(binaryBody of GtvEncoder.encodeGtv(response))
@@ -839,8 +840,14 @@ class RestApi(
 
     private fun extractGetQuery(queryMap: Map<String, List<String?>>): GtxQuery {
         val type = queryMap[QUERY_TYPE]?.singleOrNull() ?: throw UserMistake("Missing query type")
-        val args = queryMap[QUERY_ARGS]?.singleOrNull()?.let { GtvDecoder.decodeGtv(it.hexStringToByteArray()) }
-                ?: gtv(queryMap.filterKeys { it != QUERY_TYPE }.mapValues {
+        val args = queryMap[QUERY_ARGS]?.singleOrNull()?.let {
+            try {
+                GtvDecoder.decodeGtv(it.hexStringToByteArray())
+            } catch (e: GtvException) {
+                logger.debug { "Invalid GTV data in GET /query_gtv: $e" }
+                throw IllegalArgumentException("Invalid GTV data")
+            }
+        } ?: gtv(queryMap.filterKeys { it != QUERY_TYPE }.mapValues {
                     val paramValue = requireNotNull(it.value.single())
                     if (paramValue == "true" || paramValue == "false") {
                         gtv(paramValue.toBoolean())
