@@ -81,6 +81,12 @@
         <gitlab.registry>registry.gitlab.com/chromaway/postchain</gitlab.registry>
     </properties>
 
+    <pluginRepositories>
+        <pluginRepository>
+            <id>kotlin-bcv-maven-plugin</id>
+            <url>https://gitlab.com/api/v4/projects/64479054/packages/maven</url>
+        </pluginRepository>
+    </pluginRepositories>
     <repositories>
         <repository>
             <id>chromia-parent</id>
@@ -631,6 +637,22 @@
                     <groupId>com.evolvedbinary.maven.jvnet</groupId>
                     <artifactId>jaxb30-maven-plugin</artifactId>
                     <version>0.15.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>com.chromaway</groupId>
+                    <artifactId>kotlin-bcv-maven-plugin</artifactId>
+                    <version>0.1.0</version>
+                    <configuration>
+                        <skip>true</skip>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <id>check</id>
+                            <goals>
+                                <goal>check</goal>
+                            </goals>
+                        </execution>
+                    </executions>
                 </plugin>
             </plugins>
         </pluginManagement>

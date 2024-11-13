@@ -1,0 +1,1313 @@
+public abstract class net/postchain/gtv/AbstractGtv : net/postchain/gtv/Gtv {
+	public fun <init> ()V
+	public fun asArray ()[Lnet/postchain/gtv/Gtv;
+	public fun asBigInteger ()Ljava/math/BigInteger;
+	public fun asBoolean ()Z
+	public fun asByteArray (Z)[B
+	public fun asDict ()Ljava/util/Map;
+	public fun asInteger ()J
+	public fun asString ()Ljava/lang/String;
+	public fun get (I)Lnet/postchain/gtv/Gtv;
+	public fun get (Ljava/lang/String;)Lnet/postchain/gtv/Gtv;
+	public fun isNull ()Z
+	public fun nrOfBytes ()I
+}
+
+public abstract interface class net/postchain/gtv/Gtv {
+	public abstract fun asArray ()[Lnet/postchain/gtv/Gtv;
+	public abstract fun asBigInteger ()Ljava/math/BigInteger;
+	public abstract fun asBoolean ()Z
+	public abstract fun asByteArray (Z)[B
+	public abstract fun asDict ()Ljava/util/Map;
+	public abstract fun asInteger ()J
+	public abstract fun asPrimitive ()Ljava/lang/Object;
+	public abstract fun asString ()Ljava/lang/String;
+	public abstract fun get (I)Lnet/postchain/gtv/Gtv;
+	public abstract fun get (Ljava/lang/String;)Lnet/postchain/gtv/Gtv;
+	public abstract fun getRawGtv ()Lnet/postchain/gtv/gtvmessages/RawGtv;
+	public abstract fun getType ()Lnet/postchain/gtv/GtvType;
+	public abstract fun isNull ()Z
+	public abstract fun nrOfBytes ()I
+}
+
+public final class net/postchain/gtv/Gtv$DefaultImpls {
+	public static synthetic fun asByteArray$default (Lnet/postchain/gtv/Gtv;ZILjava/lang/Object;)[B
+}
+
+public final class net/postchain/gtv/GtvAdapter : com/google/gson/JsonDeserializer, com/google/gson/JsonSerializer {
+	public fun <init> ()V
+	public fun <init> (Z)V
+	public synthetic fun <init> (ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (ZZ)V
+	public synthetic fun <init> (ZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun deserialize (Lcom/google/gson/JsonElement;Ljava/lang/reflect/Type;Lcom/google/gson/JsonDeserializationContext;)Ljava/lang/Object;
+	public fun deserialize (Lcom/google/gson/JsonElement;Ljava/lang/reflect/Type;Lcom/google/gson/JsonDeserializationContext;)Lnet/postchain/gtv/Gtv;
+	public final fun getStrict ()Z
+	public final fun getSupportBigInteger ()Z
+	public synthetic fun serialize (Ljava/lang/Object;Ljava/lang/reflect/Type;Lcom/google/gson/JsonSerializationContext;)Lcom/google/gson/JsonElement;
+	public fun serialize (Lnet/postchain/gtv/Gtv;Ljava/lang/reflect/Type;Lcom/google/gson/JsonSerializationContext;)Lcom/google/gson/JsonElement;
+}
+
+public synthetic class net/postchain/gtv/GtvAdapter$WhenMappings {
+	public static final synthetic field $EnumSwitchMapping$0 [I
+}
+
+public final class net/postchain/gtv/GtvArray : net/postchain/gtv/GtvCollection {
+	public fun <init> ([Lnet/postchain/gtv/Gtv;)V
+	public fun asArray ()[Lnet/postchain/gtv/Gtv;
+	public fun asPrimitive ()Ljava/lang/Object;
+	public final fun component1 ()[Lnet/postchain/gtv/Gtv;
+	public final fun copy ([Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/GtvArray;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/GtvArray;[Lnet/postchain/gtv/Gtv;ILjava/lang/Object;)Lnet/postchain/gtv/GtvArray;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun get (I)Lnet/postchain/gtv/Gtv;
+	public final fun getArray ()[Lnet/postchain/gtv/Gtv;
+	public fun getRawGtv ()Lnet/postchain/gtv/gtvmessages/RawGtv;
+	public fun getSize ()I
+	public fun getType ()Lnet/postchain/gtv/GtvType;
+	public fun hashCode ()I
+	public fun nrOfBytes ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/GtvBigInteger : net/postchain/gtv/GtvPrimitive {
+	public fun <init> (Ljava/math/BigInteger;)V
+	public fun asBigInteger ()Ljava/math/BigInteger;
+	public fun asPrimitive ()Ljava/lang/Object;
+	public final fun component1 ()Ljava/math/BigInteger;
+	public final fun copy (Ljava/math/BigInteger;)Lnet/postchain/gtv/GtvBigInteger;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/GtvBigInteger;Ljava/math/BigInteger;ILjava/lang/Object;)Lnet/postchain/gtv/GtvBigInteger;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInteger ()Ljava/math/BigInteger;
+	public fun getRawGtv ()Lnet/postchain/gtv/gtvmessages/RawGtv;
+	public fun getType ()Lnet/postchain/gtv/GtvType;
+	public fun hashCode ()I
+	public fun nrOfBytes ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/GtvByteArray : net/postchain/gtv/GtvPrimitive {
+	public fun <init> ([B)V
+	public fun asByteArray (Z)[B
+	public fun asPrimitive ()Ljava/lang/Object;
+	public final fun component1 ()[B
+	public final fun copy ([B)Lnet/postchain/gtv/GtvByteArray;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/GtvByteArray;[BILjava/lang/Object;)Lnet/postchain/gtv/GtvByteArray;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBytearray ()[B
+	public fun getRawGtv ()Lnet/postchain/gtv/gtvmessages/RawGtv;
+	public fun getType ()Lnet/postchain/gtv/GtvType;
+	public fun hashCode ()I
+	public fun nrOfBytes ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class net/postchain/gtv/GtvCollection : net/postchain/gtv/AbstractGtv {
+	public fun <init> ()V
+	public abstract fun getSize ()I
+}
+
+public final class net/postchain/gtv/GtvDecoder {
+	public static final field INSTANCE Lnet/postchain/gtv/GtvDecoder;
+	public final fun decodeGtv (Ljava/io/InputStream;)Lnet/postchain/gtv/Gtv;
+	public final fun decodeGtv ([B)Lnet/postchain/gtv/Gtv;
+	public final fun fromRawGtv (Lnet/postchain/gtv/gtvmessages/RawGtv;)Lnet/postchain/gtv/Gtv;
+}
+
+public final class net/postchain/gtv/GtvDictionary : net/postchain/gtv/GtvCollection {
+	public static final field Companion Lnet/postchain/gtv/GtvDictionary$Companion;
+	public synthetic fun <init> (Ljava/util/Map;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun asDict ()Ljava/util/Map;
+	public fun asPrimitive ()Ljava/lang/Object;
+	public final fun component1 ()Ljava/util/Map;
+	public final fun copy (Ljava/util/Map;)Lnet/postchain/gtv/GtvDictionary;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/GtvDictionary;Ljava/util/Map;ILjava/lang/Object;)Lnet/postchain/gtv/GtvDictionary;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun get (Ljava/lang/String;)Lnet/postchain/gtv/Gtv;
+	public final fun getDict ()Ljava/util/Map;
+	public fun getRawGtv ()Lnet/postchain/gtv/gtvmessages/RawGtv;
+	public fun getSize ()I
+	public fun getType ()Lnet/postchain/gtv/GtvType;
+	public fun hashCode ()I
+	public fun nrOfBytes ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/GtvDictionary$Companion {
+	public final fun build (Ljava/util/Map;)Lnet/postchain/gtv/GtvDictionary;
+}
+
+public final class net/postchain/gtv/GtvEncoder {
+	public static final field INSTANCE Lnet/postchain/gtv/GtvEncoder;
+	public final fun encodeGtv (Lnet/postchain/gtv/Gtv;)[B
+}
+
+public final class net/postchain/gtv/GtvException : java/io/IOException {
+	public fun <init> (Ljava/lang/String;)V
+}
+
+public final class net/postchain/gtv/GtvExtensionsKt {
+	public static final fun generateProof (Lnet/postchain/gtv/Gtv;Ljava/util/List;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;
+	public static final fun generateProof (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/path/GtvPathSet;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;
+	public static final fun merkleHash (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)[B
+	public static final fun merkleHashSummary (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+}
+
+public final class net/postchain/gtv/GtvFactory {
+	public static final field INSTANCE Lnet/postchain/gtv/GtvFactory;
+	public final fun decodeGtv ([B)Lnet/postchain/gtv/Gtv;
+	public final fun gtv (J)Lnet/postchain/gtv/GtvInteger;
+	public final fun gtv (Ljava/lang/String;)Lnet/postchain/gtv/GtvString;
+	public final fun gtv (Ljava/math/BigInteger;)Lnet/postchain/gtv/GtvBigInteger;
+	public final fun gtv (Ljava/util/List;)Lnet/postchain/gtv/GtvArray;
+	public final fun gtv (Ljava/util/Map;)Lnet/postchain/gtv/GtvDictionary;
+	public final fun gtv (Lnet/postchain/common/BlockchainRid;)Lnet/postchain/gtv/GtvByteArray;
+	public final fun gtv (Lnet/postchain/common/types/WrappedByteArray;)Lnet/postchain/gtv/GtvByteArray;
+	public final fun gtv (Z)Lnet/postchain/gtv/GtvInteger;
+	public final fun gtv ([B)Lnet/postchain/gtv/GtvByteArray;
+	public final fun gtv ([Lkotlin/Pair;)Lnet/postchain/gtv/GtvDictionary;
+	public final fun gtv ([Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/GtvArray;
+	public final fun makeDictPair (Ljava/lang/String;Lnet/postchain/gtv/gtvmessages/RawGtv;)Lnet/postchain/gtv/gtvmessages/DictPair;
+}
+
+public final class net/postchain/gtv/GtvFactoryKt {
+	public static final fun toLong (Z)J
+}
+
+public final class net/postchain/gtv/GtvFileReader {
+	public static final field INSTANCE Lnet/postchain/gtv/GtvFileReader;
+	public final fun readFile (Ljava/io/File;)Lnet/postchain/gtv/Gtv;
+	public final fun readFile (Ljava/lang/String;)Lnet/postchain/gtv/Gtv;
+}
+
+public final class net/postchain/gtv/GtvInteger : net/postchain/gtv/GtvPrimitive {
+	public fun <init> (J)V
+	public fun asBoolean ()Z
+	public fun asInteger ()J
+	public fun asPrimitive ()Ljava/lang/Object;
+	public final fun component1 ()J
+	public final fun copy (J)Lnet/postchain/gtv/GtvInteger;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/GtvInteger;JILjava/lang/Object;)Lnet/postchain/gtv/GtvInteger;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInteger ()J
+	public fun getRawGtv ()Lnet/postchain/gtv/gtvmessages/RawGtv;
+	public fun getType ()Lnet/postchain/gtv/GtvType;
+	public fun hashCode ()I
+	public fun nrOfBytes ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/GtvNull : net/postchain/gtv/GtvPrimitive {
+	public static final field INSTANCE Lnet/postchain/gtv/GtvNull;
+	public fun asPrimitive ()Ljava/lang/Object;
+	public fun getRawGtv ()Lnet/postchain/gtv/gtvmessages/RawGtv;
+	public fun getType ()Lnet/postchain/gtv/GtvType;
+	public fun isNull ()Z
+	public fun nrOfBytes ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class net/postchain/gtv/GtvPrimitive : net/postchain/gtv/AbstractGtv {
+	public fun <init> ()V
+}
+
+public final class net/postchain/gtv/GtvString : net/postchain/gtv/GtvPrimitive {
+	public fun <init> (Ljava/lang/String;)V
+	public fun asByteArray (Z)[B
+	public fun asPrimitive ()Ljava/lang/Object;
+	public fun asString ()Ljava/lang/String;
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lnet/postchain/gtv/GtvString;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/GtvString;Ljava/lang/String;ILjava/lang/Object;)Lnet/postchain/gtv/GtvString;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getRawGtv ()Lnet/postchain/gtv/gtvmessages/RawGtv;
+	public final fun getString ()Ljava/lang/String;
+	public fun getType ()Lnet/postchain/gtv/GtvType;
+	public fun hashCode ()I
+	public fun nrOfBytes ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/GtvType : java/lang/Enum {
+	public static final field ARRAY Lnet/postchain/gtv/GtvType;
+	public static final field BIGINTEGER Lnet/postchain/gtv/GtvType;
+	public static final field BYTEARRAY Lnet/postchain/gtv/GtvType;
+	public static final field Companion Lnet/postchain/gtv/GtvType$Companion;
+	public static final field DICT Lnet/postchain/gtv/GtvType;
+	public static final field INTEGER Lnet/postchain/gtv/GtvType;
+	public static final field NULL Lnet/postchain/gtv/GtvType;
+	public static final field STRING Lnet/postchain/gtv/GtvType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getS ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lnet/postchain/gtv/GtvType;
+	public static fun values ()[Lnet/postchain/gtv/GtvType;
+}
+
+public final class net/postchain/gtv/GtvType$Companion {
+	public final fun fromString (Ljava/lang/String;)Lnet/postchain/gtv/GtvType;
+}
+
+public final class net/postchain/gtv/GtvTypeException : net/postchain/common/exception/UserMistake {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Exception;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Exception;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+}
+
+public abstract class net/postchain/gtv/GtvVirtual : net/postchain/gtv/GtvCollection {
+	public fun <init> (Lnet/postchain/gtv/merkle/proof/MerkleProofElement;)V
+	public final fun getGtvMerkleProofTree ()Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;
+}
+
+public final class net/postchain/gtv/GtvVirtualArray : net/postchain/gtv/GtvVirtual {
+	public fun <init> (Lnet/postchain/gtv/merkle/proof/MerkleProofElement;[Lnet/postchain/gtv/Gtv;)V
+	public fun asArray ()[Lnet/postchain/gtv/Gtv;
+	public fun asPrimitive ()Ljava/lang/Object;
+	public final fun component1 ()Lnet/postchain/gtv/merkle/proof/MerkleProofElement;
+	public final fun component2 ()[Lnet/postchain/gtv/Gtv;
+	public final fun copy (Lnet/postchain/gtv/merkle/proof/MerkleProofElement;[Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/GtvVirtualArray;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/GtvVirtualArray;Lnet/postchain/gtv/merkle/proof/MerkleProofElement;[Lnet/postchain/gtv/Gtv;ILjava/lang/Object;)Lnet/postchain/gtv/GtvVirtualArray;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun get (I)Lnet/postchain/gtv/Gtv;
+	public final fun getArray ()[Lnet/postchain/gtv/Gtv;
+	public final fun getProofElement ()Lnet/postchain/gtv/merkle/proof/MerkleProofElement;
+	public fun getRawGtv ()Lnet/postchain/gtv/gtvmessages/RawGtv;
+	public fun getSize ()I
+	public fun getType ()Lnet/postchain/gtv/GtvType;
+	public fun hashCode ()I
+	public final fun isKeyPresent (I)Z
+	public fun nrOfBytes ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/GtvVirtualDictionary : net/postchain/gtv/GtvVirtual {
+	public fun <init> (Lnet/postchain/gtv/merkle/proof/MerkleProofElement;Ljava/util/Map;Ljava/lang/Integer;)V
+	public synthetic fun <init> (Lnet/postchain/gtv/merkle/proof/MerkleProofElement;Ljava/util/Map;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun asDict ()Ljava/util/Map;
+	public fun asPrimitive ()Ljava/lang/Object;
+	public final fun component1 ()Lnet/postchain/gtv/merkle/proof/MerkleProofElement;
+	public final fun component2 ()Ljava/util/Map;
+	public final fun component3 ()Ljava/lang/Integer;
+	public final fun copy (Lnet/postchain/gtv/merkle/proof/MerkleProofElement;Ljava/util/Map;Ljava/lang/Integer;)Lnet/postchain/gtv/GtvVirtualDictionary;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/GtvVirtualDictionary;Lnet/postchain/gtv/merkle/proof/MerkleProofElement;Ljava/util/Map;Ljava/lang/Integer;ILjava/lang/Object;)Lnet/postchain/gtv/GtvVirtualDictionary;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun get (Ljava/lang/String;)Lnet/postchain/gtv/Gtv;
+	public final fun getDict ()Ljava/util/Map;
+	public final fun getProofElement ()Lnet/postchain/gtv/merkle/proof/MerkleProofElement;
+	public fun getRawGtv ()Lnet/postchain/gtv/gtvmessages/RawGtv;
+	public fun getSize ()I
+	public final fun getSize ()Ljava/lang/Integer;
+	public fun getType ()Lnet/postchain/gtv/GtvType;
+	public fun hashCode ()I
+	public final fun isKeyPresent (Ljava/lang/String;)Z
+	public fun nrOfBytes ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/GtvjsonKt {
+	public static final fun gtvToJSON (Lnet/postchain/gtv/Gtv;Lcom/google/gson/Gson;)Ljava/lang/String;
+	public static final fun makeLenientGtvGson ()Lcom/google/gson/Gson;
+	public static final fun makeLenientGtvGsonBuilder ()Lcom/google/gson/GsonBuilder;
+	public static final fun makeStrictGtvGson ()Lcom/google/gson/Gson;
+	public static final fun makeStrictGvtGsonBuilder ()Lcom/google/gson/GsonBuilder;
+	public static final fun make_gtv_gson ()Lcom/google/gson/Gson;
+	public static final fun make_gtv_gson_builder ()Lcom/google/gson/GsonBuilder;
+}
+
+public final class net/postchain/gtv/ListmapKt {
+	public static final fun gtvToListMapAndPrimitives (Lnet/postchain/gtv/Gtv;)Ljava/lang/Object;
+	public static final fun listMapAndPrimitivesToGtv (Ljava/lang/Object;)Lnet/postchain/gtv/Gtv;
+}
+
+public synthetic class net/postchain/gtv/ListmapKt$WhenMappings {
+	public static final synthetic field $EnumSwitchMapping$0 [I
+}
+
+public final class net/postchain/gtv/PrettyKt {
+	public static final field INDENT I
+	public static final fun pretty (Lnet/postchain/gtv/Gtv;I)Ljava/lang/String;
+	public static synthetic fun pretty$default (Lnet/postchain/gtv/Gtv;IILjava/lang/Object;)Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/UtilKt {
+	public static final fun getESCAPE_GTV ()Lorg/apache/commons/text/translate/AggregateTranslator;
+}
+
+public final class net/postchain/gtv/builder/GtvBuilder {
+	public static final field Companion Lnet/postchain/gtv/builder/GtvBuilder$Companion;
+	public fun <init> ()V
+	public fun <init> (Lnet/postchain/gtv/Gtv;)V
+	public synthetic fun <init> (Lnet/postchain/gtv/Gtv;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun build ()Lnet/postchain/gtv/Gtv;
+	public final fun update (Lnet/postchain/gtv/Gtv;[Ljava/lang/String;)V
+	public final fun update (Lnet/postchain/gtv/builder/GtvBuilder$GtvNode;[Ljava/lang/String;)V
+}
+
+public final class net/postchain/gtv/builder/GtvBuilder$Companion {
+}
+
+public final class net/postchain/gtv/builder/GtvBuilder$GtvArrayMerge : java/lang/Enum {
+	public static final field APPEND Lnet/postchain/gtv/builder/GtvBuilder$GtvArrayMerge;
+	public static final field Companion Lnet/postchain/gtv/builder/GtvBuilder$GtvArrayMerge$Companion;
+	public static final field PREPEND Lnet/postchain/gtv/builder/GtvBuilder$GtvArrayMerge;
+	public static final field REPLACE Lnet/postchain/gtv/builder/GtvBuilder$GtvArrayMerge;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lnet/postchain/gtv/builder/GtvBuilder$GtvArrayMerge;
+	public static fun values ()[Lnet/postchain/gtv/builder/GtvBuilder$GtvArrayMerge;
+}
+
+public final class net/postchain/gtv/builder/GtvBuilder$GtvArrayMerge$Companion {
+	public final fun parse (Ljava/lang/String;)Lnet/postchain/gtv/builder/GtvBuilder$GtvArrayMerge;
+}
+
+public final class net/postchain/gtv/builder/GtvBuilder$GtvArrayNode : net/postchain/gtv/builder/GtvBuilder$GtvNode {
+	public fun <init> (Ljava/util/List;Lnet/postchain/gtv/builder/GtvBuilder$GtvArrayMerge;)V
+	public fun <init> (Lnet/postchain/gtv/GtvArray;Lnet/postchain/gtv/builder/GtvBuilder$GtvArrayMerge;)V
+	public fun asArray ()Lnet/postchain/gtv/builder/GtvBuilder$GtvArrayNode;
+	public final fun getValues ()[Lnet/postchain/gtv/Gtv;
+	public fun merge (Lnet/postchain/gtv/Gtv;Ljava/util/List;)Lnet/postchain/gtv/Gtv;
+	public synthetic fun toGtv ()Lnet/postchain/gtv/Gtv;
+	public fun toGtv ()Lnet/postchain/gtv/GtvArray;
+	public fun type ()Lnet/postchain/gtv/GtvType;
+}
+
+public synthetic class net/postchain/gtv/builder/GtvBuilder$GtvArrayNode$WhenMappings {
+	public static final synthetic field $EnumSwitchMapping$0 [I
+}
+
+public final class net/postchain/gtv/builder/GtvBuilder$GtvDictEntry {
+	public fun <init> (Lnet/postchain/gtv/builder/GtvBuilder$GtvNode;Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge;)V
+	public final fun getMerge ()Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge;
+	public final fun getValue ()Lnet/postchain/gtv/builder/GtvBuilder$GtvNode;
+}
+
+public final class net/postchain/gtv/builder/GtvBuilder$GtvDictMerge : java/lang/Enum {
+	public static final field Companion Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge$Companion;
+	public static final field KEEP_NEW Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge;
+	public static final field KEEP_OLD Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge;
+	public static final field REPLACE Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge;
+	public static final field STRICT Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge;
+	public static fun values ()[Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge;
+}
+
+public final class net/postchain/gtv/builder/GtvBuilder$GtvDictMerge$Companion {
+	public final fun parseDict (Ljava/lang/String;)Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge;
+	public final fun parseEntry (Ljava/lang/String;)Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge;
+}
+
+public final class net/postchain/gtv/builder/GtvBuilder$GtvDictNode : net/postchain/gtv/builder/GtvBuilder$GtvNode {
+	public fun <init> (Ljava/util/Map;Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge;)V
+	public fun <init> (Lnet/postchain/gtv/GtvDictionary;Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge;)V
+	public fun asDict ()Lnet/postchain/gtv/builder/GtvBuilder$GtvDictNode;
+	public final fun getValues ()Ljava/util/Map;
+	public fun merge (Lnet/postchain/gtv/Gtv;Ljava/util/List;)Lnet/postchain/gtv/Gtv;
+	public synthetic fun toGtv ()Lnet/postchain/gtv/Gtv;
+	public fun toGtv ()Lnet/postchain/gtv/GtvDictionary;
+	public fun type ()Lnet/postchain/gtv/GtvType;
+}
+
+public synthetic class net/postchain/gtv/builder/GtvBuilder$GtvDictNode$WhenMappings {
+	public static final synthetic field $EnumSwitchMapping$0 [I
+}
+
+public abstract class net/postchain/gtv/builder/GtvBuilder$GtvNode {
+	public static final field Companion Lnet/postchain/gtv/builder/GtvBuilder$GtvNode$Companion;
+	public fun asArray ()Lnet/postchain/gtv/builder/GtvBuilder$GtvArrayNode;
+	public fun asDict ()Lnet/postchain/gtv/builder/GtvBuilder$GtvDictNode;
+	public abstract fun merge (Lnet/postchain/gtv/Gtv;Ljava/util/List;)Lnet/postchain/gtv/Gtv;
+	public abstract fun toGtv ()Lnet/postchain/gtv/Gtv;
+	public abstract fun type ()Lnet/postchain/gtv/GtvType;
+}
+
+public final class net/postchain/gtv/builder/GtvBuilder$GtvNode$Companion {
+	public final fun decode (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/builder/GtvBuilder$GtvNode;
+}
+
+public synthetic class net/postchain/gtv/builder/GtvBuilder$GtvNode$Companion$WhenMappings {
+	public static final synthetic field $EnumSwitchMapping$0 [I
+}
+
+public final class net/postchain/gtv/builder/GtvBuilder$GtvTermNode : net/postchain/gtv/builder/GtvBuilder$GtvNode {
+	public fun <init> (Lnet/postchain/gtv/Gtv;)V
+	public fun merge (Lnet/postchain/gtv/Gtv;Ljava/util/List;)Lnet/postchain/gtv/Gtv;
+	public fun toGtv ()Lnet/postchain/gtv/Gtv;
+	public fun type ()Lnet/postchain/gtv/GtvType;
+}
+
+public class net/postchain/gtv/gtvmessages/DictPair : com/beanit/jasn1/ber/types/BerType, java/io/Serializable {
+	public field code [B
+	public field name Lcom/beanit/jasn1/ber/types/string/BerUTF8String;
+	public static final field tag Lcom/beanit/jasn1/ber/BerTag;
+	public field value Lnet/postchain/gtv/gtvmessages/RawGtv;
+	public fun <init> ()V
+	public fun <init> (Lcom/beanit/jasn1/ber/types/string/BerUTF8String;Lnet/postchain/gtv/gtvmessages/RawGtv;)V
+	public fun <init> ([B)V
+	public fun appendAsString (Ljava/lang/StringBuilder;I)V
+	public fun decode (Ljava/io/InputStream;)I
+	public fun decode (Ljava/io/InputStream;Z)I
+	public fun encode (Ljava/io/OutputStream;)I
+	public fun encode (Ljava/io/OutputStream;Z)I
+	public fun encodeAndSave (I)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public class net/postchain/gtv/gtvmessages/RawGtv : com/beanit/jasn1/ber/types/BerType, java/io/Serializable {
+	public field array Lnet/postchain/gtv/gtvmessages/RawGtv$Array;
+	public field bigInteger Lcom/beanit/jasn1/ber/types/BerInteger;
+	public field byteArray Lcom/beanit/jasn1/ber/types/BerOctetString;
+	public field code [B
+	public field dict Lnet/postchain/gtv/gtvmessages/RawGtv$Dict;
+	public field integer Lcom/beanit/jasn1/ber/types/BerInteger;
+	public field null_ Lcom/beanit/jasn1/ber/types/BerNull;
+	public field string Lcom/beanit/jasn1/ber/types/string/BerUTF8String;
+	public fun <init> ()V
+	public fun <init> (Lcom/beanit/jasn1/ber/types/BerNull;Lcom/beanit/jasn1/ber/types/BerOctetString;Lcom/beanit/jasn1/ber/types/string/BerUTF8String;Lcom/beanit/jasn1/ber/types/BerInteger;Lnet/postchain/gtv/gtvmessages/RawGtv$Dict;Lnet/postchain/gtv/gtvmessages/RawGtv$Array;Lcom/beanit/jasn1/ber/types/BerInteger;)V
+	public fun <init> ([B)V
+	public fun appendAsString (Ljava/lang/StringBuilder;I)V
+	public fun decode (Ljava/io/InputStream;)I
+	public fun decode (Ljava/io/InputStream;Lcom/beanit/jasn1/ber/BerTag;)I
+	public fun encode (Ljava/io/OutputStream;)I
+	public fun encodeAndSave (I)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public class net/postchain/gtv/gtvmessages/RawGtv$Array : com/beanit/jasn1/ber/types/BerType, java/io/Serializable {
+	public field code [B
+	public field seqOf Ljava/util/List;
+	public static final field tag Lcom/beanit/jasn1/ber/BerTag;
+	public fun <init> ()V
+	public fun <init> (Ljava/util/List;)V
+	public fun <init> ([B)V
+	public fun appendAsString (Ljava/lang/StringBuilder;I)V
+	public fun decode (Ljava/io/InputStream;)I
+	public fun decode (Ljava/io/InputStream;Z)I
+	public fun encode (Ljava/io/OutputStream;)I
+	public fun encode (Ljava/io/OutputStream;Z)I
+	public fun encodeAndSave (I)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public class net/postchain/gtv/gtvmessages/RawGtv$Dict : com/beanit/jasn1/ber/types/BerType, java/io/Serializable {
+	public field code [B
+	public field seqOf Ljava/util/List;
+	public static final field tag Lcom/beanit/jasn1/ber/BerTag;
+	public fun <init> ()V
+	public fun <init> (Ljava/util/List;)V
+	public fun <init> ([B)V
+	public fun appendAsString (Ljava/lang/StringBuilder;I)V
+	public fun decode (Ljava/io/InputStream;)I
+	public fun decode (Ljava/io/InputStream;Z)I
+	public fun encode (Ljava/io/OutputStream;)I
+	public fun encode (Ljava/io/OutputStream;Z)I
+	public fun encodeAndSave (I)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/gtvml/GtvMLEncoder {
+	public static final field INSTANCE Lnet/postchain/gtv/gtvml/GtvMLEncoder;
+	public final fun encodeGTXMLValueToJAXBElement (Lnet/postchain/gtv/Gtv;)Ljakarta/xml/bind/JAXBElement;
+	public final fun encodeXML (Lnet/postchain/gtv/Gtv;Ljava/io/Writer;Z)V
+	public static synthetic fun encodeXML$default (Lnet/postchain/gtv/gtvml/GtvMLEncoder;Lnet/postchain/gtv/Gtv;Ljava/io/Writer;ZILjava/lang/Object;)V
+	public final fun encodeXMLGtv (Lnet/postchain/gtv/Gtv;)Ljava/lang/String;
+	public final fun encodeXMLGtvStrict (Lnet/postchain/gtv/Gtv;)Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/gtvml/GtvMLEscapeHandler : org/glassfish/jaxb/core/marshaller/CharacterEscapeHandler {
+	public fun <init> (Z)V
+	public fun escape ([CIIZLjava/io/Writer;)V
+	public final fun getStrict ()Z
+}
+
+public final class net/postchain/gtv/gtvml/GtvMLParser {
+	public static final field INSTANCE Lnet/postchain/gtv/gtvml/GtvMLParser;
+	public final fun parseGtvML (Ljava/lang/String;Ljava/util/Map;)Lnet/postchain/gtv/Gtv;
+	public static synthetic fun parseGtvML$default (Lnet/postchain/gtv/gtvml/GtvMLParser;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)Lnet/postchain/gtv/Gtv;
+	public final fun parseJAXBElementToGtvML (Ljakarta/xml/bind/JAXBElement;Ljava/util/Map;)Lnet/postchain/gtv/Gtv;
+}
+
+public synthetic class net/postchain/gtv/gtvml/GtvMLParser$WhenMappings {
+	public static final synthetic field $EnumSwitchMapping$0 [I
+}
+
+public class net/postchain/gtv/gtxml/ArrayType {
+	protected field elements Ljava/util/List;
+	public fun <init> ()V
+	public fun getElements ()Ljava/util/List;
+}
+
+public class net/postchain/gtv/gtxml/BlockType {
+	protected field transaction Ljava/util/List;
+	public fun <init> ()V
+	public fun getTransaction ()Ljava/util/List;
+}
+
+public class net/postchain/gtv/gtxml/DictType {
+	protected field entry Ljava/util/List;
+	public fun <init> ()V
+	public fun getEntry ()Ljava/util/List;
+}
+
+public class net/postchain/gtv/gtxml/EntryType {
+	protected field key Ljava/lang/String;
+	protected field value Ljakarta/xml/bind/JAXBElement;
+	public fun <init> ()V
+	public fun getKey ()Ljava/lang/String;
+	public fun getValue ()Ljakarta/xml/bind/JAXBElement;
+	public fun setKey (Ljava/lang/String;)V
+	public fun setValue (Ljakarta/xml/bind/JAXBElement;)V
+}
+
+public class net/postchain/gtv/gtxml/ObjectFactory {
+	public fun <init> ()V
+	public fun createArray (Lnet/postchain/gtv/gtxml/ArrayType;)Ljakarta/xml/bind/JAXBElement;
+	public fun createArrayType ()Lnet/postchain/gtv/gtxml/ArrayType;
+	public fun createBigint (Ljava/math/BigInteger;)Ljakarta/xml/bind/JAXBElement;
+	public fun createBlockType ()Lnet/postchain/gtv/gtxml/BlockType;
+	public fun createBytea ([B)Ljakarta/xml/bind/JAXBElement;
+	public fun createDict (Lnet/postchain/gtv/gtxml/DictType;)Ljakarta/xml/bind/JAXBElement;
+	public fun createDictType ()Lnet/postchain/gtv/gtxml/DictType;
+	public fun createEntryType ()Lnet/postchain/gtv/gtxml/EntryType;
+	public fun createInt (Ljava/lang/Long;)Ljakarta/xml/bind/JAXBElement;
+	public fun createNull (Ljava/lang/Object;)Ljakarta/xml/bind/JAXBElement;
+	public fun createOperationType ()Lnet/postchain/gtv/gtxml/OperationType;
+	public fun createOperationsType ()Lnet/postchain/gtv/gtxml/OperationsType;
+	public fun createParam (Lnet/postchain/gtv/gtxml/ParamType;)Ljakarta/xml/bind/JAXBElement;
+	public fun createParamType ()Lnet/postchain/gtv/gtxml/ParamType;
+	public fun createSignaturesType ()Lnet/postchain/gtv/gtxml/SignaturesType;
+	public fun createSignersType ()Lnet/postchain/gtv/gtxml/SignersType;
+	public fun createString (Ljava/lang/String;)Ljakarta/xml/bind/JAXBElement;
+	public fun createTest (Lnet/postchain/gtv/gtxml/TestType;)Ljakarta/xml/bind/JAXBElement;
+	public fun createTestType ()Lnet/postchain/gtv/gtxml/TestType;
+	public fun createTransaction (Lnet/postchain/gtv/gtxml/TransactionType;)Ljakarta/xml/bind/JAXBElement;
+	public fun createTransactionType ()Lnet/postchain/gtv/gtxml/TransactionType;
+}
+
+public class net/postchain/gtv/gtxml/OperationType {
+	protected field name Ljava/lang/String;
+	protected field parameters Ljava/util/List;
+	public fun <init> ()V
+	public fun getName ()Ljava/lang/String;
+	public fun getParameters ()Ljava/util/List;
+	public fun setName (Ljava/lang/String;)V
+}
+
+public class net/postchain/gtv/gtxml/OperationsType {
+	protected field operation Ljava/util/List;
+	public fun <init> ()V
+	public fun getOperation ()Ljava/util/List;
+}
+
+public class net/postchain/gtv/gtxml/ParamType {
+	protected field key Ljava/lang/String;
+	protected field type Ljava/lang/String;
+	public fun <init> ()V
+	public fun getKey ()Ljava/lang/String;
+	public fun getType ()Ljava/lang/String;
+	public fun setKey (Ljava/lang/String;)V
+	public fun setType (Ljava/lang/String;)V
+}
+
+public class net/postchain/gtv/gtxml/SignaturesType {
+	protected field signatures Ljava/util/List;
+	public fun <init> ()V
+	public fun getSignatures ()Ljava/util/List;
+}
+
+public class net/postchain/gtv/gtxml/SignersType {
+	protected field signers Ljava/util/List;
+	public fun <init> ()V
+	public fun getSigners ()Ljava/util/List;
+}
+
+public class net/postchain/gtv/gtxml/TestType {
+	protected field block Ljava/util/List;
+	public fun <init> ()V
+	public fun getBlock ()Ljava/util/List;
+}
+
+public class net/postchain/gtv/gtxml/TransactionType {
+	protected field blockchainRID Ljava/lang/String;
+	protected field failure Ljava/lang/Boolean;
+	protected field operations Lnet/postchain/gtv/gtxml/OperationsType;
+	protected field signatures Lnet/postchain/gtv/gtxml/SignaturesType;
+	protected field signers Lnet/postchain/gtv/gtxml/SignersType;
+	public fun <init> ()V
+	public fun getBlockchainRID ()Ljava/lang/String;
+	public fun getOperations ()Lnet/postchain/gtv/gtxml/OperationsType;
+	public fun getSignatures ()Lnet/postchain/gtv/gtxml/SignaturesType;
+	public fun getSigners ()Lnet/postchain/gtv/gtxml/SignersType;
+	public fun isFailure ()Z
+	public fun setBlockchainRID (Ljava/lang/String;)V
+	public fun setFailure (Ljava/lang/Boolean;)V
+	public fun setOperations (Lnet/postchain/gtv/gtxml/OperationsType;)V
+	public fun setSignatures (Lnet/postchain/gtv/gtxml/SignaturesType;)V
+	public fun setSigners (Lnet/postchain/gtv/gtxml/SignersType;)V
+}
+
+public abstract interface annotation class net/postchain/gtv/mapper/DefaultEmpty : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class net/postchain/gtv/mapper/DefaultValue : java/lang/annotation/Annotation {
+	public abstract fun defaultBigInteger ()Ljava/lang/String;
+	public abstract fun defaultBoolean ()Z
+	public abstract fun defaultByteArray ()[B
+	public abstract fun defaultDecimal ()Ljava/lang/String;
+	public abstract fun defaultLong ()J
+	public abstract fun defaultString ()Ljava/lang/String;
+}
+
+public abstract interface class net/postchain/gtv/mapper/FromGtv {
+	public abstract fun fromGtv (Lnet/postchain/gtv/Gtv;)Ljava/lang/Object;
+}
+
+public final class net/postchain/gtv/mapper/GtvObjectMapper {
+	public static final field INSTANCE Lnet/postchain/gtv/mapper/GtvObjectMapper;
+	public final fun default (Ljava/lang/Class;)Ljava/lang/Object;
+	public final fun default (Lkotlin/reflect/KClass;)Ljava/lang/Object;
+	public final fun fromArray (Lnet/postchain/gtv/Gtv;Ljava/lang/Class;Ljava/util/Map;)Ljava/util/List;
+	public final fun fromArray (Lnet/postchain/gtv/Gtv;Lkotlin/reflect/KClass;Ljava/util/Map;)Ljava/util/List;
+	public static synthetic fun fromArray$default (Lnet/postchain/gtv/mapper/GtvObjectMapper;Lnet/postchain/gtv/Gtv;Ljava/lang/Class;Ljava/util/Map;ILjava/lang/Object;)Ljava/util/List;
+	public static synthetic fun fromArray$default (Lnet/postchain/gtv/mapper/GtvObjectMapper;Lnet/postchain/gtv/Gtv;Lkotlin/reflect/KClass;Ljava/util/Map;ILjava/lang/Object;)Ljava/util/List;
+	public final fun fromGtv (Lnet/postchain/gtv/Gtv;Ljava/lang/Class;Ljava/util/Map;)Ljava/lang/Object;
+	public final fun fromGtv (Lnet/postchain/gtv/Gtv;Lkotlin/reflect/KClass;Ljava/util/Map;)Ljava/lang/Object;
+	public static synthetic fun fromGtv$default (Lnet/postchain/gtv/mapper/GtvObjectMapper;Lnet/postchain/gtv/Gtv;Ljava/lang/Class;Ljava/util/Map;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun fromGtv$default (Lnet/postchain/gtv/mapper/GtvObjectMapper;Lnet/postchain/gtv/Gtv;Lkotlin/reflect/KClass;Ljava/util/Map;ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun toGtvArray (Ljava/lang/Object;)Lnet/postchain/gtv/GtvArray;
+	public final fun toGtvDictionary (Ljava/lang/Object;)Lnet/postchain/gtv/GtvDictionary;
+}
+
+public final class net/postchain/gtv/mapper/GtvObjectMapperKt {
+	public static final fun getJavaLangBooleanClass ()Lkotlin/reflect/KClass;
+	public static final fun getJavaLangIntegerClass ()Lkotlin/reflect/KClass;
+	public static final fun getJavaLangLongClass ()Lkotlin/reflect/KClass;
+	public static final fun getJavaLangStringClass ()Lkotlin/reflect/KClass;
+	public static final fun getJavaMathBigDecimalClass ()Lkotlin/reflect/KClass;
+	public static final fun getJavaMathBigIntegerClass ()Lkotlin/reflect/KClass;
+}
+
+public abstract interface annotation class net/postchain/gtv/mapper/Name : java/lang/annotation/Annotation {
+	public abstract fun name ()Ljava/lang/String;
+}
+
+public abstract interface annotation class net/postchain/gtv/mapper/Nested : java/lang/annotation/Annotation {
+	public abstract fun path ()[Ljava/lang/String;
+}
+
+public abstract interface annotation class net/postchain/gtv/mapper/Nullable : java/lang/annotation/Annotation {
+}
+
+public abstract interface annotation class net/postchain/gtv/mapper/RawGtv : java/lang/annotation/Annotation {
+}
+
+public abstract interface class net/postchain/gtv/mapper/ToGtv {
+	public abstract fun toGtv ()Lnet/postchain/gtv/Gtv;
+}
+
+public abstract interface annotation class net/postchain/gtv/mapper/Transient : java/lang/annotation/Annotation {
+	public abstract fun mappedName ()Ljava/lang/String;
+}
+
+public abstract class net/postchain/gtv/merkle/BinaryNodeHashCalculator {
+	public fun <init> (Lnet/postchain/crypto/Digester;)V
+	public abstract fun calculateNodeHash (B[B[B)[B
+	protected final fun calculateNodeHashInternal (B[B[BLkotlin/jvm/functions/Function2;)[B
+	public final fun getDigester ()Lnet/postchain/crypto/Digester;
+}
+
+public class net/postchain/gtv/merkle/BinaryTree {
+	public fun <init> (Lnet/postchain/gtv/merkle/BinaryTreeElement;)V
+	public final fun getRoot ()Lnet/postchain/gtv/merkle/BinaryTreeElement;
+	public final fun maxLevel ()I
+}
+
+public class net/postchain/gtv/merkle/BinaryTreeElement {
+	public fun <init> ()V
+	public fun getNrOfBytes ()I
+	public final fun getPathElement ()Lnet/postchain/gtv/merkle/path/PathElement;
+	public fun getPrefixByte ()B
+	public final fun isPath ()Z
+	public final fun isPathLeaf ()Z
+	protected final fun setPathElement (Lnet/postchain/gtv/merkle/path/PathElement;)V
+}
+
+public abstract class net/postchain/gtv/merkle/BinaryTreeFactory : mu/KLogging {
+	public fun <init> ()V
+	public final fun buildHigherLayer (ILjava/util/List;)Ljava/util/List;
+	protected abstract fun getEmptyPathSet ()Lnet/postchain/gtv/merkle/path/PathSet;
+	public abstract fun getNrOfBytes (Ljava/lang/Object;)I
+	public final fun handleLeaf (Ljava/lang/Object;Lnet/postchain/gtv/merkle/path/PathSet;Z)Lnet/postchain/gtv/merkle/BinaryTreeElement;
+	public static synthetic fun handleLeaf$default (Lnet/postchain/gtv/merkle/BinaryTreeFactory;Ljava/lang/Object;Lnet/postchain/gtv/merkle/path/PathSet;ZILjava/lang/Object;)Lnet/postchain/gtv/merkle/BinaryTreeElement;
+	public final fun handlePrimitiveLeaf (Ljava/lang/Object;Lnet/postchain/gtv/merkle/path/PathSet;)Lnet/postchain/gtv/merkle/BinaryTreeElement;
+	protected abstract fun innerHandleLeaf (Ljava/lang/Object;Lnet/postchain/gtv/merkle/path/PathSet;)Lnet/postchain/gtv/merkle/BinaryTreeElement;
+}
+
+public final class net/postchain/gtv/merkle/CacheElement {
+	public fun <init> (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;)V
+	public fun <init> (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;J)V
+	public final fun component1 ()Lnet/postchain/gtv/Gtv;
+	public final fun component2 ()Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+	public final fun component3 ()J
+	public final fun copy (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;J)Lnet/postchain/gtv/merkle/CacheElement;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/merkle/CacheElement;Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;JILjava/lang/Object;)Lnet/postchain/gtv/merkle/CacheElement;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAge ()J
+	public final fun getMerkleHashSummary ()Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+	public final fun getOrgGtv ()Lnet/postchain/gtv/Gtv;
+	public fun hashCode ()I
+	public final fun setAge (J)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/merkle/CachedLeaf : net/postchain/gtv/merkle/BinaryTreeElement {
+	public fun <init> (Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;)V
+	public final fun component1 ()Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+	public final fun copy (Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;)Lnet/postchain/gtv/merkle/CachedLeaf;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/merkle/CachedLeaf;Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;ILjava/lang/Object;)Lnet/postchain/gtv/merkle/CachedLeaf;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCachedSummary ()Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+	public fun getNrOfBytes ()I
+	public fun getPrefixByte ()B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/merkle/EmptyLeaf : net/postchain/gtv/merkle/BinaryTreeElement {
+	public static final field INSTANCE Lnet/postchain/gtv/merkle/EmptyLeaf;
+	public fun getNrOfBytes ()I
+}
+
+public final class net/postchain/gtv/merkle/GtvArrayHeadNode : net/postchain/gtv/merkle/SubTreeRootNode {
+	public fun <init> (Lnet/postchain/gtv/merkle/BinaryTreeElement;Lnet/postchain/gtv/merkle/BinaryTreeElement;Lnet/postchain/gtv/Gtv;IILnet/postchain/gtv/merkle/path/PathElement;)V
+	public synthetic fun <init> (Lnet/postchain/gtv/merkle/BinaryTreeElement;Lnet/postchain/gtv/merkle/BinaryTreeElement;Lnet/postchain/gtv/Gtv;IILnet/postchain/gtv/merkle/path/PathElement;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun getNrOfBytes ()I
+	public fun getPrefixByte ()B
+	public final fun getSize ()I
+	public final fun getSizeInBytes ()I
+}
+
+public final class net/postchain/gtv/merkle/GtvBinaryTree : net/postchain/gtv/merkle/BinaryTree {
+	public fun <init> (Lnet/postchain/gtv/merkle/BinaryTreeElement;)V
+}
+
+public final class net/postchain/gtv/merkle/GtvBinaryTreeFactory : net/postchain/gtv/merkle/BinaryTreeFactory {
+	public fun <init> ()V
+	public final fun buildFromGtv (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/GtvBinaryTree;
+	public final fun buildFromGtvAndPath (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/path/GtvPathSet;)Lnet/postchain/gtv/merkle/GtvBinaryTree;
+	public final fun buildLeafElements (Ljava/util/List;Lnet/postchain/gtv/merkle/path/GtvPathSet;)Ljava/util/ArrayList;
+	public synthetic fun getEmptyPathSet ()Lnet/postchain/gtv/merkle/path/PathSet;
+	public synthetic fun getNrOfBytes (Ljava/lang/Object;)I
+	public fun getNrOfBytes (Lnet/postchain/gtv/Gtv;)I
+	public synthetic fun innerHandleLeaf (Ljava/lang/Object;Lnet/postchain/gtv/merkle/path/PathSet;)Lnet/postchain/gtv/merkle/BinaryTreeElement;
+}
+
+public final class net/postchain/gtv/merkle/GtvDictHeadNode : net/postchain/gtv/merkle/SubTreeRootNode {
+	public fun <init> (Lnet/postchain/gtv/merkle/BinaryTreeElement;Lnet/postchain/gtv/merkle/BinaryTreeElement;Lnet/postchain/gtv/Gtv;IILnet/postchain/gtv/merkle/path/PathElement;)V
+	public synthetic fun <init> (Lnet/postchain/gtv/merkle/BinaryTreeElement;Lnet/postchain/gtv/merkle/BinaryTreeElement;Lnet/postchain/gtv/Gtv;IILnet/postchain/gtv/merkle/path/PathElement;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun getNrOfBytes ()I
+	public fun getPrefixByte ()B
+	public final fun getSize ()I
+	public final fun getSizeInBytes ()I
+}
+
+public final class net/postchain/gtv/merkle/GtvMerkleBasics {
+	public static final field HASH_PREFIX_NODE_GTV_ARRAY B
+	public static final field HASH_PREFIX_NODE_GTV_DICT B
+	public static final field INSTANCE Lnet/postchain/gtv/merkle/GtvMerkleBasics;
+	public static final field UNKNOWN_COLLECTION_POSITION J
+	public final fun getGtvBinaryTreeFactory ()Lnet/postchain/gtv/merkle/GtvBinaryTreeFactory;
+	public final fun getGtvMerkleHashSummaryFactory ()Lnet/postchain/gtv/merkle/proof/GtvMerkleHashSummaryFactory;
+	public final fun getGtvMerkleProofTreeFactory ()Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTreeFactory;
+	public final fun getGtvVirtualFactory ()Lnet/postchain/gtv/merkle/virtual/GtvVirtualFactory;
+}
+
+public final class net/postchain/gtv/merkle/GtvMerkleHashCalculator : net/postchain/gtv/merkle/MerkleHashCalculator {
+	public fun <init> (Lnet/postchain/crypto/CryptoSystem;)V
+	public fun <init> (Lnet/postchain/crypto/Digester;)V
+	public synthetic fun calculateLeafHash (Ljava/lang/Object;)[B
+	public fun calculateLeafHash (Lnet/postchain/gtv/Gtv;)[B
+	public fun calculateNodeHash (B[B[B)[B
+	public synthetic fun isContainerProofValueLeaf (Ljava/lang/Object;)Z
+	public fun isContainerProofValueLeaf (Lnet/postchain/gtv/Gtv;)Z
+}
+
+synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculator$calculateLeafHash$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function1 {
+	public static final field INSTANCE Lnet/postchain/gtv/merkle/GtvMerkleHashCalculator$calculateLeafHash$1;
+	public synthetic fun invoke (Ljava/lang/Object;)Ljava/lang/Object;
+	public final fun invoke (Lnet/postchain/gtv/Gtv;)[B
+}
+
+synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculator$calculateLeafHash$2 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
+	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+	public final fun invoke ([BLnet/postchain/crypto/Digester;)[B
+}
+
+synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculator$calculateNodeHash$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
+	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+	public final fun invoke ([BLnet/postchain/crypto/Digester;)[B
+}
+
+public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorKt {
+	public static final fun serializeGtvToByteArray (Lnet/postchain/gtv/Gtv;)[B
+}
+
+public final class net/postchain/gtv/merkle/Leaf : net/postchain/gtv/merkle/BinaryTreeElement {
+	public fun <init> (Ljava/lang/Object;ILnet/postchain/gtv/merkle/path/PathElement;)V
+	public synthetic fun <init> (Ljava/lang/Object;ILnet/postchain/gtv/merkle/path/PathElement;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getContent ()Ljava/lang/Object;
+	public fun getNrOfBytes ()I
+	public fun getPrefixByte ()B
+	public final fun getSizeInBytes ()I
+}
+
+public final class net/postchain/gtv/merkle/MerkleBasics {
+	public static final field HASH_PREFIX_LEAF B
+	public static final field HASH_PREFIX_NODE B
+	public static final field INSTANCE Lnet/postchain/gtv/merkle/MerkleBasics;
+	public static final field UNKNOWN_SIZE_IN_BYTE I
+	public final fun hashingFun ([BLnet/postchain/crypto/Digester;)[B
+}
+
+public abstract class net/postchain/gtv/merkle/MerkleHashCalculator : net/postchain/gtv/merkle/BinaryNodeHashCalculator {
+	public fun <init> (Lnet/postchain/crypto/Digester;)V
+	protected final fun calculateHashOfValueInternal (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;)[B
+	public abstract fun calculateLeafHash (Ljava/lang/Object;)[B
+	public fun isContainerProofValueLeaf (Ljava/lang/Object;)Z
+}
+
+public abstract class net/postchain/gtv/merkle/MerkleHashMemoization {
+	public fun <init> ()V
+	public abstract fun add (Ljava/lang/Object;Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;)V
+	public abstract fun findMerkleHash (Ljava/lang/Object;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+}
+
+public final class net/postchain/gtv/merkle/MerkleHashSetWithSameGtvJavaHashCode {
+	public static final field AGE_SIZE_BYTES I
+	public static final field CARRIER_SIZE_BYTES I
+	public static final field Companion Lnet/postchain/gtv/merkle/MerkleHashSetWithSameGtvJavaHashCode$Companion;
+	public static final field OVERHEAD_SIZE_BYTES I
+	public static final field SUMMARY_NO_OF_BYTES_SIZE_BYTES I
+	public fun <init> (Ljava/util/Set;)V
+	public final fun addToSet (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;)V
+	public final fun component1 ()Ljava/util/Set;
+	public final fun copy (Ljava/util/Set;)Lnet/postchain/gtv/merkle/MerkleHashSetWithSameGtvJavaHashCode;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/merkle/MerkleHashSetWithSameGtvJavaHashCode;Ljava/util/Set;ILjava/lang/Object;)Lnet/postchain/gtv/merkle/MerkleHashSetWithSameGtvJavaHashCode;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun findFromGtv (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+	public final fun getInternalSet ()Ljava/util/Set;
+	public fun hashCode ()I
+	public final fun prune (Lnet/postchain/gtv/merkle/CacheElement;)Lnet/postchain/gtv/merkle/CacheElement;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/merkle/MerkleHashSetWithSameGtvJavaHashCode$Companion {
+	public final fun build (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;)Lnet/postchain/gtv/merkle/MerkleHashSetWithSameGtvJavaHashCode;
+}
+
+public class net/postchain/gtv/merkle/Node : net/postchain/gtv/merkle/BinaryTreeElement {
+	public fun <init> (Lnet/postchain/gtv/merkle/BinaryTreeElement;Lnet/postchain/gtv/merkle/BinaryTreeElement;)V
+	public final fun getLeft ()Lnet/postchain/gtv/merkle/BinaryTreeElement;
+	public fun getPrefixByte ()B
+	public final fun getRight ()Lnet/postchain/gtv/merkle/BinaryTreeElement;
+}
+
+public class net/postchain/gtv/merkle/SubTreeRootNode : net/postchain/gtv/merkle/Node {
+	public fun <init> (Lnet/postchain/gtv/merkle/BinaryTreeElement;Lnet/postchain/gtv/merkle/BinaryTreeElement;Ljava/lang/Object;Lnet/postchain/gtv/merkle/path/PathElement;)V
+	public synthetic fun <init> (Lnet/postchain/gtv/merkle/BinaryTreeElement;Lnet/postchain/gtv/merkle/BinaryTreeElement;Ljava/lang/Object;Lnet/postchain/gtv/merkle/path/PathElement;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getContent ()Ljava/lang/Object;
+}
+
+public final class net/postchain/gtv/merkle/factory/GtvBinaryTreeFactoryArray {
+	public static final field INSTANCE Lnet/postchain/gtv/merkle/factory/GtvBinaryTreeFactoryArray;
+	public final fun buildFromGtvArray (Lnet/postchain/gtv/GtvArray;Lnet/postchain/gtv/merkle/path/GtvPathSet;)Lnet/postchain/gtv/merkle/BinaryTreeElement;
+}
+
+public final class net/postchain/gtv/merkle/factory/GtvBinaryTreeFactoryDict {
+	public static final field INSTANCE Lnet/postchain/gtv/merkle/factory/GtvBinaryTreeFactoryDict;
+	public final fun buildFromGtvDictionary (Lnet/postchain/gtv/GtvDictionary;Lnet/postchain/gtv/merkle/path/GtvPathSet;)Lnet/postchain/gtv/merkle/GtvDictHeadNode;
+}
+
+public final class net/postchain/gtv/merkle/path/ArrayGtvPathElement : net/postchain/gtv/merkle/path/SearchableGtvPathElement {
+	public fun <init> (Lnet/postchain/gtv/merkle/path/SearchableGtvPathElement;I)V
+	public fun buildGtv ()Lnet/postchain/gtv/Gtv;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getIndex ()I
+	public fun getSearchKey ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/merkle/path/DictGtvPathElement : net/postchain/gtv/merkle/path/SearchableGtvPathElement {
+	public fun <init> (Lnet/postchain/gtv/merkle/path/SearchableGtvPathElement;Ljava/lang/String;)V
+	public fun buildGtv ()Lnet/postchain/gtv/Gtv;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getKey ()Ljava/lang/String;
+	public fun getSearchKey ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/merkle/path/GtvPath : net/postchain/gtv/merkle/path/Path {
+	public static final field GtvPathList Lnet/postchain/gtv/merkle/path/GtvPath$GtvPathList;
+	public fun <init> (Ljava/util/List;)V
+	public final fun debugString ()Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public final fun tail ()Lnet/postchain/gtv/merkle/path/GtvPath;
+}
+
+public final class net/postchain/gtv/merkle/path/GtvPath$GtvPathList : mu/KLogging {
+	public final fun debugRerpresentation (Ljava/util/List;)Ljava/lang/String;
+	public final fun getNO_PATHS ()Lnet/postchain/gtv/merkle/path/GtvPathSet;
+	public final fun getTailIfFirstElementIsArrayOfThisIndex (ILnet/postchain/gtv/merkle/path/GtvPath;)Lnet/postchain/gtv/merkle/path/GtvPath;
+	public final fun getTailIfFirstElementIsDictOfThisKey (Ljava/lang/String;Lnet/postchain/gtv/merkle/path/GtvPath;)Lnet/postchain/gtv/merkle/path/GtvPath;
+}
+
+public abstract class net/postchain/gtv/merkle/path/GtvPathElement : net/postchain/gtv/merkle/path/PathElement {
+	public synthetic fun <init> (Lnet/postchain/gtv/merkle/path/SearchableGtvPathElement;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getPrevious ()Lnet/postchain/gtv/merkle/path/SearchableGtvPathElement;
+}
+
+public final class net/postchain/gtv/merkle/path/GtvPathFactory {
+	public static final field INSTANCE Lnet/postchain/gtv/merkle/path/GtvPathFactory;
+	public final fun buildFromArrayOfPointers ([Ljava/lang/Object;)Lnet/postchain/gtv/merkle/path/GtvPath;
+}
+
+public final class net/postchain/gtv/merkle/path/GtvPathLeafElement : net/postchain/gtv/merkle/path/GtvPathElement, net/postchain/gtv/merkle/path/PathLeafElement {
+	public fun <init> (Lnet/postchain/gtv/merkle/path/SearchableGtvPathElement;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/merkle/path/GtvPathSet : net/postchain/gtv/merkle/path/PathSet {
+	public fun <init> (Ljava/util/Set;)V
+	public fun getPathLeafOrElseAnyCurrentPathElement ()Lnet/postchain/gtv/merkle/path/PathElement;
+	public final fun getPaths ()Ljava/util/Set;
+	public final fun getTailIfFirstElementIsArrayOfThisIndexFromList (I)Lnet/postchain/gtv/merkle/path/GtvPathSet;
+	public final fun getTailIfFirstElementIsDictOfThisKeyFromList (Ljava/lang/String;)Lnet/postchain/gtv/merkle/path/GtvPathSet;
+	public fun isEmpty ()Z
+	public final fun keepOnlyArrayPaths ()Lnet/postchain/gtv/merkle/path/GtvPathSet;
+	public final fun keepOnlyDictPaths ()Lnet/postchain/gtv/merkle/path/GtvPathSet;
+}
+
+synthetic class net/postchain/gtv/merkle/path/GtvPathSet$getTailIfFirstElementIsArrayOfThisIndexFromList$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
+	public final fun invoke (ILnet/postchain/gtv/merkle/path/GtvPath;)Lnet/postchain/gtv/merkle/path/GtvPath;
+	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+synthetic class net/postchain/gtv/merkle/path/GtvPathSet$getTailIfFirstElementIsDictOfThisKeyFromList$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
+	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+	public final fun invoke (Ljava/lang/String;Lnet/postchain/gtv/merkle/path/GtvPath;)Lnet/postchain/gtv/merkle/path/GtvPath;
+}
+
+public class net/postchain/gtv/merkle/path/Path {
+	public fun <init> (Ljava/util/List;)V
+	public final fun getCurrentPathElement ()Lnet/postchain/gtv/merkle/path/PathElement;
+	public final fun getPathElements ()Ljava/util/List;
+	public final fun size ()I
+}
+
+public abstract interface class net/postchain/gtv/merkle/path/PathElement {
+}
+
+public abstract interface class net/postchain/gtv/merkle/path/PathLeafElement : net/postchain/gtv/merkle/path/PathElement {
+}
+
+public abstract interface class net/postchain/gtv/merkle/path/PathSet {
+	public abstract fun getPathLeafOrElseAnyCurrentPathElement ()Lnet/postchain/gtv/merkle/path/PathElement;
+	public abstract fun isEmpty ()Z
+}
+
+public abstract class net/postchain/gtv/merkle/path/SearchableGtvPathElement : net/postchain/gtv/merkle/path/GtvPathElement {
+	public fun <init> (Lnet/postchain/gtv/merkle/path/SearchableGtvPathElement;)V
+	public abstract fun buildGtv ()Lnet/postchain/gtv/Gtv;
+	public abstract fun getSearchKey ()Ljava/lang/Object;
+}
+
+public final class net/postchain/gtv/merkle/proof/GtvMerkleHashSummaryFactory : net/postchain/gtv/merkle/proof/MerkleHashSummaryFactory {
+	public fun <init> (Lnet/postchain/gtv/merkle/GtvBinaryTreeFactory;Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTreeFactory;)V
+	public synthetic fun buildProofTree (Ljava/lang/Object;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/MerkleProofTree;
+	public fun buildProofTree (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;
+	public synthetic fun calculateMerkleRoot (Ljava/lang/Object;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+	public fun calculateMerkleRoot (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+}
+
+public final class net/postchain/gtv/merkle/proof/GtvMerkleProofTree : net/postchain/gtv/merkle/proof/MerkleProofTree, net/postchain/gtv/mapper/ToGtv {
+	public static final field Companion Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree$Companion;
+	public fun <init> (Lnet/postchain/gtv/merkle/proof/MerkleProofElement;I)V
+	public synthetic fun <init> (Lnet/postchain/gtv/merkle/proof/MerkleProofElement;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun toGtv ()Lnet/postchain/gtv/Gtv;
+	public fun toGtv ()Lnet/postchain/gtv/GtvArray;
+}
+
+public final class net/postchain/gtv/merkle/proof/GtvMerkleProofTree$Companion : net/postchain/gtv/mapper/FromGtv {
+	public synthetic fun fromGtv (Lnet/postchain/gtv/Gtv;)Ljava/lang/Object;
+	public fun fromGtv (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;
+}
+
+public final class net/postchain/gtv/merkle/proof/GtvMerkleProofTreeFactory : net/postchain/gtv/merkle/proof/MerkleProofTreeFactory {
+	public fun <init> ()V
+	public final fun buildFromBinaryTree (Lnet/postchain/gtv/merkle/GtvBinaryTree;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;
+	public fun buildFromBinaryTreeInternal (Lnet/postchain/gtv/merkle/BinaryTreeElement;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/MerkleProofElement;
+	public fun buildNodeOfCorrectType (Lnet/postchain/gtv/merkle/Node;Lnet/postchain/gtv/merkle/proof/MerkleProofElement;Lnet/postchain/gtv/merkle/proof/MerkleProofElement;)Lnet/postchain/gtv/merkle/proof/ProofNode;
+	public final fun deserialize (Lnet/postchain/gtv/GtvArray;)Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;
+}
+
+public final class net/postchain/gtv/merkle/proof/GtvMerkleProofTreeKt {
+	public static final field SERIALIZATION_ARRAY_TYPE J
+	public static final field SERIALIZATION_DICT_TYPE J
+	public static final fun merkleHash (Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)[B
+	public static final fun merkleHashSummary (Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+	public static final fun toGtvVirtual (Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;)Lnet/postchain/gtv/GtvVirtual;
+}
+
+public final class net/postchain/gtv/merkle/proof/MerkleHashSummary {
+	public fun <init> ([BI)V
+	public final fun component1 ()[B
+	public final fun component2 ()I
+	public final fun copy ([BI)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;[BIILjava/lang/Object;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMerkleHash ()[B
+	public final fun getNrOfBytes ()I
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class net/postchain/gtv/merkle/proof/MerkleHashSummaryFactory {
+	public fun <init> (Lnet/postchain/gtv/merkle/BinaryTreeFactory;Lnet/postchain/gtv/merkle/proof/MerkleProofTreeFactory;)V
+	public abstract fun buildProofTree (Ljava/lang/Object;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/MerkleProofTree;
+	public abstract fun calculateMerkleRoot (Ljava/lang/Object;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+	public final fun calculateMerkleRoot (Lnet/postchain/gtv/merkle/proof/MerkleProofTree;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+	public final fun getProofFactory ()Lnet/postchain/gtv/merkle/proof/MerkleProofTreeFactory;
+	public final fun getTreeFactory ()Lnet/postchain/gtv/merkle/BinaryTreeFactory;
+}
+
+public abstract interface class net/postchain/gtv/merkle/proof/MerkleProofElement {
+}
+
+public abstract class net/postchain/gtv/merkle/proof/MerkleProofTree {
+	public fun <init> (Lnet/postchain/gtv/merkle/proof/MerkleProofElement;I)V
+	public synthetic fun <init> (Lnet/postchain/gtv/merkle/proof/MerkleProofElement;IILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getRoot ()Lnet/postchain/gtv/merkle/proof/MerkleProofElement;
+	public final fun getTotalNrOfBytes ()I
+	public final fun maxLevel ()I
+}
+
+public abstract class net/postchain/gtv/merkle/proof/MerkleProofTreeFactory {
+	public static final field Companion Lnet/postchain/gtv/merkle/proof/MerkleProofTreeFactory$Companion;
+	public fun <init> ()V
+	public abstract fun buildFromBinaryTreeInternal (Lnet/postchain/gtv/merkle/BinaryTreeElement;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/MerkleProofElement;
+	public fun buildNodeOfCorrectType (Lnet/postchain/gtv/merkle/Node;Lnet/postchain/gtv/merkle/proof/MerkleProofElement;Lnet/postchain/gtv/merkle/proof/MerkleProofElement;)Lnet/postchain/gtv/merkle/proof/ProofNode;
+	protected final fun convertNode (Lnet/postchain/gtv/merkle/Node;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/MerkleProofElement;
+}
+
+public final class net/postchain/gtv/merkle/proof/MerkleProofTreeFactory$Companion : mu/KLogging {
+}
+
+public final class net/postchain/gtv/merkle/proof/MerkleProofTreeKt {
+	public static final field SERIALIZATION_HASH_LEAF_TYPE J
+	public static final field SERIALIZATION_NODE_TYPE J
+	public static final field SERIALIZATION_VALUE_LEAF_TYPE J
+}
+
+public final class net/postchain/gtv/merkle/proof/ProofHashedLeaf : net/postchain/gtv/merkle/proof/MerkleProofElement {
+	public fun <init> ([B)V
+	public final fun component1 ()[B
+	public final fun copy ([B)Lnet/postchain/gtv/merkle/proof/ProofHashedLeaf;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/merkle/proof/ProofHashedLeaf;[BILjava/lang/Object;)Lnet/postchain/gtv/merkle/proof/ProofHashedLeaf;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMerkleHash ()[B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public class net/postchain/gtv/merkle/proof/ProofNode : net/postchain/gtv/merkle/proof/MerkleProofElement {
+	public fun <init> (BLnet/postchain/gtv/merkle/proof/MerkleProofElement;Lnet/postchain/gtv/merkle/proof/MerkleProofElement;)V
+	public final fun getLeft ()Lnet/postchain/gtv/merkle/proof/MerkleProofElement;
+	public final fun getPrefix ()B
+	public final fun getRight ()Lnet/postchain/gtv/merkle/proof/MerkleProofElement;
+}
+
+public final class net/postchain/gtv/merkle/proof/ProofNodeGtvArrayHead : net/postchain/gtv/merkle/proof/ProofNode {
+	public fun <init> (ILnet/postchain/gtv/merkle/proof/MerkleProofElement;Lnet/postchain/gtv/merkle/proof/MerkleProofElement;Lnet/postchain/gtv/merkle/path/SearchableGtvPathElement;)V
+	public synthetic fun <init> (ILnet/postchain/gtv/merkle/proof/MerkleProofElement;Lnet/postchain/gtv/merkle/proof/MerkleProofElement;Lnet/postchain/gtv/merkle/path/SearchableGtvPathElement;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getPathElem ()Lnet/postchain/gtv/merkle/path/SearchableGtvPathElement;
+	public final fun getSize ()I
+}
+
+public final class net/postchain/gtv/merkle/proof/ProofNodeGtvDictHead : net/postchain/gtv/merkle/proof/ProofNode {
+	public fun <init> (ILnet/postchain/gtv/merkle/proof/MerkleProofElement;Lnet/postchain/gtv/merkle/proof/MerkleProofElement;Lnet/postchain/gtv/merkle/path/SearchableGtvPathElement;)V
+	public synthetic fun <init> (ILnet/postchain/gtv/merkle/proof/MerkleProofElement;Lnet/postchain/gtv/merkle/proof/MerkleProofElement;Lnet/postchain/gtv/merkle/path/SearchableGtvPathElement;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getPathElem ()Lnet/postchain/gtv/merkle/path/SearchableGtvPathElement;
+	public final fun getSize ()I
+}
+
+public final class net/postchain/gtv/merkle/proof/ProofNodeSimple : net/postchain/gtv/merkle/proof/ProofNode {
+	public fun <init> (Lnet/postchain/gtv/merkle/proof/MerkleProofElement;Lnet/postchain/gtv/merkle/proof/MerkleProofElement;)V
+}
+
+public final class net/postchain/gtv/merkle/proof/ProofValueGtvLeaf : net/postchain/gtv/merkle/proof/ProofValueLeaf {
+	public fun <init> (Lnet/postchain/gtv/Gtv;ILnet/postchain/gtv/merkle/path/SearchableGtvPathElement;)V
+	public final fun getPathElem ()Lnet/postchain/gtv/merkle/path/SearchableGtvPathElement;
+}
+
+public class net/postchain/gtv/merkle/proof/ProofValueLeaf : net/postchain/gtv/merkle/proof/MerkleProofElement {
+	public fun <init> (Ljava/lang/Object;I)V
+	public final fun getContent ()Ljava/lang/Object;
+	public final fun getSizeInBytes ()I
+}
+
+public final class net/postchain/gtv/merkle/virtual/ArrayIndexAndGtv {
+	public fun <init> (ILnet/postchain/gtv/Gtv;)V
+	public final fun component1 ()I
+	public final fun component2 ()Lnet/postchain/gtv/Gtv;
+	public final fun copy (ILnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/virtual/ArrayIndexAndGtv;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/merkle/virtual/ArrayIndexAndGtv;ILnet/postchain/gtv/Gtv;ILjava/lang/Object;)Lnet/postchain/gtv/merkle/virtual/ArrayIndexAndGtv;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getIndex ()I
+	public final fun getValue ()Lnet/postchain/gtv/Gtv;
+	public fun hashCode ()I
+	public final fun setIndex (I)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/merkle/virtual/ArrayIndexAndGtvList {
+	public fun <init> ()V
+	public fun <init> (ILnet/postchain/gtv/Gtv;)V
+	public fun <init> (Ljava/util/List;)V
+	public final fun addAll (Lnet/postchain/gtv/merkle/virtual/ArrayIndexAndGtvList;)V
+	public final fun buildGtvVirtualArray (Lnet/postchain/gtv/merkle/proof/MerkleProofElement;I)Lnet/postchain/gtv/GtvVirtualArray;
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lnet/postchain/gtv/merkle/virtual/ArrayIndexAndGtvList;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/merkle/virtual/ArrayIndexAndGtvList;Ljava/util/List;ILjava/lang/Object;)Lnet/postchain/gtv/merkle/virtual/ArrayIndexAndGtvList;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getInnerSet ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/merkle/virtual/GtvVirtualFactory : mu/KLogging {
+	public static final field INSTANCE Lnet/postchain/gtv/merkle/virtual/GtvVirtualFactory;
+	public final fun buildGtvVirtual (Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;)Lnet/postchain/gtv/GtvVirtual;
+	public final fun buildGtvVirtualArray (Lnet/postchain/gtv/merkle/proof/ProofNodeGtvArrayHead;Z)Lnet/postchain/gtv/GtvVirtualArray;
+	public static synthetic fun buildGtvVirtualArray$default (Lnet/postchain/gtv/merkle/virtual/GtvVirtualFactory;Lnet/postchain/gtv/merkle/proof/ProofNodeGtvArrayHead;ZILjava/lang/Object;)Lnet/postchain/gtv/GtvVirtualArray;
+	public final fun buildGtvVirtualDictionary (Lnet/postchain/gtv/merkle/proof/ProofNodeGtvDictHead;Z)Lnet/postchain/gtv/GtvVirtualDictionary;
+	public static synthetic fun buildGtvVirtualDictionary$default (Lnet/postchain/gtv/merkle/virtual/GtvVirtualFactory;Lnet/postchain/gtv/merkle/proof/ProofNodeGtvDictHead;ZILjava/lang/Object;)Lnet/postchain/gtv/GtvVirtualDictionary;
+}
+
+public final class net/postchain/gtv/parse/GtvParser {
+	public static final field Companion Lnet/postchain/gtv/parse/GtvParser$Companion;
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun array ()Lnet/postchain/gtv/GtvArray;
+	public final fun consume ()Lnet/postchain/gtv/parse/Token;
+	public final fun dict ()Lnet/postchain/gtv/GtvDictionary;
+	public final fun expect (Lnet/postchain/gtv/parse/Token;)V
+	public final fun peek (I)Lnet/postchain/gtv/parse/Token;
+	public static synthetic fun peek$default (Lnet/postchain/gtv/parse/GtvParser;IILjava/lang/Object;)Lnet/postchain/gtv/parse/Token;
+	public final fun primitive ()Lnet/postchain/gtv/Gtv;
+	public final fun value ()Lnet/postchain/gtv/Gtv;
+}
+
+public final class net/postchain/gtv/parse/GtvParser$Companion {
+	public final fun parse (Ljava/lang/String;)Lnet/postchain/gtv/Gtv;
+}
+
+public final class net/postchain/gtv/parse/LexerKt {
+	public static final fun lexer (Ljava/lang/String;)Lkotlin/sequences/Sequence;
+}
+
+final class net/postchain/gtv/parse/LexerKt$lexer$1 : kotlin/coroutines/jvm/internal/RestrictedSuspendLambda, kotlin/jvm/functions/Function2 {
+	public final fun create (Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Lkotlin/coroutines/Continuation;
+	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+	public final fun invoke (Lkotlin/sequences/SequenceScope;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public final fun invokeSuspend (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public abstract interface class net/postchain/gtv/parse/Token {
+	public static final field Companion Lnet/postchain/gtv/parse/Token$Companion;
+}
+
+public final class net/postchain/gtv/parse/Token$Companion {
+}
+
+public final class net/postchain/gtv/parse/Token$Companion$BigInteger : net/postchain/gtv/parse/Token {
+	public fun <init> (Ljava/math/BigInteger;)V
+	public final fun component1 ()Ljava/math/BigInteger;
+	public final fun copy (Ljava/math/BigInteger;)Lnet/postchain/gtv/parse/Token$Companion$BigInteger;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/parse/Token$Companion$BigInteger;Ljava/math/BigInteger;ILjava/lang/Object;)Lnet/postchain/gtv/parse/Token$Companion$BigInteger;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getV ()Ljava/math/BigInteger;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/parse/Token$Companion$ByteArray : net/postchain/gtv/parse/Token {
+	public fun <init> ([B)V
+	public final fun component1 ()[B
+	public final fun copy ([B)Lnet/postchain/gtv/parse/Token$Companion$ByteArray;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/parse/Token$Companion$ByteArray;[BILjava/lang/Object;)Lnet/postchain/gtv/parse/Token$Companion$ByteArray;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getV ()[B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/parse/Token$Companion$Colon : net/postchain/gtv/parse/Token {
+	public static final field INSTANCE Lnet/postchain/gtv/parse/Token$Companion$Colon;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/parse/Token$Companion$Comma : net/postchain/gtv/parse/Token {
+	public static final field INSTANCE Lnet/postchain/gtv/parse/Token$Companion$Comma;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/parse/Token$Companion$Integer : net/postchain/gtv/parse/Token {
+	public fun <init> (J)V
+	public final fun component1 ()J
+	public final fun copy (J)Lnet/postchain/gtv/parse/Token$Companion$Integer;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/parse/Token$Companion$Integer;JILjava/lang/Object;)Lnet/postchain/gtv/parse/Token$Companion$Integer;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getV ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/parse/Token$Companion$LBracket : net/postchain/gtv/parse/Token {
+	public static final field INSTANCE Lnet/postchain/gtv/parse/Token$Companion$LBracket;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/parse/Token$Companion$Null : net/postchain/gtv/parse/Token {
+	public static final field INSTANCE Lnet/postchain/gtv/parse/Token$Companion$Null;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/parse/Token$Companion$RBracket : net/postchain/gtv/parse/Token {
+	public static final field INSTANCE Lnet/postchain/gtv/parse/Token$Companion$RBracket;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/parse/Token$Companion$String : net/postchain/gtv/parse/Token {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lnet/postchain/gtv/parse/Token$Companion$String;
+	public static synthetic fun copy$default (Lnet/postchain/gtv/parse/Token$Companion$String;Ljava/lang/String;ILjava/lang/Object;)Lnet/postchain/gtv/parse/Token$Companion$String;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getV ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtx/gtxml/ExtensionsKt {
+	public static final fun GtvTypeOf (Ljavax/xml/namespace/QName;)Lnet/postchain/gtv/GtvType;
+	public static final fun isParam (Ljavax/xml/namespace/QName;)Z
+}
+
+public final class net/postchain/gtx/gtxml/JAXBHelpersKt {
+	public static final fun component1 (Ljakarta/xml/bind/JAXBElement;)Ljavax/xml/namespace/QName;
+	public static final fun component2 (Ljakarta/xml/bind/JAXBElement;)Ljava/lang/Object;
+	public static final fun createBytearrayElement (Lnet/postchain/gtv/gtxml/ObjectFactory;[B)Ljakarta/xml/bind/JAXBElement;
+}
+

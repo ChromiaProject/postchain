@@ -179,6 +179,13 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>com.chromaway</groupId>
+                <artifactId>kotlin-bcv-maven-plugin</artifactId>
+                <configuration>
+                    <skip>false</skip>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
