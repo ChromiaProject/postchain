@@ -541,6 +541,13 @@
                 <artifactId>system-stubs-jupiter</artifactId>
                 <version>2.0.1</version>
             </dependency>
+
+            <!-- Security bump: java-docker depends on bad 2.13.0. 2.17.0 is used by logs4j -->
+            <dependency>
+                <groupId>commons-io</groupId>
+                <artifactId>commons-io</artifactId>
+                <version>2.17.0</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
