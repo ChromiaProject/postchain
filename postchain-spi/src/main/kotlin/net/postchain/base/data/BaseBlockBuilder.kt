@@ -297,7 +297,7 @@ open class BaseBlockBuilder(
      */
     override fun finalizeAndValidate(blockHeader: BlockHeader, skipValidationFields: Set<String>) {
         logger.trace(FINALIZE_AND_VALIDATE, "Begin")
-        if (specialTxHandler.needsSpecialTransaction(End) && !haveSpecialEndTransaction)
+        if (specialTxHandler.needsSpecialTransaction(End) && !haveSpecialEndTransaction && !specialTxHandler.isAllowedToSkipSpecialTransaction(End, bctx))
             throw BadBlockException("End special transaction is missing")
         val defaultExtraData = mutableMapOf<String, Gtv>()
         val primaryHeader = (blockHeader as? BaseBlockHeader)?.extraData?.get(PRIMARY_HEADER_KEY)
@@ -349,7 +349,7 @@ open class BaseBlockBuilder(
                 throw BadBlockException("Special transaction validation failed: $End")
             }
             haveSpecialEndTransaction = true
-        } else if (expectBeginTx) {
+        } else if (expectBeginTx && !specialTxHandler.isAllowedToSkipSpecialTransaction(Begin, bctx)) {
             throw BadBlockException("First transaction must be special transaction")
         }
     }

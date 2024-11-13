@@ -1,5 +1,6 @@
 package net.postchain.gtx.special
 
+import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -14,6 +15,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 
 class GTXSpecialTxHandlerTest {
 
@@ -178,5 +180,67 @@ class GTXSpecialTxHandlerTest {
         // validate
         val validated = sut.validateSpecialTransaction(mock(), tx, mock())
         assertEquals(true, validated)
+    }
+
+    @Test
+    fun `special tx has op at position but extension does not need it`() {
+        val ext1: GTXSpecialTxExtension = mock {
+            on { getRelevantOps() } doReturn setOf("op1")
+            on { needsSpecialTransaction(SpecialTransactionPosition.Begin) } doReturn true
+            on { needsSpecialTransaction(SpecialTransactionPosition.End) } doReturn false
+            on { createSpecialOperations(any(), any()) } doReturn listOf(OpData("op1", emptyArray()))
+            on { validateSpecialOperations(any(), any(), any()) } doReturn true
+        }
+        val module: GTXModule = mock {
+            on { getSpecialTxExtensions() } doReturn listOf(ext1)
+        }
+        val factory = GTXTransactionFactory(ZERO_RID, module, cs)
+
+        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
+
+        // needs
+        assertEquals(true, sut.needsSpecialTransaction(SpecialTransactionPosition.Begin))
+        assertEquals(false, sut.needsSpecialTransaction(SpecialTransactionPosition.End))
+        val tx = sut.createSpecialTransaction(SpecialTransactionPosition.Begin, mock()) as GTXTransaction
+
+        // create
+        val ops = tx.gtxData.gtxBody.operations.map { it.opName }
+        assertEquals(listOf("op1"), ops)
+
+        // validate
+        val validatedBegin = sut.validateSpecialTransaction(SpecialTransactionPosition.Begin, tx, mock())
+        assertEquals(true, validatedBegin)
+        val validatedEnd = sut.validateSpecialTransaction(SpecialTransactionPosition.End, tx, mock())
+        assertEquals(false, validatedEnd)
+    }
+
+    @Test
+    fun `extensions has no operations and does not allow skipping`() {
+        val ext1: GTXNonSkippingSpecialTxExtension = mock {
+            on { getRelevantOps() } doReturn setOf("op1")
+            on { needsSpecialTransaction(any()) } doReturn true
+            on { createSpecialOperations(any(), any()) } doReturn listOf()
+            on { validateSpecialOperations(any(), any(), any()) } doReturn true
+            on { isAllowedToSkipSpecialOperations(any(), any()) } doReturn false
+        }
+        val module: GTXModule = mock {
+            on { getSpecialTxExtensions() } doReturn listOf(ext1)
+        }
+        val factory = GTXTransactionFactory(ZERO_RID, module, cs)
+
+        val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
+        assertFalse(sut.isAllowedToSkipSpecialTransaction(SpecialTransactionPosition.Begin, mock()))
+
+        // needs
+        assertEquals(true, sut.needsSpecialTransaction(mock()))
+        val tx = sut.createSpecialTransaction(mock(), mock()) as GTXTransaction
+
+        // create
+        val ops = tx.gtxData.gtxBody.operations.map { it.opName }
+        assertEquals(listOf("__nop"), ops)
+
+        // validate
+        val validated = sut.validateSpecialTransaction(mock(), tx, mock())
+        assertEquals(false, validated)
     }
 }
