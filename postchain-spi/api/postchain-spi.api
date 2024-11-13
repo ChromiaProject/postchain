@@ -297,6 +297,7 @@ public final class net/postchain/base/NetworkNodes$Companion : mu/KLogging {
 public final class net/postchain/base/NullSpecialTransactionHandler : net/postchain/base/SpecialTransactionHandler {
 	public fun <init> ()V
 	public fun createSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/BlockEContext;)Lnet/postchain/core/Transaction;
+	public fun isAllowedToSkipSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/BlockEContext;)Z
 	public fun needsSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;)Z
 	public fun validateSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/Transaction;Lnet/postchain/core/BlockEContext;)Z
 }
@@ -338,6 +339,7 @@ public abstract interface class net/postchain/base/PeerResolver {
 
 public abstract interface class net/postchain/base/SpecialTransactionHandler {
 	public abstract fun createSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/BlockEContext;)Lnet/postchain/core/Transaction;
+	public abstract fun isAllowedToSkipSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/BlockEContext;)Z
 	public abstract fun needsSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;)Z
 	public abstract fun validateSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/Transaction;Lnet/postchain/core/BlockEContext;)Z
 }
@@ -2055,6 +2057,10 @@ public final class net/postchain/gtx/UnknownOperation : net/postchain/common/exc
 public final class net/postchain/gtx/UnknownQuery : net/postchain/common/exception/UserMistake {
 	public fun <init> (Ljava/lang/String;)V
 	public final fun getName ()Ljava/lang/String;
+}
+
+public abstract interface class net/postchain/gtx/special/GTXNonSkippingSpecialTxExtension : net/postchain/gtx/special/GTXSpecialTxExtension {
+	public abstract fun isAllowedToSkipSpecialOperations (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/BlockEContext;)Z
 }
 
 public abstract interface class net/postchain/gtx/special/GTXSpecialTxExtension {
