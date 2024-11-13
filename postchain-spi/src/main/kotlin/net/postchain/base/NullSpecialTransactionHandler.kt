@@ -20,4 +20,8 @@ class NullSpecialTransactionHandler : SpecialTransactionHandler {
     ): Boolean {
         throw ProgrammerMistake("NullSpecialTransactionHandler.createSpecialTransaction")
     }
+
+    override fun isAllowedToSkipSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Boolean {
+        throw ProgrammerMistake("NullSpecialTransactionHandler.isAllowedToSkipSpecialTransaction")
+    }
 }

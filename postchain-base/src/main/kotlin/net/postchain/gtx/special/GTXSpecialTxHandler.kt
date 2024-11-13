@@ -116,12 +116,34 @@ open class GTXSpecialTxHandler(val module: GTXModule,
 
             // ext validation
             extOps.forEach { (ext, ops) ->
+                if (ext != null && !ext.needsSpecialTransaction(position)) {
+                    logger.warn("Special handler ${ext.javaClass.name} does not need special transaction at position: $position")
+                    return false
+                }
                 if (ext != null && !ext.validateSpecialOperations(position, bctx, ops)) {
                     logger.warn("Validation failed in special handler ${ext.javaClass.name}")
                     return false
                 }
             }
+            extensions.filterIsInstance<GTXNonSkippingSpecialTxExtension>()
+                    .filterNot { extOps.keys.contains(it) }
+                    .forEach { skippedExtension ->
+                        if (!skippedExtension.isAllowedToSkipSpecialOperations(position, bctx)) {
+                            logger.warn("Skipping special operations is not allowed by handler ${skippedExtension.javaClass.name}")
+                            return false
+                        }
+                    }
             logger.trace(VALIDATE_SPECIAL_TRANSACTION, "End", position)
+        }
+        return true
+    }
+
+    override fun isAllowedToSkipSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Boolean {
+        extensions.filterIsInstance<GTXNonSkippingSpecialTxExtension>().forEach { extension ->
+            if (!extension.isAllowedToSkipSpecialOperations(position, bctx)) {
+                logger.warn("Skipping special transaction at position: $position is not allowed by handler ${extension.javaClass.name}")
+                return false
+            }
         }
         return true
     }

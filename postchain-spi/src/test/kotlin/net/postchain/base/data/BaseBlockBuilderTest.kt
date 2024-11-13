@@ -6,11 +6,14 @@ import net.postchain.base.BaseBlockEContext
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseEContext
 import net.postchain.base.SpecialTransactionHandler
+import net.postchain.base.SpecialTransactionPosition.Begin
 import net.postchain.base.SpecialTransactionPosition.End
 import net.postchain.base.TxEventSink
 import net.postchain.base.data.BaseBlockBuilder.Companion.PRIMARY_HEADER_KEY
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
+import net.postchain.core.BadBlockException
+import net.postchain.core.Transaction
 import net.postchain.core.TxEContext
 import net.postchain.core.ValidationResult.Result.INVALID_TIMESTAMP
 import net.postchain.core.ValidationResult.Result.OK
@@ -26,6 +29,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
+import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
@@ -142,5 +147,73 @@ class BaseBlockBuilderTest {
         assertEquals(0, bbb.transactions.size)
         // execute & verify
         assertTrue(bbb.shouldStopBuildingBlock(2))
+    }
+
+    @Test
+    fun `skipping begin special tx is allowed if all extensions allow it`() {
+        // setup
+        whenever(specialTransactionHandler.needsSpecialTransaction(Begin)).doReturn(true)
+        whenever(specialTransactionHandler.isAllowedToSkipSpecialTransaction(Begin, bctx)).doReturn(true)
+        val normalTx: Transaction = mock {
+            on { isSpecial() } doReturn false
+            on { getRawData() } doReturn ByteArray(0)
+            on { getRID() } doReturn ByteArray(0)
+            on { apply(any()) } doReturn true
+        }
+        bbb.bctx = bctx
+
+        // execute and verify
+        bbb.appendTransaction(normalTx)
+    }
+
+    @Test
+    fun `skipping begin special tx is not allowed if not all extensions allow it`() {
+        // setup
+        whenever(specialTransactionHandler.needsSpecialTransaction(Begin)).doReturn(true)
+        whenever(specialTransactionHandler.isAllowedToSkipSpecialTransaction(Begin, bctx)).doReturn(false)
+        val normalTx: Transaction = mock {
+            on { isSpecial() } doReturn false
+            on { getRawData() } doReturn ByteArray(0)
+            on { getRID() } doReturn ByteArray(0)
+            on { apply(any()) } doReturn true
+        }
+        bbb.bctx = bctx
+
+        // execute and verify
+        assertThrows<BadBlockException> {
+            bbb.appendTransaction(normalTx)
+        }
+    }
+
+    @Test
+    fun `skipping end special tx is allowed if all extensions allow it`() {
+        // setup
+        whenever(specialTransactionHandler.needsSpecialTransaction(Begin)).doReturn(false)
+        whenever(specialTransactionHandler.needsSpecialTransaction(End)).doReturn(true)
+        whenever(specialTransactionHandler.isAllowedToSkipSpecialTransaction(End, bctx)).doReturn(true)
+        bbb.bctx = bctx
+        val blockData = InitialBlockData(myBlockchainRid, 2, 2, dummy, 1, 100L, arrayOf())
+        bbb.initialBlockData = blockData
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, 100L, primaryExtraHeader)
+
+        // execute and verify
+        bbb.finalizeAndValidate(header)
+    }
+
+    @Test
+    fun `skipping end special tx is not allowed if not all extensions allow it`() {
+        // setup
+        whenever(specialTransactionHandler.needsSpecialTransaction(Begin)).doReturn(false)
+        whenever(specialTransactionHandler.needsSpecialTransaction(End)).doReturn(true)
+        whenever(specialTransactionHandler.isAllowedToSkipSpecialTransaction(End, bctx)).doReturn(false)
+        bbb.bctx = bctx
+        val blockData = InitialBlockData(myBlockchainRid, 2, 2, dummy, 1, 100L, arrayOf())
+        bbb.initialBlockData = blockData
+        val header = BaseBlockHeader.make(merkeHashCalculator, blockData, myMerkleRootHash, 100L, primaryExtraHeader)
+
+        // execute and verify
+        assertThrows<BadBlockException> {
+            bbb.finalizeAndValidate(header)
+        }
     }
 }
