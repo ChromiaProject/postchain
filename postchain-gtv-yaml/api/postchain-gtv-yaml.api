@@ -1,0 +1,54 @@
+public final class net/postchain/gtv/yaml/GtvConstructor : org/yaml/snakeyaml/constructor/Constructor {
+	public fun <init> ()V
+}
+
+private final class net/postchain/gtv/yaml/GtvConstructor$ConstructBigInteger : org/yaml/snakeyaml/constructor/AbstractConstruct {
+	public fun <init> (Lnet/postchain/gtv/yaml/GtvConstructor;)V
+	public fun construct (Lorg/yaml/snakeyaml/nodes/Node;)Ljava/lang/Object;
+}
+
+private final class net/postchain/gtv/yaml/GtvConstructor$ConstructByteArray : org/yaml/snakeyaml/constructor/AbstractConstruct {
+	public fun <init> (Lnet/postchain/gtv/yaml/GtvConstructor;)V
+	public fun construct (Lorg/yaml/snakeyaml/nodes/Node;)Ljava/lang/Object;
+}
+
+public final class net/postchain/gtv/yaml/GtvRepresenter : org/yaml/snakeyaml/representer/Representer {
+	public fun <init> ()V
+}
+
+private final class net/postchain/gtv/yaml/GtvRepresenter$RepresentBigInteger : org/yaml/snakeyaml/representer/Represent {
+	public fun <init> (Lnet/postchain/gtv/yaml/GtvRepresenter;)V
+	public fun representData (Ljava/lang/Object;)Lorg/yaml/snakeyaml/nodes/Node;
+}
+
+private final class net/postchain/gtv/yaml/GtvRepresenter$RepresentByteArray : org/yaml/snakeyaml/representer/Represent {
+	public fun <init> (Lnet/postchain/gtv/yaml/GtvRepresenter;)V
+	public fun representData (Ljava/lang/Object;)Lorg/yaml/snakeyaml/nodes/Node;
+}
+
+public final class net/postchain/gtv/yaml/GtvResolver : org/yaml/snakeyaml/resolver/Resolver {
+	public fun <init> ()V
+}
+
+public final class net/postchain/gtv/yaml/GtvYaml {
+	public fun <init> ()V
+	public fun <init> (Lkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun dump (Lnet/postchain/gtv/Gtv;)Ljava/lang/String;
+	public final fun dump (Lnet/postchain/gtv/Gtv;Ljava/io/File;)V
+	public final fun dump (Lnet/postchain/gtv/Gtv;Ljava/io/Writer;)V
+	public final fun load (Ljava/io/File;)Lnet/postchain/gtv/Gtv;
+	public final fun load (Ljava/io/InputStream;)Lnet/postchain/gtv/Gtv;
+	public final fun load (Ljava/io/Reader;)Lnet/postchain/gtv/Gtv;
+	public final fun load (Ljava/lang/String;)Lnet/postchain/gtv/Gtv;
+}
+
+public final class net/postchain/gtv/yaml/GtvYamlKt {
+	public static final field BIG_INTEGER_START Ljava/lang/String;
+	public static final field BYTE_ARRAY_START Ljava/lang/String;
+	public static final fun getBIG_INTEGER_FORMAT ()Ljava/util/regex/Pattern;
+	public static final fun getBIG_INTEGER_TAG ()Lorg/yaml/snakeyaml/nodes/Tag;
+	public static final fun getBYTE_ARRAY_FORMAT ()Ljava/util/regex/Pattern;
+	public static final fun getBYTE_ARRAY_TAG ()Lorg/yaml/snakeyaml/nodes/Tag;
+}
+
