@@ -31,6 +31,7 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.logging.CONTAINER_NAME_TAG
+import net.postchain.managed.CHAIN0
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.LocalBlockchainInfo
 import net.postchain.managed.ManagedBlockchainProcessManager

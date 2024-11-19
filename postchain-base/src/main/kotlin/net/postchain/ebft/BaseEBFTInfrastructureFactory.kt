@@ -33,12 +33,15 @@ open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
 
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
-            val syncInfra = EBFTSynchronizationInfrastructure(this)
+            val syncInfra = makeSynchronizationInfrastructure(this)
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
             val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, postchainContext)
             return BaseBlockchainInfrastructure(syncInfra, apiInfra, this)
         }
     }
+
+    open fun makeSynchronizationInfrastructure(postchainContext: PostchainContext): EBFTSynchronizationInfrastructure
+        = EBFTSynchronizationInfrastructure(postchainContext)
 
     override fun makeProcessManager(
             postchainContext: PostchainContext,

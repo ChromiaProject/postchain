@@ -36,10 +36,8 @@ will be merged with the information from NM API. If there is conflicting peer in
 Postchain will pick the peer information that was added/updated last. Both directory chain and local database updates a
 timestamp when peer information is added/modified.
 
-For the directory chain itself, peer information of the genesis node must be configured in node configuration so that
-a node can start syncing the first blocks of the directory chain. If the genesis node is no longer available, genesis
-peer information can point to another live node but then that node also needs to be manually added as a peer and as a
-blockchain replica via CLI.
+For the directory chain itself, peer information of a node in the system cluster must be configured in node configuration 
+so that a node can start syncing the first blocks of the directory chain.
 
 #### Inferring relevant peers for a specific blockchain
 

@@ -6,15 +6,26 @@ import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
 import net.postchain.api.internal.BlockchainApi
-import net.postchain.base.*
+import net.postchain.base.BaseBlockchainProcessManager
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.withReadConnection
+import net.postchain.base.withReadWriteConnection
+import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfig
 import net.postchain.config.node.ManagedNodeConfigurationProvider
-import net.postchain.core.*
+import net.postchain.core.AfterCommitHandler
+import net.postchain.core.BeforeCommitHandler
+import net.postchain.core.BlockEContext
+import net.postchain.core.BlockchainConfiguration
+import net.postchain.core.BlockchainConfigurationFactorySupplier
+import net.postchain.core.BlockchainInfrastructure
+import net.postchain.core.BlockchainProcess
+import net.postchain.core.BlockchainProcessManagerExtension
+import net.postchain.core.BlockchainState
 import net.postchain.core.block.BlockTrace
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
@@ -82,9 +93,7 @@ open class ManagedBlockchainProcessManager(
     @Volatile
     protected var currentInactiveBlockchainsHeight = 0L
 
-    companion object : KLogging() {
-        const val CHAIN0 = 0L
-    }
+    companion object : KLogging()
 
     init {
         executor.scheduleWithFixedDelay(

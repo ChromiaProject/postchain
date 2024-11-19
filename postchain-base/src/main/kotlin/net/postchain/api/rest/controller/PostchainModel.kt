@@ -67,7 +67,7 @@ import net.postchain.logging.FAILURE_RESULT
 import net.postchain.logging.QUERY_NAME_TAG
 import net.postchain.logging.RESULT_TAG
 import net.postchain.logging.SUCCESS_RESULT
-import net.postchain.managed.ManagedBlockchainProcessManager
+import net.postchain.managed.CHAIN0
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.managed.config.ManagedBlockchainConfiguration
@@ -224,7 +224,7 @@ open class PostchainModel(
             val partialContext = BaseBlockchainContext(chainIID, blockchainRid, NODE_ID_AUTO, postchainContext.appConfig.pubKeyByteArray)
             val factory = if (blockchainConfiguration is ManagedDataSourceAware) {
                 val factory = newInstanceOf<GTXBlockchainConfigurationFactory>(blockConfData.configurationFactory)
-                if (chainIID == ManagedBlockchainProcessManager.CHAIN0) {
+                if (chainIID == CHAIN0) {
                     Chain0BlockchainConfigurationFactory(factory, postchainContext.appConfig, storage)
                 } else {
                     DappBlockchainConfigurationFactory(factory, blockchainConfiguration.dataSource)

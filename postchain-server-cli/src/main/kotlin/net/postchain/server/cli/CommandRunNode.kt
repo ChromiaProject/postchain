@@ -55,7 +55,7 @@ class CommandRunNode : CliktCommand(name = "run-node") {
             runStorageCommand(appConfig, chainIDs[0], true) { ctx ->
                 val wasInitialized = BlockchainApi.initializeBlockchain(ctx, blockchainRid, override, blockchainConfig)
                 if (wasInitialized) {
-                    appConfig.genesisPeer?.let { DatabaseAccess.of(ctx).addBlockchainReplica(ctx, blockchainRid, PubKey(it.pubKey)) }
+                    appConfig.initialPeer?.let { DatabaseAccess.of(ctx).addBlockchainReplica(ctx, blockchainRid, PubKey(it.pubKey)) }
                 }
 
                 if (!wasInitialized && update) {

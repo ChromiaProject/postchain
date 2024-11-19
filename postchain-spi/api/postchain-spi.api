@@ -939,6 +939,7 @@ public final class net/postchain/config/app/AppConfig : net/postchain/common/con
 	public final fun getHasPort ()Z
 	public final fun getHousekeepingIntervalMs ()J
 	public final fun getInfrastructure ()Ljava/lang/String;
+	public final fun getInitialPeer ()Lnet/postchain/base/PeerInfo;
 	public final fun getInt (Ljava/lang/String;I)I
 	public static synthetic fun getInt$default (Lnet/postchain/config/app/AppConfig;Ljava/lang/String;IILjava/lang/Object;)I
 	public final fun getKeys (Ljava/lang/String;)Ljava/util/Iterator;

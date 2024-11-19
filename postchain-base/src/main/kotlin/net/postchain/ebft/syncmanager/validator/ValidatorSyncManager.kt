@@ -50,8 +50,8 @@ import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
+import net.postchain.managed.CHAIN0
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
-import net.postchain.managed.ManagedBlockchainProcessManager.Companion.CHAIN0
 import net.postchain.metrics.SyncMetrics
 import java.time.Clock
 import java.util.Date

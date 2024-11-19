@@ -173,15 +173,25 @@ class AppConfig(private val config: Configuration) : Config {
     val hasPort: Boolean
         get() = hasEnvOrKey("POSTCHAIN_PORT", "messaging.port")
 
+    @Deprecated("Use initialPeer", replaceWith = ReplaceWith("initialPeer"))
     val genesisPeer: PeerInfo?
-        get() {
-            val genesisPubkey = getEnvOrString("POSTCHAIN_GENESIS_PUBKEY", "genesis.pubkey") ?: return null
-            require(hasEnvOrKey("POSTCHAIN_GENESIS_HOST", "genesis.host")) { "Node configuration must contain genesis.host if genesis.pubkey is supplied" }
-            require(hasEnvOrKey("POSTCHAIN_GENESIS_PORT", "genesis.port")) { "Node configuration must contain genesis.port if genesis.pubkey if supplied" }
+        get() = initialPeer
 
-            val genesisHost = getEnvOrString("POSTCHAIN_GENESIS_HOST", "genesis.host")!!
-            val genesisPort = getEnvOrInt("POSTCHAIN_GENESIS_PORT", "genesis.port", 0)
-            return PeerInfo(genesisHost, genesisPort, genesisPubkey.hexStringToByteArray())
+    val initialPeer: PeerInfo?
+        get() {
+            val initialPubkey = getEnvOrString("POSTCHAIN_INITIAL_PEER_PUBKEY", "initial-peer.pubkey")
+                    ?: getEnvOrString("POSTCHAIN_GENESIS_PUBKEY", "genesis.pubkey")
+                    ?: return null
+
+            val initialHost = getEnvOrString("POSTCHAIN_INITIAL_PEER_HOST", "initial-peer.host")
+                    ?: getEnvOrString("POSTCHAIN_GENESIS_HOST", "genesis.host")
+                    ?: throw IllegalArgumentException("Node configuration must contain initial-peer.host if initial-peer.pubkey is supplied")
+
+            val initialPort = getEnvOrString("POSTCHAIN_INITIAL_PEER_PORT", "initial-peer.port")
+                    ?: (getEnvOrString("POSTCHAIN_GENESIS_PORT", "genesis.port")
+                    ?: throw IllegalArgumentException("Node configuration must contain initial-peer.port if initial-peer.pubkey is supplied"))
+
+            return PeerInfo(initialHost, initialPort.toInt(), initialPubkey.hexStringToByteArray())
         }
 
     fun appliedConfigSendInterval(): Long = getEnvOrLong("POSTCHAIN_CONFIG_SEND_INTERVAL_MS", "applied-config-send-interval-ms", DEFAULT_APPLIED_CONFIG_SEND_INTERVAL_MS)
