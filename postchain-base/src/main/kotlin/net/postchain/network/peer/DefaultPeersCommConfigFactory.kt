@@ -74,7 +74,7 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
             nodeConfig: NodeConfig,
             chainId: Long,
             blockchainRid: BlockchainRid,
-            signers: List<ByteArray>, // signers
+            signers: List<ByteArray>,
             historicBlockchainContext: HistoricBlockchainContext?
     ): Map<NodeRid, PeerInfo> {
         val myNodeRid = NodeRid(appConfig.pubKeyByteArray)
@@ -93,10 +93,19 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
         // 2. All BC's signers in latest configuration
         // 3. All nodes that replicate the BC
         // 4. This node itself
+        // 5. Any extra replica nodes provided by subclasses
         return nodeConfig.peerInfoMap.filterKeys {
             it in signers0 || it in latestSigners || it in blockchainReplicas || it == myNodeRid
+                    || it in getExtraBlockchainReplicaNodes(appConfig, nodeConfig, chainId, blockchainRid, signers, historicBlockchainContext)
         }
     }
+
+    protected open fun getExtraBlockchainReplicaNodes(appConfig: AppConfig,
+                                                      nodeConfig: NodeConfig,
+                                                      chainId: Long,
+                                                      blockchainRid: BlockchainRid,
+                                                      signers: List<ByteArray>,
+                                                      historicBlockchainContext: HistoricBlockchainContext?): Set<NodeRid> = emptySet()
 
     private fun getBlockchainReplicaNodes(nodeConfig: NodeConfig, blockchainRid: BlockchainRid): List<NodeRid> =
             buildList {
