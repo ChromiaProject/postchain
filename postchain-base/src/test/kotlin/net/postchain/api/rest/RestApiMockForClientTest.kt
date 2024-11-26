@@ -9,7 +9,6 @@ import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.ConfirmationProof
-import net.postchain.base.cryptoSystem
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -18,9 +17,14 @@ import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.wrap
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
+import net.postchain.core.block.BlockDetailsTruncated
+import net.postchain.core.block.BlockQueryHeightFilter
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.crypto.PubKey
+import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.Signature
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
@@ -33,6 +37,8 @@ import org.junit.jupiter.api.Test
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
+
+val cryptoSystem = Secp256K1CryptoSystem()
 
 class RestApiMockForClientManual {
     val listenPort = 49545
@@ -169,13 +175,25 @@ class RestApiMockForClientManual {
             TODO("Not yet implemented")
         }
 
-        override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> =
-                blocks.filter { it.timestamp < beforeTime }.subList(0, limit)
+        override fun confirmBlock(blockRID: BlockRid): BlockSignature? {
+            TODO("Not yet implemented")
+        }
 
-        override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> =
-                blocks.filter { it.height < beforeHeight }.subList(0, limit)
+        override fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated =
+                BlockDetailsTruncated(blocks.filter {
+                    it.timestamp < timeFilter.beforeTime && it.timestamp > timeFilter.afterTime && (!excludeEmpty || it.transactions.isNotEmpty())
+                }.subList(0, limit), false)
+
+        override fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated =
+                BlockDetailsTruncated(blocks.filter {
+                    it.height < heightFilter.beforeHeight && it.height > heightFilter.afterHeight && (!excludeEmpty || it.transactions.isNotEmpty())
+                }.subList(0, limit), false)
 
         override fun getCurrentBlockHeight(): BlockHeight {
+            TODO("Not yet implemented")
+        }
+
+        override fun getBlockchainNodeState(): BlockchainNodeState {
             TODO("Not yet implemented")
         }
 
@@ -185,7 +203,7 @@ class RestApiMockForClientManual {
             return TransactionInfoExt(block.rid, block.height, block.header, block.witness, block.timestamp, cryptoSystem.digest(tx.data!!), tx.data!!.slice(IntRange(0, 4)).toByteArray(), tx.data!!)
         }
 
-        override fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt> {
+        override fun getTransactionsInfo(timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated {
             var queryBlocks = blocks
             val transactionsInfo: MutableList<TransactionInfoExt> = mutableListOf()
             queryBlocks = queryBlocks.sortedByDescending { blockDetail -> blockDetail.height }
@@ -194,10 +212,10 @@ class RestApiMockForClientManual {
                     transactionsInfo.add(TransactionInfoExt(block.rid, block.height, block.header, block.witness, block.timestamp, cryptoSystem.digest(tx.data!!), tx.data!!.slice(IntRange(0, 4)).toByteArray(), tx.data!!))
                 }
             }
-            return transactionsInfo.toList()
+            return TransactionInfoExtsTruncated(transactionsInfo.toList(), false)
         }
 
-        override fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey): List<TransactionInfoExt> {
+        override fun getTransactionsInfoBySigner(timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated {
             TODO("Not yet implemented")
         }
 
@@ -210,6 +228,10 @@ class RestApiMockForClientManual {
         }
 
         override fun validateBlockchainConfiguration(configuration: Gtv) {
+            TODO("Not yet implemented")
+        }
+
+        override fun getNextBlockchainConfigurationHeight(height: Long): BlockHeight? {
             TODO("Not yet implemented")
         }
     }

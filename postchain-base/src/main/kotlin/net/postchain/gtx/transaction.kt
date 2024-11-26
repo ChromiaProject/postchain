@@ -6,6 +6,8 @@ import net.postchain.common.data.Hash
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.common.wrap
 import net.postchain.core.SignableTransaction
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
@@ -38,8 +40,9 @@ class GTXTransaction(
         val cs: CryptoSystem
 ) : SignableTransaction {
 
-    var cachedRawData: ByteArray? = null // We are not sure we have the rawData, and if ever need to calculate it it will be cache here.
+    var cachedRawData: ByteArray? = null // We are not sure if we have the rawData, and if we ever need to calculate it, it will be cached here.
     var isChecked: Boolean = false
+    var isCheckedWhileSyncing: Boolean = false
 
     override fun getHash(): ByteArray {
         return myHash
@@ -51,23 +54,56 @@ class GTXTransaction(
         }
     }
 
+    override fun checkCorrectnessWhileSyncing() {
+        if (isChecked || isCheckedWhileSyncing) return
+
+        checkSignatures(parallel = false)
+        checkOperations(true)
+
+        isCheckedWhileSyncing = true
+    }
+
     override fun checkCorrectness() {
         if (isChecked) return
 
+        if (!isCheckedWhileSyncing) {
+            checkSignatures(parallel = true)
+        }
+
+        checkOperations(false)
+
+        isChecked = true
+    }
+
+    private fun checkSignatures(parallel: Boolean) {
         if (signatures.size != signers.size) {
             throw TransactionIncorrect(myRID, "${signatures.size} signatures != ${signers.size} signers")
         }
 
-        for ((idx, signer) in signers.withIndex()) {
-            val signature = signatures[idx]
-            if (!cs.verifyDigest(myRID, Signature(signer, signature))) {
-                throw TransactionIncorrect(myRID, "Signature by ${signer.toHex()} is not valid")
+        if (signers.size > 1) {
+            val set = HashSet<WrappedByteArray>(signers.size)
+            for (signer in signers) { set.add(signer.wrap()) }
+            if (set.size != signers.size) {
+                throw TransactionIncorrect(myRID, "Duplicate signers")
             }
         }
 
-        checkOperations()
+        if (signers.size == 1) {
+            if (!cs.verifyDigest(myRID, Signature(signers.first(), signatures.first()))) {
+                throw TransactionIncorrect(myRID, "Signature by ${signers.first().toHex()} is not valid")
+            }
+        } else if (signers.size > 1) {
+            val signersAndSignatures = if (parallel)
+                signers.zip(signatures).parallelStream()
+            else
+                signers.zip(signatures).stream()
 
-        isChecked = true
+            signersAndSignatures.forEach { (signer, signature) ->
+                if (!cs.verifyDigest(myRID, Signature(signer, signature))) {
+                    throw TransactionIncorrect(myRID, "Signature by ${signer.toHex()} is not valid")
+                }
+            }
+        }
     }
 
     /**
@@ -77,7 +113,7 @@ class GTXTransaction(
      * We still have one attack vector where the Dapp developer creates custom operation where no signer check is
      * included, b/c this opens up to anonymous attacks.
      */
-    private fun checkOperations() {
+    private fun checkOperations(isSyncing: Boolean) {
         var hasCustomOperation = false
         var totalOps = 0
         var specialOps = 0
@@ -97,21 +133,24 @@ class GTXTransaction(
                     if (foundSpecNop) throw TransactionIncorrect(myRID, "contains more than one '__nop'")
                     foundSpecNop = true
                 }
+
                 is GtxNop -> {
                     if (foundNop) throw TransactionIncorrect(myRID, "contains more than one 'nop'")
                     foundNop = true
                 }
+
                 is GtxTimeB -> {
                     if (foundTimeB) throw TransactionIncorrect(myRID, "contains more than one 'timeb'")
                     foundTimeB = true
                 }
+
                 else -> {
                     hasCustomOperation = true
                 }
             }
 
             try {
-                op.checkCorrectness()
+                if (isSyncing) op.checkCorrectnessWhileSyncing() else op.checkCorrectness()
             } catch (e: UserMistake) {
                 throw TransactionIncorrect(myRID, e.message)
             }
@@ -145,6 +184,15 @@ class GTXTransaction(
         checkCorrectness()
         for (op in ops) {
             if (!op.apply(ctx))
+                throw UserMistake("Operation failed")
+        }
+        return true
+    }
+
+    override fun applyWhileSyncing(ctx: TxEContext): Boolean {
+        checkCorrectnessWhileSyncing()
+        for (op in ops) {
+            if (!op.applyWhileSyncing(ctx))
                 throw UserMistake("Operation failed")
         }
         return true

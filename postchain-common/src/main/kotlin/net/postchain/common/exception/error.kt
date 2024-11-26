@@ -17,12 +17,6 @@ class TransactionIncorrect(txRid: ByteArray, message: String? = null, cause: Exc
  */
 class TransactionFailed(txRid: ByteArray) : UserMistake("Transaction ${txRid.toHex()} failed")
 
-/**
- * When the TX timeout due to `max_transaction_execution_time` being exceeded.
- */
-class TransactionTimeout(txRid: ByteArray, maxTxExecutionTime: Long)
-    : UserMistake("Transaction ${txRid.toHex()} failed to execute within given time constraint: $maxTxExecutionTime ms")
-
 class NotFound(message: String, cause: Exception? = null) : UserMistake(message, cause)
 
 class AlreadyExists(message: String, cause: Exception? = null) : UserMistake(message, cause)

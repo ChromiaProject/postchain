@@ -2,9 +2,9 @@
 
 package net.postchain.network.common
 
+import io.netty.channel.ChannelPipeline
 import net.postchain.base.PeerInfo
-import net.postchain.network.XPacketDecoder
-import net.postchain.network.XPacketEncoder
+import net.postchain.network.XPacketCodec
 
 /**
  * A "Node Connector" is wrapper around the underlying network library we use (for example: Netty).
@@ -18,15 +18,19 @@ interface NodeConnector<PacketType, DescriptorType> {
     /**
      * Initiates the network implementation (ex: Netty) with connection life cycle logic
      */
-    fun init(peerInfo: PeerInfo, packetDecoder: XPacketDecoder<PacketType>)
+    fun init(
+            peerInfo: PeerInfo,
+            packetCodec: XPacketCodec<PacketType>
+    )
 
     /**
      * Makes sure the network implementation (ex: Netty) connects to the given node
      */
     fun connectNode(
-        connectionDescriptor: DescriptorType,
-        peerInfo: PeerInfo,
-        packetEncoder: XPacketEncoder<PacketType>
+            connectionDescriptor: DescriptorType,
+            peerInfo: PeerInfo,
+            packetCodec: XPacketCodec<PacketType>,
+            postInitChannelHandler: (ChannelPipeline) -> Unit = {}
     )
 
     /**

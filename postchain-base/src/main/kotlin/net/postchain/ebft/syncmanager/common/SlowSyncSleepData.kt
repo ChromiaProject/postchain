@@ -54,7 +54,7 @@ class SlowSyncSleepData(
         } else if (averageBlocksFound > TOO_MANY_BLOCKS_LIMIT && failureRate < TOO_MANY_FAILURES_LIMIT) {
             // We should speed up
             val safeAverage = averageBlocksFound + smallNum
-            1 - (DAMPING_FACTOR * (1.0 / safeAverage)) // The "damping factor" prevents oscillations
+            1 - (DAMPING_FACTOR * (1.0 - (1.0 / safeAverage))) // The "damping factor" prevents oscillations
         } else {
             1.0 // Good enough, Do nothing
         }

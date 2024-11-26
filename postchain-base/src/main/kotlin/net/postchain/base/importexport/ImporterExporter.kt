@@ -6,13 +6,16 @@ import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.data.BaseBlockBuilder.Companion.PRIMARY_HEADER_KEY
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.extension.FAILED_CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.common.toHex
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainConfigurationFactory
 import net.postchain.core.EContext
@@ -23,6 +26,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.sha256Digest
+import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_PACKAGE_CONTENT_BYTES
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
@@ -72,7 +76,15 @@ object ImporterExporter : KLogging() {
                 ) {
                     logger.info("Exporting blockchain...")
 
-                    exportConfigurations(configurationsFile, blockchainRid, db, ctx, fromHeight = fromHeight, upToHeight = upToHeight)
+                    val chainConfigurations = db.getAllConfigurations(ctx)
+                    val nonNullConfigurations = chainConfigurations.mapNotNull { (height, config) ->
+                        if (config == null) null else height to config
+                    }
+                    if (chainConfigurations.size != nonNullConfigurations.size) {
+                        logger.info("Exporting a managed blockchain, skipping configuration file generation...")
+                    } else {
+                        exportConfigurations(configurationsFile, blockchainRid, nonNullConfigurations, fromHeight = fromHeight, upToHeight = upToHeight)
+                    }
 
                     if (blocksFile != null) {
                         val (firstBlock, lastBlock, numBlocks) = exportBlocks(blocksFile, db, ctx, fromHeight, upToHeight, logNBlocks)
@@ -90,11 +102,11 @@ object ImporterExporter : KLogging() {
                 }
             }
 
-    private fun exportConfigurations(configurationsFile: Path, blockchainRid: BlockchainRid, db: DatabaseAccess, ctx: EContext, fromHeight: Long, upToHeight: Long) {
+    private fun exportConfigurations(configurationsFile: Path, blockchainRid: BlockchainRid, configurations: List<Pair<Long, WrappedByteArray>>, fromHeight: Long, upToHeight: Long) {
         BufferedOutputStream(FileOutputStream(configurationsFile.toFile())).use { output ->
             output.write(GtvEncoder.encodeGtv(GtvFactory.gtv(blockchainRid.data)))
 
-            for ((height, configurationData) in db.getAllConfigurations(ctx)) {
+            for ((height, configurationData) in configurations) {
                 if (height > upToHeight) break
                 if (height >= fromHeight) {
                     output.write(GtvEncoder.encodeGtv(GtvFactory.gtv(GtvFactory.gtv(height), GtvFactory.gtv(configurationData))))
@@ -124,6 +136,59 @@ object ImporterExporter : KLogging() {
     }
 
     /**
+     * @param blockCountLimit     Maximum number of blocks to read
+     * @param blocksSizeLimit     Maximum total size of blocks to read
+     */
+    fun exportBlocks(storage: Storage, chainId: Long, height: Long, blockCountLimit: Int?, blocksSizeLimit: Int = MAX_PACKAGE_CONTENT_BYTES): List<Gtv> {
+
+        val blocks: MutableList<Gtv> = mutableListOf()
+
+        val blockchainRid = withReadConnection(storage, chainId) { ctx ->
+            DatabaseAccess.of(ctx).getBlockchainRid(ctx)
+        } ?: throw UserMistake("Can't find blockchain RID for chainIid $chainId")
+
+        withLoggingContext(
+                CHAIN_IID_TAG to chainId.toString(),
+                BLOCKCHAIN_RID_TAG to blockchainRid.toHex()
+        ) {
+
+            logger.debug { "Export blocks from height $height until blockCountList $blockCountLimit or blocksSizeLimit: $blocksSizeLimit is reached" }
+
+            withReadConnection(storage, chainId) { ctx ->
+
+                var totalSize = 0
+                val dbReadBatchLimit = 2000
+                var continueReadBlocks = true
+
+                while (continueReadBlocks) {
+
+                    val heightsOffset = height + blocks.size
+                    val upToHeight = heightsOffset + (blockCountLimit ?: Int.MAX_VALUE).coerceAtMost(dbReadBatchLimit)
+
+                    continueReadBlocks = false
+                    DatabaseAccess.of(ctx).getAllBlocksWithTransactions(ctx, fromHeight = heightsOffset, upToHeight = upToHeight) {
+
+                        val element = encodeBlockEntry(it)
+                        continueReadBlocks = blocksWithinLimit(blocks.size + 1, blockCountLimit, totalSize + element.nrOfBytes(), blocksSizeLimit)
+                        if (continueReadBlocks) {
+
+                            blocks.add(element)
+                            totalSize += element.nrOfBytes()
+                            continueReadBlocks = true
+
+                            logger.debug { "Block ${blocks.size - 1} - size: ${element.nrOfBytes()} - total blocks: ${blocks.size} - totalSize: $totalSize" }
+                        }
+                    }
+                }
+            }
+
+            logger.debug { "${blocks.size} blocks exported" }
+        }
+
+        return blocks
+    }
+
+    /**
      * @param nodeKeyPair         KeyPair of the node
      * @param cryptoSystem        CryptoSystem of the node
      * @param storage             storage
@@ -133,8 +198,18 @@ object ImporterExporter : KLogging() {
      * @param incremental         import new configurations and blocks to existing blockchain
      * @param logNBlocks          log every N block
      */
-    fun importBlockchain(nodeKeyPair: KeyPair, cryptoSystem: CryptoSystem, storage: Storage, chainId: Long,
-                         configurationsFile: Path, blocksFile: Path, incremental: Boolean = false, logNBlocks: Int = 100): ImportResult {
+    fun importBlockchain(
+            nodeKeyPair: KeyPair,
+            cryptoSystem: CryptoSystem,
+            storage: Storage,
+            chainId: Long,
+            configurationsFile: Path,
+            blocksFile: Path,
+            incremental: Boolean = false,
+            logNBlocks: Int = 100,
+            skipPrimaryFieldValidation: Boolean = false
+    ): ImportResult {
+
         val (blockchainRid, _) = withReadWriteConnection(storage, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
 
@@ -156,7 +231,7 @@ object ImporterExporter : KLogging() {
                 BLOCKCHAIN_RID_TAG to blockchainRid.toHex()
         ) {
             logger.info("Importing blockchain from ${configurationsFile.toAbsolutePath()} and ${blocksFile.toAbsolutePath()}...")
-            val result = importBlocks(blocksFile, logNBlocks, storage, chainId, blockchainRid, nodeKeyPair, cryptoSystem)
+            val result = importBlocksFromFile(blocksFile, logNBlocks, storage, chainId, blockchainRid, nodeKeyPair, cryptoSystem, skipPrimaryFieldValidation)
 
             logger.info {
                 if (result.numBlocks > 0) "Import of blocks to chain $chainId with blockchain RID ${blockchainRid.toHex()} completed: $result"
@@ -186,8 +261,16 @@ object ImporterExporter : KLogging() {
                 blockchainRid to heights
             }
 
-    private fun importBlocks(blocksFile: Path, logNBlocks: Int, storage: Storage, chainId: Long, blockchainRid: BlockchainRid, nodeKeyPair: KeyPair,
-                             cryptoSystem: CryptoSystem): ImportResult {
+    private fun importBlocksFromFile(
+            blocksFile: Path,
+            logNBlocks: Int,
+            storage: Storage,
+            chainId: Long,
+            blockchainRid: BlockchainRid,
+            nodeKeyPair: KeyPair,
+            cryptoSystem: CryptoSystem,
+            skipPrimaryFieldValidation: Boolean
+    ): ImportResult {
         val partialContext = BaseBlockchainContext(chainId, blockchainRid, NODE_ID_READ_ONLY, nodeKeyPair.pubKey.data)
         val blockSigMaker = cryptoSystem.buildSigMaker(nodeKeyPair)
 
@@ -241,7 +324,7 @@ object ImporterExporter : KLogging() {
 
                     val config = configs[nextConfigHeight]
                             ?: throw UserMistake("Cannot load configuration for height $blockHeight")
-                    importBlock(ctx, config, blockHeader, transactions, blockWitness)
+                    importBlock(ctx, config, blockHeader, transactions, blockWitness, skipPrimaryFieldValidation)
 
                     if (firstImportedBlock == -1L) firstImportedBlock = blockHeight
                 }
@@ -259,6 +342,67 @@ object ImporterExporter : KLogging() {
                 blockchainRid = blockchainRid)
     }
 
+    fun importBlocks(
+            storage: Storage,
+            chainId: Long,
+            blockData: List<Gtv>,
+            nodeKeyPair: KeyPair,
+            cryptoSystem: CryptoSystem,
+            skipPrimaryFieldValidation: Boolean
+    ): LongRange {
+
+        val blockchainRid = withReadConnection(storage, chainId) { ctx ->
+            DatabaseAccess.of(ctx).getBlockchainRid(ctx)
+        } ?: throw UserMistake("Can't find blockchain RID for chainIid $chainId")
+
+        withLoggingContext(
+                CHAIN_IID_TAG to chainId.toString(),
+                BLOCKCHAIN_RID_TAG to blockchainRid.toHex()
+        ) {
+
+            logger.debug { "starting importing ${blockData.size} blocks" }
+
+            var startHeight = -1L
+            var endHeight = -1L
+
+            withReadWriteConnection(storage, chainId) { ctx ->
+                val partialContext = BaseBlockchainContext(chainId, blockchainRid, NODE_ID_READ_ONLY, nodeKeyPair.pubKey.data)
+                val blockSigMaker = cryptoSystem.buildSigMaker(nodeKeyPair)
+                var config: BlockchainConfiguration? = null
+                var lastConfigHeight = -1L
+
+                for (blockDatum in blockData) {
+                    val (blockHeader, blockWitness, transactions) = decodeBlockEntry(blockDatum)
+                    val blockHeight = blockHeader.blockHeaderRec.getHeight()
+
+                    if (startHeight == -1L) {
+                        startHeight = blockHeight
+                    }
+
+                    val configHeight = DatabaseAccess.of(ctx).findConfigurationHeightForBlock(ctx, blockHeight)
+                            ?: throw UserMistake("Can't find config height for block $blockHeight")
+                    if (config == null || configHeight > lastConfigHeight) {
+                        lastConfigHeight = configHeight
+
+                        val db = DatabaseAccess.of(ctx)
+                        val configData = db.getConfigurationData(ctx, configHeight)
+                                ?: throw UserMistake("Can't load config for block $blockHeight")
+                        config = makeBlockchainConfiguration(configData, partialContext, blockSigMaker, ctx, cryptoSystem)
+
+                        logger.debug { "New configuration at height $configHeight" }
+                    }
+
+                    importBlock(ctx, config, blockHeader, transactions, blockWitness, skipPrimaryFieldValidation)
+                    endHeight = blockHeight
+                }
+            }
+
+            logger.debug { "finished importing blocks" }
+
+            return startHeight..endHeight
+        }
+    }
+
     private fun makeBlockchainConfiguration(rawConfigurationData: ByteArray, partialContext: BaseBlockchainContext,
                                             blockSigMaker: SigMaker, ctx: EContext, cryptoSystem: CryptoSystem): BlockchainConfiguration {
         val blockConfData = BlockchainConfigurationData.fromRaw(rawConfigurationData)
@@ -266,8 +410,14 @@ object ImporterExporter : KLogging() {
         return factory.makeBlockchainConfiguration(blockConfData, partialContext, blockSigMaker, ctx, cryptoSystem)
     }
 
-    private fun importBlock(ctx: EContext, blockchainConfiguration: BlockchainConfiguration, blockHeader: BaseBlockHeader,
-                            rawTransactions: List<ByteArray>, blockWitness: BaseBlockWitness) {
+    private fun importBlock(
+            ctx: EContext,
+            blockchainConfiguration: BlockchainConfiguration,
+            blockHeader: BaseBlockHeader,
+            rawTransactions: List<ByteArray>,
+            blockWitness: BaseBlockWitness,
+            skipPrimaryFieldValidation: Boolean
+    ) {
         val blockBuilder = blockchainConfiguration.makeBlockBuilder(ctx, true)
         blockBuilder.begin(blockHeader)
         val transactions = rawTransactions.parallelStream().map { rawTransaction ->
@@ -276,13 +426,16 @@ object ImporterExporter : KLogging() {
         for (transaction in transactions) {
             blockBuilder.appendTransaction(transaction)
         }
-        blockBuilder.finalizeAndValidate(blockHeader)
+        blockBuilder.finalizeAndValidate(blockHeader, buildSet {
+            add(FAILED_CONFIG_HASH_EXTRA_HEADER)
+            if (skipPrimaryFieldValidation) add(PRIMARY_HEADER_KEY)
+        })
         blockBuilder.commit(blockWitness)
     }
 
     private fun decodeTransaction(blockchainConfiguration: BlockchainConfiguration, txData: ByteArray): Transaction {
         val tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(txData)
-        tx.checkCorrectness()
+        tx.checkCorrectnessWhileSyncing()
         return tx
     }
 
@@ -297,4 +450,10 @@ object ImporterExporter : KLogging() {
             BaseBlockWitness.fromBytes(gtv.asArray()[1].asByteArray()),
             gtv.asArray()[2].asArray().map { it.asByteArray() }
     )
+
+    private fun blocksWithinLimit(blockCount: Int, blockCountLimit: Int?, blocksSize: Int, blocksSizeLimit: Int): Boolean {
+
+        return blockCount <= (blockCountLimit
+                ?: Int.MAX_VALUE) && blocksSize <= blocksSizeLimit.coerceAtMost(MAX_PACKAGE_CONTENT_BYTES)
+    }
 }

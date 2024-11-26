@@ -9,8 +9,8 @@ import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.DefaultContainerBlockchainProcess
 import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.core.BlockchainState
-import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.managed.DirectoryDataSource
+import net.postchain.managed.ManagedEBFTSynchronizationInfrastructure
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 import net.postchain.network.mastersub.master.DefaultMasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterCommunicationManager
@@ -22,7 +22,7 @@ open class DefaultMasterSyncInfra(
         postchainContext: PostchainContext,
         override val masterConnectionManager: MasterConnectionManager,
         private val containerNodeConfig: ContainerNodeConfig,
-) : EBFTSynchronizationInfrastructure(postchainContext), MasterSyncInfra {
+) : ManagedEBFTSynchronizationInfrastructure(postchainContext), MasterSyncInfra {
     private val afterSubnodeCommitListeners = Collections.newSetFromMap(ConcurrentHashMap<AfterSubnodeCommitListener, Boolean>())
 
     /**
@@ -33,7 +33,8 @@ open class DefaultMasterSyncInfra(
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
             targetContainer: PostchainContainer,
-            blockchainState: BlockchainState
+            blockchainState: BlockchainState,
+            restApiEnabled: Boolean
     ): ContainerBlockchainProcess {
 
         val communicationManager = DefaultMasterCommunicationManager(
@@ -51,11 +52,13 @@ open class DefaultMasterSyncInfra(
         return DefaultContainerBlockchainProcess(
                 nodeConfig,
                 containerNodeConfig,
-                targetContainer.containerPortMapping[containerNodeConfig.subnodeRestApiPort]
+                restApiEnabled,
+                restApiPort = targetContainer.containerPortMapping[containerNodeConfig.subnodeRestApiPort]
                         ?: throw ProgrammerMistake("No port mapping for subnode REST API"),
                 chainId,
                 blockchainRid,
                 blockchainState,
+                targetContainer.containerName.directoryContainer,
                 communicationManager
         )
     }

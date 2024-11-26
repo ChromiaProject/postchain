@@ -3,7 +3,10 @@
 package net.postchain.crypto
 
 import mu.KotlinLogging
+import net.postchain.bitcoinj.forks.crypto.HDKeyDerivation
+import net.postchain.bitcoinj.forks.crypto.MnemonicCode
 import net.postchain.common.data.Hash
+import net.postchain.common.exception.UserMistake
 import org.bouncycastle.asn1.x9.X9ECParameters
 import org.bouncycastle.crypto.digests.SHA256Digest
 import org.bouncycastle.crypto.ec.CustomNamedCurves
@@ -51,7 +54,13 @@ fun encodeSignature(r: BigInteger, s: BigInteger): ByteArray {
     )
 }
 
+const val STANDARD_SIGNATURE_SIZE = 64
+const val MAX_SIGNATURE_SIZE = 65
+
 fun secp256k1_decodeSignature(bytes: ByteArray): Array<BigInteger> {
+    require(bytes.size == STANDARD_SIGNATURE_SIZE || bytes.size == MAX_SIGNATURE_SIZE) {
+        "Secp256k1 signature should be $STANDARD_SIGNATURE_SIZE or $MAX_SIGNATURE_SIZE bytes"
+    }
     val r = BigInteger(1, bytes.sliceArray(0..31))
     val s = BigInteger(1, bytes.sliceArray(32..63))
     return arrayOf(r, s)
@@ -85,6 +94,7 @@ fun secp256k1_decodeSignature(bytes: ByteArray): Array<BigInteger> {
 }*/
 
 fun secp256k1_verify(digest: ByteArray, pubKey: ByteArray, signature: ByteArray): Boolean {
+    if (signature.size > MAX_SIGNATURE_SIZE) return false
     val signer = ECDSASigner()
     val params = ECPublicKeyParameters(CURVE.curve.decodePoint(pubKey), CURVE)
     signer.init(false, params)
@@ -126,6 +136,8 @@ open class Secp256k1SigMaker(val pubKey: ByteArray, val privKey: ByteArray, val 
     }
 
     private fun sign(digest: ByteArray, privateKeyBytes: ByteArray): ByteArray {
+        if (digest.size != 32) throw UserMistake("Digest to sign must be 32 bytes long")
+
         val signer = ECDSASigner(HMacDSAKCalculator(SHA256Digest()))
         val privateKey = BigInteger(1, privateKeyBytes)
         val privKey = ECPrivateKeyParameters(privateKey, CURVE)
@@ -194,20 +206,50 @@ open class Secp256K1CryptoSystem : BaseCryptoSystem() {
      */
     fun generatePrivKey(): PrivKey {
         var privateKey: ByteArray
-        var d: BigInteger
         while (true) {
             privateKey = getRandomBytes(32)
-            d = BigInteger(1, privateKey)
-            try {
-                ECPrivateKeyParameters(d, CURVE) // validate private key
-                break
-            } catch (e: Exception) {
-                logger.debug { "Generated invalid private key: $d" }
-            }
+            if (validatePrivKey(privateKey)) break
         }
         return PrivKey(privateKey)
     }
 
+    private fun validatePrivKey(privateKey: ByteArray): Boolean {
+        val d = BigInteger(1, privateKey)
+        return try {
+            ECPrivateKeyParameters(d, CURVE) // validate private key
+            true
+        } catch (e: Exception) {
+            logger.debug { "Generated invalid private key: $d" }
+            false
+        }
+    }
+
     override fun deriveSignatureVerificationFromSubject(subjectID: ByteArray): BasicVerifier? =
             if (subjectID[0] in setOf(2.toByte(), 3.toByte(), 4.toByte(), 6.toByte(), 7.toByte())) ::secp256k1_verify else null
+
+
+    fun generateKeyPairWithMnemonic(): Pair<KeyPair, String> {
+        val mnemonicInstance = MnemonicCode()
+        val entropy = getRandomBytes(32)
+        val mnemonic = mnemonicInstance.toMnemonic(entropy)
+        return recoverKeyPairFromMnemonic(mnemonic.joinToString(" "))
+    }
+
+    fun recoverKeyPairFromMnemonic(mnemonic: String): Pair<KeyPair, String> {
+        val mnemonicInstance = MnemonicCode()
+        validateMnemonic(mnemonic)
+        val seed = mnemonicInstance.toSeed(mnemonic.split(" "), "")
+        val privKey = HDKeyDerivation.createMasterPrivateKey(seed)
+        check(validatePrivKey(privKey)) { "Invalid private key generated" }
+        val pubKey = secp256k1_derivePubKey(privKey)
+        val keyPair = KeyPair(PubKey(pubKey), PrivKey(privKey))
+        return keyPair to mnemonic
+    }
+
+    private fun validateMnemonic(mnemonic: String) {
+        val nrOfWords = mnemonic.split(" ").size
+        if (nrOfWords != 12 && nrOfWords != 24) {
+            throw IllegalArgumentException("Invalid number of words in mnemonic. Supported number of words are 12 or 24")
+        }
+    }
 }

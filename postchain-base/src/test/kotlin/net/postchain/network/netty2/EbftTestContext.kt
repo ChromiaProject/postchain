@@ -2,37 +2,66 @@
 
 package net.postchain.network.netty2
 
-import org.mockito.kotlin.any
-import org.mockito.kotlin.doReturn
-import org.mockito.kotlin.mock
-import net.postchain.common.BlockchainRid
+import io.netty.channel.ChannelPipeline
 import net.postchain.base.PeerCommConfiguration
-import net.postchain.ebft.EbftPacketDecoder
-import net.postchain.ebft.EbftPacketEncoder
+import net.postchain.common.BlockchainRid
+import net.postchain.ebft.EbftPacketCodec
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.network.XPacketCodec
+import net.postchain.network.common.NodeConnection
 import net.postchain.network.common.NodeConnectorEvents
-import net.postchain.network.peer.PeerPacketHandler
 import net.postchain.network.peer.PeerConnectionDescriptor
+import net.postchain.network.peer.PeerPacketHandler
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.spy
+import java.util.Collections
 
 class EbftTestContext(val config: PeerCommConfiguration, val blockchainRid: BlockchainRid) {
 
-    val packets: PeerPacketHandler = mock()
+    val connectionConfig = ConnectionConfig()
+    var readHandshakeTimeoutHandler = true
 
-    val events: NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> = mock {
-        on { onNodeConnected(any()) } doReturn packets
+    val packets: PeerPacketHandler = mock()
+    val connections = Collections.synchronizedList(mutableListOf<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>())
+    val serverConnections = Collections.synchronizedList(mutableListOf<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>())
+
+    val events = spy(object : NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
+
+        override fun onNodeConnected(connection: NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>): PeerPacketHandler? {
+            connections.add(connection)
+            return packets
+        }
+
+        override fun onNodeDisconnected(connection: NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>) {
+            connections.remove(connection)
+        }
+    })
+
+    private val serverChannelHandlerFactory = object : ServerChannelHandlerFactory {
+
+        override fun <PacketType> onPostInitChannelHandler(pipeline: ChannelPipeline, packetCodec: XPacketCodec<PacketType>, eventsReceiver: NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor>) {
+            // The default initialisation flow
+            DefaultServerChannelHandlerFactory(connectionConfig).onPostInitChannelHandler(pipeline, packetCodec, eventsReceiver)
+
+            // Get the connectionHandler and add it to the `serverConnections` list
+            serverConnections.add(pipeline.last() as NettyServerPeerConnection<*>)
+
+            // Remove the ReadHandshakeTimeoutHandler
+            if (!readHandshakeTimeoutHandler) {
+                pipeline.remove(ReadHandshakeTimeoutHandler::class.java)
+            }
+        }
     }
 
-    val peer = NettyPeerConnector<EbftMessage>(events)
+    val connector = NettyPeerConnector<EbftMessage>(events, connectionConfig, serverChannelHandlerFactory)
 
-    fun init() = peer.init(config.myPeerInfo(), EbftPacketDecoder(config))
+    fun init() = connector.init(config.myPeerInfo(), EbftPacketCodec(config, blockchainRid))
 
-    fun buildPacketEncoder(): EbftPacketEncoder = EbftPacketEncoder(config, blockchainRid)
+    fun buildPacketCodec(): EbftPacketCodec = EbftPacketCodec(config, blockchainRid)
 
-    fun buildPacketDecoder(): EbftPacketDecoder = EbftPacketDecoder(config)
+    fun encodePacket(message: EbftMessage, version: Long): ByteArray = buildPacketCodec().encodePacket(message, version)
 
-    fun encodePacket(message: EbftMessage): ByteArray = buildPacketEncoder().encodePacket(message)
+    fun decodePacket(bytes: ByteArray, version: Long): EbftMessage = buildPacketCodec().decodePacket(bytes, version)!!
 
-    fun decodePacket(bytes: ByteArray): EbftMessage = buildPacketDecoder().decodePacket(bytes)!!
-
-    fun shutdown() = peer.shutdown()
+    fun shutdown() = connector.shutdown()
 }

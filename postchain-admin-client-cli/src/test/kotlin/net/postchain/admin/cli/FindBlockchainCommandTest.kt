@@ -1,6 +1,8 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.PostchainServiceCommandTestBase
 import net.postchain.common.BlockchainRid
 import org.junit.jupiter.api.BeforeEach
@@ -21,7 +23,7 @@ class FindBlockchainCommandTest : PostchainServiceCommandTestBase() {
     @BeforeEach
     fun beforeEach() {
         command = FindBlockchainCommand { _, _ -> setupChannel(postchainService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
     }
 
     @Test
@@ -37,7 +39,7 @@ class FindBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).findBlockchain(chainId)
-        testConsole.assertContains("$brid\n")
+        testTerminal.assertContains(brid)
     }
 
     @Test
@@ -53,6 +55,6 @@ class FindBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).findBlockchain(chainId)
-        testConsole.assertContains("\n")
+        testTerminal.assertContains("")
     }
 }

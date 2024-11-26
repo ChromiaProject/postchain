@@ -4,6 +4,8 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.PostchainServiceCommandTestBase
 import net.postchain.gtv.gtvml.GtvMLParser
 import org.junit.jupiter.api.BeforeEach
@@ -20,7 +22,7 @@ class AddConfigurationCommandTest : PostchainServiceCommandTestBase() {
 
     private val chainId = 1L
     private val height = 10L
-    private val blockChainConfig = getResouceFile("blockchain_config.xml")
+    private val blockChainConfig = getResourceFile("blockchain_config.xml")
     private val gtv = GtvMLParser.parseGtvML(blockChainConfig.readText())
 
     private lateinit var command: AddConfigurationCommand
@@ -28,7 +30,7 @@ class AddConfigurationCommandTest : PostchainServiceCommandTestBase() {
     @BeforeEach
     fun beforeEach() {
         command = AddConfigurationCommand { _, _ -> setupChannel(postchainService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
     }
 
     @Test
@@ -47,7 +49,7 @@ class AddConfigurationCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).addConfiguration(chainId, height, true, gtv, false)
-        testConsole.assertContains("Configuration height $height on chain $chainId has been added\n")
+        testTerminal.assertContains("Configuration height $height on chain $chainId has been added")
     }
 
     @Test

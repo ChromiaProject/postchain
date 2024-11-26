@@ -9,6 +9,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.core.BadDataException
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.server.service.PostchainService
 import java.nio.file.Path
@@ -61,7 +62,7 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         }
 
         try {
-            val added = postchainService.addConfiguration(request.chainId, request.height, request.override, config)
+            val added = postchainService.addConfiguration(request.chainId, request.height, request.override, config, request.allowUnknownSigners)
             if (added) {
                 responseObserver.onNext(
                         AddConfigurationReply.newBuilder().run {
@@ -207,6 +208,7 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         try {
             val exportResult = postchainService.exportBlockchain(
                     request.chainId,
+                    request.blockchainRid.toByteArray(),
                     Path.of(request.configurationsFile),
                     if (request.blocksFile.isNullOrBlank()) null else Path.of(request.blocksFile),
                     request.overwrite,
@@ -226,6 +228,26 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
         }
     }
 
+    override fun exportBlocks(request: ExportBlocksRequest, responseObserver: StreamObserver<ExportBlocksReply>) {
+        try {
+
+            val builder = ExportBlocksReply.newBuilder()
+
+            postchainService.exportBlocks(request.chainId, request.fromHeight, request.blockCountLimit, request.blocksSizeLimit)
+                    .map { ByteString.copyFrom(GtvEncoder.encodeGtv(it)) }
+                    .forEach(builder::addBlockData)
+
+            responseObserver.onNext(builder.build())
+            responseObserver.onCompleted()
+        } catch (e: NotFound) {
+            responseObserver.onError(Status.NOT_FOUND.withDescription(e.message).asRuntimeException())
+        } catch (e: Exception) {
+            responseObserver.onError(
+                    Status.INTERNAL.withDescription(e.message).asRuntimeException()
+            )
+        }
+    }
+
     override fun importBlockchain(request: ImportBlockchainRequest, responseObserver: StreamObserver<ImportBlockchainReply>) {
         try {
             val importResult = postchainService.importBlockchain(
@@ -233,13 +255,37 @@ class PostchainServiceGrpcImpl(private val postchainService: PostchainService) :
                     request.blockchainRid.toByteArray(),
                     Path.of(request.configurationsFile),
                     Path.of(request.blocksFile),
-                    request.incremental
+                    request.incremental,
+                    request.skipPrimaryFieldValidation
             )
             responseObserver.onNext(ImportBlockchainReply.newBuilder()
                     .setFromHeight(importResult.fromHeight)
                     .setToHeight(importResult.toHeight)
                     .setNumBlocks(importResult.numBlocks)
                     .setBlockchainRid(ByteString.copyFrom(importResult.blockchainRid.data))
+                    .build())
+            responseObserver.onCompleted()
+        } catch (e: NotFound) {
+            responseObserver.onError(Status.NOT_FOUND.withDescription(e.message).asRuntimeException())
+        } catch (e: Exception) {
+            responseObserver.onError(
+                    Status.INTERNAL.withDescription(e.message).asRuntimeException()
+            )
+        }
+    }
+
+    override fun importBlocks(request: ImportBlocksRequest, responseObserver: StreamObserver<ImportBlocksReply>) {
+        try {
+            val importBlocks = postchainService.importBlocks(
+                    request.chainId,
+                    request.blockDataList.map { GtvDecoder.decodeGtv(it.toByteArray()) },
+                    request.skipPrimaryFieldValidation
+            )
+
+            responseObserver.onNext(ImportBlocksReply.newBuilder()
+                    .setMessage("OK")
+                    .setFromHeight(importBlocks.first)
+                    .setUpToHeight(importBlocks.last)
                     .build())
             responseObserver.onCompleted()
         } catch (e: NotFound) {

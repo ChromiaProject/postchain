@@ -37,30 +37,19 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         return res.asArray().map { PeerInfo.fromGtv(it) }.toTypedArray()
     }
 
-    override fun computeBlockchainList(): List<ByteArray> {
+    override fun computeBlockchainInfoList(): List<BlockchainInfo> {
+        if (nmApiVersion < 4) return listOf()
+
         val res = query(
-                "nm_compute_blockchain_list",
+                "nm_compute_blockchain_info_list",
                 buildArgs("node_id" to gtv(appConfig.pubKeyByteArray))
         )
 
-        return res.asArray().map { it.asByteArray() }
-    }
-
-    override fun computeBlockchainInfoList(): List<BlockchainInfo> {
-        return if (nmApiVersion >= 4) {
-            val res = query(
-                    "nm_compute_blockchain_info_list",
-                    buildArgs("node_id" to gtv(appConfig.pubKeyByteArray))
-            )
-            res.asArray().map {
-                BlockchainInfo(
-                        BlockchainRid(it["rid"]!!.asByteArray()),
-                        it["system"]!!.asBoolean(),
-                        BlockchainState.valueOf(it["state"]?.asString() ?: BlockchainState.RUNNING.name))
-            }
-        } else {
-            // Fallback for legacy API versions
-            computeBlockchainList().map { BlockchainInfo(BlockchainRid(it), false, BlockchainState.RUNNING) }
+        return res.asArray().map {
+            BlockchainInfo(
+                    BlockchainRid(it["rid"]!!.asByteArray()),
+                    it["system"]!!.asBoolean(),
+                    BlockchainState.valueOf(it["state"]?.asString() ?: BlockchainState.RUNNING.name))
         }
     }
 
@@ -179,20 +168,63 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         }
     }
 
-    override fun findNextRemovedBlockchains(height: Long): List<RemovedBlockchainInfo> {
-        return if (nmApiVersion >= 10) {
+    override fun findNextInactiveBlockchains(height: Long): List<InactiveBlockchainInfo> {
+        return if (nmApiVersion >= 11) {
             val res = query(
-                    "nm_find_next_removed_blockchains",
+                    "nm_find_next_inactive_blockchains",
                     buildArgs("height" to gtv(height))
             )
-            res.asArray().map {
-                RemovedBlockchainInfo(
-                        BlockchainRid(it["rid"]!!.asByteArray()),
-                        it["height"]!!.asInteger()
-                )
+
+            try {
+                res.asArray().map {
+                    InactiveBlockchainInfo(
+                            BlockchainRid(it["rid"]!!.asByteArray()),
+                            BlockchainState.valueOf(it["state"]!!.asString()),
+                            it["height"]!!.asInteger()
+                    )
+                }
+            } catch (e: Exception) {
+                logger.error(e) { "Can't parse nm_find_next_inactive_blockchains() query result" }
+                emptyList()
             }
         } else {
             emptyList()
         }
+    }
+
+    override fun getMigratingBlockchainNodeInfo(blockchainRid: BlockchainRid): MigratingBlockchainNodeInfo? {
+        if (nmApiVersion < 16) return null
+
+        val res = query(
+                "nm_get_migrating_blockchain_node_info",
+                buildArgs(
+                        "node_id" to gtv(appConfig.pubKeyByteArray),
+                        "blockchain_rid" to gtv(blockchainRid.data)
+                )
+        )
+        if (res.isNull()) return null
+
+        return MigratingBlockchainNodeInfo(
+                res["rid"]?.asByteArray()?.wrap() ?: return null,
+                res["source_container"]?.asString() ?: return null,
+                res["destination_container"]?.asString() ?: return null,
+                res["is_source_node"]?.asBoolean() ?: return null,
+                res["is_destination_node"]?.asBoolean() ?: return null,
+                res["final_height"]?.asInteger() ?: return null
+        )
+    }
+
+    override fun isBlockchainProvider(providerPubKey: PubKey, blockchainRid: BlockchainRid): Boolean {
+        if (nmApiVersion < 19) return true
+
+        val res = query(
+                "nm_is_blockchain_provider",
+                buildArgs(
+                        "provider_pubkey" to gtv(providerPubKey.data),
+                        "blockchain_rid" to gtv(blockchainRid.data)
+                )
+        )
+
+        return res.asBoolean()
     }
 }

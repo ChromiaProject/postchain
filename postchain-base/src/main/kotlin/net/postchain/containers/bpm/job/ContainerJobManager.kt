@@ -17,12 +17,14 @@ internal interface ContainerJobManager {
     fun stopChain(chain: Chain)
     fun startChain(chain: Chain)
     fun restartChain(chain: Chain)
+    fun hasPendingJobs(containerName: ContainerName): Boolean
 }
 
 internal class DefaultContainerJobManager(
         val containerNodeConfig: ContainerNodeConfig,
         private val containerJobHandler: ContainerJobHandler,
-        private val containerHealthcheckHandler: ContainerHealthcheckHandler
+        private val containerHealthcheckHandler: ContainerHealthcheckHandler,
+        private val housekeepingHandler: () -> Unit
 ) : ContainerJobManager, Shutdownable {
 
     private val jobs = LinkedHashMap<String, Job>() // name -> job
@@ -40,8 +42,12 @@ internal class DefaultContainerJobManager(
         jobsExecutor = Executors.newSingleThreadScheduledExecutor(
                 ThreadFactoryBuilder().setNameFormat("containerJobThread").build()
         ).also {
-            it.scheduleAtFixedRate({
-                checkJobs()
+            it.scheduleWithFixedDelay({
+                try {
+                    checkJobs()
+                } catch (e: Exception) {
+                    logger.error("Unexpected exception while checking jobs", e)
+                }
             }, EXECUTION_PERIOD, EXECUTION_PERIOD, TimeUnit.MILLISECONDS)
         }
 
@@ -75,6 +81,10 @@ internal class DefaultContainerJobManager(
     override fun restartChain(chain: Chain) {
         jobOf(chain.containerName).restartChain(chain)
     }
+
+    override fun hasPendingJobs(containerName: ContainerName) = jobs[containerName.dockerContainer]?.let {
+        (it as ContainerJob).isNotEmpty()
+    } ?: false
 
     override fun shutdown() {
         jobsExecutor.shutdownNow()
@@ -119,6 +129,8 @@ internal class DefaultContainerJobManager(
                 logger.error("Can't handle container job: $currentJob", e)
             }
         }
+
+        housekeepingHandler()
     }
 
     private fun runHealthCheck(): Boolean =
@@ -136,7 +148,7 @@ internal class DefaultContainerJobManager(
 
     private fun jobOf(containerName: ContainerName): ContainerJob {
         lockJobs.withLock {
-            return jobs.computeIfAbsent(containerName.name) {
+            return jobs.computeIfAbsent(containerName.dockerContainer) {
                 ContainerJob(containerName)
             } as ContainerJob
         }

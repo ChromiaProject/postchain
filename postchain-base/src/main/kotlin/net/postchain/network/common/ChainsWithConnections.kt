@@ -100,4 +100,6 @@ class ChainsWithConnections<
 
     // For testing only
     fun isEmpty() = chainsWithConnections.isEmpty()
+
+    fun getAllChains() = chainsWithConnections.values.toList()
 }

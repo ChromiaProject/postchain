@@ -1,6 +1,8 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.PeerServiceCommandTestBase
 import net.postchain.base.PeerInfo
 import net.postchain.common.hexStringToByteArray
@@ -22,7 +24,7 @@ class RemovePeerCommandTest : PeerServiceCommandTestBase() {
     @BeforeEach
     fun beforeEach() {
         command = RemovePeerCommand { _, _ -> setupChannel(peerService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
     }
 
     @Test
@@ -38,7 +40,7 @@ class RemovePeerCommandTest : PeerServiceCommandTestBase() {
         )
         // verify
         verify(peerService).removePeer(PubKey(pubKey))
-        testConsole.assertContains("No peer has been removed\n")
+        testTerminal.assertContains("No peer has been removed")
     }
 
     @Test
@@ -54,6 +56,6 @@ class RemovePeerCommandTest : PeerServiceCommandTestBase() {
         )
         // verify
         verify(peerService).removePeer(PubKey(pubKey))
-        testConsole.assertContains("Successfully removed peer: PeerInfo(host='host1', port=1, pubKey=$pubKey)\n")
+        testTerminal.assertContains("Successfully removed peer: PeerInfo(host='host1', port=1, pubKey=$pubKey)")
     }
 }

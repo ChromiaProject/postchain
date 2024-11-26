@@ -1,16 +1,13 @@
 package net.postchain.base.snapshot
 
-import net.postchain.StorageBuilder
 import net.postchain.base.BaseBlockEContext
 import net.postchain.base.BaseTxEContext
 import net.postchain.base.TxEventSink
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.data.testDbConfig
-import net.postchain.base.withWriteConnection
+import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.toHex
-import net.postchain.config.app.AppConfig
 import net.postchain.core.TxEContext
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
@@ -26,16 +23,14 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.math.BigInteger
 
-class EventIT: SnapshotBaseIT() {
+class EventIT : SnapshotBaseIT() {
     private val cs = Secp256K1CryptoSystem()
-    private val appConfig: AppConfig = testDbConfig("database_event_tree")
 
     @Test
     fun testEventTree() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         val chainId = 0L
 
-        withWriteConnection(storage, chainId) { ctx ->
+        runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
             db.apply {
@@ -81,7 +76,16 @@ class EventIT: SnapshotBaseIT() {
                 assertEquals(expected.toHex(), root.toHex())
             }
 
-            true
+            // Add event on next height and assert that levels from previous height is not included in proof
+            val nextHeight = blockHeight + 1
+            val data = BigInteger.valueOf(129L).toByteArray()
+            val hash = ds.digest(data)
+            db.insertEvent(txEContext, PREFIX, nextHeight, 0, hash, data)
+            val nextHeightRoot = event.writeEventTree(nextHeight, listOf(hash))
+
+            val proofs = event.getMerkleProof(nextHeight, 0)
+            val expected = getMerkleRoot(proofs, 0, hash)
+            assertEquals(expected.toHex(), nextHeightRoot.toHex())
         }
     }
 }

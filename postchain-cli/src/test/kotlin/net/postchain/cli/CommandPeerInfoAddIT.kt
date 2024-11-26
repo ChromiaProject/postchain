@@ -4,6 +4,8 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.runStorageCommand
 import net.postchain.common.hexStringToByteArray
@@ -19,7 +21,7 @@ class CommandPeerInfoAddIT : CommandITBase() {
     @BeforeEach
     fun setup() {
         command = CommandPeerInfoAdd()
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
         addBlockchain(multiSignersBlockchainConfig)
         addSignersAsPeers()
     }
@@ -44,7 +46,7 @@ class CommandPeerInfoAddIT : CommandITBase() {
         assertThat(peerInfos[0].pubKey).isEqualTo(signer3PubKey.hexStringToByteArray())
         assertThat(peerInfos[0].host).isEqualTo(host)
         assertThat(peerInfos[0].port).isEqualTo(1234)
-        testConsole.assertContains("Peer info has been added successfully\n")
+        testTerminal.assertContains("Peer info has been added successfully\n")
     }
 
     @Test

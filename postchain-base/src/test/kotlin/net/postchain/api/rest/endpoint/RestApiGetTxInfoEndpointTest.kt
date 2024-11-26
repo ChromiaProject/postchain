@@ -4,15 +4,18 @@ package net.postchain.api.rest.endpoint
 
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
+import net.postchain.api.rest.controller.DATA_TRUNCATED_HEADER
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
+import net.postchain.api.rest.infra.RestApiConfig.Companion.DEFAULT_MAX_DATA_SIZE
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.model.TxRid
-import net.postchain.base.cryptoSystem
 import net.postchain.common.BlockchainRid
 import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TransactionInfoExtsTruncated
+import net.postchain.core.block.BlockQueryTimeFilter
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.CoreMatchers.nullValue
 import org.junit.jupiter.api.AfterEach
@@ -88,7 +91,7 @@ class RestApiGetTxInfoEndpointTest {
                 .contentType(ContentType.JSON)
                 .header("Cache-Control", nullValue())
                 .header("Expires", nullValue())
-                .body("error", equalTo("Can't find tx with hash ${txRID.toHex()}"))
+                .body("error", equalTo("Can't find transaction with RID: ${txRID.toHex()}"))
     }
 
     @Test
@@ -100,8 +103,8 @@ class RestApiGetTxInfoEndpointTest {
                 TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx4".toByteArray()), "tx4 - 004".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx4".toByteArray())
         )
         whenever(
-                model.getTransactionsInfo(Long.MAX_VALUE, 300)
-        ).thenReturn(response)
+                model.getTransactionsInfo(BlockQueryTimeFilter(), 300, DEFAULT_MAX_DATA_SIZE)
+        ).thenReturn(TransactionInfoExtsTruncated(response, false))
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -111,6 +114,32 @@ class RestApiGetTxInfoEndpointTest {
                 .contentType(ContentType.JSON)
                 .header("Cache-Control", equalTo("private, must-revalidate"))
                 .header("Expires", equalTo("0"))
+                .header(DATA_TRUNCATED_HEADER, equalTo("false"))
+                .body(equalTo(gson.toJson(response).toString()))
+    }
+
+    @Test
+    fun testGetTransactionsWithRemainingBlocks() {
+        val response = listOf(
+                TransactionInfoExt(BlockRid.buildRepeat(2).data, 1, "some other header".toByteArray(), "signatures".toByteArray(), 1574849760, cryptoSystem.digest("tx1".toByteArray()), "tx1 - 001".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx1".toByteArray()),
+                TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx2".toByteArray()), "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx2".toByteArray()),
+                TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx3".toByteArray()), "tx3 - 003".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx3".toByteArray()),
+                TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx4".toByteArray()), "tx4 - 004".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx4".toByteArray())
+        )
+        whenever(
+                model.getTransactionsInfo(BlockQueryTimeFilter(), 300, DEFAULT_MAX_DATA_SIZE)
+        ).thenReturn(TransactionInfoExtsTruncated(response, true))
+
+        restApi.attachModel(blockchainRID, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/transactions/$blockchainRID?before-time=${Long.MAX_VALUE}&limit=${300}")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .header("Cache-Control", equalTo("private, must-revalidate"))
+                .header("Expires", equalTo("0"))
+                .header(DATA_TRUNCATED_HEADER, equalTo("true"))
                 .body(equalTo(gson.toJson(response).toString()))
     }
 
@@ -123,8 +152,8 @@ class RestApiGetTxInfoEndpointTest {
                 TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(), "signatures".toByteArray(), 1574849940, cryptoSystem.digest("tx4".toByteArray()), "tx4 - 004".toByteArray().slice(IntRange(0, 4)).toByteArray(), "tx4".toByteArray())
         )
         whenever(
-                model.getTransactionsInfo(Long.MAX_VALUE, 25)
-        ).thenReturn(response)
+                model.getTransactionsInfo(BlockQueryTimeFilter(), 25, DEFAULT_MAX_DATA_SIZE)
+        ).thenReturn(TransactionInfoExtsTruncated(response, false))
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -139,8 +168,8 @@ class RestApiGetTxInfoEndpointTest {
     fun testGetTransactionsEmpty() {
         val response = listOf<TransactionInfoExt>()
         whenever(
-                model.getTransactionsInfo(Long.MAX_VALUE, 25)
-        ).thenReturn(response)
+                model.getTransactionsInfo(BlockQueryTimeFilter(), 25, DEFAULT_MAX_DATA_SIZE)
+        ).thenReturn(TransactionInfoExtsTruncated(response, false))
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())

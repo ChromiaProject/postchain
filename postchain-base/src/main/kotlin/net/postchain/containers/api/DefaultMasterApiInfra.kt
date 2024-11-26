@@ -19,12 +19,12 @@ class DefaultMasterApiInfra(
 
     override fun connectContainerProcess(process: ContainerBlockchainProcess) {
         if (restApi != null) {
-            val model = HttpExternalModel(restApi.basePath, process.restApiUrl, process.chainId)
-            restApi.attachModel(process.blockchainRid, model)
+            val model = HttpExternalModel(restApi.basePath, process.restApiUrl, process.chainId, process.directoryContainer)
+            restApi.attachModel(process.blockchainRid, model, process.directoryContainer)
         }
     }
 
     override fun disconnectContainerProcess(process: ContainerBlockchainProcess) {
-        restApi?.detachModel(process.blockchainRid)
+        restApi?.detachModel(process.blockchainRid, process.directoryContainer)
     }
 }

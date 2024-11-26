@@ -1,6 +1,8 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.PostchainServiceCommandTestBase
 import net.postchain.common.BlockchainRid
 import org.junit.jupiter.api.Test
@@ -20,7 +22,7 @@ class StartBlockchainCommandTest : PostchainServiceCommandTestBase() {
         // setup
         doReturn(blockchainRid).whenever(postchainService).startBlockchain(anyLong())
         val command = StartBlockchainCommand { _, _ -> setupChannel(postchainService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
         // execute
         command.parse(
                 arrayOf(
@@ -30,6 +32,6 @@ class StartBlockchainCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).startBlockchain(chainId)
-        testConsole.assertContains("Blockchain with id $chainId started with brid $brid\n")
+        testTerminal.assertContains("Blockchain with id $chainId started with brid $brid")
     }
 }

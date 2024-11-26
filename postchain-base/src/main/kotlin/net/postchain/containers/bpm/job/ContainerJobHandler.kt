@@ -1,19 +1,19 @@
 package net.postchain.containers.bpm.job
 
+import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.model.Container
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.Chain
 import net.postchain.containers.bpm.ContainerBlockchainProcess
-import net.postchain.containers.bpm.ContainerConfigFactory
+import net.postchain.containers.bpm.ContainerHandler
 import net.postchain.containers.bpm.ContainerName
 import net.postchain.containers.bpm.ContainerState
 import net.postchain.containers.bpm.DefaultPostchainContainer
 import net.postchain.containers.bpm.PostchainContainer
-import net.postchain.containers.bpm.docker.DockerTools.findHostPorts
-import net.postchain.containers.bpm.docker.DockerTools.hasName
 import net.postchain.containers.bpm.fs.FileSystem
-import net.postchain.containers.bpm.rpc.SubnodeAdminClient
+import net.postchain.containers.bpm.rpc.DefaultSubnodeAdminClient
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.crypto.PrivKey
 import net.postchain.debug.NodeDiagnosticContext
@@ -21,28 +21,40 @@ import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.logging.CONTAINER_NAME_TAG
 import net.postchain.managed.DirectoryDataSource
-import org.mandas.docker.client.DockerClient
-import org.mandas.docker.client.messages.Container
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
 class ContainerJobHandler(
         private val appConfig: AppConfig,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
-        private val dockerClient: DockerClient,
+        dockerClient: DockerClient,
         private val fileSystem: FileSystem,
         private val directoryDataSource: () -> DirectoryDataSource,
         private val postchainContainers: () -> MutableMap<ContainerName, PostchainContainer>,
         private val terminateBlockchainProcess: (Long, PostchainContainer) -> ContainerBlockchainProcess?,
         private val createBlockchainProcess: (Chain, PostchainContainer) -> ContainerBlockchainProcess?
-) {
+) : ContainerHandler(dockerClient, appConfig, fileSystem) {
 
-    companion object : KLogging()
-
-    private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
+    companion object : KLogging() {
+        internal fun getDefaultContainerImage(config: ContainerNodeConfig): String =
+                when (val expectedTag = config.imageVersionTag) {
+                    "" -> config.containerImage
+                    else -> {
+                        when (val actualTag = config.containerImage.substringAfter(":", "")) {
+                            "" -> config.containerImage.substringBefore(":") + ":" + expectedTag
+                            else -> {
+                                if (expectedTag != actualTag) {
+                                    logger.warn { "Container image version tag ($actualTag) is not equal to the environment image version tag ($expectedTag)" }
+                                }
+                                config.containerImage
+                            }
+                        }
+                    }
+                }
+    }
 
     fun handleJob(job: ContainerJob) {
-        withLoggingContext(CONTAINER_NAME_TAG to job.containerName.name) {
+        withLoggingContext(CONTAINER_NAME_TAG to job.containerName.dockerContainer) {
             handleJobInternal(job)
         }
     }
@@ -68,15 +80,15 @@ class ContainerJobHandler(
         val psContainer = ensurePostchainContainer(containerName) ?: return result(false)
 
         // 2. Start Docker container
-        val dockerContainer = findDockerContainer(job.containerName)
+        val dockerContainer = findContainer(job.containerName.dockerContainer)
         if (dockerContainer == null && job.chainsToStart.isNotEmpty()) {
-            startDockerContainer(containerName, psContainer, job)
+            startDockerContainer(psContainer, job)
             return result(false)
         }
 
         // 3. Assert subnode is connected and running
         if (dockerContainer != null && job.chainsToStart.isNotEmpty()) {
-            if (!ensureSubNode(psContainer, dockerContainer, containerName, job)) return result(false)
+            if (!ensureSubNode(psContainer, dockerContainer, job)) return result(false)
         } else {
             logger.debug { "DockerContainer is not running, 'is subnode connected' check will be skipped, container: ${job.containerName}" }
         }
@@ -87,67 +99,51 @@ class ContainerJobHandler(
         // 5. Start chains
         startChains(job, psContainer)
 
-        // 6. Stop container if it is empty
-        stopContainerIfEmpty(job, psContainer, containerName, dockerContainer)
-
         job.done = true
         return result(true)
     }
 
-    private fun ensureSubNode(psContainer: PostchainContainer, dockerContainer: Container, containerName: ContainerName, job: ContainerJob): Boolean {
-        psContainer.containerId = dockerContainer.id()
-        val dcState = dockerContainer.state()
+    private fun ensureSubNode(psContainer: PostchainContainer, dockerContainer: Container, job: ContainerJob): Boolean {
+        psContainer.containerId = dockerContainer.id
+        val dcState = dockerContainer.state
         if (dcState in listOf("exited", "created", "paused")) {
-            logger.info { dcLog(containerName, "$dcState and will be started", psContainer) }
+            logger.info { dcLog(psContainer.containerName, "$dcState and will be started", psContainer) }
             updateResourceLimits(psContainer)
-            dockerClient.startContainer(dockerContainer.id())
+            startContainer(psContainer)
 
             // We may have new ports so let's ensure we re-connect with those
             if (psContainer.state == ContainerState.RUNNING) psContainer.reset()
-            logger.info { dcLog(containerName, "restarted", psContainer) }
+            logger.info { dcLog(psContainer.containerName, "restarted", psContainer) }
 
             job.postponeWithBackoff()
             return false
         }
         if (psContainer.state != ContainerState.RUNNING) {
-            psContainer.containerPortMapping.putAll(dockerClient.findHostPorts(dockerContainer.id(), containerNodeConfig.subnodePorts))
+            psContainer.containerPortMapping.putAll(findHostPorts(dockerContainer.id, containerNodeConfig.subnodePorts))
             psContainer.start()
             job.postpone(5_000)
             return false
         }
         if (!psContainer.initializePostchainNode(PrivKey(appConfig.privKey))) {
-            logger.warn { "Failed to initialize Postchain node, container: $containerName" }
+            logger.warn { "Failed to initialize Postchain node, container: ${psContainer.containerName}" }
             job.postpone(5_000)
             return false
         }
         if (!psContainer.isSubnodeHealthy()) {
-            logger.warn { "Subnode is unhealthy, container: $containerName" }
+            logger.warn { "Subnode is unhealthy, container: ${psContainer.containerName}" }
             job.postpone(5_000)
             return false
         }
         job.resetFailedStartCount()
-        logger.info { "Subnode is healthy, container: $containerName" }
+        logger.info { "Subnode is healthy, container: ${psContainer.containerName}" }
         return true
-    }
-
-    private fun stopContainerIfEmpty(job: ContainerJob, psContainer: PostchainContainer, containerName: ContainerName, dockerContainer: Container?) {
-        if (job.chainsToStart.isEmpty() && psContainer.isEmpty()) {
-            logger.info { "Container is empty and will be stopped: $containerName" }
-            psContainer.stop()
-            postchainContainers().remove(psContainer.containerName)
-            if (dockerContainer != null) {
-                dockerClient.stopContainer(dockerContainer.id(), 10)
-                logger.debug { "Docker container stopped: $containerName" }
-            }
-            logger.info { "Container stopped: $containerName" }
-        }
     }
 
     private fun startChains(job: ContainerJob, psContainer: PostchainContainer) {
         job.chainsToStart.forEach { chain ->
             withLoggingContext(CHAIN_IID_TAG to chain.chainId.toString(), BLOCKCHAIN_RID_TAG to chain.brid.toHex()) {
                 val process = createBlockchainProcess(chain, psContainer)
-                logger.debug { "ContainerBlockchainProcess created" }
+                logger.debug { "ContainerBlockchainProcess created: ${process != null}" }
                 if (process == null) {
                     logger.error { "Blockchain didn't start" }
                 } else {
@@ -167,14 +163,14 @@ class ContainerJobHandler(
         }
     }
 
-    private fun startDockerContainer(containerName: ContainerName, psContainer: PostchainContainer, job: ContainerJob) {
-        logger.debug { dcLog(containerName, "not found", null) }
+    private fun startDockerContainer(psContainer: PostchainContainer, job: ContainerJob) {
+        logger.debug { dcLog(psContainer.containerName, "not found", null) }
         updateResourceLimits(psContainer)
         psContainer.checkResourceLimits(fileSystem)
-        val containerId = createDockerContainer(psContainer, containerName)
-        dockerClient.startContainer(containerId)
-        psContainer.containerId = containerId
-        logger.info { dcLog(containerName, "started", psContainer) }
+        psContainer.updateImage()
+        psContainer.containerId = pullAndCreateDockerContainer(psContainer)
+        startContainer(psContainer)
+        logger.info { dcLog(psContainer.containerName, "started", psContainer) }
         job.postpone(1_000)
     }
 
@@ -183,16 +179,20 @@ class ContainerJobHandler(
         fileSystem.applyLimits(psContainer.containerName, psContainer.resourceLimits)
     }
 
-    private fun createDockerContainer(psContainer: PostchainContainer, containerName: ContainerName): String {
-        val config = ContainerConfigFactory.createConfig(fileSystem, appConfig, containerNodeConfig, psContainer)
-        return dockerClient.createContainer(config, containerName.toString()).id()!!.also {
-            logger.debug { dcLog(containerName, "created", psContainer) }
+    private fun pullAndCreateDockerContainer(psContainer: PostchainContainer): String {
+        val containerImageInfo = psContainer.image
+        val image = if (containerImageInfo != null) {
+            val imageSpec = "${containerImageInfo.url}@${containerImageInfo.digest}"
+            logger.info("Pulling image $imageSpec...")
+            pullImage(imageSpec)
+            imageSpec
+        } else {
+            logger.info("Using default image")
+            getDefaultContainerImage(containerNodeConfig)
         }
-    }
-
-    private fun findDockerContainer(containerName: ContainerName): Container? {
-        val all = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers())
-        return all.firstOrNull { it.hasName(containerName.name) }
+        return createDockerContainer(psContainer.containerName, psContainer.resourceLimits, psContainer.readOnly.get(), image).also {
+            logger.debug { dcLog(psContainer.containerName, "created", psContainer) }
+        }
     }
 
     private fun ensurePostchainContainer(containerName: ContainerName): PostchainContainer? {
@@ -217,7 +217,7 @@ class ContainerJobHandler(
 
     private fun createPostchainContainer(containerName: ContainerName): PostchainContainer {
         val containerPortMapping = ConcurrentHashMap<Int, Int>()
-        val subnodeAdminClient = SubnodeAdminClient.create(containerNodeConfig, containerPortMapping, nodeDiagnosticContext)
+        val subnodeAdminClient = DefaultSubnodeAdminClient(containerName, containerNodeConfig, containerPortMapping, nodeDiagnosticContext)
         return DefaultPostchainContainer(containerNodeConfig, directoryDataSource(), containerName, containerPortMapping, ContainerState.STARTING, subnodeAdminClient)
     }
 

@@ -19,7 +19,8 @@ import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
 import net.postchain.core.EContext
 import net.postchain.crypto.KeyPair
-import net.postchain.crypto.devtools.KeyPairHelper
+import net.postchain.crypto.devtools.KeyPairHelper.privKey
+import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.RestTools
@@ -37,7 +38,7 @@ import net.postchain.gtx.SimpleGTXModule
 import net.postchain.integrationtest.JsonTools
 import net.postchain.integrationtest.JsonTools.jsonAsMap
 import net.postchain.integrationtest.reconfiguration.TogglableFaultyGtxModule
-import org.awaitility.Awaitility
+import org.awaitility.Awaitility.await
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.core.IsEqual
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -127,6 +128,38 @@ class RestApiIT : IntegrationTestSetup() {
     }
 
     @Test
+    fun testWebQueryApi() {
+        val nodeCount = 1
+
+        val sysSetup = doSystemSetup(nodeCount, "/net/postchain/devtools/api/blockchain_config_web_query.xml")
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+
+        buildBlockAndCommit(nodes[0])
+
+        val text = given().port(nodes[0].getRestApiHttpPort())
+                .get("/web_query/$blockchainRID/get_page/front")
+                .then()
+                .statusCode(200)
+                .extract().asString()
+        assertEquals("<h1>it works!</h1>", text)
+
+        val byteArray = given().port(nodes[0].getRestApiHttpPort())
+                .get("/web_query/$blockchainRID/get_picture?id=1234")
+                .then()
+                .statusCode(200)
+                .extract().asByteArray()
+        assertEquals("abcd", String(byteArray))
+
+        val stream = given().port(nodes[0].getRestApiHttpPort())
+                .get("/web_query/$blockchainRID/get_stream")
+                .then()
+                .statusCode(200)
+                .extract().asByteArray()
+        assertEquals("1234567890", String(stream))
+    }
+
+    @Test
     fun testGetQuery() {
         val nodesCount = 1
         configOverrides.setProperty("testpeerinfos", createPeerInfos(nodesCount))
@@ -158,58 +191,16 @@ class RestApiIT : IntegrationTestSetup() {
     }
 
     @Test
-    fun testBatchQueriesApi() {
-        val nodesCount = 1
-
-        val sysSetup = doSystemSetup(nodesCount, "/net/postchain/devtools/api/blockchain_config_1.xml")
-        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
-        val blockchainRID = blockchainRIDBytes.toHex()
-
-        buildBlockAndCommit(nodes[0])
-        val query = """{"queries": [{"type"="gtx_test_get_value", "txRID"="abcd"},
-                                    {"type"="gtx_test_get_value", "txRID"="cdef"}]}""".trimMargin()
-        given().port(nodes[0].getRestApiHttpPort())
-                .body(query)
-                .post("/batch_query/$blockchainRID")
-                .then()
-                .statusCode(200)
-                .body(IsEqual.equalTo("[\"null\",\"null\"]"))
-    }
-
-    @Test
-    fun testQueryGTXApi() {
-        val nodesCount = 1
-
-        val sysSetup = doSystemSetup(nodesCount, "/net/postchain/devtools/api/blockchain_config_1.xml")
-        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
-        val blockchainRID = blockchainRIDBytes.toHex()
-
-        buildBlockAndCommit(nodes[0])
-
-        val gtxQuery1 = gtv(gtv("gtx_test_get_value"), gtv("txRID" to gtv("abcd")))
-        val gtxQuery2 = gtv(gtv("gtx_test_get_value"), gtv("txRID" to gtv("cdef")))
-        val jsonQuery = """{"queries" : ["${GtvEncoder.encodeGtv(gtxQuery1).toHex()}", "${GtvEncoder.encodeGtv(gtxQuery2).toHex()}"]}""".trimMargin()
-
-
-        given().port(nodes[0].getRestApiHttpPort())
-                .body(jsonQuery)
-                .post("/query_gtx/$blockchainRID")
-                .then()
-                .statusCode(200)
-                .body(IsEqual.equalTo("[\"A0020500\",\"A0020500\"]"))
-    }
-
-    @Test
     fun testRejectedTransactionWithReason() {
         val nodesCount = 1
         val sysSetup = doSystemSetup(nodesCount, "/net/postchain/devtools/api/blockchain_config_rejected.xml")
         val bcRid = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = bcRid.toHex()
 
-        val builder = GtxBuilder(bcRid, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
+        val builder = GtxBuilder(bcRid, listOf(pubKey(0)), cryptoSystem)
                 .addOperation("gtx_test", gtv(1L), gtv("rejectMe"))
                 .finish()
-                .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))
+                .sign(cryptoSystem.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
                 .buildGtx()
 
         // post transaction
@@ -228,7 +219,7 @@ class RestApiIT : IntegrationTestSetup() {
             }
         """.trimIndent()
 
-        Awaitility.await().untilAsserted {
+        await().untilAsserted {
             val body = given().port(nodes[0].getRestApiHttpPort())
                     .get("/tx/$blockchainRID/$txRidHex/status")
                     .then()
@@ -379,6 +370,19 @@ class RestApiIT : IntegrationTestSetup() {
     }
 
     @Test
+    fun testGetBlockchainNodeState() {
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
+        val sysSetup = doSystemSetup(1, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        given().port(nodes[0].getRestApiHttpPort())
+                .get("/blockchain/$blockchainRID/nodestate")
+                .then()
+                .statusCode(200)
+                .body(IsEqual.equalTo("{\"state\":\"RUNNING_VALIDATOR\"}"))
+    }
+
+    @Test
     fun `Get Transactions should return blocks and transactions in descending order`() {
         val nodeCount = 1
         val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
@@ -391,15 +395,7 @@ class RestApiIT : IntegrationTestSetup() {
         val txPerBlockCount = 3
 
         // create blocks
-        var currentId = 0
-        for (blockHeight in 0 until blockCount) {
-            val transactions = mutableListOf<TestOneOpGtxTransaction>()
-            for (txInBlock in 0 until txPerBlockCount) {
-                transactions.add(postGtxTransaction(factory, ++currentId, blockHeight, nodeCount, blockchainRIDBytes))
-            }
-            buildBlockAndCommit(nodes[0])
-            blocks.add(transactions)
-        }
+        createBlocks(blockCount, txPerBlockCount, factory, nodeCount, blockchainRIDBytes, blocks)
 
         // get transactions
         val body = given().port(nodes[0].getRestApiHttpPort())
@@ -436,15 +432,7 @@ class RestApiIT : IntegrationTestSetup() {
         val txPerBlockCount = 3
 
         // create blocks
-        var currentId = 0
-        for (blockHeight in 0 until blockCount) {
-            val transactions = mutableListOf<TestOneOpGtxTransaction>()
-            for (txInBlock in 0 until txPerBlockCount) {
-                transactions.add(postGtxTransaction(factory, ++currentId, blockHeight, nodeCount, blockchainRIDBytes))
-            }
-            buildBlockAndCommit(nodes[0])
-            blocks.add(transactions)
-        }
+        createBlocks(blockCount, txPerBlockCount, factory, nodeCount, blockchainRIDBytes, blocks)
 
         TogglableFaultyGtxModule.shouldFail = true
         val faultyConfig = readBlockchainConfig(
@@ -452,7 +440,7 @@ class RestApiIT : IntegrationTestSetup() {
         )
         nodes[0].addConfiguration(PostchainTestNode.DEFAULT_CHAIN_IID, 4, faultyConfig)
         buildBlock(PostchainTestNode.DEFAULT_CHAIN_IID, 3)
-        Awaitility.await().untilAsserted {
+        await().untilAsserted {
             assertThat(nodes[0].getRestApiModel().live).isFalse()
         }
 
@@ -564,7 +552,7 @@ class RestApiIT : IntegrationTestSetup() {
                     .extract().statusCode()
         }
 
-        Awaitility.await().untilAsserted {
+        await().untilAsserted {
             assertThat(BlockableQueryGtxModule.querySemaphore.queueLength).isEqualTo(2)
         }
 
@@ -629,6 +617,18 @@ class RestApiIT : IntegrationTestSetup() {
                 .post(path)
                 .then()
                 .statusCode(expectedStatus)
+    }
+
+    private fun createBlocks(blockCount: Int, txPerBlockCount: Int, factory: GTXTransactionFactory, nodeCount: Int, blockchainRIDBytes: BlockchainRid, blocks: MutableList<List<TestOneOpGtxTransaction>>) {
+        var currentId = 0
+        for (blockHeight in 0 until blockCount) {
+            val transactions = mutableListOf<TestOneOpGtxTransaction>()
+            for (txInBlock in 0 until txPerBlockCount) {
+                transactions.add(postGtxTransaction(factory, ++currentId, blockHeight, nodeCount, blockchainRIDBytes))
+            }
+            buildBlockAndCommit(nodes[0])
+            blocks.add(transactions)
+        }
     }
 }
 

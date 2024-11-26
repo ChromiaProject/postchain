@@ -32,9 +32,8 @@ fun initMetrics(appConfig: AppConfig) {
     ProcessorMetrics().bindTo(registry)
     UptimeMetrics().bindTo(registry)
 
-    val prometheusPort = appConfig.getEnvOrInt("POSTCHAIN_PROMETHEUS_PORT", "metrics.prometheus.port", -1)
-    if (prometheusPort > 0) {
-        initPrometheus(registry, prometheusPort)
+    if (appConfig.prometheusPort > 0) {
+        initPrometheus(registry, appConfig.prometheusPort)
     } else {
         registry.add(SimpleMeterRegistry())
     }

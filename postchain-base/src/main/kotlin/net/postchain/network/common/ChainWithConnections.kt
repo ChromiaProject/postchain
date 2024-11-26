@@ -2,6 +2,7 @@ package net.postchain.network.common
 
 import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
+import java.util.concurrent.CompletableFuture
 
 /**
  * This is a wrapped collection of connections.
@@ -46,9 +47,9 @@ interface ChainWithConnections<NodeConnectionType, HandlerType> {
     /**
      * Will close any connection related to this chain
      */
-    fun closeConnections()
+    fun closeConnections(): CompletableFuture<Void>
 
-    fun removeAndCloseConnection(nodeId: NodeRid)
+    fun removeAndCloseConnection(nodeId: NodeRid): CompletableFuture<Void>?
 
     // ----------
     // Topology

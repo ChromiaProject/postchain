@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.api.internal.BlockchainApi
 import net.postchain.base.runStorageCommand
@@ -13,7 +14,8 @@ import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 
-class CommandBlockchainReplicaAdd : CliktCommand(name = "add", help = "Add info to system about blockchain replicas. To be used to sync this node.") {
+class CommandBlockchainReplicaAdd : CliktCommand(name = "add") { 
+    override fun help(context: Context) = "Add info to system about blockchain replicas. To be used to sync this node."
 
     private val nodeConfigFile by nodeConfigOption()
 

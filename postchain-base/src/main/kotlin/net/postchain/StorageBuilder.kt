@@ -8,27 +8,37 @@ import net.postchain.base.data.DatabaseAccessFactory
 import net.postchain.config.app.AppConfig
 import net.postchain.core.Storage
 import org.apache.commons.dbcp2.BasicDataSource
+import java.sql.Connection.TRANSACTION_REPEATABLE_READ
 import javax.sql.DataSource
 import kotlin.time.Duration
 
 object StorageBuilder {
 
-    private const val DB_VERSION = 9
+    private const val DB_VERSION = 11
 
-    fun buildStorage(appConfig: AppConfig, maxWaitWrite: Duration = Duration.ZERO, maxWriteTotal: Int = 2,
-                     wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION, allowUpgrade: Boolean = true): Storage {
+    /**
+     * This is to be used by dependent projects to determine current version
+     */
+    fun getCurrentDbVersion() = DB_VERSION
+
+    fun buildStorage(appConfig: AppConfig, maxWaitWrite: Duration = Duration.ZERO,
+                     maxWriteTotal: Int = 2, maxReadTotal: Int = 10,
+                     wipeDatabase: Boolean = false, expectedDbVersion: Int = DB_VERSION,
+                     allowUpgrade: Boolean = true, name: String? = null
+    ): Storage {
         val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
         initStorage(appConfig, wipeDatabase, db, expectedDbVersion, allowUpgrade)
 
         // Read DataSource
-        val readDataSource = createBasicDataSource(appConfig).apply {
-            defaultAutoCommit = true
-            maxTotal = appConfig.databaseReadConcurrency
+        val readDataSource = createBasicDataSource(appConfig, connectionName = (name?.let { "$it " } ?: "") + "read").apply {
+            defaultAutoCommit = false
+            defaultTransactionIsolation = TRANSACTION_REPEATABLE_READ
+            maxTotal = maxReadTotal
             defaultReadOnly = true
         }
 
         // Write DataSource
-        val writeDataSource = createBasicDataSource(appConfig).apply {
+        val writeDataSource = createBasicDataSource(appConfig, connectionName = (name?.let { "$it " } ?: "") + "write").apply {
             this.maxWaitMillis = maxWaitWrite.inWholeMilliseconds
             defaultAutoCommit = false
             maxTotal = maxWriteTotal
@@ -38,13 +48,13 @@ object StorageBuilder {
                 readDataSource,
                 writeDataSource,
                 db,
-                appConfig.databaseReadConcurrency,
+                maxReadTotal,
                 appConfig.exitOnFatalError,
                 db.isSavepointSupported())
     }
 
     private fun initStorage(appConfig: AppConfig, wipeDatabase: Boolean, db: DatabaseAccess, expectedDbVersion: Int, allowUpgrade: Boolean) {
-        val initDataSource = createBasicDataSource(appConfig)
+        val initDataSource = createBasicDataSource(appConfig, connectionName = "init")
 
         if (wipeDatabase) {
             wipeDatabase(initDataSource, appConfig, db)
@@ -55,37 +65,35 @@ object StorageBuilder {
         initDataSource.close()
     }
 
-    private fun createBasicDataSource(appConfig: AppConfig, withSchema: Boolean = true): BasicDataSource {
-        return BasicDataSource().apply {
-            driverClassName = appConfig.databaseDriverclass
-            url = appConfig.databaseUrl // + "?loggerLevel=TRACE&loggerFile=db.log"
-            username = appConfig.databaseUsername
-            password = appConfig.databasePassword
-            defaultAutoCommit = false
-            addConnectionProperty("binaryTransfer", "false") // workaround for issue in Postgres driver 42.5.1: https://github.com/pgjdbc/pgjdbc/issues/2695
-
-            if (withSchema) {
-                /**
-                 * [POS-129]: After setting up defaultSchema property by `DataSource.setDefaultSchema(...)`
-                 * DataSource.getConnection().schema is null in docker container which is run by
-                 * DockerClient on Windows/WSL2:
-                 *      Database error: sql-state: 3F000, error-code: 0, message: ERROR: no schema has been selected to create in
-                 *        Position: 14 Query: CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT) Parameters: []
-                 *
-                 * `SET SCHEMA` sql init script fails with the same error:
-                 *      val scripts = listOf("SET SCHEMA '${appConfig.databaseSchema}'")
-                 */
-//                defaultSchema = appConfig.databaseSchema
-                val scripts = listOf("SET search_path TO ${appConfig.databaseSchema}") // PostgreSQL specific script
-                setConnectionInitSqls(scripts)
+    private fun createBasicDataSource(appConfig: AppConfig, connectionName: String, withSchema: Boolean = true) =
+            BasicDataSource().apply {
+                driverClassName = appConfig.databaseDriverclass
+                url = appConfig.databaseUrl // + "?loggerLevel=TRACE&loggerFile=db.log"
+                username = appConfig.databaseUsername
+                password = appConfig.databasePassword
+                defaultAutoCommit = false
+                addConnectionProperty("binaryTransfer", "false") // workaround for issue in Postgres driver 42.5.1: https://github.com/pgjdbc/pgjdbc/issues/2695
+                addConnectionProperty("ApplicationName", "Postchain $connectionName")
+                if (withSchema) {
+                    /**
+                     * [POS-129]: After setting up defaultSchema property by `DataSource.setDefaultSchema(...)`
+                     * DataSource.getConnection().schema is null in docker container which is run by
+                     * DockerClient on Windows/WSL2:
+                     *      Database error: sql-state: 3F000, error-code: 0, message: ERROR: no schema has been selected to create in
+                     *        Position: 14 Query: CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT) Parameters: []
+                     *
+                     * `SET SCHEMA` sql init script fails with the same error:
+                     *      val scripts = listOf("SET SCHEMA '${appConfig.databaseSchema}'")
+                     */
+                    // defaultSchema = appConfig.databaseSchema
+                    val scripts = listOf("SET search_path TO ${appConfig.databaseSchema}") // PostgreSQL specific script
+                    setConnectionInitSqls(scripts)
+                }
             }
-        }
-
-    }
 
     fun wipeDatabase(appConfig: AppConfig) {
         val db = DatabaseAccessFactory.createDatabaseAccess(appConfig.databaseDriverclass)
-        wipeDatabase(createBasicDataSource(appConfig), appConfig, db)
+        wipeDatabase(createBasicDataSource(appConfig, connectionName = "wipe"), appConfig, db)
     }
 
     private fun wipeDatabase(dataSource: DataSource, appConfig: AppConfig, db: DatabaseAccess) {

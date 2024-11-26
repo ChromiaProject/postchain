@@ -6,15 +6,16 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.network.common.LazyPacket
 
 class SignedMessage(val message: EbftMessage, val pubKey: ByteArray, val signature: ByteArray) {
 
     companion object {
-        fun decode(bytes: ByteArray): SignedMessage {
+        fun decode(bytes: ByteArray, ebftVersion: Long): SignedMessage {
             try {
                 val gtvArray = GtvDecoder.decodeGtv(bytes) as GtvArray
 
-                return SignedMessage(EbftMessage.decode(gtvArray[0].asByteArray()), gtvArray[1].asByteArray(), gtvArray[2].asByteArray())
+                return SignedMessage(EbftMessage.decode(gtvArray[0].asByteArray(), ebftVersion), gtvArray[1].asByteArray(), gtvArray[2].asByteArray())
             } catch (e: Exception) {
                 throw UserMistake("bytes ${bytes.toHex()} cannot be decoded", e)
             }
@@ -23,7 +24,7 @@ class SignedMessage(val message: EbftMessage, val pubKey: ByteArray, val signatu
 
     val topic get() = message.topic
 
-    val encoded: ByteArray by lazy { GtvEncoder.encodeGtv(toGtv()) }
+    fun encoded(ebftVersion: Long): LazyPacket = lazy { GtvEncoder.encodeGtv(toGtv(ebftVersion)) }
 
-    fun toGtv() = gtv(gtv(message.encoded), gtv(pubKey), gtv(signature))
+    fun toGtv(ebftVersion: Long) = gtv(gtv(message.encoded(ebftVersion).value), gtv(pubKey), gtv(signature))
 }

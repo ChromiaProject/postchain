@@ -1,6 +1,7 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.PrintMessage
 import io.grpc.StatusRuntimeException
 import net.postchain.admin.cli.util.ChannelFactory
@@ -10,7 +11,8 @@ import net.postchain.admin.cli.util.pubkeyOption
 import net.postchain.server.grpc.RemovePeerRequest
 
 class RemovePeerCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_FACTORY)
-    : CliktCommand(name = "list", help = "Remove peer information from database") {
+    : CliktCommand(name = "list") { 
+    override fun help(context: Context) = "Remove peer information from database"
 
     private val channel by blockingPeerServiceChannelOption(channelFactory)
 
@@ -25,7 +27,7 @@ class RemovePeerCommand(channelFactory: ChannelFactory = DEFAULT_CHANNEL_FACTORY
             val reply = channel.removePeer(request)
             echo(reply.message)
         } catch (e: StatusRuntimeException) {
-            throw PrintMessage("Failed with: ${e.message}", true)
+            throw PrintMessage("Failed with: ${e.message}", printError = true)
         }
     }
 }

@@ -4,39 +4,46 @@ package net.postchain.network.netty2
 
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
+import io.netty.channel.ChannelPipeline
+import io.netty.channel.EventLoopGroup
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
-import net.postchain.network.XPacketEncoder
+import net.postchain.network.XPacketCodec
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.peer.PeerConnectionDescriptor
 import net.postchain.network.peer.PeerPacketHandler
 import java.net.InetSocketAddress
 import java.net.SocketAddress
+import java.util.concurrent.CompletableFuture
 
 class NettyClientPeerConnection<PacketType>(
         private val peerInfo: PeerInfo,
-        private val packetEncoder: XPacketEncoder<PacketType>,
-        private val descriptor: PeerConnectionDescriptor
-) : NettyPeerConnection() {
+        packetCodec: XPacketCodec<PacketType>,
+        private val descriptor: PeerConnectionDescriptor,
+        private val eventLoopGroup: EventLoopGroup
+) : NettyPeerConnection<PacketType>(packetCodec) {
 
     companion object : KLogging()
 
     private var nettyClient: NettyClient? = null
     private var hasReceivedPing = false
+    private var hasReceivedVersion = false
     private var peerPacketHandler: PeerPacketHandler? = null
-    private lateinit var context: ChannelHandlerContext
     private lateinit var onConnected: () -> Unit
-    private lateinit var onDisconnected: () -> Unit
 
-    fun open(onConnected: () -> Unit, onDisconnected: () -> Unit) {
+    fun open(onConnected: () -> Unit, onDisconnected: () -> Unit, postInitChannelHandler: (ChannelPipeline) -> Unit) {
         this.onConnected = onConnected
-        this.onDisconnected = onDisconnected
+        channelInactiveFuture.thenApply { onDisconnected() }
 
-        nettyClient = NettyClient(this@NettyClientPeerConnection, peerAddress()).also {it.channelFuture.await().apply {
-                if (!isSuccess) {
-                    logger.info("Connection failed: ${cause().message}")
-                    onDisconnected()
+        nettyClient = NettyClient(peerAddress(), eventLoopGroup) { pipeline ->
+            pipeline.addLast(this@NettyClientPeerConnection)
+            postInitChannelHandler(pipeline)
+        }.also {
+            it.channelFuture.addListener { future ->
+                if (!future.isSuccess) {
+                    logger.info("Connection failed: ${future.cause().message}")
+                    channelInactiveFuture.complete(null)
                 }
             }
         }
@@ -46,31 +53,50 @@ class NettyClientPeerConnection<PacketType>(
         ctx?.let {
             context = it
             context.writeAndFlush(buildIdentPacket())
+            sendVersion(it)
+            isConnected = true
             onConnected()
         }
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext?) {
-        onDisconnected()
+        channelInactiveFuture.complete(null)
     }
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
-        handleSafely(peerInfo.peerId()) {
-            val message = Transport.unwrapMessage(msg as ByteBuf)
-            if (!isPing(message)) {
-                peerPacketHandler?.handle(
-                        message,
-                        peerInfo.peerId())
-            } else if (!hasReceivedPing) {
-                // Peer has ping capability
-                ctx?.let {
-                    // Notify peer that we also have ping capability
-                    sendPing(it)
-                    registerIdleStateHandler(it)
-                }
-                hasReceivedPing = true
+        val message = Transport.unwrapMessage(msg as ByteBuf)
+        try {
+            if (isPing(message)) {
+                handlePing(ctx)
+            } else if (isVersion(message)) {
+                handleVersion(message)
+            } else {
+                peerPacketHandler?.handle(message, peerInfo.peerId())
             }
+        } catch (e: Exception) {
+            logger.error("Error when receiving message from peer ${peerInfo.peerId()}", e)
+        } finally {
             msg.release()
+        }
+    }
+
+    private fun handleVersion(message: ByteArray) {
+        if (!hasReceivedVersion) {
+            logger.debug { "Got packet version from ${descriptor.nodeId.toHex()}" }
+            hasReceivedVersion = true
+            peerPacketHandler?.handle(message, peerInfo.peerId())
+        }
+    }
+
+    private fun handlePing(ctx: ChannelHandlerContext?) {
+        // Peer has ping capability
+        if (!hasReceivedPing) {
+            ctx?.let {
+                // Notify peer that we also have ping capability
+                sendPing(it)
+                registerIdleStateHandler(it)
+            }
+            hasReceivedPing = true
         }
     }
 
@@ -83,13 +109,14 @@ class NettyClientPeerConnection<PacketType>(
     }
 
     override fun remoteAddress(): String {
-        return if (::context.isInitialized)
+        return if (isContextInitialized())
             context.channel().remoteAddress().toString()
         else ""
     }
 
-    override fun close() {
+    override fun close(): CompletableFuture<Void> {
         nettyClient?.shutdownAsync()
+        return channelInactiveFuture
     }
 
     override fun descriptor(): PeerConnectionDescriptor = descriptor
@@ -98,8 +125,5 @@ class NettyClientPeerConnection<PacketType>(
         return InetSocketAddress(peerInfo.host, peerInfo.port)
     }
 
-    private fun buildIdentPacket(): ByteBuf {
-        return Transport.wrapMessage(
-                packetEncoder.makeIdentPacket(peerInfo.getNodeRid()))
-    }
+    private fun buildIdentPacket(): ByteBuf = Transport.wrapMessage(packetCodec.makeIdentPacket(peerInfo.getNodeRid()))
 }

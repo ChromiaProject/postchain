@@ -5,7 +5,7 @@ import io.grpc.ManagedChannel
 import io.grpc.Server
 import io.grpc.inprocess.InProcessChannelBuilder
 import io.grpc.inprocess.InProcessServerBuilder
-import net.postchain.admin.cli.testutil.TestConsole
+import net.postchain.admin.cli.testutil.TestTerminal
 import net.postchain.server.grpc.DebugServiceGrpcImpl
 import net.postchain.server.service.DebugService
 import org.junit.jupiter.api.AfterEach
@@ -16,7 +16,7 @@ import org.mockito.kotlin.mock
 abstract class DebugServiceCommandTestBase {
 
     @ExtendWith
-    val testConsole = TestConsole()
+    val testTerminal = TestTerminal()
 
     protected lateinit var debugService: DebugService
     private lateinit var channel: Channel

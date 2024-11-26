@@ -7,41 +7,58 @@ import io.micrometer.core.instrument.Timer
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.api.rest.BlockHeight
+import net.postchain.api.rest.BlockSignature
+import net.postchain.api.rest.BlockchainNodeState
 import net.postchain.api.rest.TransactionsCount
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
+import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.ConfirmationProof
+import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.KEY_SIGNERS
+import net.postchain.base.data.BaseBlockWitnessProvider
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
+import net.postchain.common.exception.UserMistake
+import net.postchain.common.reflection.newInstanceOf
 import net.postchain.common.tx.TransactionStatus.CONFIRMED
 import net.postchain.common.tx.TransactionStatus.REJECTED
 import net.postchain.common.tx.TransactionStatus.UNKNOWN
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockRid
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.DefaultBlockchainConfigurationFactory
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.core.Storage
 import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
+import net.postchain.core.block.BlockDetailsTruncated
 import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockQueryHeightFilter
+import net.postchain.core.block.BlockQueryTimeFilter
+import net.postchain.core.block.MultiSigBlockWitnessBuilder
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.SigMaker
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpBlockchainNodeState
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDictionary
+import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.UnknownQuery
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
@@ -50,12 +67,17 @@ import net.postchain.logging.FAILURE_RESULT
 import net.postchain.logging.QUERY_NAME_TAG
 import net.postchain.logging.RESULT_TAG
 import net.postchain.logging.SUCCESS_RESULT
+import net.postchain.managed.CHAIN0
+import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
+import net.postchain.managed.config.DappBlockchainConfigurationFactory
+import net.postchain.managed.config.ManagedBlockchainConfiguration
+import net.postchain.managed.config.ManagedDataSourceAware
 import net.postchain.metrics.PostchainModelMetrics
 import net.postchain.metrics.QUERIES_METRIC_DESCRIPTION
 import net.postchain.metrics.QUERIES_METRIC_NAME
 
 open class PostchainModel(
-        final override val chainIID: Long,
+        val blockchainConfiguration: BlockchainConfiguration,
         val txQueue: TransactionQueue,
         val blockQueries: BlockQueries,
         final override val blockchainRid: BlockchainRid,
@@ -67,7 +89,10 @@ open class PostchainModel(
 
     companion object : KLogging()
 
+    final override val chainIID = blockchainConfiguration.chainID
     protected val metrics = PostchainModelMetrics(chainIID, blockchainRid)
+
+    private val currentRawConfiguration = GtvEncoder.encodeGtv(blockchainConfiguration.rawConfig)
 
     override var live = true
 
@@ -77,20 +102,21 @@ open class PostchainModel(
 
     override fun getTransactionInfo(txRID: TxRid): TransactionInfoExt? = blockQueries.getTransactionInfo(txRID.bytes).get()
 
-    override fun getTransactionsInfo(beforeTime: Long, limit: Int): List<TransactionInfoExt> =
-            blockQueries.getTransactionsInfo(beforeTime, limit).get()
+    override fun getTransactionsInfo(timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated =
+            blockQueries.getTransactionsInfo(timeFilter, limit, maxDataSize).get()
 
-    override fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey): List<TransactionInfoExt> =
-            blockQueries.getTransactionsInfoBySigner(beforeTime, limit, signer).get()
+    override fun getTransactionsInfoBySigner(timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated =
+            blockQueries.getTransactionsInfoBySigner(timeFilter, limit, signer, maxDataSize).get()
+
 
     override fun getLastTransactionNumber(): TransactionsCount =
             TransactionsCount(blockQueries.getLastTransactionNumber().get())
 
-    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> =
-            blockQueries.getBlocks(beforeTime, limit, txHashesOnly).get()
+    override fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated =
+            blockQueries.getBlocksBetweenTimes(timeFilter, limit, txHashesOnly, maxDataSize, excludeEmpty).get()
 
-    override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): List<BlockDetail> =
-            blockQueries.getBlocksBeforeHeight(beforeHeight, limit, txHashesOnly).get()
+    override fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated =
+            blockQueries.getBlocksBetweenHeights(heightFilter, limit, txHashesOnly, maxDataSize, excludeEmpty).get()
 
     override fun getBlock(blockRID: BlockRid, txHashesOnly: Boolean): BlockDetail? =
             blockQueries.getBlock(blockRID.data, txHashesOnly).get()
@@ -98,6 +124,24 @@ open class PostchainModel(
     override fun getBlock(height: Long, txHashesOnly: Boolean): BlockDetail? {
         val blockRid = blockQueries.getBlockRid(height).get()
         return blockRid?.let { getBlock(BlockRid(it), txHashesOnly) }
+    }
+
+    override fun confirmBlock(blockRID: BlockRid): BlockSignature? {
+        return blockQueries.getBlock(blockRID.data, true).get()?.let {
+            val blockSigMaker = when (blockchainConfiguration) {
+                is BaseBlockchainConfiguration -> blockchainConfiguration.blockSigMaker
+                is ManagedBlockchainConfiguration -> blockchainConfiguration.configuration.blockSigMaker
+                else -> throw UserMistake("Unknown blockchain configuration detected: " + blockchainConfiguration.javaClass.simpleName)
+            }
+            val witnessProvider = BaseBlockWitnessProvider(
+                    postchainContext.cryptoSystem,
+                    blockSigMaker,
+                    blockchainConfiguration.signers.toTypedArray()
+            )
+            val blockHeader = BaseBlockHeader(it.header, GtvMerkleHashCalculator(postchainContext.cryptoSystem))
+            val witnessBuilder = witnessProvider.createWitnessBuilderWithOwnSignature(blockHeader) as MultiSigBlockWitnessBuilder
+            BlockSignature.fromSignature(witnessBuilder.getMySignature())
+        }
     }
 
     override fun getConfirmationProof(txRID: TxRid): ConfirmationProof? =
@@ -154,12 +198,17 @@ open class PostchainModel(
 
     override fun getCurrentBlockHeight(): BlockHeight = BlockHeight(blockQueries.getLastBlockHeight().get() + 1)
 
+    override fun getBlockchainNodeState(): BlockchainNodeState {
+        val nodeState = diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATE]?.value as? DpBlockchainNodeState
+                ?: throw NotFoundError("NotFound")
+        return BlockchainNodeState(nodeState.name)
+    }
+
     override fun getBlockchainConfiguration(height: Long): ByteArray? = withReadConnection(storage, chainIID) { ctx ->
-        val db = DatabaseAccess.of(ctx)
         if (height < 0) {
-            db.getConfigurationDataForHeight(ctx, db.getLastBlockHeight(ctx))
+            currentRawConfiguration
         } else {
-            db.getConfigurationData(ctx, height)
+            postchainContext.configurationProvider.getHistoricConfiguration(ctx, chainIID, height)
         }
     }
 
@@ -173,7 +222,17 @@ open class PostchainModel(
         withWriteConnection(storage, chainIID) { eContext ->
             val blockchainRid = DatabaseAccess.of(eContext).getBlockchainRid(eContext)!!
             val partialContext = BaseBlockchainContext(chainIID, blockchainRid, NODE_ID_AUTO, postchainContext.appConfig.pubKeyByteArray)
-            val factory = DefaultBlockchainConfigurationFactory().supply(blockConfData.configurationFactory)
+            val factory = if (blockchainConfiguration is ManagedDataSourceAware) {
+                val factory = newInstanceOf<GTXBlockchainConfigurationFactory>(blockConfData.configurationFactory)
+                if (chainIID == CHAIN0) {
+                    Chain0BlockchainConfigurationFactory(factory, postchainContext.appConfig, storage)
+                } else {
+                    DappBlockchainConfigurationFactory(factory, blockchainConfiguration.dataSource)
+                }
+            } else {
+                DefaultBlockchainConfigurationFactory().supply(blockConfData.configurationFactory)
+            }
+
             val blockSigMaker: SigMaker = object : SigMaker {
                 override fun signMessage(msg: ByteArray) = throw NotImplementedError("SigMaker")
                 override fun signDigest(digest: Hash) = throw NotImplementedError("SigMaker")
@@ -184,6 +243,10 @@ open class PostchainModel(
 
             false
         }
+    }
+
+    override fun getNextBlockchainConfigurationHeight(height: Long): BlockHeight? = withReadConnection(storage, chainIID) { ctx ->
+        DatabaseAccess.of(ctx).findNextConfigurationHeight(ctx, height)?.let { BlockHeight(it) }
     }
 
     override fun toString(): String = "${this.javaClass.simpleName}(chainId=$chainIID)"

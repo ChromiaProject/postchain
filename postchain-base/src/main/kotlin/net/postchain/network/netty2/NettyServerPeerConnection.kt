@@ -6,18 +6,19 @@ import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.network.XPacketDecoder
+import net.postchain.common.exception.UserMistake
+import net.postchain.network.XPacketCodec
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.peer.PeerConnection
 import net.postchain.network.peer.PeerConnectionDescriptor
 import net.postchain.network.peer.PeerConnectionDescriptorFactory
 import net.postchain.network.peer.PeerPacketHandler
+import java.util.concurrent.CompletableFuture
 
 class NettyServerPeerConnection<PacketType>(
-        private val packetDecoder: XPacketDecoder<PacketType>
-) : NettyPeerConnection() {
+        packetCodec: XPacketCodec<PacketType>
+) : NettyPeerConnection<PacketType>(packetCodec) {
 
-    private lateinit var context: ChannelHandlerContext
     private var peerPacketHandler: PeerPacketHandler? = null
     private var peerConnectionDescriptor: PeerConnectionDescriptor? = null
 
@@ -25,8 +26,9 @@ class NettyServerPeerConnection<PacketType>(
     private var onDisconnectedHandler: ((PeerConnection) -> Unit)? = null
 
     private var hasReceivedPing = false
+    private var hasReceivedVersion = false
 
-    companion object: KLogging()
+    companion object : KLogging()
 
     override fun accept(handler: PeerPacketHandler) {
         this.peerPacketHandler = handler
@@ -37,13 +39,14 @@ class NettyServerPeerConnection<PacketType>(
     }
 
     override fun remoteAddress(): String {
-        return if (::context.isInitialized)
+        return if (isContextInitialized())
             context.channel().remoteAddress().toString()
         else ""
     }
 
-    override fun close() {
+    override fun close(): CompletableFuture<Void> {
         context.close()
+        return channelInactiveFuture
     }
 
     override fun descriptor(): PeerConnectionDescriptor {
@@ -61,25 +64,53 @@ class NettyServerPeerConnection<PacketType>(
     }
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
-        handleSafely(peerConnectionDescriptor?.nodeId) {
-            val message = Transport.unwrapMessage(msg as ByteBuf)
-            if (!isPing(message)) {
+        val message = Transport.unwrapMessage(msg as ByteBuf)
+        try {
+            if (isPing(message)) {
+                handlePing(ctx)
+            } else if (isVersion(message)) {
+                handleVersion(message, ctx)
+            } else {
                 handleMessage(message, ctx)
-            } else if (!hasReceivedPing) {
-                ctx?.let { registerIdleStateHandler(it) }
-                hasReceivedPing = true
             }
+        } catch (e: Exception) {
+            logger.error("Error when receiving message from peer ${peerConnectionDescriptor?.nodeId}", e)
+        } finally {
             msg.release()
         }
     }
 
+    private fun handleVersion(message: ByteArray, ctx: ChannelHandlerContext?) {
+        if (!hasReceivedVersion) {
+            logger.debug { "Got packet version from ${descriptor().nodeId.toHex()}" }
+            hasReceivedVersion = true
+            handleMessage(message, ctx)
+        }
+    }
+
+    private fun handlePing(ctx: ChannelHandlerContext?) {
+        if (!hasReceivedPing) {
+            ctx?.let { registerIdleStateHandler(it) }
+            hasReceivedPing = true
+        }
+    }
+
     private fun handleMessage(message: ByteArray, ctx: ChannelHandlerContext?) {
-        if (packetDecoder.isIdentPacket(message)) {
-            val identPacketInfo = packetDecoder.parseIdentPacket(message)
+        if (packetCodec.isIdentPacket(message)) {
+            val identPacketInfo = try {
+                packetCodec.parseIdentPacket(message)
+            } catch (e: UserMistake) {
+                logger.warn("Failed to parse ident packet from peer with remote address ${ctx?.channel()?.remoteAddress()} reason: ${e.message}")
+                return
+            }
             peerConnectionDescriptor = PeerConnectionDescriptorFactory.createFromIdentPacketInfo(identPacketInfo)
+            isConnected = true
 
             // Notify peer that we have ping capability
-            ctx?.let { sendPing(it) }
+            ctx?.let {
+                sendVersion(it)
+                sendPing(it)
+            }
             onConnectedHandler?.invoke(this)
         } else {
             if (peerConnectionDescriptor != null) {
@@ -93,6 +124,7 @@ class NettyServerPeerConnection<PacketType>(
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext?) {
+        channelInactiveFuture.complete(null)
         // If peerConnectionDescriptor is null, we can't do much handling
         // in which case we just ignore the inactivation of this channel.
         if (peerConnectionDescriptor != null) {

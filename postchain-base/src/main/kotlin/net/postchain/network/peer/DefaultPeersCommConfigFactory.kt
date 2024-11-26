@@ -74,7 +74,7 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
             nodeConfig: NodeConfig,
             chainId: Long,
             blockchainRid: BlockchainRid,
-            signers: List<ByteArray>, // signers
+            signers: List<ByteArray>,
             historicBlockchainContext: HistoricBlockchainContext?
     ): Map<NodeRid, PeerInfo> {
         val myNodeRid = NodeRid(appConfig.pubKeyByteArray)
@@ -82,34 +82,34 @@ open class DefaultPeersCommConfigFactory : PeersCommConfigFactory {
         val latestSigners = nodeConfig.getSignersInLatestConfiguration(blockchainRid, chainId)
 
         val blockchainReplicas = if (historicBlockchainContext != null) {
-            (getBlockchainReplicaNodes(nodeConfig, historicBlockchainContext.historicBrid, chainId) ?: listOf()).union(
-                    getBlockchainReplicaNodes(nodeConfig, blockchainRid, chainId) ?: listOf())
+            getBlockchainReplicaNodes(nodeConfig, historicBlockchainContext.historicBrid) +
+                    getBlockchainReplicaNodes(nodeConfig, blockchainRid)
         } else {
-            getBlockchainReplicaNodes(nodeConfig, blockchainRid, chainId) ?: listOf()
+            getBlockchainReplicaNodes(nodeConfig, blockchainRid)
         }
 
         // We keep
         // 1. All BC's signers
         // 2. All BC's signers in latest configuration
-        // 3. All nodes that replicate the BC (if must sync until height is set, otherwise just locally configured replicas)
+        // 3. All nodes that replicate the BC
         // 4. This node itself
+        // 5. Any extra replica nodes provided by subclasses
         return nodeConfig.peerInfoMap.filterKeys {
             it in signers0 || it in latestSigners || it in blockchainReplicas || it == myNodeRid
+                    || it in getExtraBlockchainReplicaNodes(appConfig, nodeConfig, chainId, blockchainRid, signers, historicBlockchainContext)
         }
     }
 
-    /**
-     * If "must sync until" is set we will add all known blockchain replica nodes as peers,
-     * otherwise only locally configured replica nodes will be considered.
-     *
-     * NOTE: This could be made smarter, perhaps some replica nodes should be included in some cases
-     */
-    private fun getBlockchainReplicaNodes(nodeConfig: NodeConfig, blockchainRid: BlockchainRid, chainId: Long): List<NodeRid>? {
-        val mustSyncUntil = nodeConfig.mustSyncUntilHeight?.get(chainId) ?: -1
-        return if (mustSyncUntil > -1) {
-            nodeConfig.blockchainReplicaNodes[blockchainRid]
-        } else {
-            nodeConfig.locallyConfiguredBlockchainReplicaNodes[blockchainRid]
-        }
-    }
+    protected open fun getExtraBlockchainReplicaNodes(appConfig: AppConfig,
+                                                      nodeConfig: NodeConfig,
+                                                      chainId: Long,
+                                                      blockchainRid: BlockchainRid,
+                                                      signers: List<ByteArray>,
+                                                      historicBlockchainContext: HistoricBlockchainContext?): Set<NodeRid> = emptySet()
+
+    private fun getBlockchainReplicaNodes(nodeConfig: NodeConfig, blockchainRid: BlockchainRid): List<NodeRid> =
+            buildList {
+                addAll(nodeConfig.blockchainReplicaNodes[blockchainRid] ?: emptyList())
+                addAll(nodeConfig.locallyConfiguredBlockchainReplicaNodes[blockchainRid] ?: emptyList())
+            }
 }

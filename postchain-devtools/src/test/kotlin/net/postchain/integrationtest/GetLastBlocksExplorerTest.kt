@@ -3,13 +3,19 @@
 package net.postchain.integrationtest
 
 import assertk.assertThat
-import assertk.assertions.*
+import assertk.assertions.hasSize
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
+import assertk.assertions.isNull
+import assertk.assertions.isTrue
+import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.api.rest.model.TxRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.Transaction
 import net.postchain.core.TxDetail
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.crypto.PubKey
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
@@ -49,13 +55,13 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
 
     @Test
     fun test_get_all_transactions_info() {
-        val transactions = nodes[0].getRestApiModel().getTransactionsInfo(Long.MAX_VALUE, 300)
+        val transactions = nodes[0].getRestApiModel().getTransactionsInfo(BlockQueryTimeFilter(), 300, RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
         assertThat(transactions).hasSize(8)
     }
 
     @Test
     fun test_get_last_2_transactions_info() {
-        val transactions = nodes[0].getRestApiModel().getTransactionsInfo(Long.MAX_VALUE, 2)
+        val transactions = nodes[0].getRestApiModel().getTransactionsInfo(BlockQueryTimeFilter(), 2, RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
         assertThat(transactions).hasSize(2)
         assertThat(transactions[0].blockHeight == 2L)
         assertThat(transactions[1].blockHeight == 2L)
@@ -63,13 +69,13 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
 
     @Test
     fun test_get_the_first_2_transactions() {
-        val last6Txs = nodes[0].getRestApiModel().getTransactionsInfo(Long.MAX_VALUE, 6) // get one tx at block_height = 1
+        val last6Txs = nodes[0].getRestApiModel().getTransactionsInfo(BlockQueryTimeFilter(), 6, RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts // get one tx at block_height = 1
         assertThat(last6Txs).hasSize(6)
         val block1 = last6Txs[5]
         assertThat(block1.blockHeight).isEqualTo(1L) // get block n. 1
 
         // get 2 txs from blocks before block1 => block0
-        val first2Transactions = nodes[0].getRestApiModel().getTransactionsInfo(block1.timestamp, 2)
+        val first2Transactions = nodes[0].getRestApiModel().getTransactionsInfo(BlockQueryTimeFilter(block1.timestamp), 2, RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
         assertThat(first2Transactions).hasSize(2)
         assertThat(first2Transactions.map { tx -> tx.blockHeight }.all { it == 0L }).isTrue()
     }
@@ -77,7 +83,7 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
     @Test
     fun test_get_all_blocks() {
         // Asserting blocks and txs
-        val blocks = nodes[0].getRestApiModel().getBlocks(Long.MAX_VALUE, 25, false)
+        val blocks = nodes[0].getRestApiModel().getBlocksBetweenTimes(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE, false).blockDetails
         assertThat(blocks).hasSize(3)
 
         // Block #2
@@ -103,7 +109,7 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
 
     @Test
     fun test_get_last_2_blocks() {
-        val blocks = nodes[0].getRestApiModel().getBlocks(Long.MAX_VALUE, 2, true)
+        val blocks = nodes[0].getRestApiModel().getBlocksBetweenTimes(BlockQueryTimeFilter(), 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE, false).blockDetails
         assertThat(blocks).hasSize(2)
 
         assertThat(blocks[0].height).isEqualTo(2L)
@@ -113,7 +119,7 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
     @Test
     fun test_get_one_block() {
         // get a random block and save blockRID
-        val randomBlock = nodes[0].getRestApiModel().getBlocks(Long.MAX_VALUE, 1, true)[0]
+        val randomBlock = nodes[0].getRestApiModel().getBlocksBetweenTimes(BlockQueryTimeFilter(), 1, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE, false).blockDetails[0]
 
         val block = nodes[0].getRestApiModel().getBlock(BlockRid(randomBlock.rid), true)
         assertThat(block).isNotNull()
@@ -137,10 +143,10 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
 
     @Test
     fun test_get_txs_by_signer() {
-        val signer1Txs = nodes[0].getRestApiModel().getTransactionsInfoBySigner(Long.MAX_VALUE, Int.MAX_VALUE, PubKey(signer1))
+        val signer1Txs = nodes[0].getRestApiModel().getTransactionsInfoBySigner(BlockQueryTimeFilter(), Int.MAX_VALUE, PubKey(signer1), RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
         assertThat(signer1Txs.size).isEqualTo(3)
 
-        val signer2Txs = nodes[0].getRestApiModel().getTransactionsInfoBySigner(Long.MAX_VALUE, Int.MAX_VALUE, PubKey(signer2))
+        val signer2Txs = nodes[0].getRestApiModel().getTransactionsInfoBySigner(BlockQueryTimeFilter(), Int.MAX_VALUE, PubKey(signer2), RestApiConfig.DEFAULT_MAX_DATA_SIZE).transactionInfoExts
         assertThat(signer2Txs.size).isEqualTo(2)
 
         // Assert one common multi-sig tx
@@ -158,13 +164,19 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
     private fun tx(id: Int, signers: Array<ByteArray> = emptyArray()): TestTransaction = TestTransaction(id, signers = signers)
 
     private fun compareTx(actualTx: TxDetail, expectedTx: Transaction): Boolean {
-        return (actualTx.data?.toHex() == expectedTx.getRawData().toHex())
+        return (actualTx.data?.toHex() == expectedTx.getRawData().toHex()
+                && actualTx.rid.toHex() == expectedTx.getRID().toHex()
+                && actualTx.hash.toHex() == expectedTx.getHash().toHex())
                 .also {
                     if (!it) {
                         logger.error {
                             "Transactions are not equal:\n" +
-                                    "\t actual:\t${actualTx.data?.toHex()}\n" +
-                                    "\t expected:\t${expectedTx.getRawData().toHex()}"
+                                    "\t actual rid:\t${actualTx.rid.toHex()}\n" +
+                                    "\t expected rid:\t${expectedTx.getRID().toHex()}\n" +
+                                    "\t actual hash:\t${actualTx.hash.toHex()}\n" +
+                                    "\t expected hash:\t${expectedTx.getHash().toHex()}\n" +
+                                    "\t actual data:\t${actualTx.data?.toHex()}\n" +
+                                    "\t expected data:\t${expectedTx.getRawData().toHex()}"
                         }
                     }
                 }

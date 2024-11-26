@@ -15,6 +15,7 @@ import net.postchain.core.BlockchainProcess
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.rest.model.PostchainEBFTModel
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
+import java.lang.Integer.min
 
 open class BaseApiInfrastructure(
         restApiConfig: RestApiConfig,
@@ -32,9 +33,12 @@ open class BaseApiInfrastructure(
                         listenPort = port,
                         basePath = basePath,
                         nodeDiagnosticContext = nodeDiagnosticContext,
-                        gracefulShutdown = restApiConfig.gracefulShutdown,
-                        requestConcurrency = restApiConfig.requestConcurrency,
-                        chainRequestConcurrency = restApiConfig.chainRequestConcurrency
+                        gracefulShutdown = gracefulShutdown,
+                        requestConcurrency = calcRequestConcurrency(restApiConfig),
+                        chainRequestConcurrency = chainRequestConcurrency,
+                        subnodeHttpRedirect = subnodeHttpRedirect,
+                        maxRequestBodySize = maxRequestBodySize,
+                        maxDataSize = maxDataSize
                 )
             } catch (e: Exception) {
                 logger.error("Unable to start REST API on port $port", e)
@@ -44,6 +48,12 @@ open class BaseApiInfrastructure(
             null
         }
     }
+
+    private fun calcRequestConcurrency(restApiConfig: RestApiConfig) =
+            if (restApiConfig.requestConcurrency > 0)
+                restApiConfig.requestConcurrency
+            else
+                min(postchainContext.appConfig.databaseSharedReadConcurrency, Runtime.getRuntime().availableProcessors() * 2)
 
     val debugApi: DebugApi? = if (restApiConfig.debugPort != -1) {
         logger.info { "Starting Debug API on port ${restApiConfig.debugPort}" }
@@ -62,7 +72,7 @@ open class BaseApiInfrastructure(
     }
 
     override fun restartProcess(process: BlockchainProcess) {
-        restApi?.retrieveModel(bridOf(process))?.live = false
+        restApi?.retrieveModels(bridOf(process))?.forEach { it.live = false }
     }
 
     override fun connectProcess(process: BlockchainProcess) {
@@ -78,9 +88,8 @@ open class BaseApiInfrastructure(
                             ?: 0
             if (process is ValidatorBlockchainProcess) { // TODO: EBFT-specific code, but pretty harmless
                 apiModel = PostchainEBFTModel(
-                        blockchainConfiguration.chainID,
+                        blockchainConfiguration,
                         process.networkAwareTxQueue,
-                        blockchainConfiguration.getTransactionFactory(),
                         engine.getBlockQueries(),
                         blockchainRid,
                         engine.sharedStorage,
@@ -90,7 +99,7 @@ open class BaseApiInfrastructure(
                 )
             } else {
                 apiModel = PostchainModel(
-                        blockchainConfiguration.chainID,
+                        blockchainConfiguration,
                         engine.getTransactionQueue(),
                         engine.getBlockQueries(),
                         blockchainRid,

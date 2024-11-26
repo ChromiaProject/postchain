@@ -6,17 +6,21 @@ import assertk.assertThat
 import assertk.isContentEqualTo
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
+import net.postchain.api.rest.controller.DATA_TRUNCATED_HEADER
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
+import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.base.BaseBlockWitness
-import net.postchain.base.cryptoSystem
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockDetail
+import net.postchain.core.block.BlockDetailsTruncated
+import net.postchain.core.block.BlockQueryHeightFilter
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.crypto.Signature
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvNull
@@ -70,7 +74,7 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetAllBlocks() {
+    fun `Get all blocks`() {
         val response = listOf(
                 BlockDetail(
                         "blockRid001".toByteArray(),
@@ -110,8 +114,8 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocks(Long.MAX_VALUE, 25, false)
-        ).thenReturn(response)
+                model.getBlocksBetweenTimes(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE, false)
+        ).thenReturn(BlockDetailsTruncated(response, false))
 
         restApi.attachModel(blockchainRID, model)
 
@@ -120,11 +124,40 @@ class RestApiGetBlockEndpointTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
+                .header(DATA_TRUNCATED_HEADER, equalTo("false"))
                 .body(equalTo(gson.toJson(response).toString()))
     }
 
     @Test
-    fun testGetTwoLastBlocks_txHashesOnly() {
+    fun `Get all blocks with remaining blocks`() {
+        val response = listOf(
+                BlockDetail(
+                        "blockRid001".toByteArray(),
+                        blockchainRID2.data,
+                        "some header".toByteArray(),
+                        0,
+                        listOf(),
+                        witness.getRawData(),
+                        1574849700),
+        )
+
+        whenever(
+                model.getBlocksBetweenTimes(BlockQueryTimeFilter(), 25, false, RestApiConfig.DEFAULT_MAX_DATA_SIZE, false)
+        ).thenReturn(BlockDetailsTruncated(response, true))
+
+        restApi.attachModel(blockchainRID, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/blocks/$blockchainRID?before-time=${Long.MAX_VALUE}&limit=${25}&txs=true")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .header(DATA_TRUNCATED_HEADER, equalTo("true"))
+                .body(equalTo(gson.toJson(response).toString()))
+    }
+
+    @Test
+    fun `Get two last blocks with txHashesOnly`() {
         val response = listOf(
                 BlockDetail(
                         "blockRid003".toByteArray(),
@@ -149,13 +182,13 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocks(1574849940, 2, true)
-        ).thenReturn(response)
+                model.getBlocksBetweenTimes(BlockQueryTimeFilter(1574849940, 1574849870), 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE, false)
+        ).thenReturn(BlockDetailsTruncated(response, false))
 
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
-                .get("/blocks/$blockchainRID?before-time=${1574849940}&limit=${2}&txs=false")
+                .get("/blocks/$blockchainRID?before-time=${1574849940}&after-time=${1574849870}&limit=${2}&txs=false")
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
@@ -163,7 +196,7 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetTwoLastBlocksBeforeHeight_txHashesOnly() {
+    fun `Get two last blocks before height with txHashesOnly`() {
         val response = listOf(
                 BlockDetail(
                         "blockRid003".toByteArray(),
@@ -188,13 +221,13 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocksBeforeHeight(4, 2, true)
-        ).thenReturn(response)
+                model.getBlocksBetweenHeights(BlockQueryHeightFilter(4, 1), 2, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE, false)
+        ).thenReturn(BlockDetailsTruncated(response, false))
 
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
-                .get("/blocks/$blockchainRID?before-height=${4}&limit=${2}&txs=false")
+                .get("/blocks/$blockchainRID?before-height=${4}&after-height=${1}&limit=${2}&txs=false")
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
@@ -202,7 +235,7 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetBlocksWithoutParams() {
+    fun `Get blocks without params`() {
         val blocks = listOf(
                 BlockDetail("blockRid001".toByteArray(), blockchainRID2.data, "some header".toByteArray(), 0, listOf(), witness.getRawData(), 1574849700),
                 BlockDetail(
@@ -257,8 +290,8 @@ class RestApiGetBlockEndpointTest {
         )
 
         whenever(
-                model.getBlocks(Long.MAX_VALUE, 25, true)
-        ).thenReturn(blocks)
+                model.getBlocksBetweenHeights(BlockQueryHeightFilter(), 25, true, RestApiConfig.DEFAULT_MAX_DATA_SIZE, false)
+        ).thenReturn(BlockDetailsTruncated(blocks, false))
 
         restApi.attachModel(blockchainRID, model)
 
@@ -270,10 +303,22 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetBlockByRID() {
-        whenever(
-                model.getBlock(BlockRid(block.rid), true)
-        ).thenReturn(block)
+    fun `Block by RID endpoint can return JSON`() {
+        whenever(model.getBlock(BlockRid(block.rid), true)).thenReturn(block)
+        restApi.attachModel(blockchainRID, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .header("Accept", ContentType.JSON)
+                .get("/blocks/$blockchainRID/${block.rid.toHex()}")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body("rid", equalTo(block.rid.toHex()))
+    }
+
+    @Test
+    fun `Block by RID endpoint returns JSON by default`() {
+        whenever(model.getBlock(BlockRid(block.rid), true)).thenReturn(block)
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -285,7 +330,7 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun `can get block even when chain is not live`() {
+    fun `Can get block even when chain is not live`() {
         whenever(
                 model.getBlock(BlockRid(block.rid), true)
         ).thenReturn(block)
@@ -303,9 +348,7 @@ class RestApiGetBlockEndpointTest {
 
     @Test
     fun `Block by RID endpoint can return GTV`() {
-        whenever(
-                model.getBlock(BlockRid(block.rid), true)
-        ).thenReturn(block)
+        whenever(model.getBlock(BlockRid(block.rid), true)).thenReturn(block)
         restApi.attachModel(blockchainRID, model)
 
         val body = given().basePath(basePath).port(restApi.actualPort())
@@ -320,10 +363,8 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetBlockByUnknownRID() {
-        whenever(
-                model.getBlock(BlockRid(block.rid), true)
-        ).thenReturn(null)
+    fun `Get block by unknown RID can return JSON null`() {
+        whenever(model.getBlock(BlockRid(block.rid), true)).thenReturn(null)
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
@@ -335,22 +376,23 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetBlockByHeight() {
-        whenever(
-                model.getBlock(block.height, true)
-        ).thenReturn(block)
+    fun `Get block by unknown RID can return GTV null`() {
+        whenever(model.getBlock(BlockRid(block.rid), true)).thenReturn(null)
         restApi.attachModel(blockchainRID, model)
 
-        given().basePath(basePath).port(restApi.actualPort())
-                .get("/blocks/$blockchainRID/height/${block.height}")
+        val body = given().basePath(basePath).port(restApi.actualPort())
+                .header("Accept", ContentType.BINARY)
+                .get("/blocks/$blockchainRID/${block.rid.toHex()}")
                 .then()
                 .statusCode(200)
-                .contentType(ContentType.JSON)
-                .body("rid", equalTo(block.rid.toHex()))
+                .contentType(ContentType.BINARY)
+
+        assertThat(body.extract().response().body.asByteArray())
+                .isContentEqualTo(GtvEncoder.encodeGtv(GtvNull))
     }
 
     @Test
-    fun testGetBlockByUnknownHeight() {
+    fun `Block at unknown height can return JSON null`() {
         val height = 0L
         whenever(
                 model.getBlock(height, true)
@@ -366,11 +408,9 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun testGetBlockByUnknownHeightGTV() {
+    fun `Block at unknown height can return GTV null`() {
         val height = 0L
-        whenever(
-                model.getBlock(height, true)
-        ).thenReturn(null)
+        whenever(model.getBlock(height, true)).thenReturn(null)
         restApi.attachModel(blockchainRID, model)
 
         val body = given().basePath(basePath).port(restApi.actualPort())
@@ -400,7 +440,7 @@ class RestApiGetBlockEndpointTest {
     }
 
     @Test
-    fun `Default content type is JSON`() {
+    fun `Block at height endpoint returns JSON by default`() {
         whenever(model.getBlock(0, true)).thenReturn(block)
 
         restApi.attachModel(blockchainRID, model)

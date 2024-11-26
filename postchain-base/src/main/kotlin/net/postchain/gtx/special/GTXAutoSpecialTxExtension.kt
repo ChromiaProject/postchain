@@ -15,7 +15,7 @@ import net.postchain.gtx.data.OpData
  * Note: This extension is called "auto" because it's always needed (so technically not extending the protocol,
  * but part of it, but the extension mechanism is the cleanest way to add extra TXs).
  */
-class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
+class GTXAutoSpecialTxExtension : GTXNonSkippingSpecialTxExtension {
     var wantBegin: Boolean = false
     var wantEnd: Boolean = false
 
@@ -84,4 +84,7 @@ class GTXAutoSpecialTxExtension: GTXSpecialTxExtension {
             }
         }
     }
+
+    override fun isAllowedToSkipSpecialOperations(position: SpecialTransactionPosition, bctx: BlockEContext): Boolean =
+            position == SpecialTransactionPosition.Begin && !wantBegin || position == SpecialTransactionPosition.End && !wantEnd
 }

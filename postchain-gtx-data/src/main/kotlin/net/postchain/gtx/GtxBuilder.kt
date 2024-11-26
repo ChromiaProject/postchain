@@ -23,12 +23,22 @@ open class GtxBuilder(
         private val blockchainRid: BlockchainRid,
         private val signers: List<ByteArray>,
         private val cryptoSystem: CryptoSystem,
-        val maxTxSize: Int = -1
+        val maxTxSize: Int = -1,
+        operations: List<GtxOp> = listOf()
 ) {
+    companion object {
+        val EMPTY_SIGNATURE = ByteArray(0)
+    }
     private val calculator = GtvMerkleHashCalculator(cryptoSystem)
     private val operations = mutableListOf<GtxOp>()
 
     internal var totalSize: Int = TX_SIZE_OVERHEAD
+
+    init {
+        operations.forEach { op ->
+            addOperation(op.opName, *op.args)
+        }
+    }
 
     fun isEmpty() = operations.isEmpty()
 
@@ -63,6 +73,13 @@ open class GtxBuilder(
         return GtxSignBuilder(body)
     }
 
+    /**
+     * Marks this transaction as sign-able but the signatures won't be checked.
+     */
+    fun uncheckedSignBuilder(): GtxSignBuilder {
+        val body = GtxBody(blockchainRid, operations, signers)
+        return GtxSignBuilder(body,false)
+    }
 
     inner class GtxSignBuilder(private val body: GtxBody, private val check: Boolean = true) {
 
@@ -84,10 +101,47 @@ open class GtxBuilder(
         fun sign(signature: Signature) = apply {
             if (signatures.contains(signature)) throw UserMistake("Signature already exists")
             if (signers.find { it.contentEquals(signature.subjectID) } == null) throw UserMistake("Signature belongs to unknown signer")
-            if (check && !cryptoSystem.verifyDigest(txRid, signature)) {
-                throw TransactionIncorrect(txRid, "Signature by ${signature.subjectID.toHex()} is not valid")
+            if (check) {
+                check(signature)
             }
             signatures.add(signature)
+        }
+
+        private fun check(signature: Signature) {
+            if (!cryptoSystem.verifyDigest(txRid, signature)) {
+                throw TransactionIncorrect(txRid, "Signature by ${signature.subjectID.toHex()} is not valid")
+            }
+        }
+
+        /**
+         * Add empty signature for subjectID. Only successful if [check] = false
+         */
+        fun emptySign(subjectID: ByteArray) = apply {
+            sign(Signature(subjectID, EMPTY_SIGNATURE))
+        }
+
+        /**
+         * Replace empty signature.
+         */
+        fun signOverEmptySignature(sigMaker: SigMaker) = apply {
+            val newSignature = sigMaker.signDigest(txRid)
+            check(newSignature)
+            val index = signatures.indexOfFirst { it.subjectID.contentEquals(newSignature.subjectID) && it.data.contentEquals(EMPTY_SIGNATURE) }
+
+            if (index == -1) {
+                throw UserMistake("No empty signature found for the given subject ID")
+            }
+
+            signatures[index] = newSignature
+        }
+
+        /**
+         * Add signatures for [signers].
+         *
+         * @param signatures List of respective signatures for all [signers]
+         */
+        fun addSignatures(signatures: List<ByteArray>) = apply {
+            signatures.forEachIndexed{index, signature -> sign(Signature(signers[index], signature))}
         }
 
         /**

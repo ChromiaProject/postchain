@@ -7,9 +7,9 @@ data class ContainerName private constructor(
         val dockerContainer: String,
         val containerIID: Int
 ) {
-    val name = dockerContainer
 
     companion object {
+
         fun create(appConfig: AppConfig, directoryContainer: String, containerIID: Int): ContainerName {
             val dockerContainer = "${appConfig.pubKey.take(8)}-${directoryContainer}-${containerIID}"
             return ContainerName(directoryContainer, dockerContainer, containerIID)

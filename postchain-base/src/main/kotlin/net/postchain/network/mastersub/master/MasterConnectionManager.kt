@@ -34,4 +34,11 @@ interface MasterConnectionManager : Shutdownable {
      * @param chainId a chainId of subnode chain.
      */
     fun disconnectSubChain(chainId: Long)
+
+    /**
+     * Callback when receiving handshake message from subnode
+     *
+     * @param blockchainRid of subnode chain
+     */
+    fun onReceivedHandshake(blockchainRid: BlockchainRid)
 }

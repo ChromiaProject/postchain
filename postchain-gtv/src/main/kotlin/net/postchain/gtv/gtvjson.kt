@@ -2,7 +2,17 @@
 
 package net.postchain.gtv
 
-import com.google.gson.*
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import com.google.gson.JsonArray
+import com.google.gson.JsonDeserializationContext
+import com.google.gson.JsonDeserializer
+import com.google.gson.JsonElement
+import com.google.gson.JsonNull
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
+import com.google.gson.JsonSerializationContext
+import com.google.gson.JsonSerializer
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.gtv.GtvFactory.gtv
@@ -11,7 +21,11 @@ import java.math.BigDecimal
 
 internal fun errorMsg(number: BigDecimal) = "Could not deserialize number '$number' to GtvInteger, valid numbers must be integers and be in range: [-2^63, (2^63)-1]"
 
-class GtvAdapter : JsonDeserializer<Gtv>, JsonSerializer<Gtv> {
+/**
+ * @param strict  serialize big_integer as string if true, as number if false
+ */
+class GtvAdapter(val strict: Boolean = true, val supportBigInteger: Boolean = true) : JsonDeserializer<Gtv>, JsonSerializer<Gtv> {
+    constructor(strict: Boolean = true): this(strict, supportBigInteger = false)
 
     override fun deserialize(json: JsonElement, typeOfT: Type, context: JsonDeserializationContext): Gtv {
         if (json.isJsonPrimitive) {
@@ -30,7 +44,7 @@ class GtvAdapter : JsonDeserializer<Gtv>, JsonSerializer<Gtv> {
             else throw ProgrammerMistake("Can't deserialize JSON primitive")
         } else if (json.isJsonArray) {
             val arr = json.asJsonArray
-            return gtv(*arr.map({ deserialize(it, typeOfT, context) }).toTypedArray())
+            return gtv(*arr.map { deserialize(it, typeOfT, context) }.toTypedArray())
         } else if (json.isJsonNull) {
             return GtvNull
         } else if (json.isJsonObject) {
@@ -66,20 +80,51 @@ class GtvAdapter : JsonDeserializer<Gtv>, JsonSerializer<Gtv> {
         GtvType.BYTEARRAY -> JsonPrimitive(v.asByteArray().toHex())
         GtvType.DICT -> encodeDict(v, t, c)
         GtvType.ARRAY -> encodeArray(v, t, c)
-        GtvType.BIGINTEGER -> throw IllegalStateException("big_integer cannot be serialized as JSON")
+        GtvType.BIGINTEGER -> if (supportBigInteger) {
+            if (strict)
+                JsonPrimitive(v.asBigInteger().toString())
+            else
+                JsonPrimitive(v.asBigInteger())
+        } else {
+            throw IllegalStateException("big_integer cannot be serialized as JSON")
+        }
     }
 }
 
-fun make_gtv_gson_builder(): GsonBuilder {
-    return GsonBuilder()
-            .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter())
-            .serializeNulls()
-}
+/**
+ * Does not support BigInteger.
+ */
+fun make_gtv_gson_builder(): GsonBuilder = GsonBuilder()
+        .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter(strict = true, supportBigInteger = false))
+        .serializeNulls()
 
-fun make_gtv_gson(): Gson {
-    return make_gtv_gson_builder().create()!!
-}
+/**
+ * Serialize BigInteger as string.
+ */
+fun makeStrictGvtGsonBuilder(): GsonBuilder = GsonBuilder()
+        .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter(strict = true, supportBigInteger = true))
+        .serializeNulls()
 
-fun gtvToJSON(gtvData: Gtv, gson: Gson): String {
-    return gson.toJson(gtvData, Gtv::class.java)
-}
+/**
+ * Serialize BigInteger as number.
+ */
+fun makeLenientGtvGsonBuilder(): GsonBuilder = GsonBuilder()
+        .registerTypeHierarchyAdapter(Gtv::class.java, GtvAdapter(strict = false, supportBigInteger = true))
+        .serializeNulls()
+
+/**
+ * Does not support BigInteger.
+ */
+fun make_gtv_gson(): Gson = make_gtv_gson_builder().create()!!
+
+/**
+ * Serialize BigInteger as string.
+ */
+fun makeStrictGtvGson(): Gson = makeStrictGvtGsonBuilder().create()!!
+
+/**
+ * Serialize BigInteger as number.
+ */
+fun makeLenientGtvGson(): Gson = makeLenientGtvGsonBuilder().create()!!
+
+fun gtvToJSON(gtvData: Gtv, gson: Gson): String = gson.toJson(gtvData, Gtv::class.java)

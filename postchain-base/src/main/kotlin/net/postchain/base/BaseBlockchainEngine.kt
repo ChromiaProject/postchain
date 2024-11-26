@@ -11,6 +11,7 @@ import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.data.BaseManagedBlockBuilderProvider
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.extension.getConfigHash
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
@@ -24,6 +25,7 @@ import net.postchain.core.BeforeCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainRestartNotifier
+import net.postchain.core.ConfigurationMismatchException
 import net.postchain.core.EContext
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.Storage
@@ -191,7 +193,7 @@ open class BaseBlockchainEngine(
             tx = enqueuedTx
         }
 
-        tx.checkCorrectness()
+        tx.checkCorrectnessWhileSyncing()
         return tx
     }
 
@@ -200,6 +202,8 @@ open class BaseBlockchainEngine(
             isSyncing: Boolean,
             transactionsDecoder: (List<ByteArray>) -> List<Transaction>
     ): Pair<ManagedBlockBuilder, Exception?> {
+        if (hasMismatchingConfiguration(block.header)) throw ConfigurationMismatchException("")
+
         val grossStart = nanoTime()
         val blockBuilder = makeBlockBuilder(isSyncing)
         var exception: Exception? = null
@@ -211,16 +215,29 @@ open class BaseBlockchainEngine(
             }
             blockBuilder.begin(block.header)
 
-            val netStart = nanoTime()
             val decodedTxs = transactionsDecoder(block.transactions)
-            decodedTxs.forEach(blockBuilder::appendTransaction)
-            val netEnd = nanoTime()
+            var netStart = -1L
+            var netEnd = -1L
+            var numberOfTxs = 0
+            decodedTxs.forEach { tx ->
+                if (!tx.isSpecial()) {
+                    numberOfTxs++
+                    // First non-special tx, start timer
+                    if (netStart == -1L) netStart = nanoTime()
+                } else if (netStart != -1L) {
+                    // End special tx, stop timer
+                    netEnd = nanoTime()
+                }
+                blockBuilder.appendTransaction(tx)
+            }
+            if (netStart == -1L) netStart = nanoTime()
+            if (netEnd == -1L) netEnd = nanoTime()
 
             blockBuilder.finalizeAndValidate(block.header)
             val grossEnd = nanoTime()
 
             val prettyBlockHeader = prettyBlockHeader(
-                    block.header, block.transactions.size, 0, grossStart to grossEnd, netStart to netEnd, 0
+                    block.header, numberOfTxs, 0, grossStart to grossEnd, netStart to netEnd, 0
             )
             logger.info("Loaded block: $prettyBlockHeader")
         } catch (e: Exception) {
@@ -241,7 +258,7 @@ open class BaseBlockchainEngine(
         return blockBuilder to exception
     }
 
-    override fun buildBlock(): Pair<ManagedBlockBuilder, Exception?> {
+    override fun buildBlock(maxBuildTimeMs: Long): Pair<ManagedBlockBuilder, Exception?> {
         buildLog("Begin")
         val grossStart = nanoTime()
 
@@ -249,7 +266,7 @@ open class BaseBlockchainEngine(
         var exception: Exception? = null
 
         try {
-            buildBlockInternal(blockBuilder, grossStart)
+            buildBlockInternal(blockBuilder, grossStart, maxBuildTimeMs)
         } catch (e: Exception) {
             try {
                 blockBuilder.rollback()
@@ -283,6 +300,9 @@ open class BaseBlockchainEngine(
         return blockBuilder to exception
     }
 
+    private fun hasMismatchingConfiguration(blockHeader: BlockHeader) =
+            blockHeader.getConfigHash()?.contentEquals(blockchainConfiguration.configHash)?.not() ?: false
+
     private fun checkForNewConfiguration() {
         withReadConnection(blockBuilderStorage, chainID) { ctx ->
             if (blockchainConfigurationProvider.activeBlockNeedsConfigurationChange(ctx, chainID, false)) {
@@ -293,7 +313,7 @@ open class BaseBlockchainEngine(
         }
     }
 
-    private fun buildBlockInternal(blockBuilder: BaseManagedBlockBuilder, grossStart: Long) {
+    private fun buildBlockInternal(blockBuilder: BaseManagedBlockBuilder, grossStart: Long, maxBuildTimeMs: Long) {
         val blockStart = nanoTime()
 
         blockBuilder.begin(null)
@@ -324,6 +344,12 @@ open class BaseBlockchainEngine(
                     continue
                 }
                 val txException = blockBuilder.maybeAppendTransaction(tx)
+
+                val elapsedTimeMs = (nanoTime() - netStart) / 1_000_000
+                if (maxBuildTimeMs >= 0 && elapsedTimeMs > maxBuildTimeMs) {
+                    logger.info("Tx ${tx.getRID().toHex()} will not be retried since block building has been running for $elapsedTimeMs ms")
+                    transactionQueue.flushTransaction(tx)
+                }
                 if (txException != null) {
                     rejectedTxs++
                     transactionSample.stop(metrics.rejectedTransactions)

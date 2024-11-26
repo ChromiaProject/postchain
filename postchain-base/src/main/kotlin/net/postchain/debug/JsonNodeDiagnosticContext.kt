@@ -5,12 +5,12 @@ import com.google.gson.JsonObject
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.core.InfrastructureFactory
+import java.util.Collections
 
-class JsonNodeDiagnosticContext(
+class JsonNodeDiagnosticContext private constructor(
         private val properties: DiagnosticData,
         private val blockchainDiagnosticData: MutableMap<BlockchainRid, DiagnosticData>
-) : NodeDiagnosticContext,
-        MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
+) : NodeDiagnosticContext, MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
 
     constructor(version: String, pubKey: String, infrastructure: InfrastructureFactory) : this(
             DiagnosticProperty.VERSION withValue version,
@@ -20,7 +20,7 @@ class JsonNodeDiagnosticContext(
                     ?: "(unknown)"),
     )
 
-    constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values), mutableMapOf())
+    constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values), Collections.synchronizedMap(mutableMapOf()))
 
     private val json = JsonFactory.makeJson()
 
@@ -40,6 +40,8 @@ class JsonNodeDiagnosticContext(
         )
     }
 
+    override fun blockchainData(): Map<BlockchainRid, DiagnosticData> = blockchainDiagnosticData
+
     override fun removeBlockchainData(blockchainRid: BlockchainRid?) = blockchainDiagnosticData.remove(blockchainRid)
 
     override fun clearBlockchainData() = blockchainDiagnosticData.clear()
@@ -48,7 +50,6 @@ class JsonNodeDiagnosticContext(
     override fun isEmpty() = properties.isEmpty()
     override val size: Int
         get() = properties.size
-
 
     override fun format(): JsonElement = JsonObject().apply {
         properties.forEach { (p, v) -> add(p.prettyName, json.toJsonTree(v.value)) }

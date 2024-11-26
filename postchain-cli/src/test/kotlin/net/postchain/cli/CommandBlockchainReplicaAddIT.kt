@@ -3,6 +3,8 @@ package net.postchain.cli
 import assertk.assertThat
 import assertk.assertions.isTrue
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
 import net.postchain.common.hexStringToByteArray
@@ -18,7 +20,7 @@ class CommandBlockchainReplicaAddIT : CommandITBase() {
     @BeforeEach
     fun setup() {
         command = CommandBlockchainReplicaAdd()
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
         addBlockchain(multiSignersBlockchainConfig)
         addSignersAsPeers()
     }
@@ -31,7 +33,7 @@ class CommandBlockchainReplicaAddIT : CommandITBase() {
         runStorageCommand(appConfig) { ctx: AppContext ->
             assertThat(DatabaseAccess.of(ctx).existsBlockchainReplica(ctx, blockchainRID, PubKey(signer3PubKey.hexStringToByteArray()))).isTrue()
         }
-        testConsole.assertContains("Blockchain replica added successfully\n")
+        testTerminal.assertContains("Blockchain replica added successfully\n")
     }
 
     @Test
@@ -41,10 +43,10 @@ class CommandBlockchainReplicaAddIT : CommandITBase() {
         // execute
         addReplica()
         // verify
-        testConsole.assertContains(
+        testTerminal.assertContains(
                 listOf(
-                        "Blockchain replica added successfully\n",
-                        "Blockchain replica already exists\n"
+                        "Blockchain replica added successfully",
+                        "Blockchain replica already exists"
                 )
         )
     }

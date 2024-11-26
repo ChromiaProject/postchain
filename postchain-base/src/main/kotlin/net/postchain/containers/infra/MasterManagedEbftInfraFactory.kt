@@ -4,6 +4,8 @@ package net.postchain.containers.infra
 
 import net.postchain.PostchainContext
 import net.postchain.api.rest.infra.RestApiConfig
+import net.postchain.common.exception.UserMistake
+import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.api.DefaultMasterApiInfra
 import net.postchain.containers.bpm.ContainerEnvironment
@@ -15,10 +17,26 @@ import net.postchain.network.mastersub.master.DefaultMasterConnectionManager
 
 open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
 
+    companion object {
+        fun validateSubnodeUser(subnodeUser: String?) {
+            if (subnodeUser == null) {
+                throw UserMistake("POSTCHAIN_SUBNODE_USER must be specified")
+            } else {
+                val values = subnodeUser.split(":")
+                if (!values.all { it.matches("\\d+".toRegex()) }) {
+                    throw UserMistake("POSTCHAIN_SUBNODE_USER requires format <uid> or <uid>:<gid>")
+                }
+                if (values.contains("0")) {
+                    throw UserMistake("POSTCHAIN_SUBNODE_USER can't be set to root")
+                }
+            }
+        }
+    }
+
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
             ContainerEnvironment.init(appConfig)
-            val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
+            val containerNodeConfig = loadContainerNodeConfig(appConfig)
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
             val connectionManager = DefaultMasterConnectionManager(appConfig, containerNodeConfig, postchainContext.blockQueriesProvider)
             val syncInfra = DefaultMasterSyncInfra(this, connectionManager, containerNodeConfig)
@@ -42,5 +60,12 @@ open class MasterManagedEbftInfraFactory : ManagedEBFTInfrastructureFactory() {
         (blockchainInfrastructure as DefaultMasterBlockchainInfra).registerAfterSubnodeCommitListener(blockchainProcessManager)
 
         return blockchainProcessManager
+    }
+
+    fun loadContainerNodeConfig(appConfig: AppConfig): ContainerNodeConfig {
+        val config = ContainerNodeConfig.fromAppConfig(appConfig)
+        validateSubnodeUser(config.subnodeUser)
+
+        return config
     }
 }

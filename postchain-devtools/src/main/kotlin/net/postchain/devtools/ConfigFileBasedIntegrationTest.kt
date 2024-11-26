@@ -135,7 +135,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
     ): PostchainTestNode {
 
         val appConfig = createAppConfig(nodeIndex, totalNodesCount, nodeConfigFilename)
-        StorageBuilder.buildStorage(appConfig, wipeDatabase = preWipeDatabase)
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = preWipeDatabase).close()
 
         nodesNames[appConfig.pubKey] = "$nodeIndex"
         val blockchainConfig = readBlockchainConfig(blockchainConfigFilename)

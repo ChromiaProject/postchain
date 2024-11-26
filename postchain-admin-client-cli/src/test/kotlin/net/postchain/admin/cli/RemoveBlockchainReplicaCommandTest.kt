@@ -1,6 +1,8 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.PostchainServiceCommandTestBase
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.PubKey
@@ -22,7 +24,7 @@ class RemoveBlockchainReplicaCommandTest : PostchainServiceCommandTestBase() {
     @BeforeEach
     fun beforeEach() {
         command = RemoveBlockchainReplicaCommand { _, _ -> setupChannel(postchainService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
     }
 
     @Test
@@ -39,7 +41,7 @@ class RemoveBlockchainReplicaCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).removeBlockchainReplica(BlockchainRid.buildFromHex(brid), PubKey(pubKey))
-        testConsole.assertContains("message: \"Successfully removed replica: [$brid]\"\n\n")
+        testTerminal.assertContains("message: \"Successfully removed replica: [$brid]\"${System.lineSeparator()}")
     }
 
     @Test
@@ -56,6 +58,6 @@ class RemoveBlockchainReplicaCommandTest : PostchainServiceCommandTestBase() {
         )
         // verify
         verify(postchainService).removeBlockchainReplica(BlockchainRid.buildFromHex(brid), PubKey(pubKey))
-        testConsole.assertContains("message: \"No replica has been removed\"\n\n")
+        testTerminal.assertContains("message: \"No replica has been removed\"${System.lineSeparator()}")
     }
 }

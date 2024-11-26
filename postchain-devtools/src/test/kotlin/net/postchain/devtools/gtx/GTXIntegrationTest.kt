@@ -133,6 +133,6 @@ class GTXIntegrationTest : IntegrationTestSetup() {
                         "txRID" to gtv(validTx1.getRID().toHex())
                 ))
         )
-        assertEquals(gtv("true"), value.get())
+        assertEquals(gtv(listOf(gtv("true"))), value.get())
     }
 }

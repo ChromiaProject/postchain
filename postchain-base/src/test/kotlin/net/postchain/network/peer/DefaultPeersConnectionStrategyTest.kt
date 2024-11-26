@@ -3,38 +3,50 @@
 package net.postchain.network.peer
 
 import mu.KLogging
-import net.postchain.common.BlockchainRid
+import net.postchain.base.PeerInfo
+import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.hexStringToByteArray
+import net.postchain.config.node.NodeConfig
+import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.NodeRid
+import net.postchain.network.netty2.ConnectionConfig
 import net.postchain.network.peer.DefaultPeersConnectionStrategy.Companion.SUCCESSFUL_CONNECTION_THRESHOLD
 import org.awaitility.Awaitility
-import org.junit.jupiter.api.Test
-import org.mockito.kotlin.*
-import java.lang.Thread.sleep
-import java.util.concurrent.TimeUnit
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.doReturnConsecutively
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.reset
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
+import java.lang.Thread.sleep
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.TimeUnit
 
 class DefaultPeersConnectionStrategyTest {
 
     companion object : KLogging()
 
-    val peer1 = NodeRid("111111".hexStringToByteArray())
-    val peer2 = NodeRid("222222".hexStringToByteArray())
-    val peer3 = NodeRid("333333".hexStringToByteArray())
-    val peer4 = NodeRid("444444".hexStringToByteArray())
-    val peerCaptor = argumentCaptor<NodeRid>()
-    val peerCaptor2 = argumentCaptor<NodeRid>()
-    val chainCaptor = argumentCaptor<Long>()
-    val connMan: PeerConnectionManager = mock()
+    private val peer1 = NodeRid("111111".hexStringToByteArray())
+    private val peer2 = NodeRid("222222".hexStringToByteArray())
+    private val peer3 = NodeRid("333333".hexStringToByteArray())
+    private val peer4 = NodeRid("444444".hexStringToByteArray())
+    private val peerCaptor = argumentCaptor<NodeRid>()
+    private val peerCaptor2 = argumentCaptor<NodeRid>()
+    private val chainCaptor = argumentCaptor<Long>()
+    private val connMan: PeerConnectionManager = mock()
 
-    fun testConnectAll(me: NodeRid, peerIds: Set<NodeRid>, expectedConns: Set<NodeRid>): DefaultPeersConnectionStrategy {
-        val strategy = sut(me)
-        strategy.connectAll(0, BlockchainRid.ZERO_RID, peerIds)
+    private fun testConnectAll(me: NodeRid, peerIds: Set<NodeRid>, expectedConns: Set<NodeRid>): DefaultPeersConnectionStrategy {
+        val strategy = sut(me, registeredPeers = peerIds)
+        strategy.connectAll(0, ZERO_RID, peerIds)
 
         verify(connMan, times(expectedConns.size)).connectChainPeer(chainCaptor.capture(), peerCaptor.capture())
         assertEquals(expectedConns, peerCaptor.allValues.toSet())
@@ -50,13 +62,36 @@ class DefaultPeersConnectionStrategyTest {
         return strategy
     }
 
-    private fun sut(me: NodeRid, clock: Clock = mock { on { instant() } doReturn Instant.now() }): DefaultPeersConnectionStrategy {
-        val strategy = DefaultPeersConnectionStrategy(connMan, me, clock)
-        strategy.backupConnTimeMax = 102
-        strategy.backupConnTimeMin = 100
-        strategy.reconnectTimeMax = 92
-        strategy.reconnectTimeMin = 90
-        return strategy
+    private fun sut(
+            me: NodeRid,
+            config: ConnectionConfig = ConnectionConfig(),
+            registeredPeers: Set<NodeRid> = emptySet(),
+            nodeConfigProvider: NodeConfigurationProvider? = null,
+            clock: Clock = mock { on { instant() } doReturn Instant.now() }
+    ): DefaultPeersConnectionStrategy {
+
+        val nodeConfigProvider0: NodeConfigurationProvider = nodeConfigProvider ?: run {
+
+            val registeredPeers0 = buildSet {
+                add(me)
+                addAll(registeredPeers)
+            }.associateWith { PeerInfo("host$it", 0, it.data) }
+
+            val nodeConfig: NodeConfig = mock {
+                on { peerInfoMap } doReturn registeredPeers0
+            }
+
+            mock {
+                on { getConfiguration() } doReturn nodeConfig
+            }
+        }
+
+        return DefaultPeersConnectionStrategy(connMan, me, config, nodeConfigProvider0, clock).apply {
+            backupConnTimeMax = 102
+            backupConnTimeMin = 100
+            reconnectTimeMax = 92
+            reconnectTimeMin = 90
+        }
     }
 
     @Test
@@ -88,7 +123,7 @@ class DefaultPeersConnectionStrategyTest {
         val strategy = testConnectAll(me, peerIds, setOf())
         reset(connMan)
         whenever(connMan.isPeerConnected(0, lostPeer)).thenReturn(false)
-        strategy.connectionLost(0, BlockchainRid.ZERO_RID, lostPeer, outgoing)
+        strategy.connectionLost(0, ZERO_RID, lostPeer, outgoing)
         Awaitility.await().atMost(400, TimeUnit.MILLISECONDS).untilAsserted {
             verify(connMan).connectChainPeer(0, lostPeer)
         }
@@ -109,11 +144,11 @@ class DefaultPeersConnectionStrategyTest {
         // We don't care about reconnecting to an unknown peer
         val chainId = 0L
         val strategy = sut(peer1)
-        strategy.connectAll(chainId, BlockchainRid.ZERO_RID, setOf(peer2))
+        strategy.connectAll(chainId, ZERO_RID, setOf(peer2))
         strategy.connectionEstablished(chainId, true, peer2)
         // Unknown peer3 connects
         strategy.connectionEstablished(chainId, false, peer3)
-        strategy.connectionLost(chainId, BlockchainRid.ZERO_RID, peer3, false)
+        strategy.connectionLost(chainId, ZERO_RID, peer3, false)
         sleep(200)
         verify(connMan, never()).connectChainPeer(chainId, peer3)
     }
@@ -123,7 +158,7 @@ class DefaultPeersConnectionStrategyTest {
         val strategy = testConnectAll(peer1, setOf(peer2, peer3), setOf())
         reset(connMan)
         whenever(connMan.isPeerConnected(0, peer3)).thenReturn(true)
-        strategy.connectionLost(0, BlockchainRid.ZERO_RID, peer3, true)
+        strategy.connectionLost(0, ZERO_RID, peer3, true)
         sleep(200)
         verify(connMan, times(0)).connectChainPeer(0, peer3)
     }
@@ -140,8 +175,8 @@ class DefaultPeersConnectionStrategyTest {
                     now + SUCCESSFUL_CONNECTION_THRESHOLD + Duration.ofMillis(500)
             )
         }
-        val strategy = sut(peer1, clock)
-        strategy.connectAll(chainId, BlockchainRid.ZERO_RID, setOf(peer2))
+        val strategy = sut(peer1, clock = clock)
+        strategy.connectAll(chainId, ZERO_RID, setOf(peer2))
         Awaitility.await().atMost(400, TimeUnit.MILLISECONDS).untilAsserted {
             verify(connMan).connectChainPeer(0, peer2)
         }
@@ -151,10 +186,86 @@ class DefaultPeersConnectionStrategyTest {
         assertTrue(strategy.isLatestConnectionSuccessful(peer2))
 
         // Assert that connection is not considered successful if we do not call connectionEstablished
-        strategy.connectionLost(chainId, BlockchainRid.ZERO_RID, peer2, true)
+        strategy.connectionLost(chainId, ZERO_RID, peer2, true)
         Awaitility.await().atMost(400, TimeUnit.MILLISECONDS).untilAsserted {
             verify(connMan, times(2)).connectChainPeer(0, peer2)
         }
         assertFalse(strategy.isLatestConnectionSuccessful(peer2))
+    }
+
+    @Test
+    fun `limited number of unknown peers can connect if config property is greater than 0`() {
+        val unknownPeers = (0 until 4).map { NodeRid("f0ba0$it".hexStringToByteArray()) }
+
+        val registeredPeers = mutableMapOf(
+                peer2 to PeerInfo("host", 0, peer2.data)
+        )
+
+        val nodeConfig: NodeConfig = mock {
+            on { peerInfoMap } doReturn registeredPeers
+        }
+
+        val nodeConfigProvider: NodeConfigurationProvider = mock {
+            on { getConfiguration() } doReturn nodeConfig
+        }
+
+        val strategy = sut(
+                peer1,
+                ConnectionConfig(maxUnknownPeerConnectionsPerChain = 3),
+                nodeConfigProvider = nodeConfigProvider,
+        )
+
+        // only 3 unknown peers can connect
+        (0 until 3).forEach {
+            reset(connMan)
+            whenever(connMan.getConnectedNodes(0)).thenReturn(unknownPeers.subList(0, it))
+            assertTrue(strategy.isConnectionAllowed(0, emptySet(), unknownPeers[it]))
+        }
+
+        reset(connMan)
+        whenever(connMan.getConnectedNodes(0)).thenReturn(unknownPeers.subList(0, 3))
+
+        // the 4th unknown peer can't connect
+        assertFalse(strategy.isConnectionAllowed(0, emptySet(), unknownPeers[3]))
+
+        // known peers still can connect
+        assertTrue(strategy.isConnectionAllowed(0, setOf(peer2), peer2))
+
+        // but 4th can connect after being registered
+        registeredPeers[unknownPeers[3]] = PeerInfo("host3", 0, unknownPeers[3].data)
+        assertTrue(strategy.isConnectionAllowed(0, registeredPeers.keys.map { NodeRid(it.data) }.toSet(), unknownPeers[3]))
+
+        // 4th peer has been removed and can no longer connect
+        registeredPeers.remove(unknownPeers[3])
+        assertFalse(strategy.isConnectionAllowed(0, registeredPeers.keys.map { NodeRid(it.data) }.toSet(), unknownPeers[3]))
+    }
+
+    @Test
+    fun `unlimited number of unknown peers can connect if config property is 0`() {
+        val unknownPeers = (0 until 10).map { NodeRid("f0ba0$it".hexStringToByteArray()) }
+
+        val nodeConfig: NodeConfig = mock {
+            on { peerInfoMap } doReturn mapOf(peer2 to PeerInfo("host", 0, peer2.data))
+        }
+
+        val nodeConfigProvider: NodeConfigurationProvider = mock {
+            on { getConfiguration() } doReturn nodeConfig
+        }
+
+        val strategy = sut(
+                peer1,
+                ConnectionConfig(maxUnknownPeerConnectionsPerChain = 0),
+                nodeConfigProvider = nodeConfigProvider
+        )
+
+        // only 3 unknown peers can connect
+        (0 until 10).forEach {
+            reset(connMan)
+            whenever(connMan.getConnectedNodes(0)).thenReturn(unknownPeers.subList(0, it))
+            assertTrue(strategy.isConnectionAllowed(0, emptySet(), unknownPeers[it]))
+        }
+
+        // known peers still can connect
+        assertTrue(strategy.isConnectionAllowed(0, emptySet(), peer2))
     }
 }

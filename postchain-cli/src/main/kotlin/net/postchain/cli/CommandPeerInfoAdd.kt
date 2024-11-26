@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.options.help
 import com.github.ajalt.clikt.parameters.options.required
@@ -14,7 +15,8 @@ import net.postchain.cli.util.portOption
 import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.config.app.AppConfig
 
-class CommandPeerInfoAdd : CliktCommand(name = "add", help = "Add peer information to database") {
+class CommandPeerInfoAdd : CliktCommand(name = "add") { 
+    override fun help(context: Context) = "Add peer information to database"
 
     private val nodeConfigFile by nodeConfigOption()
 
@@ -36,7 +38,7 @@ class CommandPeerInfoAdd : CliktCommand(name = "add", help = "Add peer informati
                     else -> echo("Peer info has not been added")
                 }
             } catch (e: Exception) {
-                throw PrintMessage("Can't add peer info: ${e.message}", true)
+                throw PrintMessage("Can't add peer info: ${e.message}", printError = true)
             }
         }
     }

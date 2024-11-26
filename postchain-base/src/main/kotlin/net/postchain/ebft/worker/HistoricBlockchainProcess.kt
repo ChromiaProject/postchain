@@ -20,17 +20,19 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpBlockchainNodeState
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.rest.contract.StateNodeStatus
-import net.postchain.ebft.syncmanager.common.FastSyncPeerStatuses
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.KnownState
+import net.postchain.ebft.syncmanager.common.PeerStatuses
 import net.postchain.ebft.syncmanager.common.SyncMethod
 import net.postchain.ebft.syncmanager.common.SyncParameters
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import java.lang.Thread.sleep
@@ -48,8 +50,9 @@ import java.util.concurrent.atomic.AtomicBoolean
  * 3 Sync from remote-OB until drained or timeout
  * 4 Goto 1
  */
-class HistoricBlockchainProcess(val workerContext: WorkerContext,
-                                private val historicBlockchainContext: HistoricBlockchainContext
+class HistoricBlockchainProcess(
+        val workerContext: WorkerContext,
+        private val historicBlockchainContext: HistoricBlockchainContext
 ) : AbstractBlockchainProcess("historic-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine) {
 
     companion object : KLogging()
@@ -70,8 +73,9 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
             workerContext,
             blockDatabase,
             syncParams,
-            FastSyncPeerStatuses(syncParams),
-            ::isProcessRunning
+            PeerStatuses(syncParams),
+            ::isProcessRunning,
+            RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
     )
 
     private var syncMethod = SyncMethod.NOT_SYNCING
@@ -123,7 +127,8 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
             brid: BlockchainRid, // the BC we are trying to pull blocks from
             myBRID: BlockchainRid, // our BC
             blockDatabase: BlockDatabase,
-            params: SyncParameters) {
+            params: SyncParameters
+    ) {
 
         if (brid == myBRID) {
             netDebug("Try network sync using own BRID")
@@ -137,15 +142,16 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                 // we ONLY try syncing over network iff chain is not locally present
                 // Reason for this is a bit complicated:
                 // (Alex:) "BRID is in DB thus we avoid this" is very simple rule.
-                netDebug("Try network sync using historic BRID since chainId $localChainID is new")
+                netDebug("Try network sync using historic BRID since chainId not found in DB")
                 try {
-                    val historicWorkerContext = historicBlockchainContext.contextCreator(brid)
+                    val historicWorkerContext = historicBlockchainContext.getHistoricWorkerContext(brid)
                     historicSynchronizer = FastSynchronizer(
                             historicWorkerContext,
                             blockDatabase,
                             params,
-                            FastSyncPeerStatuses(params),
-                            ::isProcessRunning
+                            PeerStatuses(params),
+                            ::isProcessRunning,
+                            RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
                     )
                     isSyncingHistoric = true
                     historicSynchronizer!!.syncUntilResponsiveNodesDrained()
@@ -226,14 +232,12 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
                         if (isProcessRunning() && readMoreBlocks.get()) {
                             pendingFuture = newBlockDatabase.addBlock(historicBlock, pendingFuture, bTrace)
                             val myHeightToCopy = heightToCopy
-                            pendingFuture.whenCompleteUnwrapped(loggingContext) { _: Any?, exception ->
-                                if (exception == null) {
-                                    copyTrace("Successfully added", bTrace, myHeightToCopy) // Now we should have the block RID in the debug
-                                } else {
-                                    copyErr("Failed to add", myHeightToCopy, exception)
-                                    readMoreBlocks.set(false)
-                                }
-                            }
+                            pendingFuture.whenCompleteUnwrapped(loggingContext, onSuccess = { _ ->
+                                copyTrace("Successfully added", bTrace, myHeightToCopy) // Now we should have the block RID in the debug
+                            }, onError = { exception ->
+                                copyErr("Failed to add", myHeightToCopy, exception)
+                                readMoreBlocks.set(false)
+                            })
                             copyLog("Got promise to add", heightToCopy)
                             heightToCopy += 1
                         }
@@ -379,6 +383,7 @@ class HistoricBlockchainProcess(val workerContext: WorkerContext,
     override fun registerDiagnosticData(diagnosticData: DiagnosticData) {
         super.registerDiagnosticData(diagnosticData)
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_HISTORIC_REPLICA.prettyName)
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATE] = EagerDiagnosticValue(DpBlockchainNodeState.RUNNING_HISTORIC)
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS] = LazyDiagnosticValue {
             StateNodeStatus(
                     myPubKey,

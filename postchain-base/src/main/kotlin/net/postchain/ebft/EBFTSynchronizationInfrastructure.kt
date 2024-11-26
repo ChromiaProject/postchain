@@ -7,8 +7,8 @@ import net.postchain.PostchainContext
 import net.postchain.base.HistoricBlockchainContext
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.configuration.BaseBlockchainConfiguration
-import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.wrap
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfig
@@ -21,12 +21,16 @@ import net.postchain.core.NODE_ID_READ_ONLY
 import net.postchain.core.NodeRid
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.message.MessageDurationTracker
 import net.postchain.ebft.message.ebftMessageToString
 import net.postchain.ebft.worker.ForceReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.HistoricBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
+import net.postchain.managed.ManagedBlockchainConfigurationProvider
+import net.postchain.managed.MigratingBlockchainNodeInfo
+import net.postchain.metrics.MessageDurationTrackerMetricsFactory
 import net.postchain.network.CommunicationManager
 import net.postchain.network.peer.DefaultPeerCommunicationManager
 import net.postchain.network.peer.DefaultPeersCommConfigFactory
@@ -53,21 +57,23 @@ open class EBFTSynchronizationInfrastructure(
             blockchainState: BlockchainState
     ): BlockchainProcess {
         val blockchainConfig = engine.getConfiguration()
+        val chainId = blockchainConfig.chainID
+        val blockchainRid = blockchainConfig.blockchainRid
         val currentNodeConfig = nodeConfig
 
+        // historic context
         val historicBrid = blockchainConfig.effectiveBlockchainRID
         val historicBlockchainContext = if (crossFetchingEnabled(blockchainConfig)) {
             HistoricBlockchainContext(
-                    historicBrid, currentNodeConfig.blockchainAncestors[blockchainConfig.blockchainRid]
-                    ?: emptyMap()
+                    historicBrid, currentNodeConfig.blockchainAncestors[blockchainRid] ?: emptyMap()
             )
         } else null
 
+        // peers
         val peerCommConfiguration = peersCommConfigFactory.create(postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
-
         val peers: Set<NodeRid> = peerCommConfiguration.networkNodes.getPeerIds()
         val signers: Set<NodeRid> = blockchainConfig.signers.map { NodeRid(it) }.toSet()
-        val iAmASigner = signers.contains(peerCommConfiguration.networkNodes.myself.peerId())
+        val iAmASigner = blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY
         if (iAmASigner) {
             if (signers.size == 1) {
                 logger.info("I am alone signer")
@@ -82,65 +88,133 @@ open class EBFTSynchronizationInfrastructure(
         val forceReadOnly = postchainContext.appConfig.readOnly
         if (forceReadOnly) logger.warn("I am running in forced read only mode")
 
-        val workerContext = WorkerContext(
-                blockchainConfig,
-                engine,
-                buildXCommunicationManager(blockchainConfig, peerCommConfiguration, blockchainConfig.blockchainRid),
-                peerCommConfiguration,
-                postchainContext.appConfig,
-                currentNodeConfig,
-                restartNotifier,
-                blockchainConfigurationProvider,
-                postchainContext.nodeDiagnosticContext
-        )
+        // worker context
+        val buildWorkerContext = { brid: BlockchainRid, peerCommConfig: PeerCommConfiguration ->
+            val communicationManager = buildXCommunicationManager(blockchainConfigurationProvider, blockchainConfig, peerCommConfig, brid)
+            val messageDurationTracker = MessageDurationTracker(
+                    postchainContext.appConfig,
+                    communicationManager,
+                    MessageDurationTrackerMetricsFactory(chainId, brid, currentNodeConfig.appConfig.pubKey),
+                    ebftMessageToString(blockchainConfig))
+            WorkerContext(
+                    blockchainConfig,
+                    engine,
+                    communicationManager,
+                    peerCommConfig,
+                    postchainContext.appConfig,
+                    currentNodeConfig,
+                    restartNotifier,
+                    blockchainConfigurationProvider,
+                    postchainContext.nodeDiagnosticContext,
+                    messageDurationTracker
+            )
+        }
+
+        val workerContext = buildWorkerContext(blockchainRid, peerCommConfiguration)
+
+        historicBlockchainContext?.contextCreator = { brid, historicBcContext ->
+            val historicPeerCommConfig = if (brid == historicBrid) {
+                peersCommConfigFactory.create(
+                        postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBcContext)
+            } else {
+                // It's an ancestor brid for historicBrid
+                peersCommConfigFactory.create(
+                        postchainContext.appConfig, currentNodeConfig, brid, historicBcContext)
+            }
+            buildWorkerContext(brid, historicPeerCommConfig)
+        }
 
         /*
-        Block building is prohibited on FB if its current configuration has a historicBrid set.
-
-        When starting a blockchain:
-
-        If !hasHistoricBrid then do nothing special, proceed as we always did
-
-        Otherwise:
-
-        1 Sync from local-OB (if available) until drained
-        2 Sync from remote-OB until drained or timeout
-        3 Sync from FB until drained or timeout
-        4 Goto 2
+            Block building is prohibited on FB if its current configuration has a historicBrid set.
+            When starting a blockchain:
+                If !hasHistoricBrid then do nothing special, proceed as we always did
+                Otherwise:
+                    1. Sync from local-OB (if available) until drained
+                    2. Sync from remote-OB until drained or timeout
+                    3. Sync from FB until drained or timeout
+                    4. Goto 2
         */
-        return if (historicBlockchainContext != null && blockchainState == BlockchainState.RUNNING && !forceReadOnly) {
+        val migratingInfo = (blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider)
+                ?.getMigratingBlockchainNodeInfo(blockchainConfig.blockchainRid)
+        return when {
+            forceReadOnly -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
 
-            historicBlockchainContext.contextCreator = { brid ->
-                val historicPeerCommConfiguration = if (brid == historicBrid) {
-                    peersCommConfigFactory.create(
-                            postchainContext.appConfig, currentNodeConfig, blockchainConfig, historicBlockchainContext)
-                } else {
-                    // It's an ancestor brid for historicBrid
-                    peersCommConfigFactory.create(
-                            postchainContext.appConfig, currentNodeConfig, brid, historicBlockchainContext)
-                }
-                val histCommManager = buildXCommunicationManager(blockchainConfig, historicPeerCommConfiguration, brid)
+            // Must be before RUNNING | PAUSED b/c there is no explicit MOVING blockchain state
+            canMovingBlockchainBeForceReadOnly(blockchainConfig, blockchainState, migratingInfo) -> createMovingForceReadOnlyBlockchainProcess(
+                    workerContext, blockchainState, migratingInfo)
 
-                WorkerContext(
-                        blockchainConfig,
-                        engine,
-                        histCommManager,
-                        historicPeerCommConfiguration,
-                        postchainContext.appConfig,
-                        currentNodeConfig,
-                        restartNotifier,
-                        blockchainConfigurationProvider,
-                        postchainContext.nodeDiagnosticContext
-                )
+            blockchainState == BlockchainState.RUNNING -> createRunningBlockchainProcess(
+                    workerContext, historicBlockchainContext, blockchainConfigurationProvider, blockchainConfig, blockchainState, iAmASigner)
 
-            }
-            HistoricBlockchainProcess(workerContext, historicBlockchainContext)
-        } else if (blockchainConfig.blockchainContext.nodeID != NODE_ID_READ_ONLY && blockchainState == BlockchainState.RUNNING && !forceReadOnly) {
-            ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID))
-        } else if (!forceReadOnly) {
-            ReadOnlyBlockchainProcess(workerContext, engine.getBlockQueries(), blockchainState)
-        } else {
-            ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
+            blockchainState == BlockchainState.PAUSED -> createPausedBlockchainProcess(
+                    workerContext, blockchainConfigurationProvider, blockchainConfig, blockchainState)
+
+            blockchainState == BlockchainState.IMPORTING -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
+
+            blockchainState == BlockchainState.UNARCHIVING -> createUnarchivingBlockchainProcess(
+                    workerContext, blockchainConfigurationProvider, blockchainConfig, blockchainState, iAmASigner)
+
+            else -> throw ProgrammerMistake("Unexpected blockchain state $blockchainState for blockchain $blockchainRid")
+        }
+    }
+
+    protected open fun createRunningBlockchainProcess(
+            workerContext: WorkerContext,
+            historicBlockchainContext: HistoricBlockchainContext?,
+            blockchainConfigProvider: BlockchainConfigurationProvider,
+            blockchainConfig: BlockchainConfiguration,
+            blockchainState: BlockchainState,
+            iAmASigner: Boolean
+    ): BlockchainProcess {
+        return when {
+            historicBlockchainContext != null -> HistoricBlockchainProcess(workerContext, historicBlockchainContext)
+            iAmASigner -> ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID), blockchainState)
+            else -> ReadOnlyBlockchainProcess(workerContext, blockchainState)
+        }
+    }
+
+    protected open fun createPausedBlockchainProcess(workerContext: WorkerContext, blockchainConfigProvider: BlockchainConfigurationProvider, blockchainConfig: BlockchainConfiguration, blockchainState: BlockchainState): BlockchainProcess =
+            ReadOnlyBlockchainProcess(workerContext, blockchainState)
+
+    protected open fun canMovingBlockchainBeForceReadOnly(
+            blockchainConfig: BlockchainConfiguration,
+            blockchainState: BlockchainState,
+            migratingInfo: MigratingBlockchainNodeInfo?
+    ): Boolean = when {
+        migratingInfo == null -> false // bc is not migrating
+        blockchainState == BlockchainState.UNARCHIVING -> false // bc is migrating but is not moving
+        migratingInfo.isSourceNode && migratingInfo.finalHeight != -1L -> true // bc is moving and finalHeight is fixed
+        else -> false
+    }
+
+    protected open fun createMovingForceReadOnlyBlockchainProcess(
+            workerContext: WorkerContext,
+            blockchainState: BlockchainState,
+            migratingInfo: MigratingBlockchainNodeInfo?
+    ): BlockchainProcess {
+        if (migratingInfo == null || blockchainState == BlockchainState.UNARCHIVING) {
+            throw ProgrammerMistake("Can't create blockchain process for moving blockchain: ${workerContext.blockchainConfiguration.blockchainRid}")
+        }
+        return ForceReadOnlyBlockchainProcess(workerContext, blockchainState, migratingInfo.finalHeight)
+    }
+
+    protected open fun createUnarchivingBlockchainProcess(
+            workerContext: WorkerContext,
+            blockchainConfigProvider: BlockchainConfigurationProvider,
+            blockchainConfig: BlockchainConfiguration,
+            blockchainState: BlockchainState,
+            iAmASigner: Boolean
+    ): BlockchainProcess {
+        val bcInfo = (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
+                ?.getMigratingBlockchainNodeInfo(blockchainConfig.blockchainRid)
+        return when {
+            bcInfo != null && bcInfo.isSourceNode && !bcInfo.isDestinationNode -> ForceReadOnlyBlockchainProcess(
+                    workerContext, blockchainState, bcInfo.finalHeight)
+
+            iAmASigner -> ValidatorBlockchainProcess(
+                    workerContext, getStartWithFastSyncValue(blockchainConfig.chainID), blockchainState)
+
+            else -> ReadOnlyBlockchainProcess(workerContext, blockchainState)
         }
     }
 
@@ -188,26 +262,23 @@ open class EBFTSynchronizationInfrastructure(
         }
     }
 
-    private fun buildXCommunicationManager(
+    protected open fun buildXCommunicationManager(
+            blockchainConfigProvider: BlockchainConfigurationProvider,
             blockchainConfig: BlockchainConfiguration,
             relevantPeerCommConfig: PeerCommConfiguration,
             blockchainRid: BlockchainRid
     ): CommunicationManager<EbftMessage> {
-        val packetEncoder = EbftPacketEncoder(relevantPeerCommConfig, blockchainRid)
-        val packetDecoder = EbftPacketDecoder(relevantPeerCommConfig)
-
         return DefaultPeerCommunicationManager(
                 connectionManager,
                 relevantPeerCommConfig,
                 blockchainConfig.chainID,
                 blockchainRid,
-                packetEncoder,
-                packetDecoder,
+                EbftPacketCodec(relevantPeerCommConfig, blockchainRid),
                 ebftMessageToString(blockchainConfig)
         ).apply { init() }
     }
 
-    private fun getStartWithFastSyncValue(chainId: Long): Boolean {
+    protected fun getStartWithFastSyncValue(chainId: Long): Boolean {
         return startWithFastSync[chainId] ?: true
     }
 }

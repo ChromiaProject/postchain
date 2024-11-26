@@ -6,6 +6,7 @@ import io.grpc.InsecureServerCredentials
 import io.grpc.Server
 import io.grpc.TlsServerCredentials
 import mu.KLogging
+import net.postchain.ebft.syncmanager.common.BlockPacker
 import net.postchain.server.config.PostchainServerConfig
 import net.postchain.server.grpc.HealthServiceGrpcImpl
 import net.postchain.server.grpc.PeerServiceGrpcImpl
@@ -29,6 +30,7 @@ class PostchainServer(
             .addService(HealthServiceGrpcImpl(HealthService(nodeProvider)))
             .addService(PostchainServiceGrpcImpl(PostchainService(nodeProvider)))
             .addService(PeerServiceGrpcImpl(PeerService(nodeProvider)))
+            .maxInboundMessageSize(BlockPacker.MAX_PACKAGE_CONTENT_BYTES)
             .apply {
                 otherServices.forEach { addService(it) }
             }

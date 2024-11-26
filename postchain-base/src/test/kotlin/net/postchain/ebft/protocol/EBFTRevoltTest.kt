@@ -10,6 +10,7 @@ import net.postchain.ebft.NodeBlockState.WaitBlock
 import net.postchain.ebft.message.GetUnfinishedBlock
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.network.ReceivedPacket
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
@@ -46,8 +47,8 @@ class EBFTRevoltTest : EBFTProtocolBase() {
         verifyIntent(DoNothingIntent)
         // incoming messages
         messagesToReceive(
-                nodeRid2 to Status(null, 0, true, 0, 1, WaitBlock.ordinal),
-                nodeRid3 to Status(null, 0, true, 0, 1, WaitBlock.ordinal)
+                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal))
         )
         // execute
         statusManager.onStartRevolting()
@@ -71,7 +72,7 @@ class EBFTRevoltTest : EBFTProtocolBase() {
         verifyIntent(DoNothingIntent)
         // incoming messages
         messagesToReceive(
-                nodeRid0 to Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal)
+                ReceivedPacket(nodeRid0, 1, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal))
         )
         // execute
         syncManager.update()
@@ -96,7 +97,7 @@ class EBFTRevoltTest : EBFTProtocolBase() {
         doReturn(CompletableFuture.failedFuture<Exception>(Exception())).whenever(blockDatabase).loadUnfinishedBlock(isA())
         // incoming messages
         messagesToReceive(
-                nodeRid0 to UnfinishedBlock(header0.rawData, emptyList())
+                ReceivedPacket(nodeRid0, 1, UnfinishedBlock(header0.rawData, emptyList()))
         )
         // execute
         syncManager.update()
@@ -130,8 +131,8 @@ class EBFTRevoltTest : EBFTProtocolBase() {
          */
         // incoming messages
         messagesToReceive(
-                nodeRid2 to Status(null, 0, true, 0, 1, WaitBlock.ordinal),
-                nodeRid3 to Status(null, 0, true, 0, 1, WaitBlock.ordinal)
+                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal))
         )
         syncManager.update()
         verifyIntent(BuildBlockIntent)
@@ -155,8 +156,8 @@ class EBFTRevoltTest : EBFTProtocolBase() {
          */
         // incoming messages
         messagesToReceive(
-                nodeRid2 to Status(null, 1, true, 0, 5, WaitBlock.ordinal),
-                nodeRid3 to Status(null, 1, true, 0, 5, WaitBlock.ordinal)
+                ReceivedPacket(nodeRid2, 1, Status(null, 1, true, 0, 5, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 1, true, 0, 5, WaitBlock.ordinal))
         )
         // execute
         statusManager.onStartRevolting()
@@ -185,9 +186,9 @@ class EBFTRevoltTest : EBFTProtocolBase() {
         reset(commManager)
         // incoming messages
         messagesToReceive(
-                nodeRid0 to Status(null, 0, true, 4, 1, WaitBlock.ordinal),
-                nodeRid2 to Status(null, 0, true, 5, 1, WaitBlock.ordinal),
-                nodeRid3 to Status(null, 0, true, 6, 1, WaitBlock.ordinal)
+                ReceivedPacket(nodeRid0, 1, Status(null, 0, true, 4, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal))
         )
         // execute
         syncManager.update()
@@ -208,9 +209,9 @@ class EBFTRevoltTest : EBFTProtocolBase() {
         // setup
         // incoming messages
         messagesToReceive(
-                nodeRid0 to Status(null, 0, true, 0, 1, WaitBlock.ordinal),
-                nodeRid2 to Status(null, 0, true, 5, 1, WaitBlock.ordinal),
-                nodeRid3 to Status(null, 0, true, 6, 1, WaitBlock.ordinal)
+                ReceivedPacket(nodeRid0, 1, Status(null, 0, true, 0, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal))
         )
         syncManager.update()
         reset(commManager)

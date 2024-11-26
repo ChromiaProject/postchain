@@ -14,7 +14,8 @@ import org.http4k.core.Uri
 data class HttpExternalModel(
         val basePath: String,
         override val path: String,
-        override val chainIID: Long
+        override val chainIID: Long,
+        override val directoryContainer: String
 ) : ExternalModel {
 
     companion object : KLogging()
@@ -22,6 +23,7 @@ data class HttpExternalModel(
     override var live = true
 
     val client: HttpHandler = ApacheClient(HttpClients.custom()
+            .disableContentCompression()
             .setDefaultRequestConfig(RequestConfig.custom()
                     .setRedirectsEnabled(false)
                     .setCookieSpec(StandardCookieSpec.IGNORE)

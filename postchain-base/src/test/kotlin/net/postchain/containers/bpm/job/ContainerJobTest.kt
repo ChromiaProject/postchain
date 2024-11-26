@@ -17,7 +17,7 @@ class ContainerJobTest {
             on { millis() } doReturn currentTime
         }
         val containerName = mock<ContainerName>()
-        whenever(containerName.name).thenReturn("Name")
+        whenever(containerName.dockerContainer).thenReturn("Name")
         val job = ContainerJob(containerName, clock)
         assertEquals(0, job.failedStartCount)
         assertEquals(0, job.nextExecutionTime)

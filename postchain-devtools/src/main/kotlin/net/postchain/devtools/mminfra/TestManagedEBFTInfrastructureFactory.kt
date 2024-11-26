@@ -8,8 +8,8 @@ import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.devtools.MockBlockchainConfigurationProvider
-import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.managed.ManagedEBFTInfrastructureFactory
+import net.postchain.managed.ManagedEBFTSynchronizationInfrastructure
 
 open class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFactory() {
 
@@ -30,7 +30,7 @@ open class TestManagedEBFTInfrastructureFactory : ManagedEBFTInfrastructureFacto
             val mockBlockQueriesProvider = configurationProvider as MockBlockchainConfigurationProvider
             mockBlockQueriesProvider.dataSource = dataSource
 
-            val syncInfra = EBFTSynchronizationInfrastructure(this)
+            val syncInfra = ManagedEBFTSynchronizationInfrastructure(this)
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
             val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, postchainContext)
             return TestManagedBlockchainInfrastructure(this, syncInfra, apiInfra, dataSource)

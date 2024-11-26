@@ -21,6 +21,7 @@ import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.subnode.netty.NettySubConnector
 import net.postchain.network.peer.XChainPeersConfiguration
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -45,9 +46,7 @@ interface SubConnectionManager : ConnectionManager {
      * Sends a [MsMessage] to the Master node
      */
     fun sendMessageToMaster(chainId: Long, message: MsMessage): Boolean
-
 }
-
 
 /**
  * While the "master" simply pass on messages, the subnode must deal with the content of the messages,
@@ -60,7 +59,7 @@ class DefaultSubConnectionManager(
 
     companion object : KLogging()
 
-    override val masterSubQueryManager = MasterSubQueryManager { _, message ->
+    override val masterSubQueryManager = MasterSubQueryManager(containerNodeConfig.masterSubQueryTimeoutMs) { _, message ->
         val connection = queryConnection
         if (connection != null) {
             connection.sendPacket(lazy { MsCodec.encode(message) })
@@ -172,15 +171,17 @@ class DefaultSubConnectionManager(
     }
 
     @Synchronized
-    override fun disconnectChain(chainId: Long) {
+    override fun disconnectChain(chainId: Long): CompletableFuture<Void> {
         logger.debug("Disconnecting master chain")
 
         val chain = chains.remove(chainId)
-        if (chain != null) {
-            chain.removeAndCloseConnection()
+        return if (chain != null) {
+            val future = chain.removeAndCloseConnection()
             logger.debug("Master chain disconnected")
+            future ?: CompletableFuture.completedFuture(null)
         } else {
             logger.debug("Master chain is not connected")
+            CompletableFuture.completedFuture(null)
         }
     }
 
@@ -216,7 +217,10 @@ class DefaultSubConnectionManager(
             masterSubQueryManager
         } else {
             val chain = chains.get(descriptor.blockchainRid)
-            withLoggingContext(BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex()) {
+            withLoggingContext(
+                    BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex(),
+                    CHAIN_IID_TAG to chain?.config?.chainId?.toString()
+            ) {
                 when {
                     chain == null -> {
                         logger.warn("Master chain not found")
@@ -251,11 +255,12 @@ class DefaultSubConnectionManager(
             logger.debug("Lost query connection to master")
             scheduleQueryReconnection()
         } else {
-            val brid = descriptor.blockchainRid
-            withLoggingContext(BLOCKCHAIN_RID_TAG to brid.toHex()) {
+            val chain = chains.get(descriptor.blockchainRid)
+            withLoggingContext(
+                    BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex(),
+                    CHAIN_IID_TAG to chain?.config?.chainId?.toString()
+            ) {
                 logger.info("Master node disconnected")
-
-                val chain = chains.get(brid)
                 if (chain == null) {
                     logger.warn("Master chain not found")
                     connection.close()

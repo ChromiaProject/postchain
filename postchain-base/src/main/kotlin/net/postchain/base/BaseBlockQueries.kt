@@ -3,6 +3,7 @@
 package net.postchain.base
 
 import mu.KLogging
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
@@ -10,39 +11,24 @@ import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.Storage
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockDetail
+import net.postchain.core.block.BlockDetailsTruncated
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockQueryHeightFilter
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.core.block.BlockStore
 import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.crypto.Digester
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.merkle.GtvMerkleHashCalculator
-import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import java.sql.SQLException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
-
-/**
- * Encapsulating a proof of a transaction hash in a block header
- *
- * @param hash The transaction hash the proof applies to
- * @param blockHeader The block header the [hash] is supposedly in
- * @param witness The block witness
- * @param merkleProofTree a proof including [hash] (in its raw form)
- * @param txIndex is the index of the proven transaction in the block (i.e. our "path").
- */
-class ConfirmationProof(
-        @Name("hash") val hash: ByteArray,
-        @Name("blockHeader") val blockHeader: ByteArray,
-        @Name("witness") val witness: BaseBlockWitness,
-        @Name("merkleProofTree") val merkleProofTree: GtvMerkleProofTree,
-        @Name("txIndex") val txIndex: Long
-)
 
 /**
  * A collection of methods for various blockchain-related queries. Each query is called with the wrapping method [runOp]
@@ -77,15 +63,15 @@ open class BaseBlockQueries(
         val ctx = try {
             storage.openReadConnection(chainId)
         } catch (e: SQLException) {
-            if (isShutdown) throw PmEngineIsAlreadyClosed("Engine is closed", e)
-            throw e
+            if (isShutdown) return CompletableFuture.failedStage(PmEngineIsAlreadyClosed("Engine is closed", e))
+            return CompletableFuture.failedStage(e)
         }
 
         val result = try {
             operation(ctx)
         } catch (e: Exception) {
             logger.trace(e) { "An error occurred" }
-            throw e
+            return CompletableFuture.failedStage(e)
         } finally {
             storage.closeReadConnection(ctx)
         }
@@ -132,29 +118,34 @@ open class BaseBlockQueries(
         blockStore.getTransactionInfo(it, txRID)
     }
 
-    override fun getTransactionsInfo(beforeTime: Long, limit: Int): CompletionStage<List<TransactionInfoExt>> =
+    override fun getTransactionsInfo(timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated> =
             runOpRegardless {
-                blockStore.getTransactionsInfo(it, beforeTime, limit)
+                blockStore.getTransactionsInfo(it, timeFilter, limit, maxDataSize)
             }
 
-    override fun getTransactionsInfoBySigner(beforeTime: Long, limit: Int, signer: PubKey): CompletionStage<List<TransactionInfoExt>> =
-        runOpRegardless {
-            blockStore.getTransactionsInfoBySigner(it, beforeTime, limit, signer)
-        }
+    override fun getTransactionsInfoBySigner(timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated> =
+            runOpRegardless {
+                blockStore.getTransactionsInfoBySigner(it, timeFilter, limit, signer, maxDataSize)
+            }
 
     override fun getLastTransactionNumber(): CompletionStage<Long> = runOpRegardless {
         blockStore.getLastTransactionNumber(it)
     }
 
-    override fun getBlocks(beforeTime: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> =
+    override fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): CompletionStage<BlockDetailsTruncated> =
             runOpRegardless {
-                blockStore.getBlocks(it, beforeTime, limit, txHashesOnly)
+                blockStore.getBlocksBetweenTimes(it, timeFilter, limit, txHashesOnly, maxDataSize, excludeEmpty)
             }
 
-    override fun getBlocksBeforeHeight(beforeHeight: Long, limit: Int, txHashesOnly: Boolean): CompletionStage<List<BlockDetail>> =
+    override fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): CompletionStage<BlockDetailsTruncated> =
             runOpRegardless {
-                blockStore.getBlocksBeforeHeight(it, beforeHeight, limit, txHashesOnly)
+                blockStore.getBlocksBetweenHeights(it, heightFilter, limit, txHashesOnly, maxDataSize, excludeEmpty)
             }
+
+    override fun getBlocksFromHeight(fromHeight: Long, limit: Int): CompletionStage<List<DatabaseAccess.BlockInfoExt>> =
+        runOpRegardless {
+            blockStore.getBlocksFromHeight(it, fromHeight, limit)
+        }
 
     override fun getBlock(blockRID: ByteArray, txHashesOnly: Boolean): CompletionStage<BlockDetail?> =
             runOpRegardless {

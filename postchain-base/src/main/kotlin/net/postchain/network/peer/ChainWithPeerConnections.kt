@@ -4,6 +4,8 @@ import net.postchain.common.BlockchainRid
 import net.postchain.core.NodeRid
 import net.postchain.network.common.ChainWithConnections
 import net.postchain.network.netty2.NettyPeerConnection
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * This is the "Peer" implementation of [ChainWithConnections] , using the [NettyPeerConnection] implementation.
@@ -12,14 +14,14 @@ import net.postchain.network.netty2.NettyPeerConnection
  * and [NodeRid].
  */
 class ChainWithPeerConnections(
-    val iid: Long,
-    val peerConfig: XChainPeersConfiguration,
-    private val connectAll: Boolean
+        val iid: Long,
+        val peerConfig: XChainPeersConfiguration,
+        private val connectAll: Boolean
 ) : ChainWithConnections<PeerConnection, PeerPacketHandler> {
 
     val bcRid = peerConfig.blockchainRid // Just take it from the config
 
-    private val connections = mutableMapOf<NodeRid, PeerConnection>()
+    private val connections = ConcurrentHashMap<NodeRid, PeerConnection>()
 
     override fun getChainIid(): Long = iid
     override fun getBlockchainRid(): BlockchainRid = bcRid
@@ -49,13 +51,15 @@ class ChainWithPeerConnections(
         connections[nodeId] = conn
     }
 
-    override fun closeConnections() {
-        connections.forEach { (_, conn) -> conn.close() }
+    override fun closeConnections(): CompletableFuture<Void> {
+        val closePromises = mutableListOf<CompletableFuture<Void>>()
+        connections.forEach { (_, conn) -> closePromises.add(conn.close()) }
         connections.clear()
+        return CompletableFuture.allOf(*closePromises.toTypedArray())
     }
 
-    override fun removeAndCloseConnection(nodeId: NodeRid) {
-        connections.remove(nodeId)
+    override fun removeAndCloseConnection(nodeId: NodeRid): CompletableFuture<Void>? {
+        return connections.remove(nodeId)
                 ?.close()
     }
 

@@ -13,6 +13,7 @@ import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.MsBlockAtHeightResponse
+import net.postchain.network.mastersub.protocol.MsBlocksFromHeightResponse
 import net.postchain.network.mastersub.protocol.MsCommittedBlockMessage
 import net.postchain.network.mastersub.protocol.MsConnectedPeersMessage
 import net.postchain.network.mastersub.protocol.MsDataMessage
@@ -56,14 +57,18 @@ open class DefaultMasterCommunicationManager(
         masterConnectionManager.initSubChainConnection(subnodeChainConfig)
 
         // Scheduling SendConnectedPeers task
-        sendConnectedPeersTask = peerTaskScheduler.scheduleAtFixedRate({
+        sendConnectedPeersTask = peerTaskScheduler.scheduleWithFixedDelay({
             withLoggingContext(
                     BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
                     CHAIN_IID_TAG to chainId.toString()
             ) {
-                val peers = connectionManager.getConnectedNodes(chainId)
-                val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.data })
-                masterConnectionManager.sendPacketToSub(blockchainRid, msg)
+                try {
+                    val peers = connectionManager.getConnectedNodes(chainId)
+                    val msg = MsConnectedPeersMessage(blockchainRid.data, peers.map { it.data })
+                    masterConnectionManager.sendPacketToSub(blockchainRid, msg)
+                } catch (e: Exception) {
+                    logger.error("Unexpected error when sending connected peers", e)
+                }
             }
         }, 0, containerNodeConfig.sendMasterConnectedPeersPeriod, TimeUnit.MILLISECONDS)
     }
@@ -82,6 +87,9 @@ open class DefaultMasterCommunicationManager(
                     when (message) {
                         is MsHandshakeMessage -> {
                             disconnectChainPeers()
+                            if (message.blockchainRid != null) {
+                                masterConnectionManager.onReceivedHandshake(BlockchainRid(message.blockchainRid))
+                            }
                             connectChainPeers(message.peers)
                         }
 
@@ -102,7 +110,7 @@ open class DefaultMasterCommunicationManager(
                             }
                         }
 
-                        is MsQueryResponse, is MsBlockAtHeightResponse, is MsQueryFailure -> {
+                        is MsQueryResponse, is MsBlockAtHeightResponse, is MsBlocksFromHeightResponse, is MsQueryFailure -> {
                             masterConnectionManager.masterSubQueryManager.onMessage(message)
                         }
                     }
@@ -138,7 +146,8 @@ open class DefaultMasterCommunicationManager(
 
     private fun disconnectChainPeers() {
         logger.info("Disconnecting chain peers")
-        connectionManager.disconnectChain(chainId)
+        // Blocking wait so we know we don't get any more packets
+        connectionManager.disconnectChain(chainId).join()
     }
 
     /**

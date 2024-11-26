@@ -29,6 +29,11 @@
             <artifactId>jasn1</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-text</artifactId>
+        </dependency>
+
         <!-- JAXB -->
         <dependency>
             <groupId>jakarta.xml.bind</groupId>
@@ -173,6 +178,13 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>com.chromaway</groupId>
+                <artifactId>kotlin-bcv-maven-plugin</artifactId>
+                <configuration>
+                    <skip>false</skip>
+                </configuration>
             </plugin>
         </plugins>
     </build>

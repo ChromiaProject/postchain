@@ -5,13 +5,15 @@ package net.postchain.ebft.worker
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.NetworkAwareTxQueue
-import net.postchain.base.configuration.BaseBlockchainConfiguration
+import net.postchain.base.configuration.KEY_REVOLT
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainState
+import net.postchain.core.NodeRid
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpBlockchainNodeState
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.debug.LazyDiagnosticValue
@@ -20,7 +22,9 @@ import net.postchain.ebft.BaseBlockManager
 import net.postchain.ebft.BaseStatusManager
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.StatusManager
+import net.postchain.ebft.message.StateChangeTracker
 import net.postchain.ebft.rest.contract.toStateNodeStatus
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.syncmanager.validator.AppliedConfigSender
 import net.postchain.ebft.syncmanager.validator.RevoltConfigurationData
 import net.postchain.ebft.syncmanager.validator.RevoltTracker
@@ -32,6 +36,7 @@ import net.postchain.metrics.NodeStatusMetrics
 import net.postchain.metrics.SyncMetrics
 import java.lang.Thread.sleep
 import java.time.Duration
+import kotlin.math.max
 
 /**
  * A blockchain instance worker
@@ -40,7 +45,8 @@ import java.time.Duration
  */
 class ValidatorBlockchainProcess(
         val workerContext: WorkerContext,
-        startWithFastSync: Boolean
+        startWithFastSync: Boolean,
+        private val blockchainState: BlockchainState
 ) : AbstractBlockchainProcess("validator-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine) {
 
     companion object : KLogging()
@@ -63,16 +69,24 @@ class ValidatorBlockchainProcess(
     )
 
     init {
+        val nodeStatusMetrics = NodeStatusMetrics(workerContext.blockchainConfiguration.chainID, workerContext.blockchainConfiguration.blockchainRid)
+        val stateChangeTracker = StateChangeTracker(workerContext.appConfig, nodeStatusMetrics)
         val blockchainConfiguration = workerContext.blockchainConfiguration
+        val revoltConfiguration = blockchainConfiguration.revoltConfiguration
         statusManager = BaseStatusManager(
                 blockchainConfiguration.signers,
                 blockchainConfiguration.blockchainContext.nodeID,
                 blockchainEngine.getBlockQueries().getLastBlockHeight().get() + 1,
-                NodeStatusMetrics()
+                nodeStatusMetrics,
+                stateChangeTracker
         )
 
+        // Other nodes will need at least half the round time to load + some margin for consensus/networking
+        // This won't be an exact time constraint on block building but used to determine if we should retry txs
+        val maxBlockBuildingTime = max((revoltConfiguration.exponentialDelayMax / 2) - revoltConfiguration.timeout, revoltConfiguration.timeout / 2)
         blockDatabase = BaseBlockDatabase(
-                loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeDiagnosticContext, blockchainConfiguration.blockchainContext.nodeID)
+                loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeDiagnosticContext, blockchainConfiguration.blockchainContext.nodeID, maxBlockBuildingTime
+        )
 
         blockManager = BaseBlockManager(
                 blockDatabase,
@@ -80,6 +94,15 @@ class ValidatorBlockchainProcess(
                 blockchainEngine.getBlockBuildingStrategy(),
                 workerContext
         )
+
+        val ensureAppliedConfigSender: () -> Boolean = {
+            if (!appliedConfigSender.isStarted) {
+                appliedConfigSender.start()
+                appliedConfigSender.isStarted
+            } else {
+                true
+            }
+        }
 
         // Give the SyncManager the BaseTransactionQueue (part of workerContext) and not the network-aware one,
         // because we don't want tx forwarding/broadcasting when received through p2p network
@@ -90,18 +113,23 @@ class ValidatorBlockchainProcess(
                 blockManager,
                 blockDatabase,
                 nodeStateTracker,
-                RevoltTracker(statusManager, blockchainConfiguration.revoltConfiguration, blockchainEngine),
+                RevoltTracker(statusManager, revoltConfiguration, blockchainEngine),
                 SyncMetrics(blockchainConfiguration.chainID, blockchainConfiguration.blockchainRid),
                 ::isProcessRunning,
-                startWithFastSync
+                startWithFastSync,
+                ensureAppliedConfigSender,
+                RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
         )
 
         networkAwareTxQueue = NetworkAwareTxQueue(
                 blockchainEngine.getTransactionQueue(),
-                workerContext.communicationManager)
+                workerContext.communicationManager,
+                blockchainConfiguration.signers
+                        .filter { !it.contentEquals(workerContext.appConfig.pubKeyByteArray) }
+                        .map { NodeRid(it) }
+        )
 
         statusManager.recomputeStatus()
-        appliedConfigSender.start()
     }
 
     fun isInFastSyncMode() = syncManager.isInFastSync()
@@ -125,6 +153,12 @@ class ValidatorBlockchainProcess(
         super.registerDiagnosticData(diagnosticData)
         val myNodeIndex = statusManager.getMyIndex()
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_VALIDATOR.prettyName)
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATE] = EagerDiagnosticValue(
+                when (blockchainState) {
+                    BlockchainState.UNARCHIVING -> DpBlockchainNodeState.UNARCHIVING_VALIDATOR
+                    else -> DpBlockchainNodeState.RUNNING_VALIDATOR
+                }
+        )
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS] = LazyDiagnosticValue {
             val errorQueue = workerContext.nodeDiagnosticContext.blockchainErrorQueue(workerContext.blockchainConfiguration.blockchainRid)
             val nodeRid = syncManager.validatorAtIndex(myNodeIndex)
@@ -142,17 +176,12 @@ class ValidatorBlockchainProcess(
     }
 
     override fun isSigner(): Boolean = !syncManager.isInFastSync()
-    override fun getBlockchainState(): BlockchainState = BlockchainState.RUNNING
+
+    override fun getBlockchainState(): BlockchainState = blockchainState
 
     override fun currentBlockHeight(): Long = syncManager.currentBlockHeight()
             ?: blockchainEngine.getBlockQueries().getLastBlockHeight().get()
 }
 
 val BlockchainConfiguration.revoltConfiguration: RevoltConfigurationData
-    get() =
-        if (this is BaseBlockchainConfiguration) {
-            configData.revoltConfigData?.toObject()
-                    ?: RevoltConfigurationData.default
-        } else {
-            RevoltConfigurationData.default
-        }
+    get() = rawConfig[KEY_REVOLT]?.toObject() ?: RevoltConfigurationData.default

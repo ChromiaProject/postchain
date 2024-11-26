@@ -3,10 +3,12 @@
 package net.postchain.gtx.special
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.Transaction
 import net.postchain.crypto.CryptoSystem
@@ -16,6 +18,7 @@ import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.GtxSpecNop
+import net.postchain.logging.TRANSACTION_RID_TAG
 
 /**
  * In this case "Handler" means we:
@@ -46,7 +49,9 @@ open class GTXSpecialTxHandler(val module: GTXModule,
         }
     }
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        const val VALIDATE_SPECIAL_TRANSACTION = "validateSpecialTransaction() -- {}, position: {}"
+    }
 
     override fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean {
         return extensions.any { it.needsSpecialTransaction(position) }
@@ -81,39 +86,66 @@ open class GTXSpecialTxHandler(val module: GTXModule,
      * @return true if all special operations of all extensions valid
      */
     override fun validateSpecialTransaction(position: SpecialTransactionPosition, tx: Transaction, bctx: BlockEContext): Boolean {
-        val operations = (tx as GTXTransaction).gtxData.gtxBody.operations.map { it.asOpData() }
+        withLoggingContext(TRANSACTION_RID_TAG to tx.getRID().toHex()) {
+            logger.trace(VALIDATE_SPECIAL_TRANSACTION, "Begin", position)
 
-        // empty ops
-        if (operations.isEmpty()) {
-            logger.warn("Empty operation list is not allowed")
-            return false
+            val operations = (tx as GTXTransaction).gtxData.gtxBody.operations.map { it.asOpData() }
+
+            // empty ops
+            if (operations.isEmpty()) {
+                logger.warn("Empty operation list is not allowed")
+                return false
+            }
+
+            // __nop
+            val nopIdx = operations.indexOfFirst { it.opName == GtxSpecNop.OP_NAME }
+            if (nopIdx != -1 && nopIdx != operations.lastIndex) {
+                logger.warn("${GtxSpecNop.OP_NAME} is allowed only as the last operation")
+                return false
+            }
+
+            val extOps = operations
+                    .filter { it.opName != GtxSpecNop.OP_NAME }
+                    .groupBy { opToExtension[it.opName] }
+
+            // unknown ops
+            if (extOps.containsKey(null)) {
+                logger.warn("Unknown operation detected: ${extOps[null]?.toTypedArray()?.contentToString()}")
+                return false
+            }
+
+            // ext validation
+            extOps.forEach { (ext, ops) ->
+                if (ext != null && !ext.needsSpecialTransaction(position)) {
+                    logger.warn("Special handler ${ext.javaClass.name} does not need special transaction at position: $position")
+                    return false
+                }
+                if (ext != null && !ext.validateSpecialOperations(position, bctx, ops)) {
+                    logger.warn("Validation failed in special handler ${ext.javaClass.name}")
+                    return false
+                }
+            }
+            extensions.filterIsInstance<GTXNonSkippingSpecialTxExtension>()
+                    .filterNot { extOps.keys.contains(it) }
+                    .forEach { skippedExtension ->
+                        if (!skippedExtension.isAllowedToSkipSpecialOperations(position, bctx)) {
+                            logger.warn("Skipping special operations is not allowed by handler ${skippedExtension.javaClass.name}")
+                            return false
+                        }
+                    }
+            logger.trace(VALIDATE_SPECIAL_TRANSACTION, "End", position)
         }
+        return true
+    }
 
-        // __nop
-        val nopIdx = operations.indexOfFirst { it.opName == GtxSpecNop.OP_NAME }
-        if (nopIdx != -1 && nopIdx != operations.lastIndex) {
-            logger.warn("${GtxSpecNop.OP_NAME} is allowed only as the last operation")
-            return false
-        }
-
-        val extOps = operations
-                .filter { it.opName != GtxSpecNop.OP_NAME }
-                .groupBy { opToExtension[it.opName] }
-
-        // unknown ops
-        if (extOps.containsKey(null)) {
-            logger.warn("Unknown operation detected: ${extOps[null]?.toTypedArray()?.contentToString()}")
-            return false
-        }
-
-        // ext validation
-        extOps.forEach { (ext, ops) ->
-            if (ext != null && !ext.validateSpecialOperations(position, bctx, ops)) {
-                logger.warn("Validation failed in special handler ${ext.javaClass.name}")
+    override fun isAllowedToSkipSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Boolean {
+        extensions.filterIsInstance<GTXNonSkippingSpecialTxExtension>().forEach { extension ->
+            if (!extension.isAllowedToSkipSpecialOperations(position, bctx)) {
+                logger.warn("Skipping special transaction at position: $position is not allowed by handler ${extension.javaClass.name}")
                 return false
             }
         }
-
         return true
     }
+
 }

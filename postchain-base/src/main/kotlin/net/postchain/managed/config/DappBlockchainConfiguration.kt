@@ -10,7 +10,7 @@ import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.config.faulty.LocalFaultyConfigurationReportHelper
 
 open class DappBlockchainConfiguration(
-        private val configuration: GTXBlockchainConfiguration,
+        configuration: GTXBlockchainConfiguration,
         dataSource: ManagedNodeDataSource
 ) : ManagedBlockchainConfiguration(configuration, dataSource) {
     override fun makeBlockBuilder(ctx: EContext, isSyncing: Boolean, extraExtensions: List<BaseBlockBuilderExtension>): BlockBuilder {

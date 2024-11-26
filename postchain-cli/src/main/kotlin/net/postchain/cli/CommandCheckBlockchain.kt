@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.cli.util.SafeExecutor.runOnChain
@@ -13,7 +14,8 @@ import net.postchain.cli.util.nodeConfigOption
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 
-class CommandCheckBlockchain : CliktCommand(name = "check", help = "Checks Blockchain") {
+class CommandCheckBlockchain : CliktCommand(name = "check") { 
+    override fun help(context: Context) = "Checks Blockchain"
 
     private val nodeConfigFile by nodeConfigOption()
 
@@ -31,7 +33,7 @@ class CommandCheckBlockchain : CliktCommand(name = "check", help = "Checks Block
                 } catch (e: UserMistake) {
                     throw PrintMessage(e.message ?: "User error")
                 } catch (e: Exception) {
-                    throw PrintMessage("Can't check blockchain: ${e.message}", true)
+                    throw PrintMessage("Can't check blockchain: ${e.message}", printError = true)
                 }
             }
         }

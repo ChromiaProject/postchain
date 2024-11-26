@@ -13,6 +13,7 @@ import net.postchain.core.BlockchainState
 import net.postchain.core.NodeRid
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvEncoder
@@ -121,7 +122,7 @@ class BaseManagedNodeDataSourceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("getBlockchainConfigurationOptionsData")
+    @MethodSource("getBlockchainConfigurationOptionsTestData")
     fun testGetBlockchainConfigurationOptions(gtvResult: Gtv, expected: BlockchainConfigurationOptions?) {
         val appConfig: AppConfig = mock {
             on { pubKeyByteArray } doReturn byteArrayOf(0)
@@ -135,15 +136,42 @@ class BaseManagedNodeDataSourceTest {
     }
 
     @ParameterizedTest
-    @MethodSource("findNextRemovedBlockchainsData")
-    fun testFindNextRemovedBlockchains(gtvResult: Gtv, expected: List<RemovedBlockchainInfo>?) {
+    @MethodSource("findNextInactiveBlockchainsTestData")
+    fun testFindNextInactiveBlockchains(gtvResult: Gtv, expected: List<InactiveBlockchainInfo>?) {
         val queryRunner: QueryRunner = mock {
-            on { query(eq("nm_api_version"), any()) } doReturn gtv(10)
-            on { query(eq("nm_find_next_removed_blockchains"), any()) } doReturn gtvResult
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(11)
+            on { query(eq("nm_find_next_inactive_blockchains"), any()) } doReturn gtvResult
         }
         val sut = BaseManagedNodeDataSource(queryRunner, mock())
-        assertEquals(expected, sut.findNextRemovedBlockchains(0L))
+        assertEquals(expected, sut.findNextInactiveBlockchains(0L))
     }
+
+    @ParameterizedTest
+    @MethodSource("getMigratingBlockchainNodeInfoTestData")
+    fun testGetMigratingBlockchainInfo(apiVersion: Long, gtvResult: Gtv, expected: MigratingBlockchainNodeInfo?) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(apiVersion)
+            on { query(eq("nm_get_migrating_blockchain_node_info"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock {
+            on { pubKeyByteArray } doReturn byteArrayOf()
+        })
+        assertEquals(expected, sut.getMigratingBlockchainNodeInfo(ZERO_RID))
+    }
+
+    @ParameterizedTest
+    @MethodSource("isBlockchainProviderTestData")
+    fun testIsBlockchainProvider(apiVersion: Long, gtvResult: Gtv, expected: Boolean) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(apiVersion)
+            on { query(eq("nm_is_blockchain_provider"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock {
+            on { pubKeyByteArray } doReturn byteArrayOf()
+        })
+        assertEquals(expected, sut.isBlockchainProvider(KeyPairHelper.keyPair(0).pubKey, ZERO_RID))
+    }
+
 
     companion object {
 
@@ -269,7 +297,7 @@ class BaseManagedNodeDataSourceTest {
         }
 
         @JvmStatic
-        fun getBlockchainConfigurationOptionsData(): List<Array<Any?>> {
+        fun getBlockchainConfigurationOptionsTestData(): List<Array<Any?>> {
             return listOf(
                     arrayOf(GtvNull, null),
                     arrayOf(
@@ -284,22 +312,73 @@ class BaseManagedNodeDataSourceTest {
         }
 
         @JvmStatic
-        fun findNextRemovedBlockchainsData(): List<Array<Any?>> {
+        fun findNextInactiveBlockchainsTestData(): List<Array<Any?>> {
             val brid0 = ZERO_RID
             val brid1 = BlockchainRid.buildRepeat(1)
 
             val nonTrivialGtv = GtvArray(arrayOf(
-                    gtv(mapOf("rid" to gtv(brid0), "height" to gtv(10))),
-                    gtv(mapOf("rid" to gtv(brid1), "height" to gtv(20)))
+                    gtv(mapOf("rid" to gtv(brid0), "state" to gtv("REMOVED"), "height" to gtv(10))),
+                    gtv(mapOf("rid" to gtv(brid1), "state" to gtv("ARCHIVED"), "height" to gtv(20)))
             ))
             val nonTrivialExpected = listOf(
-                    RemovedBlockchainInfo(brid0, 10),
-                    RemovedBlockchainInfo(brid1, 20)
+                    InactiveBlockchainInfo(brid0, BlockchainState.REMOVED, 10),
+                    InactiveBlockchainInfo(brid1, BlockchainState.ARCHIVED, 20)
             )
 
             return listOf(
-                    arrayOf(GtvArray(emptyArray()), emptyList<RemovedBlockchainInfo>()),
+                    arrayOf(GtvArray(emptyArray()), emptyList<InactiveBlockchainInfo>()),
                     arrayOf(nonTrivialGtv, nonTrivialExpected)
+            )
+        }
+
+        @JvmStatic
+        fun getMigratingBlockchainNodeInfoTestData(): List<Array<Any?>> {
+            return listOf(
+                    arrayOf(15, GtvNull, null),
+                    arrayOf(16,
+                            gtv(mapOf(
+                                    "rid" to gtv(ZERO_RID.data),
+                                    "source_container" to gtv("src"),
+                                    "destination_container" to gtv("dst"),
+                                    "is_source_node" to gtv(false),
+                                    "is_destination_node" to gtv(true),
+                                    "final_height" to gtv(100)
+                            )),
+                            MigratingBlockchainNodeInfo(
+                                    ZERO_RID.wData,
+                                    "src",
+                                    "dst",
+                                    isSourceNode = false,
+                                    isDestinationNode = true,
+                                    finalHeight = 100L)
+                    ),
+                    arrayOf(16,
+                            gtv(mapOf(
+                                    "rid" to gtv(ZERO_RID.data),
+                                    "source_container" to gtv("src"),
+                                    "destination_container" to gtv("dst"),
+                                    "is_source_node" to gtv(true),
+                                    "is_destination_node" to gtv(false),
+                                    "final_height" to gtv(100)
+                            )),
+                            MigratingBlockchainNodeInfo(
+                                    ZERO_RID.wData,
+                                    "src",
+                                    "dst",
+                                    isSourceNode = true,
+                                    isDestinationNode = false,
+                                    finalHeight = 100L)
+                    ),
+            )
+        }
+
+        @JvmStatic
+        fun isBlockchainProviderTestData(): List<Array<Any>> {
+            return listOf(
+                    arrayOf(18, gtv(true), true),
+                    arrayOf(18, gtv(false), true), // both are true
+                    arrayOf(19, gtv(true), true),
+                    arrayOf(19, gtv(false), false),
             )
         }
     }

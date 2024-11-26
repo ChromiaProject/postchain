@@ -11,6 +11,7 @@ import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockQueries
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.log2
 import kotlin.math.min
 import kotlin.math.pow
 
@@ -35,6 +36,8 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
     private val preemptiveBlockBuilding = configData.preemptiveBlockBuilding
 
     private val forceStopBlockBuilding: AtomicBoolean = AtomicBoolean(false)
+
+    private val maxFailCount = log2(maxBackoffTime.toDouble() - minBackoffTime).toLong()
 
     init {
         val height = blockQueries.getLastBlockHeight().get()
@@ -112,5 +115,6 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
 
     open fun extendedShouldBuildBlock(): Boolean = false
 
-    fun getBackoffTime(): Long = min(2.0.pow(failedBlockCount).toLong() + minBackoffTime, maxBackoffTime)
+    fun getBackoffTime(): Long = if (failedBlockCount > maxFailCount) maxBackoffTime else
+        min(2.0.pow(failedBlockCount).toLong() + minBackoffTime, maxBackoffTime)
 }

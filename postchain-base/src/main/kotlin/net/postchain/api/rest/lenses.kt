@@ -10,10 +10,12 @@ import net.postchain.api.rest.model.TxRid
 import net.postchain.base.ConfirmationProof
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
+import net.postchain.common.rest.HighestBlockHeightAnchoringCheck
 import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.block.BlockDetail
+import net.postchain.crypto.Signature
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
@@ -22,14 +24,15 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.gtv.make_gtv_gson
 import net.postchain.gtv.mapper.GtvObjectMapper
+import net.postchain.gtv.mapper.Name
 import org.http4k.core.Body
 import org.http4k.core.ContentType
 import org.http4k.format.auto
 import org.http4k.lens.BiDiBodyLens
 import org.http4k.lens.ContentNegotiation
 import org.http4k.lens.ContentNegotiation.Companion.None
+import org.http4k.lens.Header
 import org.http4k.lens.Invalid
 import org.http4k.lens.LensFailure
 import org.http4k.lens.Meta
@@ -46,7 +49,18 @@ import org.http4k.lens.string
 import java.io.InputStream
 import net.postchain.api.rest.json.GtvJsonFactory.auto as gtvJson
 
+const val X_POSTCHAIN_SIGNATURE_HEADER = "X-Postchain-Signature"
 const val ridRegex = "([0-9a-fA-F]{64})"
+val signaturePattern = "([a-zA-Z0-9]+):([a-zA-Z0-9]+)".toRegex()
+
+val signatureHeader = Header.string()
+        .map { signaturesParam ->
+            signaturePattern.findAll(signaturesParam).map {
+                Signature(it.groupValues[1].hexStringToByteArray(), it.groupValues[2].hexStringToByteArray())
+            }
+                    .toList()
+        }
+        .optional(X_POSTCHAIN_SIGNATURE_HEADER)
 
 val txRidPath = Path.regex(ridRegex).map { TxRid(it.hexStringToByteArray()) }.of("txRid", "Hex encoded transaction RID")
 val blockRidPath = Path.regex(ridRegex).map { BlockRid(it.hexStringToByteArray()) }.of("blockRid", "Hex encoded block RID")
@@ -54,8 +68,11 @@ val heightPath = Path.long().of("height", "Block height")
 
 val limitQuery = Query.int().optional("limit")
 val beforeTimeQuery = Query.long().optional("before-time")
+val afterTimeQuery = Query.long().optional("after-time")
 val beforeHeightQuery = Query.long().optional("before-height")
+val afterHeightQuery = Query.long().optional("after-height")
 val txsQuery = Query.boolean().optional("txs")
+val excludeEmptyQuery = Query.boolean().optional("exclude-empty")
 val heightQuery = Query.long().map {
     if (it >= -1)
         it
@@ -63,11 +80,11 @@ val heightQuery = Query.long().map {
         throw LensFailure(listOf(
                 Invalid(Meta(false, "query", ParamMeta.IntegerParam, "height", "Height must be -1 (current height) or a non-negative integer"))))
 }.defaulted("height", -1)
-val queryQuery = Query.string().optional("query")
 val signerQuery = Query.string().regex("([0-9a-fA-F]+)").optional("signer")
+val containerQuery = Query.string().defaulted("container", "")
 
-val gtvGson = make_gtv_gson()
 val prettyGson = JsonFactory.makePrettyJson()
+val dashedPrettyGson = JsonFactory.makeCustomJson()
 
 val errorJsonBody = Body.auto<ErrorBody>().toLens()
 val errorGtvBody = Body.binary(ContentType.OCTET_STREAM, "error GTV").map(
@@ -145,16 +162,27 @@ val binaryBody = Body.binary(ContentType.OCTET_STREAM, "binary").map(
         }
 ).toLens()
 val gtvJsonBody = Body.gtvJson<Gtv>().toLens()
-val batchQueriesBody = Body.json("queries").map {
-    it.asJsonObject["queries"].asJsonArray.map { e -> gtvGson.fromJson(e, Gtv::class.java) }
-}.toLens()
-val gtxQueriesBody = Body.auto<GtxQueries>().toLens()
-val stringsBody = Body.auto<List<String>>().toLens()
 val nodeStatusBody = Body.auto<StateNodeStatus>().toLens()
 val nodeStatusesBody = Body.auto<List<StateNodeStatus>>().toLens()
+val highestBlockHeightAnchoringCheckBody = Body.auto<HighestBlockHeightAnchoringCheck>().toLens()
 val textBody = Body.string(ContentType.TEXT_PLAIN).toLens()
 val blockHeightBody = Body.auto<BlockHeight>().toLens()
+val blockchainNodeStateBody = Body.auto<BlockchainNodeState>().toLens()
 val transactionsCountBody = Body.auto<TransactionsCount>().toLens()
+
+val signatureJsonBody = Body.auto<BlockSignature>().toLens()
+val signatureGtvBody = Body.binary(ContentType.OCTET_STREAM, "signature GTV").map(
+        { inputStream ->
+            val gtv = inputStream.use { GtvDecoder.decodeGtv(it) }
+            GtvObjectMapper.fromGtv(gtv, BlockSignature::class)
+        },
+        {
+            val gtv = it.let { GtvObjectMapper.toGtvDictionary(it) }
+            GtvEncoder.encodeGtv(gtv).inputStream()
+        }
+).toLens()
+val signatureBody = ContentNegotiation.auto(signatureJsonBody, signatureGtvBody)
+
 @Suppress("UNREACHABLE_CODE", "USELESS_CAST")
 val configurationXmlOutBody: BiDiBodyLens<ByteArray> = httpBodyRoot(listOf(Meta(true, location = "body",
         ParamMeta.StringParam, "configuration", "GtvML")), ContentType.TEXT_XML, None)
@@ -183,15 +211,44 @@ val gtvBody = Body.binary(ContentType.OCTET_STREAM, "GTV").map(
 ).toLens()
 val configurationInBody = ContentNegotiation.auto(gtvmlBody, gtvBody)
 val versionBody = Body.auto<Version>().toLens()
+val infraVersionBody = Body.string(ContentType.APPLICATION_JSON, "pretty JSON").map(
+        {
+            dashedPrettyGson.fromJson(it, InfraVersion::class.java)
+        },
+        {
+            dashedPrettyGson.toJson(it)
+        }
+).toLens()
+
+val pathPath = Path.of("path", "Path")
 
 sealed interface BlockchainRef
 data class BlockchainRidRef(val rid: BlockchainRid) : BlockchainRef
 data class BlockchainIidRef(val iid: Long) : BlockchainRef
 
-data class GtxQueries(val queries: List<String>)
 data class BlockHeight(val blockHeight: Long)
 data class TransactionsCount(val transactionsCount: Long)
 data class Tx(val tx: String)
 data class ErrorBody(val error: String = "")
 data class Version(val version: Int)
+data class InfraVersion(
+        val postchain: String,
+        val infrastructure: String,
+        val infrastructureVersion: String,
+        val restApi: String
+)
+
+data class BlockchainNodeState(val state: String)
 object Empty
+
+data class BlockSignature(
+        @Name("subjectID") val subjectID: ByteArray,
+        @Name("data") val data: ByteArray
+) {
+    companion object {
+        fun fromSignature(signature: Signature): BlockSignature =
+                BlockSignature(signature.subjectID, signature.data)
+    }
+
+    fun toSignature() = Signature(subjectID, data)
+}

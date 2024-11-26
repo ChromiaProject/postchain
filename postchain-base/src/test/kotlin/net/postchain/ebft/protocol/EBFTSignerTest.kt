@@ -15,6 +15,7 @@ import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.GetUnfinishedBlock
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.network.ReceivedPacket
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
@@ -41,7 +42,7 @@ class EBFTSignerTest : EBFTProtocolBase() {
         verifyIntent(DoNothingIntent)
         // incoming messages
         messagesToReceive(
-                nodeRid0 to Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal)
+                ReceivedPacket(nodeRid0, 2, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal, Signature(node0, ByteArray(0))))
         )
         // execute
         syncManager.update()
@@ -67,13 +68,13 @@ class EBFTSignerTest : EBFTProtocolBase() {
         doReturn(header0).whenever(blockchainConfiguration).decodeBlockHeader(header0.rawData)
         // incoming messages
         messagesToReceive(
-                nodeRid0 to UnfinishedBlock(header0.rawData, emptyList())
+                ReceivedPacket(nodeRid0, 2, UnfinishedBlock(header0.rawData, emptyList()))
         )
         // execute
         syncManager.update()
         // verify
         verifyIntent(DoNothingIntent)
-        verifyStatus(blockRID = blockRid0, height = 0, serial = 1, round = 0, revolting = false, state = HaveBlock)
+        verifyStatus(blockRID = blockRid0, height = 0, serial = 1, round = 0, revolting = false, state = HaveBlock, signature = null)
         reset(commManager)
 
         /**
@@ -86,18 +87,19 @@ class EBFTSignerTest : EBFTProtocolBase() {
          */
         // incoming messages
         messagesToReceive(
-                nodeRid2 to Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal)
+                ReceivedPacket(nodeRid2, 1, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal))
         )
         // execute
         syncManager.update()
         // verify
         verifyIntent(DoNothingIntent)
-        verifyStatus(blockRID = blockRid0, height = 0, serial = 2, round = 0, revolting = false, state = Prepared)
+        verifyStatus(blockRID = blockRid0, height = 0, serial = 2, round = 0, revolting = false, state = Prepared, signature = signature)
         reset(commManager)
 
         /**
          * Input: Receiving [Status] [Prepared] from node 0 and 2.
-         * Expected outcome: Send request for commit signatures to node 0 and 2.
+         * Expected outcome: Send request for commit signatures to node 2.
+         *                   Since node 0 is on version 2 and delivers the signature in the status message, it should not get a request.
          * State: [Prepared] -> [Prepared]
          * Intent: [DoNothingIntent] -> [FetchCommitSignatureIntent]
          * Receive: [Status] with [Prepared] from node 0 and 2
@@ -105,15 +107,15 @@ class EBFTSignerTest : EBFTProtocolBase() {
          */
         // incoming messages
         messagesToReceive(
-                nodeRid0 to Status(blockRid0, 0, false, 0, 2, Prepared.ordinal),
-                nodeRid2 to Status(blockRid0, 0, false, 0, 2, Prepared.ordinal)
+                ReceivedPacket(nodeRid0, 2, Status(blockRid0, 0, false, 0, 2, Prepared.ordinal, Signature(node0, ByteArray(0)))),
+                ReceivedPacket(nodeRid2, 1, Status(blockRid0, 0, false, 0, 2, Prepared.ordinal))
         )
         // execute
         syncManager.update()
         // verify
-        verifyIntent(FetchCommitSignatureIntent(blockRid0, arrayOf(0, 2)))
+        verifyIntent(FetchCommitSignatureIntent(blockRid0, arrayOf(2)))
         argumentCaptor<GetBlockSignature> {
-            verify(commManager).sendPacket(capture(), eq(listOf(nodeRid0, nodeRid2)))
+            verify(commManager).sendPacket(capture(), eq(listOf(nodeRid2)))
             assertThat(firstValue.blockRID).isEqualTo(blockRid0)
         }
         reset(commManager)
@@ -127,12 +129,11 @@ class EBFTSignerTest : EBFTProtocolBase() {
          * Send: Broadcast [Status]
          */
         // setup
-        doReturn(true).whenever(blockDatabase).verifyBlockSignature(isA())
+        doReturn(true).whenever(blockDatabase).applyAndVerifyBlockSignature(isA())
         doReturn(CompletableFuture.completedStage(Unit)).whenever(blockDatabase).commitBlock(isA())
         // incoming messages
         messagesToReceive(
-                nodeRid0 to BlockSignature(blockRid0, Signature(node0, ByteArray(0))),
-                nodeRid2 to BlockSignature(blockRid0, Signature(node2, ByteArray(0)))
+                ReceivedPacket(nodeRid2, 1, BlockSignature(blockRid0, Signature(node2, ByteArray(0))))
         )
         // execute
         syncManager.update()
@@ -158,9 +159,9 @@ class EBFTSignerTest : EBFTProtocolBase() {
         assertThat(statusManager.myStatus.round).isEqualTo(0)
         // incoming messages
         messagesToReceive(
-                nodeRid0 to Status(null, 0, true, 4, 1, WaitBlock.ordinal),
-                nodeRid2 to Status(null, 0, true, 5, 1, WaitBlock.ordinal),
-                nodeRid3 to Status(null, 0, true, 6, 1, WaitBlock.ordinal)
+                ReceivedPacket(nodeRid0, 1, Status(null, 0, true, 4, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal))
         )
         // execute
         syncManager.update()
@@ -180,7 +181,7 @@ class EBFTSignerTest : EBFTProtocolBase() {
 
         // incoming messages
         messagesToReceive(
-                nodeRid0 to Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal)
+                ReceivedPacket(nodeRid0, 1, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal))
         )
         // execute
         syncManager.update()
@@ -190,12 +191,12 @@ class EBFTSignerTest : EBFTProtocolBase() {
 
         // incoming messages
         messagesToReceive(
-                nodeRid0 to UnfinishedBlock(header0.rawData, emptyList())
+                ReceivedPacket(nodeRid0, 1, UnfinishedBlock(header0.rawData, emptyList()))
         )
         // execute
         syncManager.update()
         // verify
-        verifyStatus(blockRID = blockRid0, height = 0, serial = 1, round = 0, revolting = false, state = HaveBlock)
+        verifyStatus(blockRID = blockRid0, height = 0, serial = 1, round = 0, revolting = false, state = HaveBlock, null)
         reset(commManager)
 
         /**
@@ -210,15 +211,71 @@ class EBFTSignerTest : EBFTProtocolBase() {
         assertThat(statusManager.myStatus.round).isEqualTo(0)
         // incoming messages
         messagesToReceive(
-                nodeRid0 to Status(null, 0, true, 4, 1, WaitBlock.ordinal),
-                nodeRid2 to Status(null, 0, true, 5, 1, WaitBlock.ordinal),
-                nodeRid3 to Status(null, 0, true, 6, 1, WaitBlock.ordinal)
+                ReceivedPacket(nodeRid0, 1, Status(null, 0, true, 4, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal))
         )
         // execute
         syncManager.update()
         // verify
         assertThat(statusManager.myStatus.round).isEqualTo(4)
         verifyStatus(blockRID = null, height = 0, serial = 3, round = 4, revolting = false, state = WaitBlock)
+    }
+
+    @Test
+    fun `If consensus on same height and same round, then transfer to Prepared`() {
+        // setup
+        doReturn(CompletableFuture.completedStage(signature)).whenever(blockDatabase).loadUnfinishedBlock(isA())
+        doReturn(header0).whenever(blockchainConfiguration).decodeBlockHeader(header0.rawData)
+
+        // incoming messages
+        messagesToReceive(
+                ReceivedPacket(nodeRid0, 1, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal)),
+                ReceivedPacket(nodeRid2, 1, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal))
+        )
+        // execute
+        syncManager.update()
+        // verify
+        verifyStatus(blockRID = null, height = 0, serial = 0, round = 0, revolting = false, state = WaitBlock)
+        reset(commManager)
+
+        // incoming messages
+        messagesToReceive(
+                ReceivedPacket(nodeRid0, 1, UnfinishedBlock(header0.rawData, emptyList()))
+        )
+        // execute
+        syncManager.update()
+        // verify
+        verifyStatus(blockRID = blockRid0, height = 0, serial = 2, round = 0, revolting = false, state = Prepared, signature)
+        reset(commManager)
+    }
+
+    @Test
+    fun `If consensus on same height but different round, then keep HaveBlock state`() {
+        // setup
+        doReturn(CompletableFuture.completedStage(signature)).whenever(blockDatabase).loadUnfinishedBlock(isA())
+        doReturn(header0).whenever(blockchainConfiguration).decodeBlockHeader(header0.rawData)
+
+        // incoming messages
+        messagesToReceive(
+                ReceivedPacket(nodeRid0, 1, Status(blockRid0, 0, false, 3, 1, HaveBlock.ordinal)),
+                ReceivedPacket(nodeRid2, 1, Status(blockRid0, 0, false, 4, 1, HaveBlock.ordinal))
+        )
+        // execute
+        syncManager.update()
+        // verify
+        verifyStatus(blockRID = null, height = 0, serial = 0, round = 0, revolting = false, state = WaitBlock)
+        reset(commManager)
+
+        // incoming messages
+        messagesToReceive(
+                ReceivedPacket(nodeRid0, 1, UnfinishedBlock(header0.rawData, emptyList()))
+        )
+        // execute
+        syncManager.update()
+        // verify
+        verifyStatus(blockRID = blockRid0, height = 0, serial = 1, round = 0, revolting = false, state = HaveBlock, null)
+        reset(commManager)
     }
 
     @Test
@@ -235,13 +292,48 @@ class EBFTSignerTest : EBFTProtocolBase() {
         assertThat(statusManager.myStatus.round).isEqualTo(0)
         // incoming messages
         messagesToReceive(
-                nodeRid2 to Status(null, 0, true, 5, 1, WaitBlock.ordinal),
-                nodeRid3 to Status(null, 0, true, 6, 1, WaitBlock.ordinal)
+                ReceivedPacket(nodeRid2, 1, Status(null, 0, true, 5, 1, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 0, true, 6, 1, WaitBlock.ordinal))
         )
         // execute
         syncManager.update()
         // verify
         assertThat(statusManager.myStatus.round).isEqualTo(0)
         verifyStatus(blockRID = null, height = 0, serial = 0, round = 0, revolting = false, state = WaitBlock)
+    }
+
+    @Test
+    fun `Ensure block to fetch is switched if primary signals new block`() {
+        /**
+         * Input: We receive [Status] from primary with a new block
+         * Expected outcome: Intent should be switched to fetch it
+         * State: [WaitBlock] -> [WaitBlock]
+         * Intent: [DoNothingIntent] -> [FetchUnfinishedBlockIntent]
+         */
+        // setup
+        verifyIntent(DoNothingIntent)
+        // incoming messages
+        messagesToReceive(
+                ReceivedPacket(nodeRid0, 2, Status(blockRid0, 0, false, 0, 1, HaveBlock.ordinal, Signature(node0, ByteArray(0))))
+        )
+        // execute
+        syncManager.update()
+        // verify
+        verifyIntent(FetchUnfinishedBlockIntent(blockRid0))
+        /**
+         * Input: We receive [Status] from primary with another block
+         * Expected outcome: Intent should be switched to fetch the new block
+         * State: [WaitBlock] -> [WaitBlock]
+         * Intent: [FetchUnfinishedBlockIntent] with previous block RID -> [FetchUnfinishedBlockIntent] with new block RID
+         */
+        // New block signaled by primary
+        val newBlockRid = ByteArray(32) { 1 }
+        messagesToReceive(
+                ReceivedPacket(nodeRid0, 2, Status(newBlockRid, 0, false, 0, 2, HaveBlock.ordinal, Signature(node0, ByteArray(0))))
+        )
+        // execute
+        syncManager.update()
+        // verify
+        verifyIntent(FetchUnfinishedBlockIntent(newBlockRid))
     }
 }

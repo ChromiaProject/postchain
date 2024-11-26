@@ -3,7 +3,9 @@
 package net.postchain.gtx.data
 
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.toHex
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.Signature
@@ -156,6 +158,27 @@ class GtxBuilderTest {
             )
         }
         checkSize(b, 1)
+    }
+
+    @Test
+    fun signOverEmptySignature_given_valid_keypair() {
+        val gtxBuilder = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto)
+
+        val emptySign = gtxBuilder.uncheckedSignBuilder().emptySign(signerPub[0])
+
+        val signOverEmptySignature = emptySign.signOverEmptySignature(crypto.buildSigMaker(KeyPair(signerPub[0], signerPriv[0])))
+        assertEquals("4F36ACA7EFCABED6B4E3F82B0DE4B6B05E299CE420369F9FC37CCF2DB7F7551E596E12C402A833D3FDE2725F8D23F682BCFB6B94DC0D896E03D9056C05056765", signOverEmptySignature.buildGtx().signatures[0].toHex())
+    }
+
+    @Test
+    fun signOverEmptySignature_given_faulty_keypair() {
+        val gtxBuilder = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto)
+
+        val emptySign = gtxBuilder.uncheckedSignBuilder().emptySign(signerPub[0])
+
+        assertThrows(TransactionIncorrect::class.java) {
+            emptySign.signOverEmptySignature(crypto.buildSigMaker(KeyPair(signerPub[0], signerPriv[1])))
+        }
     }
 
     private fun checkSize(b: GtxBuilder, numOps: Int) {

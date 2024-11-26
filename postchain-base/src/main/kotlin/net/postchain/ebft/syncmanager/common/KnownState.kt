@@ -20,7 +20,7 @@ import java.time.Clock
  * height + 1). They also serve as a discovery mechanism, in which we become
  * aware of our neighborhood.
  */
-open class KnownState(val params: SyncParameters, val clock: Clock = Clock.systemUTC()) {
+class KnownState(val params: SyncParameters, val clock: Clock = Clock.systemUTC()) {
 
     companion object : KLogging()
 
@@ -48,7 +48,57 @@ open class KnownState(val params: SyncParameters, val clock: Clock = Clock.syste
 
     private var disconnectedSince: Long = 0
 
+    private var drainedResurrectTime: Long = 0
+    private var drainedHeight: Long = -1
+
     private fun currentTimeMillis() = clock.millis()
+
+    fun isDrained(now: Long): Boolean {
+        if (state == State.DRAINED && (now > drainedResurrectTime)) {
+            if (logger.isDebugEnabled) {
+                logger.debug("Peer timed out of drained")
+            }
+            this.state = State.SYNCABLE
+            this.drainedResurrectTime = 0
+            this.drainedHeight = -1
+        }
+
+        return state == State.DRAINED
+    }
+
+    /**
+     * @param height is where the node's highest block can be found (but higher than that the node has no blocks).
+     */
+    fun drained(height: Long, now: Long, drainedTimeout: Long = params.resurrectDrainedTime) {
+        state = State.DRAINED
+        drainedResurrectTime = now + drainedTimeout
+        if (height > drainedHeight) {
+            drainedHeight = height
+        }
+    }
+
+    fun isSyncable(h: Long) = state == State.SYNCABLE || state == State.DRAINED && drainedHeight >= h
+
+    fun headerReceived(height: Long) {
+        if (state == State.DRAINED && height > drainedHeight) {
+            if (logger.isDebugEnabled) {
+                logger.debug("Got header. Setting new fast sync peer status SYNCABLE")
+            }
+            state = State.SYNCABLE
+        }
+    }
+
+    fun statusReceived(height: Long) {
+        // We take a Status message as an indication that
+        // there might be more blocks to fetch now. But
+        // we won't resurrect unresponsive peers.
+        if (state == State.DRAINED && height > drainedHeight) {
+            if (logger.isDebugEnabled) {
+                logger.debug("Got status. Setting new fast sync peer status SYNCABLE")
+            }
+            state = State.SYNCABLE
+        }
+    }
 
     fun updateAndCheckBlacklisted() = updateAndCheckBlacklisted(currentTimeMillis())
 
@@ -58,13 +108,13 @@ open class KnownState(val params: SyncParameters, val clock: Clock = Clock.syste
             if (logger.isDebugEnabled) {
                 logger.debug("Peer timed out of blacklist")
             }
-            whitelist()
+            markAsSyncable()
         }
 
         return state == State.BLACKLISTED
     }
 
-    fun whitelist() {
+    fun markAsSyncable() {
         this.state = State.SYNCABLE
         this.timeOfLastError = 0
         this.errors.clear()
@@ -86,10 +136,6 @@ open class KnownState(val params: SyncParameters, val clock: Clock = Clock.syste
     fun isMaybeLegacy() = !confirmedModern && maybeLegacy
 
     fun isConfirmedModern() = confirmedModern
-
-    open fun isSyncable(h: Long) = state == State.SYNCABLE || state == State.DRAINED // We don't mind "drained"
-
-    fun isBlacklisted(): Boolean = state == State.BLACKLISTED
 
     /**
      * Note: this will get into conflict with connection manager, which also has a way of dealing with
@@ -164,7 +210,8 @@ open class KnownState(val params: SyncParameters, val clock: Clock = Clock.syste
         return disconnectedSince == 0L || now - disconnectedSince < params.disconnectTimeout
     }
 
-    open fun resurrect(now: Long) {
+    fun resurrect(now: Long) {
+        isDrained(now)
         isUnresponsive(now)
         updateAndCheckBlacklisted(now)
     }

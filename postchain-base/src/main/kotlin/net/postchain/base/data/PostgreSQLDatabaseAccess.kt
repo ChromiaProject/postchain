@@ -181,6 +181,11 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 " ALTER COLUMN configuration_hash SET NOT NULL"
     }
 
+    override fun cmdDropTableConfigurationDataNotNull(chainId: Long): String {
+        return "ALTER TABLE ${tableConfigurations(chainId)}" +
+                " ALTER COLUMN configuration_data DROP NOT NULL"
+    }
+
     override fun cmdAddTableBlockchainReplicasPubKeyConstraint(): String =
             "ALTER TABLE ${tableBlockchainReplicas()} ADD FOREIGN KEY ($TABLE_REPLICAS_FIELD_PUBKEY)" +
                     " REFERENCES ${tablePeerinfos()} ($TABLE_PEERINFOS_FIELD_PUBKEY)"
@@ -327,6 +332,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
             ORDER BY b.block_height ASC
                 """.trimIndent()
         ctx.conn.prepareStatement(sql).use { statement ->
+            statement.fetchSize = 10
             statement.setLong(1, fromHeight)
             statement.setLong(2, upToHeight)
             statement.executeQuery().use { resultSet ->
@@ -335,12 +341,16 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                     val blockHeader = resultSet.getBytes("block_header_data")
                     val witness = resultSet.getBytes("block_witness")
                     val array = resultSet.getArray("transactions")
-                    val transactions = buildList<ByteArray> {
-                        array.resultSet.use {
-                            while (it.next()) {
-                                add(it.getBytes(2))
+                    val transactions = try {
+                        buildList<ByteArray> {
+                            array.resultSet.use {
+                                while (it.next()) {
+                                    add(it.getBytes(2))
+                                }
                             }
                         }
+                    } finally {
+                        array.free()
                     }
 
                     blockHandler(DatabaseAccess.BlockWithTransactions(blockHeight, blockHeader, witness, transactions))

@@ -38,7 +38,7 @@ open class TestManagedBlockchainProcessManager(
 
     private val blockchainStarts = ConcurrentHashMap<Long, BlockingQueue<Long>>()
 
-    fun getCurRemovedBcHeight() = currentRemovedBlockchainHeight
+    fun getCurInactiveBcHeight() = currentInactiveBlockchainsHeight
 
     override fun initManagedEnvironment(dataSource: ManagedNodeDataSource) {
         this.dataSource = dataSource

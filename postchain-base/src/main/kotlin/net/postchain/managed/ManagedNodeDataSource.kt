@@ -6,13 +6,13 @@ import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.common.BlockchainRid
 import net.postchain.config.node.PeerInfoDataSource
 import net.postchain.core.BlockchainState
+import net.postchain.crypto.PubKey
 import net.postchain.managed.query.QueryRunner
 
 interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
 
     val nmApiVersion: Int
 
-    fun computeBlockchainList(): List<ByteArray>
     fun computeBlockchainInfoList(): List<BlockchainInfo>
     fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray?
 
@@ -30,5 +30,9 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
 
     fun getBlockchainConfigurationOptions(blockchainRid: BlockchainRid, height: Long): BlockchainConfigurationOptions?
 
-    fun findNextRemovedBlockchains(height: Long): List<RemovedBlockchainInfo>
+    fun findNextInactiveBlockchains(height: Long): List<InactiveBlockchainInfo>
+
+    fun getMigratingBlockchainNodeInfo(blockchainRid: BlockchainRid): MigratingBlockchainNodeInfo?
+
+    fun isBlockchainProvider(providerPubKey: PubKey, blockchainRid: BlockchainRid): Boolean
 }

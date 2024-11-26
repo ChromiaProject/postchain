@@ -44,8 +44,8 @@ import net.postchain.managed.ManagedBlockchainProcessManager
 import net.postchain.metrics.BlockchainProcessManagerMetrics
 import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -77,7 +77,7 @@ open class BaseBlockchainProcessManager(
     protected val chainIdToBrid = mutableMapOf<Long, BlockchainRid>()
     protected val bridToChainId = mutableMapOf<BlockchainRid, Long>()
     protected val extensions: List<BlockchainProcessManagerExtension> = bpmExtensions
-    protected val executor: ExecutorService = Executors.newSingleThreadExecutor()
+    protected val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     private val scheduledForStart = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
     private val scheduledForStop = Collections.newSetFromMap(ConcurrentHashMap<Long, Boolean>())
 
@@ -162,10 +162,11 @@ open class BaseBlockchainProcessManager(
                 startDebug("Begin by stopping blockchain", bTrace)
                 stopBlockchain(chainId, bTrace, true)
 
-                logger.info("Starting of blockchain")
+                logger.info("Starting of blockchain: $chainId")
 
+                var initialEContext: EContext? = null
                 try {
-                    val initialEContext = blockBuilderStorage.openWriteConnection(chainId)
+                    initialEContext = blockBuilderStorage.openWriteConnection(chainId)
                     val blockHeight = blockchainConfigProvider.getActiveBlocksHeight(initialEContext, DatabaseAccess.of(initialEContext))
 
                     val rawConfigurationData = blockchainConfigProvider.getActiveBlockConfiguration(initialEContext, chainId, loadNextPendingConfig)
@@ -189,8 +190,9 @@ open class BaseBlockchainProcessManager(
                         }
                         blockchainConfig.blockchainRid
                     } catch (e: Exception) {
+                        var eContext: EContext? = null
                         try {
-                            val eContext = if (initialEContext.conn.isClosed) blockBuilderStorage.openWriteConnection(chainId) else initialEContext
+                            eContext = blockBuilderStorage.openWriteConnection(chainId)
                             val configHash = GtvToBlockchainRidFactory.calculateBlockchainRid(GtvDecoder.decodeGtv(rawConfigurationData), ::sha256Digest).data
                             if (hasBuiltInitialBlock(eContext) && !hasBuiltBlockWithConfig(eContext, blockHeight, configHash)) {
                                 revertConfiguration(chainId, bTrace, eContext, blockHeight, rawConfigurationData)
@@ -198,13 +200,22 @@ open class BaseBlockchainProcessManager(
                                 blockBuilderStorage.closeWriteConnection(eContext, false)
                             }
                         } catch (e: Exception) {
+                            if (eContext != null && !eContext.conn.isClosed) {
+                                blockBuilderStorage.closeWriteConnection(eContext, false)
+                            }
                             logger.warn(e) { "Unable to revert configuration: $e" }
                         }
 
-                        addToErrorQueue(chainId, e)
-
                         throw e
                     }
+                } catch (e: Exception) {
+                    if (initialEContext != null && !initialEContext.conn.isClosed) {
+                        blockBuilderStorage.closeWriteConnection(initialEContext, false)
+                    }
+
+                    addToErrorQueue(chainId, e)
+
+                    throw e
                 } finally {
                     scheduledForStart.remove(chainId)
                 }
@@ -253,7 +264,7 @@ open class BaseBlockchainProcessManager(
             // We need to print full BC RID so that users can see in INFO logs what it is.
             val process = blockchainProcesses[chainId]
             "startBlockchain() - Blockchain has been started: ${process?.javaClass?.simpleName}:${process?.getBlockchainState()}," +
-                    " full blockchain RID: ${blockchainConfig.blockchainRid.toHex()}, signers: ${blockchainConfig.signers.map { it.toHex() }}"
+                    " blockchain RID: ${blockchainConfig.blockchainRid.toHex()}, signers: ${blockchainConfig.signers.map { it.toHex() }}"
         }
     }
 
@@ -277,7 +288,6 @@ open class BaseBlockchainProcessManager(
         logger.info("Reverting faulty configuration at height $blockHeight")
         val failedConfigHash = GtvToBlockchainRidFactory.calculateBlockchainRid(GtvFactory.decodeGtv(failedConfig), ::sha256Digest).data
 
-        eContext.conn.rollback() // rollback any DB updates the new and faulty configuration did
         DatabaseAccess.of(eContext).apply {
             addFaultyConfiguration(eContext, FaultyConfiguration(failedConfigHash.wrap(), blockHeight))
             removeConfiguration(eContext, blockHeight)
@@ -381,7 +391,7 @@ open class BaseBlockchainProcessManager(
             blockchainRid?.let { nodeDiagnosticContext.blockchainErrorQueue(it).clear() }
         }
         blockchainProcesses.remove(chainId)?.also {
-            stopInfoDebug("Stopping of blockchain", bTrace)
+            stopInfoDebug("Stopping of blockchain: $chainId", bTrace)
             extensions.forEach { ext -> ext.disconnectProcess(it) }
             if (restart) {
                 blockchainInfrastructure.restartBlockchainProcess(it)
@@ -389,7 +399,7 @@ open class BaseBlockchainProcessManager(
                 blockchainInfrastructure.exitBlockchainProcess(it)
             }
             it.shutdown()
-            stopInfoDebug("Stopping blockchain, shutdown complete", bTrace)
+            stopInfoDebug("Stopping blockchain: $chainId, shutdown complete", bTrace)
         }
     }
 

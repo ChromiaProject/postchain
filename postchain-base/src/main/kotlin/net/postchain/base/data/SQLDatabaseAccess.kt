@@ -6,6 +6,7 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.SqlUtils.isUniqueViolation
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
@@ -25,10 +26,17 @@ import net.postchain.core.NodeRid
 import net.postchain.core.SignableTransaction
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionInfoExt
+import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.TxDetail
 import net.postchain.core.TxEContext
+import net.postchain.core.block.BlockDetail
+import net.postchain.core.block.BlockDetailsTruncated
 import net.postchain.core.block.BlockHeader
+import net.postchain.core.block.BlockQueryHeightFilter
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.core.block.BlockWitness
+import net.postchain.core.block.Filter
+import net.postchain.core.block.size
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.GtvDecoder
@@ -37,14 +45,16 @@ import org.apache.commons.dbutils.handlers.ColumnListHandler
 import org.apache.commons.dbutils.handlers.MapListHandler
 import org.apache.commons.dbutils.handlers.ScalarHandler
 import java.sql.Connection
+import java.sql.ResultSet
 import java.sql.SQLException
 import java.sql.Timestamp
 import java.time.Instant
+import kotlin.math.max
 
 
 abstract class SQLDatabaseAccess : DatabaseAccess {
 
-    protected fun tableMeta(): String = "meta"
+    internal fun tableMeta(): String = "meta"
     protected fun tableContainers(): String = "containers"
     internal fun tableBlockchains(): String = "blockchains"
     protected fun tablePeerinfos(): String = "peerinfos"
@@ -97,6 +107,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     protected abstract fun cmdUpdateTableConfigurationsV4First(chainId: Long): String
     protected abstract fun cmdUpdateTableConfigurationsV4Second(chainId: Long): String
+    protected abstract fun cmdDropTableConfigurationDataNotNull(chainId: Long): String
 
     protected abstract fun cmdCreateTableFaultyConfiguration(chainId: Long): String
 
@@ -134,6 +145,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     internal val mapListHandler = MapListHandler()
 
     companion object : KLogging() {
+        const val TABLE_META_KEY_VERSION = "version"
+        const val TABLE_META_KEY_LAST_CHAIN_IID = "chain_iid"
+
         const val FIELD_NAME_CHAIN_IID = "chain_iid"
 
         const val TABLE_PEERINFOS_FIELD_HOST = "host"
@@ -316,29 +330,65 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return buildTransactionInfoExt(txInfo)
     }
 
-    override fun getTransactionsInfo(ctx: EContext, beforeTime: Long, limit: Int): List<TransactionInfoExt> {
+    override fun getTransactionsInfo(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated {
         val sql = """
-            SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_rid, t.tx_hash, t.tx_data 
-                    FROM ${tableBlocks(ctx)} as b 
-                    JOIN ${tableTransactions(ctx)} as t ON (t.block_iid = b.block_iid) 
-                    WHERE b.timestamp < ? 
-                    ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?;
+            WITH TransactionInfo AS (
+                SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_rid, t.tx_hash, t.tx_data, t.tx_iid, 
+                    SUM(
+                        LENGTH(b.block_rid) * 2 + 
+                        LENGTH(CAST(b.block_height AS TEXT)) + 
+                        LENGTH(b.block_header_data) * 2 + 
+                        LENGTH(b.block_witness) * 2 + 
+                        LENGTH(CAST(b.timestamp AS TEXT)) + 
+                        LENGTH(t.tx_rid) * 2 + 
+                        LENGTH(t.tx_hash) * 2 + 
+                        LENGTH(t.tx_data) * 2 
+                    ) OVER (ORDER BY b.block_height DESC, t.tx_iid DESC) AS cumulative_size
+                FROM ${tableBlocks(ctx)} AS b 
+                JOIN ${tableTransactions(ctx)} AS t ON (t.block_iid = b.block_iid) 
+                WHERE b.timestamp < ? AND b.timestamp > ?
+                ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?
+            )
+            SELECT block_rid, block_height, block_header_data, block_witness, timestamp, tx_rid, tx_hash, tx_data,
+            (SELECT COUNT(*) FROM TransactionInfo) - (SELECT COUNT(*) FROM TransactionInfo WHERE cumulative_size <= ?) AS remaining_truncated_count
+            FROM TransactionInfo
+            WHERE cumulative_size <= ?;
         """.trimIndent()
-        val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, beforeTime, limit)
-        return transactions.map(::buildTransactionInfoExt)
+        val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, timeFilter.beforeTime, timeFilter.afterTime, limit, maxDataSize, maxDataSize)
+        val transactionInfoExts = transactions.map(::buildTransactionInfoExt)
+        val remainingTruncatedCount = transactions.map(::remainingTruncatedCount).firstOrNull() ?: 0
+        return TransactionInfoExtsTruncated(transactionInfoExts, remainingTruncatedCount != 0L)
     }
 
-    override fun getTransactionsInfoBySigner(ctx: EContext, beforeTime: Long, limit: Int, signer: PubKey): List<TransactionInfoExt> {
+    override fun getTransactionsInfoBySigner(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated {
         val sql = """
-            SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_rid, t.tx_hash, t.tx_data 
-                    FROM ${tableBlocks(ctx)} as b 
-                    JOIN ${tableTransactions(ctx)} as t ON (t.block_iid = b.block_iid) 
-                    WHERE t.tx_iid IN (SELECT tx_iid FROM ${tableTransactionSigners(ctx)} WHERE signer = ?) 
-                    AND b.timestamp < ? 
-                    ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?;
+            WITH TransactionInfo AS (
+                SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_iid, t.tx_rid, t.tx_hash, t.tx_data, 
+                    SUM(
+                        LENGTH(b.block_rid) * 2 + 
+                        LENGTH(CAST(b.block_height AS TEXT)) + 
+                        LENGTH(b.block_header_data) * 2 + 
+                        LENGTH(b.block_witness) * 2 + 
+                        LENGTH(CAST(b.timestamp AS TEXT)) + 
+                        LENGTH(t.tx_rid) * 2 + 
+                        LENGTH(t.tx_hash) * 2 + 
+                        LENGTH(t.tx_data) * 2 
+                    ) OVER (ORDER BY b.block_height DESC, t.tx_iid DESC) AS cumulative_size
+                FROM ${tableBlocks(ctx)} AS b
+                JOIN ${tableTransactions(ctx)} AS t ON (t.block_iid = b.block_iid)
+                WHERE t.tx_iid IN (SELECT tx_iid FROM ${tableTransactionSigners(ctx)} WHERE signer = ?) 
+                AND b.timestamp < ? AND b.timestamp > ?
+                ORDER BY b.block_height DESC, t.tx_iid DESC LIMIT ?
+            )
+            SELECT block_rid, block_height, block_header_data, block_witness, timestamp, tx_rid, tx_hash, tx_data,
+                (SELECT COUNT(*) FROM TransactionInfo) - (SELECT COUNT(*) FROM TransactionInfo WHERE cumulative_size <= ?) AS remaining_truncated_count
+            FROM TransactionInfo
+            WHERE cumulative_size <= ?;
         """.trimIndent()
-        val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, signer.data, beforeTime, limit)
-        return transactions.map(::buildTransactionInfoExt)
+        val transactions = queryRunner.query(ctx.conn, sql, mapListHandler, signer.data, timeFilter.beforeTime, timeFilter.afterTime, limit, maxDataSize, maxDataSize)
+        val transactionInfoExts = transactions.map(::buildTransactionInfoExt)
+        val remainingTruncatedCount = transactions.map(::remainingTruncatedCount).firstOrNull() ?: 0
+        return TransactionInfoExtsTruncated(transactionInfoExts, remainingTruncatedCount != 0L)
     }
 
     private fun buildTransactionInfoExt(txInfo: MutableMap<String, Any>): TransactionInfoExt {
@@ -352,6 +402,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val txData = txInfo["tx_data"] as ByteArray
         return TransactionInfoExt(
                 blockRID, blockHeight, blockHeader, blockWitness, blockTimestamp, resultTxRID, txHash, txData)
+    }
+
+    private fun remainingTruncatedCount(result: MutableMap<String, Any>): Long {
+        return result["remaining_truncated_count"] as Long
     }
 
     override fun getLastTransactionNumber(ctx: EContext): Long {
@@ -481,7 +535,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     override fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, heightMustBeHigherThan: Long) {
         if (left > right) {
-            throw ProgrammerMistake("Why is left value lower than right? $left < $right")
+            throw ProgrammerMistake("Invalid range: left value ($left) is greater than right value ($right)")
         }
         queryRunner.update(ctx.conn, cmdPruneStates(ctx, prefix), left, right, heightMustBeHigherThan)
     }
@@ -497,7 +551,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      */
     override fun safePruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, nextSnapshotHeight: Long) {
         if (left > right) {
-            throw ProgrammerMistake("Why is left value lower than right? $left < $right")
+            throw ProgrammerMistake("Invalid range: left value ($left) is greater than right value ($right).")
         }
         val sql = """
             DELETE FROM ${tableStateLeafs(ctx, prefix)} 
@@ -517,13 +571,31 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      * If we didn't prune the old one then we need to query the snapshot page
      * at highest block height that less than or equal to specific height
      */
-    override fun getPage(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page? {
+    override fun getPageEqualOrLowerThanHeight(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page? {
         val sql = """
             SELECT child_hashes FROM ${tablePages(ctx, name)} 
             WHERE block_height = (SELECT MAX(block_height) FROM ${tablePages(ctx, name)} 
                                     WHERE block_height <= ? AND level = ? AND left_index = ?)
             AND level = ? AND left_index = ?"""
         val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height, level, left, level, left)
+        // if data size is not contain correct length then it regards to error
+        if (data == null || data.size % HASH_LENGTH != 0) return null
+        val length = data.size / HASH_LENGTH
+        val childHashes = Array(length) { ByteArray(HASH_LENGTH) }
+        for (i in 0 until length) {
+            val start = i * HASH_LENGTH
+            val end = start + HASH_LENGTH - 1
+            childHashes[i] = data.sliceArray(start..end)
+        }
+        return Page(height, level, left, childHashes)
+    }
+
+    override fun getPageAtHeight(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page? {
+        val sql = """
+            SELECT child_hashes FROM ${tablePages(ctx, name)} 
+            WHERE block_height = ? AND level = ? AND left_index = ?
+            """
+        val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height, level, left)
         // if data size is not contain correct length then it regards to error
         if (data == null || data.size % HASH_LENGTH != 0) return null
         val length = data.size / HASH_LENGTH
@@ -554,13 +626,18 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdCreateIndexTableState(ctx, prefix, index))
     }
 
-    override fun getHighestLevelPage(ctx: EContext, name: String, height: Long): Int {
+    override fun getHighestLevelPageEqualOrLowerThanHeight(ctx: EContext, name: String, height: Long): Int {
         val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, name)} WHERE block_height <= ?"
         return queryRunner.query(ctx.conn, sql, intRes, height)
     }
 
+    override fun getHighestLevelPageAtHeight(ctx: EContext, name: String, height: Long): Int {
+        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, name)} WHERE block_height = ?"
+        return queryRunner.query(ctx.conn, sql, intRes, height)
+    }
+
     override fun initializeApp(connection: Connection, expectedDbVersion: Int, allowUpgrade: Boolean) {
-        if (expectedDbVersion !in 1..9) {
+        if (expectedDbVersion !in 1..11) {
             throw UserMistake("Unsupported DB version $expectedDbVersion")
         }
 
@@ -571,7 +648,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
          */
         if (tableExists(connection, tableMeta())) {
             // meta table already exists. Check the version
-            val sql = "SELECT value FROM ${tableMeta()} WHERE key='version'"
+            val sql = "SELECT value FROM ${tableMeta()} WHERE key='$TABLE_META_KEY_VERSION'"
             val version = queryRunner.query(connection, sql, ScalarHandler<String>()).toInt()
 
             when {
@@ -630,14 +707,24 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 version9(connection)
             }
 
+            if (version < 10 && expectedDbVersion >= 10) {
+                logger.info("Upgrading to version 10")
+                version10(connection)
+            }
+
+            if (version < 11 && expectedDbVersion >= 11) {
+                logger.info("Upgrading to version 11")
+                version11(connection)
+            }
+
             if (expectedDbVersion > version) {
-                queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = 'version'", expectedDbVersion)
+                queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = '$TABLE_META_KEY_VERSION'", expectedDbVersion)
                 logger.info("Database version has been updated to version: $expectedDbVersion")
             }
         } else {
             logger.debug("Meta table does not exist. Assume database does not exist and create it (version: $expectedDbVersion).")
             queryRunner.update(connection, cmdCreateTableMeta())
-            val sql = "INSERT INTO ${tableMeta()} (key, value) values ('version', ?)"
+            val sql = "INSERT INTO ${tableMeta()} (key, value) values ('$TABLE_META_KEY_VERSION', ?)"
             queryRunner.update(connection, sql, expectedDbVersion)
 
             /**
@@ -678,6 +765,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
             if (expectedDbVersion >= 9) {
                 version9(connection)
+            }
+
+            if (expectedDbVersion >= 10) {
+                version10(connection)
+            }
+
+            if (expectedDbVersion >= 11) {
+                version11(connection)
             }
         }
     }
@@ -759,6 +854,22 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 }
     }
 
+    private fun version10(connection: Connection) {
+        queryRunner.query(connection, "SELECT chain_iid FROM ${tableBlockchains()}", mapListHandler)
+                .map { it["chain_iid"] as Long }
+                .forEach { chainId ->
+                    queryRunner.update(connection, cmdDropTableConfigurationDataNotNull(chainId))
+                }
+    }
+
+    private fun version11(connection: Connection) {
+        val maxChainIid = queryRunner.query(connection,
+                "SELECT MAX(chain_iid) FROM ${tableBlockchains()}", nullableLongRes) ?: -1
+        queryRunner.update(connection,
+                "INSERT INTO ${tableMeta()} (key, value) values ('$TABLE_META_KEY_LAST_CHAIN_IID', ?)",
+                max(maxChainIid, 99))
+    }
+
     protected fun calcConfigurationHash(configurationData: ByteArray) = GtvToBlockchainRidFactory.calculateBlockchainRid(
             GtvDecoder.decodeGtv(configurationData), ::sha256Digest).data
 
@@ -781,6 +892,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdCreateTableFaultyConfiguration(ctx.chainID))
         queryRunner.update(ctx.conn, cmdCreateTableTransactionSigners(ctx.chainID))
         queryRunner.update(ctx.conn, cmdCreateTableTransactionSignersIndex(ctx.chainID))
+        queryRunner.update(ctx.conn, cmdDropTableConfigurationDataNotNull(ctx.chainID))
 
         val txIndex = "CREATE INDEX IF NOT EXISTS ${tableName(ctx, "transactions_block_iid_idx")} " +
                 "ON ${tableTransactions(ctx)}(block_iid)"
@@ -792,8 +904,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
         if (!initialized) {
             // Inserting chainId -> blockchainRid
-            val sql = "INSERT INTO ${tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)"
             try {
+                val sql = "INSERT INTO ${tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)"
                 queryRunner.update(ctx.conn, sql, ctx.chainID, blockchainRid.data)
             } catch (e: SQLException) {
                 if (e.isUniqueViolation())
@@ -811,8 +923,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.update(ctx.conn, sql, ctx.chainID) != 0
     }
 
-    override fun removeAllBlockchainSpecificTables(ctx: EContext) {
+    override fun removeAllBlockchainSpecificTables(ctx: EContext, excludeTables: List<String>) {
         val bcTables = queryRunner.query(ctx.conn, cmdGetAllBlockchainTables(ctx.chainID), ColumnListHandler<String>())
+                .filter { it.substringAfter(".") !in excludeTables }
         bcTables.forEach { tableName ->
             queryRunner.query(ctx.conn, cmdGetTableConstraints(tableName), ColumnListHandler<String>()).forEach { constraintName ->
                 queryRunner.update(ctx.conn, cmdDropTableConstraint(tableName, constraintName))
@@ -838,19 +951,30 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.update(ctx.conn, sql, ctx.chainID) != 0
     }
 
+    override fun getBlockchainTables(ctx: EContext): List<String> {
+        return queryRunner.query(ctx.conn, cmdGetAllBlockchainTables(ctx.chainID), ColumnListHandler())
+    }
+
     override fun getChainId(ctx: AppContext, blockchainRid: BlockchainRid): Long? {
         val sql = "SELECT chain_iid FROM ${tableBlockchains()} WHERE blockchain_rid = ?"
         return queryRunner.query(ctx.conn, sql, nullableLongRes, blockchainRid.data)
     }
 
-    override fun getMaxChainId(ctx: EContext): Long? {
-        val sql = "SELECT MAX(chain_iid) FROM ${tableBlockchains()}"
-        return queryRunner.query(ctx.conn, sql, nullableLongRes)
+    override fun getLastSystemChainId(ctx: EContext): Long {
+        val sql = "SELECT MAX(chain_iid) FROM ${tableBlockchains()} WHERE chain_iid < 100"
+        return queryRunner.query(ctx.conn, sql, nullableLongRes) ?: -1L
     }
 
-    override fun getMaxSystemChainId(ctx: EContext): Long? {
-        val sql = "SELECT MAX(chain_iid) FROM ${tableBlockchains()} WHERE chain_iid < 100"
-        return queryRunner.query(ctx.conn, sql, nullableLongRes)
+    override fun getLastChainId(ctx: EContext): Long {
+        val sql = "SELECT value FROM ${tableMeta()} WHERE key='$TABLE_META_KEY_LAST_CHAIN_IID'"
+        return queryRunner.query(ctx.conn, sql, ScalarHandler<String>()).toLong()
+    }
+
+    override fun setLastChainId(ctx: EContext) {
+        queryRunner.update(ctx.conn,
+                "UPDATE ${tableMeta()} set value = ? WHERE key = '$TABLE_META_KEY_LAST_CHAIN_IID'",
+                ctx.chainID
+        )
     }
 
     override fun getBlock(ctx: EContext, blockRID: ByteArray): DatabaseAccess.BlockInfoExt? {
@@ -867,25 +991,112 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return buildBlockInfoExt(blockInfo)
     }
 
-    override fun getBlocks(ctx: EContext, blockTime: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
+    override fun getBlocksBetweenTimes(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int,
+                                       txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated =
+            getBlocksWithFilter(ctx, "timestamp", timeFilter, limit, txHashesOnly, maxDataSize, excludeEmpty)
+
+    override fun getBlocksBetweenHeights(ctx: EContext, heightFilter: BlockQueryHeightFilter, limit: Int,
+                                         txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated =
+            getBlocksWithFilter(ctx, "block_height", heightFilter, limit, txHashesOnly, maxDataSize, excludeEmpty)
+
+    private fun getBlocksWithFilter(ctx: EContext, filterColumn: String, filter: Filter, limit: Int,
+                                    txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated {
         val sql = """
-            SELECT block_rid, block_height, block_header_data, block_witness, timestamp 
-            FROM ${tableBlocks(ctx)} 
-            WHERE timestamp < ? 
-            ORDER BY timestamp DESC LIMIT ?
+            WITH Blocks AS (
+                SELECT block_iid, block_rid, block_height, block_header_data, block_witness, timestamp 
+                FROM ${tableBlocks(ctx)} 
+                WHERE $filterColumn < ? AND $filterColumn > ? 
+                ORDER BY $filterColumn DESC LIMIT ?
+            )
+            SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_rid, t.tx_hash${if (txHashesOnly) "" else ", t.tx_data"} 
+            FROM Blocks b ${if (excludeEmpty) "INNER" else "LEFT"} JOIN ${tableTransactions(ctx)} t ON t.block_iid=b.block_iid 
+            ORDER BY b.$filterColumn DESC, tx_iid ASC
         """.trimIndent()
-        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, blockTime, limit)
-        return blocksInfo.map { buildBlockInfoExt(it) }
+
+        return ctx.conn.prepareStatement(sql).use {
+            it.setLong(1, filter.before)
+            it.setLong(2, filter.after)
+            it.setInt(3, limit)
+            it.fetchSize = 100
+            it.executeQuery().use { resultSet -> buildBlockDetails(resultSet, txHashesOnly, maxDataSize) }
+        }
     }
 
-    override fun getBlocksBeforeHeight(ctx: EContext, blockHeight: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
+    private fun buildBlockDetails(resultSet: ResultSet, txHashesOnly: Boolean, maxDataSize: Int): BlockDetailsTruncated {
+        var blockHeight: Long = -1
+        var blockRid: ByteArray = byteArrayOf()
+        var blockHeader: ByteArray = byteArrayOf()
+        var blockWitness: ByteArray = byteArrayOf()
+        var timestamp: Long = -1
+        var transactions = mutableListOf<TxDetail>()
+        var cumulativeSize = 0
+        var truncated = false
+        val blockDetails = buildList {
+            while (resultSet.next()) {
+                val thisBlockHeight = resultSet.getLong("block_height")
+                if (thisBlockHeight != blockHeight) {
+                    if (blockHeight > -1) {
+                        val blockDetail = BlockDetail(
+                                rid = blockRid,
+                                prevBlockRID = BlockHeaderData.fromBinary(blockHeader).getPreviousBlockRid(),
+                                header = blockHeader,
+                                height = blockHeight,
+                                transactions = transactions,
+                                witness = blockWitness,
+                                timestamp = timestamp)
+                        transactions = mutableListOf()
+                        cumulativeSize += blockDetail.size()
+                        if (cumulativeSize <= maxDataSize)
+                            add(blockDetail)
+                        else {
+                            truncated = true
+                            break
+                        }
+                    }
+                    blockHeight = thisBlockHeight
+                    blockRid = resultSet.getBytes("block_rid")
+                    blockHeader = resultSet.getBytes("block_header_data")
+                    blockWitness = resultSet.getBytes("block_witness")
+                    timestamp = resultSet.getLong("timestamp")
+                }
+                val txRid = resultSet.getBytes("tx_rid")
+                if (!resultSet.wasNull()) {
+                    transactions.add(TxDetail(
+                            txRid,
+                            resultSet.getBytes("tx_hash"),
+                            if (txHashesOnly) null else (resultSet.getBytes("tx_data"))
+                    ))
+                }
+            }
+            if (blockHeight > -1 && !truncated) {
+                val blockDetail = BlockDetail(
+                        rid = blockRid,
+                        prevBlockRID = BlockHeaderData.fromBinary(blockHeader).getPreviousBlockRid(),
+                        header = blockHeader,
+                        height = blockHeight,
+                        transactions = transactions,
+                        witness = blockWitness,
+                        timestamp = timestamp)
+                transactions = mutableListOf()
+                cumulativeSize += blockDetail.size()
+                if (cumulativeSize <= maxDataSize)
+                    add(blockDetail)
+                else {
+                    truncated = true
+                }
+            }
+        }
+        return BlockDetailsTruncated(blockDetails, truncated)
+    }
+
+    override fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int): List<DatabaseAccess.BlockInfoExt> {
         val sql = """
             SELECT block_rid, block_height, block_header_data, block_witness, timestamp 
             FROM ${tableBlocks(ctx)} 
-            WHERE block_height < ? 
-            ORDER BY block_height DESC LIMIT ?
+            WHERE block_height >= ? 
+            ORDER BY block_height ASC LIMIT ?
         """.trimIndent()
-        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, blockHeight, limit)
+        val blocksInfo = queryRunner.query(ctx.conn, sql, mapListHandler, fromHeight, limit)
         return blocksInfo.map { buildBlockInfoExt(it) }
     }
 
@@ -968,18 +1179,18 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.update(ctx.conn, "DELETE FROM ${tableConfigurations(ctx)} WHERE height = ?", height)
     }
 
-    override fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray>> {
+    override fun getAllConfigurations(ctx: EContext): List<Pair<Long, WrappedByteArray?>> {
         return getAllConfigurations(ctx.conn, ctx.chainID)
     }
 
-    override fun getAllConfigurations(connection: Connection, chainId: Long): List<Pair<Long, WrappedByteArray>> {
+    override fun getAllConfigurations(connection: Connection, chainId: Long): List<Pair<Long, WrappedByteArray?>> {
         val sql = """
             SELECT height, configuration_data  
             FROM ${tableConfigurations(chainId)} 
             ORDER BY height
         """.trimIndent()
         return queryRunner.query(connection, sql, mapListHandler).map { configuration ->
-            (configuration["height"] as Long) to (configuration["configuration_data"] as ByteArray).wrap()
+            (configuration["height"] as Long) to (configuration["configuration_data"] as ByteArray?)?.wrap()
         }
     }
 
@@ -990,7 +1201,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 .map { it["chain_iid"] as Long to BlockchainRid(it["blockchain_rid"] as ByteArray) }
                 .forEach { (dependentChainId, dependentBrid) ->
                     if (dependentBrid != brid) {
-                        getAllConfigurations(ctx.conn, dependentChainId).forEach { (_, conf) ->
+                        getAllConfigurations(ctx.conn, dependentChainId).forEach { (height, conf) ->
+                            if (conf == null) {
+                                throw ProgrammerMistake("Configuration data at height $height is missing. Blockchain dependencies should be determined via chain0 in managed mode")
+                            }
                             BlockchainConfigurationData.fromRaw(conf.data).blockchainDependencies.forEach {
                                 if (it.blockchainRid == brid) dependentChains.add(dependentBrid)
                             }
@@ -1023,6 +1237,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     override fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray) {
         val hash = calcConfigurationHash(data)
         queryRunner.insert(ctx.conn, cmdInsertConfiguration(ctx), longRes, height, data, hash, data, hash)
+    }
+
+    override fun addConfigurationHash(ctx: EContext, height: Long, configHash: ByteArray) {
+        queryRunner.insert(ctx.conn, cmdInsertConfiguration(ctx), longRes, height, null, configHash, null, configHash)
     }
 
     override fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo> {
@@ -1269,7 +1487,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
      * @param snapshotsToKeep is the number of snapshots to keep
      */
     override fun getNextPrunableSnapshotHeight(ctx: EContext, name: String, blockHeight: Long, snapshotsToKeep: Int): Long? {
-        val sql ="""
+        val sql = """
             SELECT distinct(block_height) from ${tablePages(ctx, name)}
             WHERE block_height <= ?
             ORDER BY block_height DESC

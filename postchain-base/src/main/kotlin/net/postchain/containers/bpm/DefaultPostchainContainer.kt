@@ -6,7 +6,9 @@ import net.postchain.containers.bpm.fs.FileSystem
 import net.postchain.containers.bpm.rpc.SubnodeAdminClient
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.crypto.PrivKey
+import net.postchain.gtv.Gtv
 import net.postchain.managed.DirectoryDataSource
+import java.time.Clock
 import java.util.concurrent.atomic.AtomicBoolean
 
 class DefaultPostchainContainer(
@@ -17,6 +19,7 @@ class DefaultPostchainContainer(
         override var state: ContainerState,
         private val subnodeAdminClient: SubnodeAdminClient,
         override var containerId: String? = null,
+        val clock: Clock = Clock.systemUTC()
 ) : PostchainContainer {
 
     companion object : KLogging()
@@ -28,7 +31,11 @@ class DefaultPostchainContainer(
     @Volatile
     override var resourceLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
 
+    @Volatile
+    override var image = dataSource.getImageForContainer(containerName.directoryContainer)
+
     override val readOnly = AtomicBoolean(false)
+    private var lastUpdated = clock.millis()
 
     override fun shortContainerId(): String? {
         return DockerTools.shortContainerId(containerId)
@@ -48,18 +55,24 @@ class DefaultPostchainContainer(
                 .toSet()
     }
 
+    override fun isBlockchainRunning(chainId: Long): Boolean = subnodeAdminClient.isBlockchainRunning(chainId)
+
     override fun startProcess(process: ContainerBlockchainProcess): Boolean {
         subnodeAdminClient.startBlockchain(process.chainId, process.blockchainRid).also {
             if (it) processes[process.chainId] = process
         }
+        setLastUpdated()
         return true
     }
 
-    override fun removeProcess(chainId: Long): ContainerBlockchainProcess? = processes.remove(chainId)
+    override fun removeProcess(chainId: Long): ContainerBlockchainProcess? = processes.remove(chainId).also {
+        setLastUpdated()
+    }
 
     override fun terminateProcess(chainId: Long): ContainerBlockchainProcess? {
         return processes.remove(chainId)?.also {
             subnodeAdminClient.stopBlockchain(chainId)
+            setLastUpdated()
         }
     }
 
@@ -67,33 +80,58 @@ class DefaultPostchainContainer(
         return getAllChains().toSet().onEach(::terminateProcess)
     }
 
-    override fun getBlockchainLastHeight(chainId: Long): Long {
-        return subnodeAdminClient.getBlockchainLastHeight(chainId)
+    override fun getBlockchainLastBlockHeight(chainId: Long): Long {
+        return subnodeAdminClient.getBlockchainLastBlockHeight(chainId)
+    }
+
+    override fun addBlockchainConfiguration(chainId: Long, height: Long, config: ByteArray) {
+        if (height == 0L) {
+            subnodeAdminClient.initializeBlockchain(chainId, config)
+        } else {
+            subnodeAdminClient.addBlockchainConfiguration(chainId, height, config)
+        }
+        setLastUpdated()
+    }
+
+    override fun exportBlocks(chainId: Long, fromHeight: Long, blockCountLimit: Int, blocksSizeLimit: Int): List<Gtv> {
+        return subnodeAdminClient.exportBlocks(chainId, fromHeight, blockCountLimit, blocksSizeLimit)
+    }
+
+    override fun importBlocks(chainId: Long, blockData: List<Gtv>): Long {
+        val upToHeight = subnodeAdminClient.importBlocks(chainId, blockData)
+        setLastUpdated()
+        return upToHeight
     }
 
     override fun start() {
         state = ContainerState.RUNNING
         subnodeAdminClient.connect()
+        setLastUpdated()
     }
 
     override fun reset() {
         subnodeAdminClient.disconnect()
         state = ContainerState.STARTING
         initialized = false
+        setLastUpdated()
     }
 
     override fun stop() {
         state = ContainerState.STOPPING
         subnodeAdminClient.shutdown()
+        setLastUpdated()
     }
 
-    override fun isEmpty() = processes.isEmpty()
+    override fun isIdle(): Boolean {
+        return processes.isEmpty() && (clock.millis() - lastUpdated > containerNodeConfig.idleTimeoutMs)
+    }
 
     override fun isSubnodeHealthy() = subnodeAdminClient.isSubnodeHealthy()
 
     override fun initializePostchainNode(privKey: PrivKey): Boolean = if (!initialized) {
         val success = subnodeAdminClient.initializePostchainNode(privKey)
         if (success) initialized = true
+        setLastUpdated()
         success
     } else true
 
@@ -102,6 +140,19 @@ class DefaultPostchainContainer(
         val newResourceLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
         return if (newResourceLimits != oldResourceLimits) {
             resourceLimits = newResourceLimits
+            setLastUpdated()
+            true
+        } else {
+            false
+        }
+    }
+
+    override fun updateImage(): Boolean {
+        val oldImage = image
+        val newImage = dataSource.getImageForContainer(containerName.directoryContainer)
+        return if (newImage != oldImage) {
+            image = newImage
+            setLastUpdated()
             true
         } else {
             false
@@ -111,14 +162,19 @@ class DefaultPostchainContainer(
     override fun checkResourceLimits(fileSystem: FileSystem): Boolean {
         val readOnlyBeforeCheck = readOnly.get()
         fileSystem.getCurrentLimitsInfo(containerName, resourceLimits)?.let {
-            readOnly.set(it.spaceUsedMB + containerNodeConfig.minSpaceQuotaBufferMB >= it.spaceHardLimitMB)
+            readOnly.set(it.spaceUsedMiB + containerNodeConfig.minSpaceQuotaBufferMB >= it.spaceHardLimitMiB)
             if (readOnlyBeforeCheck != readOnly.get()) {
                 if (readOnly.get())
-                    logger.warn("Space used is too close to hard limit. Switching to read only mode. (used space: ${it.spaceUsedMB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceUsedMB}MB)")
+                    logger.warn("Space used is too close to hard limit. Switching to read only mode. (used space: ${it.spaceUsedMiB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceHardLimitMiB}MB)")
                 else
-                    logger.info("Space used is no longer too close to hard limit. (used space: ${it.spaceUsedMB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceUsedMB}MB)")
+                    logger.info("Space used is no longer too close to hard limit. (used space: ${it.spaceUsedMiB}MB, space buffer: ${containerNodeConfig.minSpaceQuotaBufferMB}MB, hard space limit: ${it.spaceHardLimitMiB}MB)")
+                setLastUpdated()
             }
         }
         return readOnlyBeforeCheck == readOnly.get()
+    }
+
+    private fun setLastUpdated() {
+        lastUpdated = clock.millis()
     }
 }

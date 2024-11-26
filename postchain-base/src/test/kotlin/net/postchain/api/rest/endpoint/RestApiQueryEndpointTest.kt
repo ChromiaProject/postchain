@@ -3,6 +3,7 @@
 package net.postchain.api.rest.endpoint
 
 import assertk.assertThat
+import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
@@ -12,15 +13,18 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
+import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvStream
 import net.postchain.gtv.gtvToJSON
-import net.postchain.gtv.make_gtv_gson
+import net.postchain.gtv.makeStrictGtvGson
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
 import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.nullValue
+import org.hamcrest.Matchers.greaterThan
 import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -29,6 +33,8 @@ import org.junit.jupiter.api.fail
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import java.io.ByteArrayInputStream
+import java.math.BigInteger
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
@@ -42,7 +48,7 @@ class RestApiQueryEndpointTest {
 
     private val basePath = "/api/v1"
     private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
-    private val gson = make_gtv_gson()
+    private val gson = makeStrictGtvGson()
     private lateinit var restApi: RestApi
     private lateinit var model: Model
 
@@ -90,33 +96,6 @@ class RestApiQueryEndpointTest {
     }
 
     @Test
-    fun test_batch_query() {
-        val queryMap = mapOf(
-                "type" to gtv("test_query"),
-                "a" to gtv("b"),
-                "c" to gtv(3)
-        )
-
-        val queryString = """{"queries":[${gtvToJSON(gtv(queryMap), gson)}]}"""
-        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
-
-        val answerString = """["{\"d\":0}"]"""
-        val answer = gtv(mapOf("d" to gtv(false)))
-
-        whenever(model.query(query)).thenReturn(answer)
-
-        restApi.attachModel(blockchainRID, model)
-
-        RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .body(queryString)
-                .post("/batch_query/$blockchainRID")
-                .then()
-                .statusCode(200)
-                .contentType(ContentType.JSON)
-                .body(equalTo(answerString))
-    }
-
-    @Test
     fun test_get_query() {
         val queryMap = mapOf(
                 "type" to gtv("test_query"),
@@ -127,8 +106,8 @@ class RestApiQueryEndpointTest {
         val queryString = queryMap.map { "${it.key}=${it.value.toString().trim('"')}" }.joinToString("&")
         val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
-        val answerString = """{"d":0}"""
-        val answer = gtv(mapOf("d" to gtv(false)))
+        val answerString = """{"bi":"92233720368547758079","d":0,"i":17}"""
+        val answer = gtv(mapOf("d" to gtv(false), "i" to gtv(17), "bi" to gtv(BigInteger("92233720368547758079"))))
 
         whenever(model.query(query)).thenReturn(answer)
         whenever(model.queryCacheTtlSeconds).thenReturn(0L)
@@ -195,6 +174,212 @@ class RestApiQueryEndpointTest {
 
         RestAssured.given().basePath(basePath).port(restApi.actualPort())
                 .get("/dquery/$blockchainRID?$queryString")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.TEXT)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+                .body(equalTo(answerString))
+    }
+
+    @Test
+    fun test_web_query_with_cache() {
+        val queryName = "web_resource"
+
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(listOf()),
+                "query_params" to gtv(mapOf())
+        )))
+
+        val cacheTtl = 57
+        val answerString = "Hello, world!"
+        val answer = gtv(mapOf("content_type" to gtv("text/plain"), "content" to gtv(answerString), "cache_ttl_seconds" to gtv(cacheTtl.toLong())))
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/web_query/$blockchainRID/$queryName")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.TEXT)
+                .header("Cache-Control", equalTo("public, max-age=$cacheTtl"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:$cacheTtl GMT"))
+                .body(equalTo(answerString))
+    }
+
+    @Test
+    fun test_web_query_with_byte_array() {
+        val queryName = "web_resource"
+
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(listOf()),
+                "query_params" to gtv(mapOf())
+        )))
+
+        val answerBytes = byteArrayOf(1, 2, 3, 4)
+        val answer = gtv(mapOf("content_type" to gtv("application/octet-stream"), "content" to gtv(answerBytes)))
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/web_query/$blockchainRID/$queryName")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+                .header("Content-Length", Integer::parseInt, greaterThan(0))
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(answerBytes)
+    }
+
+    @Test
+    fun test_web_query_with_stream_of_unknown_length() {
+        val queryName = "web_resource"
+
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(listOf()),
+                "query_params" to gtv(mapOf())
+        )))
+
+        val answerBytes = byteArrayOf(1, 2, 3, 4)
+        val answer = gtv(mapOf("content_type" to gtv("application/octet-stream"),
+                "content" to GtvStream(ByteArrayInputStream(answerBytes), null)))
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/web_query/$blockchainRID/$queryName")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(answerBytes)
+    }
+
+    @Test
+    fun test_web_query_with_stream_of_known_length() {
+        val queryName = "web_resource"
+
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(listOf()),
+                "query_params" to gtv(mapOf())
+        )))
+
+        val answerBytes = byteArrayOf(1, 2, 3, 4)
+        val answer = gtv(mapOf("content_type" to gtv("application/octet-stream"),
+                "content" to GtvStream(ByteArrayInputStream(answerBytes), answerBytes.size.toLong())))
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/web_query/$blockchainRID/$queryName")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+                .header("Content-Length", Integer::parseInt, greaterThan(0))
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(answerBytes)
+    }
+
+    @Test
+    fun test_web_query_with_path() {
+        val queryName = "web_resource"
+
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(listOf(gtv("path1"), gtv("path2"))),
+                "query_params" to gtv(mapOf())
+        )))
+
+        val answerString = "Hello, world!"
+        val answer = gtv(mapOf("content_type" to gtv("text/plain"), "content" to gtv(answerString)))
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/web_query/$blockchainRID/$queryName/path1/path2")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.TEXT)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+                .body(equalTo(answerString))
+    }
+
+    @Test
+    fun test_web_query_with_query() {
+        val queryName = "web_resource"
+
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(listOf()),
+                "query_params" to gtv(mapOf(
+                        "q1" to gtv(gtv("Q1")),
+                        "q2" to gtv(gtv("Q2a"), gtv("Q2b")),
+                        "q3" to gtv(gtv("")),
+                        "q4" to gtv(GtvNull)))
+        )))
+
+        val answerString = "Hello, world!"
+        val answer = gtv(mapOf("content_type" to gtv("text/plain"), "content" to gtv(answerString)))
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .param("q1", "Q1")
+                .param("q2", "Q2a")
+                .param("q2", "Q2b")
+                .param("q3", "")
+                .param("q4")
+                .get("/web_query/$blockchainRID/$queryName")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.TEXT)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+                .body(equalTo(answerString))
+    }
+
+    @Test
+    fun test_web_query_with_path_and_query() {
+        val queryName = "web_resource"
+
+        val query = GtxQuery(queryName, gtv(mapOf(
+                "path" to gtv(listOf(gtv("path1"), gtv("path2"))),
+                "query_params" to gtv(mapOf("q1" to gtv(gtv("Q1")), "q2" to gtv(gtv("Q2a"), gtv("Q2b"))))
+        )))
+
+        val answerString = "Hello, world!"
+        val answer = gtv(mapOf("content_type" to gtv("text/plain"), "content" to gtv(answerString)))
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .param("q1", "Q1")
+                .param("q2", "Q2a")
+                .param("q2", "Q2b")
+                .get("/web_query/$blockchainRID/$queryName/path1/path2")
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.TEXT)
@@ -346,27 +531,7 @@ class RestApiQueryEndpointTest {
     }
 
     @Test
-    fun queryGTX() {
-        val gtxQuery1 = gtv(gtv("gtx_test_get_value"), gtv("txRID" to gtv("abcd")))
-        val gtxQuery2 = gtv(gtv("gtx_test_get_value"), gtv("txRID" to gtv("cdef")))
-        val jsonQuery = """{"queries":["${GtvEncoder.encodeGtv(gtxQuery1).toHex()}", "${GtvEncoder.encodeGtv(gtxQuery2).toHex()}"]}""".trimMargin()
-
-        whenever(model.query(GtxQuery("gtx_test_get_value", gtv("txRID" to gtv("abcd"))))).thenReturn(gtv("one"))
-        whenever(model.query(GtxQuery("gtx_test_get_value", gtv("txRID" to gtv("cdef"))))).thenReturn(gtv("two"))
-
-        restApi.attachModel(blockchainRID, model)
-
-        RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .body(jsonQuery)
-                .post("/query_gtx/$blockchainRID")
-                .then()
-                .statusCode(200)
-                .contentType(ContentType.JSON)
-                .body(equalTo("[\"A2050C036F6E65\",\"A2050C0374776F\"]"))
-    }
-
-    @Test
-    fun `GET query_gtv`() {
+    fun `GET query_gtv with legacy args`() {
         val queryMap = mapOf(
                 "type" to gtv("test_query"),
                 "a" to gtv("b"),
@@ -391,6 +556,51 @@ class RestApiQueryEndpointTest {
                 .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
 
         assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(answer))
+    }
+
+    @Test
+    fun `GET query_gtv with GTV args`() {
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3))))
+        val queryString = "type=${query.name}&~args=${GtvEncoder.encodeGtv(query.args).toHex()}"
+        val answer = gtv("answer")
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .header("Accept", ContentType.BINARY)
+                .get("/query_gtv/${blockchainRID}?$queryString")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(answer))
+    }
+
+    @Test
+    fun `GET query_gtv with invalid GTV args`() {
+        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3))))
+        val queryString = "type=${query.name}&~args=${byteArrayOf(1, 2, 3, 4).toHex()}"
+        val answer = gtv("answer")
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .header("Accept", ContentType.BINARY)
+                .get("/query_gtv/${blockchainRID}?$queryString")
+                .then()
+                .statusCode(400)
+                .contentType(ContentType.BINARY)
+
+        assertThat(GtvDecoder.decodeGtv(body.extract().response().body.asByteArray()).asString())
+                .isEqualTo("Invalid GTV data")
     }
 
     @Test
@@ -430,33 +640,39 @@ class RestApiQueryEndpointTest {
                 .statusCode(400)
                 .contentType(ContentType.BINARY)
 
-        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(gtv(errorMessage)))
+        assertThat(GtvDecoder.decodeGtv(body.extract().response().body.asByteArray()).asString()).isEqualTo(errorMessage)
     }
 
     @Test
     fun `400 Bad Request is returned when gtv encoding is incorrect`() {
         restApi.attachModel(blockchainRID, model)
 
-        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
                 .header("Accept", ContentType.BINARY)
                 .body(ByteArray(32))
                 .post("/query_gtv/${blockchainRID}")
                 .then()
                 .statusCode(400)
                 .contentType(ContentType.BINARY)
+
+        assertThat(GtvDecoder.decodeGtv(body.extract().response().body.asByteArray()).asString())
+                .isEqualTo("Invalid GTV data")
     }
 
     @Test
     fun `400 Bad Request is returned when gtx encoding is incorrect`() {
         restApi.attachModel(blockchainRID, model)
 
-        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
                 .header("Accept", ContentType.BINARY)
                 .body(GtvEncoder.encodeGtv(gtv("bogus")))
                 .post("/query_gtv/${blockchainRID}")
                 .then()
                 .statusCode(400)
                 .contentType(ContentType.BINARY)
+
+        assertThat(GtvDecoder.decodeGtv(body.extract().response().body.asByteArray()).asString())
+                .isEqualTo("Gtx Query must be an array with 2 elements")
     }
 
     @Test

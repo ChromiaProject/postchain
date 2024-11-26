@@ -120,8 +120,8 @@ class BaseManagedBlockBuilder(
         return runOpSafely { blockBuilder.finalizeBlock(timestamp) }
     }
 
-    override fun finalizeAndValidate(blockHeader: BlockHeader) {
-        runOpSafely { blockBuilder.finalizeAndValidate(blockHeader) }
+    override fun finalizeAndValidate(blockHeader: BlockHeader, skipValidationFields: Set<String>) {
+        runOpSafely { blockBuilder.finalizeAndValidate(blockHeader, skipValidationFields) }
     }
 
     override fun getBlockData(): BlockData {
@@ -162,6 +162,8 @@ class BaseManagedBlockBuilder(
                 rollbackLog("Got lock")
                 if (!eContext.conn.isClosed) {
                     eContext.conn.rollback(savepoint)
+                    // Release the savepoint here, we will create a new save point next time we try to build a block
+                    eContext.conn.releaseSavepoint(savepoint)
                 } else {
                     logger.error("Unable to rollback since connection is already closed")
                 }

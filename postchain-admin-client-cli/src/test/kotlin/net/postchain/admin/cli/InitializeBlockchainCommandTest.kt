@@ -4,6 +4,8 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.PostchainServiceCommandTestBase
 import net.postchain.common.BlockchainRid
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -25,7 +27,7 @@ class InitializeBlockchainCommandTest : PostchainServiceCommandTestBase() {
     private val chainId = 1L
     private val brid = "3475C1EEC5836D9B38218F78C30D302DBC7CAAAFFAF0CC83AE054B7A208F71D4"
     private val blockchainRid = BlockchainRid.buildFromHex(brid)
-    private val blockChainConfig = getResouceFile("blockchain_config.xml")
+    private val blockChainConfig = getResourceFile("blockchain_config.xml")
     private val gtv = GtvMLParser.parseGtvML(blockChainConfig.readText())
 
     private lateinit var command: InitializeBlockchainCommand
@@ -33,7 +35,7 @@ class InitializeBlockchainCommandTest : PostchainServiceCommandTestBase() {
     @BeforeEach
     fun beforeEach() {
         command = InitializeBlockchainCommand { _, _ -> setupChannel(postchainService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
     }
 
     @Test
@@ -53,7 +55,7 @@ class InitializeBlockchainCommandTest : PostchainServiceCommandTestBase() {
         // verify
         verify(postchainService).initializeBlockchain(chainId, null, true, gtv)
         verify(postchainService).startBlockchain(chainId)
-        testConsole.assertContains("Blockchain has been initialized with blockchain RID: $brid\n")
+        testTerminal.assertContains("Blockchain has been initialized with blockchain RID: $brid")
     }
 
     @Test

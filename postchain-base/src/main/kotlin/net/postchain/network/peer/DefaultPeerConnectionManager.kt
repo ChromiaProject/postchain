@@ -4,18 +4,30 @@ package net.postchain.network.peer
 
 import mu.KLogging
 import mu.withLoggingContext
+import net.postchain.base.NetworkNodes
+import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.NodeRid
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
-import net.postchain.network.XPacketDecoderFactory
-import net.postchain.network.XPacketEncoderFactory
-import net.postchain.network.common.*
+import net.postchain.network.XPacketCodecFactory
+import net.postchain.network.common.ChainWithConnections
+import net.postchain.network.common.ChainsWithConnections
+import net.postchain.network.common.ConnectionDirection
+import net.postchain.network.common.LazyPacket
+import net.postchain.network.common.NetworkTopology
+import net.postchain.network.common.NodeConnector
+import net.postchain.network.common.NodeConnectorEvents
+import net.postchain.network.netty2.ConnectionConfig
 import net.postchain.network.netty2.NettyPeerConnector
+import java.time.Clock
+import java.time.Duration
+import java.util.concurrent.CompletableFuture
 
 /**
  * Default implementation for "peer" based networks (which EBFT is).
@@ -30,7 +42,7 @@ import net.postchain.network.netty2.NettyPeerConnector
  *
  * Example, a cluster of 10 peers where each peer runs 100 chains each, the total number of connections will be:
  *
- *   Nr of Conns = (10 -1) * (100) = 900
+ *   Nr of Conns = (10 - 1) * (100) = 900
  *
  * Also, every replica that connects to a node will get a connection, so there will often be more that this.
  *
@@ -50,13 +62,16 @@ import net.postchain.network.netty2.NettyPeerConnector
  * @property PacketType is the type of packets that can be handled
  */
 open class DefaultPeerConnectionManager<PacketType>(
-        private val packetEncoderFactory: XPacketEncoderFactory<PacketType>,
-        private val packetDecoderFactory: XPacketDecoderFactory<PacketType>
-) : NetworkTopology, // Only "Peer" networks need this
-        PeerConnectionManager,  // Methods specific to the "X" connection part
-        NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
+        private val nodeConfigProvider: NodeConfigurationProvider,
+        private val packetCodecFactory: XPacketCodecFactory<PacketType>,
+        private val clock: Clock = Clock.systemUTC()
+) : NetworkTopology, PeerConnectionManager, NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        val NETWORK_NODES_UPDATE_INTERVAL: Duration = Duration.ofSeconds(60)
+    }
+
+    private val connectionConfig = ConnectionConfig.fromAppConfig(nodeConfigProvider.getConfiguration().appConfig)
 
     /**
      * A collection of all our connections (sorted and grouped by Chain IID).
@@ -81,6 +96,9 @@ open class DefaultPeerConnectionManager<PacketType>(
 
     // Used by connection strategy, connector and loggers (to distinguish nodes in tests' logs).
     private lateinit var myPeerInfo: PeerInfo
+
+    internal var networkNodesTimestamp = clock.instant()
+        private set
 
     override fun shutdown() {
         connector?.shutdown()
@@ -144,12 +162,13 @@ open class DefaultPeerConnectionManager<PacketType>(
         // blockchain started, but not for subsequent ones.
         if (connector == null) {
             myPeerInfo = chainPeersConfig.commConfiguration.myPeerInfo()
-            peersConnectionStrategy = DefaultPeersConnectionStrategy(this, myPeerInfo.peerId())
+            peersConnectionStrategy = DefaultPeersConnectionStrategy(
+                    this, myPeerInfo.peerId(), connectionConfig, nodeConfigProvider)
 
-            val packetDecoder = packetDecoderFactory.create(chainPeersConfig.commConfiguration)
+            val packetCodec = packetCodecFactory.create(chainPeersConfig.commConfiguration, chainPeersConfig.blockchainRid)
             // We have already given away we are using Netty, so skipping the factory
-            connector = NettyPeerConnector<PacketType>(this).apply {
-                init(myPeerInfo, packetDecoder)
+            connector = NettyPeerConnector<PacketType>(this, connectionConfig).apply {
+                init(myPeerInfo, packetCodec)
             }
         }
 
@@ -172,8 +191,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                 peerId,
                 ConnectionDirection.OUTGOING
         )
-
-        val peerInfo = chainPeersConfig.commConfiguration.resolvePeer(peerId.data)
+        val peerInfo = resolvePeerInfo(chainPeersConfig.commConfiguration, peerId)
                 ?: throw ProgrammerMistake("Peer ID not found: ${peerId.toHex()}")
         if (peerInfo.peerId() != peerId) {
             // Have to add this check since I see strange things
@@ -183,12 +201,8 @@ open class DefaultPeerConnectionManager<PacketType>(
             )
         }
 
-        val packetEncoder = packetEncoderFactory.create(
-                chainPeersConfig.commConfiguration,
-                chainPeersConfig.blockchainRid
-        )
-
-        connector?.connectNode(descriptor, peerInfo, packetEncoder)
+        val packetCodec = packetCodecFactory.create(chainPeersConfig.commConfiguration, chainPeersConfig.blockchainRid)
+        connector?.connectNode(descriptor, peerInfo, packetCodec)
     }
 
     @Synchronized
@@ -243,21 +257,23 @@ open class DefaultPeerConnectionManager<PacketType>(
     }
 
     @Synchronized
-    override fun disconnectChain(chainId: Long) {
+    override fun disconnectChain(chainId: Long): CompletableFuture<Void> {
         logger.debug("Disconnecting chain")
 
         // Remove the chain before closing connections so that we won't
         // reconnect in onPeerDisconnected()
         val chain = chainsWithConnections.remove(chainId)
-        if (chain != null) {
+        return if (chain != null) {
             val old = chainIdForBlockchainRid.remove(chain.peerConfig.blockchainRid)
             if (old != null) {
                 disconnectedChainIdForBlockchainRid[chain.peerConfig.blockchainRid] = old
             }
-            chain.closeConnections()
+            val future = chain.closeConnections()
             logger.debug("Chain disconnected")
+            return future
         } else {
             logger.debug("Unknown chain")
+            CompletableFuture.completedFuture(null)
         }
     }
 
@@ -320,17 +336,31 @@ open class DefaultPeerConnectionManager<PacketType>(
                             connection.close()
                             null
                         }
+
+                    } else if (!peersConnectionStrategy.isConnectionAllowed(
+                                    chainID,
+                                    getNetworkNodeRids(chain),
+                                    descriptor.nodeId)) {
+                        logger.warn {
+                            "Peer connection is not allowed: ${descriptor.nodeId}. " +
+                                    "Check `connection.max_unknown_peer_connections_per_chain` config parameter"
+                        }
+                        connection.close()
+                        null
+
                     } else {
                         chain.setConnection(descriptor.nodeId, connection)
-                        logger.debug {
-                            "onPeerConnected() - Connection accepted: " +
-                                    "peer = ${peerName(descriptor.nodeId)}"
-                        }
                         peersConnectionStrategy.connectionEstablished(
                                 chainID,
                                 connection.descriptor().isOutgoing(),
                                 descriptor.nodeId
                         )
+
+                        logger.debug {
+                            "onPeerConnected() - Connection accepted: " +
+                                    "peer = ${peerName(descriptor.nodeId)}"
+                        }
+
                         chain.getPacketHandler()
                     }
                 }
@@ -418,13 +448,14 @@ open class DefaultPeerConnectionManager<PacketType>(
                             oldChainID
                         } else {
                             logger.info(
-                                    "getChainIdOnConnected() - Chain ID not found(Could be due to 1) chain not started or 2) we really don't have it)"
+                                    "getChainIdOnConnected() - Chain ID not found (could be due to (1) chain not started or (2) we really don't have it)"
                             )
 
                             connection.close()
                             return null
                         }
                     }
+
                     ConnectionDirection.OUTGOING -> {
                         logger.error(
                                 "getChainIdOnConnected() - We initiated this contact but lost the Chain ID"
@@ -450,6 +481,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                         connection.close()
                         return null
                     }
+
                     ConnectionDirection.OUTGOING -> {
                         logger.error("getChainOnConnected() - We initiated this contact but lost the Chain")
                         connection.close()
@@ -480,6 +512,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                         )
                         null
                     }
+
                     ConnectionDirection.OUTGOING -> {
                         // Should never happen
                         logger.error(
@@ -492,7 +525,6 @@ open class DefaultPeerConnectionManager<PacketType>(
                 }
     }
 
-
     /**
      * [NetworkTopology] impl
      */
@@ -502,5 +534,35 @@ open class DefaultPeerConnectionManager<PacketType>(
 
     override fun getNodesTopology(chainIid: Long): Map<NodeRid, String> {
         return chainsWithConnections.getNodesTopology(chainIid)
+    }
+
+    private fun resolvePeerInfo(commConfiguration: PeerCommConfiguration, nodeId: NodeRid): PeerInfo? {
+        maybeUpdateNetworkNodes()
+        return commConfiguration.networkNodes[nodeId]
+    }
+
+    internal fun getNetworkNodeRids(chain: ChainWithPeerConnections): Set<NodeRid> {
+        maybeUpdateNetworkNodes()
+        return chain.peerConfig.commConfiguration.networkNodes.getPeerIds()
+    }
+
+    /**
+     * Reload [PeerInfo] from configuration/DC and update each chains [NetworkNodes] if enough time has passed
+     * since last reload.
+     */
+    private fun maybeUpdateNetworkNodes() {
+        if (clock.instant().isAfter(networkNodesTimestamp + NETWORK_NODES_UPDATE_INTERVAL)) {
+            val nodes = nodeConfigProvider.getConfiguration().peerInfoMap.values
+            chainsWithConnections.getAllChains().forEach { chain ->
+                val networkNodes = chain.peerConfig.commConfiguration.networkNodes
+                nodes.forEach { node ->
+                        if (node.peerId() in networkNodes) {
+                            networkNodes[node.peerId()] = node
+                        }
+                    }
+            }
+
+            networkNodesTimestamp = clock.instant()
+        }
     }
 }

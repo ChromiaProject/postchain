@@ -36,6 +36,6 @@ data class GtvString(val string: String) : GtvPrimitive() {
     }
 
     override fun toString(): String {
-        return "\"$string\""
+        return "\"${ESCAPE_GTV.translate(string)}\""
     }
 }

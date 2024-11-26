@@ -1,13 +1,14 @@
 package net.postchain.containers.bpm
 
+import com.github.dockerjava.api.DockerClient
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.docker.DockerClientFactory
 import net.postchain.containers.bpm.docker.DockerTools
+import net.postchain.containers.bpm.docker.DockerTools.listSubContainersCmd
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.logging.CONTAINER_NAME_TAG
-import org.mandas.docker.client.DockerClient
 
 object ContainerEnvironment : KLogging() {
 
@@ -22,7 +23,7 @@ object ContainerEnvironment : KLogging() {
         dockerClient = DockerClientFactory.create()
 
         try {
-            dockerClient.ping()
+            dockerClient.pingCmd().exec()
         } catch (e: Exception) {
             logger.error("Unable to access Docker daemon: $e")
         }
@@ -36,9 +37,7 @@ object ContainerEnvironment : KLogging() {
     private fun removeContainersIfExist(appConfig: AppConfig) {
         val config = ContainerNodeConfig.fromAppConfig(appConfig)
 
-        val toStop = dockerClient.listContainers(DockerClient.ListContainersParam.allContainers()).filter {
-            (it.labels() ?: emptyMap())[POSTCHAIN_MASTER_PUBKEY] == config.masterPubkey
-        }
+        val toStop = dockerClient.listSubContainersCmd(config).exec()
 
         if (toStop.isNotEmpty()) {
             logger.warn {
@@ -47,22 +46,24 @@ object ContainerEnvironment : KLogging() {
 
             toStop.forEach {
                 withLoggingContext(CONTAINER_NAME_TAG to DockerTools.containerName(it).drop(1)) {
-                    try {
-                        dockerClient.stopContainer(it.id(), 20)
-                        logger.info { "Container has been stopped: ${DockerTools.containerName(it)} / ${DockerTools.shortContainerId(it.id())}" }
-                    } catch (e: Exception) {
-                        logger.error("Can't stop container: " + it.id(), e)
+
+                    if ("running".equals(it.state, ignoreCase = true)) {
+                        try {
+                            dockerClient.stopContainerCmd(it.id).withTimeout(20).exec()
+                            logger.info { "Container has been stopped: ${DockerTools.containerName(it)} / ${DockerTools.shortContainerId(it.id)}" }
+                        } catch (e: Exception) {
+                            logger.error("Can't stop container: " + it.id, e)
+                        }
                     }
 
                     try {
-                        dockerClient.removeContainer(it.id(), DockerClient.RemoveContainerParam.forceKill())
-                        logger.info { "Container has been removed: ${DockerTools.containerName(it)} / ${DockerTools.shortContainerId(it.id())}" }
+                        dockerClient.removeContainerCmd(it.id).withForce(true).exec()
+                        logger.info { "Container has been removed: ${DockerTools.containerName(it)} / ${DockerTools.shortContainerId(it.id)}" }
                     } catch (e: Exception) {
-                        logger.error("Can't remove container: " + it.id(), e)
+                        logger.error("Can't remove container: " + it.id, e)
                     }
                 }
             }
         }
     }
-
 }

@@ -1,31 +1,25 @@
 package net.postchain.base.snapshot
 
-import net.postchain.StorageBuilder
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.data.testDbConfig
-import net.postchain.base.withWriteConnection
+import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
-import net.postchain.config.app.AppConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.util.TreeMap
 
-class SnapshotIT: SnapshotBaseIT() {
-
-    private val appConfig: AppConfig = testDbConfig("database_snapshot")
+class SnapshotIT : SnapshotBaseIT() {
 
     @Test
     fun testSnapshot() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         val chainId = 0L
 
-        withWriteConnection(storage, chainId) { ctx ->
+        runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
             db.apply {
@@ -46,7 +40,7 @@ class SnapshotIT: SnapshotBaseIT() {
             states[7] = "52f1a9b320cab38e5da8a8f97989383aab0a49165fc91c737310e4f7e9821021".hexStringToByteArray()
             states[8] = "e4b1702d9298fee62dfeccc57d322a463ad55ca201256d01f62b45b2e1c21c10".hexStringToByteArray()
             states[9] = "d2f8f61201b2b11a78d6e866abc9c3db2ae8631fa656bfe5cb53668255367afb".hexStringToByteArray()
-            states.forEach { (n, data) ->  db.insertState(ctx, PREFIX, blockHeight, n, data) }
+            states.forEach { (n, data) -> db.insertState(ctx, PREFIX, blockHeight, n, data) }
             states.forEach { (n, data) ->
                 val accountState = db.getAccountState(ctx, PREFIX, blockHeight, n)
                 assertNotNull(accountState)
@@ -76,7 +70,7 @@ class SnapshotIT: SnapshotBaseIT() {
             states2[2] = "ad7c5bef027816a800da1736444fb58a807ef4c9603b7848673f7e3a68eb14a5".hexStringToByteArray()
             states2[8] = "9ae6066ff8547d3138cce35b150f93047df88fa376c8808f462d3bbdbcb4a690".hexStringToByteArray()
             states2[9] = "c41c8390c0da0418b7667ee0df6c246c26c4be6c0618368dce5a916e8008b0db".hexStringToByteArray()
-            states2.forEach { (n, data) ->  db.insertState(ctx, PREFIX, blockHeight, n, data) }
+            states2.forEach { (n, data) -> db.insertState(ctx, PREFIX, blockHeight, n, data) }
             states2.forEach { (n, data) ->
                 val accountState = db.getAccountState(ctx, PREFIX, blockHeight, n)
                 assertNotNull(accountState)
@@ -105,7 +99,7 @@ class SnapshotIT: SnapshotBaseIT() {
             val states3 = TreeMap<Long, Hash>()
             states3[10] = "1a192fabce13988b84994d4296e6cdc418d55e2f1d7f942188d4040b94fc57ac".hexStringToByteArray()
             states3[11] = "7880aec93413f117ef14bd4e6d130875ab2c7d7d55a064fac3c2f7bd51516380".hexStringToByteArray()
-            states3.forEach { (n, data) ->  db.insertState(ctx, PREFIX, blockHeight, n, data) }
+            states3.forEach { (n, data) -> db.insertState(ctx, PREFIX, blockHeight, n, data) }
             states3.forEach { (n, data) ->
                 val accountState = db.getAccountState(ctx, PREFIX, blockHeight, n)
                 assertNotNull(accountState)
@@ -122,7 +116,7 @@ class SnapshotIT: SnapshotBaseIT() {
             states4[13] = "789bcdf275fa270780a52ae3b79bb1ce0fda7e0aaad87b57b74bb99ac290714a".hexStringToByteArray()
             states4[14] = "5c4c6aa067b6f8e6cb38e6ab843832a94d1712d661a04d73c517d6a1931a9e5d".hexStringToByteArray()
             states4[15] = "1d3be50b2bb17407dd170f1d5da128d1def30c6b1598d6a629e79b4775265526".hexStringToByteArray()
-            states4.forEach { (n, data) ->  db.insertState(ctx, PREFIX, blockHeight, n, data) }
+            states4.forEach { (n, data) -> db.insertState(ctx, PREFIX, blockHeight, n, data) }
             states4.forEach { (n, data) ->
                 val accountState = db.getAccountState(ctx, PREFIX, blockHeight, n)
                 assertNotNull(accountState)
@@ -153,7 +147,7 @@ class SnapshotIT: SnapshotBaseIT() {
             blockHeight++
             val states5 = TreeMap<Long, Hash>()
             states5[16] = "277ab82e5a4641341820a4a2933a62c1de997e42e92548657ae21b3728d580fe".hexStringToByteArray()
-            states5.forEach { (n, data) ->  db.insertState(ctx, PREFIX, blockHeight, n, data) }
+            states5.forEach { (n, data) -> db.insertState(ctx, PREFIX, blockHeight, n, data) }
             states5.forEach { (n, data) ->
                 val accountState = db.getAccountState(ctx, PREFIX, blockHeight, n)
                 assertNotNull(accountState)
@@ -162,7 +156,7 @@ class SnapshotIT: SnapshotBaseIT() {
             stateRootHash = snapshot.updateSnapshot(blockHeight, states5)
             snapshot.pruneSnapshot(blockHeight)
             assertEquals(4, snapshot.highestLevelPage(blockHeight))
-            assertEquals(4, snapshot.highestLevelPage(blockHeight+100))
+            assertEquals(4, snapshot.highestLevelPage(blockHeight + 100))
 
             val p5 = ds.hash(ds.hash(states5[16]!!, EMPTY_HASH), EMPTY_HASH)
             val p7 = ds.hash(ds.hash(p5, EMPTY_HASH), EMPTY_HASH)
@@ -170,15 +164,15 @@ class SnapshotIT: SnapshotBaseIT() {
             assertEquals(stateRootHash.toHex(), root.toHex())
 
             assertNotNull(snapshot.readPage(blockHeight, 2, 0))
-            assertNotNull(snapshot.readPage(blockHeight-1, 2, 0))
-            assertEquals(null, snapshot.readPage(blockHeight-snapshotsToKeep, 2, 0))
+            assertNotNull(snapshot.readPage(blockHeight - 1, 2, 0))
+            assertEquals(null, snapshot.readPage(blockHeight - snapshotsToKeep, 2, 0))
 
             // Verify merkle proofs
             var leafPos = 0L
-            var proofs = snapshot.getMerkleProof(blockHeight-snapshotsToKeep, leafPos)
+            var proofs = snapshot.getMerkleProof(blockHeight - snapshotsToKeep, leafPos)
             assertEquals(0, proofs.size)
 
-            proofs = snapshot.getMerkleProof(blockHeight-1, leafPos)
+            proofs = snapshot.getMerkleProof(blockHeight - 1, leafPos)
             var merkleRoot = getMerkleRoot(proofs, leafPos.toInt(), states4[leafPos]!!)
             assertEquals(oldStateRootHash.toHex(), merkleRoot.toHex())
 
@@ -187,10 +181,10 @@ class SnapshotIT: SnapshotBaseIT() {
             assertEquals(stateRootHash.toHex(), merkleRoot.toHex())
 
             leafPos = 2L
-            proofs = snapshot.getMerkleProof(blockHeight-snapshotsToKeep, leafPos)
+            proofs = snapshot.getMerkleProof(blockHeight - snapshotsToKeep, leafPos)
             assertEquals(0, proofs.size)
 
-            proofs = snapshot.getMerkleProof(blockHeight-1, leafPos)
+            proofs = snapshot.getMerkleProof(blockHeight - 1, leafPos)
             merkleRoot = getMerkleRoot(proofs, leafPos.toInt(), states2[leafPos]!!)
             assertEquals(oldStateRootHash.toHex(), merkleRoot.toHex())
 
@@ -199,22 +193,20 @@ class SnapshotIT: SnapshotBaseIT() {
             assertEquals(stateRootHash.toHex(), merkleRoot.toHex())
 
             leafPos = 16L
-            proofs = snapshot.getMerkleProof(blockHeight-1, leafPos)
+            proofs = snapshot.getMerkleProof(blockHeight - 1, leafPos)
             assertEquals(0, proofs.size)
 
             proofs = snapshot.getMerkleProof(blockHeight, leafPos)
             merkleRoot = getMerkleRoot(proofs, leafPos.toInt(), states5[leafPos]!!)
             assertEquals(stateRootHash.toHex(), merkleRoot.toHex())
-            true
         }
     }
 
     @Test
     fun testSnapshot128() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         val chainId = 0L
 
-        withWriteConnection(storage, chainId) { ctx ->
+        runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
             db.apply {
@@ -229,7 +221,7 @@ class SnapshotIT: SnapshotBaseIT() {
             }
             val blockHeight = 1L
 
-            states.forEach { (n, data) ->  db.insertState(ctx, PREFIX, blockHeight, n, data) }
+            states.forEach { (n, data) -> db.insertState(ctx, PREFIX, blockHeight, n, data) }
             states.forEach { (n, data) ->
                 val accountState = db.getAccountState(ctx, PREFIX, blockHeight, n)
                 assertNotNull(accountState)
@@ -244,7 +236,6 @@ class SnapshotIT: SnapshotBaseIT() {
                 val expected = getMerkleRoot(proofs, it, states[it.toLong()]!!)
                 assertEquals(expected.toHex(), stateRootHash.toHex())
             }
-            true
         }
     }
 }

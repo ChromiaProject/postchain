@@ -1,0 +1,167 @@
+public final class net/postchain/gtx/Gtx : net/postchain/gtv/mapper/ToGtv {
+	public static final field Companion Lnet/postchain/gtx/Gtx$Companion;
+	public fun <init> (Lnet/postchain/gtx/GtxBody;Ljava/util/List;)V
+	public fun <init> (Lnet/postchain/gtx/GtxBody;[[B)V
+	public final fun calculateTxRid (Lnet/postchain/gtv/merkle/MerkleHashCalculator;)[B
+	public static final fun decode ([B)Lnet/postchain/gtx/Gtx;
+	public final fun encode ()[B
+	public final fun encodeHex ()Ljava/lang/String;
+	public fun equals (Ljava/lang/Object;)Z
+	public static final fun fromGtv (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtx/Gtx;
+	public final fun getGtxBody ()Lnet/postchain/gtx/GtxBody;
+	public final fun getSignatures ()Ljava/util/List;
+	public fun hashCode ()I
+	public synthetic fun toGtv ()Lnet/postchain/gtv/Gtv;
+	public fun toGtv ()Lnet/postchain/gtv/GtvArray;
+}
+
+public final class net/postchain/gtx/Gtx$Companion {
+	public final fun decode ([B)Lnet/postchain/gtx/Gtx;
+	public final fun fromGtv (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtx/Gtx;
+}
+
+public final class net/postchain/gtx/GtxBody : net/postchain/gtv/mapper/ToGtv {
+	public static final field Companion Lnet/postchain/gtx/GtxBody$Companion;
+	public fun <init> (Lnet/postchain/common/BlockchainRid;Ljava/util/List;Ljava/util/List;)V
+	public fun <init> (Lnet/postchain/common/BlockchainRid;[Lnet/postchain/gtx/GtxOp;[[B)V
+	public final fun calculateTxRid (Lnet/postchain/gtv/merkle/MerkleHashCalculator;)[B
+	public fun equals (Ljava/lang/Object;)Z
+	public static final fun fromGtv (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtx/GtxBody;
+	public final fun getBlockchainRid ()Lnet/postchain/common/BlockchainRid;
+	public final fun getExtOpData ()[Lnet/postchain/gtx/data/ExtOpData;
+	public final fun getOperations ()Ljava/util/List;
+	public final fun getSigners ()Ljava/util/List;
+	public fun hashCode ()I
+	public synthetic fun toGtv ()Lnet/postchain/gtv/Gtv;
+	public fun toGtv ()Lnet/postchain/gtv/GtvArray;
+}
+
+public final class net/postchain/gtx/GtxBody$Companion {
+	public final fun fromGtv (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtx/GtxBody;
+}
+
+public class net/postchain/gtx/GtxBuilder {
+	public static final field Companion Lnet/postchain/gtx/GtxBuilder$Companion;
+	public fun <init> (Lnet/postchain/common/BlockchainRid;Ljava/util/List;Lnet/postchain/crypto/CryptoSystem;ILjava/util/List;)V
+	public synthetic fun <init> (Lnet/postchain/common/BlockchainRid;Ljava/util/List;Lnet/postchain/crypto/CryptoSystem;ILjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun addNop ()Lnet/postchain/gtx/GtxBuilder;
+	public final fun addOperation (Ljava/lang/String;[Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtx/GtxBuilder;
+	public final fun finish ()Lnet/postchain/gtx/GtxBuilder$GtxSignBuilder;
+	public final fun getMaxTxSize ()I
+	public final fun isEmpty ()Z
+	public final fun uncheckedSignBuilder ()Lnet/postchain/gtx/GtxBuilder$GtxSignBuilder;
+}
+
+public final class net/postchain/gtx/GtxBuilder$Companion {
+	public final fun getEMPTY_SIGNATURE ()[B
+}
+
+public final class net/postchain/gtx/GtxBuilder$GtxSignBuilder {
+	public fun <init> (Lnet/postchain/gtx/GtxBuilder;Lnet/postchain/gtx/GtxBody;Z)V
+	public synthetic fun <init> (Lnet/postchain/gtx/GtxBuilder;Lnet/postchain/gtx/GtxBody;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun addSignatures (Ljava/util/List;)Lnet/postchain/gtx/GtxBuilder$GtxSignBuilder;
+	public final fun buildGtx ()Lnet/postchain/gtx/Gtx;
+	public final fun emptySign ([B)Lnet/postchain/gtx/GtxBuilder$GtxSignBuilder;
+	public final fun getTxRid ()[B
+	public final fun isFullySigned ()Z
+	public final fun sign (Lnet/postchain/crypto/SigMaker;)Lnet/postchain/gtx/GtxBuilder$GtxSignBuilder;
+	public final fun sign (Lnet/postchain/crypto/Signature;)Lnet/postchain/gtx/GtxBuilder$GtxSignBuilder;
+	public final fun signOverEmptySignature (Lnet/postchain/crypto/SigMaker;)Lnet/postchain/gtx/GtxBuilder$GtxSignBuilder;
+}
+
+public final class net/postchain/gtx/GtxBuilderKt {
+}
+
+public final class net/postchain/gtx/GtxOp : net/postchain/gtv/mapper/ToGtv {
+	public static final field Companion Lnet/postchain/gtx/GtxOp$Companion;
+	public fun <init> (Ljava/lang/String;[Lnet/postchain/gtv/Gtv;)V
+	public final fun asOpData ()Lnet/postchain/gtx/data/OpData;
+	public final fun calcSize ()I
+	public fun equals (Ljava/lang/Object;)Z
+	public static final fun fromGtv (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtx/GtxOp;
+	public static final fun fromOpData (Lnet/postchain/gtx/data/OpData;)Lnet/postchain/gtx/GtxOp;
+	public final fun getArgs ()[Lnet/postchain/gtv/Gtv;
+	public final fun getOpName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public synthetic fun toGtv ()Lnet/postchain/gtv/Gtv;
+	public fun toGtv ()Lnet/postchain/gtv/GtvArray;
+}
+
+public final class net/postchain/gtx/GtxOp$Companion {
+	public final fun fromGtv (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtx/GtxOp;
+	public final fun fromOpData (Lnet/postchain/gtx/data/OpData;)Lnet/postchain/gtx/GtxOp;
+}
+
+public final class net/postchain/gtx/GtxQuery {
+	public static final field Companion Lnet/postchain/gtx/GtxQuery$Companion;
+	public fun <init> (Ljava/lang/String;Lnet/postchain/gtv/Gtv;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lnet/postchain/gtv/Gtv;
+	public final fun copy (Ljava/lang/String;Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtx/GtxQuery;
+	public static synthetic fun copy$default (Lnet/postchain/gtx/GtxQuery;Ljava/lang/String;Lnet/postchain/gtv/Gtv;ILjava/lang/Object;)Lnet/postchain/gtx/GtxQuery;
+	public static final fun decode ([B)Lnet/postchain/gtx/GtxQuery;
+	public final fun encode ()[B
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArgs ()Lnet/postchain/gtv/Gtv;
+	public final fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtx/GtxQuery$Companion {
+	public final fun decode ([B)Lnet/postchain/gtx/GtxQuery;
+}
+
+public final class net/postchain/gtx/data/ExtOpData {
+	public static final field Companion Lnet/postchain/gtx/data/ExtOpData$Companion;
+	public fun <init> (Ljava/lang/String;I[Lnet/postchain/gtv/Gtv;Lnet/postchain/common/BlockchainRid;[[B[Lnet/postchain/gtx/data/OpData;)V
+	public final fun getArgs ()[Lnet/postchain/gtv/Gtv;
+	public final fun getBlockchainRID ()Lnet/postchain/common/BlockchainRid;
+	public final fun getOpIndex ()I
+	public final fun getOpName ()Ljava/lang/String;
+	public final fun getOperations ()[Lnet/postchain/gtx/data/OpData;
+	public final fun getSigners ()[[B
+}
+
+public final class net/postchain/gtx/data/ExtOpData$Companion {
+	public final fun build (Lnet/postchain/gtx/data/OpData;ILnet/postchain/gtx/GtxBody;[Lnet/postchain/gtx/data/OpData;)Lnet/postchain/gtx/data/ExtOpData;
+}
+
+public final class net/postchain/gtx/data/OpData {
+	public fun <init> (Ljava/lang/String;[Lnet/postchain/gtv/Gtv;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()[Lnet/postchain/gtv/Gtv;
+	public final fun copy (Ljava/lang/String;[Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtx/data/OpData;
+	public static synthetic fun copy$default (Lnet/postchain/gtx/data/OpData;Ljava/lang/String;[Lnet/postchain/gtv/Gtv;ILjava/lang/Object;)Lnet/postchain/gtx/data/OpData;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArgs ()[Lnet/postchain/gtv/Gtv;
+	public final fun getOpName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtx/gtxml/GTXMLTransactionEncoder {
+	public static final field INSTANCE Lnet/postchain/gtx/gtxml/GTXMLTransactionEncoder;
+	public final fun encodeXMLGTXTransaction (Lnet/postchain/gtx/Gtx;)Ljava/lang/String;
+}
+
+public final class net/postchain/gtx/gtxml/GTXMLTransactionParser {
+	public static final field INSTANCE Lnet/postchain/gtx/gtxml/GTXMLTransactionParser;
+	public final fun parseGTXMLTransaction (Ljava/lang/String;Lnet/postchain/gtx/gtxml/TransactionContext;Lnet/postchain/crypto/CryptoSystem;)Lnet/postchain/gtx/Gtx;
+	public final fun parseGTXMLTransaction (Lnet/postchain/gtv/gtxml/TransactionType;Lnet/postchain/gtx/gtxml/TransactionContext;Lnet/postchain/crypto/CryptoSystem;)Lnet/postchain/gtx/Gtx;
+}
+
+public final class net/postchain/gtx/gtxml/TransactionContext {
+	public static final field Companion Lnet/postchain/gtx/gtxml/TransactionContext$Companion;
+	public fun <init> (Lnet/postchain/common/BlockchainRid;Ljava/util/Map;ZLjava/util/Map;)V
+	public synthetic fun <init> (Lnet/postchain/common/BlockchainRid;Ljava/util/Map;ZLjava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getAutoSign ()Z
+	public final fun getBlockchainRID ()Lnet/postchain/common/BlockchainRid;
+	public final fun getParams ()Ljava/util/Map;
+	public final fun getSigners ()Ljava/util/Map;
+}
+
+public final class net/postchain/gtx/gtxml/TransactionContext$Companion {
+	public final fun empty ()Lnet/postchain/gtx/gtxml/TransactionContext;
+}
+

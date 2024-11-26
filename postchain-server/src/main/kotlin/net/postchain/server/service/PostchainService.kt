@@ -12,6 +12,7 @@ import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.BadDataException
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
@@ -95,43 +96,74 @@ class PostchainService(private val nodeProvider: NodeProvider) {
                 BlockchainApi.removeBlockchainReplica(ctx, brid, pubkey)
             }
 
-    fun exportBlockchain(chainId: Long, configurationFile: Path, blocksFile: Path?, overwrite: Boolean, fromHeight: Long, upToHeight: Long): ExportResult =
+    fun exportBlockchain(chainId: Long, blockchainRidData: ByteArray, configurationFile: Path, blocksFile: Path?, overwrite: Boolean, fromHeight: Long, upToHeight: Long): ExportResult =
             ImporterExporter.exportBlockchain(
                     postchainNode.postchainContext.sharedStorage,
-                    chainId,
+                    getChainId(blockchainRidData) ?: chainId,
                     configurationsFile = configurationFile,
                     blocksFile = blocksFile,
                     overwrite = overwrite,
                     fromHeight = fromHeight,
                     upToHeight = upToHeight)
 
-    fun importBlockchain(chainId: Long, blockchainRidData: ByteArray, configurationFile: Path, blocksFile: Path, incremental: Boolean): ImportResult {
-        val chainId0 = if (blockchainRidData.isNotEmpty()) {
+    fun exportBlocks(chainId: Long, height: Long, blockCountLimit: Int, blocksSizeLimit: Int): List<Gtv> = ImporterExporter.exportBlocks(
+            postchainNode.postchainContext.sharedStorage,
+            chainId,
+            height,
+            blockCountLimit,
+            blocksSizeLimit
+    )
+
+    fun importBlockchain(
+            chainId: Long,
+            blockchainRidData: ByteArray,
+            configurationFile: Path,
+            blocksFile: Path,
+            incremental: Boolean,
+            skipPrimaryFieldValidation: Boolean
+    ): ImportResult = ImporterExporter.importBlockchain(
+            KeyPair(PubKey(postchainNode.appConfig.pubKey), PrivKey(postchainNode.appConfig.privKey)),
+            postchainNode.postchainContext.cryptoSystem,
+            postchainNode.postchainContext.sharedStorage,
+            getChainId(blockchainRidData) ?: chainId,
+            configurationsFile = configurationFile,
+            blocksFile = blocksFile,
+            incremental = incremental,
+            skipPrimaryFieldValidation = skipPrimaryFieldValidation
+    )
+
+    fun importBlocks(chainId: Long, blockData: List<Gtv>, skipPrimaryFieldValidation: Boolean): LongRange = ImporterExporter.importBlocks(
+            postchainNode.postchainContext.sharedStorage,
+            chainId,
+            blockData,
+            KeyPair(PubKey(postchainNode.appConfig.pubKey), PrivKey(postchainNode.appConfig.privKey)),
+            postchainNode.postchainContext.cryptoSystem,
+            skipPrimaryFieldValidation
+    )
+
+    fun removeBlockchain(chainId: Long) {
+        stopBlockchain(chainId)
+
+        withWriteConnection(postchainNode.postchainContext.sharedStorage, chainId) { ctx ->
+            val dependentChains = BlockchainApi.getDependentChains(ctx)
+            if (dependentChains.isNotEmpty()) {
+                throw UserMistake("Blockchain may not be deleted due to the following dependent chains: ${dependentChains.joinToString(", ")}")
+            }
+
+            BlockchainApi.deleteBlockchain(ctx)
+            true
+        }
+    }
+
+    private fun getChainId(blockchainRidData: ByteArray): Long? {
+        return if (blockchainRidData.isNotEmpty()) {
             val brid = BlockchainRid(blockchainRidData)
             postchainNode.postchainContext.sharedStorage.withReadConnection {
                 DatabaseAccess.of(it).getChainId(it, brid)
                         ?: throw NotFound("Blockchain not found by RID: $brid")
             }
         } else {
-            chainId
-        }
-
-        return ImporterExporter.importBlockchain(
-                KeyPair(PubKey(postchainNode.appConfig.pubKeyByteArray), PrivKey(postchainNode.appConfig.privKeyByteArray)),
-                postchainNode.postchainContext.cryptoSystem,
-                postchainNode.postchainContext.sharedStorage,
-                chainId0,
-                configurationsFile = configurationFile,
-                blocksFile = blocksFile,
-                incremental)
-    }
-
-    fun removeBlockchain(chainId: Long) {
-        stopBlockchain(chainId)
-
-        withWriteConnection(postchainNode.postchainContext.sharedStorage, chainId) { ctx ->
-            BlockchainApi.deleteBlockchain(ctx)
-            true
+            null
         }
     }
 }

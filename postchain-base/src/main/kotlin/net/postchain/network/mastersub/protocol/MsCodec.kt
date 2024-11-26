@@ -35,6 +35,8 @@ object MsCodec {
             QueryFailure -> MsQueryFailure(payload)
             BlockAtHeightRequest -> MsBlockAtHeightRequest(payload)
             BlockAtHeightResponse -> MsBlockAtHeightResponse(payload)
+            BlocksFromHeightRequest -> MsBlocksFromHeightRequest(payload)
+            BlocksFromHeightResponse -> MsBlocksFromHeightResponse(payload)
         }
     }
 }

@@ -3,6 +3,7 @@
 package net.postchain.devtools.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.devtools.TestLauncher
@@ -11,10 +12,9 @@ import java.io.File
 /**
  * Cli test command
  */
-class RunTestCommand : CliktCommand(
-        name = "run-test",
-        help = "Tests gtxml file"
-) {
+class RunTestCommand : CliktCommand(name = "run-test") {
+
+    override fun help(context: Context) = "Tests gtxml file"
 
     private val filename by option(
             "--filename", "-f",

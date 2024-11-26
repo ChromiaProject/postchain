@@ -6,27 +6,39 @@ import net.postchain.core.BlockchainState
 import net.postchain.core.framework.AbstractBlockchainProcess
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
+import net.postchain.debug.DpBlockchainNodeState
 import net.postchain.debug.DpNodeType
 import net.postchain.debug.EagerDiagnosticValue
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.syncmanager.readonly.ForceReadOnlyMessageProcessor
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
-import kotlin.collections.mapOf
 import kotlin.collections.set
+import kotlin.math.min
 
-class ForceReadOnlyBlockchainProcess(
+open class ForceReadOnlyBlockchainProcess(
         private val workerContext: WorkerContext,
-        private val blockchainState: BlockchainState
+        private val blockchainState: BlockchainState,
+        maxExposedHeight: Long = -1
 ) : AbstractBlockchainProcess("force-readonly-c${workerContext.blockchainConfiguration.chainID}", workerContext.engine) {
+
+    constructor(workerContext: WorkerContext, blockchainState: BlockchainState, maxExposedHeight: Long?) :
+            this(workerContext, blockchainState, maxExposedHeight ?: -1L)
 
     private val loggingContext = mapOf(
             CHAIN_IID_TAG to workerContext.blockchainConfiguration.chainID.toString(),
             BLOCKCHAIN_RID_TAG to workerContext.blockchainConfiguration.blockchainRid.toHex()
     )
 
-    private val blockHeight = workerContext.engine.getBlockQueries().getLastBlockHeight().get()
+    private val blockHeight = workerContext.engine.getBlockQueries().getLastBlockHeight().get().let {
+        val actual = if (maxExposedHeight != -1L) min(maxExposedHeight, it) else it
+        withLoggingContext(loggingContext) {
+            logger.debug { "lastBlockHeight: $it, maxExposedHeight: $maxExposedHeight, actualBlockHeight: $actual" }
+        }
+        actual
+    }
 
-    private val forceReadOnlyMessageProcessor = ForceReadOnlyMessageProcessor(workerContext.engine.getBlockQueries(), workerContext.communicationManager, blockHeight)
+    protected open val forceReadOnlyMessageProcessor = ForceReadOnlyMessageProcessor(workerContext.engine.getBlockQueries(), workerContext.communicationManager, blockHeight, RateLimitConfiguration.fromAppConfig(workerContext.appConfig))
 
     override fun action() {
         withLoggingContext(loggingContext) {
@@ -48,6 +60,13 @@ class ForceReadOnlyBlockchainProcess(
     override fun registerDiagnosticData(diagnosticData: DiagnosticData) {
         super.registerDiagnosticData(diagnosticData)
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_TYPE] = EagerDiagnosticValue(DpNodeType.NODE_TYPE_FORCE_READ_ONLY.prettyName)
+        diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATE] = EagerDiagnosticValue(
+                when (blockchainState) {
+                    BlockchainState.IMPORTING -> DpBlockchainNodeState.IMPORTING_FORCED_READ_ONLY
+                    BlockchainState.UNARCHIVING -> DpBlockchainNodeState.UNARCHIVING_FORCED_READ_ONLY
+                    else -> DpBlockchainNodeState.FORCED_READ_ONLY
+                }
+        )
     }
 
     override fun currentBlockHeight(): Long = blockHeight

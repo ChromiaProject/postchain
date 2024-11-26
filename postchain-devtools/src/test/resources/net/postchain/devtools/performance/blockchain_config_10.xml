@@ -3,12 +3,8 @@
 
 <dict>
     <entry key="blockstrategy">
-        <!--
-        This block strategy is the default one if no config is made
-        maxblocktime=30000 (milliseconds)
-        blockdelay=1000 (milliseconds)
-        -->
         <dict>
+            <entry key="maxblocktransactions"><int>10000</int></entry>
             <entry key="name">
                 <string>net.postchain.devtools.OnDemandBlockBuildingStrategy</string>
             </entry>

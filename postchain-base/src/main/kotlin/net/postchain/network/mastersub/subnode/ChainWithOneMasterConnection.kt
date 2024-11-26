@@ -7,6 +7,7 @@ import net.postchain.network.mastersub.MsMessageHandler
 import net.postchain.network.mastersub.protocol.MsDataMessage
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.peer.XChainPeersConfiguration
+import java.util.concurrent.CompletableFuture
 
 
 /**
@@ -47,13 +48,14 @@ class ChainWithOneMasterConnection(
         conn = newConn
     }
 
-    override fun closeConnection() {
-        conn?.close()
+    override fun closeConnection(): CompletableFuture<Void>? {
+        return conn?.close()
     }
 
-    override fun removeAndCloseConnection() {
-        conn?.close()
+    override fun removeAndCloseConnection(): CompletableFuture<Void>? {
+        val future = conn?.close()
         conn = null
+        return future
     }
 
     fun addMsMessageHandler(handler: MsMessageHandler?) {

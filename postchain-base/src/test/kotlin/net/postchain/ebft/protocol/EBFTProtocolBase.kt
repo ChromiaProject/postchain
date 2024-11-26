@@ -31,7 +31,10 @@ import net.postchain.ebft.BuildBlockIntent
 import net.postchain.ebft.NodeBlockState
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.message.MessageDurationTracker
+import net.postchain.ebft.message.StateChangeTracker
 import net.postchain.ebft.message.Status
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.syncmanager.validator.RevoltTracker
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
 import net.postchain.ebft.worker.WorkerContext
@@ -39,10 +42,12 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.metrics.NodeStatusMetrics
 import net.postchain.metrics.SyncMetrics
 import net.postchain.network.CommunicationManager
+import net.postchain.network.ReceivedPacket
 import org.apache.commons.configuration2.PropertiesConfiguration
 import org.junit.jupiter.api.BeforeEach
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.ArgumentMatchers.eq
+import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
@@ -78,7 +83,10 @@ abstract class EBFTProtocolBase {
     protected val header0 = createBlockHeader(blockchainRid, 2L, 0, prevBlockRid, 1)
     protected val blockRid0 = header0.blockRID
 
-    protected val blockDatabase: BlockDatabase = mock()
+    protected val blockDatabase: BlockDatabase = mock {
+        on { applyAndVerifyBlockSignature(any()) } doReturn true
+    }
+
     protected val blockStrategy: BlockBuildingStrategy = mock()
     protected val nodeStateTracker: NodeStateTracker = mock()
     protected val counter: Counter = mock()
@@ -87,6 +95,7 @@ abstract class EBFTProtocolBase {
         on { revoltsOnNode } doReturn counter
         on { revoltsBetweenOthers } doReturn counter
     }
+    protected val stateChangeTracker: StateChangeTracker = mock()
     protected val appConfig = AppConfig(PropertiesConfiguration().apply {
     })
     protected val nodeConfig = NodeConfig(appConfig)
@@ -120,6 +129,7 @@ abstract class EBFTProtocolBase {
     protected val peerCommConf: PeerCommConfiguration = mock {
         on { networkNodes } doReturn networkNodes
     }
+    protected val messageDurationTracker: MessageDurationTracker = mock()
     protected val workerContext: WorkerContext = mock {
         on { appConfig } doReturn appConfig
         on { nodeConfig } doReturn nodeConfig
@@ -127,6 +137,7 @@ abstract class EBFTProtocolBase {
         on { communicationManager } doReturn commManager
         on { peerCommConfiguration } doReturn peerCommConf
         on { blockchainConfiguration } doReturn blockchainConfiguration
+        on { messageDurationTracker } doReturn messageDurationTracker
     }
     protected val clock: Clock = mock()
     protected val revoltTracker: RevoltTracker = mock()
@@ -140,27 +151,29 @@ abstract class EBFTProtocolBase {
     @BeforeEach
     fun setup() {
         doReturn(BaseStatusManager.ZERO_SERIAL_TIME).whenever(clock).millis()
-        statusManager = BaseStatusManager(nodes, myNodeId, 0, nodeStatusMetrics, clock)
+        statusManager = BaseStatusManager(nodes, myNodeId, 0, nodeStatusMetrics, stateChangeTracker, clock)
         blockManager = BaseBlockManager(blockDatabase, statusManager, blockStrategy, workerContext)
-        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, syncMetrics, { true }, false, clock)
+        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, syncMetrics, { true }, false, { true }, RateLimitConfiguration.fromAppConfig(appConfig), clock)
         statusManager.recomputeStatus()
     }
 
-    protected fun verifyStatus(blockRID: ByteArray?, height: Long, serial: Long, round: Long, revolting: Boolean, state: NodeBlockState) {
+    protected fun verifyStatus(blockRID: ByteArray?, height: Long, serial: Long, round: Long, revolting: Boolean, state: NodeBlockState, signature: Signature? = null, configHash: ByteArray? = null) {
         argumentCaptor<Status> {
-            verify(commManager).broadcastPacket(capture(), eq(null))
+            verify(commManager).broadcastPacket(capture(), eq(null), eq(null))
             assertThat(firstValue.blockRID).isEqualTo(blockRID)
             assertThat(firstValue.height).isEqualTo(height)
             assertThat(firstValue.serial).isEqualTo(serial)
             assertThat(firstValue.round).isEqualTo(round)
             assertThat(firstValue.revolting).isEqualTo(revolting)
             assertThat(firstValue.state).isEqualTo(state.ordinal)
+            assertThat(firstValue.signature).isEqualTo(signature)
+            assertThat(firstValue.configHash).isEqualTo(configHash)
         }
     }
 
     protected fun verifyIntent(intent: BlockIntent) = assertThat(statusManager.intent).isEqualTo(intent)
 
-    protected fun messagesToReceive(vararg messages: Pair<NodeRid, EbftMessage>) {
+    protected fun messagesToReceive(vararg messages: ReceivedPacket<EbftMessage>) {
         doReturn(messages.toList()).whenever(commManager).getPackets()
     }
 

@@ -13,23 +13,23 @@ object StorageInitializer {
         if (!hasOwnPeer) {
             DatabaseAccess.of(ctx).addPeerInfo(ctx, "localhost", appConfig.port, appConfig.pubKey)
         }
-        if (appConfig.genesisPeer != null) {
-            addGenesisPeer(ctx, appConfig)
+        if (appConfig.initialPeer != null) {
+            addInitialPeer(ctx, appConfig)
         }
     }
 
-    private fun addGenesisPeer(it: AppContext, appConfig: AppConfig) {
-        val genesisPeer = appConfig.genesisPeer
-        if (genesisPeer != null) {
-            if (genesisPeer.pubKey.contentEquals(appConfig.pubKeyByteArray)) return
-            val hasGenesisPeer =
-                    DatabaseAccess.of(it).findPeerInfo(it, null, null, genesisPeer.pubKey.toHex()).isNotEmpty()
+    private fun addInitialPeer(it: AppContext, appConfig: AppConfig) {
+        val initialPeer = appConfig.initialPeer
+        if (initialPeer != null) {
+            if (initialPeer.pubKey.contentEquals(appConfig.pubKeyByteArray)) return
+            val hasInitialPeer =
+                    DatabaseAccess.of(it).findPeerInfo(it, null, null, initialPeer.pubKey.toHex()).isNotEmpty()
 
-            if (!hasGenesisPeer) {
+            if (!hasInitialPeer) {
                 DatabaseAccess.of(it).addPeerInfo(it,
-                        genesisPeer.host,
-                        genesisPeer.port,
-                        genesisPeer.pubKey.toHex()
+                        initialPeer.host,
+                        initialPeer.port,
+                        initialPeer.pubKey.toHex()
                 )
             }
         }

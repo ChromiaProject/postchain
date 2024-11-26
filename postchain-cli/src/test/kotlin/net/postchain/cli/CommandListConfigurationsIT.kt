@@ -1,6 +1,8 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import org.junit.jupiter.api.Test
 
 class CommandListConfigurationsIT : CommandITBase() {
@@ -9,7 +11,7 @@ class CommandListConfigurationsIT : CommandITBase() {
     fun `List configurations`() {
         // setup
         val command = CommandListConfigurations()
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
         addBlockchain()
         addConfiguration()
         // execute
@@ -20,11 +22,11 @@ class CommandListConfigurationsIT : CommandITBase() {
                 )
         )
         // verify
-        testConsole.assertContains(
+        testTerminal.assertContains(
                 listOf(
-                        "Height\n",
-                        "------\n",
-                        "0\n",
+                        "Height",
+                        "------",
+                        "0",
                         "10"
                 )
         )

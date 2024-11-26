@@ -23,8 +23,7 @@ enum class NodeBlockState {
 }
 
 /**
- * @param height The hight of the next block to be built. Ie current committed
- * height + 1
+ * @param height The height of the next block to be built, i.e., current committed height + 1
  */
 class NodeStatus(var height: Long, var serial: Long) {
 
@@ -33,6 +32,8 @@ class NodeStatus(var height: Long, var serial: Long) {
     var blockRID: ByteArray? = null
 
     var revolting: Boolean = false // PBFT: VIEW-CHANGE (?)
+
+    var signature: Signature? = null
 
     constructor () : this(0, -1)
 }
@@ -44,7 +45,7 @@ interface BlockDatabase {
     fun commitBlock(signatures: Array<Signature?>): CompletionStage<Unit>
     fun buildBlock(): CompletionStage<Pair<BlockData, Signature>>
 
-    fun verifyBlockSignature(s: Signature): Boolean
+    fun applyAndVerifyBlockSignature(s: Signature): Boolean
     fun getBlockSignature(blockRID: ByteArray): CompletionStage<Signature>
     fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): CompletionStage<BlockDataWithWitness?>
 
@@ -166,6 +167,8 @@ interface StatusManager {
     fun getBlockIntent(): BlockIntent
     fun getCommitSignature(): Signature?
     fun getLatestStatusTimestamp(nodeIndex: Int): Long
+
+    fun shouldApplySignature(state: NodeBlockState): Boolean
 }
 
 class BDBAbortException(val block: BlockDataWithWitness) :

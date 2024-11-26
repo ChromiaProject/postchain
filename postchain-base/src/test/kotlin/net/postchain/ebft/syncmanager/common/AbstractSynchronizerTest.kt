@@ -1,7 +1,6 @@
 package net.postchain.ebft.syncmanager.common
 
 import assertk.assertThat
-import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockHeader
@@ -12,9 +11,10 @@ import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.extension.FAILED_CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
+import net.postchain.core.BadBlockException
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainRestartNotifier
@@ -31,15 +31,16 @@ import net.postchain.core.block.BlockWitnessBuilder
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.SigMaker
-import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvNull
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
+import net.postchain.managed.PendingBlockchainConfiguration
 import net.postchain.network.CommunicationManager
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.mockito.ArgumentMatchers.anyBoolean
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.ArgumentMatchers.anyString
@@ -62,7 +63,7 @@ class AbstractSynchronizerTest {
     private val incomingHeight = height + 1
     private val chainId = 52L
     private val bridHex = "3475C1EEC5836D9B38218F78C30D302DBC7CAAAFFAF0CC83AE054B7A208F71D4"
-    private val blockRID = BlockchainRid.buildFromHex(bridHex)
+    private val blockchainRid = BlockchainRid.buildFromHex(bridHex)
     private val nodeHex = "0350FE40766BC0CE8D08B3F5B810E49A8352FDD458606BD5FAFE5ACDCDC8FF3F57"
     private val nodeRid = NodeRid.fromHex(nodeHex)
     private val peerIds = mutableSetOf<NodeRid>()
@@ -90,10 +91,10 @@ class AbstractSynchronizerTest {
     }
     private val blockchainConfigurationProvider: ManagedBlockchainConfigurationProvider = mock {
         on { isConfigPending(isA(), isA(), anyLong(), isA()) } doReturn true
-        on { getPendingConfigSigners(isA(), anyLong(), isA()) } doReturn pendingSigners
+        on { getConfigIfPending(isA(), isA(), anyLong(), isA()) } doReturn PendingBlockchainConfiguration(GtvNull, configHash.wrap(), pendingSigners, -1)
     }
     private val blockchainConfiguration: BlockchainConfiguration = mock {
-        on { blockchainRid } doReturn blockRID
+        on { blockchainRid } doReturn blockchainRid
         on { chainID } doReturn chainId
         on { configHash } doReturn configHash
         on { signers } doReturn currentSigners
@@ -153,7 +154,7 @@ class AbstractSynchronizerTest {
     private val blockWitness: BlockWitness = mock {
         on { getRawData() } doReturn witness
     }
-    private val peerStatuses: AbstractPeerStatuses<*> = mock()
+    private val peerStatuses: PeerStatuses = mock()
     private val blockWitnessBuilder: BlockWitnessBuilder = mock()
     private val baseBlockWitnessProvider: BaseBlockWitnessProvider = mock {
         on { createWitnessBuilderWithoutOwnSignature(isA()) } doReturn blockWitnessBuilder
@@ -165,17 +166,16 @@ class AbstractSynchronizerTest {
 
     @BeforeEach
     fun setup() {
-        sut = object : AbstractSynchronizer(workerContext, baseBlockWitnessProviderProvider) {}
+        sut = object : AbstractSynchronizer(workerContext, RateLimitConfiguration.fromAppConfig(appConfig), baseBlockWitnessProviderProvider) {}
     }
 
     ///// check pending config  /////
     @Test
     fun `check pending config  with chain is 0 should return false`() {
         // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, height)
         doReturn(0L).whenever(blockchainConfiguration).chainID
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, height)).isFalse()
         // verify
         verify(workerContext, never()).blockchainConfigurationProvider
     }
@@ -183,21 +183,18 @@ class AbstractSynchronizerTest {
     @Test
     fun `check pending config  with blockchain configuration provider is not managed should return false`() {
         // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, height)
         val manualBlockchainConfigurationProvider: ManualBlockchainConfigurationProvider = mock()
         doReturn(manualBlockchainConfigurationProvider).whenever(workerContext).blockchainConfigurationProvider
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, height)).isFalse()
         // verify
         verify(workerContext, atLeastOnce()).blockchainConfigurationProvider
     }
 
     @Test
     fun `check pending config with applied config height is not next height should return false`() {
-        // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, height)
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, height)).isFalse()
         // verify
         verify(blockQueries, times(2)).getLastBlockHeight()
         verify(blockchainConfiguration, never()).configHash
@@ -205,10 +202,8 @@ class AbstractSynchronizerTest {
 
     @Test
     fun `check pending config with not new config should return false`() {
-        // setup
-        val appliedConfig = AppliedConfig(configHash, incomingHeight)
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, configHash, incomingHeight)).isFalse()
         // verify
         verify(storage, never()).openReadConnection(chainId)
     }
@@ -216,12 +211,11 @@ class AbstractSynchronizerTest {
     @Test
     fun `check pending config with config is not pending should return false`() {
         // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, incomingHeight)
-        doReturn(false).whenever(blockchainConfigurationProvider).isConfigPending(isA(), isA(), anyLong(), isA())
+        doReturn(null).whenever(blockchainConfigurationProvider).getConfigIfPending(isA(), isA(), anyLong(), isA())
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, incomingHeight)).isFalse()
         // verify
-        verify(blockchainConfigurationProvider).isConfigPending(eContext, blockRID, incomingHeight, incomingConfigHash)
+        verify(blockchainConfigurationProvider).getConfigIfPending(eContext, blockchainRid, incomingHeight, incomingConfigHash)
         verify(storage).openReadConnection(chainId)
         verify(storage).closeReadConnection(eContext)
     }
@@ -229,33 +223,31 @@ class AbstractSynchronizerTest {
     @Test
     fun `check pending config with my pubKey is not part of signers should return false`() {
         // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, incomingHeight)
         val pendingSigners = listOf(pubKey1, pubKey2)
-        doReturn(pendingSigners).whenever(blockchainConfigurationProvider).getPendingConfigSigners(isA(), anyLong(), isA())
+        val pendingConfig = PendingBlockchainConfiguration(GtvNull, configHash.wrap(), pendingSigners, -1)
+        doReturn(pendingConfig).whenever(blockchainConfigurationProvider).getConfigIfPending(isA(), isA(), anyLong(), isA())
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, incomingHeight)).isFalse()
         // verify
-        verify(blockchainConfigurationProvider).getPendingConfigSigners(blockRID, incomingHeight, incomingConfigHash)
+        verify(blockchainConfigurationProvider).getConfigIfPending(eContext, blockchainRid, incomingHeight, incomingConfigHash)
     }
 
     @Test
     fun `check pending config with us as pending signer but do not need to apply it should return false`() {
         // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, incomingHeight)
         val pendingSigners = listOf(pubKey2, myPubKey)
-        doReturn(pendingSigners).whenever(blockchainConfigurationProvider).getPendingConfigSigners(isA(), anyLong(), isA())
+        val pendingConfig = PendingBlockchainConfiguration(GtvNull, configHash.wrap(), pendingSigners, -1)
+        doReturn(pendingConfig).whenever(blockchainConfigurationProvider).getConfigIfPending(isA(), isA(), anyLong(), isA())
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, incomingHeight)).isFalse()
         // verify
-        verify(blockchainConfigurationProvider).getPendingConfigSigners(blockRID, incomingHeight, incomingConfigHash)
+        verify(blockchainConfigurationProvider).getConfigIfPending(eContext, blockchainRid, incomingHeight, incomingConfigHash)
     }
 
     @Test
     fun `check pending config with us as signer but need to wait for others should return false`() {
-        // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, incomingHeight)
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isFalse()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, incomingHeight)).isFalse()
         // verify
         verify(restartNotifier, never()).notifyRestart(true)
     }
@@ -263,26 +255,23 @@ class AbstractSynchronizerTest {
     @Test
     fun `check pending config with enough signatures should trigger restart and return true`() {
         // setup
-        val appliedConfig = AppliedConfig(incomingConfigHash, incomingHeight)
         currentSigners.remove(pubKey2.data)
         pendingSigners.add(PubKey(nodeHex))
         // execute & verify
-        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, appliedConfig)).isTrue()
+        assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, incomingHeight)).isTrue()
         // verify
         verify(restartNotifier).notifyRestart(true)
     }
 
     ///// handle Add block exception /////
     @Test
-    fun `handle Add block exception with wrong type of block header should throw exception`() {
+    fun `handle Add block exception with wrong type of block header should throw exception but not bubble`() {
         // setup
         val exception = Exception()
         val blockHeader: BlockHeader = mock()
         val block = BlockDataWithWitness(blockHeader, transactions, blockWitness)
         // execute & verify
-        assertThat(assertThrows<ProgrammerMistake> {
-            sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
-        }.message).isEqualTo("Expected BaseBlockHeader")
+        sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
     }
 
     ///// handle Add block exception: ConfigurationMismatchException /////
@@ -319,11 +308,11 @@ class AbstractSynchronizerTest {
         val exception = ConfigurationMismatchException("Failure")
         val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
         doReturn(false).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
-        doReturn(false).whenever(blockchainConfigurationProvider).isConfigPending(isA(), isA(), anyLong(), isA())
+        doReturn(null).whenever(blockchainConfigurationProvider).getConfigIfPending(isA(), isA(), anyLong(), isA())
         // execute
         sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
         // verify
-        verify(blockchainConfigurationProvider).isConfigPending(eContext, blockRID, height, configHash)
+        verify(blockchainConfigurationProvider).getConfigIfPending(eContext, blockchainRid, height, configHash)
         verify(peerStatuses).maybeBlacklist(isA(), anyString())
     }
 
@@ -332,13 +321,14 @@ class AbstractSynchronizerTest {
         // setup
         val exception = ConfigurationMismatchException("Failure")
         val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
+        val pendingConfig: PendingBlockchainConfiguration = mock { }
         doReturn(false).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
-        doReturn(true).whenever(blockchainConfigurationProvider).isConfigPending(isA(), isA(), anyLong(), isA())
+        doReturn(pendingConfig).whenever(blockchainConfigurationProvider).getConfigIfPending(isA(), isA(), anyLong(), isA())
         doThrow(RuntimeException("Failure")).whenever(baseBlockWitnessProvider).validateWitness(isA(), isA())
         // execute
         sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
         // verify
-        verify(blockchainConfigurationProvider).getPendingConfigSigners(blockRID, height, configHash)
+        verify(blockchainConfigurationProvider).getConfigIfPending(eContext, blockchainRid, height, configHash)
         verify(baseBlockWitnessProvider).createWitnessBuilderWithoutOwnSignature(baseBlockHeader)
         verify(baseBlockWitnessProvider).validateWitness(blockWitness, blockWitnessBuilder)
         verify(peerStatuses).maybeBlacklist(isA(), anyString())
@@ -349,13 +339,14 @@ class AbstractSynchronizerTest {
         // setup
         val exception = ConfigurationMismatchException("Failure")
         val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
+        val pendingConfig: PendingBlockchainConfiguration = mock { }
         doReturn(false).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
-        doReturn(true).whenever(blockchainConfigurationProvider).isConfigPending(isA(), isA(), anyLong(), isA())
+        doReturn(pendingConfig).whenever(blockchainConfigurationProvider).getConfigIfPending(isA(), isA(), anyLong(), isA())
         doNothing().whenever(baseBlockWitnessProvider).validateWitness(isA(), isA())
         // execute
         sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
         // verify
-        verify(blockchainConfigurationProvider).getPendingConfigSigners(blockRID, height, configHash)
+        verify(blockchainConfigurationProvider).getConfigIfPending(eContext, blockchainRid, height, configHash)
         verify(baseBlockWitnessProvider).createWitnessBuilderWithoutOwnSignature(baseBlockHeader)
         verify(baseBlockWitnessProvider).validateWitness(blockWitness, blockWitnessBuilder)
         verify(peerStatuses, never()).maybeBlacklist(isA(), anyString())
@@ -381,12 +372,12 @@ class AbstractSynchronizerTest {
         val exception = FailedConfigurationMismatchException("Failure")
         val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
         doReturn(false).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
-        doReturn(false).whenever(blockchainConfigurationProvider).isConfigPending(isA(), isA(), anyLong(), isA())
+        doReturn(null).whenever(blockchainConfigurationProvider).getConfigIfPending(isA(), isA(), anyLong(), isA())
         doNothing().whenever(baseBlockWitnessProvider).validateWitness(isA(), isA())
         // execute
         sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
         // verify
-        verify(blockchainConfigurationProvider).isConfigPending(eContext, blockRID, height, failedConfigHash)
+        verify(blockchainConfigurationProvider).getConfigIfPending(eContext, blockchainRid, height, failedConfigHash)
         verify(peerStatuses).maybeBlacklist(isA(), anyString())
     }
 
@@ -395,16 +386,28 @@ class AbstractSynchronizerTest {
         // setup
         val exception = FailedConfigurationMismatchException("Failure")
         val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
+        val pendingConfig: PendingBlockchainConfiguration = mock { }
         doReturn(false).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
-        doReturn(true).whenever(blockchainConfigurationProvider).isConfigPending(isA(), isA(), anyLong(), isA())
+        doReturn(pendingConfig).whenever(blockchainConfigurationProvider).getConfigIfPending(isA(), isA(), anyLong(), isA())
         doNothing().whenever(baseBlockWitnessProvider).validateWitness(isA(), isA())
         // execute
         sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
         // verify
-        verify(blockchainConfigurationProvider).getPendingConfigSigners(blockRID, height, failedConfigHash)
+        verify(blockchainConfigurationProvider).getConfigIfPending(eContext, blockchainRid, height, failedConfigHash)
         verify(baseBlockWitnessProvider).createWitnessBuilderWithoutOwnSignature(baseBlockHeader)
         verify(baseBlockWitnessProvider).validateWitness(blockWitness, blockWitnessBuilder)
         verify(peerStatuses, never()).maybeBlacklist(isA(), anyString())
         verify(restartNotifier).notifyRestart(true)
+    }
+
+    @Test
+    fun `handle Add block exception with BadDataException should blacklist peer`() {
+        // setup
+        val exception = BadBlockException("Failure")
+        val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
+        // execute
+        sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
+        // verify
+        verify(peerStatuses).maybeBlacklist(isA(), anyString())
     }
 }

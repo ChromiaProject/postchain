@@ -1,6 +1,7 @@
 package net.postchain.managed
 
 import net.postchain.common.BlockchainRid
+import net.postchain.containers.bpm.ContainerImageInfo
 import net.postchain.containers.bpm.ContainerResourceLimits
 
 interface DirectoryDataSource : ManagedNodeDataSource {
@@ -11,12 +12,24 @@ interface DirectoryDataSource : ManagedNodeDataSource {
     fun getContainersToRun(): List<String>?
 
     /**
-     * TODO: [POS-164]: Provide a KDoc
+     * Returns container blockchain is running in.
+     * NM API Version: 3
      */
     fun getContainerForBlockchain(brid: BlockchainRid): String
 
     /**
+     * Returns a list of containers running on a node.
+     * NM API Version: 14
+     */
+    fun getBlockchainContainersForNode(brid: BlockchainRid): List<String>
+
+    /**
      * What is the resource limits for this container?
      */
-    fun getResourceLimitForContainer(containerId: String): ContainerResourceLimits
+    fun getResourceLimitForContainer(container: String): ContainerResourceLimits
+
+    /**
+     * Returns the Docker image required to run subnode for container.
+     */
+    fun getImageForContainer(container: String): ContainerImageInfo?
 }

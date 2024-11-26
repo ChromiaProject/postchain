@@ -7,6 +7,7 @@ import net.postchain.base.BaseBlockHeader
 import net.postchain.base.extension.getConfigHash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
+import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.BadDataException
@@ -24,6 +25,7 @@ import net.postchain.ebft.BlockDatabase
 import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.EbftMessage
+import net.postchain.ebft.message.EbftVersion
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
@@ -31,12 +33,12 @@ import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.Transaction
 import net.postchain.ebft.message.UnfinishedBlock
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import java.time.Clock
 import java.util.TreeMap
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
-import net.postchain.ebft.message.BlockData as MessageBlockData
 import net.postchain.ebft.message.BlockHeader as BlockHeaderMessage
 
 /**
@@ -65,13 +67,16 @@ class FastSynchronizer(
         workerContext: WorkerContext,
         private val blockDatabase: BlockDatabase,
         val params: SyncParameters,
-        val peerStatuses: FastSyncPeerStatuses,
+        val peerStatuses: PeerStatuses,
         val isProcessRunning: () -> Boolean,
-        val clock: Clock = Clock.systemUTC(),
-) : AbstractSynchronizer(workerContext) {
+        rateLimitConfiguration: RateLimitConfiguration,
+        val clock: Clock = Clock.systemUTC()
+) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {
 
     val jobs = TreeMap<Long, Job>()
     private var lastJob: Job? = null
+    private val messageDurationTracker = workerContext.messageDurationTracker
+    private val signers = workerContext.blockchainConfiguration.signers.map { it.wrap() }
 
     // This is the communication mechanism from the async commitBlock callback to the main loop
     val finishedJobs = LinkedBlockingQueue<Job>()
@@ -289,9 +294,6 @@ class FastSynchronizer(
         val legacyPeers = mutableSetOf<NodeRid>()
         for (job in jobs.values) {
             if (job.hasRestartFailed) {
-                if (job.startTime + params.jobTimeout < now) {
-                    peerStatuses.unresponsive(job.peerId, "Sync: Marking peer for restarted job $job unresponsive")
-                }
                 // These are jobs that couldn't be restarted because there
                 // were no peers available at the time. Try again every
                 // time, because there is virtually no cost in doing so.
@@ -362,8 +364,8 @@ class FastSynchronizer(
     private fun sendRequest(height: Long): NodeRid? {
         val now = currentTimeMillis()
         val peers = configuredPeers.minus(peerStatuses.excludedNonSyncable(height, now)).ifEmpty {
-            if (params.mustSyncUntilHeight > -1) {
-                peerStatuses.reviveAllBlacklisted()
+            if (params.mustSyncUntilHeight >= height) {
+                peerStatuses.markAllSyncable(height)
                 configuredPeers.minus(peerStatuses.excludedNonSyncable(height, now))
             } else {
                 emptySet()
@@ -375,6 +377,7 @@ class FastSynchronizer(
 
     private fun sendMessageAndUpdateConnectionStatuses(message: EbftMessage, peers: Set<NodeRid>): NodeRid? {
         val (selectedPeer, connectedPeers) = communicationManager.sendToRandomPeer(message, peers)
+        selectedPeer?.also { messageDurationTracker.send(it, message) }
         peerStatuses.markConnected(connectedPeers)
         peerStatuses.markDisconnected(peers - connectedPeers)
         return selectedPeer
@@ -419,6 +422,11 @@ class FastSynchronizer(
             out += ", Requested (job): $job"
         }
         return out
+    }
+
+    internal fun handleBlockHeader(peerId: NodeRid, message: BlockHeaderMessage): Boolean {
+        messageDurationTracker.receive(peerId, message)
+        return handleBlockHeader(peerId, message.header, message.witness, message.requestedHeight)
     }
 
     /**
@@ -505,14 +513,20 @@ class FastSynchronizer(
         return true
     }
 
-    /**
-     * Non-private for testing purposes
-     */
-    internal fun handleUnfinishedBlock(peerId: NodeRid, header: ByteArray, txs: List<ByteArray>) {
+    internal fun handleUnfinishedBlock(peerId: NodeRid, message: UnfinishedBlock) {
+        val header = message.header
         val decodedHeader = blockchainConfiguration.decodeBlockHeader(header)
         if (decodedHeader !is BaseBlockHeader) {
             throw BadMessageException("Expected BaseBlockHeader")
         }
+        messageDurationTracker.receive(peerId, message, decodedHeader)
+        handleUnfinishedBlock(peerId, header, decodedHeader, message.transactions)
+    }
+
+    /**
+     * Non-private for testing purposes
+     */
+    internal fun handleUnfinishedBlock(peerId: NodeRid, header: ByteArray, decodedHeader: BaseBlockHeader, txs: List<ByteArray>) {
         val height = getHeight(decodedHeader)
         val job = jobs[height]
         if (job == null) {
@@ -579,19 +593,30 @@ class FastSynchronizer(
     /**
      * This is used for syncing from old nodes that doesn't have this new FastSynchronizer algorithm
      */
-    private fun handleCompleteBlock(peerId: NodeRid, blockData: MessageBlockData, height: Long, witness: ByteArray) {
+    private fun handleCompleteBlock(peerId: NodeRid, message: CompleteBlock) {
+        val blockData = message.data
+        val height = message.height
+        val witness = message.witness
+
+        messageDurationTracker.receive(peerId, message)
+
         // We expect height to be the requested height. If the peer didn't have the block we wouldn't
         // get any block at all.
         if (!peerStatuses.isMaybeLegacy(peerId)) {
             // We only expect CompleteBlock from legacy nodes.
             return
         }
-
-        val saveBlock = handleBlockHeader(peerId, blockData.header, witness, height)
+        val header = blockData.header
+        val saveBlock = handleBlockHeader(peerId, header, witness, height)
         if (!saveBlock) {
             return
         }
-        handleUnfinishedBlock(peerId, blockData.header, blockData.transactions)
+
+        val decodedHeader = blockchainConfiguration.decodeBlockHeader(header)
+        if (decodedHeader !is BaseBlockHeader) {
+            throw BadMessageException("Expected BaseBlockHeader")
+        }
+        handleUnfinishedBlock(peerId, header, decodedHeader, blockData.transactions)
     }
 
     /**
@@ -614,25 +639,25 @@ class FastSynchronizer(
         val block = job.block ?: throw ProgrammerMistake("Attempting to commit an unfinished job")
         addBlockCompletionFuture = blockDatabase
                 .addBlock(block, addBlockCompletionFuture, bTrace)
-                .whenCompleteUnwrapped(loggingContext) { _: Any?, exception ->
+                .whenCompleteUnwrapped(loggingContext, always = { _, exception ->
                     if (exception != null) {
                         handleAddBlockException(exception, block, bTrace, peerStatuses, job.peerId)
                         job.addBlockException = exception
                     }
                     finishedJobs.add(job)
-                }
+                })
     }
 
     /**
      * Non-private for testing purposes
      */
     internal fun processMessages() {
-        for (packet in communicationManager.getPackets()) {
-            val peerId = packet.first
+        messageDurationTracker.cleanup()
+        resetServedRequests()
+        for ((peerId, _, message) in communicationManager.getPackets()) {
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue
             }
-            val message = packet.second
             if (message is GetBlockHeaderAndBlock || message is BlockHeaderMessage) {
                 peerStatuses.confirmModern(peerId)
             }
@@ -641,15 +666,26 @@ class FastSynchronizer(
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
                     is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight.get()) // A replica might ask us
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight.get())
-                    is GetBlockSignature -> sendBlockSignature(peerId, message.blockRID)
-                    is BlockHeaderMessage -> handleBlockHeader(peerId, message.header, message.witness, message.requestedHeight)
-                    is UnfinishedBlock -> handleUnfinishedBlock(peerId, message.header, message.transactions)
-                    is CompleteBlock -> handleCompleteBlock(peerId, message.data, message.height, message.witness)
-                    is Status -> peerStatuses.statusReceived(peerId, message.height - 1)
-                    is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message)) return
+                    is BlockHeaderMessage -> handleBlockHeader(peerId, message)
+                    is UnfinishedBlock -> handleUnfinishedBlock(peerId, message)
+                    is CompleteBlock -> handleCompleteBlock(peerId, message)
+                    is EbftVersion -> logger.debug { "Received EbftVersion from peer $peerId" }
+                    is Transaction -> logger.trace { "Got transaction from peer $peerId, ignoring" }
 
-                    is Transaction -> logger.info("Got unexpected transaction from peer $peerId, ignoring")
-                    else -> logger.warn { "Unhandled message type: ${message.topic} from peer $peerId" } // WARN b/c this might be buggy?
+                    else -> {
+                        if (signers.contains(peerId)) {
+                            when (message) {
+                                is GetBlockSignature -> sendBlockSignature(peerId, message.blockRID)
+                                is Status -> {
+                                    peerStatuses.statusReceived(peerId, message.height - 1)
+                                    if (message.configHash != null && checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
+                                }
+
+                                is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
+                                else -> logger.warn { "Unhandled message type: ${message.topic} from peer $peerId" } // WARN b/c this might be buggy?
+                            }
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 logger.info("Couldn't handle message $message from peer $peerId. Ignoring and continuing", e)

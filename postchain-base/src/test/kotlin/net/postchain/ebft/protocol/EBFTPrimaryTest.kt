@@ -14,6 +14,7 @@ import net.postchain.ebft.NodeBlockState.WaitBlock
 import net.postchain.ebft.message.BlockSignature
 import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.Status
+import net.postchain.network.ReceivedPacket
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doReturn
@@ -49,7 +50,7 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
         // verify
         verify(blockStrategy).setForceStopBlockBuilding(false)
         verifyIntent(DoNothingIntent)
-        verifyStatus(blockRID = blockRid0, height = 1, serial = 4, round = 0, revolting = false, state = HaveBlock)
+        verifyStatus(blockRID = blockRid0, height = 1, serial = 4, round = 0, revolting = false, state = HaveBlock, signature = null)
         reset(commManager)
 
         /**
@@ -62,14 +63,14 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
          */
         // incoming messages
         messagesToReceive(
-                nodeRid2 to Status(blockRid0, 1, false, 0, 4, HaveBlock.ordinal),
-                nodeRid3 to Status(blockRid0, 1, false, 0, 4, HaveBlock.ordinal)
+                ReceivedPacket(nodeRid2, 2, Status(blockRid0, 1, false, 0, 4, HaveBlock.ordinal, Signature(node2, ByteArray(0)))),
+                ReceivedPacket(nodeRid3, 1, Status(blockRid0, 1, false, 0, 4, HaveBlock.ordinal))
         )
         // execute
         syncManager.update()
         // verify
         verifyIntent(DoNothingIntent)
-        verifyStatus(blockRID = blockRid0, height = 1, serial = 5, round = 0, revolting = false, state = Prepared)
+        verifyStatus(blockRID = blockRid0, height = 1, serial = 5, round = 0, revolting = false, state = Prepared, signature = signature)
         reset(commManager)
 
         /**
@@ -82,15 +83,15 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
          */
         // incoming messages
         messagesToReceive(
-                nodeRid2 to Status(blockRid0, 1, false, 0, 5, Prepared.ordinal),
-                nodeRid3 to Status(blockRid0, 1, false, 0, 5, Prepared.ordinal)
+                ReceivedPacket(nodeRid2, 2, Status(blockRid0, 1, false, 0, 5, Prepared.ordinal, Signature(node2, ByteArray(0)))),
+                ReceivedPacket(nodeRid3, 1, Status(blockRid0, 1, false, 0, 5, Prepared.ordinal))
         )
         // execute
         syncManager.update()
         // verify
-        verifyIntent(FetchCommitSignatureIntent(blockRid0, arrayOf(2, 3)))
+        verifyIntent(FetchCommitSignatureIntent(blockRid0, arrayOf(3)))
         argumentCaptor<GetBlockSignature> {
-            verify(commManager).sendPacket(capture(), eq(listOf(nodeRid2, nodeRid3)))
+            verify(commManager).sendPacket(capture(), eq(listOf(nodeRid3)))
             assertThat(firstValue.blockRID).isEqualTo(blockRid0)
         }
         reset(commManager)
@@ -105,12 +106,11 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
          * Send: Broadcast [Status]
          */
         // setup
-        doReturn(true).whenever(blockDatabase).verifyBlockSignature(isA())
+        doReturn(true).whenever(blockDatabase).applyAndVerifyBlockSignature(isA())
         doReturn(CompletableFuture.completedStage(Unit)).whenever(blockDatabase).commitBlock(isA())
         // incoming messages
         messagesToReceive(
-                nodeRid2 to BlockSignature(blockRid0, Signature(node2, ByteArray(0))),
-                nodeRid3 to BlockSignature(blockRid0, Signature(node3, ByteArray(0)))
+                ReceivedPacket(nodeRid3, 1, BlockSignature(blockRid0, Signature(node3, ByteArray(0))))
         )
         // execute
         syncManager.update()
@@ -129,8 +129,8 @@ class EBFTPrimaryTest : EBFTProtocolBase() {
          */
         // incoming messages
         messagesToReceive(
-                nodeRid2 to Status(null, 2, false, 0, 6, WaitBlock.ordinal),
-                nodeRid3 to Status(null, 2, false, 0, 6, WaitBlock.ordinal)
+                ReceivedPacket(nodeRid2, 2, Status(null, 2, false, 0, 6, WaitBlock.ordinal)),
+                ReceivedPacket(nodeRid3, 1, Status(null, 2, false, 0, 6, WaitBlock.ordinal))
         )
         // execute
         syncManager.update()

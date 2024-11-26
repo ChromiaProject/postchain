@@ -22,29 +22,26 @@ import net.postchain.network.peer.DefaultPeerConnectionManager
 
 open class BaseEBFTInfrastructureFactory : InfrastructureFactory {
 
-    override fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider {
-        return NodeConfigurationProviderFactory.createProvider(appConfig, storage)
-    }
+    override fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider =
+            NodeConfigurationProviderFactory.createProvider(appConfig, storage)
 
-    override fun makeConnectionManager(appConfig: AppConfig): ConnectionManager {
-        return DefaultPeerConnectionManager(
-                EbftPacketEncoderFactory(),
-                EbftPacketDecoderFactory()
-        )
-    }
+    override fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): ConnectionManager =
+            DefaultPeerConnectionManager(nodeConfigProvider, EbftPacketCodecFactory())
 
-    override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
-        return ManualBlockchainConfigurationProvider()
-    }
+    override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider =
+            ManualBlockchainConfigurationProvider()
 
     override fun makeBlockchainInfrastructure(postchainContext: PostchainContext): BlockchainInfrastructure {
         with(postchainContext) {
-            val syncInfra = EBFTSynchronizationInfrastructure(this)
+            val syncInfra = makeSynchronizationInfrastructure(this)
             val restApiConfig = RestApiConfig.fromAppConfig(appConfig)
             val apiInfra = BaseApiInfrastructure(restApiConfig, nodeDiagnosticContext, postchainContext)
             return BaseBlockchainInfrastructure(syncInfra, apiInfra, this)
         }
     }
+
+    open fun makeSynchronizationInfrastructure(postchainContext: PostchainContext): EBFTSynchronizationInfrastructure
+        = EBFTSynchronizationInfrastructure(postchainContext)
 
     override fun makeProcessManager(
             postchainContext: PostchainContext,

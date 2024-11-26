@@ -3,6 +3,7 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import net.postchain.api.internal.PeerApi
 import net.postchain.base.runStorageCommand
 import net.postchain.cli.util.SafeExecutor.withDbVersionMismatch
@@ -12,7 +13,8 @@ import net.postchain.cli.util.requiredPubkeyOption
 import net.postchain.config.app.AppConfig
 import net.postchain.core.AppContext
 
-class CommandPeerInfoRemove : CliktCommand(name = "remove", help = "Remove peer information") {
+class CommandPeerInfoRemove : CliktCommand(name = "remove") { 
+    override fun help(context: Context) = "Remove peer information"
 
     private val nodeConfigFile by nodeConfigOption()
 

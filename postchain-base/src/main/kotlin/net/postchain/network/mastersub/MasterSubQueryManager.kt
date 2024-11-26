@@ -1,6 +1,7 @@
 package net.postchain.network.mastersub
 
 import mu.KLogging
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -8,6 +9,8 @@ import net.postchain.core.block.BlockDetail
 import net.postchain.gtv.Gtv
 import net.postchain.network.mastersub.protocol.MsBlockAtHeightRequest
 import net.postchain.network.mastersub.protocol.MsBlockAtHeightResponse
+import net.postchain.network.mastersub.protocol.MsBlocksFromHeightRequest
+import net.postchain.network.mastersub.protocol.MsBlocksFromHeightResponse
 import net.postchain.network.mastersub.protocol.MsMessage
 import net.postchain.network.mastersub.protocol.MsQueryFailure
 import net.postchain.network.mastersub.protocol.MsQueryRequest
@@ -17,58 +20,61 @@ import java.util.concurrent.CompletionStage
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.time.Duration.Companion.seconds
 
 @Suppress("UNCHECKED_CAST")
-class MasterSubQueryManager(private val messageSender: (BlockchainRid?, MsMessage) -> Boolean) : MsMessageHandler {
+class MasterSubQueryManager(private val queryTimeoutMs: Long, private val messageSender: (BlockchainRid?, MsMessage) -> Boolean) : MsMessageHandler {
 
-    companion object : KLogging() {
-        val timeout = 10.seconds
-    }
+    companion object : KLogging()
 
     private val requestCounter = AtomicLong(0L)
     private val outstandingRequests = ConcurrentHashMap<Long, CompletableFuture<Any?>>()
 
-    fun query(targetBlockchainRid: BlockchainRid?, name: String, args: Gtv): CompletionStage<Gtv> {
+    fun query(targetBlockchainRid: BlockchainRid?, name: String, args: Gtv): CompletionStage<Gtv> =
+            sendRequest(targetBlockchainRid, { requestId ->
+                MsQueryRequest(
+                        requestId,
+                        targetBlockchainRid,
+                        name,
+                        args
+                )
+            }, "Unable to send query")
+
+    fun blockAtHeight(targetBlockchainRid: BlockchainRid, height: Long): CompletionStage<BlockDetail?> =
+            sendRequest(targetBlockchainRid, { requestId ->
+                MsBlockAtHeightRequest(
+                        requestId,
+                        targetBlockchainRid,
+                        height
+                )
+            }, "Unable to send block at height query")
+
+    fun blocksFromHeight(targetBlockchainRid: BlockchainRid, fromHeight: Long, limit: Long): CompletionStage<List<DatabaseAccess.BlockInfoExt>> =
+            sendRequest(targetBlockchainRid, { requestId ->
+                MsBlocksFromHeightRequest(
+                        requestId,
+                        targetBlockchainRid,
+                        fromHeight,
+                        limit,
+                )
+            }, "Unable to send blocks from height query")
+
+    private fun <T> sendRequest(targetBlockchainRid: BlockchainRid?, requestProducer: (requestId: Long) -> MsMessage, errorMessage: String): CompletionStage<T> {
         val requestId = requestCounter.incrementAndGet()
         val future = CompletableFuture<Any?>()
-                .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
-                .whenComplete { _, _ -> outstandingRequests.remove(requestId) }
         outstandingRequests[requestId] = future
 
         if (!messageSender(
                         targetBlockchainRid,
-                        MsQueryRequest(
-                                requestId,
-                                targetBlockchainRid,
-                                name,
-                                args
-                        )
+                        requestProducer(requestId)
                 )) {
-            future.completeExceptionally(ProgrammerMistake("Unable to send query"))
+            future.completeExceptionally(ProgrammerMistake(errorMessage))
         }
-        return future as CompletionStage<Gtv>
+        return future
+                .orTimeout(queryTimeoutMs, TimeUnit.MILLISECONDS)
+                .whenComplete { _, _ -> outstandingRequests.remove(requestId) } as CompletionStage<T>
     }
 
-    fun blockAtHeight(targetBlockchainRid: BlockchainRid, height: Long): CompletionStage<BlockDetail?> {
-        val requestId = requestCounter.incrementAndGet()
-        val future = CompletableFuture<Any?>()
-                .orTimeout(timeout.inWholeSeconds, TimeUnit.SECONDS)
-                .whenComplete { _, _ -> outstandingRequests.remove(requestId) }
-        outstandingRequests[requestId] = future
-
-        if (!messageSender(
-                        targetBlockchainRid,
-                        MsBlockAtHeightRequest(
-                                requestId,
-                                targetBlockchainRid,
-                                height
-                        )
-                )) {
-            future.completeExceptionally(ProgrammerMistake("Unable to send block at height query"))
-        }
-        return future as CompletionStage<BlockDetail?>
-    }
+    fun isRequestOutstanding(requestId: Long) = outstandingRequests.containsKey(requestId)
 
     override fun onMessage(message: MsMessage) {
         when (message) {
@@ -80,6 +86,11 @@ class MasterSubQueryManager(private val messageSender: (BlockchainRid?, MsMessag
             is MsBlockAtHeightResponse -> {
                 outstandingRequests[message.requestId]?.complete(message.block)
                         ?: logger.debug { "Got BlockAtHeightResponse for unknown requestId: ${message.requestId}" }
+            }
+
+            is MsBlocksFromHeightResponse -> {
+                outstandingRequests[message.requestId]?.complete(message.blocks)
+                        ?: logger.debug { "Got BlocksFromHeightResponse for unknown requestId: ${message.requestId}" }
             }
 
             is MsQueryFailure -> {

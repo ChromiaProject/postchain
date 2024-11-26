@@ -27,7 +27,7 @@ class SyncChainWithNoOriginalSignersSlowIntegrationTest : ManagedModeTest() {
         buildBlock(chain, 0)
 
         // Add node 1 as signer
-        addBlockchainConfiguration(
+        addGtxBlockchainConfiguration(
                 chain,
                 setOf(0, 1).associateWith { nodes[it].pubKey.hexStringToByteArray() },
                 null,
@@ -44,7 +44,7 @@ class SyncChainWithNoOriginalSignersSlowIntegrationTest : ManagedModeTest() {
         }
 
         // Remove node 0 as signer
-        addBlockchainConfiguration(
+        addGtxBlockchainConfiguration(
                 chain,
                 setOf(1).associateWith { nodes[it].pubKey.hexStringToByteArray() },
                 null,
@@ -52,7 +52,7 @@ class SyncChainWithNoOriginalSignersSlowIntegrationTest : ManagedModeTest() {
         )
 
         buildBlockNoWait(nodes, chain, 4)
-        await().atMost(10, TimeUnit.SECONDS).untilAsserted {
+        await().atMost(30, TimeUnit.SECONDS).untilAsserted {
             nodes.forEach {
                 val bc = it.retrieveBlockchain()
                 assertThat(bc).isNotNull()

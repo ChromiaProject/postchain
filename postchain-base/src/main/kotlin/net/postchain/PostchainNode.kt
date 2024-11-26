@@ -10,7 +10,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
-import net.postchain.core.BaseInfrastructureFactoryProvider
+import net.postchain.base.BaseInfrastructureFactoryProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.Shutdownable
@@ -37,13 +37,18 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
 
         val blockBuilderStorage = StorageBuilder.buildStorage(
                 appConfig,
-                appConfig.databaseBlockBuilderMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
-                appConfig.databaseBlockBuilderWriteConcurrency,
-                wipeDb)
-        val sharedStorage = StorageBuilder.buildStorage(appConfig,
-                appConfig.databaseSharedMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
-                appConfig.databaseSharedWriteConcurrency,
-                wipeDb)
+                maxWaitWrite = appConfig.databaseBlockBuilderMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
+                maxWriteTotal = appConfig.databaseBlockBuilderWriteConcurrency,
+                maxReadTotal = appConfig.databaseBlockBuilderReadConcurrency,
+                wipeDatabase = wipeDb,
+                name = "block builder")
+        val sharedStorage = StorageBuilder.buildStorage(
+                appConfig,
+                maxWaitWrite = appConfig.databaseSharedMaxWaitWrite.toDuration(DurationUnit.MILLISECONDS),
+                maxWriteTotal = appConfig.databaseSharedWriteConcurrency,
+                maxReadTotal = appConfig.databaseSharedReadConcurrency,
+                wipeDatabase = wipeDb,
+                name = "shared")
 
         sharedStorage.withReadConnection { ctx ->
             DatabaseAccess.of(ctx).checkCollation(ctx.conn, suppressError = appConfig.databaseSuppressCollationCheck)
@@ -53,12 +58,13 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
 
         val blockQueriesProvider = BlockQueriesProviderImpl()
         val blockchainConfigProvider = infrastructureFactory.makeBlockchainConfigurationProvider()
+        val nodeConfigProvider = infrastructureFactory.makeNodeConfigurationProvider(appConfig, sharedStorage)
         postchainContext = PostchainContext(
                 appConfig,
-                infrastructureFactory.makeNodeConfigurationProvider(appConfig, sharedStorage),
+                nodeConfigProvider,
                 blockBuilderStorage,
                 sharedStorage,
-                infrastructureFactory.makeConnectionManager(appConfig),
+                infrastructureFactory.makeConnectionManager(nodeConfigProvider),
                 blockQueriesProvider,
                 JsonNodeDiagnosticContext(version, appConfig.pubKey, infrastructureFactory),
                 blockchainConfigProvider

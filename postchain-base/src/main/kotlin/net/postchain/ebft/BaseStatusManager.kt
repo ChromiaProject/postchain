@@ -8,12 +8,12 @@ import mu.withLoggingContext
 import net.postchain.common.toHex
 import net.postchain.core.NodeRid
 import net.postchain.crypto.Signature
+import net.postchain.ebft.message.StateChangeTracker
 import net.postchain.getBFTRequiredSignatureCount
 import net.postchain.logging.REVOLTED_ON_NODE_TAG
 import net.postchain.logging.REVOLTING_NODE_TAG
 import net.postchain.metrics.NodeStatusMetrics
 import java.time.Clock
-import java.util.Arrays
 
 /**
  * StatusManager manages the status of the consensus protocol
@@ -23,6 +23,7 @@ class BaseStatusManager(
         private val myIndex: Int,
         myNextHeight: Long,
         private val nodeStatusMetrics: NodeStatusMetrics,
+        private val stateChangeTracker: StateChangeTracker,
         private val clock: Clock = Clock.systemUTC()
 ) : StatusManager {
     private val nodeCount = nodes.size
@@ -59,10 +60,10 @@ class BaseStatusManager(
      * @param blockRID latest block
      * @return the number of nodes at the same state as the local node
      */
-    private fun countNodes(state: NodeBlockState, height: Long, blockRID: ByteArray?): Int {
+    private fun countNodes(state: NodeBlockState, height: Long, blockRID: ByteArray?, round: Long): Int {
         var count = 0
         for (ns in nodeStatuses) {
-            if (ns.height == height && ns.state == state) {
+            if (ns.height == height && ns.state == state && ns.round == round) {
                 if (blockRID == null) {
                     if (ns.blockRID == null) count++
                 } else {
@@ -96,6 +97,9 @@ class BaseStatusManager(
                 || ((status.height == existingStatus.height) && (status.round > existingStatus.round))
         ) {
             nodeStatuses[nodeIndex] = status
+            stateChangeTracker.statusChange(nodeRids[nodeIndex], status)
+            status.signature?.let { commitSignatures[nodeIndex] = it }
+
             recomputeStatus()
         }
     }
@@ -118,8 +122,10 @@ class BaseStatusManager(
         val revoltingNode = nodeRids[revoltingNodeIndex]
         val revoltedOnNodeIndex = calculateIndex(status.height, status.round)
         val revoltedOnNode = nodeRids[revoltedOnNodeIndex]
-        withLoggingContext(REVOLTED_ON_NODE_TAG to revoltedOnNode.toString(), REVOLTING_NODE_TAG to revoltingNode.toString()) {
-            logger.info("Node $revoltingNode has revolted against $revoltedOnNode")
+        if (logger.isDebugEnabled) {
+            withLoggingContext(REVOLTED_ON_NODE_TAG to revoltedOnNode.toString(), REVOLTING_NODE_TAG to revoltingNode.toString()) {
+                logger.debug { "Node $revoltingNode has revolted against $revoltedOnNode" }
+            }
         }
         getRevoltCounter(revoltingNodeIndex, revoltedOnNodeIndex).increment()
     }
@@ -142,6 +148,7 @@ class BaseStatusManager(
             round = 0
             revolting = false
             state = NodeBlockState.WaitBlock
+            signature = null
         }
         resetCommitSignatures()
         intent = DoNothingIntent
@@ -219,6 +226,7 @@ class BaseStatusManager(
         myStatus.state = NodeBlockState.HaveBlock
         commitSignatures[myIndex] = mySignature
         intent = DoNothingIntent
+        stateChangeTracker.myStatusChange(myStatus)
         recomputeStatus()
     }
 
@@ -293,7 +301,7 @@ class BaseStatusManager(
     @Synchronized
     override fun onCommitSignature(nodeIndex: Int, blockRID: ByteArray, signature: Signature) {
         if (myStatus.state == NodeBlockState.Prepared
-                && Arrays.equals(blockRID, myStatus.blockRID)) {
+                && blockRID.contentEquals(myStatus.blockRID)) {
             this.commitSignatures[nodeIndex] = signature
             recomputeStatus()
         } else {
@@ -336,6 +344,8 @@ class BaseStatusManager(
         return nodeStatusesTimestamps[nodeIndex]
     }
 
+    override fun shouldApplySignature(state: NodeBlockState): Boolean = state == NodeBlockState.Prepared
+
     /**
      * Recompute status until no more updates occur.
      */
@@ -366,6 +376,7 @@ class BaseStatusManager(
             myStatus.state = NodeBlockState.WaitBlock
             myStatus.blockRID = null
             myStatus.serial += 1
+            myStatus.signature = null
             resetCommitSignatures()
         }
 
@@ -415,6 +426,7 @@ class BaseStatusManager(
             } else if (sameHeightHigherRounds.size >= this.quorum) {
                 myStatus.serial += 1
                 myStatus.round = sameHeightHigherRounds.sortedDescending()[this.quorum - 1]
+                myStatus.revolting = false
                 if (myStatus.state == NodeBlockState.HaveBlock) {
                     logger.info("Resetting block in HaveBlock state due to new round")
                     resetBlock()
@@ -467,11 +479,13 @@ class BaseStatusManager(
          * Will move to state [Prepared] if enough nodes have reached our BlockRID
          */
         fun handleHaveBlockState(): Boolean {
-            val count = countNodes(NodeBlockState.HaveBlock, myStatus.height, myStatus.blockRID) +
-                    countNodes(NodeBlockState.Prepared, myStatus.height, myStatus.blockRID)
+            val count = countNodes(NodeBlockState.HaveBlock, myStatus.height, myStatus.blockRID, myStatus.round) +
+                    countNodes(NodeBlockState.Prepared, myStatus.height, myStatus.blockRID, myStatus.round)
             return if (count >= this.quorum) {
                 myStatus.state = NodeBlockState.Prepared
+                myStatus.signature = this.commitSignatures[myIndex]
                 myStatus.serial += 1
+                stateChangeTracker.myStatusChange(myStatus)
                 true
             } else {
                 false
@@ -544,7 +558,7 @@ class BaseStatusManager(
                 if (primaryBlockRID != null) {
                     val _intent = intent
                     if (!(_intent is FetchUnfinishedBlockIntent &&
-                                    _intent.isThisTheBlockWeAreWaitingFor(myStatus.blockRID))) {
+                                    _intent.isThisTheBlockWeAreWaitingFor(primaryBlockRID))) {
                         intent = FetchUnfinishedBlockIntent(primaryBlockRID)
                         return true
                     }

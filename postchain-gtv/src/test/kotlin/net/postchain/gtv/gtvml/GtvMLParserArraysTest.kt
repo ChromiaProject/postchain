@@ -4,6 +4,7 @@ package net.postchain.gtv.gtvml
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import jakarta.xml.bind.UnmarshalException
 import net.postchain.gtv.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -50,9 +51,9 @@ class GtvMLParserArraysTest {
     fun parseGtv_array_with_not_found_param_throws_exception() {
         val xml = "<array><string>hello</string><param type='int' key='UNKNOWN_KEY'/></array>"
         assertThrows<IllegalArgumentException> {
-        GtvMLParser.parseGtvML(
-                xml,
-                mapOf("num" to GtvInteger(42)))
+            GtvMLParser.parseGtvML(
+                    xml,
+                    mapOf("num" to GtvInteger(42)))
         }
     }
 
@@ -61,8 +62,8 @@ class GtvMLParserArraysTest {
         val xml = "<array><string>hello</string><param type='int' key='CASE_SENSITIVE_KEY'/></array>"
         assertThrows<IllegalArgumentException> {
             GtvMLParser.parseGtvML(
-                xml,
-                mapOf("case_sensitive_key" to GtvInteger(42))
+                    xml,
+                    mapOf("case_sensitive_key" to GtvInteger(42))
             )
         }
     }
@@ -213,5 +214,19 @@ class GtvMLParserArraysTest {
         ))
 
         assertThat(actual).isEqualTo(expected)
+    }
+
+    @Test
+    fun `parseGtvML does not accept XML External Entity (XXE) injection attacks`() {
+        val xml = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <!DOCTYPE dict [
+              <!ELEMENT dict ANY>
+              <!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+            <dict>&xxe;</dict>            
+        """.trimIndent()
+        assertThrows<UnmarshalException> {
+            GtvMLParser.parseGtvML(xml)
+        }
     }
 }

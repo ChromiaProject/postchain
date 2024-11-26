@@ -20,6 +20,7 @@ import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.BaseBlockWitnessProvider
 import net.postchain.base.data.BaseTransactionFactory
 import net.postchain.base.extension.ConfigurationHashBlockBuilderExtension
+import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.core.BadConfigurationException
@@ -39,6 +40,7 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockWitness
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
+import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
@@ -54,36 +56,31 @@ open class BaseBlockchainConfiguration(
         val configData: BlockchainConfigurationData,
         val cryptoSystem: CryptoSystem,
         partialContext: BlockchainContext,
-        private val blockSigMaker: SigMaker
+        val blockSigMaker: SigMaker
 ) : BlockchainConfiguration {
 
     companion object : KLogging()
 
-    val baseConfig: Gtv
-        get() {
-            val fullConfig = rawConfig.asDict().toMutableMap()
-            fullConfig.remove(KEY_SIGNERS)
-            return gtv(fullConfig)
-        }
-    final override val rawConfig: Gtv
-        get() = configData.rawConfig
+    final override val rawConfig: Gtv = configData.rawConfig
+    val baseConfig: Gtv = calculateBaseConfig()
+    final override val signers = configData.signers
+
+    override val traits = setOf<String>()
+
+    val blockStore = BaseBlockStore()
     final override val blockchainContext: BlockchainContext = BaseBlockchainContext(
             partialContext.chainID,
             partialContext.blockchainRID,
-            resolveNodeID(partialContext.nodeID, partialContext.nodeRID!!),
+            resolveNodeID(partialContext.nodeID, partialContext.nodeRID),
             partialContext.nodeRID
     )
-
-    override val traits = setOf<String>()
-    val blockStore = BaseBlockStore()
-    final override val chainID get() = blockchainContext.chainID
-    final override val blockchainRid get() = blockchainContext.blockchainRID
+    final override val chainID = blockchainContext.chainID
+    final override val blockchainRid = blockchainContext.blockchainRID
     final override val effectiveBlockchainRID = configData.historicBrid ?: blockchainContext.blockchainRID
-    final override val signers get() = configData.signers
-    final override val transactionQueueSize: Int
-        get() = configData.txQueueSize.toInt()
-    final override val transactionQueueRecheckInterval: Duration
-        get() = configData.txQueueRecheckInterval.milliseconds
+    final override val transactionQueueSize = configData.txQueueSize.toInt()
+    final override val transactionQueueRecheckInterval: Duration = configData.txQueueRecheckInterval.milliseconds
+
+    override val configHash = GtvToBlockchainRidFactory.calculateBlockchainRid(rawConfig, ::sha256Digest).data
 
     private val blockBuildingStrategyConstructor = constructorOf<BlockBuildingStrategy>(
             configData.blockStrategyName,
@@ -111,7 +108,7 @@ open class BaseBlockchainConfiguration(
             signers.toTypedArray()
     )
 
-    override val blockchainDependencies: List<BlockchainRelatedInfo> get() = configData.blockchainDependencies
+    override val blockchainDependencies: List<BlockchainRelatedInfo> = configData.blockchainDependencies
 
     // Infrastructure settings
     override val syncInfrastructureName = DynamicClassName.build(configData.synchronizationInfrastructure)
@@ -154,7 +151,6 @@ open class BaseBlockchainConfiguration(
                 cryptoSystem,
                 ctx,
                 blockStore,
-                getTransactionFactory(),
                 getSpecialTxHandler(),
                 signers.toTypedArray(),
                 blockSigMaker,
@@ -164,13 +160,15 @@ open class BaseBlockchainConfiguration(
                 effectiveBlockchainRID != blockchainRid,
                 blockStrategyConfig.maxBlockSize,
                 blockStrategyConfig.maxBlockTransactions,
-                if (isSyncing) 0 else configData.maxTxExecutionTime,
                 blockStrategyConfig.maxSpecialEndTransactionSize,
                 isSuppressSpecialTransactionValidation().also {
                     withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainRid.toHex(), CHAIN_IID_TAG to chainID.toString()) {
                         logger.debug { "suppressSpecialTransactionValidation: $it" }
                     }
-                }
+                },
+                configData.maxBlockFutureTime,
+                if (configData.addPrimaryKeyToHeader) blockchainContext.nodeRID else null,
+                isSyncing
         )
 
         return bb
@@ -197,7 +195,7 @@ open class BaseBlockchainConfiguration(
     }
 
     override fun makeBlockQueries(storage: Storage): BlockQueries =
-            BaseBlockQueries(cryptoSystem, storage, blockStore, chainID, blockchainContext.nodeRID!!)
+            BaseBlockQueries(cryptoSystem, storage, blockStore, chainID, blockchainContext.nodeRID)
 
     override fun hasQuery(name: String): Boolean = false
 
@@ -219,4 +217,10 @@ open class BaseBlockchainConfiguration(
             } else listOf()
 
     open fun isSuppressSpecialTransactionValidation(): Boolean = false
+
+    private fun calculateBaseConfig(): Gtv {
+        val fullConfig = rawConfig.asDict().toMutableMap()
+        fullConfig.remove(KEY_SIGNERS)
+        return gtv(fullConfig)
+    }
 }

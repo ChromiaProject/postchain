@@ -3,7 +3,11 @@
 package net.postchain.network.peer
 
 import assertk.assertThat
+import assertk.assertions.containsExactly
+import assertk.assertions.containsExactlyInAnyOrder
 import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNotEqualTo
 import assertk.isContentEqualTo
 import net.postchain.base.NetworkNodes
 import net.postchain.base.PeerCommConfiguration
@@ -12,13 +16,16 @@ import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.app.AppConfig
-import net.postchain.network.XPacketDecoder
-import net.postchain.network.XPacketDecoderFactory
-import net.postchain.network.XPacketEncoderFactory
+import net.postchain.config.node.NodeConfig
+import net.postchain.config.node.NodeConfigurationProvider
+import net.postchain.core.NodeRid
+import net.postchain.network.XPacketCodec
+import net.postchain.network.XPacketCodecFactory
 import net.postchain.network.common.ChainsWithConnections
 import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.netty2.NettyPeerConnection
+import net.postchain.network.peer.DefaultPeerConnectionManager.Companion.NETWORK_NODES_UPDATE_INTERVAL
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.apache.commons.lang3.reflect.FieldUtils
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -26,15 +33,21 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.atLeast
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.util.concurrent.CompletableFuture
 
 class DefaultPeerConnectionManagerTest {
 
@@ -42,8 +55,7 @@ class DefaultPeerConnectionManagerTest {
 
     private lateinit var peerInfo1: PeerInfo
     private lateinit var peerConnectionDescriptor1: PeerConnectionDescriptor
-    private lateinit var packetEncoderFactory: XPacketEncoderFactory<Int>
-    private lateinit var packetDecoderFactory: XPacketDecoderFactory<Int>
+    private lateinit var packetCodecFactory: XPacketCodecFactory<Int>
 
     private lateinit var peerInfo2: PeerInfo
     private lateinit var peerConnectionDescriptor2: PeerConnectionDescriptor
@@ -52,6 +64,10 @@ class DefaultPeerConnectionManagerTest {
     private lateinit var appConfig2: AppConfig
 
     private lateinit var unknownPeerInfo: PeerInfo
+
+    private lateinit var appConfig: AppConfig
+    private lateinit var nodeConfig: NodeConfig
+    private lateinit var nodeConfigProvider: NodeConfigurationProvider
 
     @BeforeEach
     fun setUp() {
@@ -72,12 +88,16 @@ class DefaultPeerConnectionManagerTest {
         peerConnectionDescriptor1 = PeerConnectionDescriptor(blockchainRid, peerInfo1.peerId(), ConnectionDirection.OUTGOING)
         peerConnectionDescriptor2 = PeerConnectionDescriptor(blockchainRid, peerInfo2.peerId(), ConnectionDirection.OUTGOING)
 
-        packetEncoderFactory = mock {
+        packetCodecFactory = mock {
             on { create(any(), any()) } doReturn mock()
         }
 
-        packetDecoderFactory = mock {
-            on { create(any()) } doReturn mock()
+        appConfig = mock { }
+        nodeConfig = mock {
+            on { appConfig } doReturn appConfig
+        }
+        nodeConfigProvider = mock {
+            on { getConfiguration() } doReturn nodeConfig
         }
     }
 
@@ -94,9 +114,9 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        ).apply { connectChain(chainPeerConfig, false) }
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory).apply {
+            connectChain(chainPeerConfig, false)
+        }
 
         // Then
         verify(communicationConfig, never()).networkNodes
@@ -108,7 +128,7 @@ class DefaultPeerConnectionManagerTest {
     fun connectChain_with_autoConnect_without_any_peers_will_result_in_exception() {
         // Given
         val communicationConfig: PeerCommConfiguration = mock {
-            on { networkNodes } doReturn NetworkNodes.buildNetworkNodesDummy()
+            on { networkNodes } doReturn NetworkNodesHelper.buildDummyNetworkNodes()
             on { myPeerInfo() } doReturn peerInfo1
         }
         val chainPeerConfig: XChainPeersConfiguration = mock {
@@ -118,9 +138,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        )
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory)
 
         try {
             connectionManager.also { it.connectChain(chainPeerConfig, true) }
@@ -138,7 +156,6 @@ class DefaultPeerConnectionManagerTest {
 
     @Test
     fun connectChain_with_autoConnect_with_two_peers() {
-        // TODO: [et]: Maybe use arg captor here
         // Given
         val nodes = NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), appConfig2)
         val communicationConfig: PeerCommConfiguration = mock {
@@ -154,9 +171,9 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        ).apply { connectChain(chainPeerConfig, true) }
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory).apply {
+            connectChain(chainPeerConfig, true)
+        }
 
         // Then
         verify(chainPeerConfig, atLeast(1)).chainId
@@ -176,21 +193,23 @@ class DefaultPeerConnectionManagerTest {
     @Test
     fun connectChainPeer_connects_unknown_peer_with_exception() {
         // Given
-        val communicationConfig: PeerCommConfiguration = emptyCommConf()
+        val nodes = NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), appConfig1)
+        val communicationConfig: PeerCommConfiguration =
+                mock {
+                    on { myPeerInfo() } doReturn peerInfo1
+                    on { networkNodes } doReturn nodes
+                }
         val chainPeerConf = XChainPeersConfiguration(1L, blockchainRid, communicationConfig, mock())
 
-        // Hate mocking
-        val d: XPacketDecoder<Int> = mock { }
-        val df: XPacketDecoderFactory<Int> = mock {
-            on { create(any()) } doReturn d
+        // Mocks
+        val codec: XPacketCodec<Int> = mock { }
+        val codecFactory: XPacketCodecFactory<Int> = mock {
+            on { create(any(), any()) } doReturn codec
         }
 
         // When / Then exception
         assertThrows<ProgrammerMistake> {
-            DefaultPeerConnectionManager(
-                    mock(),
-                    df
-            ).apply {
+            DefaultPeerConnectionManager(nodeConfigProvider, codecFactory).apply {
                 connectChain(chainPeerConf, false) // Without connecting to peers
                 connectChainPeer(1, unknownPeerInfo.peerId())
             }
@@ -214,9 +233,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        ).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory).apply {
             connectChain(chainPeerConfig, false) // Without connecting to peers
             connectChainPeer(1, peerInfo2.peerId())
         }
@@ -246,9 +263,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        ).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory).apply {
             connectChain(chainPeerConfig, true) // Auto connect all peers
 
             // Emulates call of onPeerConnected() by XConnector
@@ -259,7 +274,7 @@ class DefaultPeerConnectionManagerTest {
 
         // Then
         verify(chainPeerConfig, atLeast(3)).chainId
-        verify(chainPeerConfig, times(6)).commConfiguration
+        verify(chainPeerConfig, times(7)).commConfiguration
 
         connectionManager.shutdown()
     }
@@ -298,9 +313,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        ).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory).apply {
             connectChain(chainPeerConfig, true) // With autoConnect
 
             // Then / before peers connected
@@ -309,7 +322,7 @@ class DefaultPeerConnectionManagerTest {
             assertFalse { isPeerConnected(1L, peerInfo2.peerId()) }
             assertFalse { isPeerConnected(1L, unknownPeerInfo.peerId()) }
             // - getConnectedPeers
-            assertThat(getConnectedNodes(1L).toTypedArray()).isEmpty()
+            assertThat(getConnectedNodes(1L)).isEmpty()
 
             // Emulates call of onPeerConnected() by XConnector
             onNodeConnected(mockConnection(peerConnectionDescriptor1))
@@ -321,8 +334,8 @@ class DefaultPeerConnectionManagerTest {
             assertTrue { isPeerConnected(1L, peerInfo2.peerId()) }
             assertFalse { isPeerConnected(1L, unknownPeerInfo.peerId()) }
             // - getConnectedPeers
-            assertThat(getConnectedNodes(1L).toTypedArray()).isContentEqualTo(
-                    arrayOf(peerInfo1.peerId(), peerInfo2.peerId())
+            assertThat(getConnectedNodes(1L)).containsExactlyInAnyOrder(
+                    peerInfo1.peerId(), peerInfo2.peerId()
             )
 
 
@@ -334,9 +347,7 @@ class DefaultPeerConnectionManagerTest {
             assertTrue { isPeerConnected(1L, peerInfo2.peerId()) }
             assertFalse { isPeerConnected(1L, unknownPeerInfo.peerId()) }
             // - getConnectedPeers
-            assertThat(getConnectedNodes(1L).toTypedArray()).isContentEqualTo(
-                    arrayOf(peerInfo2.peerId())
-            )
+            assertThat(getConnectedNodes(1L)).containsExactly(peerInfo2.peerId())
 
 
             // When / Disconnecting the whole chain
@@ -372,13 +383,11 @@ class DefaultPeerConnectionManagerTest {
             on { blockchainRid } doReturn blockchainRid
             on { commConfiguration } doReturn communicationConfig
         }
-        val connection1: NettyPeerConnection = mockConnection(peerConnectionDescriptor1)
-        val connection2: NettyPeerConnection = mockConnection(peerConnectionDescriptor2)
+        val connection1: NettyPeerConnection<Int> = mockConnection(peerConnectionDescriptor1)
+        val connection2: NettyPeerConnection<Int> = mockConnection(peerConnectionDescriptor2)
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        ).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory).apply {
             connectChain(chainPeerConfig, true) // With autoConnect
 
             // Emulates call of onPeerConnected() by XConnector
@@ -405,13 +414,7 @@ class DefaultPeerConnectionManagerTest {
         }
     }
 
-    private fun emptyManager() = DefaultPeerConnectionManager<Int>(mock(), mock())
-
-    private fun emptyCommConf(): PeerCommConfiguration {
-        return mock {
-            on { myPeerInfo() } doReturn peerInfo1
-        }
-    }
+    private fun emptyManager() = DefaultPeerConnectionManager<Int>(nodeConfigProvider, mock())
 
     @Test
     fun broadcastPacket_sends_packet_to_all_receivers_successfully() {
@@ -428,13 +431,11 @@ class DefaultPeerConnectionManagerTest {
             on { blockchainRid } doReturn blockchainRid
             on { commConfiguration } doReturn communicationConfig
         }
-        val connection1: NettyPeerConnection = mockConnection(peerConnectionDescriptor1)
-        val connection2: NettyPeerConnection = mockConnection(peerConnectionDescriptor2)
+        val connection1: NettyPeerConnection<Int> = mockConnection(peerConnectionDescriptor1)
+        val connection2: NettyPeerConnection<Int> = mockConnection(peerConnectionDescriptor2)
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(
-                packetEncoderFactory, packetDecoderFactory
-        ).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory).apply {
             connectChain(chainPeerConfig, true) // With autoConnect
 
             // Emulates call of onPeerConnected() by XConnector
@@ -457,9 +458,109 @@ class DefaultPeerConnectionManagerTest {
         connectionManager.shutdown()
     }
 
-    fun mockConnection(descriptor: PeerConnectionDescriptor): NettyPeerConnection {
-        val m: NettyPeerConnection = mock()
+    @Test
+    fun `refresh node info and connect to new host`() {
+        // Given one peer
+        val nodes = NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), appConfig1)
+        val communicationConfig: PeerCommConfiguration = mock {
+            on { pubKey } doReturn peerInfo1.pubKey
+            on { myPeerInfo() } doReturn peerInfo1
+            on { networkNodes } doReturn nodes
+        }
+        val chainPeerConfig: XChainPeersConfiguration = mock {
+            on { chainId } doReturn 1L
+            on { blockchainRid } doReturn blockchainRid
+            on { commConfiguration } doReturn communicationConfig
+        }
+        val clock: Clock = mockClock()
+        Mockito.`when`(nodeConfig.peerInfoMap).doReturn(nodes.getPeerMap())
+
+        // When connecting a chain
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, clock).apply {
+            connectChain(chainPeerConfig, false)
+            connectChainPeer(chainPeerConfig.chainId, peerInfo2.peerId())
+        }
+
+        // Then try to connect to that one peer
+        argumentCaptor<PeerCommConfiguration>().apply {
+            verify(packetCodecFactory, times(2)).create(capture(), any())
+            assertThat(allValues.size).isEqualTo(2)
+            allValues.forEach {
+                assertThat(firstValue.networkNodes[peerInfo2.pubKey]!!.host).isEqualTo(peerInfo2.host)
+            }
+        }
+
+        // Given the peer host is updated
+        val updatedPeerInfo2 = PeerInfo("new-host", peerInfo2.port, peerInfo2.pubKey)
+        Mockito.`when`(nodeConfig.peerInfoMap).doReturn(mapOf(NodeRid(peerInfo2.pubKey) to updatedPeerInfo2))
+        Mockito.`when`(clock.instant().isAfter(any())).doReturn(true)
+
+        // When
+        connectionManager.connectChainPeer(chainPeerConfig.chainId, updatedPeerInfo2.peerId())
+
+        // Then connect to new host
+        assertThat(updatedPeerInfo2.host).isNotEqualTo(peerInfo2.host)
+        argumentCaptor<PeerCommConfiguration>().apply {
+            verify(packetCodecFactory, times(3)).create(capture(), any())
+            assertThat(lastValue.networkNodes[peerInfo2.pubKey]!!.host).isEqualTo(updatedPeerInfo2.host)
+        }
+    }
+
+    @Test
+    fun `node info update interval`() {
+        // Given
+        val nodes = NetworkNodes.buildNetworkNodes(setOf(peerInfo1, peerInfo2), appConfig1)
+        val communicationConfig: PeerCommConfiguration = mock {
+            on { pubKey } doReturn peerInfo1.pubKey
+            on { myPeerInfo() } doReturn peerInfo1
+            on { networkNodes } doReturn nodes
+            on { resolvePeer(peerInfo2.pubKey) } doReturn peerInfo2
+        }
+        val xChainPeersConfiguration = mock<XChainPeersConfiguration> {
+            on { commConfiguration } doReturn communicationConfig
+        }
+        val chainWithPeerConnections = mock<ChainWithPeerConnections> {
+            on { peerConfig } doReturn xChainPeersConfiguration
+        }
+
+        val initialNetworkNodeTimestamp = Instant.ofEpochSecond(0)
+        val clock: Clock = mock {
+            on { instant() } doReturn initialNetworkNodeTimestamp
+        }
+
+        // When
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, clock).apply {
+            getNetworkNodeRids(chainWithPeerConnections)
+            getNetworkNodeRids(chainWithPeerConnections)
+        }
+
+        // Then timestamp is unchanged since no update took place
+        assertThat(connectionManager.networkNodesTimestamp).isEqualTo(initialNetworkNodeTimestamp)
+
+        // Given time interval passed
+        Mockito.`when`(clock.instant()).doReturn(initialNetworkNodeTimestamp.plus(NETWORK_NODES_UPDATE_INTERVAL).plus(Duration.ofSeconds(1)))
+
+        // When
+        connectionManager.getNetworkNodeRids(chainWithPeerConnections)
+
+        // Then timestamp is changed due to update
+        assertThat(connectionManager.networkNodesTimestamp).isNotEqualTo(initialNetworkNodeTimestamp)
+    }
+
+    fun mockConnection(descriptor: PeerConnectionDescriptor): NettyPeerConnection<Int> {
+        val m: NettyPeerConnection<Int> = mock()
         whenever(m.descriptor()).thenReturn(descriptor)
+        whenever(m.close()).thenReturn(CompletableFuture.completedFuture(null))
         return m
+    }
+
+    private fun mockClock(): Clock {
+        val instant = mock<Instant> {
+            on { isAfter(any()) } doReturn false
+        }
+        Mockito.`when`(instant.plus(any())).doReturn(instant)
+        return mock {
+            on { instant() } doReturn instant
+        }
     }
 }

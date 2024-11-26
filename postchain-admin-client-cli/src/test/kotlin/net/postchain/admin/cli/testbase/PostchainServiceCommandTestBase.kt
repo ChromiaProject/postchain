@@ -5,7 +5,7 @@ import io.grpc.ManagedChannel
 import io.grpc.Server
 import io.grpc.inprocess.InProcessChannelBuilder
 import io.grpc.inprocess.InProcessServerBuilder
-import net.postchain.admin.cli.testutil.TestConsole
+import net.postchain.admin.cli.testutil.TestTerminal
 import net.postchain.server.grpc.PostchainServiceGrpcImpl
 import net.postchain.server.service.PostchainService
 import org.junit.jupiter.api.AfterEach
@@ -18,7 +18,7 @@ import java.nio.file.Paths
 abstract class PostchainServiceCommandTestBase {
 
     @ExtendWith
-    val testConsole = TestConsole()
+    val testTerminal = TestTerminal()
 
     protected lateinit var postchainService: PostchainService
     private lateinit var channel: Channel
@@ -35,7 +35,7 @@ abstract class PostchainServiceCommandTestBase {
         server.shutdownNow()
     }
 
-    protected fun getResouceFile(name: String): File {
+    protected fun getResourceFile(name: String): File {
         return Paths.get(javaClass.getResource("/net/postchain/admin/cli/${name}")!!.toURI()).toFile()
     }
 

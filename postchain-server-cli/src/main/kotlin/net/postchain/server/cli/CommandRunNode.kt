@@ -3,6 +3,7 @@
 package net.postchain.server.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.multiple
@@ -18,7 +19,8 @@ import net.postchain.config.app.AppConfig
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvFileReader
 
-class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node with a configuration") {
+class CommandRunNode : CliktCommand(name = "run-node") { 
+    override fun help(context: Context) = "Starts a node with a configuration"
 
     private val nodeConfigFile by nodeConfigOption()
 
@@ -53,7 +55,7 @@ class CommandRunNode : CliktCommand(name = "run-node", help = "Starts a node wit
             runStorageCommand(appConfig, chainIDs[0], true) { ctx ->
                 val wasInitialized = BlockchainApi.initializeBlockchain(ctx, blockchainRid, override, blockchainConfig)
                 if (wasInitialized) {
-                    appConfig.genesisPeer?.let { DatabaseAccess.of(ctx).addBlockchainReplica(ctx, blockchainRid, PubKey(it.pubKey)) }
+                    appConfig.initialPeer?.let { DatabaseAccess.of(ctx).addBlockchainReplica(ctx, blockchainRid, PubKey(it.pubKey)) }
                 }
 
                 if (!wasInitialized && update) {

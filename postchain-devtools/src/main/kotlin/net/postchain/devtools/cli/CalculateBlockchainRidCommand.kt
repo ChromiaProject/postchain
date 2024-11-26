@@ -3,6 +3,7 @@
 package net.postchain.devtools.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
@@ -10,10 +11,9 @@ import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.gtvml.GtvMLParser
 import java.io.File
 
-class CalculateBlockchainRidCommand : CliktCommand(
-        name = "blockchain-rid",
-        help = "Calculates blockchain RID by blockchain configuration in GtxML format"
-) {
+class CalculateBlockchainRidCommand : CliktCommand(name = "blockchain-rid") {
+
+    override fun help(context: Context) = "Calculates blockchain RID by blockchain configuration in GtxML format"
 
     private val blockchainConfigFilename by option(
             "-bc", "--blockchain-config",

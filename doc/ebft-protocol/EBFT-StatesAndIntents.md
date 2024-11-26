@@ -6,11 +6,11 @@ A node is always in a state and has an intent. These control the actions of the 
 
 A node can be in one of three states depending on where the node is in the block building lifecycle.
 
-| Name        | Description                                                                                                           | Enter condition                                                                                           |
-|-------------|-----------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
-| `WaitBlock` | While waiting for a new block to be built by primary or ourselves, if we are primary, we reside in state `WaitBlock`. | When no block is being handled.                                                                           |
-| `HaveBlock` | While waiting for consensus to have fetched block from primary we reside in `HaveBlock` state.                        | If node is primary then enter when block is built, otherwise when received unfinished block from primary. |
-| `Prepared`  | While waiting for consensus to have signed block we reside in `Prepared` state.                                       | When at least 2f+1 nodes are in `HaveBlock` or `Prepared` state for same block as node has.               |
+| Name        | Description                                                                                    | Enter condition                                                                                           |
+|-------------|------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
+| `WaitBlock` | While waiting for a new block to be built by primary we reside in state `WaitBlock`.           | When no block is being handled.                                                                           |
+| `HaveBlock` | While waiting for consensus to have fetched block from primary we reside in `HaveBlock` state. | If node is primary then enter when block is built, otherwise when received unfinished block from primary. |
+| `Prepared`  | While waiting for consensus to have signed block we reside in `Prepared` state.                | When at least 2f+1 nodes are in `HaveBlock` or `Prepared` state for same block as node has.               |
 
 ## Intent
 

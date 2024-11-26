@@ -4,21 +4,25 @@ import net.postchain.StorageBuilder
 import net.postchain.base.BaseDependencyFactory
 import net.postchain.base.BlockchainRelatedInfo
 import net.postchain.base.PeerInfo
+import net.postchain.base.TestBlockchainBuilder
 import net.postchain.base.configuration.KEY_CONFIGURATIONFACTORY
 import net.postchain.base.configuration.KEY_DEPENDENCIES
 import net.postchain.base.configuration.KEY_SIGNERS
-import net.postchain.base.cryptoSystem
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.base.runStorageCommand
 import net.postchain.base.withReadConnection
+import net.postchain.base.withReadWriteConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.core.EContext
+import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtx.Gtx
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ColumnListHandler
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -28,6 +32,7 @@ import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.sql.SQLException
@@ -36,44 +41,44 @@ class DatabaseIT {
 
     private val appConfig: AppConfig = testDbConfig("database_it")
 
+    fun selectAllTablesSql(chainId: Long) = "SELECT tables.table_name FROM information_schema.tables AS tables" +
+            " WHERE tables.table_schema = current_schema() AND tables.table_name LIKE 'c$chainId.%'"
+
+    @BeforeEach
+    fun beforeEach() {
+        StorageBuilder.wipeDatabase(appConfig)
+    }
+
     @Test
     fun collation() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
-        storage.withReadConnection { ctx ->
+        runStorageCommand(appConfig) { ctx ->
             DatabaseAccess.of(ctx).checkCollation(ctx.conn, suppressError = false)
         }
     }
 
     @Test
     fun blockchains() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
-
-        withWriteConnection(storage, 1) { ctx ->
+        runStorageCommand(appConfig, 1) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid(ByteArray(32) { 1 }))
-            true
         }
 
-        withWriteConnection(storage, 2) { ctx ->
+        runStorageCommand(appConfig, 2) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid(ByteArray(32) { 2 }))
-            true
         }
 
         assertThrows<UserMistake> {
-            withWriteConnection(storage, 3) { ctx ->
+            runStorageCommand(appConfig, 3) { ctx ->
                 val db = DatabaseAccess.of(ctx)
                 db.initializeBlockchain(ctx, BlockchainRid(ByteArray(32) { 1 }))
-                true
             }
         }
     }
 
     @Test
     fun containers() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
-
-        storage.withWriteConnection { ctx ->
+        runStorageCommand(appConfig) { ctx ->
             val db = DatabaseAccess.of(ctx)
             assertNull(db.getContainerIid(ctx, "test"))
             val iid1 = db.createContainer(ctx, "test1")
@@ -88,32 +93,22 @@ class DatabaseIT {
 
     @Test
     fun configurations() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
-
         val chainId = 0L
         val configData1 = gtv(mapOf("any" to gtv("value1")))
         val configData2 = gtv(mapOf("any" to gtv("value2")))
         val configData3 = gtv(mapOf("any" to gtv("value3")))
 
-        withWriteConnection(storage, chainId) { ctx ->
+        runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
-            true
-        }
 
-        withWriteConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             db.addConfigurationData(ctx, 0, encodeGtv(configData1))
             db.addConfigurationData(ctx, 5, encodeGtv(configData2))
-            true
-        }
 
-        val hash1 = GtvToBlockchainRidFactory.calculateBlockchainRid(configData1, cryptoSystem)
-        val hash2 = GtvToBlockchainRidFactory.calculateBlockchainRid(configData2, cryptoSystem)
-        val hash3 = GtvToBlockchainRidFactory.calculateBlockchainRid(configData3, cryptoSystem)
+            val hash1 = GtvToBlockchainRidFactory.calculateBlockchainRid(configData1, cryptoSystem)
+            val hash2 = GtvToBlockchainRidFactory.calculateBlockchainRid(configData2, cryptoSystem)
+            val hash3 = GtvToBlockchainRidFactory.calculateBlockchainRid(configData3, cryptoSystem)
 
-        withReadConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             assertEquals(listOf(0L, 5L), db.listConfigurations(ctx))
             assertEquals(listOf(hash1.wData, hash2.wData), db.listConfigurationHashes(ctx).map { it.wrap() })
             assertTrue(db.configurationHashExists(ctx, hash1.data))
@@ -125,40 +120,25 @@ class DatabaseIT {
             assertArrayEquals(encodeGtv(configData1), db.getConfigurationData(ctx, configurationHash(configData1)))
             assertArrayEquals(encodeGtv(configData2), db.getConfigurationData(ctx, configurationHash(configData2)))
             assertNull(db.getConfigurationData(ctx, configurationHash(configData3)))
-        }
 
-        withWriteConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             db.addConfigurationData(ctx, 0, encodeGtv(configData1))
             assertThrows<SQLException> {
                 db.addConfigurationData(ctx, 5, encodeGtv(configData1))
             }
-            true
         }
     }
 
     @Test
     fun dropTable() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         val chainId = 0L
 
-        withWriteConnection(storage, chainId) { ctx ->
+        runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
-            true
-        }
-
-        withReadConnection(storage, chainId) { ctx ->
             assertTrue(tableExists(ctx, "transactions"))
-        }
 
-        withWriteConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             db.dropTable(ctx.conn, db.tableName(ctx, "transactions"))
-            true
-        }
 
-        withReadConnection(storage, chainId) { ctx ->
             assertFalse(tableExists(ctx, "transactions"))
         }
     }
@@ -174,72 +154,67 @@ class DatabaseIT {
 
     @Test
     fun removeBlockchain() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         val chainId = 0L
 
-        withWriteConnection(storage, chainId) { ctx ->
+        runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
-            true
-        }
-
-        withReadConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             assertNotNull(db.getBlockchainRid(ctx))
-        }
 
-        withWriteConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             db.removeBlockchain(ctx)
-        }
-
-        withReadConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             assertNull(db.getBlockchainRid(ctx))
         }
     }
 
     @Test
     fun removeAllBlockchainTables() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         val chainId = 0L
         val queryRunner = QueryRunner()
-        val allBcTablesQuerySql = "SELECT tables.table_name FROM information_schema.tables AS tables" +
-                " WHERE tables.table_schema = current_schema() AND tables.table_name LIKE 'c${chainId}.%'"
 
-        withWriteConnection(storage, chainId) { ctx ->
+        runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
-            true
-        }
 
-        withReadConnection(storage, chainId) { ctx ->
-            val allTables = queryRunner.query(ctx.conn, allBcTablesQuerySql, ColumnListHandler<String>())
+            val allTables = queryRunner.query(ctx.conn, selectAllTablesSql(chainId), ColumnListHandler<String>())
             assertTrue(allTables.isNotEmpty())
-        }
 
-        withWriteConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             db.removeAllBlockchainSpecificTables(ctx)
-            true
-        }
 
-        withReadConnection(storage, chainId) { ctx ->
-            val allTables = queryRunner.query(ctx.conn, allBcTablesQuerySql, ColumnListHandler<String>())
-            assertTrue(allTables.isEmpty())
+            val allTables2 = queryRunner.query(ctx.conn, selectAllTablesSql(chainId), ColumnListHandler<String>())
+            assertTrue(allTables2.isEmpty())
+        }
+    }
+
+    @Test
+    fun removeAllBlockchainTablesWithExclusion() {
+        val chainId = 0L
+        val excludeTables = listOf("configurations", "blocks", "transactions")
+        val queryRunner = QueryRunner()
+
+        runStorageCommand(appConfig, chainId) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
+
+            val tables = queryRunner.query(ctx.conn, selectAllTablesSql(chainId), ColumnListHandler<String>())
+                    .filter { it.substringAfter(".") !in excludeTables }
+            assertTrue(tables.isNotEmpty())
+
+            db.removeAllBlockchainSpecificTables(ctx, excludeTables)
+
+            val tables2 = queryRunner.query(ctx.conn, selectAllTablesSql(chainId), ColumnListHandler<String>()).toSet()
+            assertEquals(excludeTables.map { "c0.$it" }.toSet(), tables2)
         }
     }
 
     @Test
     fun removeAllBlockchainSpecificFunctions() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         val chainId = 10L
         val queryRunner = QueryRunner()
 
         // init blockchain
         val rowIdTable = "c$chainId.rowid_gen"
         val funcName = "c$chainId.make_rowid"
-        withWriteConnection(storage, chainId) { ctx ->
+        runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
             // GtxModule adds a function
@@ -253,136 +228,91 @@ class DatabaseIT {
             queryRunner.execute(ctx.conn, """
                 CREATE FUNCTION "$funcName.0"() RETURNS BIGINT AS 'SELECT 0' LANGUAGE SQL;
             """.trimIndent())
-            true
-        }
 
-        val allFunctionsQuery = """
-            SELECT routine_name FROM information_schema.routines
-            WHERE routine_schema = current_schema() AND routine_name LIKE 'c${chainId}.%'
-        """.trimIndent()
+            val allFunctionsQuery = """
+                SELECT routine_name FROM information_schema.routines
+                WHERE routine_schema = current_schema() AND routine_name LIKE 'c${chainId}.%'
+            """.trimIndent()
 
-        // before
-        withReadConnection(storage, chainId) { ctx ->
+            // before
             val allFunctions = queryRunner.query(ctx.conn, allFunctionsQuery, ColumnListHandler<String>())
             assertEquals(allFunctions, listOf("c10.make_rowid", "c10.make_rowid.0"))
-        }
 
-        // action
-        withWriteConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
+            // action
             db.removeAllBlockchainSpecificFunctions(ctx)
             db.removeAllBlockchainSpecificFunctions(ctx) // deleting IF NOT EXISTS
-            true
-        }
 
-        // after
-        withReadConnection(storage, chainId) { ctx ->
-            val allFunctions = queryRunner.query(ctx.conn, allFunctionsQuery, ColumnListHandler<String>())
-            assertTrue(allFunctions.isEmpty())
+            // after
+            val allFunctions2 = queryRunner.query(ctx.conn, allFunctionsQuery, ColumnListHandler<String>())
+            assertTrue(allFunctions2.isEmpty())
         }
     }
 
     @Test
     fun removeMustSyncUntil() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         val chainId = 0L
 
-        withWriteConnection(storage, chainId) { ctx ->
+        runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
             db.setMustSyncUntil(ctx, BlockchainRid.ZERO_RID, 10)
-            true
-        }
 
-        withReadConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             assertEquals(10, db.getMustSyncUntil(ctx)[chainId])
-        }
 
-        withWriteConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             db.removeBlockchainFromMustSyncUntil(ctx)
-        }
 
-        withReadConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             assertTrue(db.getMustSyncUntil(ctx).isEmpty())
         }
     }
 
     @Test
     fun removeBlockchainReplica() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         val chainId = 0L
         val node = PubKey(ByteArray(32))
 
-        withWriteConnection(storage, chainId) { ctx ->
+        runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
             db.addPeerInfo(ctx, PeerInfo("test", 0, node.data))
             db.addBlockchainReplica(ctx, BlockchainRid.ZERO_RID, node)
-            true
-        }
 
-        withReadConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             assertEquals(listOf(node.data.wrap()), db.getBlockchainReplicaCollection(ctx)[BlockchainRid.ZERO_RID])
-        }
 
-        withWriteConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             db.removeAllBlockchainReplicas(ctx)
-        }
 
-        withReadConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             assertTrue(db.getBlockchainReplicaCollection(ctx).isEmpty())
         }
     }
 
     @Test
     fun getAllConfigurations() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         val chainId = 0L
 
-        withWriteConnection(storage, chainId) { ctx ->
+        runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
-            true
-        }
 
-        withReadConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             assertTrue(db.getAllConfigurations(ctx.conn, chainId).isEmpty())
-        }
 
-        withWriteConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             db.addConfigurationData(ctx, 0, encodeGtv(gtv(0)))
             db.addConfigurationData(ctx, 10, encodeGtv(gtv(1)))
             db.addConfigurationData(ctx, 2, encodeGtv(gtv(2)))
-            true
-        }
 
-        withReadConnection(storage, chainId) { ctx ->
-            val db = DatabaseAccess.of(ctx)
             assertEquals(3, db.getAllConfigurations(ctx.conn, chainId).size)
         }
     }
 
     @Test
     fun getDependenciesOnBlockchain() {
-        val storage = StorageBuilder.buildStorage(appConfig, wipeDatabase = true)
         val chainId = 0L
         val dependentChainId = 1L
 
-        withWriteConnection(storage, chainId) { ctx ->
+        runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
-            true
         }
 
-        withWriteConnection(storage, dependentChainId) { ctx ->
+        runStorageCommand(appConfig, dependentChainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid.buildRepeat(1))
             db.addConfigurationData(ctx, 0, encodeGtv(gtv(mapOf(
@@ -392,14 +322,87 @@ class DatabaseIT {
                             BlockchainRelatedInfo(BlockchainRid.ZERO_RID, "dependency", chainId)
                     ))!!
             ))))
-            true
         }
 
-        withReadConnection(storage, chainId) { ctx ->
+        runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             val deps = db.getDependenciesOnBlockchain(ctx)
             assertEquals(1, deps.size)
             assertEquals(BlockchainRid.buildRepeat(1), deps[0])
         }
     }
+
+    @Test
+    fun testReadConnectionTransactionIsolation() {
+        val chainId = 0L
+        StorageBuilder.buildStorage(appConfig).use { storage ->
+            withReadConnection(storage, chainId) { readCtx ->
+                val readAccess = DatabaseAccess.of(readCtx)
+                assertNull(readAccess.getBlockchainRid(readCtx))
+
+                withWriteConnection(storage, chainId) { ctx ->
+                    DatabaseAccess.of(ctx).initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
+                    true
+                }
+
+                // Chain init is committed but our read DB tx should not see it
+                assertNull(readAccess.getBlockchainRid(readCtx))
+            }
+
+            withReadConnection(storage, chainId) { readCtx ->
+                val readAccess = DatabaseAccess.of(readCtx)
+                assertEquals(BlockchainRid.ZERO_RID, readAccess.getBlockchainRid(readCtx))
+            }
+        }
+    }
+
+    @Test
+    fun getTransactionsInfoWithDataSize() {
+        val configData1 = gtv(mapOf("any" to gtv("value1")))
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData1)
+            testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData1), listOf(
+                    listOf("first"),
+                    listOf("second"),
+                    listOf("third")
+            ))
+            withReadConnection(storage, testBlockChainBuilder.chainId) { readCtx ->
+                val readAccess = DatabaseAccess.of(readCtx)
+                val (transactionsInfo, truncated) = readAccess.getTransactionsInfo(readCtx, BlockQueryTimeFilter(100000L), 10, 3200)
+                assertTrue(transactionsInfo.size == 2)
+                assertEquals("third", Gtx.decode(transactionsInfo[0].txData!!).gtxBody.operations[0].asOpData().args[1].asString())
+                assertEquals("second", Gtx.decode(transactionsInfo[1].txData!!).gtxBody.operations[0].asOpData().args[1].asString())
+                assertTrue(truncated)
+            }
+        }
+    }
+
+    @Test
+    fun getTransactionsInfoBySignerWithDataSize() {
+        val configData1 = gtv(mapOf("any" to gtv("value1")))
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData1)
+            testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData1), listOf(
+                    listOf("first"),
+                    listOf("second"),
+                    listOf("third")
+            ))
+            withReadWriteConnection(storage, testBlockChainBuilder.chainId) { ctx ->
+                val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                val signer = PubKey("03ECD350EEBC617CBBFBEF0A1B7AE553A748021FD65C7C50C5ABB4CA16D4EA5B05")
+                db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactionSigners(ctx)} (signer, tx_iid) VALUES (?, ?)", signer.data, 1)
+                db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactionSigners(ctx)} (signer, tx_iid) VALUES (?, ?)", signer.data, 2)
+                db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableTransactionSigners(ctx)} (signer, tx_iid) VALUES (?, ?)", signer.data, 3)
+
+                val (transactionsInfo, truncated) = db.getTransactionsInfoBySigner(ctx, BlockQueryTimeFilter(100000L), 10, signer, 3200)
+                assertTrue(transactionsInfo.size == 2)
+                assertEquals("third", Gtx.decode(transactionsInfo[0].txData!!).gtxBody.operations[0].asOpData().args[1].asString())
+                assertEquals("second", Gtx.decode(transactionsInfo[1].txData!!).gtxBody.operations[0].asOpData().args[1].asString())
+                assertTrue(truncated)
+            }
+        }
+    }
+
 }

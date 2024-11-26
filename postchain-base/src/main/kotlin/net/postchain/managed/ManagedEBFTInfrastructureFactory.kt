@@ -11,6 +11,7 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.Storage
 import net.postchain.ebft.BaseEBFTInfrastructureFactory
+import net.postchain.ebft.EBFTSynchronizationInfrastructure
 
 open class ManagedEBFTInfrastructureFactory : BaseEBFTInfrastructureFactory() {
 
@@ -21,6 +22,9 @@ open class ManagedEBFTInfrastructureFactory : BaseEBFTInfrastructureFactory() {
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider {
         return ManagedBlockchainConfigurationProvider()
     }
+
+    override fun makeSynchronizationInfrastructure(postchainContext: PostchainContext): EBFTSynchronizationInfrastructure
+        = ManagedEBFTSynchronizationInfrastructure(postchainContext)
 
     override fun makeProcessManager(
             postchainContext: PostchainContext,

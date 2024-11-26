@@ -41,7 +41,8 @@ class BaseBlockDatabase(
         private val engine: BlockchainEngine,
         private val blockQueries: BlockQueries,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
-        val nodeIndex: Int
+        val nodeIndex: Int,
+        private val maxBlockBuildTime: Long = -1
 ) : BlockDatabase {
 
     // The executor will only execute one thing at a time, in order
@@ -145,10 +146,16 @@ class BaseBlockDatabase(
                     addBlockLog("Got error when loading: ${exception.message}")
                     throw exception
                 } else {
-                    theBlockBuilder.getBTrace()?.let { updateBTrace(existingBTrace, it) }
-                    val blockSample = Timer.start(Metrics.globalRegistry)
-                    theBlockBuilder.commit(block.witness) // No need to set BTrace, because we have it
-                    blockSample.stop(metrics.confirmedBlocks)
+                    try {
+                        theBlockBuilder.getBTrace()?.let { updateBTrace(existingBTrace, it) }
+                        val blockSample = Timer.start(Metrics.globalRegistry)
+                        theBlockBuilder.commit(block.witness) // No need to set BTrace, because we have it
+                        blockSample.stop(metrics.confirmedBlocks)
+                    } catch (e: Exception) {
+                        // In case exception was thrown before DB commit was successful we need to roll back
+                        theBlockBuilder.rollback()
+                        throw e
+                    }
                     metrics.confirmedTransactions.increment(block.transactions.size.toDouble())
                     addBlockLog("Done commit", theBlockBuilder.getBTrace())
                 }
@@ -198,7 +205,7 @@ class BaseBlockDatabase(
     override fun buildBlock(): CompletionStage<Pair<BlockData, Signature>> {
         return runOpAsync("buildBlock") {
             maybeRollback()
-            val (theBlockBuilder, exception) = engine.buildBlock()
+            val (theBlockBuilder, exception) = engine.buildBlock(maxBlockBuildTime)
             if (exception != null) {
                 throw exception
             } else {
@@ -209,7 +216,7 @@ class BaseBlockDatabase(
         }
     }
 
-    override fun verifyBlockSignature(s: Signature): Boolean {
+    override fun applyAndVerifyBlockSignature(s: Signature): Boolean {
         return if (witnessBuilder != null) {
             try {
                 witnessBuilder!!.applySignature(s)

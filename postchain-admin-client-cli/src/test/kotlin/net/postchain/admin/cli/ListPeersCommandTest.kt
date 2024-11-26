@@ -1,6 +1,8 @@
 package net.postchain.admin.cli
 
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import net.postchain.admin.cli.testbase.PeerServiceCommandTestBase
 import net.postchain.base.PeerInfo
 import net.postchain.common.toHex
@@ -25,7 +27,7 @@ class ListPeersCommandTest : PeerServiceCommandTestBase() {
     @BeforeEach
     fun beforeEach() {
         command = ListPeersCommand { _, _ -> setupChannel(peerService) }
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
     }
 
     @Test
@@ -40,7 +42,7 @@ class ListPeersCommandTest : PeerServiceCommandTestBase() {
         )
         // verify
         verify(peerService).listPeers()
-        testConsole.assertContains("No peers found\n")
+        testTerminal.assertContains("No peers found")
     }
 
     @Test
@@ -55,10 +57,10 @@ class ListPeersCommandTest : PeerServiceCommandTestBase() {
         )
         // verify
         verify(peerService).listPeers()
-        testConsole.assertContains("Peers (3):\n" +
-                "PeerInfo(host='host1', port=1, pubKey=${pubKey1.toHex()})\n" +
-                "PeerInfo(host='host2', port=2, pubKey=${pubKey2.toHex()})\n" +
-                "PeerInfo(host='host3', port=3, pubKey=${pubKey3.toHex()})\n"
+        testTerminal.assertContains("Peers (3):${System.lineSeparator()}" +
+                "PeerInfo(host='host1', port=1, pubKey=${pubKey1.toHex()})${System.lineSeparator()}" +
+                "PeerInfo(host='host2', port=2, pubKey=${pubKey2.toHex()})${System.lineSeparator()}" +
+                "PeerInfo(host='host3', port=3, pubKey=${pubKey3.toHex()})"
         )
     }
 }

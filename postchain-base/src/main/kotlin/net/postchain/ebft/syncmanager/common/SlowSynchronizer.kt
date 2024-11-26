@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.extension.getConfigHash
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.BadDataException
@@ -17,10 +18,13 @@ import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.BlockHeader
 import net.postchain.ebft.message.BlockRange
 import net.postchain.ebft.message.CompleteBlock
+import net.postchain.ebft.message.EbftVersion
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
+import net.postchain.ebft.message.Status
+import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import java.time.Clock
 import java.util.concurrent.locks.ReentrantLock
@@ -44,19 +48,26 @@ class SlowSynchronizer(
         private val blockDatabase: BlockDatabase,
         val params: SyncParameters,
         private val isProcessRunning: () -> Boolean,
+        rateLimitConfiguration: RateLimitConfiguration,
         val clock: Clock = Clock.systemUTC(),
         slowSyncStateMachineProvider: (Int) -> SlowSyncStateMachine = { chainId -> SlowSyncStateMachine.buildWithChain(chainId, params) },
-        slowSyncPeerStatusesProvider: () -> SlowSyncPeerStatuses = { SlowSyncPeerStatuses(params) },
+        slowSyncPeerStatusesProvider: () -> PeerStatuses = { PeerStatuses(params) },
         val slowSyncSleepDataProvider: () -> SlowSyncSleepData = { SlowSyncSleepData(params) },
         reentrantLockProvider: () -> ReentrantLock = { ReentrantLock() }
-) : AbstractSynchronizer(workerContext) {
+) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {
 
     private val stateMachine = slowSyncStateMachineProvider(blockchainConfiguration.chainID.toInt())
+    private val messageDurationTracker = workerContext.messageDurationTracker
 
     private val stateMachineLock = reentrantLockProvider()
     private val allBlocksCommitted = stateMachineLock.newCondition()
+    private val replicas = configuredPeers.filterNot { peer ->
+        workerContext.blockchainConfiguration.signers.any { it.contentEquals(peer.data) }
+    }.map { it.data.wrap() }.toSet()
 
     val peerStatuses = slowSyncPeerStatusesProvider() // Don't want to put this in [AbstractSynchronizer] b/c too much generics.
+
+    private var hasLoggedNoPeers = false
 
     companion object : KLogging()
 
@@ -95,7 +106,7 @@ class SlowSynchronizer(
     internal fun sendRequest(now: Long, slowSyncStateMachine: SlowSyncStateMachine, lastPeer: NodeRid? = null) {
         val startAtHeight = slowSyncStateMachine.getStartHeight()
         val peers = configuredPeers.minus(peerStatuses.excludedNonSyncable(startAtHeight, now)).ifEmpty {
-            peerStatuses.reviveAllBlacklisted()
+            peerStatuses.markAllSyncable(startAtHeight)
             configuredPeers.minus(peerStatuses.excludedNonSyncable(startAtHeight, now)).ifEmpty {
                 return
             }
@@ -107,13 +118,19 @@ class SlowSynchronizer(
         } else {
             peers
         }
-        val pickedPeerId = communicationManager.sendToRandomPeer(GetBlockRange(startAtHeight), usePeers).first
+        val message = GetBlockRange(startAtHeight)
+        val pickedPeerId = communicationManager.sendToRandomPeer(message, usePeers).first
 
         if (pickedPeerId != null) {
+            hasLoggedNoPeers = false
+            messageDurationTracker.send(pickedPeerId, message)
             if (stateMachine.hasUnacknowledgedFailedCommit()) stateMachine.acknowledgeFailedCommit()
             slowSyncStateMachine.updateToWaitForReply(pickedPeerId, startAtHeight, now)
         } else {
-            logger.warn("No nodes to request blocks from. Cannot proceed. Current height: ${startAtHeight - 1}")
+            if (!hasLoggedNoPeers) {
+                logger.info { "No nodes to request blocks from. Cannot proceed. Current height: ${startAtHeight - 1}" }
+            }
+            hasLoggedNoPeers = true
         }
     }
 
@@ -124,12 +141,12 @@ class SlowSynchronizer(
      * @return SleepData we should use to sleep
      */
     internal fun processMessages(sleepData: SlowSyncSleepData) {
-        for (packet in communicationManager.getPackets()) {
-            val peerId = packet.first
+        messageDurationTracker.cleanup()
+        resetServedRequests()
+        for ((peerId, _, message) in communicationManager.getPackets()) {
             if (peerStatuses.isBlacklisted(peerId)) {
                 continue
             }
-            val message = packet.second
             if (message is GetBlockHeaderAndBlock || message is BlockHeader) {
                 peerStatuses.confirmModern(peerId)
             }
@@ -139,19 +156,32 @@ class SlowSynchronizer(
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight.get())
                     is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight.get()) // A replica might ask us
-                    is GetBlockSignature -> sendBlockSignature(peerId, message.blockRID)
 
                     // But we only expect ranges and status to be sent to us
                     is BlockRange -> {
+                        messageDurationTracker.receive(peerId, message)
                         val processedBlocks = handleBlockRange(peerId, message.blocks, message.startAtHeight)
-                        sleepData.updateData(processedBlocks)
+
+                        // We want to avoid drained replicas from affecting our sync rate
+                        val isReplica = replicas.contains(peerId.data.wrap())
+                        if (isReplica && processedBlocks == 0) {
+                            peerStatuses.drained(peerId, message.startAtHeight, currentTimeMillis(), params.slowSyncMaxSleepTime * configuredPeers.size)
+                        } else {
+                            sleepData.updateData(processedBlocks)
+                        }
                     }
 
-                    is AppliedConfig -> {
-                        if (checkIfWeNeedToApplyPendingConfig(peerId, message)) return
+                    is EbftVersion -> logger.debug { "Received EbftVersion from peer $peerId" }
+                    else -> {
+                        if (!replicas.contains(peerId.data.wrap())) { // Only for signers
+                            when (message) {
+                                is GetBlockSignature -> sendBlockSignature(peerId, message.blockRID)
+                                is Status -> if (message.configHash != null && checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
+                                is AppliedConfig -> if (checkIfWeNeedToApplyPendingConfig(peerId, message.configHash, message.height)) return
+                                else -> logger.debug { "Unhandled type $message from peer $peerId" }
+                            }
+                        }
                     }
-
-                    else -> logger.debug { "Unhandled type $message from peer $peerId" }
                 }
             } catch (e: Exception) {
                 logger.info("Couldn't handle message $message from peer $peerId. Ignoring and continuing", e)
@@ -310,7 +340,7 @@ class SlowSynchronizer(
         // (this is usually slow and is therefore handled via a future).
         addBlockCompletionFuture = blockDatabase
                 .addBlock(block, addBlockCompletionFuture, bTrace)
-                .whenCompleteUnwrapped(loggingContext) { _: Any?, exception ->
+                .whenCompleteUnwrapped(loggingContext, always = { _, exception ->
                     stateMachineLock.withLock {
                         if (exception == null) {
                             logger.debug { "commitBlock() - Block height: $height committed successfully." }
@@ -328,7 +358,7 @@ class SlowSynchronizer(
                             allBlocksCommitted.signalAll()
                         }
                     }
-                }
+                })
     }
 
     private fun currentTimeMillis() = clock.millis()

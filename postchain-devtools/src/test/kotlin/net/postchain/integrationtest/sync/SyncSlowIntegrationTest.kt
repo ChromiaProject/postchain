@@ -49,7 +49,8 @@ class SyncSlowIntegrationTest : AbstractSyncTest() {
 
     @Test
     fun fastsyncHandlesDisconnectedNodes() {
-        val nodeSetup = runNodes(4, 0)
+        runNodes(4, 0)
+        val peerInfoMap = nodes[1].postchainContext.nodeConfigProvider.getConfiguration().peerInfoMap
         buildBlock(0, 1)
 
         // Shutdown node 1 and build a block
@@ -58,7 +59,6 @@ class SyncSlowIntegrationTest : AbstractSyncTest() {
 
         // Shutdown node 2 and start node 1 again -> node 1 will enter fast sync
         nodes[2].shutdown()
-        val peerInfoMap = nodeSetup[1].configurationProvider!!.getConfiguration().peerInfoMap
         startOldNode(1, peerInfoMap, nodes[1].getBlockchainRid(0)!!)
 
         // Build another block, node 1 must consider node 2 as disconnected in order to exit fast sync
@@ -70,7 +70,10 @@ class SyncSlowIntegrationTest : AbstractSyncTest() {
 
     @Test
     fun canSyncFromForcedReadOnlyNode() {
-        val nodeSetup = runNodes(4, 0)
+        runNodes(4, 0)
+        val peerInfoMap0 = nodes[0].postchainContext.nodeConfigProvider.getConfiguration().peerInfoMap
+        val peerInfoMap3 = nodes[3].postchainContext.nodeConfigProvider.getConfiguration().peerInfoMap
+
         buildBlock(0, 1)
         // Shutdown the 4th node
         nodes[3].shutdown()
@@ -82,13 +85,11 @@ class SyncSlowIntegrationTest : AbstractSyncTest() {
 
         // Restart 1st node as a force read only process
         configOverrides.setProperty("readOnly", true)
-        val peerInfoMap0 = nodeSetup[0].configurationProvider!!.getConfiguration().peerInfoMap
         startOldNode(0, peerInfoMap0, nodes[0].getBlockchainRid(0)!!)
         assertThat(nodes[0].getBlockchainInstance(0)).isInstanceOf(ForceReadOnlyBlockchainProcess::class.java)
 
         // Restart 4th node as validator
         configOverrides.setProperty("readOnly", false)
-        val peerInfoMap3 = nodeSetup[3].configurationProvider!!.getConfiguration().peerInfoMap
         startOldNode(3, peerInfoMap3, nodes[3].getBlockchainRid(0)!!)
         assertThat(nodes[3].blockQueries(0).getLastBlockHeight().get()).isEqualTo(1)
         assertThat(nodes[3].getBlockchainInstance(0)).isInstanceOf(ValidatorBlockchainProcess::class.java)

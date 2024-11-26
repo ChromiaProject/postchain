@@ -5,6 +5,8 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import com.github.ajalt.clikt.core.PrintMessage
 import com.github.ajalt.clikt.core.context
+import com.github.ajalt.clikt.core.parse
+import com.github.ajalt.clikt.core.terminal
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -16,7 +18,7 @@ class CommandDeleteBlockchainIT : CommandITBase() {
     @BeforeEach
     fun setup() {
         command = CommandDeleteBlockchain()
-        command.context { console = testConsole }
+        command.context { terminal = testTerminal.terminal }
     }
 
     @Test
@@ -32,7 +34,7 @@ class CommandDeleteBlockchainIT : CommandITBase() {
         )
         // verify
         assertThat(CliExecution.findBlockchainRid(appConfig, chainId)).isNull()
-        testConsole.assertContains("OK: Blockchain was deleted\n")
+        testTerminal.assertContains("OK: Blockchain was deleted\n")
     }
 
     @Test

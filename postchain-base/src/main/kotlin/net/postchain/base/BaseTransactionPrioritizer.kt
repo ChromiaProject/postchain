@@ -3,6 +3,7 @@ package net.postchain.base
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.mapper.Name
+import net.postchain.gtv.mapper.Nullable
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GtxBody
 import net.postchain.managed.query.QueryRunner
@@ -15,6 +16,9 @@ class PrioritizeQueryRequest(
         @Name("tx_body")
         val txBody: GtxBody,
 
+        @Name("tx_size")
+        val txSize: Long,
+
         @Name("tx_enter_timestamp")
         val txEnterTimestamp: Long,
 
@@ -25,7 +29,8 @@ class PrioritizeQueryRequest(
 class TxPriorityStateV1(
         /** id of account which wants to push the tx forward */
         @Name("account_id")
-        override val accountId: WrappedByteArray,
+        @Nullable
+        override val accountId: WrappedByteArray?,
 
         /** number of points currently associated with the account */
         @Name("account_points")
@@ -44,6 +49,7 @@ class BaseTransactionPrioritizer(private val query: QueryRunner) : TransactionPr
     override fun prioritize(tx: GTXTransaction, txEnter: Instant, current: Instant): TransactionPriorityState {
         return GtvObjectMapper.fromGtv(query.query(PRIORITIZE_QUERY_NAME, GtvObjectMapper.toGtvDictionary(PrioritizeQueryRequest(
                 txBody = tx.gtxData.gtxBody,
+                txSize = tx.getRawData().size.toLong(),
                 txEnterTimestamp = txEnter.toEpochMilli(),
                 currentTimestamp = current.toEpochMilli()
         ))), TxPriorityStateV1::class)

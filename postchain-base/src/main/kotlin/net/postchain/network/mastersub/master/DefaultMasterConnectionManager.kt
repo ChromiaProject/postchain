@@ -8,6 +8,7 @@ import net.postchain.config.app.AppConfig
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.core.block.BlockQueriesProvider
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.network.common.ChainsWithOneConnection
 import net.postchain.network.mastersub.MasterSubQueryManager
@@ -27,7 +28,7 @@ class DefaultMasterConnectionManager(
 
     companion object : KLogging()
 
-    override val masterSubQueryManager = MasterSubQueryManager { blockchainRid, message ->
+    override val masterSubQueryManager = MasterSubQueryManager(containerNodeConfig.masterSubQueryTimeoutMs) { blockchainRid, message ->
         if (blockchainRid == null) throw ProgrammerMistake("Missing destination chain")
         sendPacketToSub(blockchainRid, message)
     }
@@ -69,11 +70,13 @@ class DefaultMasterConnectionManager(
         val chain = chainsWithOneSubConnection.get(blockchainRid)
         return if (chain != null) {
             val conn = chain.getConnection()
-            if (conn != null) {
+            // We should not pass anything on to the subnode until receiving a handshake since
+            // packets must be coming from old connections
+            if (conn != null && chain.handshakeReceived) {
                 conn.sendPacket(lazy { MsCodec.encode(message) })
                 logger.trace { "$prefix - end: message sent" }
             } else {
-                logger.debug { "$prefix - end: conn not found" }
+                logger.debug { "$prefix - end: conn not found or has not received handshake yet" }
             }
             true
         } else {
@@ -96,6 +99,12 @@ class DefaultMasterConnectionManager(
     }
 
     @Synchronized
+    override fun onReceivedHandshake(blockchainRid: BlockchainRid) {
+        logger.debug { "Received handshake for chain: ${blockchainRid.toShortHex()}" }
+        chainsWithOneSubConnection.get(blockchainRid)?.handshakeReceived = true
+    }
+
+    @Synchronized
     override fun onSubConnected(
             descriptor: MasterConnectionDescriptor,
             connection: MasterConnection
@@ -109,7 +118,10 @@ class DefaultMasterConnectionManager(
                     masterSubQueryManager, dataSource, blockQueriesProvider)
         } else {
             val chain = chainsWithOneSubConnection.get(descriptor.blockchainRid)
-            withLoggingContext(BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex()) {
+            withLoggingContext(
+                    BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex(),
+                    CHAIN_IID_TAG to chain?.config?.chainId?.toString()
+            ) {
                 return when {
                     chain == null -> {
                         logger.warn("Sub chain not found")
@@ -143,10 +155,12 @@ class DefaultMasterConnectionManager(
             logger.debug { "Disconnected query runner for container: ${descriptor.containerIID}" }
             queryConnections.remove(descriptor.containerIID)?.close()
         } else {
-            withLoggingContext(BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex()) {
+            val chain = chainsWithOneSubConnection.get(descriptor.blockchainRid)
+            withLoggingContext(
+                    BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex(),
+                    CHAIN_IID_TAG to chain?.config?.chainId?.toString()
+            ) {
                 logger.debug("Subnode disconnected")
-
-                val chain = chainsWithOneSubConnection.get(descriptor.blockchainRid)
                 if (chain == null) {
                     connection.close()
                     logger.warn("Subnode chain not found")

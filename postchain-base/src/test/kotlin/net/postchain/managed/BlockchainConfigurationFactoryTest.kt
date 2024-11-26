@@ -7,18 +7,19 @@ import net.postchain.debug.JsonNodeDiagnosticContext
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.spy
 import kotlin.reflect.KClass
-import org.junit.jupiter.api.Assertions.assertEquals
 
 class BlockchainConfigurationFactoryTest {
 
     private val appConfigMock: AppConfig = mock {
         on { pubKey } doReturn "ffffffff"
+        on { housekeepingIntervalMs } doReturn 30_000
     }
 
     private val contextMock: PostchainContext = mock {

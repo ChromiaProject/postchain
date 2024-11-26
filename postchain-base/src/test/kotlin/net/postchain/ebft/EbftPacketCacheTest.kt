@@ -3,6 +3,7 @@ package net.postchain.ebft
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
+import net.postchain.common.wrap
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.MessageTopic
 import org.junit.jupiter.api.BeforeEach
@@ -11,8 +12,8 @@ import org.mockito.kotlin.mock
 
 class EbftPacketCacheTest {
 
-    private val pubKey1 = "1".toByteArray()
-    private val pubKey2 = "2".toByteArray()
+    private val pubKey1 = "1".toByteArray().wrap()
+    private val pubKey2 = "2".toByteArray().wrap()
 
     private val message1 = "11".toByteArray()
     private val message2 = "22".toByteArray()

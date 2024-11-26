@@ -3,13 +3,15 @@
 package net.postchain.cli
 
 import com.github.ajalt.clikt.core.CliktCommand
+import com.github.ajalt.clikt.core.Context
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import net.postchain.StorageBuilder
 import net.postchain.cli.util.nodeConfigOption
 import net.postchain.config.app.AppConfig
 
-class CommandWipeDb : CliktCommand(name = "wipe-db", help = "Wipe Database") {
+class CommandWipeDb : CliktCommand(name = "wipe-db") { 
+    override fun help(context: Context) = "Wipe Database"
 
     private val nodeConfigFile by nodeConfigOption()
     private val recreate by option(help = "Recreate database schemas").flag()

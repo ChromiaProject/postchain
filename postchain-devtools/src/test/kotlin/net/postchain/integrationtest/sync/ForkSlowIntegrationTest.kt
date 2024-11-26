@@ -318,9 +318,18 @@ class ForkSlowIntegrationTest : ManagedModeTest() {
      */
     @Test
     fun testAncestorsManyLevels() {
-        // ancestors for chain 5 are 3 and 4
-        extraNodeProperties[5] = mapOf(
-                "blockchain_ancestors.${ChainUtil.ridOf(5)}" to listOf(ancestor(4, 4)))
+        for (nodeIndex in 0..6) {
+            extraNodeProperties[nodeIndex] = buildMap {
+                // Modify max concurrent connections to stay under 100 when we run with 7 nodes
+                // Shared storage 2 + 4, bb storage 2 + 4 -> 7 * 12 = 84
+                put("database.sharedWriteConcurrency", 2)
+                put("database.sharedReadConcurrency", 4)
+                put("database.blockBuilderWriteConcurrency", 2)
+                put("database.blockBuilderReadConcurrency", 4)
+                // ancestors for chain 5 are 3 and 4
+                if (nodeIndex == 5) put("blockchain_ancestors.${ChainUtil.ridOf(5)}", listOf(ancestor(4, 4)))
+            }
+        }
 
         startManagedSystem(7, 0)
 
@@ -443,7 +452,7 @@ class ForkSlowIntegrationTest : ManagedModeTest() {
         setChainSigners(signers, chainId)
         setChainReplicas(replicas, chainId)
         val signerKeys = signers.associateWith { nodes[it].pubKey.hexStringToByteArray() }
-        addBlockchainConfiguration(chainId, signerKeys, historicChain, atHeight)
+        addGtxBlockchainConfiguration(chainId, signerKeys, historicChain, atHeight)
         // Build block to trigger changes
         val chain0Nodes = nodes.filterIndexed { i, _ -> !excludeChain0Nodes.contains(i) }
         buildBlock(chain0Nodes, 0)

@@ -1,24 +1,27 @@
 package net.postchain.containers.bpm.job
 
+import com.github.dockerjava.api.DockerClient
+import com.github.dockerjava.api.command.ListContainersCmd
+import com.github.dockerjava.api.command.StopContainerCmd
+import com.github.dockerjava.api.model.Container
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.bpm.ContainerBlockchainProcess
 import net.postchain.containers.bpm.ContainerName
 import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.containers.bpm.fs.FileSystem
-import org.mandas.docker.client.DockerClient
-import org.mandas.docker.client.messages.Container
-import org.mockito.Mockito.anyInt
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers.anyInt
+import org.mockito.Mockito.anyBoolean
 import org.mockito.Mockito.anyString
 import org.mockito.Mockito.`when`
+import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.BeforeEach
-import org.mockito.kotlin.any
 
 class ContainerHealthcheckHandlerTest {
 
@@ -32,7 +35,14 @@ class ContainerHealthcheckHandlerTest {
         on { pubKey } doReturn PUBKEY
     }
     private val postchainContainer: PostchainContainer = mock()
-    private val dockerClient: DockerClient = mock()
+    private val listContainersCmd: ListContainersCmd = mock()
+    private val stopContainersCmd: StopContainerCmd = mock()
+    private val dockerClient: DockerClient = mock {
+        on { listContainersCmd() } doReturn listContainersCmd
+        on { stopContainerCmd(anyString()) } doReturn stopContainersCmd
+        on { startContainerCmd(anyString()) } doReturn mock()
+        on { removeContainerCmd(anyString()) } doReturn mock()
+    }
     private val fileSystem: FileSystem = mock()
     private val psContainers = mutableMapOf<ContainerName, PostchainContainer>()
     private val cname = ContainerName.create(appConfig, "directory-container", CONTAINER_IID)
@@ -52,14 +62,19 @@ class ContainerHealthcheckHandlerTest {
         psContainers.clear()
         psContainers[cname] = postchainContainer
         sut = ContainerHealthcheckHandler(dockerClient, fileSystem, postchainContainers, removeBlockchainProcess)
+
+
+        `when`(listContainersCmd.withShowAll(anyBoolean())).thenReturn(listContainersCmd)
+        `when`(listContainersCmd.withStatusFilter(any())).thenReturn(listContainersCmd)
+        `when`(stopContainersCmd.withTimeout(anyInt())).thenReturn(stopContainersCmd)
     }
 
     @Test
     fun `container in progress should not be checked`() {
         // execute
-        sut.check(setOf(cname.name))
+        sut.check(setOf(cname.dockerContainer))
         // verify
-        verify(dockerClient, never()).listContainers()
+        verify(dockerClient, never()).listContainersCmd()
     }
 
     @Test
@@ -75,8 +90,8 @@ class ContainerHealthcheckHandlerTest {
         sut.check(emptySet())
         // verify
         verify(postchainContainer).reset()
-        verify(dockerClient).stopContainer(anyString(), anyInt())
-        verify(dockerClient).removeContainer(anyString())
+        verify(dockerClient).stopContainerCmd(anyString())
+        verify(dockerClient).removeContainerCmd(anyString())
         assertEquals(removedBlockchainProcess!!.first, CHAIN_ID)
         assertEquals(removedBlockchainProcess!!.second, postchainContainer)
     }
@@ -94,8 +109,8 @@ class ContainerHealthcheckHandlerTest {
         sut.check(emptySet())
         // verify
         verify(postchainContainer, never()).reset()
-        verify(dockerClient, never()).stopContainer(anyString(), anyInt())
-        verify(dockerClient, never()).removeContainer(anyString())
+        verify(dockerClient, never()).stopContainerCmd(anyString())
+        verify(dockerClient, never()).removeContainerCmd(anyString())
     }
 
     @Test
@@ -111,15 +126,15 @@ class ContainerHealthcheckHandlerTest {
         sut.check(emptySet())
         // verify
         verify(postchainContainer, never()).reset()
-        verify(dockerClient, never()).stopContainer(anyString(), anyInt())
-        verify(dockerClient, never()).removeContainer(anyString())
+        verify(dockerClient, never()).stopContainerCmd(anyString())
+        verify(dockerClient, never()).removeContainerCmd(anyString())
     }
 
     @Test
     fun `not running subnode container should be restarted`() {
         // setup
         `when`(postchainContainer.getAllChains()).thenReturn(setOf(CHAIN_ID))
-        `when`(dockerClient.listContainers()).thenReturn(emptyList())
+        `when`(listContainersCmd.exec()).thenReturn(emptyList())
         // execute
         sut.check(emptySet())
         // verify
@@ -136,7 +151,7 @@ class ContainerHealthcheckHandlerTest {
         // execute
         sut.check(emptySet())
         // verify
-        verify(dockerClient).stopContainer(anyString(), anyInt())
+        verify(dockerClient).stopContainerCmd(anyString())
         assertEquals(removedBlockchainProcess!!.first, CHAIN_ID)
         assertEquals(removedBlockchainProcess!!.second, postchainContainer)
     }
@@ -152,7 +167,7 @@ class ContainerHealthcheckHandlerTest {
         // execute
         sut.check(emptySet())
         // verify
-        verify(dockerClient).stopContainer(anyString(), anyInt())
+        verify(dockerClient).stopContainerCmd(anyString())
         assertEquals(removedBlockchainProcess!!.first, CHAIN_ID)
         assertEquals(removedBlockchainProcess!!.second, postchainContainer)
     }
@@ -175,7 +190,7 @@ class ContainerHealthcheckHandlerTest {
 
     private fun mockContainerIsRunning() {
         val container: Container = mock()
-        doReturn(listOf("/${cname.name}")).`when`(container).names()
-        `when`(dockerClient.listContainers()).thenReturn(listOf(container))
+        `when`(container.names).thenReturn(listOf("/${cname.dockerContainer}").toTypedArray())
+        `when`(listContainersCmd.exec()).thenReturn(listOf(container))
     }
 }

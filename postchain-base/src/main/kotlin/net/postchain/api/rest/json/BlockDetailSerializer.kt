@@ -2,21 +2,27 @@
 
 package net.postchain.api.rest.json
 
-import com.google.gson.*
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonNull
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
+import com.google.gson.JsonSerializationContext
+import com.google.gson.JsonSerializer
 import net.postchain.base.BaseBlockWitness
 import net.postchain.common.toHex
 import net.postchain.core.block.BlockDetail
-import net.postchain.gtv.make_gtv_gson
+import net.postchain.gtv.makeStrictGtvGson
 import java.lang.reflect.Type
 
 internal class BlockDetailSerializer : JsonSerializer<BlockDetail> {
 
-    val gson = make_gtv_gson()
+    val gson = makeStrictGtvGson()
 
     override fun serialize(
-        src: BlockDetail?,
-        typeOfSrc: Type?,
-        context: JsonSerializationContext?
+            src: BlockDetail?,
+            typeOfSrc: Type?,
+            context: JsonSerializationContext?
     ): JsonElement {
         if (src == null) {
             return JsonNull.INSTANCE
@@ -32,8 +38,8 @@ internal class BlockDetailSerializer : JsonSerializer<BlockDetail> {
             val tx = JsonObject()
             tx.add("rid", JsonPrimitive(it.rid.toHex()))
             tx.add("hash", JsonPrimitive(it.hash.toHex()))
-            if (it.data != null) {
-                tx.add("data", JsonPrimitive(it.data.toHex()))
+            it.data?.let { data ->
+                tx.add("data", JsonPrimitive(data.toHex()))
             }
             transactions.add(tx)
         }

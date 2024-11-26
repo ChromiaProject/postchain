@@ -5,6 +5,7 @@ package net.postchain.network.mastersub.subnode.netty
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
+import io.netty.channel.EventLoopGroup
 import mu.KLogging
 import net.postchain.base.PeerInfo
 import net.postchain.network.common.LazyPacket
@@ -17,10 +18,12 @@ import net.postchain.network.netty2.NettyClient
 import net.postchain.network.netty2.Transport
 import java.net.InetSocketAddress
 import java.net.SocketAddress
+import java.util.concurrent.CompletableFuture
 
 class NettySubConnection(
         private val masterNode: PeerInfo,
-        private val connectionDescriptor: SubConnectionDescriptor
+        private val connectionDescriptor: SubConnectionDescriptor,
+        private val eventLoopGroup: EventLoopGroup
 ) : ChannelInboundHandlerAdapter(), SubConnection {
 
     companion object : KLogging()
@@ -29,16 +32,20 @@ class NettySubConnection(
     private lateinit var context: ChannelHandlerContext
     private var messageHandler: MsMessageHandler? = null
     private lateinit var onConnected: () -> Unit
-    private lateinit var onDisconnected: () -> Unit
+
+    private val channelInactiveFuture = CompletableFuture<Void>()
 
     fun open(onConnected: () -> Unit, onDisconnected: () -> Unit) {
         this.onConnected = onConnected
-        this.onDisconnected = onDisconnected
+        channelInactiveFuture.thenApply { onDisconnected() }
 
-        nettyClient = NettyClient(this@NettySubConnection, masterAddress()).also {it.channelFuture.await().apply {
-                if (!isSuccess) {
-                    logger.info("Connection failed: ${cause().message}")
-                    onDisconnected()
+        nettyClient = NettyClient(masterAddress(), eventLoopGroup) { pipeline ->
+            pipeline.addLast(this@NettySubConnection)
+        }.also {
+            it.channelFuture.addListener { future ->
+                if (!future.isSuccess) {
+                    logger.info("Connection failed: ${future.cause().message}")
+                    channelInactiveFuture.complete(null)
                 }
             }
         }
@@ -53,14 +60,17 @@ class NettySubConnection(
     }
 
     override fun channelInactive(ctx: ChannelHandlerContext?) {
-        onDisconnected()
+        channelInactiveFuture.complete(null)
     }
 
     override fun channelRead(ctx: ChannelHandlerContext?, msg: Any?) {
         val bytes = Transport.unwrapMessage(msg as ByteBuf)
-        val message = MsCodec.decode(bytes)
-        messageHandler?.onMessage(message)
-        msg.release()
+        try {
+            val message = MsCodec.decode(bytes)
+            messageHandler?.onMessage(message)
+        } finally {
+            msg.release()
+        }
     }
 
     override fun accept(handler: MsMessageHandler) {
@@ -77,8 +87,9 @@ class NettySubConnection(
         else ""
     }
 
-    override fun close() {
+    override fun close(): CompletableFuture<Void> {
         nettyClient?.shutdownAsync()
+        return channelInactiveFuture
     }
 
     override fun descriptor(): SubConnectionDescriptor {
