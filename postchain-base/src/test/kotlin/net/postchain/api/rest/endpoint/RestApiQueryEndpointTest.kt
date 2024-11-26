@@ -531,6 +531,32 @@ class RestApiQueryEndpointTest {
     }
 
     @Test
+    fun `GET query_gtv with no args`() {
+        val queryMap = mapOf(
+                "type" to gtv("test_query"),
+        )
+        val queryString = queryMap.map { "${it.key}=${it.value.toString().trim('"')}" }.joinToString("&")
+        val query = GtxQuery("test_query", gtv(mapOf()))
+        val answer = gtv("answer")
+
+        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryCacheTtlSeconds).thenReturn(17L)
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .header("Accept", ContentType.BINARY)
+                .get("/query_gtv/${blockchainRID}?$queryString")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+                .header("Cache-Control", equalTo("public, max-age=17"))
+                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
+
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(answer))
+    }
+
+    @Test
     fun `GET query_gtv with legacy args`() {
         val queryMap = mapOf(
                 "type" to gtv("test_query"),
@@ -678,7 +704,7 @@ class RestApiQueryEndpointTest {
     @Test
     fun `JSON response contains null values`() {
         val queryName = "test_query"
-        val query = GtxQuery(queryName, gtv(mapOf(NON_STRICT_QUERY_ARGUMENT to gtv(true))))
+        val query = GtxQuery(queryName, gtv(mapOf()))
 
         val answerString = """{"a":"not-null","b":null}"""
         val answer = gtv(mapOf("a" to gtv("not-null"), "b" to GtvNull))
