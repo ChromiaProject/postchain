@@ -131,7 +131,6 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdInsertEvent(ctx: EContext, prefix: String): String
     protected abstract fun cmdInsertState(ctx: EContext, prefix: String): String
     protected abstract fun cmdPruneEvents(ctx: EContext, prefix: String): String
-    protected abstract fun cmdPruneStates(ctx: EContext, prefix: String): String
 
     abstract fun cmdCreateTableGtxModuleVersion(ctx: EContext): String
 
@@ -507,11 +506,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
-    override fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): DatabaseAccess.AccountState? {
+    override fun getAccountState(ctx: EContext, prefix: String, height: Long, stateN: Long): DatabaseAccess.AccountState? {
         val sql = """SELECT block_height, state_n, data FROM ${tableStateLeafs(ctx, prefix)} 
             WHERE block_height <= ? AND state_n = ? 
             ORDER BY state_iid DESC LIMIT 1"""
-        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, height, state_n)
+        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, height, stateN)
         if (rows.isEmpty()) return null
         val data = rows.first()
         return DatabaseAccess.AccountState(
@@ -525,8 +524,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdInsertEvent(ctx, prefix), height, position, hash, ctx.txIID, data)
     }
 
-    override fun insertState(ctx: EContext, prefix: String, height: Long, state_n: Long, data: ByteArray) {
-        queryRunner.update(ctx.conn, cmdInsertState(ctx, prefix), height, state_n, data)
+    override fun insertState(ctx: EContext, prefix: String, height: Long, stateN: Long, data: ByteArray) {
+        queryRunner.update(ctx.conn, cmdInsertState(ctx, prefix), height, stateN, data)
     }
 
     override fun pruneEvents(ctx: EContext, prefix: String, heightMustBeHigherThan: Long) {
@@ -534,68 +533,78 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, heightMustBeHigherThan: Long) {
+        validateLeafRange(left, right)
+
+        val sql = """
+            DELETE FROM ${tableStateLeafs(ctx, prefix)} 
+            WHERE (state_n BETWEEN ? and ?) AND block_height <= ?            
+        """.trimIndent()
+
+        queryRunner.update(ctx.conn, sql, left, right, heightMustBeHigherThan)
+    }
+
+    private fun validateLeafRange(left: Long, right: Long) {
         if (left > right) {
             throw ProgrammerMistake("Invalid range: left value ($left) is greater than right value ($right)")
         }
-        queryRunner.update(ctx.conn, cmdPruneStates(ctx, prefix), left, right, heightMustBeHigherThan)
     }
 
     /**
-     * Delete prunable account states that not be used anymore at given height
+     * Deletes prunable account states that are no longer needed at the specified height.
      *
-     * @param ctx the context
-     * @param prefix the prefix
-     * @param left the left
-     * @param right the right
-     * @param nextSnapshotHeight the next snapshot height
+     * @param ctx The chain execution context.
+     * @param prefix The table name prefix.
+     * @param left The lower bound of the range for account states to be deleted (inclusive).
+     * @param right The upper bound of the range for account states to be deleted (inclusive).
+     * @param nextSnapshotHeight The height of the next snapshot used to determine which states are prunable.
      */
     override fun safePruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, nextSnapshotHeight: Long) {
-        if (left > right) {
-            throw ProgrammerMistake("Invalid range: left value ($left) is greater than right value ($right).")
-        }
+        validateLeafRange(left, right)
+
         val sql = """
             DELETE FROM ${tableStateLeafs(ctx, prefix)} 
             WHERE block_height < ? AND state_n BETWEEN ? AND ? 
-            AND state_n in (SELECT state_n FROM ${tableStateLeafs(ctx, prefix)} 
-                            WHERE block_height = ? AND state_n BETWEEN ? AND ?)
+            AND state_n in (
+                SELECT state_n 
+                FROM ${tableStateLeafs(ctx, prefix)} 
+                WHERE block_height = ? AND state_n BETWEEN ? AND ?
+            )
         """.trimIndent()
         queryRunner.update(ctx.conn, sql, nextSnapshotHeight, left, right, nextSnapshotHeight, left, right)
     }
 
-    override fun insertPage(ctx: EContext, name: String, page: Page) {
+    override fun insertPage(ctx: EContext, pageStoreName: String, page: Page) {
         val childHashes = page.childHashes.fold(ByteArray(0)) { total, item -> total.plus(item) }
-        queryRunner.update(ctx.conn, cmdInsertPage(ctx, name), page.blockHeight, page.level, page.left, childHashes)
+        queryRunner.update(ctx.conn, cmdInsertPage(ctx, pageStoreName), page.blockHeight, page.level, page.left, childHashes)
     }
 
     /**
      * If we didn't prune the old one then we need to query the snapshot page
      * at highest block height that less than or equal to specific height
      */
-    override fun getPageEqualOrLowerThanHeight(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page? {
+    override fun getPageEqualOrLowerThanHeight(ctx: EContext, pageStoreName: String, height: Long, level: Int, left: Long): Page? {
         val sql = """
-            SELECT child_hashes FROM ${tablePages(ctx, name)} 
-            WHERE block_height = (SELECT MAX(block_height) FROM ${tablePages(ctx, name)} 
-                                    WHERE block_height <= ? AND level = ? AND left_index = ?)
-            AND level = ? AND left_index = ?"""
+            SELECT child_hashes FROM ${tablePages(ctx, pageStoreName)} 
+            WHERE block_height = (
+                SELECT MAX(block_height) FROM ${tablePages(ctx, pageStoreName)} 
+                WHERE block_height <= ? AND level = ? AND left_index = ?
+            )
+            AND level = ? AND left_index = ? ORDER BY page_iid DESC
+        """.trimIndent()
         val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height, level, left, level, left)
-        // if data size is not contain correct length then it regards to error
-        if (data == null || data.size % HASH_LENGTH != 0) return null
-        val length = data.size / HASH_LENGTH
-        val childHashes = Array(length) { ByteArray(HASH_LENGTH) }
-        for (i in 0 until length) {
-            val start = i * HASH_LENGTH
-            val end = start + HASH_LENGTH - 1
-            childHashes[i] = data.sliceArray(start..end)
-        }
-        return Page(height, level, left, childHashes)
+        return createPage(height, level, left, data)
     }
 
-    override fun getPageAtHeight(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page? {
+    override fun getPageAtHeight(ctx: EContext, pageStoreName: String, height: Long, level: Int, left: Long): Page? {
         val sql = """
-            SELECT child_hashes FROM ${tablePages(ctx, name)} 
+            SELECT child_hashes FROM ${tablePages(ctx, pageStoreName)} 
             WHERE block_height = ? AND level = ? AND left_index = ?
-            """
+        """.trimIndent()
         val data = queryRunner.query(ctx.conn, sql, nullableByteArrayRes, height, level, left)
+        return createPage(height, level, left, data)
+    }
+
+    private fun createPage(height: Long, level: Int, left: Long, data: ByteArray?): Page? {
         // if data size is not contain correct length then it regards to error
         if (data == null || data.size % HASH_LENGTH != 0) return null
         val length = data.size / HASH_LENGTH
@@ -626,13 +635,13 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdCreateIndexTableState(ctx, prefix, index))
     }
 
-    override fun getHighestLevelPageEqualOrLowerThanHeight(ctx: EContext, name: String, height: Long): Int {
-        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, name)} WHERE block_height <= ?"
+    override fun getHighestLevelPageEqualOrLowerThanHeight(ctx: EContext, pageStoreName: String, height: Long): Int {
+        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, pageStoreName)} WHERE block_height <= ?"
         return queryRunner.query(ctx.conn, sql, intRes, height)
     }
 
-    override fun getHighestLevelPageAtHeight(ctx: EContext, name: String, height: Long): Int {
-        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, name)} WHERE block_height = ?"
+    override fun getHighestLevelPageAtHeight(ctx: EContext, pageStoreName: String, height: Long): Int {
+        val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, pageStoreName)} WHERE block_height = ?"
         return queryRunner.query(ctx.conn, sql, intRes, height)
     }
 
@@ -1479,31 +1488,36 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     /**
-     * Get next prunable snapshot height
+     * Determines the lowest snapshot height to keep.
      *
-     * @param ctx is the context
-     * @param prefix is what the state will be used for, for example "eif" or "icmf"
-     * @param blockHeight is the block height
-     * @param snapshotsToKeep is the number of snapshots to keep
+     * This function identifies the first height above the prunable range based on the specified block height
+     * and the number of recent snapshots to keep. All snapshots below the returned height are considered prunable.
+     *
+     * @param ctx The chain execution context.
+     * @param pageStoreName The name of the page store.
+     * @param blockHeight The current block height used to determine the snapshot.
+     * @param snapshotsToKeep The number of recent snapshots that should be retained.
+     * @return The height of the next prunable snapshot, or `null` if no snapshot is eligible for pruning.
      */
-    override fun getNextPrunableSnapshotHeight(ctx: EContext, name: String, blockHeight: Long, snapshotsToKeep: Int): Long? {
+    override fun getLowestSnapshotHeightToKeep(ctx: EContext, pageStoreName: String, blockHeight: Long, snapshotsToKeep: Int): Long? {
+        val snapshotsToKeepIncludingCurrentHeight = snapshotsToKeep + 1
         val sql = """
-            SELECT distinct(block_height) from ${tablePages(ctx, name)}
+            SELECT distinct(block_height) FROM ${tablePages(ctx, pageStoreName)}
             WHERE block_height <= ?
             ORDER BY block_height DESC
             LIMIT ?
-            """.trimIndent()
+        """.trimIndent()
 
         ctx.conn.prepareStatement(sql).use { statement ->
             statement.setLong(1, blockHeight)
-            statement.setInt(2, snapshotsToKeep + 1)
+            statement.setInt(2, snapshotsToKeepIncludingCurrentHeight)
             statement.executeQuery().use { resultSet ->
-                val list = buildList<Long> {
+                val list = buildList {
                     while (resultSet.next()) {
                         add(resultSet.getLong(1))
                     }
                 }
-                if (list.size < snapshotsToKeep + 1) {
+                if (list.size < snapshotsToKeepIncludingCurrentHeight) {
                     return null
                 }
                 return list[snapshotsToKeep - 1]
@@ -1512,22 +1526,27 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     /**
-     * Get prunable pages that are not needed anymore at the given height
+     * Retrieves prunable pages that are no longer required at the specified height.
      *
-     * @param ctx is the context
-     * @param name is the name of the page
-     * @param nextSnapshotHeight is the next snapshot height
+     * A prunable page is defined as a page whose height is lower than the `lowestHeightToKeep` parameter.
+     *
+     * @param ctx The chain execution context.
+     * @param pageStoreName The name of the page store.
+     * @param lowestHeightToKeep The lowest snapshot height to keep.
+     * @return A list of prunable pages (those with heights below `lowestHeightToKeep`) that can be removed.
      */
-    override fun getPrunablePages(ctx: EContext, name: String, nextSnapshotHeight: Long): List<Long> {
+    override fun getPrunablePages(ctx: EContext, pageStoreName: String, lowestHeightToKeep: Long): List<Long> {
         val sql = """
-            SELECT page_iid FROM ${tablePages(ctx, name)}
-            WHERE block_height < ? AND (level, left_index) IN (SELECT level, left_index FROM ${tablePages(ctx, name)} WHERE block_height = ?)
-            """.trimIndent()
+            SELECT page_iid FROM ${tablePages(ctx, pageStoreName)}
+            WHERE block_height < ? AND (level, left_index) IN (
+                SELECT level, left_index FROM ${tablePages(ctx, pageStoreName)} WHERE block_height = ?
+            )
+        """.trimIndent()
         ctx.conn.prepareStatement(sql).use { statement ->
-            statement.setLong(1, nextSnapshotHeight)
-            statement.setLong(2, nextSnapshotHeight)
+            statement.setLong(1, lowestHeightToKeep)
+            statement.setLong(2, lowestHeightToKeep)
             statement.executeQuery().use { resultSet ->
-                return buildList<Long> {
+                return buildList {
                     while (resultSet.next()) {
                         add(resultSet.getLong(1))
                     }
@@ -1537,31 +1556,38 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     /**
-     * Delete prunable pages
+     * Deletes prunable pages from the specified page store.
      *
-     * @param ctx is the context
-     * @param name is the name of the page
-     * @param pageIids is the list of page iids to delete
+     * @param ctx The chain execution context.
+     * @param pageStoreName The name of the page store.
+     * @param pageIids A list of page IDs that should be deleted.
      */
-    override fun deletePages(ctx: EContext, name: String, pageIids: List<Long>): Boolean {
-        val sql = "DELETE FROM ${tablePages(ctx, name)} WHERE page_iid in (${pageIids.joinToString(",")})"
+    override fun deletePages(ctx: EContext, pageStoreName: String, pageIids: List<Long>): Boolean {
+        val sql = """
+            DELETE FROM ${tablePages(ctx, pageStoreName)} 
+            WHERE page_iid in (${pageIids.joinToString(",")})
+        """.trimIndent()
         ctx.conn.prepareStatement(sql).use { statement ->
             return statement.executeUpdate() > 0
         }
     }
 
     /**
-     * Get the left index of the given page iids
+     * Retrieves the left index values for the specified page IDs.
      *
-     * @param ctx is the context
-     * @param name is the name of the page
-     * @param pageIids is the list of page iids
+     * @param ctx The chain execution context.
+     * @param pageStoreName The name of the page store.
+     * @param pageIids A list of page IDs for which the left index is retrieved.
+     * @return A list of left index values corresponding to the given page IDs.
      */
-    override fun getLeftIndex(ctx: EContext, name: String, pageIids: List<Long>): List<Long> {
-        val sql = "SELECT left_index FROM ${tablePages(ctx, name)} WHERE page_iid in (${pageIids.joinToString(",")})"
+    override fun getLeftIndex(ctx: EContext, pageStoreName: String, pageIids: List<Long>): List<Long> {
+        val sql = """
+            SELECT left_index FROM ${tablePages(ctx, pageStoreName)} 
+            WHERE page_iid in (${pageIids.joinToString(",")})
+        """.trimIndent()
         ctx.conn.prepareStatement(sql).use { statement ->
             statement.executeQuery().use { resultSet ->
-                return buildList<Long> {
+                return buildList {
                     while (resultSet.next()) {
                         add(resultSet.getLong(1))
                     }

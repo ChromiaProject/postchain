@@ -84,8 +84,8 @@ fun <RT> runStorageCommand(appConfig: AppConfig, allowUpgrade: Boolean = false, 
     }
 }
 
-fun <RT> runStorageCommand(appConfig: AppConfig, chainId: Long, allowUpgrade: Boolean = false, op: (ctx: EContext) -> RT): RT {
-    val storage = StorageBuilder.buildStorage(appConfig, allowUpgrade = allowUpgrade)
+fun <RT> runStorageCommand(appConfig: AppConfig, chainId: Long, allowUpgrade: Boolean = false, wipeDatabase: Boolean = false, op: (ctx: EContext) -> RT): RT {
+    val storage = StorageBuilder.buildStorage(appConfig, allowUpgrade = allowUpgrade, wipeDatabase = wipeDatabase)
 
     return storage.use {
         withReadWriteConnection(it, chainId) { ctx ->

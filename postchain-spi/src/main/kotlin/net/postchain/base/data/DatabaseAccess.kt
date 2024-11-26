@@ -160,19 +160,19 @@ interface DatabaseAccess {
     fun getEventsOfHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
     fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
     fun pruneEvents(ctx: EContext, prefix: String, heightMustBeHigherThan: Long)
-    fun insertState(ctx: EContext, prefix: String, height: Long, state_n: Long, data: ByteArray)
-    fun getAccountState(ctx: EContext, prefix: String, height: Long, state_n: Long): AccountState?
+    fun insertState(ctx: EContext, prefix: String, height: Long, stateN: Long, data: ByteArray)
+    fun getAccountState(ctx: EContext, prefix: String, height: Long, stateN: Long): AccountState?
     fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, heightMustBeHigherThan: Long)
     fun safePruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, nextSnapshotHeight: Long)
-    fun insertPage(ctx: EContext, name: String, page: Page)
-    fun getPageEqualOrLowerThanHeight(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page?
-    fun getPageAtHeight(ctx: EContext, name: String, height: Long, level: Int, left: Long): Page?
-    fun deletePages(ctx: EContext, name: String, pageIids: List<Long>): Boolean
-    fun getLeftIndex(ctx: EContext, name: String, pageIids: List<Long>): List<Long>
-    fun getHighestLevelPageEqualOrLowerThanHeight(ctx: EContext, name: String, height: Long): Int
-    fun getHighestLevelPageAtHeight(ctx: EContext, name: String, height: Long): Int
-    fun getPrunablePages(ctx: EContext, name: String, nextSnapshotHeight: Long): List<Long>
-    fun getNextPrunableSnapshotHeight(ctx: EContext, name: String, blockHeight: Long, snapshotsToKeep: Int = 100): Long?
+    fun insertPage(ctx: EContext, pageStoreName: String, page: Page)
+    fun getPageEqualOrLowerThanHeight(ctx: EContext, pageStoreName: String, height: Long, level: Int, left: Long): Page?
+    fun getPageAtHeight(ctx: EContext, pageStoreName: String, height: Long, level: Int, left: Long): Page?
+    fun deletePages(ctx: EContext, pageStoreName: String, pageIids: List<Long>): Boolean
+    fun getLeftIndex(ctx: EContext, pageStoreName: String, pageIids: List<Long>): List<Long>
+    fun getHighestLevelPageEqualOrLowerThanHeight(ctx: EContext, pageStoreName: String, height: Long): Int
+    fun getHighestLevelPageAtHeight(ctx: EContext, pageStoreName: String, height: Long): Int
+    fun getPrunablePages(ctx: EContext, pageStoreName: String, lowestHeightToKeep: Long): List<Long>
+    fun getLowestSnapshotHeightToKeep(ctx: EContext, pageStoreName: String, blockHeight: Long, snapshotsToKeep: Int = 100): Long?
 
     // Peers
     fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo>

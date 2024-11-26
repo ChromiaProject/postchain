@@ -309,19 +309,6 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
         return "DELETE FROM ${tableEventLeafs(ctx, prefix)} WHERE block_height <= ?"
     }
 
-    /**
-     * Deletes data from the table where:
-     *
-     * 1. state_n is between left and right
-     * 2. height is <= given minimum-height-to-keep
-     *
-     * @param ctx is the context
-     * @param prefix is what the state will be used for, for example "eif"
-     */
-    override fun cmdPruneStates(ctx: EContext, prefix: String): String {
-        return "DELETE FROM ${tableStateLeafs(ctx, prefix)} WHERE (state_n BETWEEN ? and ?) AND block_height <= ?"
-    }
-
     override fun getAllBlocksWithTransactions(ctx: EContext, fromHeight: Long, upToHeight: Long,
                                               blockHandler: (DatabaseAccess.BlockWithTransactions) -> Unit) {
         val sql = """

@@ -8,6 +8,8 @@ import net.postchain.common.data.Hash
 import java.security.InvalidParameterException
 import java.security.MessageDigest
 
+/* these are specific to the sparse Merkle tree implementation */
+
 interface DigestSystem {
     val messageDigest: MessageDigest
 
