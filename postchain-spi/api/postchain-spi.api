@@ -629,8 +629,8 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getLastSystemChainId (Lnet/postchain/core/ExecutionContext;)J
 	public abstract fun getLastTransactionNumber (Lnet/postchain/core/ExecutionContext;)J
 	public abstract fun getLeftIndex (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;Ljava/util/List;)Ljava/util/List;
+	public abstract fun getLowestSnapshotHeightToKeep (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JI)Ljava/lang/Long;
 	public abstract fun getMustSyncUntil (Lnet/postchain/core/AppContext;)Ljava/util/Map;
-	public abstract fun getNextPrunableSnapshotHeight (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JI)Ljava/lang/Long;
 	public abstract fun getPageAtHeight (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JIJ)Lnet/postchain/base/snapshot/Page;
 	public abstract fun getPageEqualOrLowerThanHeight (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JIJ)Lnet/postchain/base/snapshot/Page;
 	public abstract fun getPeerInfoCollection (Lnet/postchain/core/AppContext;)[Lnet/postchain/base/PeerInfo;
@@ -712,7 +712,7 @@ public final class net/postchain/base/data/DatabaseAccess$Companion {
 public final class net/postchain/base/data/DatabaseAccess$DefaultImpls {
 	public static synthetic fun addPeerInfo$default (Lnet/postchain/base/data/DatabaseAccess;Lnet/postchain/core/AppContext;Ljava/lang/String;ILjava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)Z
 	public static synthetic fun getAllBlocksWithTransactions$default (Lnet/postchain/base/data/DatabaseAccess;Lnet/postchain/core/ExecutionContext;JJLkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
-	public static synthetic fun getNextPrunableSnapshotHeight$default (Lnet/postchain/base/data/DatabaseAccess;Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JIILjava/lang/Object;)Ljava/lang/Long;
+	public static synthetic fun getLowestSnapshotHeightToKeep$default (Lnet/postchain/base/data/DatabaseAccess;Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JIILjava/lang/Object;)Ljava/lang/Long;
 	public static fun initializeApp (Lnet/postchain/base/data/DatabaseAccess;Ljava/sql/Connection;I)V
 	public static synthetic fun initializeApp$default (Lnet/postchain/base/data/DatabaseAccess;Ljava/sql/Connection;IZILjava/lang/Object;)V
 	public static synthetic fun removeAllBlockchainSpecificTables$default (Lnet/postchain/base/data/DatabaseAccess;Lnet/postchain/core/ExecutionContext;Ljava/util/List;ILjava/lang/Object;)V
@@ -888,17 +888,27 @@ public class net/postchain/base/snapshot/SnapshotPageStore : net/postchain/base/
 	public static synthetic fun updateSnapshot$default (Lnet/postchain/base/snapshot/SnapshotPageStore;JLjava/util/NavigableMap;IILjava/lang/Object;)[B
 }
 
-synthetic class net/postchain/base/snapshot/SnapshotPageStore$updateSnapshot$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
+synthetic class net/postchain/base/snapshot/SnapshotPageStore$_updateSnapshotV1$updateLevel$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
 	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
 	public final fun invoke ([B[B)[B
 }
 
-synthetic class net/postchain/base/snapshot/SnapshotPageStore$updateSnapshot$updateLevel$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
+synthetic class net/postchain/base/snapshot/SnapshotPageStore$_updateSnapshotV1$updateLevel$pageHash$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
 	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
 	public final fun invoke ([B[B)[B
 }
 
-synthetic class net/postchain/base/snapshot/SnapshotPageStore$updateSnapshot$updateLevel$pageHash$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
+synthetic class net/postchain/base/snapshot/SnapshotPageStore$_updateSnapshotV2$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
+	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+	public final fun invoke ([B[B)[B
+}
+
+synthetic class net/postchain/base/snapshot/SnapshotPageStore$_updateSnapshotV2$updateLevel$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
+	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
+	public final fun invoke ([B[B)[B
+}
+
+synthetic class net/postchain/base/snapshot/SnapshotPageStore$_updateSnapshotV2$updateLevel$pageHash$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
 	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
 	public final fun invoke ([B[B)[B
 }

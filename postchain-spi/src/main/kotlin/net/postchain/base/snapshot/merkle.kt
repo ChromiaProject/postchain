@@ -172,7 +172,7 @@ open class EventPageStore(
         tableNamePrefix: String
 ) : BasePageStore("${tableNamePrefix}_event", ctx, levelsPerPage, ds) {
 
-    fun writeEventTree(blockHeight: Long, leafHashes: List<Hash>, protocolVersion: Int = 1): Hash {
+    fun writeEventTree(blockHeight: Long, leafHashes: List<Hash>): Hash {
         val entriesPerPage = 1 shl levelsPerPage
 
         fun updateLevel(level: Int, entryHashes: List<Hash>): Hash {
