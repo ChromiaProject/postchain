@@ -344,12 +344,12 @@ class RestApi(
             "/highest_block_height_anchoring_check/{blockchainRid}" bind GET to ::getHighestBlockHeightAnchoringCheck,
     )
 
-    @Suppress("UNUSED_PARAMETER")
+    @Suppress("unused")
     private fun getVersion(request: Request): Response = Response(OK).with(
             versionBody of Version(REST_API_VERSION)
     )
 
-    @Suppress("UNUSED_PARAMETER")
+    @Suppress("unused")
     private fun getInfraVersion(request: Request): Response = Response(OK).with(
             infraVersionBody of InfraVersion(
                     nodeDiagnosticContext[DiagnosticProperty.VERSION]?.value?.toString().orEmpty(),
@@ -529,7 +529,8 @@ class RestApi(
         if (res.type != GtvType.DICT)
             throw UserMistake("web_query response must be a dict with at least 'content_type' and 'content' (and optionally 'cache_ttl_seconds')")
         val dict = res.asDict()
-        val contentType = dict["content_type"]?.asString() ?: throw UserMistake("web_query response must have content_type")
+        val contentType = dict["content_type"]?.asString()
+                ?: throw UserMistake("web_query response must have content_type")
         val content = dict["content"] ?: throw UserMistake("web_query response must have content")
         val cacheTtlSeconds = dict["cache_ttl_seconds"]?.asInteger() ?: -1
         return webQueryResponse(model, content, contentType, cacheTtlSeconds)
@@ -840,7 +841,8 @@ class RestApi(
 
     private fun extractGetQuery(queryMap: Map<String, List<String?>>): GtxQuery {
         val type = queryMap[QUERY_TYPE]?.singleOrNull() ?: throw UserMistake("Missing query type")
-        val args = queryMap[QUERY_ARGS]?.singleOrNull()?.let {
+        val args = if (queryMap.size == 1) gtv(mapOf())
+        else queryMap[QUERY_ARGS]?.singleOrNull()?.let {
             try {
                 GtvDecoder.decodeGtv(it.hexStringToByteArray())
             } catch (e: GtvException) {
@@ -848,15 +850,15 @@ class RestApi(
                 throw IllegalArgumentException("Invalid GTV data")
             }
         } ?: gtv(queryMap.filterKeys { it != QUERY_TYPE }.mapValues {
-                    val paramValue = requireNotNull(it.value.single())
-                    if (paramValue == "true" || paramValue == "false") {
-                        gtv(paramValue.toBoolean())
-                    } else if (paramValue.toLongOrNull() != null) {
-                        gtv(paramValue.toLong())
-                    } else {
-                        gtv(paramValue)
-                    }
-                } + (NON_STRICT_QUERY_ARGUMENT to gtv(true)))
+            val paramValue = requireNotNull(it.value.single())
+            if (paramValue == "true" || paramValue == "false") {
+                gtv(paramValue.toBoolean())
+            } else if (paramValue.toLongOrNull() != null) {
+                gtv(paramValue.toLong())
+            } else {
+                gtv(paramValue)
+            }
+        } + (NON_STRICT_QUERY_ARGUMENT to gtv(true)))
         return GtxQuery(type, args)
     }
 
