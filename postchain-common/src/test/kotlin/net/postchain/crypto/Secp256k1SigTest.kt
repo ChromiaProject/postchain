@@ -3,7 +3,6 @@ package net.postchain.crypto
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.common.exception.UserMistake
-import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -17,7 +16,7 @@ class Secp256k1SigTest {
 
     @Test
     fun testSign() {
-        val privKey = PrivKey("01".hexStringToByteArray())
+        val privKey = PrivKey(ByteArray(32) { 1 })
         val cryptoSystem = Secp256K1CryptoSystem()
         val pubKey = cryptoSystem.derivePubKey(privKey)
         val sha256 = MessageDigest.getInstance("SHA-256")
@@ -25,7 +24,7 @@ class Secp256k1SigTest {
         val sigMaker = cryptoSystem.buildSigMaker(KeyPair(pubKey, privKey))
         val signature = sigMaker.signDigest(digest)
 
-        val expectedSignature = "AFFF580595971B8C1700E77069D73602AEF4C2A760DBD697881423DFFF845DE8579ADB6A1AC03ACDE461B5821A049EBD39A8A8EBF2506B841B15C27342D2E342"
+        val expectedSignature = "225C195DDD198AD2840EFB7017B7484FF353A77686F5D211B22D12129A4C78214CE22891D74A635A5F18A56EEB17716AA1C84E4F5ED389A8F56E7F5ECC9F8BCA"
         assertThat(signature.data.toHex()).isEqualTo(expectedSignature)
     }
 
@@ -35,7 +34,7 @@ class Secp256k1SigTest {
      */
     @Test
     fun `Should canonicalize S values`() {
-        val privKey = PrivKey("03".hexStringToByteArray())
+        val privKey = PrivKey(ByteArray(32) { 3 })
         val cryptoSystem = Secp256K1CryptoSystem()
         val pubKey = cryptoSystem.derivePubKey(privKey)
         val sha256 = MessageDigest.getInstance("SHA-256")
@@ -43,16 +42,14 @@ class Secp256k1SigTest {
         val sigMaker = cryptoSystem.buildSigMaker(KeyPair(pubKey, privKey))
         val signature = sigMaker.signDigest(digest)
 
-        val expectedSignature = "502C6AC38E1C68CE68F044F5AB680F2880A6C1CD34E70F2B4F945C6FD30ABD0318EF5C6C3392B9D67AD5109C85476A0E159425D7F6ACE2CEBEAA65F02F210BBB"
+        val expectedSignature = "45DE827CD49A36D658A1F8E69BDBDBFC612F2307C6ED299078900E86C3C47E3A469AAB836E48ED66F6E62BE4EA17DAA7A33318CCD27A9825CC30EB18A51810DA"
         assertThat(signature.data.toHex()).isEqualTo(expectedSignature)
     }
 
     @Test
     fun `Should not allow digests larger than 32 bytes`() {
-        val privKey = PrivKey("01".hexStringToByteArray())
         val cryptoSystem = Secp256K1CryptoSystem()
-        val pubKey = cryptoSystem.derivePubKey(privKey)
-        val sigMaker = cryptoSystem.buildSigMaker(KeyPair(pubKey, privKey))
+        val sigMaker = cryptoSystem.buildSigMaker(cryptoSystem.generateKeyPair())
         val exception = assertThrows<UserMistake> {
             sigMaker.signDigest(ByteArray(33))
         }
