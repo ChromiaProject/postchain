@@ -128,14 +128,20 @@ fun secp256k1_ecdh(privKey: ByteArray, pubKey: ByteArray): ByteArray {
 open class Secp256k1SigMaker(val pubKey: ByteArray, val privKey: ByteArray, val digestFun: (ByteArray) -> Hash) : SigMaker {
 
     init {
-        val compressedPubKey = isCompressedPubKey(pubKey)
-        if (compressedPubKey && pubKey.size != 33) {
-            throw UserMistake("Compressed public key must be 33 bytes long")
-        } else if (!compressedPubKey && pubKey.size != 65) {
-            throw UserMistake("Uncompressed public key must be 65 bytes long")
+        try {
+            ECPublicKeyParameters(CURVE.curve.decodePoint(pubKey), CURVE)
+        } catch (e: Exception) {
+            throw UserMistake("Invalid public key: ${e.message}", e)
         }
+
         if (privKey.size != 32) {
             throw UserMistake("Private key must be 32 bytes long")
+        }
+
+        try {
+            ECPrivateKeyParameters(BigInteger(1, privKey), CURVE)
+        } catch (e: Exception) {
+            throw UserMistake("Invalid private key: ${e.message}")
         }
     }
 
