@@ -157,7 +157,7 @@ variables:
   # As of Maven 3.3.0 instead of this you may define these options in `.mvn/maven.config` so the same config is used
   # when running from the command line.
   # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
-  MAVEN_CLI_OPTS: "-DexcludedGroups=no-ci --batch-mode --errors --fail-at-end --show-version -s .gitlab-settings.xml"
+  MAVEN_CLI_OPTS: "-DexcludedGroups=no-ci --batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true -s .gitlab-settings.xml"
   MAVEN_CLI_NVD_OPTS: "-DnvdDatafeedUrl=https://nvd-data-feeds.chromia.dev/nvdcve-{0}.json.gz"
   POSTCHAIN_DB_URL: jdbc:postgresql://docker/postchain
   DOCKER_HOST: tcp://docker:2375
