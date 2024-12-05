@@ -23,6 +23,7 @@ fun runNode(appConfig: AppConfig, chainIds: List<Long>) {
 
 fun waitDb(retryTimes: Int, retryInterval: Long, appConfig: AppConfig) {
     tryCreateBasicDataSource(appConfig)?.let { return } ?: if (retryTimes > 0) {
+        println("Retrying database connection $retryTimes times")
         Thread.sleep(retryInterval)
         waitDb(retryTimes - 1, retryInterval, appConfig)
     } else throw PrintMessage("Unable to connect to database: ${appConfig.databaseUrl}")
