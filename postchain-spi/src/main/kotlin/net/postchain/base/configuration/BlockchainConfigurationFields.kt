@@ -48,3 +48,5 @@ const val KEY_REVOLT_WHEN_SHOULD_BUILD_BLOCK = "revolt_when_should_build_block"
 const val KEY_CONFIG_CONSENSUS_STRATEGY = "config_consensus_strategy"
 
 const val KEY_QUERY_CACHE_TTL_SECONDS = "query_cache_ttl_seconds"
+
+const val KEY_FEATURES = "features"

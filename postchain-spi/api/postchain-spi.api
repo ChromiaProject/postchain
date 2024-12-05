@@ -358,12 +358,13 @@ public abstract interface class net/postchain/base/TxEventSink {
 
 public final class net/postchain/base/configuration/BlockchainConfigurationData {
 	public static final field Companion Lnet/postchain/base/configuration/BlockchainConfigurationData$Companion;
-	public fun <init> (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JZ)V
+	public fun <init> (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JZLjava/util/Map;)V
 	public final fun component1 ()Lnet/postchain/gtv/Gtv;
 	public final fun component12 ()Lnet/postchain/gtv/Gtv;
 	public final fun component14 ()Ljava/lang/Long;
 	public final fun component15 ()J
 	public final fun component16 ()Z
+	public final fun component17 ()Ljava/util/Map;
 	public final fun component2 ()Ljava/util/List;
 	public final fun component3 ()Ljava/lang/String;
 	public final fun component4 ()Ljava/util/List;
@@ -372,8 +373,8 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData 
 	public final fun component7 ()J
 	public final fun component8 ()Ljava/lang/String;
 	public final fun component9 ()Lnet/postchain/gtv/Gtv;
-	public final fun copy (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JZ)Lnet/postchain/base/configuration/BlockchainConfigurationData;
-	public static synthetic fun copy$default (Lnet/postchain/base/configuration/BlockchainConfigurationData;Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JZILjava/lang/Object;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
+	public final fun copy (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JZLjava/util/Map;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
+	public static synthetic fun copy$default (Lnet/postchain/base/configuration/BlockchainConfigurationData;Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JZLjava/util/Map;ILjava/lang/Object;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
 	public fun equals (Ljava/lang/Object;)Z
 	public static final fun fromRaw ([B)Lnet/postchain/base/configuration/BlockchainConfigurationData;
 	public final fun getAddPrimaryKeyToHeader ()Z
@@ -382,6 +383,7 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData 
 	public final fun getBlockchainDependencies ()Ljava/util/List;
 	public final fun getConfigConsensusStrategy ()Lnet/postchain/base/configuration/ConfigConsensusStrategy;
 	public final fun getConfigurationFactory ()Ljava/lang/String;
+	public final fun getFeatures ()Ljava/util/Map;
 	public final fun getGtx ()Lnet/postchain/gtv/Gtv;
 	public final fun getHistoricBrid ()Lnet/postchain/common/BlockchainRid;
 	public final fun getMaxBlockFutureTime ()J
@@ -416,6 +418,7 @@ public final class net/postchain/base/configuration/BlockchainConfigurationField
 	public static final field KEY_CONFIGURATIONFACTORY Ljava/lang/String;
 	public static final field KEY_CONFIG_CONSENSUS_STRATEGY Ljava/lang/String;
 	public static final field KEY_DEPENDENCIES Ljava/lang/String;
+	public static final field KEY_FEATURES Ljava/lang/String;
 	public static final field KEY_GTX Ljava/lang/String;
 	public static final field KEY_GTX_ALLOWOVERRIDES Ljava/lang/String;
 	public static final field KEY_GTX_MAX_TX_SIGNATURES Ljava/lang/String;
@@ -453,6 +456,13 @@ public final class net/postchain/base/configuration/BlockchainConfigurationOptio
 
 public final class net/postchain/base/configuration/BlockchainConfigurationOptions$Companion {
 	public final fun getDEFAULT ()Lnet/postchain/base/configuration/BlockchainConfigurationOptions;
+}
+
+public final class net/postchain/base/configuration/BlockchainFeatures : java/lang/Enum {
+	public static final field merkle_hash_version Lnet/postchain/base/configuration/BlockchainFeatures;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lnet/postchain/base/configuration/BlockchainFeatures;
+	public static fun values ()[Lnet/postchain/base/configuration/BlockchainFeatures;
 }
 
 public final class net/postchain/base/configuration/ConfigConsensusStrategy : java/lang/Enum {
