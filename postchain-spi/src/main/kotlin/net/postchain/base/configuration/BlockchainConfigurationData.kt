@@ -4,6 +4,7 @@ import net.postchain.base.BaseDependencyFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.mapper.DefaultEmpty
 import net.postchain.gtv.mapper.DefaultValue
 import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.mapper.Nested
@@ -65,7 +66,10 @@ data class BlockchainConfigurationData(
         val maxBlockFutureTime: Long,
         @Name(KEY_ADD_PRIMARY_KEY_TO_HEADER)
         @DefaultValue(defaultBoolean = false)
-        val addPrimaryKeyToHeader: Boolean
+        val addPrimaryKeyToHeader: Boolean,
+        @Name(KEY_FEATURES)
+        @DefaultEmpty
+        val features: Map<String, Gtv>,
 ) {
     val historicBrid = historicBridAsByteArray?.let { BlockchainRid(it) }
     val blockchainDependencies = blockchainDependenciesRaw?.let { BaseDependencyFactory.build(it) } ?: listOf()

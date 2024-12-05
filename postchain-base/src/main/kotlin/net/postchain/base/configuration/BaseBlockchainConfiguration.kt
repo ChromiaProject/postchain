@@ -22,6 +22,7 @@ import net.postchain.base.data.BaseTransactionFactory
 import net.postchain.base.extension.ConfigurationHashBlockBuilderExtension
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.core.BadConfigurationException
 import net.postchain.core.BlockchainConfiguration
@@ -60,6 +61,18 @@ open class BaseBlockchainConfiguration(
 ) : BlockchainConfiguration {
 
     companion object : KLogging()
+
+    init {
+        configData.features.keys.forEach { feature ->
+            if (BlockchainFeatures.entries.find { it.name == feature } == null)
+                throw UserMistake("Unrecognized feature: $feature")
+        }
+
+        configData.features[BlockchainFeatures.merkle_hash_version.name]?.let {
+            if (it.asInteger() != 1L)
+                throw UserMistake("Unsupported ${BlockchainFeatures.merkle_hash_version.name} version: ${it.asInteger()}")
+        }
+    }
 
     final override val rawConfig: Gtv = configData.rawConfig
     val baseConfig: Gtv = calculateBaseConfig()

@@ -2,9 +2,16 @@
 
 package net.postchain.gtx
 
+import assertk.assertFailure
+import assertk.assertThat
+import assertk.assertions.isEmpty
+import assertk.assertions.isEqualTo
+import assertk.assertions.isInstanceOf
+import assertk.assertions.messageContains
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
+import net.postchain.base.configuration.BlockchainFeatures
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.ExecutionContext
@@ -15,7 +22,6 @@ import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.mapper.toObject
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import java.sql.Connection
 
 class GTXBlockchainConfigurationTest {
@@ -24,18 +30,39 @@ class GTXBlockchainConfigurationTest {
     private val keyPair = cryptoSystem.generateKeyPair()
 
     @Test
-    fun `valid configuration`() {
-        testConfig("valid_configuration.xml")
+    fun `valid configuration with no features`() {
+        val configuration = testConfig("valid_configuration.xml")
+        assertThat(configuration.configData.features).isEmpty()
+    }
+
+    @Test
+    fun `valid configuration with supported feature`() {
+        val configuration = testConfig("valid_configuration_with_feature.xml")
+        assertThat(configuration.configData.features[BlockchainFeatures.merkle_hash_version.name]?.asInteger()).isEqualTo(1L)
     }
 
     @Test
     fun `unknown blockstrategy`() {
-        assertThrows<UserMistake> {
+        assertFailure {
             testConfig("unknown_blockstrategy.xml")
-        }
+        }.isInstanceOf(UserMistake::class).messageContains("Configured class net.postchain.base.DoesNotExist not found")
     }
 
-    private fun testConfig(fileName: String) {
+    @Test
+    fun `unrecognized feature`() {
+        assertFailure {
+            testConfig("unrecognized_feature.xml")
+        }.isInstanceOf(UserMistake::class).messageContains("Unrecognized feature: bogus")
+    }
+
+    @Test
+    fun `unsupported feature version`() {
+        assertFailure {
+            testConfig("unsupported_feature.xml")
+        }.isInstanceOf(UserMistake::class).messageContains("Unsupported merkle_hash_version version: 2")
+    }
+
+    private fun testConfig(fileName: String): GTXBlockchainConfiguration {
         val configGtv = GtvMLParser.parseGtvML(javaClass.getResource(fileName)!!.readText())
         val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configGtv, ::sha256Digest)
         val configData = configGtv.toObject<BlockchainConfigurationData>()
@@ -46,7 +73,7 @@ class GTXBlockchainConfigurationTest {
                 get() = throw NotImplementedError()
         })
 
-        GTXBlockchainConfiguration(
+        return GTXBlockchainConfiguration(
                 configData,
                 cryptoSystem,
                 BaseBlockchainContext(1, blockchainRid, NODE_ID_AUTO, NodeRid.fromHex("").data),
