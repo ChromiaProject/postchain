@@ -159,8 +159,6 @@ const val DATA_TRUNCATED_HEADER = "X-Data-Truncated"
 const val QUERY_TYPE = "type"
 const val QUERY_ARGS = "~args"
 
-const val REQUST_PATH_LOG_LENGTH_LIMIT = 100
-
 /**
  * Implements the REST API.
  *
