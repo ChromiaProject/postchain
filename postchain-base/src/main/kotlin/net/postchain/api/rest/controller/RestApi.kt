@@ -719,11 +719,9 @@ class RestApi(
 
     val requestLogContext = Filter { next ->
         { request: Request ->
-            val path = request.uri.path
-            val truncatedPath = if (path.length > REQUST_PATH_LOG_LENGTH_LIMIT) "${path.take(REQUST_PATH_LOG_LENGTH_LIMIT - 3)}..." else path
             withLoggingContext(
                     "requestSource" to "rest",
-                    "requestRestPath" to truncatedPath,
+                    "requestRestComponent" to getEndpointComponent(request.uri.path),
                     "requestRestMethod" to request.method.name
             ) {
                 next(request)
@@ -913,5 +911,14 @@ class RestApi(
     override fun close() {
         server.close()
         System.gc()
+    }
+
+    /** Extract the component from endpoint path: /api/v1/<component>/.* */
+    private fun getEndpointComponent(path: String): String? {
+        val apiEndpointOffset = basePath.length + 1
+        if (path.length > apiEndpointOffset) {
+            return path.substring(apiEndpointOffset).split("/")[0]
+        }
+        return null
     }
 }
