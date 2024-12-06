@@ -159,6 +159,8 @@ const val DATA_TRUNCATED_HEADER = "X-Data-Truncated"
 const val QUERY_TYPE = "type"
 const val QUERY_ARGS = "~args"
 
+const val REQUST_PATH_LOG_LENGTH_LIMIT = 100
+
 /**
  * Implements the REST API.
  *
@@ -715,9 +717,24 @@ class RestApi(
     private val blockchainRidKey = RequestContextKey.required<BlockchainRid>(contexts)
     private val modelKey = RequestContextKey.optional<Model>(contexts)
 
+    val requestLogContext = Filter { next ->
+        { request: Request ->
+            val path = request.uri.path
+            val truncatedPath = if (path.length > REQUST_PATH_LOG_LENGTH_LIMIT) "${path.take(REQUST_PATH_LOG_LENGTH_LIMIT - 3)}..." else path
+            withLoggingContext(
+                    "requestSource" to "rest",
+                    "requestRestPath" to truncatedPath,
+                    "requestRestMethod" to request.method.name
+            ) {
+                next(request)
+            }
+        }
+    }
+
     val server = ServerFilters.InitialiseRequestContext(contexts)
             .then(ServerFilters.Cors(
                     CorsPolicy(OriginPolicy.AllowAll(), listOf("Content-Type", "Accept"), listOf(GET, POST, OPTIONS), credentials = false)))
+            .then(requestLogContext)
             .then(Filter { next ->
                 { request ->
                     try {
