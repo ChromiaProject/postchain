@@ -159,6 +159,8 @@ const val DATA_TRUNCATED_HEADER = "X-Data-Truncated"
 const val QUERY_TYPE = "type"
 const val QUERY_ARGS = "~args"
 
+const val REQUST_PATH_LOG_LENGTH_LIMIT = 100
+
 /**
  * Implements the REST API.
  *
@@ -715,9 +717,22 @@ class RestApi(
     private val blockchainRidKey = RequestContextKey.required<BlockchainRid>(contexts)
     private val modelKey = RequestContextKey.optional<Model>(contexts)
 
+    val requestLogContext = Filter { next ->
+        { request: Request ->
+            withLoggingContext(
+                    "requestSource" to "rest",
+                    "requestRestComponent" to getEndpointComponent(request.uri.path),
+                    "requestRestMethod" to request.method.name
+            ) {
+                next(request)
+            }
+        }
+    }
+
     val server = ServerFilters.InitialiseRequestContext(contexts)
             .then(ServerFilters.Cors(
                     CorsPolicy(OriginPolicy.AllowAll(), listOf("Content-Type", "Accept"), listOf(GET, POST, OPTIONS), credentials = false)))
+            .then(requestLogContext)
             .then(Filter { next ->
                 { request ->
                     try {
@@ -896,5 +911,14 @@ class RestApi(
     override fun close() {
         server.close()
         System.gc()
+    }
+
+    /** Extract the component from endpoint path: /api/v1/<component>/.* */
+    private fun getEndpointComponent(path: String): String? {
+        val apiEndpointOffset = basePath.length + 1
+        if (path.length > apiEndpointOffset) {
+            return path.substring(apiEndpointOffset).split("/")[0]
+        }
+        return null
     }
 }
