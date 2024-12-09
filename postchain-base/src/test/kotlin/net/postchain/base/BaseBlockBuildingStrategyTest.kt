@@ -2,7 +2,9 @@ package net.postchain.base
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isFalse
 import assertk.assertions.isGreaterThan
+import assertk.assertions.isTrue
 import net.postchain.DynamicValueAnswer
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockData
@@ -14,7 +16,12 @@ import org.junit.jupiter.api.MethodOrderer
 import org.junit.jupiter.api.Order
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestMethodOrder
-import org.mockito.kotlin.*
+import org.mockito.kotlin.clearInvocations
+import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import java.time.Clock
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -68,7 +75,15 @@ class BaseBlockBuildingStrategyTest {
             on { getTransactionQueueSize() } doAnswer txQueueSize
         }
 
+        private var specialTxHandlerShouldBuildBlock = DynamicValueAnswer(false)
+
+        private val specialTxHandler: SpecialTransactionHandler = mock {
+            on { shouldAffectBlockBuilding() } doReturn true
+            on { shouldBuildBlock() } doAnswer specialTxHandlerShouldBuildBlock
+        }
+
         private val sut = BaseBlockBuildingStrategy(strategyData.toObject(), blockQueries, txQueue, clock)
+                .also { it.specialTxHandler = specialTxHandler }
     }
 
     @Test
@@ -166,9 +181,20 @@ class BaseBlockBuildingStrategyTest {
         sut.blockCommitted(committedBlockData())
     }
 
+    @Test
+    @Order(8)
+    fun `special transaction handler can trigger block building`() {
+        assertThat(sut.mustWaitBeforeBuildBlock()).isEqualTo(false)
+        sut.blockCommitted(committedBlockData())
+        currentMillis.value = currentMillis.value + 1000
+        assertThat(sut.shouldBuildBlock()).isFalse()
+        specialTxHandlerShouldBuildBlock.value = true
+        assertThat(sut.shouldBuildBlock()).isTrue()
+    }
+
     private fun failCommit(times: Int) {
         var failTime = 1
-        for (i in 1..times) {
+        (1..times).forEach { i ->
             sut.blockFailed()
             failTime *= 2
             assertThat(sut.getBackoffTime()).isEqualTo(failTime + MIN_BACKOFF_TIME)

@@ -296,9 +296,12 @@ public final class net/postchain/base/NetworkNodes$Companion : mu/KLogging {
 
 public final class net/postchain/base/NullSpecialTransactionHandler : net/postchain/base/SpecialTransactionHandler {
 	public fun <init> ()V
+	public fun blockCommitted (Lnet/postchain/core/block/BlockData;)V
 	public fun createSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/BlockEContext;)Lnet/postchain/core/Transaction;
 	public fun isAllowedToSkipSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/BlockEContext;)Z
 	public fun needsSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;)Z
+	public fun shouldAffectBlockBuilding ()Z
+	public fun shouldBuildBlock ()Z
 	public fun validateSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/Transaction;Lnet/postchain/core/BlockEContext;)Z
 }
 
@@ -338,10 +341,19 @@ public abstract interface class net/postchain/base/PeerResolver {
 }
 
 public abstract interface class net/postchain/base/SpecialTransactionHandler {
+	public abstract fun blockCommitted (Lnet/postchain/core/block/BlockData;)V
 	public abstract fun createSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/BlockEContext;)Lnet/postchain/core/Transaction;
 	public abstract fun isAllowedToSkipSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/BlockEContext;)Z
 	public abstract fun needsSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;)Z
+	public abstract fun shouldAffectBlockBuilding ()Z
+	public abstract fun shouldBuildBlock ()Z
 	public abstract fun validateSpecialTransaction (Lnet/postchain/base/SpecialTransactionPosition;Lnet/postchain/core/Transaction;Lnet/postchain/core/BlockEContext;)Z
+}
+
+public final class net/postchain/base/SpecialTransactionHandler$DefaultImpls {
+	public static fun blockCommitted (Lnet/postchain/base/SpecialTransactionHandler;Lnet/postchain/core/block/BlockData;)V
+	public static fun shouldAffectBlockBuilding (Lnet/postchain/base/SpecialTransactionHandler;)Z
+	public static fun shouldBuildBlock (Lnet/postchain/base/SpecialTransactionHandler;)Z
 }
 
 public final class net/postchain/base/SpecialTransactionPosition : java/lang/Enum {
@@ -1772,6 +1784,11 @@ public abstract interface class net/postchain/core/block/MultiSigBlockWitnessBui
 	public abstract fun getMySignature ()Lnet/postchain/crypto/Signature;
 }
 
+public abstract interface class net/postchain/core/block/SpecialTxHandlerAware {
+	public abstract fun getSpecialTxHandler ()Lnet/postchain/base/SpecialTransactionHandler;
+	public abstract fun setSpecialTxHandler (Lnet/postchain/base/SpecialTransactionHandler;)V
+}
+
 public final class net/postchain/debug/DiagnosticData : java/util/Map, kotlin/jvm/internal/markers/KMutableMap, net/postchain/debug/DiagnosticValue {
 	public fun <init> ()V
 	public fun <init> (Ljava/util/Map;)V
@@ -2078,6 +2095,11 @@ public final class net/postchain/gtx/UnknownOperation : net/postchain/common/exc
 public final class net/postchain/gtx/UnknownQuery : net/postchain/common/exception/UserMistake {
 	public fun <init> (Ljava/lang/String;)V
 	public final fun getName ()Ljava/lang/String;
+}
+
+public abstract interface class net/postchain/gtx/special/GTXBlockBuildingAffectingSpecialTxExtension : net/postchain/gtx/special/GTXSpecialTxExtension {
+	public abstract fun blockCommitted (Lnet/postchain/core/block/BlockData;)V
+	public abstract fun shouldBuildBlock ()Z
 }
 
 public abstract interface class net/postchain/gtx/special/GTXNonSkippingSpecialTxExtension : net/postchain/gtx/special/GTXSpecialTxExtension {

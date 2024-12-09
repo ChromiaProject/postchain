@@ -3,6 +3,7 @@
 package net.postchain.core.block
 
 import net.postchain.base.ConfirmationProof
+import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.core.Shutdownable
 import net.postchain.core.Transaction
@@ -107,4 +108,8 @@ interface BlockBuildingStrategy {
     fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean
     fun blockCommitted(blockData: BlockData)
     fun blockFailed()
+}
+
+interface SpecialTxHandlerAware {
+    var specialTxHandler: SpecialTransactionHandler?
 }
