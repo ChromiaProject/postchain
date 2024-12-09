@@ -9,6 +9,7 @@ import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
 import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.SpecialTxHandlerAware
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.log2
@@ -19,7 +20,7 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
                                      blockQueries: BlockQueries,
                                      private val txQueue: TransactionQueue,
                                      private val clock: Clock
-) : BlockBuildingStrategy {
+) : BlockBuildingStrategy, SpecialTxHandlerAware {
 
     private var lastBlockTime: Long
     private var firstTxTime = 0L
@@ -49,6 +50,8 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
         }
     }
 
+    override var specialTxHandler: SpecialTransactionHandler? = null
+
     override fun shouldStopBuildingBlock(bb: BlockBuilder): Boolean {
         val baseBlockBuilder = bb as BaseBlockBuilder
         return baseBlockBuilder.shouldStopBuildingBlock(maxBlockTransactions)
@@ -64,11 +67,15 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
         firstTxTime = 0
         failedBlockCount = 0
         failedBlockTime = 0
+        specialTxHandler?.blockCommitted(blockData)
     }
 
-    override fun preemptiveBlockBuilding(): Boolean = preemptiveBlockBuilding
+    override fun preemptiveBlockBuilding(): Boolean =
+            preemptiveBlockBuilding && (specialTxHandler?.shouldAffectBlockBuilding() == false)
 
-    override fun shouldBuildPreemptiveBlock(): Boolean = preemptiveBlockBuilding && (txQueue.getTransactionQueueSize() > 0)
+    override fun shouldBuildPreemptiveBlock(): Boolean =
+            preemptiveBlockBuilding && (specialTxHandler?.shouldAffectBlockBuilding() == false)
+                    && (txQueue.getTransactionQueueSize() > 0)
 
     override fun shouldBuildBlock(): Boolean {
         if (mustWaitMinimumBuildBlockTime() > 0) return false
@@ -77,8 +84,10 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
         if (transactionQueueSize >= maxBlockTransactions) return true
         return if (hasReachedTimeConstraintsForBlockBuilding(transactionQueueSize > 0)) {
             true
+        } else if (extendedShouldBuildBlock()) {
+            true
         } else {
-            extendedShouldBuildBlock()
+            specialTxHandler?.shouldBuildBlock() == true
         }
     }
 

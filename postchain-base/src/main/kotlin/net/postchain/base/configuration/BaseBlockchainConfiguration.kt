@@ -39,6 +39,7 @@ import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockWitness
+import net.postchain.core.block.SpecialTxHandlerAware
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.sha256Digest
@@ -218,6 +219,8 @@ open class BaseBlockchainConfiguration(
             } catch (e: InvocationTargetException) {
                 throw ProgrammerMistake("The constructor of the block building strategy given was " +
                         "unable to finish. Class name given: ${configData.blockStrategyName}, Msg: ${e.message}")
+            }.also {
+                if (it is SpecialTxHandlerAware) it.specialTxHandler = getSpecialTxHandler()
             }
 
     override fun initializeModules(postchainContext: PostchainContext) {}

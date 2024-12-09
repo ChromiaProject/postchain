@@ -11,6 +11,7 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.core.Transaction
+import net.postchain.core.block.BlockData
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtx.GTXModule
@@ -147,5 +148,15 @@ open class GTXSpecialTxHandler(val module: GTXModule,
         }
         return true
     }
+
+    override fun shouldAffectBlockBuilding(): Boolean =
+            extensions.filterIsInstance<GTXBlockBuildingAffectingSpecialTxExtension>().isNotEmpty()
+
+    override fun blockCommitted(blockData: BlockData) {
+        extensions.filterIsInstance<GTXBlockBuildingAffectingSpecialTxExtension>().forEach { it.blockCommitted(blockData) }
+    }
+
+    override fun shouldBuildBlock(): Boolean =
+            extensions.filterIsInstance<GTXBlockBuildingAffectingSpecialTxExtension>().any { it.shouldBuildBlock() }
 
 }
