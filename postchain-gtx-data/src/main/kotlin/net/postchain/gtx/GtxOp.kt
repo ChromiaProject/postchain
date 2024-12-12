@@ -40,6 +40,8 @@ class GtxOp(val opName: String, vararg val args: Gtv) : ToGtv {
         return result
     }
 
+    override fun toString() = "GtxOp('$opName', args=${args.toList()})"
+
     companion object {
         @JvmStatic
         fun fromGtv(gtv: Gtv): GtxOp {

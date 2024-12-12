@@ -63,6 +63,8 @@ class Gtx(
         return result
     }
 
+    override fun toString() = "Gtx($gtxBody, signatures=${signatures.map { it.toHex() }})"
+
     companion object {
         @JvmStatic
         fun decode(b: ByteArray) = fromGtv(GtvDecoder.decodeGtv(b))

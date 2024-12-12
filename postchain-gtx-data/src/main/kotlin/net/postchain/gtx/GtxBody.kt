@@ -2,6 +2,7 @@ package net.postchain.gtx
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
+import net.postchain.common.toHex
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
@@ -71,6 +72,8 @@ class GtxBody(
         }
         return result
     }
+
+    override fun toString() = "GtxBody(blockchainRid=$blockchainRid, operations=$operations, signers=${signers.map { it.toHex() }})"
 
     companion object {
 
