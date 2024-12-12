@@ -16,8 +16,8 @@ import org.junit.jupiter.api.Test
 
 class GtxDataFactoryTest {
 
-    val op_name = "op_name"
-    val op_args = listOf(1,2,3,4)
+    val opName = "op_name"
+    val opArgs = listOf(1, 2, 3, 4)
     val blockchainRID = BlockchainRid.ZERO_RID
     val aliceSigner: ByteArray = "010101".hexStringToByteArray()
     val aliceSignature: ByteArray = "DDDDDD".hexStringToByteArray()
@@ -26,15 +26,15 @@ class GtxDataFactoryTest {
     fun testBuildGTXDataFromGtv_one_operation() {
 
         // ---------- Build expected  ----------------------
-        val expectedOp = GtxOp(op_name, *op_args.map{ gtv(it.toLong())}.toTypedArray() )
+        val expectedOp = GtxOp(opName, *opArgs.map { gtv(it.toLong()) }.toTypedArray())
         val expectedTxBody = GtxBody(blockchainRID, arrayOf(expectedOp), arrayOf(aliceSigner))
         val expectedTx = Gtx(expectedTxBody, arrayOf(aliceSignature))
 
         // ---------- Build da GTV struct -----------------
 
         // Operation Data
-        val opName: GtvString = gtv(op_name)
-        val opArgs: GtvArray = gtv(op_args.map{ gtv(it.toLong())} )
+        val opName: GtvString = gtv(opName)
+        val opArgs: GtvArray = gtv(opArgs.map { gtv(it.toLong()) })
         val op1: GtvArray = gtv(listOf(opName, opArgs))
 
         // Transaction Body Data
@@ -47,6 +47,11 @@ class GtxDataFactoryTest {
         val signatures: GtvArray = gtv(listOf(gtv(aliceSignature)))
         val tx = gtv(listOf(txb, signatures))
 
-       assertEquals(expectedTx, Gtx.fromGtv(tx))
+        val gtx = Gtx.fromGtv(tx)
+        assertEquals(expectedTx, gtx)
+
+        assertEquals(
+                "Gtx(GtxBody(blockchainRid=0000000000000000000000000000000000000000000000000000000000000000, operations=[GtxOp('op_name', args=[1, 2, 3, 4])], signers=[010101]), signatures=[DDDDDD])",
+                gtx.toString())
     }
 }

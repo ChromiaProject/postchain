@@ -13,6 +13,7 @@ public final class net/postchain/gtx/Gtx : net/postchain/gtv/mapper/ToGtv {
 	public fun hashCode ()I
 	public synthetic fun toGtv ()Lnet/postchain/gtv/Gtv;
 	public fun toGtv ()Lnet/postchain/gtv/GtvArray;
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class net/postchain/gtx/Gtx$Companion {
@@ -34,6 +35,7 @@ public final class net/postchain/gtx/GtxBody : net/postchain/gtv/mapper/ToGtv {
 	public fun hashCode ()I
 	public synthetic fun toGtv ()Lnet/postchain/gtv/Gtv;
 	public fun toGtv ()Lnet/postchain/gtv/GtvArray;
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class net/postchain/gtx/GtxBody$Companion {
@@ -85,6 +87,7 @@ public final class net/postchain/gtx/GtxOp : net/postchain/gtv/mapper/ToGtv {
 	public fun hashCode ()I
 	public synthetic fun toGtv ()Lnet/postchain/gtv/Gtv;
 	public fun toGtv ()Lnet/postchain/gtv/GtvArray;
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class net/postchain/gtx/GtxOp$Companion {
