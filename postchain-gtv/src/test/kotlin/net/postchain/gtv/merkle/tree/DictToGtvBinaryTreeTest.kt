@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 class DictToGtvBinaryTreeTest {
 
     private val ln = System.lineSeparator()
-    private val factory = GtvBinaryTreeFactory()
+    private val factory = GtvBinaryTreeFactory(2)
 
     // ------------------- Size 1 --------------------
     private fun buildThreeOf1_fromDict(): String {
@@ -24,7 +24,7 @@ class DictToGtvBinaryTreeTest {
         val gtvDict = DictToGtvBinaryTreeHelper.buildGtvDictOf1()
 
         val fullBinaryTree: GtvBinaryTree = if (gtvPath != null) {
-            factory.buildFromGtvAndPath(gtvDict, GtvPathSet(setOf(gtvPath)))
+            factory.buildBinaryTree(gtvDict, GtvPathSet(setOf(gtvPath)))
         } else {
             factory.buildFromGtv(gtvDict)
         }
@@ -71,7 +71,7 @@ class DictToGtvBinaryTreeTest {
         val gtvDict = DictToGtvBinaryTreeHelper.buildGtvDictOf4()
 
         val fullBinaryTree: GtvBinaryTree = if (gtvPath != null) {
-            factory.buildFromGtvAndPath(gtvDict, GtvPathSet(setOf(gtvPath)))
+            factory.buildBinaryTree(gtvDict, GtvPathSet(setOf(gtvPath)))
         } else {
             factory.buildFromGtv(gtvDict)
         }
@@ -139,7 +139,7 @@ class DictToGtvBinaryTreeTest {
         val gtvDict = DictToGtvBinaryTreeHelper.buildGtvDictOf1WithSubDictOf2()
 
         val fullBinaryTree: GtvBinaryTree = if (gtvPath != null) {
-            factory.buildFromGtvAndPath(gtvDict, GtvPathSet(setOf(gtvPath)))
+            factory.buildBinaryTree(gtvDict, GtvPathSet(setOf(gtvPath)))
         } else {
             factory.buildFromGtv(gtvDict)
         }

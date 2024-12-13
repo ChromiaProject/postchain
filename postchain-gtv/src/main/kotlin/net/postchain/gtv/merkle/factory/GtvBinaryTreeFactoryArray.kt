@@ -10,14 +10,12 @@ import net.postchain.gtv.merkle.path.GtvPathSet
 
 object GtvBinaryTreeFactoryArray {
 
-    private val mainFactory = GtvBinaryTreeFactory()
-
     /**
      * There are 2 edge cases here:
      * - When the args is empty. -> We return a top node with two empty leaves
      * - When there is only one element. -> We set the right element as empty
      */
-    fun buildFromGtvArray(gtvArray: GtvArray, gtvPaths: GtvPathSet): BinaryTreeElement {
+    fun buildFromGtvArray(gtvArray: GtvArray, gtvPaths: GtvPathSet, gtvBinaryTreeFactory: GtvBinaryTreeFactory): BinaryTreeElement {
         val pathElem: PathElement? =  gtvPaths.getPathLeafOrElseAnyCurrentPathElement()
 
         // 1. Build leaf layer
@@ -26,11 +24,16 @@ object GtvBinaryTreeFactoryArray {
             return GtvArrayHeadNode(EmptyLeaf, EmptyLeaf, gtvArray, 0, 0, pathElem)
         }
 
-        val leafArray = mainFactory.buildLeafElements(leafList, gtvPaths)
+        val leafArray = gtvBinaryTreeFactory.buildLeafElements(leafList, gtvPaths)
         val sumNrOfBytes = leafArray.sumOf { it.getNrOfBytes() }
 
+        // If we have just a single leaf that is a node we can return immediately (version 2)
+        if (leafArray.size == 1 && leafArray[0] is Node && gtvBinaryTreeFactory.gtvHashVersion > 1) {
+            return GtvArrayHeadNode(leafArray[0], EmptyLeaf, gtvArray, leafList.size, sumNrOfBytes, pathElem)
+        }
+
         // 2. Build all higher layers
-        val result = mainFactory.buildHigherLayer(1, leafArray)
+        val result = gtvBinaryTreeFactory.buildHigherLayer(1, leafArray)
 
         // 3. Fix and return the root node
         return when (val orgRoot = result[0]) {

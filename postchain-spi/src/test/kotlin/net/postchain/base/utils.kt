@@ -4,11 +4,11 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.InitialBlockData
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 
 fun createBlockHeader(
         blockchainRid: BlockchainRid, blockIID: Long, chainId: Long, prevBlockRid: ByteArray, height: Long,
-        merkeHashCalculator: GtvMerkleHashCalculator
+        merkeHashCalculator: GtvMerkleHashCalculatorV1
 ): BlockHeader {
     val rootHash = ByteArray(32) { 0 }
     val timestamp = 10000L + height

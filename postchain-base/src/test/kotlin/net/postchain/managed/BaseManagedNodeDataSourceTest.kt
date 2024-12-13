@@ -19,7 +19,7 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import net.postchain.managed.query.QueryRunner
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -175,7 +175,7 @@ class BaseManagedNodeDataSourceTest {
 
     companion object {
 
-        private val hashCalculator: GtvMerkleHashCalculator = GtvMerkleHashCalculator(Secp256K1CryptoSystem())
+        private val hashCalculator: GtvMerkleHashCalculatorV1 = GtvMerkleHashCalculatorV1(Secp256K1CryptoSystem())
 
         @JvmStatic
         fun getPeerInfosTestData(): List<Array<Any>> {

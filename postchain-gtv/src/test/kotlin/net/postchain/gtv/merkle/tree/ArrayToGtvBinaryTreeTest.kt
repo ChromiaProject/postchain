@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 class ArrayToGtvBinaryTreeTest {
 
     private val ln = System.lineSeparator()
-    private val factory = GtvBinaryTreeFactory()
+    private val factory = GtvBinaryTreeFactory(2)
 
     // ------------------- Size 1 --------------------
     /**
@@ -26,7 +26,7 @@ class ArrayToGtvBinaryTreeTest {
         val gtvArr = ArrayToGtvBinaryTreeHelper.buildGtvArrayOf1()
 
         val fullBinaryTree: GtvBinaryTree = if (gtvPath != null) {
-            factory.buildFromGtvAndPath(gtvArr, GtvPathSet(setOf(gtvPath)))
+            factory.buildBinaryTree(gtvArr, GtvPathSet(setOf(gtvPath)))
         } else {
             factory.buildFromGtv(gtvArr)
         }
@@ -76,7 +76,7 @@ class ArrayToGtvBinaryTreeTest {
         val gtvArr = ArrayToGtvBinaryTreeHelper.buildGtvArrayOf4()
 
         val fullBinaryTree: GtvBinaryTree = if (gtvPath != null) {
-            factory.buildFromGtvAndPath(gtvArr, GtvPathSet(setOf((gtvPath))))
+            factory.buildBinaryTree(gtvArr, GtvPathSet(setOf((gtvPath))))
         } else {
             factory.buildFromGtv(gtvArr)
         }
@@ -135,7 +135,7 @@ class ArrayToGtvBinaryTreeTest {
     private fun buildTreeOf7(gtvPaths: GtvPathSet): String {
         val gtvArr = ArrayToGtvBinaryTreeHelper.buildGtvArrayOf7()
 
-        val fullBinaryTree = factory.buildFromGtvAndPath(gtvArr, gtvPaths)
+        val fullBinaryTree = factory.buildBinaryTree(gtvArr, gtvPaths)
 
         val printer = TreePrinter()
         val printableBinaryTree = PrintableTreeFactory.buildPrintableTreeFromClfbTree(fullBinaryTree)
@@ -234,7 +234,7 @@ class ArrayToGtvBinaryTreeTest {
         val intArray = intArrayOf(1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3)
         val intArrayList = GtvTreeHelper.transformIntToGtv(intArray.toCollection(ArrayList()))
 
-        val fullBinaryTree: GtvBinaryTree = (GtvBinaryTreeFactory()).buildFromGtv(GtvTreeHelper.transformGtvsToGtvArray(intArrayList))
+        val fullBinaryTree: GtvBinaryTree = (GtvBinaryTreeFactory(1)).buildFromGtv(GtvTreeHelper.transformGtvsToGtvArray(intArrayList))
 
         val printer = TreePrinter()
         val printableBinaryTree = PrintableTreeFactory.buildPrintableTreeFromClfbTree(fullBinaryTree)
@@ -283,7 +283,7 @@ class ArrayToGtvBinaryTreeTest {
         val gtvArr = ArrayToGtvBinaryTreeHelper.buildGtvArrOf7WithInner3()
 
         val fullBinaryTree: GtvBinaryTree = if (gtvPath != null) {
-            factory.buildFromGtvAndPath(gtvArr, GtvPathSet(setOf(gtvPath)))
+            factory.buildBinaryTree(gtvArr, GtvPathSet(setOf(gtvPath)))
         } else {
             factory.buildFromGtv(gtvArr)
         }

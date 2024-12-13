@@ -5,7 +5,7 @@ package net.postchain.base.gtv
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.Digester
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 
 object GtvToBlockchainRidFactory {
@@ -17,7 +17,7 @@ object GtvToBlockchainRidFactory {
      */
     fun calculateBlockchainRid(data: Gtv, digester: Digester): BlockchainRid {
         // Need to calculate it the RID, and we do it the usual way (same as merkle root of block)
-        val bcBinary = data.merkleHash(GtvMerkleHashCalculator(digester))
+        val bcBinary = data.merkleHash(GtvMerkleHashCalculatorV1(digester))
         return BlockchainRid(bcBinary)
     }
 }

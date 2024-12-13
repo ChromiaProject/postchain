@@ -19,7 +19,7 @@ import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
@@ -33,7 +33,7 @@ class TestBlockchainBuilder(
 ) {
     private val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configData0, ::sha256Digest)
     val cryptoSystem = Secp256K1CryptoSystem()
-    val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+    val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
     val chainId = 1L
 
     fun buildBlockchain(configurations: List<Pair<Long, Gtv>>, blocks: Long,

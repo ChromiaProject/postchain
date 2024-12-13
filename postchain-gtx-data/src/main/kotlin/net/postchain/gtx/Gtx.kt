@@ -9,7 +9,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.ToGtv
-import net.postchain.gtv.merkle.MerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 
 class Gtx(
     val gtxBody: GtxBody,
@@ -22,7 +22,7 @@ class Gtx(
         require(gtxBody.signers.size == signatures.size) { "Expected ${gtxBody.signers.size} signatures, found ${signatures.size}" }
     }
 
-    fun calculateTxRid(calculator: MerkleHashCalculator<Gtv>) = gtxBody.calculateTxRid(calculator)
+    fun calculateTxRid(calculator: GtvMerkleHashCalculatorBase) = gtxBody.calculateTxRid(calculator)
 
     fun encodeHex() = encode().toHex()
     fun encode(): ByteArray {

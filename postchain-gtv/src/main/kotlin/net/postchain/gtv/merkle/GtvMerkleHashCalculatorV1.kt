@@ -14,6 +14,11 @@ import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvPrimitive
 import net.postchain.gtv.GtvString
+import net.postchain.gtv.merkle.path.GtvPathSet
+import net.postchain.gtv.merkle.proof.GtvMerkleHashSummaryFactory
+import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
+import net.postchain.gtv.merkle.proof.GtvMerkleProofTreeFactory
+import net.postchain.gtv.merkle.proof.MerkleHashSummary
 
 /**
  * This should be the serialization we use in production
@@ -36,13 +41,19 @@ fun serializeGtvToByteArray(gtv: Gtv): ByteArray {
     }
 }
 
-/**
- * The calculator intended to be used is production for trees that hold [Gtv]
- */
-class GtvMerkleHashCalculator(digester: Digester) :
-        MerkleHashCalculator<Gtv>(digester) {
+abstract class GtvMerkleHashCalculatorBase(digester: Digester?) : MerkleHashCalculator<Gtv, GtvPathSet>(digester) {
 
-    constructor(cryptoSystem: CryptoSystem) : this(cryptoSystem as Digester)
+    override fun generateProof(value: Gtv, pathSet: GtvPathSet): GtvMerkleProofTree {
+        val factory = getHashSummaryFactory().treeFactory
+        val proofFactory = GtvMerkleBasics.getGtvMerkleProofTreeFactory()
+
+        val binaryTree = factory.buildBinaryTree(value, pathSet)
+
+        return proofFactory.buildFromBinaryTree(binaryTree, this)
+    }
+
+    override fun merkleHashSummary(value: Gtv): MerkleHashSummary =
+            getHashSummaryFactory().calculateMerkleRoot(value, this)
 
     override fun calculateNodeHash(prefix: Byte, hashLeft: Hash, hashRight: Hash): Hash {
         return calculateNodeHashInternal(prefix, hashLeft, hashRight, MerkleBasics::hashingFun)
@@ -65,5 +76,35 @@ class GtvMerkleHashCalculator(digester: Digester) :
             else -> throw IllegalStateException("The type is neither collection or primitive. type: ${value.type} ")
         }
     }
+}
 
+/**
+ * The first version of the calculator which contains a bug causing hash collisions.
+ * Should only be used for backward compatibility
+ */
+class GtvMerkleHashCalculatorV1(digester: Digester) : GtvMerkleHashCalculatorBase(digester) {
+
+    companion object {
+        // These were singletons before so let's keep it that way I guess
+        private val summaryFactory = GtvMerkleHashSummaryFactory(GtvBinaryTreeFactory(1), GtvMerkleProofTreeFactory())
+    }
+
+    constructor(cryptoSystem: CryptoSystem) : this(cryptoSystem as Digester)
+
+    override fun getHashSummaryFactory() = summaryFactory
+}
+
+/**
+ * The calculator intended to be used is production for trees that hold [Gtv]
+ */
+class GtvMerkleHashCalculatorV2(digester: Digester) : GtvMerkleHashCalculatorBase(digester) {
+
+    companion object {
+        // These were singletons before so let's keep it that way I guess
+        private val summaryFactory = GtvMerkleHashSummaryFactory(GtvBinaryTreeFactory(2), GtvMerkleProofTreeFactory())
+    }
+
+    constructor(cryptoSystem: CryptoSystem) : this(cryptoSystem as Digester)
+
+    override fun getHashSummaryFactory() = summaryFactory
 }

@@ -19,7 +19,7 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvProofTreeTestHelper
 import net.postchain.gtv.mapper.GtvObjectMapper
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.integrationtest.JsonTools
@@ -185,7 +185,7 @@ class ConfirmationProofSlowIntegrationTest : IntegrationTestSetup() {
 
         // Assert signatures
         val blockHeaderRaw = confirmationProof.blockHeader
-        val blockHeader = BaseBlockHeader(blockHeaderRaw, GtvMerkleHashCalculator(cryptoSystem))
+        val blockHeader = BaseBlockHeader(blockHeaderRaw, GtvMerkleHashCalculatorV1(cryptoSystem))
         val blockRid = blockHeader.blockRID
 
         confirmationProof.witness.getSignatures().forEach {
@@ -204,7 +204,7 @@ class ConfirmationProofSlowIntegrationTest : IntegrationTestSetup() {
         assertTrue(found, "The proof does not contain the hash we expected")
 
         // b) Calculate the merkle root of the proof
-        val myNewBlockHash = confirmationProof.merkleProofTree.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val myNewBlockHash = confirmationProof.merkleProofTree.merkleHash(GtvMerkleHashCalculatorV1(cryptoSystem))
 
         // Assert we get the same block RID
         println("Block merkle root - calculated : ${myNewBlockHash.toHex()}")

@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 val cryptoSystem = Secp256K1CryptoSystem()
-val calculator = GtvMerkleHashCalculator(cryptoSystem)
+val calculator = GtvMerkleHashCalculatorV1(cryptoSystem)
 
 internal class MerkleTest {
     @Disabled

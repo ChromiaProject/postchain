@@ -13,7 +13,7 @@ import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.data.ExtOpData
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -24,7 +24,7 @@ import org.junit.jupiter.api.assertThrows
 class GTXTransactionTest {
 
     private val cs = Secp256K1CryptoSystem()
-    private val hashCalculator = GtvMerkleHashCalculator(cs)
+    private val hashCalculator = GtvMerkleHashCalculatorV1(cs)
 
     @Test
     fun `tx with only nop op is invalid`() {

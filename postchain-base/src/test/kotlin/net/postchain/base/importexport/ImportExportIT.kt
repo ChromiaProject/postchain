@@ -41,7 +41,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
@@ -58,7 +58,7 @@ class ImportExportIT {
     private val appConfig: AppConfig = testDbConfig("import_export_it")
 
     private val cryptoSystem = Secp256K1CryptoSystem()
-    private val hashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+    private val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
     private val chainId = 1L
     private val configData0 = GtvMLParser.parseGtvML(javaClass.getResource("blockchain_configuration_0.xml")!!.readText())
     private val configData2 = GtvMLParser.parseGtvML(javaClass.getResource("blockchain_configuration_2.xml")!!.readText())

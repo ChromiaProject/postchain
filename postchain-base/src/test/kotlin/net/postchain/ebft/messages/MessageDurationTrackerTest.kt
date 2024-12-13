@@ -22,7 +22,7 @@ import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.GetUnfinishedBlock
 import net.postchain.ebft.message.MessageDurationTracker
 import net.postchain.ebft.message.UnfinishedBlock
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.metrics.MessageDurationTrackerMetricsFactory
 import net.postchain.network.CommunicationManager
 import org.junit.jupiter.api.BeforeEach
@@ -62,7 +62,7 @@ class MessageDurationTrackerTest {
         private val blockchainRID = BlockchainRid.ZERO_RID
         private val prevBlockRID0 = ByteArray(32) { if (it == 31) 99 else 0 }
         private val cryptoSystem = Secp256K1CryptoSystem()
-        private val merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+        private val merkleHashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
         private val header0 = createBlockHeader(blockchainRID, 2L, 0, prevBlockRID0, 0, merkleHashCalculator)
         private val baseBlockHeader = BaseBlockHeader(header0.rawData, merkleHashCalculator)
 

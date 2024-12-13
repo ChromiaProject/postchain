@@ -17,6 +17,7 @@ import net.postchain.gtv.merkle.GtvMerkleBasics.HASH_PREFIX_NODE_GTV_DICT
 import net.postchain.gtv.merkle.GtvMerkleBasics.UNKNOWN_COLLECTION_POSITION
 import net.postchain.gtv.merkle.MerkleBasics.UNKNOWN_SIZE_IN_BYTE
 import net.postchain.gtv.merkle.MerkleHashCalculator
+import net.postchain.gtv.merkle.path.GtvPathSet
 import net.postchain.gtv.merkle.path.SearchableGtvPathElement
 
 const val SERIALIZATION_ARRAY_TYPE: Long = 103
@@ -156,7 +157,7 @@ class GtvMerkleProofTree(root: MerkleProofElement, totalNrOfBytes: Int = UNKNOWN
  * @param calculator describes the method we use for hashing and serialization
  * @return the merkle root hash
  */
-fun GtvMerkleProofTree.merkleHash(calculator: MerkleHashCalculator<Gtv>): Hash =
+fun GtvMerkleProofTree.merkleHash(calculator: MerkleHashCalculator<Gtv, GtvPathSet>): Hash =
         this.merkleHashSummary(calculator).merkleHash
 
 /**
@@ -165,8 +166,8 @@ fun GtvMerkleProofTree.merkleHash(calculator: MerkleHashCalculator<Gtv>): Hash =
  * @param calculator describes the method we use for hashing and serialization
  * @return the merkle root hash summary
  */
-fun GtvMerkleProofTree.merkleHashSummary(calculator: MerkleHashCalculator<Gtv>): MerkleHashSummary {
-    val summaryFactory = GtvMerkleBasics.getGtvMerkleHashSummaryFactory()
+fun GtvMerkleProofTree.merkleHashSummary(calculator: MerkleHashCalculator<Gtv, GtvPathSet>): MerkleHashSummary {
+    val summaryFactory = calculator.getHashSummaryFactory()
     return summaryFactory.calculateMerkleRoot(this, calculator)
 }
 

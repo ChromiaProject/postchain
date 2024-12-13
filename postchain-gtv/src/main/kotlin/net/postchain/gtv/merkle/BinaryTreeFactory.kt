@@ -116,6 +116,6 @@ abstract class BinaryTreeFactory<T, TPathSet : PathSet> : KLogging() {
 
     }
 
-
+    abstract fun buildBinaryTree(gtv: T, gtvPaths: TPathSet): BinaryTree<T>
 
 }
