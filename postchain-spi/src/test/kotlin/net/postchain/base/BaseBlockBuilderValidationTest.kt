@@ -28,7 +28,7 @@ import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.crypto.devtools.MockCryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -46,7 +46,7 @@ import java.time.Clock
 class BaseBlockBuilderValidationTest {
     // Mocks
     val cryptoSystem = MockCryptoSystem()
-    val merkeHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+    val merkeHashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
     val mockedConn: Connection = mock {}
     val clock: Clock = mock()
 

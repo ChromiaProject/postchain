@@ -5,6 +5,8 @@ package net.postchain.gtv.merkle
 import net.postchain.common.data.Hash
 import net.postchain.crypto.Digester
 import net.postchain.gtv.*
+import net.postchain.gtv.merkle.proof.GtvMerkleHashSummaryFactory
+import net.postchain.gtv.merkle.proof.GtvMerkleProofTreeFactory
 import java.nio.charset.Charset
 
 
@@ -59,7 +61,7 @@ fun dummyAddOneHashFun(bArr: ByteArray, digester: Digester?): Hash {
  *
  * @property memoization is possible to override with some other version (for example that prunes more often)
  */
-class MerkleHashCalculatorDummy : MerkleHashCalculator<Gtv>(null) {
+class MerkleHashCalculatorDummy : GtvMerkleHashCalculatorBase(null) {
 
 
     override fun calculateLeafHash(value: Gtv): Hash {
@@ -67,6 +69,8 @@ class MerkleHashCalculatorDummy : MerkleHashCalculator<Gtv>(null) {
         //println("Hex: " + TreeHelper.convertToHex(hash))
         return hash
     }
+
+    override fun getHashSummaryFactory() = GtvMerkleHashSummaryFactory(GtvBinaryTreeFactory(2), GtvMerkleProofTreeFactory())
 
     override fun calculateNodeHash(prefix: Byte, hashLeft: Hash, hashRight: Hash): Hash {
         return calculateNodeHashInternal(prefix, hashLeft, hashRight, ::dummyAddOneHashFun)

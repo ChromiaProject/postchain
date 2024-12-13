@@ -14,7 +14,7 @@ import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.generateProof
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 import net.postchain.gtv.merkleHash
 
@@ -26,7 +26,7 @@ import net.postchain.gtv.merkleHash
  * @property timestamp  Specifies the time that a block was created as the number
  *                      of milliseconds since midnight January 1st 1970 UTC
  */
-class BaseBlockHeader(override val rawData: ByteArray, private val merkleHashCalculator: GtvMerkleHashCalculator) : BlockHeader {
+class BaseBlockHeader(override val rawData: ByteArray, private val merkleHashCalculator: GtvMerkleHashCalculatorV1) : BlockHeader {
     override val prevBlockRID: ByteArray
     override val blockRID: ByteArray
     val blockHeightDependencyArray: Array<Hash?>
@@ -75,7 +75,7 @@ class BaseBlockHeader(override val rawData: ByteArray, private val merkleHashCal
          */
         @JvmStatic
         fun make(
-                merkleHashCalculator: GtvMerkleHashCalculator,
+                merkleHashCalculator: GtvMerkleHashCalculatorV1,
                 iBlockData: InitialBlockData,
                 rootHash: ByteArray,
                 timestamp: Long,

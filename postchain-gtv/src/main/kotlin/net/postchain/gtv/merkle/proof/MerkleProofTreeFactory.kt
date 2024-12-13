@@ -31,14 +31,14 @@ abstract class MerkleProofTreeFactory<T> {
      * @param isRoot is "true" if this is the root element of the structure
      * @return the [MerkleProofElement] we have built.
      */
-    abstract fun buildFromBinaryTreeInternal(currentElement: BinaryTreeElement, calculator: MerkleHashCalculator<T>):
+    abstract fun buildFromBinaryTreeInternal(currentElement: BinaryTreeElement, calculator: MerkleHashCalculator<T, *>):
             MerkleProofElement
 
 
     /**
      * Note: we cannot add to the cache, since a node does not map one-to-one to a source element.
      */
-    protected fun convertNode(currentNode: Node, calculator: MerkleHashCalculator<T>): MerkleProofElement {
+    protected fun convertNode(currentNode: Node, calculator: MerkleHashCalculator<T, *>): MerkleProofElement {
         val left = buildFromBinaryTreeInternal(currentNode.left, calculator)
         val right = buildFromBinaryTreeInternal(currentNode.right, calculator)
         return if (left is ProofHashedLeaf && right is ProofHashedLeaf) {

@@ -15,7 +15,7 @@ import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import net.postchain.managed.query.QueryRunner
 
@@ -24,8 +24,8 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
 
     companion object : KLogging()
 
-    private val hashCalculator: GtvMerkleHashCalculator by lazy {
-        GtvMerkleHashCalculator(appConfig.cryptoSystem)
+    private val hashCalculator: GtvMerkleHashCalculatorV1 by lazy {
+        GtvMerkleHashCalculatorV1(appConfig.cryptoSystem)
     }
 
     override val nmApiVersion by lazy {

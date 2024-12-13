@@ -10,7 +10,7 @@ import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.crypto.devtools.MockCryptoSystem
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvString
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
@@ -25,7 +25,7 @@ class GTXMLTransactionParserAutoSignTest {
     fun autoSign_autosigning_for_empty_signatures_successfully() {
         val xml = readResourceFile("tx_two_empty_signatures.xml")
 
-        val mockCalculator = GtvMerkleHashCalculator(MockCryptoSystem())  // TODO: POS-04_sig ??
+        val mockCalculator = GtvMerkleHashCalculatorV1(MockCryptoSystem())  // TODO: POS-04_sig ??
 
         val pubKey0 = pubKey(0)
         val privKey0 = privKey(0)
@@ -142,7 +142,7 @@ class GTXMLTransactionParserAutoSignTest {
     fun autoSign_autosigning_no_signatures_element_successfully() {
         val xml = readResourceFile("tx_no_signatures_element.xml")
 
-        val mockCalculator = GtvMerkleHashCalculator(MockCryptoSystem())  // TODO: POS-04_sig ??
+        val mockCalculator = GtvMerkleHashCalculatorV1(MockCryptoSystem())  // TODO: POS-04_sig ??
 
         val pubKey0 = pubKey(0)
         val privKey0 = privKey(0)

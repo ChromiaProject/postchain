@@ -45,7 +45,7 @@ import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import java.lang.reflect.InvocationTargetException
@@ -132,7 +132,7 @@ open class BaseBlockchainConfiguration(
     private val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()
 
     override fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader {
-        return BaseBlockHeader(rawBlockHeader, GtvMerkleHashCalculator(cryptoSystem))
+        return BaseBlockHeader(rawBlockHeader, GtvMerkleHashCalculatorV1(cryptoSystem))
     }
 
     override fun decodeWitness(rawWitness: ByteArray): BlockWitness {

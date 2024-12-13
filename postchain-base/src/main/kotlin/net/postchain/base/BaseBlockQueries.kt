@@ -25,7 +25,7 @@ import net.postchain.crypto.Digester
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import java.sql.SQLException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -217,7 +217,7 @@ open class BaseBlockQueries(
     }
 
     protected open fun decodeBlockHeader(headerData: ByteArray): BaseBlockHeader =
-            BaseBlockHeader(headerData, GtvMerkleHashCalculator(digester))
+            BaseBlockHeader(headerData, GtvMerkleHashCalculatorV1(digester))
 
     protected open fun decodeWitness(witnessData: ByteArray): MultiSigBlockWitness =
             BaseBlockWitness.fromBytes(witnessData)

@@ -3,7 +3,7 @@ package net.postchain.base
 import net.postchain.common.BlockchainRid
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 
@@ -11,7 +11,7 @@ class BaseBlockHeaderTestMerkleProofTest {
     val blockchainRID = BlockchainRid.ZERO_RID
 
     val cryptoSystem = Secp256K1CryptoSystem()
-    val merkeHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+    val merkeHashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
 
     val prevBlockRid = ByteArray(32)
     val wrappedProveTx = WrappedByteArray.fromHex("12341234")

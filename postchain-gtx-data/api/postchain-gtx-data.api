@@ -2,7 +2,7 @@ public final class net/postchain/gtx/Gtx : net/postchain/gtv/mapper/ToGtv {
 	public static final field Companion Lnet/postchain/gtx/Gtx$Companion;
 	public fun <init> (Lnet/postchain/gtx/GtxBody;Ljava/util/List;)V
 	public fun <init> (Lnet/postchain/gtx/GtxBody;[[B)V
-	public final fun calculateTxRid (Lnet/postchain/gtv/merkle/MerkleHashCalculator;)[B
+	public final fun calculateTxRid (Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;)[B
 	public static final fun decode ([B)Lnet/postchain/gtx/Gtx;
 	public final fun encode ()[B
 	public final fun encodeHex ()Ljava/lang/String;
@@ -24,7 +24,7 @@ public final class net/postchain/gtx/GtxBody : net/postchain/gtv/mapper/ToGtv {
 	public static final field Companion Lnet/postchain/gtx/GtxBody$Companion;
 	public fun <init> (Lnet/postchain/common/BlockchainRid;Ljava/util/List;Ljava/util/List;)V
 	public fun <init> (Lnet/postchain/common/BlockchainRid;[Lnet/postchain/gtx/GtxOp;[[B)V
-	public final fun calculateTxRid (Lnet/postchain/gtv/merkle/MerkleHashCalculator;)[B
+	public final fun calculateTxRid (Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;)[B
 	public fun equals (Ljava/lang/Object;)Z
 	public static final fun fromGtv (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtx/GtxBody;
 	public final fun getBlockchainRid ()Lnet/postchain/common/BlockchainRid;

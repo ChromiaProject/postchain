@@ -57,7 +57,7 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.mapper.toObject
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.UnknownQuery
@@ -138,7 +138,7 @@ open class PostchainModel(
                     blockSigMaker,
                     blockchainConfiguration.signers.toTypedArray()
             )
-            val blockHeader = BaseBlockHeader(it.header, GtvMerkleHashCalculator(postchainContext.cryptoSystem))
+            val blockHeader = BaseBlockHeader(it.header, GtvMerkleHashCalculatorV1(postchainContext.cryptoSystem))
             val witnessBuilder = witnessProvider.createWitnessBuilderWithOwnSignature(blockHeader) as MultiSigBlockWitnessBuilder
             BlockSignature.fromSignature(witnessBuilder.getMySignature())
         }

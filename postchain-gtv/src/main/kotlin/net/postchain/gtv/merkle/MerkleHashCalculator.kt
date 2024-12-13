@@ -4,7 +4,10 @@ package net.postchain.gtv.merkle
 
 import net.postchain.common.data.Hash
 import net.postchain.crypto.Digester
-
+import net.postchain.gtv.merkle.path.PathSet
+import net.postchain.gtv.merkle.proof.MerkleHashSummary
+import net.postchain.gtv.merkle.proof.MerkleHashSummaryFactory
+import net.postchain.gtv.merkle.proof.MerkleProofTree
 
 /**
  * Abstract class responsible for calculating hashes and serialization.
@@ -12,7 +15,13 @@ import net.postchain.crypto.Digester
  *
  * Note: We make this class abstract so we can use a dummy version during test (this makes tests easier to understand).
  */
-abstract class MerkleHashCalculator<T>(digester: Digester?) : BinaryNodeHashCalculator(digester) {
+abstract class MerkleHashCalculator<T, TPathSet : PathSet>(digester: Digester?) : BinaryNodeHashCalculator(digester) {
+
+    abstract fun getHashSummaryFactory(): MerkleHashSummaryFactory<T, TPathSet>
+
+    abstract fun generateProof(value: T, pathSet: TPathSet): MerkleProofTree<T>
+
+    abstract fun merkleHashSummary(value: T): MerkleHashSummary
 
     /**
      * Leaf hashes are prefixed to tell them apart from internal nodes.

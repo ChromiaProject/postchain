@@ -11,6 +11,7 @@ import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvPrimitive
 import net.postchain.gtv.GtvString
+import net.postchain.gtv.merkle.BinaryTree
 import net.postchain.gtv.merkle.BinaryTreeElement
 import net.postchain.gtv.merkle.EmptyLeaf
 import net.postchain.gtv.merkle.GtvArrayHeadNode
@@ -47,8 +48,8 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
      * @param calculator is the class we use for hash calculation
      */
     fun buildFromBinaryTree(
-        originalTree: GtvBinaryTree,
-        calculator: MerkleHashCalculator<Gtv>
+            originalTree: BinaryTree<Gtv>,
+            calculator: MerkleHashCalculator<Gtv, *>
     ): GtvMerkleProofTree {
         if (logger.isTraceEnabled) {
             logger.trace("--------------------------------------------")
@@ -66,7 +67,7 @@ class GtvMerkleProofTreeFactory: MerkleProofTreeFactory<Gtv>()   {
 
     override fun buildFromBinaryTreeInternal(
             currentElement: BinaryTreeElement,
-            calculator: MerkleHashCalculator<Gtv>
+            calculator: MerkleHashCalculator<Gtv, *>
     ): MerkleProofElement {
         return when (currentElement) {
             is EmptyLeaf -> {

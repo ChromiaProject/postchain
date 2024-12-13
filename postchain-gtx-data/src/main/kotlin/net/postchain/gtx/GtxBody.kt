@@ -7,7 +7,7 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.ToGtv
-import net.postchain.gtv.merkle.MerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.data.ExtOpData
 
@@ -22,7 +22,7 @@ class GtxBody(
 
     private lateinit var rid: Hash
 
-    fun calculateTxRid(calculator: MerkleHashCalculator<Gtv>): Hash {
+    fun calculateTxRid(calculator: GtvMerkleHashCalculatorBase): Hash {
         if (!this::rid.isInitialized) rid = toGtv().merkleHash(calculator)
         return rid
     }

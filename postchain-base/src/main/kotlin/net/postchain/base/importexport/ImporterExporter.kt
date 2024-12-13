@@ -32,7 +32,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvNull
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import java.io.BufferedInputStream
@@ -446,7 +446,7 @@ object ImporterExporter : KLogging() {
     )
 
     internal fun decodeBlockEntry(gtv: Gtv): Triple<BaseBlockHeader, BaseBlockWitness, List<ByteArray>> = Triple(
-            BaseBlockHeader(gtv.asArray()[0].asByteArray(), GtvMerkleHashCalculator(::sha256Digest)),
+            BaseBlockHeader(gtv.asArray()[0].asByteArray(), GtvMerkleHashCalculatorV1(::sha256Digest)),
             BaseBlockWitness.fromBytes(gtv.asArray()[1].asByteArray()),
             gtv.asArray()[2].asArray().map { it.asByteArray() }
     )

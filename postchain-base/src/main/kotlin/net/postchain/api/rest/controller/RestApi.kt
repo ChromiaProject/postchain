@@ -87,7 +87,7 @@ import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvStream
 import net.postchain.gtv.GtvString
 import net.postchain.gtv.GtvType
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
@@ -658,7 +658,7 @@ class RestApi(
                 throw UnauthorizedException(UNAUTHORIZED_REQUIRE_SIGNATURE_IN_MANAGED_MODE)
             }
 
-            val configHash = configuration.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+            val configHash = configuration.merkleHash(GtvMerkleHashCalculatorV1(cryptoSystem))
             if (!signatures.all { cryptoSystem.verifyDigest(configHash, it) }) {
                 throw UnauthorizedException(UNAUTHORIZED_INVALID_SIGNATURE)
             }

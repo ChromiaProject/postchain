@@ -99,7 +99,7 @@ public class net/postchain/base/BaseBlockEContext : net/postchain/core/BlockECon
 
 public final class net/postchain/base/BaseBlockHeader : net/postchain/core/block/BlockHeader {
 	public static final field Factory Lnet/postchain/base/BaseBlockHeader$Factory;
-	public fun <init> ([BLnet/postchain/gtv/merkle/GtvMerkleHashCalculator;)V
+	public fun <init> ([BLnet/postchain/gtv/merkle/GtvMerkleHashCalculatorV1;)V
 	public final fun checkCorrectNumberOfDependencies (I)Z
 	public final fun checkExtraData (Ljava/util/Map;)Z
 	public final fun checkPrimaryExtraHeader ([[B)Z
@@ -110,12 +110,12 @@ public final class net/postchain/base/BaseBlockHeader : net/postchain/core/block
 	public fun getPrevBlockRID ()[B
 	public fun getRawData ()[B
 	public final fun getTimestamp ()J
-	public static final fun make (Lnet/postchain/gtv/merkle/GtvMerkleHashCalculator;Lnet/postchain/core/block/InitialBlockData;[BJLjava/util/Map;)Lnet/postchain/base/BaseBlockHeader;
+	public static final fun make (Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorV1;Lnet/postchain/core/block/InitialBlockData;[BJLjava/util/Map;)Lnet/postchain/base/BaseBlockHeader;
 	public final fun merkleProofTree (Lnet/postchain/common/types/WrappedByteArray;[Lnet/postchain/common/types/WrappedByteArray;)Lkotlin/Pair;
 }
 
 public final class net/postchain/base/BaseBlockHeader$Factory {
-	public final fun make (Lnet/postchain/gtv/merkle/GtvMerkleHashCalculator;Lnet/postchain/core/block/InitialBlockData;[BJLjava/util/Map;)Lnet/postchain/base/BaseBlockHeader;
+	public final fun make (Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorV1;Lnet/postchain/core/block/InitialBlockData;[BJLjava/util/Map;)Lnet/postchain/base/BaseBlockHeader;
 }
 
 public final class net/postchain/base/BaseBlockWitness : net/postchain/core/block/MultiSigBlockWitness, net/postchain/gtv/mapper/ToGtv {

@@ -31,7 +31,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvFileReader
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.SimpleGTXModule
@@ -211,7 +211,7 @@ class RestApiIT : IntegrationTestSetup() {
                 200)
 
         // Asserting
-        val txRidHex = builder.calculateTxRid(GtvMerkleHashCalculator(cryptoSystem)).toHex()
+        val txRidHex = builder.calculateTxRid(GtvMerkleHashCalculatorV1(cryptoSystem)).toHex()
         val expected = """
             {
                 "status": "rejected",

@@ -147,10 +147,10 @@ public final class net/postchain/gtv/GtvException : java/io/IOException {
 }
 
 public final class net/postchain/gtv/GtvExtensionsKt {
-	public static final fun generateProof (Lnet/postchain/gtv/Gtv;Ljava/util/List;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;
-	public static final fun generateProof (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/path/GtvPathSet;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;
-	public static final fun merkleHash (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)[B
-	public static final fun merkleHashSummary (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+	public static final fun generateProof (Lnet/postchain/gtv/Gtv;Ljava/util/List;Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;)Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;
+	public static final fun generateProof (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/path/GtvPathSet;Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;)Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;
+	public static final fun merkleHash (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;)[B
+	public static final fun merkleHashSummary (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
 }
 
 public final class net/postchain/gtv/GtvFactory {
@@ -732,6 +732,7 @@ public class net/postchain/gtv/merkle/BinaryTreeElement {
 
 public abstract class net/postchain/gtv/merkle/BinaryTreeFactory : mu/KLogging {
 	public fun <init> ()V
+	public abstract fun buildBinaryTree (Ljava/lang/Object;Lnet/postchain/gtv/merkle/path/PathSet;)Lnet/postchain/gtv/merkle/BinaryTree;
 	public final fun buildHigherLayer (ILjava/util/List;)Ljava/util/List;
 	protected abstract fun getEmptyPathSet ()Lnet/postchain/gtv/merkle/path/PathSet;
 	public abstract fun getNrOfBytes (Ljava/lang/Object;)I
@@ -790,11 +791,13 @@ public final class net/postchain/gtv/merkle/GtvBinaryTree : net/postchain/gtv/me
 }
 
 public final class net/postchain/gtv/merkle/GtvBinaryTreeFactory : net/postchain/gtv/merkle/BinaryTreeFactory {
-	public fun <init> ()V
+	public fun <init> (I)V
+	public synthetic fun buildBinaryTree (Ljava/lang/Object;Lnet/postchain/gtv/merkle/path/PathSet;)Lnet/postchain/gtv/merkle/BinaryTree;
+	public fun buildBinaryTree (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/path/GtvPathSet;)Lnet/postchain/gtv/merkle/GtvBinaryTree;
 	public final fun buildFromGtv (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/GtvBinaryTree;
-	public final fun buildFromGtvAndPath (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/path/GtvPathSet;)Lnet/postchain/gtv/merkle/GtvBinaryTree;
 	public final fun buildLeafElements (Ljava/util/List;Lnet/postchain/gtv/merkle/path/GtvPathSet;)Ljava/util/ArrayList;
 	public synthetic fun getEmptyPathSet ()Lnet/postchain/gtv/merkle/path/PathSet;
+	public final fun getGtvHashVersion ()I
 	public synthetic fun getNrOfBytes (Ljava/lang/Object;)I
 	public fun getNrOfBytes (Lnet/postchain/gtv/Gtv;)I
 	public synthetic fun innerHandleLeaf (Ljava/lang/Object;Lnet/postchain/gtv/merkle/path/PathSet;)Lnet/postchain/gtv/merkle/BinaryTreeElement;
@@ -814,40 +817,63 @@ public final class net/postchain/gtv/merkle/GtvMerkleBasics {
 	public static final field HASH_PREFIX_NODE_GTV_DICT B
 	public static final field INSTANCE Lnet/postchain/gtv/merkle/GtvMerkleBasics;
 	public static final field UNKNOWN_COLLECTION_POSITION J
-	public final fun getGtvBinaryTreeFactory ()Lnet/postchain/gtv/merkle/GtvBinaryTreeFactory;
-	public final fun getGtvMerkleHashSummaryFactory ()Lnet/postchain/gtv/merkle/proof/GtvMerkleHashSummaryFactory;
 	public final fun getGtvMerkleProofTreeFactory ()Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTreeFactory;
 	public final fun getGtvVirtualFactory ()Lnet/postchain/gtv/merkle/virtual/GtvVirtualFactory;
 }
 
-public final class net/postchain/gtv/merkle/GtvMerkleHashCalculator : net/postchain/gtv/merkle/MerkleHashCalculator {
-	public fun <init> (Lnet/postchain/crypto/CryptoSystem;)V
+public abstract class net/postchain/gtv/merkle/GtvMerkleHashCalculatorBase : net/postchain/gtv/merkle/MerkleHashCalculator {
 	public fun <init> (Lnet/postchain/crypto/Digester;)V
 	public synthetic fun calculateLeafHash (Ljava/lang/Object;)[B
 	public fun calculateLeafHash (Lnet/postchain/gtv/Gtv;)[B
 	public fun calculateNodeHash (B[B[B)[B
+	public synthetic fun generateProof (Ljava/lang/Object;Lnet/postchain/gtv/merkle/path/PathSet;)Lnet/postchain/gtv/merkle/proof/MerkleProofTree;
+	public fun generateProof (Lnet/postchain/gtv/Gtv;Lnet/postchain/gtv/merkle/path/GtvPathSet;)Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;
 	public synthetic fun isContainerProofValueLeaf (Ljava/lang/Object;)Z
 	public fun isContainerProofValueLeaf (Lnet/postchain/gtv/Gtv;)Z
+	public synthetic fun merkleHashSummary (Ljava/lang/Object;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
+	public fun merkleHashSummary (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
 }
 
-synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculator$calculateLeafHash$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function1 {
-	public static final field INSTANCE Lnet/postchain/gtv/merkle/GtvMerkleHashCalculator$calculateLeafHash$1;
+synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculatorBase$calculateLeafHash$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function1 {
+	public static final field INSTANCE Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase$calculateLeafHash$1;
 	public synthetic fun invoke (Ljava/lang/Object;)Ljava/lang/Object;
 	public final fun invoke (Lnet/postchain/gtv/Gtv;)[B
 }
 
-synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculator$calculateLeafHash$2 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
+synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculatorBase$calculateLeafHash$2 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
 	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
 	public final fun invoke ([BLnet/postchain/crypto/Digester;)[B
 }
 
-synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculator$calculateNodeHash$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
+synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculatorBase$calculateNodeHash$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
 	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
 	public final fun invoke ([BLnet/postchain/crypto/Digester;)[B
 }
 
-public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorKt {
+public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorV1 : net/postchain/gtv/merkle/GtvMerkleHashCalculatorBase {
+	public static final field Companion Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorV1$Companion;
+	public fun <init> (Lnet/postchain/crypto/CryptoSystem;)V
+	public fun <init> (Lnet/postchain/crypto/Digester;)V
+	public fun getHashSummaryFactory ()Lnet/postchain/gtv/merkle/proof/GtvMerkleHashSummaryFactory;
+	public synthetic fun getHashSummaryFactory ()Lnet/postchain/gtv/merkle/proof/MerkleHashSummaryFactory;
+}
+
+public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorV1$Companion {
+}
+
+public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorV1Kt {
 	public static final fun serializeGtvToByteArray (Lnet/postchain/gtv/Gtv;)[B
+}
+
+public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorV2 : net/postchain/gtv/merkle/GtvMerkleHashCalculatorBase {
+	public static final field Companion Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorV2$Companion;
+	public fun <init> (Lnet/postchain/crypto/CryptoSystem;)V
+	public fun <init> (Lnet/postchain/crypto/Digester;)V
+	public fun getHashSummaryFactory ()Lnet/postchain/gtv/merkle/proof/GtvMerkleHashSummaryFactory;
+	public synthetic fun getHashSummaryFactory ()Lnet/postchain/gtv/merkle/proof/MerkleHashSummaryFactory;
+}
+
+public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorV2$Companion {
 }
 
 public final class net/postchain/gtv/merkle/Leaf : net/postchain/gtv/merkle/BinaryTreeElement {
@@ -871,7 +897,10 @@ public abstract class net/postchain/gtv/merkle/MerkleHashCalculator : net/postch
 	public fun <init> (Lnet/postchain/crypto/Digester;)V
 	protected final fun calculateHashOfValueInternal (Ljava/lang/Object;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function2;)[B
 	public abstract fun calculateLeafHash (Ljava/lang/Object;)[B
+	public abstract fun generateProof (Ljava/lang/Object;Lnet/postchain/gtv/merkle/path/PathSet;)Lnet/postchain/gtv/merkle/proof/MerkleProofTree;
+	public abstract fun getHashSummaryFactory ()Lnet/postchain/gtv/merkle/proof/MerkleHashSummaryFactory;
 	public fun isContainerProofValueLeaf (Ljava/lang/Object;)Z
+	public abstract fun merkleHashSummary (Ljava/lang/Object;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
 }
 
 public abstract class net/postchain/gtv/merkle/MerkleHashMemoization {
@@ -918,12 +947,12 @@ public class net/postchain/gtv/merkle/SubTreeRootNode : net/postchain/gtv/merkle
 
 public final class net/postchain/gtv/merkle/factory/GtvBinaryTreeFactoryArray {
 	public static final field INSTANCE Lnet/postchain/gtv/merkle/factory/GtvBinaryTreeFactoryArray;
-	public final fun buildFromGtvArray (Lnet/postchain/gtv/GtvArray;Lnet/postchain/gtv/merkle/path/GtvPathSet;)Lnet/postchain/gtv/merkle/BinaryTreeElement;
+	public final fun buildFromGtvArray (Lnet/postchain/gtv/GtvArray;Lnet/postchain/gtv/merkle/path/GtvPathSet;Lnet/postchain/gtv/merkle/GtvBinaryTreeFactory;)Lnet/postchain/gtv/merkle/BinaryTreeElement;
 }
 
 public final class net/postchain/gtv/merkle/factory/GtvBinaryTreeFactoryDict {
 	public static final field INSTANCE Lnet/postchain/gtv/merkle/factory/GtvBinaryTreeFactoryDict;
-	public final fun buildFromGtvDictionary (Lnet/postchain/gtv/GtvDictionary;Lnet/postchain/gtv/merkle/path/GtvPathSet;)Lnet/postchain/gtv/merkle/GtvDictHeadNode;
+	public final fun buildFromGtvDictionary (Lnet/postchain/gtv/GtvDictionary;Lnet/postchain/gtv/merkle/path/GtvPathSet;Lnet/postchain/gtv/merkle/GtvBinaryTreeFactory;)Lnet/postchain/gtv/merkle/GtvDictHeadNode;
 }
 
 public final class net/postchain/gtv/merkle/path/ArrayGtvPathElement : net/postchain/gtv/merkle/path/SearchableGtvPathElement {
@@ -1047,7 +1076,7 @@ public final class net/postchain/gtv/merkle/proof/GtvMerkleProofTree$Companion :
 
 public final class net/postchain/gtv/merkle/proof/GtvMerkleProofTreeFactory : net/postchain/gtv/merkle/proof/MerkleProofTreeFactory {
 	public fun <init> ()V
-	public final fun buildFromBinaryTree (Lnet/postchain/gtv/merkle/GtvBinaryTree;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;
+	public final fun buildFromBinaryTree (Lnet/postchain/gtv/merkle/BinaryTree;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;
 	public fun buildFromBinaryTreeInternal (Lnet/postchain/gtv/merkle/BinaryTreeElement;Lnet/postchain/gtv/merkle/MerkleHashCalculator;)Lnet/postchain/gtv/merkle/proof/MerkleProofElement;
 	public fun buildNodeOfCorrectType (Lnet/postchain/gtv/merkle/Node;Lnet/postchain/gtv/merkle/proof/MerkleProofElement;Lnet/postchain/gtv/merkle/proof/MerkleProofElement;)Lnet/postchain/gtv/merkle/proof/ProofNode;
 	public final fun deserialize (Lnet/postchain/gtv/GtvArray;)Lnet/postchain/gtv/merkle/proof/GtvMerkleProofTree;

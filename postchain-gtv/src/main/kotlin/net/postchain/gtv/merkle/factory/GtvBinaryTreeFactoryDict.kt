@@ -12,9 +12,6 @@ import java.util.SortedSet
 
 object GtvBinaryTreeFactoryDict {
 
-
-    private val mainFactory = GtvBinaryTreeFactory()
-
     /**
      * The strategy for transforming [GtvDictionary] is pretty simple, we treat the key and value as leafs and
      * add them both as elements to the tree.
@@ -22,7 +19,7 @@ object GtvBinaryTreeFactoryDict {
      * There is an edge cases here:
      * - When the dict is empty. -> We return a top node with two empty leafs
      */
-    fun buildFromGtvDictionary(gtvDictionary: GtvDictionary, gtvPaths: GtvPathSet): GtvDictHeadNode {
+    fun buildFromGtvDictionary(gtvDictionary: GtvDictionary, gtvPaths: GtvPathSet, gtvBinaryTreeFactory: GtvBinaryTreeFactory): GtvDictHeadNode {
         val pathElem = gtvPaths.getPathLeafOrElseAnyCurrentPathElement()
         //println("Dict,(is proof? $isThisAProofLeaf) Proof path (size: ${GtvPathList.size} ) list: " + GtvPath.debugRerpresentation(GtvPathList))
         val keys: SortedSet<String> = gtvDictionary.dict.keys.toSortedSet() // Needs to be sorted, or else the order is undefined
@@ -32,11 +29,11 @@ object GtvBinaryTreeFactoryDict {
         }
 
         // 1. Build first (leaf) layer
-        val leafArray = buildLeafElementFromDict(keys, gtvDictionary, gtvPaths)
+        val leafArray = buildLeafElementFromDict(keys, gtvDictionary, gtvPaths, gtvBinaryTreeFactory)
         val sumNrOfBytes = leafArray.sumOf { it.getNrOfBytes() }
 
         // 2. Build all higher layers
-        val result = mainFactory.buildHigherLayer(1, leafArray)
+        val result = gtvBinaryTreeFactory.buildHigherLayer(1, leafArray)
 
         // 3. Fix and return the root node
         val orgRoot = result.get(0)
@@ -59,7 +56,8 @@ object GtvBinaryTreeFactoryDict {
     private fun buildLeafElementFromDict(
             keys: SortedSet<String>,
             gtvDictionary: GtvDictionary,
-            gtvPaths: GtvPathSet
+            gtvPaths: GtvPathSet,
+            gtvBinaryTreeFactory: GtvBinaryTreeFactory
     ): ArrayList<BinaryTreeElement> {
         val leafArray = arrayListOf<BinaryTreeElement>()
 
@@ -69,13 +67,13 @@ object GtvBinaryTreeFactoryDict {
 
             // 1.a Fix the key
             val keyGtvString: Gtv = GtvString(key)
-            val keyElement = mainFactory.handleLeaf(keyGtvString, GtvPath.NO_PATHS) // The key cannot not be proved, so NO_PATHS
+            val keyElement = gtvBinaryTreeFactory.handleLeaf(keyGtvString, GtvPath.NO_PATHS) // The key cannot not be proved, so NO_PATHS
             leafArray.add(keyElement)
 
             // 1.b Fix the value/content
             val pathsRelevantForThisLeaf = onlyDictPaths.getTailIfFirstElementIsDictOfThisKeyFromList(key)
             val content: Gtv = gtvDictionary.get(key)!!
-            val contentElement = mainFactory.handleLeaf(content, pathsRelevantForThisLeaf)
+            val contentElement = gtvBinaryTreeFactory.handleLeaf(content, pathsRelevantForThisLeaf)
             leafArray.add(contentElement)
         }
         return leafArray

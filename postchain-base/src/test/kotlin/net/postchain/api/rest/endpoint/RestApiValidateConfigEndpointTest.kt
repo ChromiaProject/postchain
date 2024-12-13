@@ -22,7 +22,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvFileReader
 import net.postchain.gtv.gtvml.GtvMLEncoder
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkleHash
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.config.ManagedBlockchainConfiguration
@@ -280,20 +280,20 @@ class RestApiValidateConfigEndpointTest {
 
     private fun buildValidHeaderAuth(config: Gtv): String {
 
-        val signature = sigMaker0.signDigest(config.merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
+        val signature = sigMaker0.signDigest(config.merkleHash(GtvMerkleHashCalculatorV1(cryptoSystem)))
         return "${signature.subjectID.toHex()}:${signature.data.toHex()}"
     }
 
     private fun buildInvalidAndValidHeaderAuth(config: Gtv): String {
 
-        val invalid = sigMaker0.signDigest(gtv(0).merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
-        val valid = sigMaker0.signDigest(config.merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
+        val invalid = sigMaker0.signDigest(gtv(0).merkleHash(GtvMerkleHashCalculatorV1(cryptoSystem)))
+        val valid = sigMaker0.signDigest(config.merkleHash(GtvMerkleHashCalculatorV1(cryptoSystem)))
         return "Postchain ${invalid.subjectID.toHex()}:${invalid.data.toHex()},${valid.subjectID.toHex()}:${valid.data.toHex()}"
     }
 
     private fun buildInvalidSigHashHeaderAuth(): String {
 
-        val signature = sigMaker0.signDigest(gtv(0).merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
+        val signature = sigMaker0.signDigest(gtv(0).merkleHash(GtvMerkleHashCalculatorV1(cryptoSystem)))
         return "Postchain ${signature.subjectID.toHex()}:${signature.data.toHex()}"
     }
 

@@ -31,7 +31,7 @@ abstract class MerkleHashSummaryFactory<T, TPathSet: PathSet>(
      * @param calculator holds the function we'll use to hash & serialize
      * @return the calculated merkle root of the proof.
      */
-    abstract fun calculateMerkleRoot(value: T, calculator: MerkleHashCalculator<T>): MerkleHashSummary
+    abstract fun calculateMerkleRoot(value: T, calculator: MerkleHashCalculator<T, TPathSet>): MerkleHashSummary
 
     /**
      * Calculates the merkle root of the given proof tree.
@@ -44,13 +44,13 @@ abstract class MerkleHashSummaryFactory<T, TPathSet: PathSet>(
      * @param calculator holds the function we'll use to hash & serialize
      * @return the calculated merkle root of the proof.
      */
-    fun calculateMerkleRoot(proofTree: MerkleProofTree<T>, calculator: MerkleHashCalculator<T>): MerkleHashSummary {
+    fun calculateMerkleRoot(proofTree: MerkleProofTree<T>, calculator: MerkleHashCalculator<T, TPathSet>): MerkleHashSummary {
         val calculatedSummary = calculateMerkleRootInternal(proofTree.root, calculator)
         return MerkleHashSummary(calculatedSummary, proofTree.totalNrOfBytes)
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun calculateMerkleRootInternal(currentElement: MerkleProofElement, calculator: MerkleHashCalculator<T>): Hash {
+    private fun calculateMerkleRootInternal(currentElement: MerkleProofElement, calculator: MerkleHashCalculator<T, TPathSet>): Hash {
         return when (currentElement) {
             is ProofHashedLeaf -> currentElement.merkleHash
             is ProofValueLeaf<*> -> {
@@ -79,5 +79,5 @@ abstract class MerkleHashSummaryFactory<T, TPathSet: PathSet>(
      * @param calculator holds the function we'll use to hash & serialize
      * @return the new proof tree
      */
-    abstract fun buildProofTree(value: T, calculator: MerkleHashCalculator<T>): MerkleProofTree<T>
+    abstract fun buildProofTree(value: T, calculator: MerkleHashCalculator<T, TPathSet>): MerkleProofTree<T>
 }

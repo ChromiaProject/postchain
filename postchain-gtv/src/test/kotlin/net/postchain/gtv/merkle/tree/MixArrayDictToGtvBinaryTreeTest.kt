@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test
 class MixArrayDictToGtvBinaryTreeTest {
 
     private val ln = System.lineSeparator()
-    private val factory = GtvBinaryTreeFactory()
+    private val factory = GtvBinaryTreeFactory(2)
 
     /**
      * An arrays within a dict.
@@ -25,7 +25,7 @@ class MixArrayDictToGtvBinaryTreeTest {
         val gtvDict = MixArrayDictToGtvBinaryTreeHelper.buildGtvDictWithSubArray4()
 
         val fullBinaryTree: GtvBinaryTree = if (gtvPath != null) {
-            factory.buildFromGtvAndPath(gtvDict, GtvPathSet(setOf(gtvPath)))
+            factory.buildBinaryTree(gtvDict, GtvPathSet(setOf(gtvPath)))
         } else {
             factory.buildFromGtv(gtvDict)
         }

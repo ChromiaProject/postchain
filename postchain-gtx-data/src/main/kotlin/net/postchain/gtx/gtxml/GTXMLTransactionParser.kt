@@ -16,8 +16,8 @@ import net.postchain.gtv.gtxml.OperationsType
 import net.postchain.gtv.gtxml.ParamType
 import net.postchain.gtv.gtxml.SignersType
 import net.postchain.gtv.gtxml.TransactionType
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
-import net.postchain.gtv.merkle.MerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
@@ -74,7 +74,7 @@ object GTXMLTransactionParser {
         val txBody = GtxBody(rid, ops.map { GtxOp.fromOpData(it) }, signers)
 
         if (context.autoSign) {
-            val calculator = GtvMerkleHashCalculator(cs)
+            val calculator = GtvMerkleHashCalculatorV1(cs)
             signTransaction(txBody, signatures, context.signers, calculator)
         }
 
@@ -144,7 +144,7 @@ object GTXMLTransactionParser {
      * @param tx is the transaction to sign
      * @param signersMap is a map that tells us what [SigMaker] should be usd for each signer
      */
-    private fun signTransaction(tx: GtxBody, signatures: Array<ByteArray>, signersMap: Map<WrappedByteArray, SigMaker>, calculator: MerkleHashCalculator<Gtv>) {
+    private fun signTransaction(tx: GtxBody, signatures: Array<ByteArray>, signersMap: Map<WrappedByteArray, SigMaker>, calculator: GtvMerkleHashCalculatorBase) {
         val txSigners = tx.signers
         val txBodyMerkleRoot = tx.calculateTxRid(calculator)
         for (i in 0 until txSigners.size) {
