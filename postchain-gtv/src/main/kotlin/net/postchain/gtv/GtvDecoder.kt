@@ -13,8 +13,10 @@ import javax.net.ssl.SSLException
 object GtvDecoder {
 
     fun decodeGtv(b: ByteArray): Gtv {
-        val byteArray = ByteArrayInputStream(b)
-        return decodeGtv(byteArray)
+        val stream = ByteArrayInputStream(b)
+        val decodeGtv = decodeGtv(stream)
+        if (stream.read() != -1) throw GtvException("Extra data at end of GTV")
+        return decodeGtv
     }
 
     fun decodeGtv(inputStream: InputStream): Gtv = try {
