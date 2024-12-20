@@ -38,7 +38,7 @@ import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.syncmanager.validator.RevoltTracker
 import net.postchain.ebft.syncmanager.validator.ValidatorSyncManager
 import net.postchain.ebft.worker.WorkerContext
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.metrics.NodeStatusMetrics
 import net.postchain.metrics.SyncMetrics
 import net.postchain.network.CommunicationManager
@@ -78,7 +78,7 @@ abstract class EBFTProtocolBase {
     protected var lastBlockHeight = 0L
     protected val peerIds = setOf(nodeRid0, nodeRid1, nodeRid2, nodeRid3)
     protected val cryptoSystem = Secp256K1CryptoSystem()
-    protected val merkleHashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
+    protected val merkleHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
     protected val prevBlockRid = "2222222222222222222222222222222222222222222222222222222222222222".hexStringToByteArray()
     protected val header0 = createBlockHeader(blockchainRid, 2L, 0, prevBlockRid, 1)
     protected val blockRid0 = header0.blockRID

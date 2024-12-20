@@ -1,12 +1,14 @@
 package net.postchain.devtools.mminfra
 
 import net.postchain.base.BaseBlockBuilderExtension
+import net.postchain.base.TestBlockQueries
 import net.postchain.base.configuration.BaseBlockchainConfiguration
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.extension.FailedConfigurationHashBlockBuilderExtension
 import net.postchain.core.BlockchainContext
 import net.postchain.core.EContext
+import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuilder
@@ -22,7 +24,7 @@ import net.postchain.managed.config.faulty.LocalFaultyConfigurationReportHelper
 import java.time.Clock
 
 class TestBlockchainConfiguration(
-        data: BlockchainConfigurationData,
+        private val data: BlockchainConfigurationData,
         partialContext: BlockchainContext,
         blockSigMaker: SigMaker,
         override var dataSource: ManagedNodeDataSource
@@ -47,4 +49,7 @@ class TestBlockchainConfiguration(
             super.makeBlockBuilder(ctx, isSyncing, extraExtensions)
         }
     }
+
+    override fun makeBlockQueries(storage: Storage): BlockQueries =
+            TestBlockQueries(cryptoSystem, storage, blockStore, chainID, blockchainContext.nodeRID, data.merkleHashCalculator)
 }

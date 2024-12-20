@@ -5,10 +5,10 @@ package net.postchain.base
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.PostchainContext
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
-import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -31,13 +31,13 @@ import net.postchain.core.DefaultBlockchainConfigurationFactory
 import net.postchain.core.EContext
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.core.block.BlockTrace
-import net.postchain.crypto.sha256Digest
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.ErrorDiagnosticValue
 import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.devtools.NameHelper.peerName
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.mapper.toObject
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.ManagedBlockchainProcessManager
@@ -193,7 +193,7 @@ open class BaseBlockchainProcessManager(
                         var eContext: EContext? = null
                         try {
                             eContext = blockBuilderStorage.openWriteConnection(chainId)
-                            val configHash = GtvToBlockchainRidFactory.calculateBlockchainRid(GtvDecoder.decodeGtv(rawConfigurationData), ::sha256Digest).data
+                            val configHash = GtvDecoder.decodeGtv(rawConfigurationData).toObject<BlockchainConfigurationData>().configHash
                             if (hasBuiltInitialBlock(eContext) && !hasBuiltBlockWithConfig(eContext, blockHeight, configHash)) {
                                 revertConfiguration(chainId, bTrace, eContext, blockHeight, rawConfigurationData)
                             } else {
@@ -286,7 +286,7 @@ open class BaseBlockchainProcessManager(
     private fun revertConfiguration(chainId: Long, bTrace: BlockTrace?, eContext: EContext, blockHeight: Long,
                                     failedConfig: ByteArray) {
         logger.info("Reverting faulty configuration at height $blockHeight")
-        val failedConfigHash = GtvToBlockchainRidFactory.calculateBlockchainRid(GtvFactory.decodeGtv(failedConfig), ::sha256Digest).data
+        val failedConfigHash = GtvFactory.decodeGtv(failedConfig).toObject<BlockchainConfigurationData>().configHash
 
         DatabaseAccess.of(eContext).apply {
             addFaultyConfiguration(eContext, FaultyConfiguration(failedConfigHash.wrap(), blockHeight))

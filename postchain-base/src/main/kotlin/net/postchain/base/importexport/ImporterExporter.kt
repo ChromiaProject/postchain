@@ -9,6 +9,7 @@ import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.BaseBlockBuilder.Companion.PRIMARY_HEADER_KEY
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.extension.FAILED_CONFIG_HASH_EXTRA_HEADER
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
 import net.postchain.common.BlockchainRid
@@ -25,14 +26,12 @@ import net.postchain.core.Transaction
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
-import net.postchain.crypto.sha256Digest
 import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_PACKAGE_CONTENT_BYTES
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvNull
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import java.io.BufferedInputStream
@@ -284,11 +283,12 @@ object ImporterExporter : KLogging() {
             while (true) {
                 val gtv = GtvDecoder.decodeGtv(stream)
                 if (gtv.isNull()) break
-                val (blockHeader, blockWitness, transactions) = decodeBlockEntry(gtv)
-                val blockHeight = blockHeader.blockHeaderRec.getHeight()
+                val (blockHeaderData, blockWitnessData, transactions) = decodeBlockEntry(gtv)
+                val blockHeight = BlockHeaderData.fromBinary(blockHeaderData).getHeight()
+                val blockWitness = BaseBlockWitness.fromBytes(blockWitnessData)
                 if (firstBlock == -1L) {
                     firstBlock = blockHeight
-                    logger.info("First block ${blockHeader.blockRID.toHex()} at height $blockHeight")
+                    logger.info("First block at height $blockHeight")
                 }
 
                 withReadWriteConnection(storage, chainId) { ctx ->
@@ -298,14 +298,14 @@ object ImporterExporter : KLogging() {
                         if (lastSkippedBlock == -1L) {
                             logger.info("Skipping already imported blocks ...")
                         } else if (numBlocks % logNBlocks == 0L) {
-                            logger.info("Skipping block ${blockHeader.blockRID.toHex()} at height $blockHeight")
+                            logger.info("Skipping block at height $blockHeight")
                         }
                         lastSkippedBlock = blockHeight
                         return@withReadWriteConnection
                     }
 
                     if (lastSkippedBlock != -1L && firstImportedBlock == -1L) {
-                        logger.info("Last skipped block ${blockHeader.blockRID.toHex()} at height $lastSkippedBlock")
+                        logger.info("Last skipped block at height $lastSkippedBlock")
                     }
 
                     val nextConfigHeight = DatabaseAccess.of(ctx).findConfigurationHeightForBlock(ctx, blockHeight)
@@ -319,11 +319,12 @@ object ImporterExporter : KLogging() {
                     }
 
                     if (numBlocks % logNBlocks == 0L || firstImportedBlock == -1L) {
-                        logger.info("Importing block ${blockHeader.blockRID.toHex()} at height $blockHeight")
+                        logger.info("Importing block at height $blockHeight")
                     }
 
                     val config = configs[nextConfigHeight]
                             ?: throw UserMistake("Cannot load configuration for height $blockHeight")
+                    val blockHeader = BaseBlockHeader(blockHeaderData, config.merkleHashCalculator)
                     importBlock(ctx, config, blockHeader, transactions, blockWitness, skipPrimaryFieldValidation)
 
                     if (firstImportedBlock == -1L) firstImportedBlock = blockHeight
@@ -372,9 +373,9 @@ object ImporterExporter : KLogging() {
                 var lastConfigHeight = -1L
 
                 for (blockDatum in blockData) {
-                    val (blockHeader, blockWitness, transactions) = decodeBlockEntry(blockDatum)
-                    val blockHeight = blockHeader.blockHeaderRec.getHeight()
-
+                    val (blockHeaderData, blockWitnessData, transactions) = decodeBlockEntry(blockDatum)
+                    val blockHeight = BlockHeaderData.fromBinary(blockHeaderData).getHeight()
+                    val blockWitness = BaseBlockWitness.fromBytes(blockWitnessData)
                     if (startHeight == -1L) {
                         startHeight = blockHeight
                     }
@@ -392,6 +393,7 @@ object ImporterExporter : KLogging() {
                         logger.debug { "New configuration at height $configHeight" }
                     }
 
+                    val blockHeader = BaseBlockHeader(blockHeaderData, config.merkleHashCalculator)
                     importBlock(ctx, config, blockHeader, transactions, blockWitness, skipPrimaryFieldValidation)
                     endHeight = blockHeight
                 }
@@ -445,9 +447,9 @@ object ImporterExporter : KLogging() {
             GtvFactory.gtv(block.transactions.map { GtvFactory.gtv(it) })
     )
 
-    internal fun decodeBlockEntry(gtv: Gtv): Triple<BaseBlockHeader, BaseBlockWitness, List<ByteArray>> = Triple(
-            BaseBlockHeader(gtv.asArray()[0].asByteArray(), GtvMerkleHashCalculatorV1(::sha256Digest)),
-            BaseBlockWitness.fromBytes(gtv.asArray()[1].asByteArray()),
+    internal fun decodeBlockEntry(gtv: Gtv): Triple<ByteArray, ByteArray, List<ByteArray>> = Triple(
+            gtv.asArray()[0].asByteArray(),
+            gtv.asArray()[1].asByteArray(),
             gtv.asArray()[2].asArray().map { it.asByteArray() }
     )
 

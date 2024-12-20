@@ -9,11 +9,11 @@ import net.postchain.core.ValidationResult
 import net.postchain.core.block.InitialBlockData
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.gtv.GtvString
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import org.junit.jupiter.api.Test
 
 val cryptoSystem = Secp256K1CryptoSystem()
-val calculator = GtvMerkleHashCalculatorV1(cryptoSystem)
+val calculator = GtvMerkleHashCalculatorV2(cryptoSystem)
 
 /**
  * The [BaseBlockWitnessProvider] doesn't have any DB dependencies, which makes it pretty easy to do unit test for

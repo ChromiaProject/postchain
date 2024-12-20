@@ -146,9 +146,13 @@ interface DatabaseAccess {
     /** Get configuration data at <= given height */
     fun getConfigurationDataForHeight(ctx: EContext, height: Long): ByteArray?
 
+    fun getInitialMerkleHashVersion(ctx: EContext): Long
+    fun getMerkleHashVersionForHeight(ctx: EContext, height: Long): Long
+    fun getCurrentMerkleHashVersion(ctx: EContext): Long
+
     fun getConfigurationData(ctx: EContext, hash: ByteArray): ByteArray?
     fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray)
-    fun addConfigurationHash(ctx: EContext, height: Long, configHash: ByteArray)
+    fun addConfigurationHash(ctx: EContext, height: Long, configHash: ByteArray, merkleHashVersion: Long)
 
     fun getFaultyConfiguration(ctx: EContext): FaultyConfiguration?
     fun addFaultyConfiguration(ctx: EContext, faultyConfiguration: FaultyConfiguration)

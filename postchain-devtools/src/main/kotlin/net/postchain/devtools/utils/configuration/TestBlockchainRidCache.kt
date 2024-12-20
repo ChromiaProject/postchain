@@ -2,8 +2,8 @@ package net.postchain.devtools.utils.configuration
 
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.BlockchainRid
-import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.mapper.toObject
 
 /**
  * This cache will save us some CPU and get us out of situations where we really should have gone to the DB to fetch the RID / IID.
@@ -31,7 +31,7 @@ object TestBlockchainRidCache {
             ?: throw IllegalStateException("Is ${rid.toShortHex()} a dependency bc RID? This chain must be added to the cache before it can be found. (${this}")
 
     fun calcAndAdd(chainId: Int, bcGtv: Gtv): BlockchainRid {
-        val newRid = GtvToBlockchainRidFactory.calculateBlockchainRid(bcGtv, ::sha256Digest)
+        val newRid = GtvToBlockchainRidFactory.calculateBlockchainRid(bcGtv.toObject())
         add(chainId, newRid)
         return newRid
     }

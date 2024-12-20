@@ -522,7 +522,7 @@ class SlowSynchronizerTest {
         @Test
         fun `with missing config hash and failed to validate witness should blacklist peer`() {
             // setup
-            doReturn(null).whenever(blockHeader).extraData
+            doReturn(mapOf<String, Gtv>()).whenever(blockHeader).extraData
             doThrow(RuntimeException("Failure")).whenever(blockWitnessProvider).validateWitness(isA(), isA())
             // execute & verify
             assertThat(sut.handleBlockHeader(nodeRid, header, witness, height)).isNull()

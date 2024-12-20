@@ -28,8 +28,6 @@ open class TestOneOpGtxTransaction(
     val op_name: String,
     val signers: Array<ByteArray>
 ) {
-
-
     protected val blockchainRID = factory.blockchainRID
 
     // cryptoSystem is the system we will use to sign the transaction with
@@ -93,7 +91,7 @@ open class TestOneOpGtxTransaction(
     open fun buildTheTx() {
         val arg0 = GtvFactory.gtv(1.toLong())
         val arg1 = GtvFactory.gtv("$id and $id")
-        val gtx = GtxBuilder(blockchainRID, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
+        val gtx = GtxBuilder(blockchainRID, listOf(KeyPairHelper.pubKey(0)), cryptoSystem, factory.gtvMerkleHashCalculator)
                 .addOperation(op_name, arg0, arg1)
                 .finish()
                 .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))

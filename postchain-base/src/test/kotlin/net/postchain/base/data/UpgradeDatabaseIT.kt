@@ -39,8 +39,16 @@ class UpgradeDatabaseIT {
 
     private val appConfig: AppConfig = testDbConfig("upgrade_database_test")
 
-    private val configData1 = gtv(mapOf("any" to gtv("value1")))
-    private val configData2 = gtv(mapOf("any" to gtv("value2")))
+    val configData1 = gtv(mapOf(
+            "signers" to gtv(listOf()),
+            "configurationfactory" to gtv(""),
+            "any" to gtv("value1")
+    ))
+    val configData2 = gtv(mapOf(
+            "signers" to gtv(listOf()),
+            "configurationfactory" to gtv(""),
+            "any" to gtv("value2")
+    ))
     private val longRes = ScalarHandler<Long>()
 
     @Test
@@ -475,7 +483,7 @@ class UpgradeDatabaseIT {
                     withWriteConnection(it, 0) { ctx ->
                         val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
 
-                        db.addConfigurationHash(ctx, 0, configHash)
+                        db.addConfigurationHash(ctx, 0, configHash, 2)
                         assertTrue(db.configurationHashExists(ctx, configHash))
                         true
                     }
@@ -586,6 +594,40 @@ class UpgradeDatabaseIT {
                         assertThat(db.getLastSystemChainId(ctx)).isEqualTo(-1)
                         assertThat(db.getLastChainId(ctx)).isEqualTo(101)
                         assertThat(getLastChainIID(ctx, db)).isEqualTo(101L)
+                    }
+                }
+    }
+
+    @Test
+    fun testUpgradeFromVersion11to12() {
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true, expectedDbVersion = 11)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableBlockchains()} (chain_iid, blockchain_rid) values (?, ?)",
+                                ctx.chainID, BlockchainRid.ZERO_RID.data)
+                        db.queryRunner.update(ctx.conn, "CREATE TABLE IF NOT EXISTS ${db.tableConfigurations(ctx)} (" +
+                                "height BIGINT PRIMARY KEY" +
+                                ", configuration_data BYTEA NULL" +
+                                ", configuration_hash BYTEA NOT NULL" +
+                                ")")
+                        db.queryRunner.update(ctx.conn, "INSERT INTO ${db.tableConfigurations(ctx)} (height, configuration_data, configuration_hash) values (?, ?, ?)",
+                                0L, encodeGtv(configData1), BlockchainRid.ZERO_RID.data)
+                        true
+                    }
+                }
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = false, expectedDbVersion = 12)
+                .use {
+                    withWriteConnection(it, 0) { ctx ->
+                        val db = DatabaseAccess.of(ctx) as SQLDatabaseAccess
+                        assertThat(db.getInitialMerkleHashVersion(ctx)).isEqualTo(1L)
+                        assertThat(db.getMerkleHashVersionForHeight(ctx, 1)).isEqualTo(1L)
+                        assertThat(db.getCurrentMerkleHashVersion(ctx)).isEqualTo(1L)
+                        db.addConfigurationHash(ctx, 10, BlockchainRid.ZERO_RID.data, 2)
+                        assertThat(db.getInitialMerkleHashVersion(ctx)).isEqualTo(1L)
+                        assertThat(db.getMerkleHashVersionForHeight(ctx, 11)).isEqualTo(2L)
+                        assertThat(db.getCurrentMerkleHashVersion(ctx)).isEqualTo(2L)
+                        true
                     }
                 }
     }

@@ -24,6 +24,7 @@ interface BlockStore {
     fun getLastBlockHeight(ctx: EContext): Long // height of the last block, first block has height 0
     fun getLastBlockTimestamp(ctx: EContext): Long
     fun getBlockHeightInfo(ctx: EContext, blockchainRID: BlockchainRid): Pair<Long, Hash>?
+    fun getMerkleHashVersion(ctx: EContext, height: Long): Long
 
     //    fun getBlockData(ctx: EContext, blockRID: ByteArray): BlockData
     fun getWitnessData(ctx: EContext, blockRID: ByteArray): ByteArray

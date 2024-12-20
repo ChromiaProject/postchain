@@ -13,7 +13,9 @@ import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvDecoder
-import net.postchain.gtx.GtxBuilder
+import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxBody
+import net.postchain.gtx.GtxOp
 import java.util.Arrays
 
 /**
@@ -69,17 +71,16 @@ class LegacyAnchoringBlockchainProcessManagerExtension(private val postchainCont
 
     private fun insertAnchorOperation(chain0Engine: BlockchainEngine, blockHeader: ByteArray, witnessData: ByteArray) {
         val witness = BaseBlockWitness.fromBytes(witnessData)
-        val txb = GtxBuilder(chain0Engine.getConfiguration().blockchainRid, listOf(), postchainContext.cryptoSystem)
         // sorting signatures makes it more likely we can avoid duplicate anchor transactions
         val sortedSignatures = witness.getSignatures().sortedWith { o1, o2 -> Arrays.compareUnsigned(o1.subjectID, o2.subjectID) }
-        txb.addOperation(
+        val op = GtxOp(
                 "anchor_block",
                 GtvDecoder.decodeGtv(blockHeader),
                 GtvArray(sortedSignatures.map { GtvByteArray(it.subjectID) }.toTypedArray()),
                 GtvArray(sortedSignatures.map { GtvByteArray(it.data) }.toTypedArray())
         )
         val tx = chain0Engine.getConfiguration().getTransactionFactory().decodeTransaction(
-                txb.finish().buildGtx().encode()
+                Gtx(GtxBody(chain0Engine.getConfiguration().blockchainRid, listOf(op), listOf()), listOf()).encode()
         )
         chain0Engine.getTransactionQueue().enqueue(tx)
     }

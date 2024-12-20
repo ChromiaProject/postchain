@@ -234,10 +234,6 @@ class BaseBlockDatabase(
         return blockQueries.getBlockSignature(blockRID)
     }
 
-    override fun getBlockAtHeight(height: Long, includeTransactions: Boolean): CompletionStage<BlockDataWithWitness?> {
-        return blockQueries.getBlockAtHeight(height, includeTransactions)
-    }
-
     // -----------
     // Only for logging
     // -----------

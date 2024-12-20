@@ -99,7 +99,7 @@ public class net/postchain/base/BaseBlockEContext : net/postchain/core/BlockECon
 
 public final class net/postchain/base/BaseBlockHeader : net/postchain/core/block/BlockHeader {
 	public static final field Factory Lnet/postchain/base/BaseBlockHeader$Factory;
-	public fun <init> ([BLnet/postchain/gtv/merkle/GtvMerkleHashCalculatorV1;)V
+	public fun <init> ([BLnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;)V
 	public final fun checkCorrectNumberOfDependencies (I)Z
 	public final fun checkExtraData (Ljava/util/Map;)Z
 	public final fun checkPrimaryExtraHeader ([[B)Z
@@ -110,12 +110,11 @@ public final class net/postchain/base/BaseBlockHeader : net/postchain/core/block
 	public fun getPrevBlockRID ()[B
 	public fun getRawData ()[B
 	public final fun getTimestamp ()J
-	public static final fun make (Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorV1;Lnet/postchain/core/block/InitialBlockData;[BJLjava/util/Map;)Lnet/postchain/base/BaseBlockHeader;
-	public final fun merkleProofTree (Lnet/postchain/common/types/WrappedByteArray;[Lnet/postchain/common/types/WrappedByteArray;)Lkotlin/Pair;
+	public static final fun make (Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;Lnet/postchain/core/block/InitialBlockData;[BJLjava/util/Map;)Lnet/postchain/base/BaseBlockHeader;
 }
 
 public final class net/postchain/base/BaseBlockHeader$Factory {
-	public final fun make (Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorV1;Lnet/postchain/core/block/InitialBlockData;[BJLjava/util/Map;)Lnet/postchain/base/BaseBlockHeader;
+	public final fun make (Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;Lnet/postchain/core/block/InitialBlockData;[BJLjava/util/Map;)Lnet/postchain/base/BaseBlockHeader;
 }
 
 public final class net/postchain/base/BaseBlockWitness : net/postchain/core/block/MultiSigBlockWitness, net/postchain/gtv/mapper/ToGtv {
@@ -138,9 +137,10 @@ public final class net/postchain/base/BaseBlockWitness$Factory : net/postchain/g
 
 public final class net/postchain/base/BaseBlockWitnessBuilder : net/postchain/core/block/MultiSigBlockWitnessBuilder {
 	public static final field Companion Lnet/postchain/base/BaseBlockWitnessBuilder$Companion;
+	public fun <init> (Lnet/postchain/crypto/CryptoSystem;Lnet/postchain/core/BlockRid;[[BI)V
 	public fun <init> (Lnet/postchain/crypto/CryptoSystem;Lnet/postchain/core/block/BlockHeader;[[BI)V
 	public fun applySignature (Lnet/postchain/crypto/Signature;)V
-	public final fun getBlockHeader ()Lnet/postchain/core/block/BlockHeader;
+	public final fun getBlockRID ()Lnet/postchain/core/BlockRid;
 	public final fun getCryptoSystem ()Lnet/postchain/crypto/CryptoSystem;
 	public fun getMySignature ()Lnet/postchain/crypto/Signature;
 	public final fun getSignatures ()Ljava/util/List;
@@ -191,7 +191,9 @@ public final class net/postchain/base/BaseTxEContext$Companion : mu/KLogging {
 }
 
 public abstract interface class net/postchain/base/BlockWitnessProvider {
+	public abstract fun createWitnessBuilderWithOwnSignature (Lnet/postchain/core/BlockRid;)Lnet/postchain/core/block/BlockWitnessBuilder;
 	public abstract fun createWitnessBuilderWithOwnSignature (Lnet/postchain/core/block/BlockHeader;)Lnet/postchain/core/block/BlockWitnessBuilder;
+	public abstract fun createWitnessBuilderWithoutOwnSignature (Lnet/postchain/core/BlockRid;)Lnet/postchain/core/block/BlockWitnessBuilder;
 	public abstract fun createWitnessBuilderWithoutOwnSignature (Lnet/postchain/core/block/BlockHeader;)Lnet/postchain/core/block/BlockWitnessBuilder;
 	public abstract fun validateWitness (Lnet/postchain/core/block/BlockWitness;Lnet/postchain/core/block/BlockWitnessBuilder;)V
 }
@@ -394,11 +396,14 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData 
 	public final fun getBlockStrategyName ()Ljava/lang/String;
 	public final fun getBlockchainDependencies ()Ljava/util/List;
 	public final fun getConfigConsensusStrategy ()Lnet/postchain/base/configuration/ConfigConsensusStrategy;
+	public final fun getConfigHash ()[B
 	public final fun getConfigurationFactory ()Ljava/lang/String;
 	public final fun getFeatures ()Ljava/util/Map;
 	public final fun getGtx ()Lnet/postchain/gtv/Gtv;
 	public final fun getHistoricBrid ()Lnet/postchain/common/BlockchainRid;
 	public final fun getMaxBlockFutureTime ()J
+	public final fun getMerkleHashCalculator ()Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;
+	public final fun getMerkleHashVersion ()J
 	public final fun getQueryCacheTtlSeconds ()Ljava/lang/Long;
 	public final fun getRawConfig ()Lnet/postchain/gtv/Gtv;
 	public final fun getSigners ()Ljava/util/List;
@@ -502,8 +507,8 @@ public class net/postchain/base/data/BaseBlockBuilder : net/postchain/base/Abstr
 	public static final field Companion Lnet/postchain/base/data/BaseBlockBuilder$Companion;
 	public static final field FINALIZE_AND_VALIDATE Ljava/lang/String;
 	public static final field PRIMARY_HEADER_KEY Ljava/lang/String;
-	public fun <init> (Lnet/postchain/common/BlockchainRid;Lnet/postchain/crypto/CryptoSystem;Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockStore;Lnet/postchain/base/SpecialTransactionHandler;[[BLnet/postchain/crypto/SigMaker;Lnet/postchain/base/BlockWitnessProvider;Ljava/util/List;Ljava/util/List;ZJJJZJ[BZLjava/time/Clock;)V
-	public synthetic fun <init> (Lnet/postchain/common/BlockchainRid;Lnet/postchain/crypto/CryptoSystem;Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockStore;Lnet/postchain/base/SpecialTransactionHandler;[[BLnet/postchain/crypto/SigMaker;Lnet/postchain/base/BlockWitnessProvider;Ljava/util/List;Ljava/util/List;ZJJJZJ[BZLjava/time/Clock;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lnet/postchain/common/BlockchainRid;Lnet/postchain/crypto/CryptoSystem;Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockStore;Lnet/postchain/base/SpecialTransactionHandler;[[BLnet/postchain/crypto/SigMaker;Lnet/postchain/base/BlockWitnessProvider;Ljava/util/List;Ljava/util/List;ZJJJZJ[BZLnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;Ljava/time/Clock;)V
+	public synthetic fun <init> (Lnet/postchain/common/BlockchainRid;Lnet/postchain/crypto/CryptoSystem;Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockStore;Lnet/postchain/base/SpecialTransactionHandler;[[BLnet/postchain/crypto/SigMaker;Lnet/postchain/base/BlockWitnessProvider;Ljava/util/List;Ljava/util/List;ZJJJZJ[BZLnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;Ljava/time/Clock;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun appendTransaction (Lnet/postchain/core/Transaction;)V
 	public fun begin (Lnet/postchain/core/block/BlockHeader;)V
 	protected fun buildBlockchainDependencies (Lnet/postchain/core/block/BlockHeader;)Lnet/postchain/base/BlockchainDependencies;
@@ -520,6 +525,7 @@ public class net/postchain/base/data/BaseBlockBuilder : net/postchain/base/Abstr
 	public final fun getMaxBlockSize ()J
 	public final fun getMaxBlockTransactions ()J
 	public final fun getMaxSpecialEndTransactionSize ()J
+	public final fun getMerkleHashCalculator ()Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;
 	public final fun getSubjects ()[[B
 	public final fun getSuppressSpecialTransactionValidation ()Z
 	public final fun installEventProcessor (Ljava/lang/String;Lnet/postchain/base/TxEventSink;)V
@@ -567,6 +573,7 @@ public final class net/postchain/base/data/BaseBlockStore : net/postchain/core/b
 	public fun getLastBlockHeight (Lnet/postchain/core/ExecutionContext;)J
 	public fun getLastBlockTimestamp (Lnet/postchain/core/ExecutionContext;)J
 	public fun getLastTransactionNumber (Lnet/postchain/core/ExecutionContext;)J
+	public fun getMerkleHashVersion (Lnet/postchain/core/ExecutionContext;J)J
 	public fun getTransactionInfo (Lnet/postchain/core/ExecutionContext;[B)Lnet/postchain/core/TransactionInfoExt;
 	public fun getTransactionsInfo (Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockQueryTimeFilter;II)Lnet/postchain/core/TransactionInfoExtsTruncated;
 	public fun getTransactionsInfoBySigner (Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockQueryTimeFilter;ILnet/postchain/crypto/PubKey;I)Lnet/postchain/core/TransactionInfoExtsTruncated;
@@ -581,7 +588,9 @@ public final class net/postchain/base/data/BaseBlockStore$Companion : mu/KLoggin
 
 public final class net/postchain/base/data/BaseBlockWitnessProvider : net/postchain/base/BlockWitnessProvider {
 	public fun <init> (Lnet/postchain/crypto/CryptoSystem;Lnet/postchain/crypto/SigMaker;[[B)V
+	public fun createWitnessBuilderWithOwnSignature (Lnet/postchain/core/BlockRid;)Lnet/postchain/core/block/BlockWitnessBuilder;
 	public fun createWitnessBuilderWithOwnSignature (Lnet/postchain/core/block/BlockHeader;)Lnet/postchain/core/block/BlockWitnessBuilder;
+	public fun createWitnessBuilderWithoutOwnSignature (Lnet/postchain/core/BlockRid;)Lnet/postchain/core/block/BlockWitnessBuilder;
 	public fun createWitnessBuilderWithoutOwnSignature (Lnet/postchain/core/block/BlockHeader;)Lnet/postchain/core/block/BlockWitnessBuilder;
 	public fun validateWitness (Lnet/postchain/core/block/BlockWitness;Lnet/postchain/core/block/BlockWitnessBuilder;)V
 }
@@ -590,7 +599,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public static final field Companion Lnet/postchain/base/data/DatabaseAccess$Companion;
 	public abstract fun addBlockchainReplica (Lnet/postchain/core/AppContext;Lnet/postchain/common/BlockchainRid;Lnet/postchain/crypto/PubKey;)Z
 	public abstract fun addConfigurationData (Lnet/postchain/core/ExecutionContext;J[B)V
-	public abstract fun addConfigurationHash (Lnet/postchain/core/ExecutionContext;J[B)V
+	public abstract fun addConfigurationHash (Lnet/postchain/core/ExecutionContext;J[BJ)V
 	public abstract fun addFaultyConfiguration (Lnet/postchain/core/ExecutionContext;Lnet/postchain/base/configuration/FaultyConfiguration;)V
 	public abstract fun addPeerInfo (Lnet/postchain/core/AppContext;Ljava/lang/String;ILjava/lang/String;Ljava/time/Instant;)Z
 	public abstract fun addPeerInfo (Lnet/postchain/core/AppContext;Lnet/postchain/base/PeerInfo;)Z
@@ -637,6 +646,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getConfigurationData (Lnet/postchain/core/ExecutionContext;[B)[B
 	public abstract fun getConfigurationDataForHeight (Lnet/postchain/core/ExecutionContext;J)[B
 	public abstract fun getContainerIid (Lnet/postchain/core/AppContext;Ljava/lang/String;)Ljava/lang/Integer;
+	public abstract fun getCurrentMerkleHashVersion (Lnet/postchain/core/ExecutionContext;)J
 	public abstract fun getDependenciesOnBlockchain (Lnet/postchain/core/ExecutionContext;)Ljava/util/List;
 	public abstract fun getEvent (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;[B)Lnet/postchain/base/data/DatabaseAccess$EventInfo;
 	public abstract fun getEventsAboveHeight (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;J)Ljava/util/List;
@@ -644,6 +654,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getFaultyConfiguration (Lnet/postchain/core/ExecutionContext;)Lnet/postchain/base/configuration/FaultyConfiguration;
 	public abstract fun getHighestLevelPageAtHeight (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;J)I
 	public abstract fun getHighestLevelPageEqualOrLowerThanHeight (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;J)I
+	public abstract fun getInitialMerkleHashVersion (Lnet/postchain/core/ExecutionContext;)J
 	public abstract fun getLastBlockHeight (Lnet/postchain/core/ExecutionContext;)J
 	public abstract fun getLastBlockRid (Lnet/postchain/core/ExecutionContext;J)[B
 	public abstract fun getLastBlockTimestamp (Lnet/postchain/core/ExecutionContext;)J
@@ -652,6 +663,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getLastTransactionNumber (Lnet/postchain/core/ExecutionContext;)J
 	public abstract fun getLeftIndex (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;Ljava/util/List;)Ljava/util/List;
 	public abstract fun getLowestSnapshotHeightToKeep (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JI)Ljava/lang/Long;
+	public abstract fun getMerkleHashVersionForHeight (Lnet/postchain/core/ExecutionContext;J)J
 	public abstract fun getMustSyncUntil (Lnet/postchain/core/AppContext;)Ljava/util/Map;
 	public abstract fun getPageAtHeight (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JIJ)Lnet/postchain/base/snapshot/Page;
 	public abstract fun getPageEqualOrLowerThanHeight (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JIJ)Lnet/postchain/base/snapshot/Page;
@@ -772,15 +784,19 @@ public final class net/postchain/base/data/MinimalBlockHeaderInfo {
 }
 
 public final class net/postchain/base/extension/ConfigurationHashBlockBuilderExtension : net/postchain/base/BaseBlockBuilderExtension {
-	public fun <init> ([B)V
+	public fun <init> (J[B)V
 	public fun finalize ()Ljava/util/Map;
 	public fun init (Lnet/postchain/core/BlockEContext;Lnet/postchain/base/data/BaseBlockBuilder;)V
 }
 
 public final class net/postchain/base/extension/ConfigurationHashBlockBuilderExtensionKt {
 	public static final field CONFIG_HASH_EXTRA_HEADER Ljava/lang/String;
+	public static final field MERKLE_HASH_VERSION_EXTRA_HEADER Ljava/lang/String;
 	public static final fun getConfigHash (Lnet/postchain/core/block/BlockHeader;)[B
+	public static final fun getExtraData (Lnet/postchain/core/block/BlockHeader;)Ljava/util/Map;
 	public static final fun getFailedConfigHash (Lnet/postchain/core/block/BlockHeader;)[B
+	public static final fun getMerkleHashVersion (Lnet/postchain/base/gtv/BlockHeaderData;)J
+	public static final fun getMerkleHashVersion (Lnet/postchain/core/block/BlockHeader;)J
 }
 
 public final class net/postchain/base/extension/FailedConfigurationHashBlockBuilderExtension : net/postchain/base/BaseBlockBuilderExtension {
@@ -833,7 +849,7 @@ public final class net/postchain/base/gtv/BlockHeaderData$Companion {
 
 public final class net/postchain/base/gtv/GtvToBlockchainRidFactory {
 	public static final field INSTANCE Lnet/postchain/base/gtv/GtvToBlockchainRidFactory;
-	public final fun calculateBlockchainRid (Lnet/postchain/gtv/Gtv;Lnet/postchain/crypto/Digester;)Lnet/postchain/common/BlockchainRid;
+	public final fun calculateBlockchainRid (Lnet/postchain/base/configuration/BlockchainConfigurationData;)Lnet/postchain/common/BlockchainRid;
 }
 
 public class net/postchain/base/snapshot/BasePageStore : net/postchain/base/snapshot/PageStore {
@@ -1132,6 +1148,8 @@ public abstract interface class net/postchain/core/BlockchainConfiguration {
 	public abstract fun getChainID ()J
 	public abstract fun getConfigHash ()[B
 	public abstract fun getEffectiveBlockchainRID ()Lnet/postchain/common/BlockchainRid;
+	public abstract fun getMerkleHashCalculator ()Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;
+	public abstract fun getMerkleHashVersion ()J
 	public abstract fun getRawConfig ()Lnet/postchain/gtv/Gtv;
 	public abstract fun getSigners ()Ljava/util/List;
 	public abstract fun getSyncInfrastructureExtensionNames ()Ljava/util/List;
@@ -1624,7 +1642,6 @@ public abstract interface class net/postchain/core/block/BlockHeader {
 public abstract interface class net/postchain/core/block/BlockQueries : net/postchain/core/Shutdownable {
 	public abstract fun getBlock ([BZ)Ljava/util/concurrent/CompletionStage;
 	public abstract fun getBlockAtHeight (JZ)Ljava/util/concurrent/CompletionStage;
-	public abstract fun getBlockHeader ([B)Ljava/util/concurrent/CompletionStage;
 	public abstract fun getBlockRid (J)Ljava/util/concurrent/CompletionStage;
 	public abstract fun getBlockSignature ([B)Ljava/util/concurrent/CompletionStage;
 	public abstract fun getBlockTransactionRids ([B)Ljava/util/concurrent/CompletionStage;
@@ -1714,6 +1731,7 @@ public abstract interface class net/postchain/core/block/BlockStore {
 	public abstract fun getLastBlockHeight (Lnet/postchain/core/ExecutionContext;)J
 	public abstract fun getLastBlockTimestamp (Lnet/postchain/core/ExecutionContext;)J
 	public abstract fun getLastTransactionNumber (Lnet/postchain/core/ExecutionContext;)J
+	public abstract fun getMerkleHashVersion (Lnet/postchain/core/ExecutionContext;J)J
 	public abstract fun getTransactionInfo (Lnet/postchain/core/ExecutionContext;[B)Lnet/postchain/core/TransactionInfoExt;
 	public abstract fun getTransactionsInfo (Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockQueryTimeFilter;II)Lnet/postchain/core/TransactionInfoExtsTruncated;
 	public abstract fun getTransactionsInfoBySigner (Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockQueryTimeFilter;ILnet/postchain/crypto/PubKey;I)Lnet/postchain/core/TransactionInfoExtsTruncated;
@@ -1782,6 +1800,13 @@ public abstract interface class net/postchain/core/block/MultiSigBlockWitness : 
 public abstract interface class net/postchain/core/block/MultiSigBlockWitnessBuilder : net/postchain/core/block/BlockWitnessBuilder {
 	public abstract fun applySignature (Lnet/postchain/crypto/Signature;)V
 	public abstract fun getMySignature ()Lnet/postchain/crypto/Signature;
+}
+
+public final class net/postchain/core/block/SimpleBlockHeader : net/postchain/core/block/BlockHeader {
+	public fun <init> ([B[B[B)V
+	public fun getBlockRID ()[B
+	public fun getPrevBlockRID ()[B
+	public fun getRawData ()[B
 }
 
 public abstract interface class net/postchain/core/block/SpecialTxHandlerAware {

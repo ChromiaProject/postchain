@@ -17,7 +17,9 @@ import net.postchain.gtv.GtvFactory
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
-import net.postchain.gtx.GtxBuilder
+import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxBody
+import net.postchain.gtx.GtxOp
 import net.postchain.gtx.GtxSpecNop
 import net.postchain.logging.TRANSACTION_RID_TAG
 
@@ -59,19 +61,20 @@ open class GTXSpecialTxHandler(val module: GTXModule,
     }
 
     override fun createSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Transaction {
-        val b = GtxBuilder(blockchainRID, listOf(), cs)
+        val ops = mutableListOf<GtxOp>()
         for (x in extensions) {
             if (x.needsSpecialTransaction(position)) {
                 for (o in x.createSpecialOperations(position, bctx)) {
-                    b.addOperation(o.opName, *o.args)
+                    ops.add(GtxOp(o.opName, *o.args))
                 }
             }
         }
-        if (b.isEmpty()) {
+        if (ops.isEmpty()) {
             // no extension emitted an operation - add "__nop" (same as "nop" but for spec tx)
-            b.addOperation(GtxSpecNop.OP_NAME, GtvFactory.gtv(cs.getRandomBytes(32)))
+            ops.add(GtxOp(GtxSpecNop.OP_NAME, GtvFactory.gtv(cs.getRandomBytes(32))))
         }
-        return factory.decodeTransaction(b.finish().buildGtx().encode())
+        val tx = Gtx(GtxBody(blockchainRID, ops, listOf()), listOf())
+        return factory.decodeTransaction(tx.encode())
     }
 
     /**

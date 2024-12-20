@@ -26,6 +26,7 @@ import net.postchain.devtools.utils.configuration.BlockchainSetup
 import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.mapper.toObject
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.logging.NODE_PUBKEY_TAG
@@ -72,7 +73,7 @@ class PostchainTestNode(
         check(isInitialized) { "PostchainNode is not initialized" }
 
         return withReadWriteConnection(postchainContext.sharedStorage, chainId) { eContext: EContext ->
-            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, postchainContext.cryptoSystem)
+            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig.toObject())
             withLoggingContext(
                     NODE_PUBKEY_TAG to appConfig.pubKey,
                     CHAIN_IID_TAG to chainId.toString(),
@@ -91,7 +92,7 @@ class PostchainTestNode(
         check(isInitialized) { "PostchainNode is not initialized" }
 
         return withReadWriteConnection(postchainContext.sharedStorage, chainId) { eContext: EContext ->
-            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, postchainContext.cryptoSystem)
+            val brid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig.toObject())
             withLoggingContext(
                     NODE_PUBKEY_TAG to appConfig.pubKey,
                     CHAIN_IID_TAG to chainId.toString(),

@@ -61,6 +61,7 @@ import net.postchain.api.rest.txInfosBody
 import net.postchain.api.rest.txRidPath
 import net.postchain.api.rest.txsQuery
 import net.postchain.api.rest.versionBody
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -87,8 +88,7 @@ import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvStream
 import net.postchain.gtv.GtvString
 import net.postchain.gtv.GtvType
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
-import net.postchain.gtv.merkleHash
+import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
@@ -658,8 +658,7 @@ class RestApi(
                 throw UnauthorizedException(UNAUTHORIZED_REQUIRE_SIGNATURE_IN_MANAGED_MODE)
             }
 
-            val configHash = configuration.merkleHash(GtvMerkleHashCalculatorV1(cryptoSystem))
-            if (!signatures.all { cryptoSystem.verifyDigest(configHash, it) }) {
+            if (!signatures.all { cryptoSystem.verifyDigest(configuration.toObject<BlockchainConfigurationData>().configHash, it) }) {
                 throw UnauthorizedException(UNAUTHORIZED_INVALID_SIGNATURE)
             }
 

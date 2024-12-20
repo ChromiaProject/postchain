@@ -8,7 +8,6 @@ import net.postchain.base.TestBlockchainBuilder
 import net.postchain.base.configuration.KEY_CONFIGURATIONFACTORY
 import net.postchain.base.configuration.KEY_DEPENDENCIES
 import net.postchain.base.configuration.KEY_SIGNERS
-import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.runStorageCommand
 import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
@@ -20,8 +19,11 @@ import net.postchain.config.app.AppConfig
 import net.postchain.core.EContext
 import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.crypto.PubKey
+import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ColumnListHandler
@@ -94,9 +96,21 @@ class DatabaseIT {
     @Test
     fun configurations() {
         val chainId = 0L
-        val configData1 = gtv(mapOf("any" to gtv("value1")))
-        val configData2 = gtv(mapOf("any" to gtv("value2")))
-        val configData3 = gtv(mapOf("any" to gtv("value3")))
+        val configData1 = gtv(mapOf(
+                "signers" to gtv(listOf()),
+                "configurationfactory" to gtv(""),
+                "any" to gtv("value1")
+        ))
+        val configData2 = gtv(mapOf(
+                "signers" to gtv(listOf()),
+                "configurationfactory" to gtv(""),
+                "any" to gtv("value2")
+        ))
+        val configData3 = gtv(mapOf(
+                "signers" to gtv(listOf()),
+                "configurationfactory" to gtv(""),
+                "any" to gtv("value3")
+        ))
 
         runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
@@ -105,14 +119,15 @@ class DatabaseIT {
             db.addConfigurationData(ctx, 0, encodeGtv(configData1))
             db.addConfigurationData(ctx, 5, encodeGtv(configData2))
 
-            val hash1 = GtvToBlockchainRidFactory.calculateBlockchainRid(configData1, cryptoSystem)
-            val hash2 = GtvToBlockchainRidFactory.calculateBlockchainRid(configData2, cryptoSystem)
-            val hash3 = GtvToBlockchainRidFactory.calculateBlockchainRid(configData3, cryptoSystem)
+            val hashCalculator = GtvMerkleHashCalculatorV2(::sha256Digest)
+            val hash1 = configData1.merkleHash(hashCalculator)
+            val hash2 = configData2.merkleHash(hashCalculator)
+            val hash3 = configData3.merkleHash(hashCalculator)
 
             assertEquals(listOf(0L, 5L), db.listConfigurations(ctx))
-            assertEquals(listOf(hash1.wData, hash2.wData), db.listConfigurationHashes(ctx).map { it.wrap() })
-            assertTrue(db.configurationHashExists(ctx, hash1.data))
-            assertFalse(db.configurationHashExists(ctx, hash3.data))
+            assertEquals(listOf(hash1.wrap(), hash2.wrap()), db.listConfigurationHashes(ctx).map { it.wrap() })
+            assertTrue(db.configurationHashExists(ctx, hash1))
+            assertFalse(db.configurationHashExists(ctx, hash3))
             assertArrayEquals(encodeGtv(configData1), db.getConfigurationData(ctx, 0L))
             assertArrayEquals(encodeGtv(configData2), db.getConfigurationData(ctx, 5L))
             assertNull(db.getConfigurationData(ctx, 7L))
@@ -288,15 +303,31 @@ class DatabaseIT {
     fun getAllConfigurations() {
         val chainId = 0L
 
+        val configData1 = gtv(mapOf(
+                "signers" to gtv(listOf()),
+                "configurationfactory" to gtv(""),
+                "any" to gtv("value1")
+        ))
+        val configData2 = gtv(mapOf(
+                "signers" to gtv(listOf()),
+                "configurationfactory" to gtv(""),
+                "any" to gtv("value2")
+        ))
+        val configData3 = gtv(mapOf(
+                "signers" to gtv(listOf()),
+                "configurationfactory" to gtv(""),
+                "any" to gtv("value3")
+        ))
+
         runStorageCommand(appConfig, chainId) { ctx ->
             val db = DatabaseAccess.of(ctx)
             db.initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
 
             assertTrue(db.getAllConfigurations(ctx.conn, chainId).isEmpty())
 
-            db.addConfigurationData(ctx, 0, encodeGtv(gtv(0)))
-            db.addConfigurationData(ctx, 10, encodeGtv(gtv(1)))
-            db.addConfigurationData(ctx, 2, encodeGtv(gtv(2)))
+            db.addConfigurationData(ctx, 0, encodeGtv(configData1))
+            db.addConfigurationData(ctx, 10, encodeGtv(configData2))
+            db.addConfigurationData(ctx, 2, encodeGtv(configData3))
 
             assertEquals(3, db.getAllConfigurations(ctx.conn, chainId).size)
         }
@@ -358,7 +389,10 @@ class DatabaseIT {
 
     @Test
     fun getTransactionsInfoWithDataSize() {
-        val configData1 = gtv(mapOf("any" to gtv("value1")))
+        val configData1 = gtv(mapOf(
+                "signers" to gtv(listOf()),
+                "configurationfactory" to gtv("")
+        ))
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val testBlockChainBuilder = TestBlockchainBuilder(storage, configData1)
@@ -380,7 +414,10 @@ class DatabaseIT {
 
     @Test
     fun getTransactionsInfoBySignerWithDataSize() {
-        val configData1 = gtv(mapOf("any" to gtv("value1")))
+        val configData1 = gtv(mapOf(
+                "signers" to gtv(listOf()),
+                "configurationfactory" to gtv("")
+        ))
 
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val testBlockChainBuilder = TestBlockchainBuilder(storage, configData1)

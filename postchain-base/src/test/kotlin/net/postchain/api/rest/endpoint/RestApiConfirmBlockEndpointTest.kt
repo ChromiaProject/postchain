@@ -35,7 +35,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.mapper.GtvObjectMapper
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -72,7 +72,7 @@ class RestApiConfirmBlockEndpointTest {
 
     // block header
     val blockHeader = BaseBlockHeader.make(
-            merkleHashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem),
+            merkleHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem),
             iBlockData = InitialBlockData(
                     blockchainRid = blockchainRID,
                     blockIID = 0,

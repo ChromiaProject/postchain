@@ -6,6 +6,7 @@ import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Digester
+import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvCollection
@@ -107,4 +108,10 @@ class GtvMerkleHashCalculatorV2(digester: Digester) : GtvMerkleHashCalculatorBas
     constructor(cryptoSystem: CryptoSystem) : this(cryptoSystem as Digester)
 
     override fun getHashSummaryFactory() = summaryFactory
+}
+
+fun makeMerkleHashCalculator(version: Long): GtvMerkleHashCalculatorBase = when (version) {
+    1L -> GtvMerkleHashCalculatorV1(::sha256Digest)
+    2L -> GtvMerkleHashCalculatorV2(::sha256Digest)
+    else -> throw ProgrammerMistake("Unknown merkle hash version $version")
 }

@@ -12,14 +12,15 @@ import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 import org.apache.commons.lang3.RandomStringUtils
 import org.awaitility.Awaitility
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.concurrent.TimeUnit
-import org.junit.jupiter.api.Assertions.assertEquals
 
 class BlockchainConfigurationTest : IntegrationTestSetup() {
 
@@ -67,8 +68,8 @@ class BlockchainConfigurationTest : IntegrationTestSetup() {
     }
 
     private fun buildTransaction(blockchainRid: BlockchainRid, value: String): GTXTransaction {
-        val factory = GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
-        val builder = GtxBuilder(blockchainRid, listOf(KeyPairHelper.pubKey(0)), cryptoSystem)
+        val factory = GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
+        val builder = GtxBuilder(blockchainRid, listOf(KeyPairHelper.pubKey(0)), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
                 .addOperation("gtx_test", GtvFactory.gtv(1L), GtvFactory.gtv(value))
                 .finish()
                 .sign(cryptoSystem.buildSigMaker(KeyPair(KeyPairHelper.pubKey(0), KeyPairHelper.privKey(0))))

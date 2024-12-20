@@ -29,7 +29,7 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
     private val gtxConfig = configData.gtx?.toObject() ?: GtxConfigurationData.default
 
     private val txFactory = GTXTransactionFactory(
-            effectiveBlockchainRID, module, cryptoSystem,
+            effectiveBlockchainRID, module, cryptoSystem, configData.merkleHashCalculator,
             maxTransactionSize = gtxConfig.maxTxSize, maxTransactionSignatures = gtxConfig.maxTxSignatures
     )
 

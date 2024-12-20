@@ -1,10 +1,10 @@
 package net.postchain.base.data
 
-import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.config.app.AppConfig
 import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.mapper.toObject
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 
@@ -23,5 +23,4 @@ fun testDbConfig(dbSchema: String, readConcurrency: Int = 10): AppConfig {
     }
 }
 
-fun configurationHash(configurationData: Gtv) =
-        GtvToBlockchainRidFactory.calculateBlockchainRid(configurationData, ::sha256Digest).data
+fun configurationHash(configurationData: Gtv) = configurationData.toObject<BlockchainConfigurationData>().configHash
