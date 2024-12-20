@@ -34,7 +34,6 @@ interface BlockQueries : Shutdownable {
     fun getLastBlockTimestamp(): CompletionStage<Long>
     fun getBlockRid(height: Long): CompletionStage<ByteArray?>
     fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): CompletionStage<BlockDataWithWitness?>
-    fun getBlockHeader(blockRID: ByteArray): CompletionStage<BlockHeader>
     fun getConfirmationProof(txRID: ByteArray): CompletionStage<ConfirmationProof?>
     fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): CompletionStage<BlockDetailsTruncated>
     fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): CompletionStage<BlockDetailsTruncated>

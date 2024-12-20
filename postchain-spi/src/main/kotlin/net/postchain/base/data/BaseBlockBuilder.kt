@@ -44,7 +44,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkleHash
 import net.postchain.logging.TRANSACTION_RID_TAG
 import java.lang.Long.max
@@ -92,6 +92,7 @@ open class BaseBlockBuilder(
         private val maxBlockFutureTime: Long,
         private val myPubKey: ByteArray?,
         isSyncing: Boolean,
+        val merkleHashCalculator: GtvMerkleHashCalculatorBase,
         val clock: Clock = Clock.systemUTC()
 ) : AbstractBlockBuilder(eContext, blockchainRID, store, isSyncing) {
 
@@ -102,8 +103,6 @@ open class BaseBlockBuilder(
     }
 
     private val eventProcessors = mutableMapOf<String, TxEventSink>()
-
-    private val calc = GtvMerkleHashCalculatorV1(cryptoSystem)
 
     internal var blockSize: Long = 0L // not private due to test access
     private var haveSpecialEndTransaction = false
@@ -117,7 +116,7 @@ open class BaseBlockBuilder(
     override fun computeMerkleRootHash(): ByteArray {
         val digestsGtv = gtv(transactions.map { gtv(it.getHash()) })
 
-        return digestsGtv.merkleHash(calc)
+        return digestsGtv.merkleHash(merkleHashCalculator)
     }
 
     /**
@@ -192,7 +191,7 @@ open class BaseBlockBuilder(
         if (myPubKey != null && buildingNewBlock) {
             extraData[PRIMARY_HEADER_KEY] = gtv(myPubKey)
         }
-        return BaseBlockHeader.make(GtvMerkleHashCalculatorV1(cryptoSystem), initialBlockData, rootHash, safeTimestamp, finalizeExtensions(extraData))
+        return BaseBlockHeader.make(merkleHashCalculator, initialBlockData, rootHash, safeTimestamp, finalizeExtensions(extraData))
     }
 
     /**

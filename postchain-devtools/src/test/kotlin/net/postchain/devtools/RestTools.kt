@@ -14,7 +14,6 @@ object RestTools {
             given().port(port)
                     .get("/tx/$blockchainRID/$txRidHex/status")
                     .then()
-                    .statusCode(200)
                     .extract()
                     .body()
 

@@ -5,7 +5,7 @@
     <entry key="features">
         <dict>
             <entry key="merkle_hash_version">
-                <int>2</int>
+                <int>3</int>
             </entry>
         </dict>
     </entry>

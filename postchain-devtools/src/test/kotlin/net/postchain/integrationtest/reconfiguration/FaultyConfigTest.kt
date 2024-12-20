@@ -1,7 +1,11 @@
 package net.postchain.integrationtest.reconfiguration
 
+import assertk.assertFailure
 import assertk.assertThat
+import assertk.assertions.hasMessage
+import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
@@ -18,6 +22,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
 import net.postchain.devtools.getModules
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.data.OpData
@@ -64,6 +69,24 @@ class FaultyConfigTest : IntegrationTestSetup() {
             val db = DatabaseAccess.of(ctx)
             assertThat(db.getConfigurationData(ctx, 2)).isNull()
         }
+    }
+
+    @Test
+    fun `cannot downgrade merkle hash version in config`() {
+        val (node) = createNodes(1, "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_hash_version_2.xml")
+        withReadConnection(node.postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            assertThat(db.getCurrentMerkleHashVersion(ctx)).isEqualTo(2)
+        }
+
+        val invalidConfig = readBlockchainConfig(
+                "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_hash_version_1.xml"
+        )
+        assertFailure {
+            withReadConnection(node.postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { eContext: EContext ->
+                GTXBlockchainConfigurationFactory.validateConfiguration(invalidConfig, node.getBlockchainRid(DEFAULT_CHAIN_IID)!!, eContext)
+            }
+        }.isInstanceOf(UserMistake::class).hasMessage("Cannot downgrade merkle hash version from 2 to 1")
     }
 
     @Test

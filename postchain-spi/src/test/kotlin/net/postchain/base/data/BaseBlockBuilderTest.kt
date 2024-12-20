@@ -22,9 +22,10 @@ import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.crypto.devtools.MockCryptoSystem
+import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -37,7 +38,7 @@ import org.mockito.kotlin.whenever
 
 class BaseBlockBuilderTest {
     val cryptoSystem = MockCryptoSystem()
-    val merkeHashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
+    val merkeHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
     var bbs = BaseBlockStore()
     val db: DatabaseAccess = mock {}
     val ctx = BaseEContext(mock {}, 2L, db)
@@ -58,7 +59,8 @@ class BaseBlockBuilderTest {
     val specialTransactionHandler: SpecialTransactionHandler = mock()
     val maxBlockSize = 26 * 1024 * 1024L
     val maxSpecialEndTransactionSize = 1024L
-    val bbb = BaseBlockBuilder(myBlockchainRid, cryptoSystem, ctx, bbs,
+    val bbb = BaseBlockBuilder(
+            myBlockchainRid, cryptoSystem, ctx, bbs,
             specialTransactionHandler,
             subjects, signer, validator, listOf(), listOf(), false,
             maxBlockSize = maxBlockSize,
@@ -67,7 +69,8 @@ class BaseBlockBuilderTest {
             suppressSpecialTransactionValidation = false,
             maxBlockFutureTime = -1,
             pubKey(0),
-            false
+            false,
+            GtvMerkleHashCalculatorV2(::sha256Digest),
     )
     val primaryExtraHeader = mapOf(PRIMARY_HEADER_KEY to gtv(pubKey(0)))
 

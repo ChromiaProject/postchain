@@ -18,6 +18,7 @@ import net.postchain.base.runStorageCommand
 import net.postchain.config.app.AppConfig
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvFileReader
+import net.postchain.gtv.mapper.toObject
 
 class CommandRunNode : CliktCommand(name = "run-node") { 
     override fun help(context: Context) = "Starts a node with a configuration"
@@ -50,7 +51,7 @@ class CommandRunNode : CliktCommand(name = "run-node") {
             require(chainIDs.size == 1) { "Cannot start more than one chain if a blockchain configuration is specified" }
 
             val blockchainConfig = GtvFileReader.readFile(blockchainConfigFile!!)
-            val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, appConfig.cryptoSystem)
+            val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig.toObject())
 
             runStorageCommand(appConfig, chainIDs[0], true) { ctx ->
                 val wasInitialized = BlockchainApi.initializeBlockchain(ctx, blockchainRid, override, blockchainConfig)

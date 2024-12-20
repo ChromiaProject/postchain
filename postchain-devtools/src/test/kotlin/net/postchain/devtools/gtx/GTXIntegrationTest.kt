@@ -14,6 +14,7 @@ import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.testinfra.BaseTestInfrastructureFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.GtxNop
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -25,7 +26,7 @@ val myCS = Secp256K1CryptoSystem()
 class GTXIntegrationTest : IntegrationTestSetup() {
 
     fun makeNOPGTX(bcRid: BlockchainRid): ByteArray {
-        val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS)
+        val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS, GtvMerkleHashCalculatorV2(myCS))
                 .addOperation(GtxNop.OP_NAME, gtv(42))
                 .finish()
                 .sign(myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
@@ -34,7 +35,7 @@ class GTXIntegrationTest : IntegrationTestSetup() {
     }
 
     fun makeTestTx(id: Long, value: String, bcRid: BlockchainRid): ByteArray {
-        val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS)
+        val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS, GtvMerkleHashCalculatorV2(myCS))
                 .addOperation("gtx_test", gtv(id), gtv(value))
                 .finish()
                 .sign(myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
@@ -43,7 +44,7 @@ class GTXIntegrationTest : IntegrationTestSetup() {
     }
 
     fun makeTimeBTx(from: Long, to: Long?, bcRid: BlockchainRid): ByteArray {
-        val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS)
+        val b = GtxBuilder(bcRid, listOf(pubKey(0)), myCS, GtvMerkleHashCalculatorV2(myCS))
                 .addOperation("timeb",
                         gtv(from),
                         if (to != null) gtv(to) else GtvNull

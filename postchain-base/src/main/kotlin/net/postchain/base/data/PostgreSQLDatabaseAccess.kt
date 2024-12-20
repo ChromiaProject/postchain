@@ -160,6 +160,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                 "height BIGINT PRIMARY KEY" +
                 ", configuration_data BYTEA NOT NULL" +
                 ", configuration_hash BYTEA NOT NULL" +
+                ", merkle_hash_version BIGINT NOT NULL" +
                 ", UNIQUE (configuration_hash)" +
                 ")"
     }
@@ -184,6 +185,11 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
     override fun cmdDropTableConfigurationDataNotNull(chainId: Long): String {
         return "ALTER TABLE ${tableConfigurations(chainId)}" +
                 " ALTER COLUMN configuration_data DROP NOT NULL"
+    }
+
+    override fun cmdAddHashVersionToConfigTable(chainId: Long): String {
+        return "ALTER TABLE ${tableConfigurations(chainId)}" +
+                " ADD COLUMN merkle_hash_version BIGINT NOT NULL DEFAULT 1"
     }
 
     override fun cmdAddTableBlockchainReplicasPubKeyConstraint(): String =
@@ -254,8 +260,8 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
     }
 
     override fun cmdInsertConfiguration(ctx: EContext): String {
-        return "INSERT INTO ${tableConfigurations(ctx)} (height, configuration_data, configuration_hash) " +
-                "VALUES (?, ?, ?) ON CONFLICT (height) DO UPDATE SET configuration_data = ?, configuration_hash = ?"
+        return "INSERT INTO ${tableConfigurations(ctx)} (height, configuration_data, configuration_hash, merkle_hash_version) " +
+                "VALUES (?, ?, ?, ?) ON CONFLICT (height) DO UPDATE SET configuration_data = ?, configuration_hash = ?, merkle_hash_version = ?"
     }
 
     override fun cmdCreateTableGtxModuleVersion(ctx: EContext): String {

@@ -4,11 +4,11 @@ package net.postchain.gtv
 
 import net.postchain.common.toHex
 import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.math.BigInteger
 import kotlin.system.measureTimeMillis
-import org.junit.jupiter.api.Assertions.assertEquals
 
 class GtvEncoderTest {
 
@@ -97,7 +97,7 @@ class GtvEncoderTest {
 
         val cs = Secp256K1CryptoSystem()
         val hashingTime = measureTimeMillis {
-            val hash = gtv.merkleHash(GtvMerkleHashCalculatorV1(cs))
+            val hash = gtv.merkleHash(GtvMerkleHashCalculatorV2(cs))
             println(hash.toHex())
         }
         println("Execution hashing time: $hashingTime milliseconds")

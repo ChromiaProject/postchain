@@ -17,6 +17,7 @@ import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.SimpleGTXModule
@@ -65,21 +66,21 @@ class TxEventSinkTest : IntegrationTestSetup() {
                 .isEqualTo(1)
     }
 
-    private fun buildSuccessEventTx(brid: BlockchainRid) = GtxBuilder(brid, emptyList(), cryptoSystem)
+    private fun buildSuccessEventTx(brid: BlockchainRid) = GtxBuilder(brid, emptyList(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
             .addOperation("emit_test_event", gtv(SUCCESS_EVENT))
             .addNop()
             .finish()
             .buildGtx()
             .encode()
 
-    private fun buildFailureEventTx(brid: BlockchainRid) = GtxBuilder(brid, emptyList(), cryptoSystem)
+    private fun buildFailureEventTx(brid: BlockchainRid) = GtxBuilder(brid, emptyList(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
             .addOperation("emit_test_event", gtv(FAILURE_EVENT))
             .addNop()
             .finish()
             .buildGtx()
             .encode()
 
-    private fun buildSuccessAndFailureEventTx(brid: BlockchainRid) = GtxBuilder(brid, emptyList(), cryptoSystem)
+    private fun buildSuccessAndFailureEventTx(brid: BlockchainRid) = GtxBuilder(brid, emptyList(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
             .addOperation("emit_test_event", gtv(SUCCESS_EVENT))
             .addOperation("emit_test_event", gtv(FAILURE_EVENT))
             .addNop()

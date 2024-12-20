@@ -2,13 +2,16 @@ package net.postchain.integrationtest
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import assertk.assertions.isTrue
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
+import net.postchain.base.extension.MERKLE_HASH_VERSION_EXTRA_HEADER
 import net.postchain.base.gtv.BlockHeaderData
-import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.concurrent.util.get
 import net.postchain.devtools.ConfigFileBasedIntegrationTest
 import net.postchain.devtools.PostchainTestNode
+import net.postchain.gtv.mapper.toObject
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Test
@@ -24,11 +27,12 @@ class ConfigConsensusSlowIntegrationTest : ConfigFileBasedIntegrationTest() {
         buildBlock(0)
 
         val initialConfig = readBlockchainConfig(blockchainConfig1FileName)
-        val initialHash = GtvToBlockchainRidFactory.calculateBlockchainRid(initialConfig, cryptoSystem).data
+        val initialHash = initialConfig.toObject<BlockchainConfigurationData>().configHash
         nodes.forEach {
             val initialBlock = it.blockQueries().getBlockAtHeight(0L).get()!!
             val decodedBlock = BlockHeaderData.fromBinary(initialBlock.header.rawData)
             assertThat(decodedBlock.getExtra()[CONFIG_HASH_EXTRA_HEADER]!!.asByteArray().contentEquals(initialHash)).isTrue()
+            assertThat(decodedBlock.getExtra()[MERKLE_HASH_VERSION_EXTRA_HEADER]).isNull()
         }
 
         // Add new config
@@ -36,11 +40,12 @@ class ConfigConsensusSlowIntegrationTest : ConfigFileBasedIntegrationTest() {
             it.addConfiguration(PostchainTestNode.DEFAULT_CHAIN_IID, 2, blockchainConfig2)
         }
         buildBlocksWithChainRestart(2)
-        val fullHash = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig2, cryptoSystem).data
+        val fullHash = blockchainConfig2.toObject<BlockchainConfigurationData>().configHash
         nodes.forEach {
             val newConfigBlock = it.blockQueries().getBlockAtHeight(2L).get()!!
             val decodedBlock = BlockHeaderData.fromBinary(newConfigBlock.header.rawData)
             assertThat(decodedBlock.getExtra()[CONFIG_HASH_EXTRA_HEADER]!!.asByteArray().contentEquals(fullHash)).isTrue()
+            assertThat(decodedBlock.getExtra()[MERKLE_HASH_VERSION_EXTRA_HEADER]!!.asInteger()).isEqualTo(2)
         }
     }
 

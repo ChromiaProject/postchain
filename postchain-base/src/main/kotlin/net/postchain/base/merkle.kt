@@ -3,7 +3,13 @@
 package net.postchain.base
 
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.crypto.CryptoSystem
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.generateProof
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
+import net.postchain.gtv.merkle.proof.GtvMerkleProofTree
 
 val internalNodePrefix = byteArrayOf(0)
 val leafPrefix = byteArrayOf(1)
@@ -108,4 +114,21 @@ fun validateMerklePath(cryptoSystem: CryptoSystem, path: MerklePath, target: Byt
     }
 
     return merkleRoot.contentEquals(currentHash)
+}
+
+/**
+ * Return a Merkle proof tree of a hash in a Merkle tree
+ *
+ * @param txHash Target hash for which the Merkle path is wanted
+ * @param txHashes All hashes are the leaves part of this Merkle tree
+ * @return The Merkle proof tree for [txHash]
+ */
+fun merkleProofTree(txHash: WrappedByteArray, txHashes: Array<WrappedByteArray>, merkleHashCalculator: GtvMerkleHashCalculatorBase): Pair<Long, GtvMerkleProofTree> {
+    //println("looking for tx hash: ${txHash.toHex()} in array where first is: ${txHashes[0].toHex()}")
+    val positionOfOurTxToProve = txHashes.indexOf(txHash) //txHash.positionInArray(txHashes)
+    if (positionOfOurTxToProve < 0) {
+        throw UserMistake("We cannot prove this transaction (hash: ${txHash.toHex()}), because it is not in the block")
+    }
+    val gtvArray = gtv(txHashes.map { gtv(it.data) })
+    return Pair(positionOfOurTxToProve.toLong(), gtvArray.generateProof(listOf(positionOfOurTxToProve), merkleHashCalculator))
 }

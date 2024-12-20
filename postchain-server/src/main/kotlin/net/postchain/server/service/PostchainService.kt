@@ -19,6 +19,7 @@ import net.postchain.crypto.PrivKey
 import net.postchain.crypto.PubKey
 import net.postchain.debug.ErrorDiagnosticValue
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.mapper.toObject
 import net.postchain.server.NodeProvider
 import java.nio.file.Path
 
@@ -54,7 +55,7 @@ class PostchainService(private val nodeProvider: NodeProvider) {
     fun initializeBlockchain(chainId: Long, maybeBrid: BlockchainRid?, override: Boolean, config: Gtv,
                              givenDependencies: List<BlockchainRelatedInfo> = listOf()): BlockchainRid? {
         val brid = maybeBrid
-                ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config, postchainNode.postchainContext.cryptoSystem)
+                ?: GtvToBlockchainRidFactory.calculateBlockchainRid(config.toObject())
 
         return try {
             val initialized = withWriteConnection(postchainNode.postchainContext.sharedStorage, chainId) { ctx ->

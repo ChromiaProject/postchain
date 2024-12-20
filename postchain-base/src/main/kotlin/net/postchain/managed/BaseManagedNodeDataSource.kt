@@ -4,6 +4,7 @@ package net.postchain.managed
 
 import mu.KLogging
 import net.postchain.base.PeerInfo
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid
@@ -15,7 +16,7 @@ import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvFactory.gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
+import net.postchain.gtv.mapper.toObject
 import net.postchain.gtv.merkleHash
 import net.postchain.managed.query.QueryRunner
 
@@ -23,10 +24,6 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
     : ManagedNodeDataSource, QueryRunner by queryRunner {
 
     companion object : KLogging()
-
-    private val hashCalculator: GtvMerkleHashCalculatorV1 by lazy {
-        GtvMerkleHashCalculatorV1(appConfig.cryptoSystem)
-    }
 
     override val nmApiVersion by lazy {
         query("nm_api_version", buildArgs()).asInteger().toInt()
@@ -89,9 +86,11 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
             val gtvBaseConfig = GtvDecoder.decodeGtv(item["base_config"]!!.asByteArray())
             val fullConfig = gtvBaseConfig.asDict().toMutableMap()
             fullConfig[KEY_SIGNERS] = item["signers"]!!
+            val gtvConfig = gtv(fullConfig)
+            val hashCalculator = gtvConfig.toObject<BlockchainConfigurationData>().merkleHashCalculator
             PendingBlockchainConfiguration(
                     gtvBaseConfig,
-                    gtv(fullConfig).merkleHash(hashCalculator).wrap(),
+                    gtvConfig.merkleHash(hashCalculator).wrap(),
                     item["signers"]!!.asArray().map { PubKey(it.asByteArray()) },
                     item["minimum_height"]!!.asInteger()
             )

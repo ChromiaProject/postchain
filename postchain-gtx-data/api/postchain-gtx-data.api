@@ -44,8 +44,8 @@ public final class net/postchain/gtx/GtxBody$Companion {
 
 public class net/postchain/gtx/GtxBuilder {
 	public static final field Companion Lnet/postchain/gtx/GtxBuilder$Companion;
-	public fun <init> (Lnet/postchain/common/BlockchainRid;Ljava/util/List;Lnet/postchain/crypto/CryptoSystem;ILjava/util/List;)V
-	public synthetic fun <init> (Lnet/postchain/common/BlockchainRid;Ljava/util/List;Lnet/postchain/crypto/CryptoSystem;ILjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lnet/postchain/common/BlockchainRid;Ljava/util/List;Lnet/postchain/crypto/CryptoSystem;Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;ILjava/util/List;)V
+	public synthetic fun <init> (Lnet/postchain/common/BlockchainRid;Ljava/util/List;Lnet/postchain/crypto/CryptoSystem;Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;ILjava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun addNop ()Lnet/postchain/gtx/GtxBuilder;
 	public final fun addOperation (Ljava/lang/String;[Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtx/GtxBuilder;
 	public final fun finish ()Lnet/postchain/gtx/GtxBuilder$GtxSignBuilder;
@@ -146,25 +146,5 @@ public final class net/postchain/gtx/data/OpData {
 public final class net/postchain/gtx/gtxml/GTXMLTransactionEncoder {
 	public static final field INSTANCE Lnet/postchain/gtx/gtxml/GTXMLTransactionEncoder;
 	public final fun encodeXMLGTXTransaction (Lnet/postchain/gtx/Gtx;)Ljava/lang/String;
-}
-
-public final class net/postchain/gtx/gtxml/GTXMLTransactionParser {
-	public static final field INSTANCE Lnet/postchain/gtx/gtxml/GTXMLTransactionParser;
-	public final fun parseGTXMLTransaction (Ljava/lang/String;Lnet/postchain/gtx/gtxml/TransactionContext;Lnet/postchain/crypto/CryptoSystem;)Lnet/postchain/gtx/Gtx;
-	public final fun parseGTXMLTransaction (Lnet/postchain/gtv/gtxml/TransactionType;Lnet/postchain/gtx/gtxml/TransactionContext;Lnet/postchain/crypto/CryptoSystem;)Lnet/postchain/gtx/Gtx;
-}
-
-public final class net/postchain/gtx/gtxml/TransactionContext {
-	public static final field Companion Lnet/postchain/gtx/gtxml/TransactionContext$Companion;
-	public fun <init> (Lnet/postchain/common/BlockchainRid;Ljava/util/Map;ZLjava/util/Map;)V
-	public synthetic fun <init> (Lnet/postchain/common/BlockchainRid;Ljava/util/Map;ZLjava/util/Map;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public final fun getAutoSign ()Z
-	public final fun getBlockchainRID ()Lnet/postchain/common/BlockchainRid;
-	public final fun getParams ()Ljava/util/Map;
-	public final fun getSigners ()Ljava/util/Map;
-}
-
-public final class net/postchain/gtx/gtxml/TransactionContext$Companion {
-	public final fun empty ()Lnet/postchain/gtx/gtxml/TransactionContext;
 }
 

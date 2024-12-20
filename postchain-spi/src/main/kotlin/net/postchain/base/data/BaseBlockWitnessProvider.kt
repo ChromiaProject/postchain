@@ -4,6 +4,7 @@ import net.postchain.base.BaseBlockWitnessBuilder
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
+import net.postchain.core.BlockRid
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.BlockWitnessBuilder
@@ -37,11 +38,23 @@ class BaseBlockWitnessProvider(
         return BaseBlockWitnessBuilder(cryptoSystem, header, subjects, getBFTRequiredSignatureCount(subjects.size))
     }
 
+    override fun createWitnessBuilderWithoutOwnSignature(blockRID: BlockRid): BlockWitnessBuilder {
+        return BaseBlockWitnessBuilder(cryptoSystem, blockRID, subjects, getBFTRequiredSignatureCount(subjects.size))
+    }
+
     override fun createWitnessBuilderWithOwnSignature(
             header: BlockHeader
     ): BlockWitnessBuilder {
         val witnessBuilder = createWitnessBuilderWithoutOwnSignature(header) as BaseBlockWitnessBuilder
         witnessBuilder.applySignature(blockSigMaker.signDigest(header.blockRID))
+        return witnessBuilder
+    }
+
+    override fun createWitnessBuilderWithOwnSignature(
+            blockRID: BlockRid,
+    ): BlockWitnessBuilder {
+        val witnessBuilder = createWitnessBuilderWithoutOwnSignature(blockRID) as BaseBlockWitnessBuilder
+        witnessBuilder.applySignature(blockSigMaker.signDigest(blockRID.data))
         return witnessBuilder
     }
 

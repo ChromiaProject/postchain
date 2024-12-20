@@ -1,8 +1,10 @@
 package net.postchain.base
 
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.BaseBlockWitnessProvider
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
+import net.postchain.base.extension.MERKLE_HASH_VERSION_EXTRA_HEADER
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.configurations.GTXTestModule
@@ -15,25 +17,24 @@ import net.postchain.core.block.InitialBlockData
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper
-import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
+import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.mapper.toObject
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
-
 
 class TestBlockchainBuilder(
         val storage: Storage,
         configData0: Gtv,
         val extraData: Map<String, Gtv> = emptyMap()
 ) {
-    private val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configData0, ::sha256Digest)
+    val blockchainConfigurationData0 = configData0.toObject<BlockchainConfigurationData>()
+    private val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfigurationData0)
     val cryptoSystem = Secp256K1CryptoSystem()
-    val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
+    val hashCalculator = blockchainConfigurationData0.merkleHashCalculator
     val chainId = 1L
 
     fun buildBlockchain(configurations: List<Pair<Long, Gtv>>, blocks: Long,
@@ -83,22 +84,27 @@ class TestBlockchainBuilder(
             }
 
     fun buildTransaction(param: String): GTXTransaction =
-            GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
-                    .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
-                            .addOperation(GTX_TEST_OP_NAME, GtvFactory.gtv(1), GtvFactory.gtv(param))
+            GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem, hashCalculator)
+                    .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem, hashCalculator)
+                            .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv(param))
                             .finish().buildGtx())
 
     private fun addBlock(ctx: EContext, db: DatabaseAccess, blockchainRid: BlockchainRid, blockHeight: Long,
                          prevBlockRID: ByteArray, configData: Gtv, transactions: List<Transaction>,
                          witnesses: List<KeyPair>): Pair<BaseBlockHeader, List<Transaction>> {
         val blockIID = db.insertBlock(ctx, blockHeight)
-        val rootHash = GtvFactory.gtv(transactions.map { GtvFactory.gtv(it.getHash()) }).merkleHash(hashCalculator)
+        val rootHash = gtv(transactions.map { gtv(it.getHash()) }).merkleHash(hashCalculator)
         val timestamp = 10000L + blockHeight
         var nextTransactionNumber = db.getLastTransactionNumber(ctx) + 1
         val blockData = InitialBlockData(blockchainRid, blockIID, ctx.chainID, prevBlockRID, blockHeight, timestamp, null)
+        val data = configData.toObject<BlockchainConfigurationData>()
+        val configHash = data.rawConfig.merkleHash(data.merkleHashCalculator)
         val extraData0: Map<String, Gtv> = buildMap {
             putAll(extraData)
-            put(CONFIG_HASH_EXTRA_HEADER, GtvFactory.gtv(GtvToBlockchainRidFactory.calculateBlockchainRid(configData, ::sha256Digest).data))
+            put(CONFIG_HASH_EXTRA_HEADER, gtv(configHash))
+            if (data.merkleHashVersion > 1) {
+                put(MERKLE_HASH_VERSION_EXTRA_HEADER, gtv(data.merkleHashVersion))
+            }
         }
         val blockHeader = BaseBlockHeader.make(hashCalculator, blockData, rootHash, timestamp, extraData0)
         val blockEContext = BaseBlockEContext(

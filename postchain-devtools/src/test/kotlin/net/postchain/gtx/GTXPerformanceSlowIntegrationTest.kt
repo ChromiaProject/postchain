@@ -13,6 +13,7 @@ import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -97,7 +98,7 @@ class GTXPerformanceSlowIntegrationTest : IntegrationTestSetup() {
     val sigMaker = net.postchain.devtools.gtx.myCS.buildSigMaker(KeyPair(pubKey(0), privKey(0)))
 
     private fun makeTestTx(id: Long, value: String, blockchainRid: BlockchainRid): ByteArray {
-        val b = GtxBuilder(blockchainRid, listOf(pubKey(0)), net.postchain.devtools.gtx.myCS)
+        val b = GtxBuilder(blockchainRid, listOf(pubKey(0)), net.postchain.devtools.gtx.myCS, GtvMerkleHashCalculatorV2(net.postchain.devtools.gtx.myCS))
                 .addOperation("gtx_test", gtv(id), gtv(value))
                 .finish()
                 .sign(sigMaker)
@@ -106,7 +107,7 @@ class GTXPerformanceSlowIntegrationTest : IntegrationTestSetup() {
     }
 
     private fun makeTestBatchTx(txCounter: Int, opCount: Int,  blockchainRid: BlockchainRid): ByteArray {
-        val b = GtxBuilder(blockchainRid, listOf(pubKey(0)), net.postchain.devtools.gtx.myCS)
+        val b = GtxBuilder(blockchainRid, listOf(pubKey(0)), net.postchain.devtools.gtx.myCS, GtvMerkleHashCalculatorV2(net.postchain.devtools.gtx.myCS))
 
         for (i in 0 until opCount) {
             b.addOperation("gtx_test", gtv(1L), gtv((txCounter * opCount +  i).toString()))
@@ -155,7 +156,7 @@ class GTXPerformanceSlowIntegrationTest : IntegrationTestSetup() {
         var total = 0
         val module = GTXTestModule()
         val cs = Secp256K1CryptoSystem()
-        val txFactory = GTXTransactionFactory(dummyBcRid, module, cs)
+        val txFactory = GTXTransactionFactory(dummyBcRid, module, cs, GtvMerkleHashCalculatorV2(net.postchain.devtools.gtx.myCS))
         val nanoDelta = measureNanoTime {
             for (rawTx in transactions) {
                 val ttx = txFactory.decodeTransaction(rawTx) as GTXTransaction
@@ -174,7 +175,7 @@ class GTXPerformanceSlowIntegrationTest : IntegrationTestSetup() {
         var total = 0
         val module = GTXTestModule()
         val cs = Secp256K1CryptoSystem()
-        val txFactory = GTXTransactionFactory(dummyBcRid, module, cs)
+        val txFactory = GTXTransactionFactory(dummyBcRid, module, cs, GtvMerkleHashCalculatorV2(net.postchain.devtools.gtx.myCS))
         val nanoDelta = measureNanoTime {
             for (rawTx in transactions) {
                 val ttx = txFactory.decodeTransaction(rawTx) as GTXTransaction

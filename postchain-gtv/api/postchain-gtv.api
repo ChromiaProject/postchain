@@ -850,6 +850,27 @@ synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculatorBase$calculateNo
 	public final fun invoke ([BLnet/postchain/crypto/Digester;)[B
 }
 
+public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorKt {
+	public static final fun makeMerkleHashCalculator (J)Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;
+	public static final fun serializeGtvToByteArray (Lnet/postchain/gtv/Gtv;)[B
+}
+
+synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculatorKt$makeMerkleHashCalculator$1 : kotlin/jvm/internal/FunctionAdapter, net/postchain/crypto/Digester {
+	public static final field INSTANCE Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorKt$makeMerkleHashCalculator$1;
+	public final fun digest ([B)[B
+	public final fun equals (Ljava/lang/Object;)Z
+	public final fun getFunctionDelegate ()Lkotlin/Function;
+	public final fun hashCode ()I
+}
+
+synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculatorKt$makeMerkleHashCalculator$2 : kotlin/jvm/internal/FunctionAdapter, net/postchain/crypto/Digester {
+	public static final field INSTANCE Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorKt$makeMerkleHashCalculator$2;
+	public final fun digest ([B)[B
+	public final fun equals (Ljava/lang/Object;)Z
+	public final fun getFunctionDelegate ()Lkotlin/Function;
+	public final fun hashCode ()I
+}
+
 public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorV1 : net/postchain/gtv/merkle/GtvMerkleHashCalculatorBase {
 	public static final field Companion Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorV1$Companion;
 	public fun <init> (Lnet/postchain/crypto/CryptoSystem;)V
@@ -859,10 +880,6 @@ public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorV1 : net/post
 }
 
 public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorV1$Companion {
-}
-
-public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorV1Kt {
-	public static final fun serializeGtvToByteArray (Lnet/postchain/gtv/Gtv;)[B
 }
 
 public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorV2 : net/postchain/gtv/merkle/GtvMerkleHashCalculatorBase {

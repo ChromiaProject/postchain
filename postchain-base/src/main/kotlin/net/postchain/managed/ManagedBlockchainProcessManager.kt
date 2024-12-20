@@ -241,7 +241,7 @@ open class ManagedBlockchainProcessManager(
     private fun saveConfigurationHashInDatabaseIfNotAlreadyExists(bctx: BlockEContext, blockchainConfig: BlockchainConfiguration) {
         val db = DatabaseAccess.of(bctx)
         if (!db.configurationHashExists(bctx, blockchainConfig.configHash)) {
-            db.addConfigurationHash(bctx, bctx.height, blockchainConfig.configHash)
+            db.addConfigurationHash(bctx, bctx.height, blockchainConfig.configHash, blockchainConfig.merkleHashVersion)
         }
     }
 
@@ -391,7 +391,7 @@ open class ManagedBlockchainProcessManager(
                 }
                 val config = currentBlockDataSource.getConfiguration(brid.data, nextConfigHeight)!!
                 try {
-                    GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(config), brid)
+                    GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(config), brid, bctx)
                     db.addConfigurationData(bctx, nextConfigHeight, config)
                 } catch (e: Exception) {
                     logger.error("Configuration for height $nextConfigHeight is invalid and will not be applied", e)

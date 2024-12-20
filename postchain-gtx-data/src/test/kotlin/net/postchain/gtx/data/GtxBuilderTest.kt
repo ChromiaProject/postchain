@@ -11,11 +11,16 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.Signature
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
+import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBuilder
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
@@ -23,6 +28,7 @@ import org.junit.jupiter.api.assertThrows
 class GtxBuilderTest {
 
     private val crypto = Secp256K1CryptoSystem()
+    private val calc = GtvMerkleHashCalculatorV2(::sha256Digest)
 
     private val signerPub = (0..3).map(::pubKey)
     private val signerPriv = (0..3).map(::privKey)
@@ -45,7 +51,7 @@ class GtxBuilderTest {
 
     @Test
     fun testGTXData() {
-        val b = GtxBuilder(BlockchainRid.buildRepeat(0), signerPub.slice(0..2), crypto)
+        val b = GtxBuilder(BlockchainRid.buildRepeat(0), signerPub.slice(0..2), crypto, calc)
         addOperations(b, signerPub[0])
         val txBuilder = b.finish()
                 .sign(crypto.buildSigMaker(KeyPair(signerPub[0], signerPriv[0])))
@@ -104,14 +110,14 @@ class GtxBuilderTest {
 
     @Test
     fun sizeOne() {
-        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, maxTxSize = 1000)
+        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, calc, maxTxSize = 1000)
         b.addOperation("dictator", gtv(mapOf("two" to gtv(2), "five" to GtvNull)))
         checkSize(b, 1)
     }
 
     @Test
     fun sizeTwo() {
-        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, maxTxSize = 1000)
+        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, calc, maxTxSize = 1000)
         b.addOperation("dictator", gtv(mapOf("two" to gtv(2), "five" to GtvNull)))
         // complex structure
         b.addOperation("soup",
@@ -125,7 +131,7 @@ class GtxBuilderTest {
 
     @Test
     fun sizeThree() {
-        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, maxTxSize = 1000)
+        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, calc, maxTxSize = 1000)
         b.addOperation("dictator", gtv(mapOf("two" to gtv(2), "five" to GtvNull)))
         // complex structure
         b.addOperation("soup",
@@ -140,14 +146,14 @@ class GtxBuilderTest {
 
     @Test
     fun sizeFour() {
-        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, maxTxSize = 1000)
+        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, calc, maxTxSize = 1000)
         addOperations(b, null)
         checkSize(b, 4)
     }
 
     @Test
     fun noFit() {
-        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, maxTxSize = 250)
+        val b = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, calc, maxTxSize = 250)
         b.addOperation("dictator", gtv(mapOf("two" to gtv(2), "five" to GtvNull)))
         assertThrows<IllegalStateException> {
             b.addOperation("soup",
@@ -162,7 +168,7 @@ class GtxBuilderTest {
 
     @Test
     fun signOverEmptySignature_given_valid_keypair() {
-        val gtxBuilder = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto)
+        val gtxBuilder = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, calc)
 
         val emptySign = gtxBuilder.uncheckedSignBuilder().emptySign(signerPub[0])
 
@@ -172,7 +178,7 @@ class GtxBuilderTest {
 
     @Test
     fun signOverEmptySignature_given_faulty_keypair() {
-        val gtxBuilder = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto)
+        val gtxBuilder = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, calc)
 
         val emptySign = gtxBuilder.uncheckedSignBuilder().emptySign(signerPub[0])
 

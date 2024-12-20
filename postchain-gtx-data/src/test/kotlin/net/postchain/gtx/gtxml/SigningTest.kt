@@ -7,7 +7,7 @@ import net.postchain.crypto.KeyPair
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -33,7 +33,7 @@ class SigningTest {
         assertEquals("03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070", tx.gtxBody.signers[0].toHex())
 
         // Signing
-        val merkleRoot = tx.calculateTxRid(GtvMerkleHashCalculatorV1(cs))
+        val merkleRoot = tx.calculateTxRid(GtvMerkleHashCalculatorV2(cs))
         val signature = sigMaker.signDigest(merkleRoot)
 //        println(signature.data.toHex())
 

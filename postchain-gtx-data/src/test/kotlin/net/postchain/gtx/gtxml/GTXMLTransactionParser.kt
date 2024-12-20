@@ -16,8 +16,8 @@ import net.postchain.gtv.gtxml.OperationsType
 import net.postchain.gtv.gtxml.ParamType
 import net.postchain.gtv.gtxml.SignersType
 import net.postchain.gtv.gtxml.TransactionType
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
@@ -74,7 +74,7 @@ object GTXMLTransactionParser {
         val txBody = GtxBody(rid, ops.map { GtxOp.fromOpData(it) }, signers)
 
         if (context.autoSign) {
-            val calculator = GtvMerkleHashCalculatorV1(cs)
+            val calculator = GtvMerkleHashCalculatorV2(cs)
             signTransaction(txBody, signatures, context.signers, calculator)
         }
 

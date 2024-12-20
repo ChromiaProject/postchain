@@ -8,6 +8,7 @@ import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.specialtx.SpecialTxTestGTXModule
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
@@ -63,7 +64,7 @@ class BlockWithSpecialTransactionTest : IntegrationTestSetup() {
         val blockchainRID: BlockchainRid = nodes[0].getBlockchainInstance().blockchainEngine.getConfiguration().blockchainRid
         val module = SpecialTxTestGTXModule() // Had to build a special module for this test
         val cs = Secp256K1CryptoSystem()
-        gtxTxFactory = GTXTransactionFactory(blockchainRID, module, cs)
+        gtxTxFactory = GTXTransactionFactory(blockchainRID, module, cs, GtvMerkleHashCalculatorV2(cryptoSystem))
 
         // --------------------
         // Create TXs

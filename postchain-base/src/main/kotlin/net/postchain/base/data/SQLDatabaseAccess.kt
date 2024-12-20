@@ -7,7 +7,6 @@ import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.FaultyConfiguration
 import net.postchain.base.data.SqlUtils.isUniqueViolation
 import net.postchain.base.gtv.BlockHeaderData
-import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.base.snapshot.Page
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.HASH_LENGTH
@@ -38,8 +37,8 @@ import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.Filter
 import net.postchain.core.block.size
 import net.postchain.crypto.PubKey
-import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.GtvDecoder
+import net.postchain.gtv.mapper.toObject
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ColumnListHandler
 import org.apache.commons.dbutils.handlers.MapListHandler
@@ -108,6 +107,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdUpdateTableConfigurationsV4First(chainId: Long): String
     protected abstract fun cmdUpdateTableConfigurationsV4Second(chainId: Long): String
     protected abstract fun cmdDropTableConfigurationDataNotNull(chainId: Long): String
+    protected abstract fun cmdAddHashVersionToConfigTable(chainId: Long): String
 
     protected abstract fun cmdCreateTableFaultyConfiguration(chainId: Long): String
 
@@ -646,7 +646,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int, allowUpgrade: Boolean) {
-        if (expectedDbVersion !in 1..11) {
+        if (expectedDbVersion !in 1..12) {
             throw UserMistake("Unsupported DB version $expectedDbVersion")
         }
 
@@ -726,6 +726,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 version11(connection)
             }
 
+            if (version < 12 && expectedDbVersion >= 12) {
+                logger.info("Upgrading to version 12")
+                version12(connection)
+            }
+
             if (expectedDbVersion > version) {
                 queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = '$TABLE_META_KEY_VERSION'", expectedDbVersion)
                 logger.info("Database version has been updated to version: $expectedDbVersion")
@@ -783,6 +788,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
             if (expectedDbVersion >= 11) {
                 version11(connection)
             }
+
+            if (expectedDbVersion >= 12) {
+                version12(connection)
+            }
         }
     }
 
@@ -811,7 +820,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                                 val configurationData = it["configuration_data"] as ByteArray
                                 queryRunner.update(connection,
                                         "UPDATE ${tableConfigurations(chainId)} SET configuration_hash=? WHERE height=?",
-                                        calcConfigurationHash(configurationData), height)
+                                        parseBlockchainConfiguration(configurationData).configHash, height)
                             }
                     queryRunner.update(connection, cmdUpdateTableConfigurationsV4Second(chainId))
                 }
@@ -879,8 +888,16 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 max(maxChainIid, 99))
     }
 
-    protected fun calcConfigurationHash(configurationData: ByteArray) = GtvToBlockchainRidFactory.calculateBlockchainRid(
-            GtvDecoder.decodeGtv(configurationData), ::sha256Digest).data
+    private fun version12(connection: Connection) {
+        queryRunner.query(connection, "SELECT chain_iid FROM ${tableBlockchains()}", mapListHandler)
+                .map { it["chain_iid"] as Long }
+                .forEach { chainId ->
+                    queryRunner.update(connection, cmdAddHashVersionToConfigTable(chainId))
+                }
+    }
+
+    protected fun parseBlockchainConfiguration(configurationData: ByteArray): BlockchainConfigurationData =
+            GtvDecoder.decodeGtv(configurationData).toObject<BlockchainConfigurationData>()
 
     override fun createContainer(ctx: AppContext, name: String): Int {
         val sql = "INSERT INTO ${tableContainers()} (name) values (?) RETURNING container_iid"
@@ -1243,13 +1260,30 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
-    override fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray) {
-        val hash = calcConfigurationHash(data)
-        queryRunner.insert(ctx.conn, cmdInsertConfiguration(ctx), longRes, height, data, hash, data, hash)
+    override fun getInitialMerkleHashVersion(ctx: EContext): Long {
+        val sql = "SELECT merkle_hash_version FROM ${tableConfigurations(ctx)} ORDER BY height LIMIT 1"
+        return queryRunner.query(ctx.conn, sql, nullableLongRes) ?: 1
     }
 
-    override fun addConfigurationHash(ctx: EContext, height: Long, configHash: ByteArray) {
-        queryRunner.insert(ctx.conn, cmdInsertConfiguration(ctx), longRes, height, null, configHash, null, configHash)
+    override fun getMerkleHashVersionForHeight(ctx: EContext, height: Long): Long {
+        val sql = "SELECT merkle_hash_version FROM ${tableConfigurations(ctx)} WHERE height <= ? ORDER BY height DESC LIMIT 1"
+        return queryRunner.query(ctx.conn, sql, nullableLongRes, height) ?: 1
+    }
+
+    override fun getCurrentMerkleHashVersion(ctx: EContext): Long {
+        val sql = "SELECT merkle_hash_version FROM ${tableConfigurations(ctx)} ORDER BY height DESC LIMIT 1"
+        return queryRunner.query(ctx.conn, sql, nullableLongRes) ?: 1
+    }
+
+    override fun addConfigurationData(ctx: EContext, height: Long, data: ByteArray) {
+        val configuration = parseBlockchainConfiguration(data)
+        queryRunner.insert(ctx.conn, cmdInsertConfiguration(ctx), longRes, height,
+                data, configuration.configHash, configuration.merkleHashVersion,
+                data, configuration.configHash, configuration.merkleHashVersion)
+    }
+
+    override fun addConfigurationHash(ctx: EContext, height: Long, configHash: ByteArray, merkleHashVersion: Long) {
+        queryRunner.insert(ctx.conn, cmdInsertConfiguration(ctx), longRes, height, null, configHash, merkleHashVersion, null, configHash, merkleHashVersion)
     }
 
     override fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo> {

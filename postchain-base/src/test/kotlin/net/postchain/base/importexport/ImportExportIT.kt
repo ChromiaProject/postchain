@@ -17,6 +17,7 @@ import net.postchain.base.data.SQLDatabaseAccess
 import net.postchain.base.data.testDbConfig
 import net.postchain.base.extension.FAILED_CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.base.importexport.ImporterExporter.decodeBlockEntry
 import net.postchain.base.importexport.ImporterExporter.exportBlocks
 import net.postchain.base.importexport.ImporterExporter.importBlocks
 import net.postchain.base.withReadConnection
@@ -35,13 +36,13 @@ import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockHeader
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.crypto.devtools.KeyPairHelper
-import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder.encodeGtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
+import net.postchain.gtv.mapper.toObject
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
@@ -58,11 +59,11 @@ class ImportExportIT {
     private val appConfig: AppConfig = testDbConfig("import_export_it")
 
     private val cryptoSystem = Secp256K1CryptoSystem()
-    private val hashCalculator = GtvMerkleHashCalculatorV1(cryptoSystem)
+    private val hashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
     private val chainId = 1L
     private val configData0 = GtvMLParser.parseGtvML(javaClass.getResource("blockchain_configuration_0.xml")!!.readText())
     private val configData2 = GtvMLParser.parseGtvML(javaClass.getResource("blockchain_configuration_2.xml")!!.readText())
-    private val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configData0, ::sha256Digest)
+    private val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configData0.toObject())
 
     @Test
     fun exportConfigurationsOnly(@TempDir tempDir: Path) {
@@ -240,7 +241,9 @@ class ImportExportIT {
 
     private fun assertExportedBlock(expectedBlock: Pair<BaseBlockHeader, List<Transaction>>, block: Gtv) {
         val (expectedBlockHeader, expectedTransactions) = expectedBlock
-        val (blockHeader, blockWitness, transactions) = ImporterExporter.decodeBlockEntry(block)
+        val (blockHeaderData, blockWitnessData, transactions) = decodeBlockEntry(block)
+        val blockHeader = BaseBlockHeader(blockHeaderData, hashCalculator)
+        val blockWitness = BaseBlockWitness.fromBytes(blockWitnessData)
         assertThat(blockHeader.blockRID).isContentEqualTo(expectedBlockHeader.blockRID)
         assertThat(blockHeader.blockHeaderRec).isEqualTo(expectedBlockHeader.blockHeaderRec)
         val blockWitnessProvider = BaseBlockWitnessProvider(cryptoSystem, cryptoSystem.buildSigMaker(KeyPairHelper.keyPair(0)),
@@ -327,7 +330,7 @@ class ImportExportIT {
             config[KEY_ADD_PRIMARY_KEY_TO_HEADER] = gtv(true)
             gtv(config)
         }
-        val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configData, ::sha256Digest)
+        val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configData.toObject())
         // but extraData doesn't contain `primary`
         val extraData = mapOf(
                 FAILED_CONFIG_HASH_EXTRA_HEADER to gtv(BlockchainRid.buildRepeat(1))
@@ -593,8 +596,8 @@ class ImportExportIT {
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
             blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
-                    listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
-                            .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
+                    listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem, blockchainBuilder.hashCalculator)
+                            .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem, blockchainBuilder.hashCalculator)
                                     .addOperation(GTX_TEST_OP_NAME, gtv("bogus"))
                                     .finish().buildGtx()))))
             ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite = false, logNBlocks = 1)
@@ -622,8 +625,8 @@ class ImportExportIT {
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
             blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
-                    listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
-                            .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
+                    listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem, blockchainBuilder.hashCalculator)
+                            .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem, blockchainBuilder.hashCalculator)
                                     .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("rejectMe"))
                                     .finish().buildGtx()))))
             ImporterExporter.exportBlockchain(storage, chainId, configurationsFile, blocksFile, overwrite = false, logNBlocks = 1)
@@ -651,8 +654,8 @@ class ImportExportIT {
         StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
             val blockchainBuilder = TestBlockchainBuilder(storage, configData0)
             blockchainBuilder.buildBlockchainWithTransactions(listOf(0L to configData0),
-                    listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
-                            .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
+                    listOf(listOf(GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem, blockchainBuilder.hashCalculator)
+                            .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem, blockchainBuilder.hashCalculator)
                                     .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("valid"))
                                     .finish().buildGtx()))),
                     (0..1).map { KeyPairHelper.keyPair(it) })

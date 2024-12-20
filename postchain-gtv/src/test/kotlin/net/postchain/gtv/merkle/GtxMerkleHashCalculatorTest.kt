@@ -36,7 +36,7 @@ class GtvMerkleHashCalculatorV1Test {
     @Test
     fun testHashOfGtvCalculation_RealSerialization_RealHash() {
 
-        val calculator = GtvMerkleHashCalculatorV1(::sha256Digest)
+        val calculator = GtvMerkleHashCalculatorV2(::sha256Digest)
 
         val iGtv = GtvInteger(7)
         // The "7" is expected to serialize to "A303020107" (in hex)

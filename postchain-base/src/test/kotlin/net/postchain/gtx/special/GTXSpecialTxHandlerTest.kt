@@ -4,18 +4,19 @@ import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.data.OpData
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 
 class GTXSpecialTxHandlerTest {
 
@@ -40,8 +41,8 @@ class GTXSpecialTxHandlerTest {
 
     @Test
     fun `gtx-tx has no ops`() {
-        val emptyTx = GTXTransactionFactory(ZERO_RID, mock(), cs).decodeTransaction(
-                GtxBuilder(ZERO_RID, listOf(), cs).finish().buildGtx().encode()
+        val emptyTx = GTXTransactionFactory(ZERO_RID, mock(), cs, GtvMerkleHashCalculatorV2(cs)).decodeTransaction(
+                GtxBuilder(ZERO_RID, listOf(), cs, GtvMerkleHashCalculatorV2(cs)).finish().buildGtx().encode()
         ) as GTXTransaction
 
         val sut = GTXSpecialTxHandler(mock(), 0L, ZERO_RID, cs, mock())
@@ -62,7 +63,7 @@ class GTXSpecialTxHandlerTest {
         val module: GTXModule = mock {
             on { getSpecialTxExtensions() } doReturn listOf(ext)
         }
-        val factory = GTXTransactionFactory(ZERO_RID, module, cs)
+        val factory = GTXTransactionFactory(ZERO_RID, module, cs, GtvMerkleHashCalculatorV2(cs))
 
         val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
 
@@ -92,7 +93,7 @@ class GTXSpecialTxHandlerTest {
         val module: GTXModule = mock {
             on { getSpecialTxExtensions() } doReturn listOf(ext)
         }
-        val factory = GTXTransactionFactory(ZERO_RID, module, cs)
+        val factory = GTXTransactionFactory(ZERO_RID, module, cs, GtvMerkleHashCalculatorV2(cs))
 
         val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
 
@@ -129,7 +130,7 @@ class GTXSpecialTxHandlerTest {
         val module: GTXModule = mock {
             on { getSpecialTxExtensions() } doReturn listOf(ext1, ext2)
         }
-        val factory = GTXTransactionFactory(ZERO_RID, module, cs)
+        val factory = GTXTransactionFactory(ZERO_RID, module, cs, GtvMerkleHashCalculatorV2(cs))
 
         val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
 
@@ -165,7 +166,7 @@ class GTXSpecialTxHandlerTest {
         val module: GTXModule = mock {
             on { getSpecialTxExtensions() } doReturn listOf(ext1, ext2)
         }
-        val factory = GTXTransactionFactory(ZERO_RID, module, cs)
+        val factory = GTXTransactionFactory(ZERO_RID, module, cs, GtvMerkleHashCalculatorV2(cs))
 
         val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
 
@@ -194,7 +195,7 @@ class GTXSpecialTxHandlerTest {
         val module: GTXModule = mock {
             on { getSpecialTxExtensions() } doReturn listOf(ext1)
         }
-        val factory = GTXTransactionFactory(ZERO_RID, module, cs)
+        val factory = GTXTransactionFactory(ZERO_RID, module, cs, GtvMerkleHashCalculatorV2(cs))
 
         val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
 
@@ -226,7 +227,7 @@ class GTXSpecialTxHandlerTest {
         val module: GTXModule = mock {
             on { getSpecialTxExtensions() } doReturn listOf(ext1)
         }
-        val factory = GTXTransactionFactory(ZERO_RID, module, cs)
+        val factory = GTXTransactionFactory(ZERO_RID, module, cs, GtvMerkleHashCalculatorV2(cs))
 
         val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
         assertFalse(sut.isAllowedToSkipSpecialTransaction(SpecialTransactionPosition.Begin, mock()))

@@ -17,6 +17,7 @@ import net.postchain.core.EContext
 import net.postchain.core.MissingPeerInfoException
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.mapper.toObject
 
 object CliExecution {
 
@@ -34,7 +35,7 @@ object CliExecution {
         // If brid is specified in nodeConfigFile, use that instead of calculating it from blockchain configuration.
         val keyString = "brid.chainid.$chainId"
         val brid = if (appConfig.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.getString(keyString)) else
-            GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, appConfig.cryptoSystem)
+            GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig.toObject())
 
         return runStorageCommand(appConfig, chainId) { ctx ->
             when (mode) {
