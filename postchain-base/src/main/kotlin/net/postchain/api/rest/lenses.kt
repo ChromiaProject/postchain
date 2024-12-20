@@ -101,7 +101,18 @@ val errorBody = ContentNegotiation.auto(errorJsonBody, errorGtvBody)
 val txBody = Body.auto<Tx>().map({ it.tx.hexStringToByteArray() }, { Tx(it.toHex()) }).toLens()
 val txInfoBody = Body.auto<TransactionInfoExt>().toLens()
 val txInfosBody = Body.auto<List<TransactionInfoExt>>().toLens()
-val proofBody = Body.auto<ConfirmationProof>().toLens()
+val proofJsonBody = Body.auto<ConfirmationProof>().toLens()
+val proofGtvBody = Body.binary(ContentType.OCTET_STREAM, "confirmationProof GTV").map(
+        { inputStream ->
+            val gtv = inputStream.use { GtvDecoder.decodeGtv(it) }
+            GtvObjectMapper.fromGtv(gtv, ConfirmationProof::class)
+        },
+        {
+            val gtv = it.let { GtvObjectMapper.toGtvDictionary(it) }
+            GtvEncoder.encodeGtv(gtv).inputStream()
+        }
+).toLens()
+val proofBody = ContentNegotiation.auto(proofJsonBody, proofGtvBody)
 val statusBody = Body.auto<ApiStatus>().toLens()
 val blocksBody = Body.auto<List<BlockDetail>>().toLens()
 val blockJsonBody = Body.auto<BlockDetail>().toLens()

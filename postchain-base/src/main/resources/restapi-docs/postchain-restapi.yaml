@@ -53,7 +53,7 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: "11"
+  version: "12"
 paths:
   /tx/{blockchainRid}:
     post:
@@ -288,7 +288,10 @@ paths:
       tags:
         - transaction
       summary: Fetch transaction confirmation proof
-      description: Fetch confirmation proof for a transaction from a chain
+      description: |
+        Fetch confirmation proof for a transaction from a chain.
+        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        otherwise defaults to JSON.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
@@ -299,6 +302,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/confirmationProof"
+            application/octet-stream: { }
         404:
           description: Not found
           content:
@@ -312,6 +316,7 @@ paths:
                 txNotFound:
                   value:
                     error: "Can't find transaction with RID: <hex-string>"
+            application/octet-stream: { }
   /tx/{blockchainRid}/{txRid}/status:
     get:
       tags:
