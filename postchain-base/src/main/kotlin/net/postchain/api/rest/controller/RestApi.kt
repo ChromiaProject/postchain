@@ -181,7 +181,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 11
+        const val REST_API_VERSION = 12
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -408,7 +408,7 @@ class RestApi(
         val proof = runTxActionOnModel(model(request), txRidPath(request)) { model, txRID ->
             model.getConfirmationProof(txRID)
         }
-        return Response(OK).with(proofBody of proof)
+        return Response(OK).with(proofBody.outbound(request) of proof)
     }
 
     private fun getTransactionStatus(request: Request): Response {

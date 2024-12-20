@@ -2,7 +2,10 @@
 
 package net.postchain.api.rest.endpoint
 
+import assertk.assertThat
+import assertk.isContentEqualTo
 import io.restassured.RestAssured.given
+import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.TxRid
@@ -39,6 +42,7 @@ class RestApiGetConfirmationProofEndpointTest {
     private lateinit var restApi: RestApi
     private lateinit var model: Model
     private lateinit var proof: GtvMerkleProofTree
+    private lateinit var expectedResponse: ByteArray
     private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
     private val txHashHex = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
@@ -53,6 +57,23 @@ class RestApiGetConfirmationProofEndpointTest {
         restApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
 
         proof = buildDummyProof()
+
+        val expectedObject = ConfirmationProof(
+                txHashHex.hexStringToByteArray(),
+                byteArrayOf(0x0a, 0x0b, 0x0c),
+                BaseBlockWitness(
+                        byteArrayOf(0x0b),
+                        arrayOf()),
+                proof,
+                1L // Position of TX in the block
+        )
+        expectedResponse = GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(expectedObject))
+
+        whenever(model.getConfirmationProof(TxRid(txHashHex.hexStringToByteArray())))
+                .doReturn(expectedObject)
+
+        restApi.attachModel(blockchainRID, model)
+
     }
 
     private fun buildDummyProof(): GtvMerkleProofTree {
@@ -87,28 +108,24 @@ class RestApiGetConfirmationProofEndpointTest {
     }
 
     private fun getConfirmationProofOk(live: Boolean) {
-        val expectedObject = ConfirmationProof(
-                txHashHex.hexStringToByteArray(),
-                byteArrayOf(0x0a, 0x0b, 0x0c),
-                BaseBlockWitness(
-                        byteArrayOf(0x0b),
-                        arrayOf()),
-                proof,
-                1L // Position of TX in the block
-        )
-        val expectedDict = GtvObjectMapper.toGtvDictionary(expectedObject)
-
-        whenever(model.getConfirmationProof(TxRid(txHashHex.hexStringToByteArray())))
-                .doReturn(expectedObject)
         whenever(model.live).thenReturn(live)
-
-        restApi.attachModel(blockchainRID, model)
-
 
         given().basePath(basePath).port(restApi.actualPort())
                 .get("/tx/$blockchainRID/$txHashHex/confirmationProof")
                 .then()
                 .statusCode(200)
-                .body("proof", equalTo(GtvEncoder.encodeGtv(expectedDict).toHex()))
+                .contentType(ContentType.JSON)
+                .body("proof", equalTo(expectedResponse.toHex()))
+    }
+
+    @Test
+    fun binaryResponse() {
+        val body = given().basePath(basePath).port(restApi.actualPort())
+                .header("Accept", ContentType.BINARY)
+                .get("/tx/$blockchainRID/$txHashHex/confirmationProof")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(expectedResponse)
     }
 }
