@@ -13,8 +13,10 @@ import mu.KLogging
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.SQLDatabaseAccess
+import net.postchain.base.runStorageCommand
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
@@ -221,6 +223,38 @@ class FaultyConfigTest : IntegrationTestSetup() {
             }
         } finally {
             TogglableFaultyGtxModule.shouldFail = false
+        }
+    }
+
+    @Test
+    fun `config is not reverted in case exception is not caused by it being faulty`() {
+        val (node) = createNodes(1, "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_initial_1.xml")
+
+        val newConfig = readBlockchainConfig(
+                "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_correct_1.xml"
+        )
+
+        node.addConfiguration(DEFAULT_CHAIN_IID, 2, newConfig)
+        buildBlock(DEFAULT_CHAIN_IID, 1)
+
+        // Assert new config is loaded
+        Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
+            assertThat(node.getModules(DEFAULT_CHAIN_IID).any { it is CorrectConfigGTXModule })
+        }
+
+        // This should make the block building fail with a ProgrammerMistake (prev block has no RID)
+        runStorageCommand(node.appConfig, DEFAULT_CHAIN_IID) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            db.insertBlock(ctx, 2)
+        }
+        // Assert that block building fails
+        val (_, error) = node.getBlockchainInstance().blockchainEngine.buildBlock()
+        assertThat(error is ProgrammerMistake).isTrue()
+
+        // Assert that config was not reverted
+        runStorageCommand(node.appConfig, DEFAULT_CHAIN_IID) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            assertThat(db.getFaultyConfiguration(ctx)).isNull()
         }
     }
 }

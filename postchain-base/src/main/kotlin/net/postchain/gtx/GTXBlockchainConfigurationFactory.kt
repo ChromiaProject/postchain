@@ -52,7 +52,11 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
                     else -> name
                 }
 
-                val moduleClass = Class.forName(className).getConstructor()
+                val moduleClass = try {
+                    Class.forName(className).getConstructor()
+                } catch (e: ClassNotFoundException) {
+                    throw UserMistake("Module class was not found: $className")
+                }
                 return when (val instance = moduleClass.newInstance()) {
                     is GTXModule -> instance
                     is GTXModuleFactory -> instance.makeModule(data.rawConfig, blockchainRID) //TODO
