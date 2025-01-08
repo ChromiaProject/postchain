@@ -62,7 +62,7 @@ class SubContainerResourceMetrics(
 
     init {
         metricDefinitions
-                .filter { enableSpaceMetrics || !it.isSpaceMetric }
+//                .filter { enableSpaceMetrics || !it.isSpaceMetric } TODO revert
                 .forEach(this::gaugeMetric)
 
         scheduledExecutorService.scheduleWithFixedDelay(this::updateMetrics, 0, refreshInterval, TimeUnit.MILLISECONDS)
@@ -80,6 +80,7 @@ class SubContainerResourceMetrics(
                 }
                 lastResourceUsage = resourceUsage
             }
+            // TODO revert
             lastResourceUsage = ContainerResourceUsage(spaceLeftMib = 100)
 
             logger.debug { "Fetching resource usage for container $directoryContainer took ${System.currentTimeMillis() - start} ms, with space check: $includeSpaceUsage" }
