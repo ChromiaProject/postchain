@@ -44,7 +44,7 @@ import org.http4k.lens.boolean
 import org.http4k.lens.httpBodyRoot
 import org.http4k.lens.int
 import org.http4k.lens.long
-import org.http4k.lens.regex
+import org.http4k.lens.regexGroup
 import org.http4k.lens.string
 import java.io.InputStream
 import net.postchain.api.rest.json.GtvJsonFactory.auto as gtvJson
@@ -62,8 +62,8 @@ val signatureHeader = Header.string()
         }
         .optional(X_POSTCHAIN_SIGNATURE_HEADER)
 
-val txRidPath = Path.regex(ridRegex).map { TxRid(it.hexStringToByteArray()) }.of("txRid", "Hex encoded transaction RID")
-val blockRidPath = Path.regex(ridRegex).map { BlockRid(it.hexStringToByteArray()) }.of("blockRid", "Hex encoded block RID")
+val txRidPath = Path.regexGroup(ridRegex, 1).map { TxRid(it.hexStringToByteArray()) }.of("txRid", "Hex encoded transaction RID")
+val blockRidPath = Path.regexGroup(ridRegex, 1).map { BlockRid(it.hexStringToByteArray()) }.of("blockRid", "Hex encoded block RID")
 val heightPath = Path.long().of("height", "Block height")
 
 val limitQuery = Query.int().optional("limit")
@@ -78,9 +78,9 @@ val heightQuery = Query.long().map {
         it
     else
         throw LensFailure(listOf(
-                Invalid(Meta(false, "query", ParamMeta.IntegerParam, "height", "Height must be -1 (current height) or a non-negative integer"))))
+                Invalid(Meta(false, "query", ParamMeta.IntegerParam, "height", "Height must be -1 (current height) or a non-negative integer", mapOf()))))
 }.defaulted("height", -1)
-val signerQuery = Query.string().regex("([0-9a-fA-F]+)").optional("signer")
+val signerQuery = Query.string().regexGroup("([0-9a-fA-F]+)", 1).optional("signer")
 val containerQuery = Query.string().defaulted("container", "")
 
 val prettyGson = JsonFactory.makePrettyJson()
@@ -196,7 +196,7 @@ val signatureBody = ContentNegotiation.auto(signatureJsonBody, signatureGtvBody)
 
 @Suppress("UNREACHABLE_CODE", "USELESS_CAST")
 val configurationXmlOutBody: BiDiBodyLens<ByteArray> = httpBodyRoot(listOf(Meta(true, location = "body",
-        ParamMeta.StringParam, "configuration", "GtvML")), ContentType.TEXT_XML, None)
+        ParamMeta.StringParam, "configuration", "GtvML", mapOf())), ContentType.TEXT_XML, None)
         .map({ it.stream }, { Body(it) }).map(
                 { _: InputStream -> (throw UnsupportedOperationException("output only lens")) as ByteArray },
                 { it: ByteArray ->

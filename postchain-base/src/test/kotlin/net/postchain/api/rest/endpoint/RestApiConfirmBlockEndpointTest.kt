@@ -45,9 +45,6 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.spy
 import org.mockito.kotlin.whenever
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
@@ -148,7 +145,7 @@ class RestApiConfirmBlockEndpointTest {
                 bcConfig1, mock(), blockQueries, blockchainRID, mock(), postchainContext, mock(), 0L
         ))
 
-        restApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
     }
 
     @AfterEach
