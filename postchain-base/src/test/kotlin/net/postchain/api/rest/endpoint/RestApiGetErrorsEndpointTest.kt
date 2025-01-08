@@ -19,9 +19,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 
 class RestApiGetErrorsEndpointTest {
 
@@ -41,7 +38,7 @@ class RestApiGetErrorsEndpointTest {
 
         nodeDiagnosticContext = JsonNodeDiagnosticContext()
 
-        restApi = RestApi(0, basePath, nodeDiagnosticContext = nodeDiagnosticContext, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
+        restApi = RestApi(0, basePath, nodeDiagnosticContext = nodeDiagnosticContext, gracefulShutdown = false)
     }
 
     @AfterEach

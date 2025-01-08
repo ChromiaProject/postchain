@@ -24,9 +24,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 
 class RestApiGetTxInfoEndpointTest {
 
@@ -44,7 +41,7 @@ class RestApiGetTxInfoEndpointTest {
             on { live } doReturn true
         }
 
-        restApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
     }
 
     @AfterEach
@@ -70,7 +67,6 @@ class RestApiGetTxInfoEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON)
                 .header("Cache-Control", equalTo("public, max-age=31536000"))
-                .header("Expires", equalTo("Fri, 1 Jan 1971 00:00:00 GMT"))
                 .body("blockRID", equalTo("0404040404040404040404040404040404040404040404040404040404040404"))
     }
 
@@ -90,7 +86,6 @@ class RestApiGetTxInfoEndpointTest {
                 .statusCode(404)
                 .contentType(ContentType.JSON)
                 .header("Cache-Control", nullValue())
-                .header("Expires", nullValue())
                 .body("error", equalTo("Can't find transaction with RID: ${txRID.toHex()}"))
     }
 
@@ -113,7 +108,6 @@ class RestApiGetTxInfoEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON)
                 .header("Cache-Control", equalTo("private, must-revalidate"))
-                .header("Expires", equalTo("0"))
                 .header(DATA_TRUNCATED_HEADER, equalTo("false"))
                 .body(equalTo(gson.toJson(response).toString()))
     }
@@ -138,7 +132,6 @@ class RestApiGetTxInfoEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON)
                 .header("Cache-Control", equalTo("private, must-revalidate"))
-                .header("Expires", equalTo("0"))
                 .header(DATA_TRUNCATED_HEADER, equalTo("true"))
                 .body(equalTo(gson.toJson(response).toString()))
     }

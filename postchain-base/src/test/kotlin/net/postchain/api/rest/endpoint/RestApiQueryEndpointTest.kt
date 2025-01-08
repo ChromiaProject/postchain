@@ -35,9 +35,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.io.ByteArrayInputStream
 import java.math.BigInteger
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 
 /**
  * ProgrammerMistake -> 500
@@ -60,7 +57,7 @@ class RestApiQueryEndpointTest {
             on { live } doReturn true
         }
 
-        restApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
     }
 
     @AfterEach
@@ -120,7 +117,6 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON)
                 .header("Cache-Control", nullValue())
-                .header("Expires", nullValue())
                 .body(equalTo(answerString))
     }
 
@@ -149,7 +145,6 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON)
                 .header("Cache-Control", equalTo("public, max-age=17"))
-                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
                 .body(equalTo(answerString))
     }
 
@@ -178,7 +173,6 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.TEXT)
                 .header("Cache-Control", equalTo("public, max-age=17"))
-                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
                 .body(equalTo(answerString))
     }
 
@@ -206,7 +200,6 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.TEXT)
                 .header("Cache-Control", equalTo("public, max-age=$cacheTtl"))
-                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:$cacheTtl GMT"))
                 .body(equalTo(answerString))
     }
 
@@ -233,7 +226,6 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
                 .header("Cache-Control", equalTo("public, max-age=17"))
-                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
                 .header("Content-Length", Integer::parseInt, greaterThan(0))
         assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(answerBytes)
     }
@@ -262,7 +254,6 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
                 .header("Cache-Control", equalTo("public, max-age=17"))
-                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
         assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(answerBytes)
     }
 
@@ -290,7 +281,6 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
                 .header("Cache-Control", equalTo("public, max-age=17"))
-                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
                 .header("Content-Length", Integer::parseInt, greaterThan(0))
         assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(answerBytes)
     }
@@ -318,7 +308,6 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.TEXT)
                 .header("Cache-Control", equalTo("public, max-age=17"))
-                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
                 .body(equalTo(answerString))
     }
 
@@ -354,7 +343,6 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.TEXT)
                 .header("Cache-Control", equalTo("public, max-age=17"))
-                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
                 .body(equalTo(answerString))
     }
 
@@ -384,7 +372,6 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.TEXT)
                 .header("Cache-Control", equalTo("public, max-age=17"))
-                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
                 .body(equalTo(answerString))
     }
 
@@ -551,7 +538,6 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
                 .header("Cache-Control", equalTo("public, max-age=17"))
-                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
 
         assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(answer))
     }
@@ -579,7 +565,6 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
                 .header("Cache-Control", equalTo("public, max-age=17"))
-                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
 
         assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(answer))
     }
@@ -602,7 +587,6 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
                 .header("Cache-Control", equalTo("public, max-age=17"))
-                .header("Expires", equalTo("Thu, 1 Jan 1970 00:00:17 GMT"))
 
         assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(answer))
     }

@@ -19,9 +19,6 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 
 class RestApiBlockchainHeightEndpointTest {
 
@@ -45,10 +42,10 @@ class RestApiBlockchainHeightEndpointTest {
 
     @BeforeEach
     fun setup() {
-        restApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
-        restApiRedirected = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC), subnodeHttpRedirect = true)
-        restApiFoo = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
-        restApiBar = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
+        restApiRedirected = RestApi(0, basePath, gracefulShutdown = false, subnodeHttpRedirect = true)
+        restApiFoo = RestApi(0, basePath, gracefulShutdown = false)
+        restApiBar = RestApi(0, basePath, gracefulShutdown = false)
 
         modelLocal = mock {
             on { chainIID } doReturn 1L

@@ -16,9 +16,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 
 /**
  * [GetStatus] and [GetTx] endpoints have common part,
@@ -43,7 +40,7 @@ class RestApiGetStatusEndpointTest {
             on { getStatus(TxRid(txHashHex.hexStringToByteArray())) } doReturn ApiStatus(TransactionStatus.CONFIRMED)
         }
 
-        restApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
     }
 
     @AfterEach

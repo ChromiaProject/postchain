@@ -29,7 +29,6 @@ import net.postchain.api.rest.configurationInBody
 import net.postchain.api.rest.configurationOutBody
 import net.postchain.api.rest.containerQuery
 import net.postchain.api.rest.controller.http4k.NettyWithCustomWorkerGroup
-import net.postchain.api.rest.controller.http4k.expires
 import net.postchain.api.rest.emptyBody
 import net.postchain.api.rest.errorBody
 import net.postchain.api.rest.excludeEmptyQuery
@@ -122,7 +121,7 @@ import org.http4k.core.then
 import org.http4k.core.toParametersMap
 import org.http4k.core.with
 import org.http4k.filter.AllowAll
-import org.http4k.filter.CachingFilters
+import org.http4k.filter.CachingFilters.CacheResponse
 import org.http4k.filter.CorsPolicy
 import org.http4k.filter.MicrometerMetrics
 import org.http4k.filter.OriginPolicy
@@ -144,7 +143,6 @@ import org.http4k.server.ServerConfig
 import org.http4k.server.asServer
 import java.io.Closeable
 import java.nio.ByteBuffer
-import java.time.Clock
 import java.time.Duration
 import java.util.concurrent.Semaphore
 
@@ -171,7 +169,6 @@ class RestApi(
         listenPort: Int,
         val basePath: String,
         private val nodeDiagnosticContext: NodeDiagnosticContext = JsonNodeDiagnosticContext(),
-        private val clock: Clock = Clock.systemUTC(),
         gracefulShutdown: Boolean = true,
         requestConcurrency: Int = 0,
         private val chainRequestConcurrency: Int = -1,
@@ -295,8 +292,8 @@ class RestApi(
     private val liveBlockchain = blockchainRefFilter(true).then(blockchainMetricsFilter).then(externalRoutingFilter).then(ServerFilters.GZip())
     private val blockchain = blockchainRefFilter(false).then(blockchainMetricsFilter).then(externalRoutingFilter).then(ServerFilters.GZip())
 
-    private val immutableResponse = CachingFilters.Response.MaxAge(clock, Duration.ofDays(365))
-    private val volatileResponse = CachingFilters.Response.NoCache()
+    private val immutableResponse = CacheResponse.MaxAge(Duration.ofDays(365))
+    private val volatileResponse = CacheResponse.NoCache()
 
     private val app = routes(
             "/" bind static(ResourceLoader.Classpath("/restapi-root")),
@@ -580,7 +577,7 @@ class RestApi(
 
     private fun getQueryResponse(response: Response, cacheTtlSeconds: Long): Response = if (cacheTtlSeconds > 0) {
         val ttl = Duration.ofSeconds(cacheTtlSeconds)
-        response.public().maxAge(ttl).expires(ttl, clock)
+        response.public().maxAge(ttl)
     } else {
         response
     }
@@ -835,7 +832,7 @@ class RestApi(
     private fun model(request: Request): Model = modelKey(request) ?: throw invalidBlockchainRid()
 
     private fun invalidBlockchainRid() = LensFailure(listOf(
-            Invalid(Meta(true, "path", ParamMeta.StringParam, BLOCKCHAIN_RID, "Invalid blockchainRID. Expected 64 hex digits [0-9a-fA-F]"))))
+            Invalid(Meta(true, "path", ParamMeta.StringParam, BLOCKCHAIN_RID, "Invalid blockchainRID. Expected 64 hex digits [0-9a-fA-F]", mapOf()))))
 
     private fun resolveBlockchain(ref: BlockchainRef): BlockchainRid = when (ref) {
         is BlockchainRidRef -> ref.rid
