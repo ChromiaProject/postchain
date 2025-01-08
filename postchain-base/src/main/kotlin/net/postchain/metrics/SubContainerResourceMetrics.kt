@@ -80,6 +80,7 @@ class SubContainerResourceMetrics(
                 }
                 lastResourceUsage = resourceUsage
             }
+            lastResourceUsage = ContainerResourceUsage(spaceLeftMib = 100)
 
             logger.debug { "Fetching resource usage for container $directoryContainer took ${System.currentTimeMillis() - start} ms, with space check: $includeSpaceUsage" }
         } catch (e: Exception) {
