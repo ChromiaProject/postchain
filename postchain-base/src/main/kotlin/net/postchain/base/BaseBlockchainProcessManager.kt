@@ -29,6 +29,7 @@ import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.BlockchainState
 import net.postchain.core.DefaultBlockchainConfigurationFactory
 import net.postchain.core.EContext
+import net.postchain.core.FaultyExtensionException
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.DiagnosticProperty
@@ -194,8 +195,8 @@ open class BaseBlockchainProcessManager(
                         try {
                             eContext = blockBuilderStorage.openWriteConnection(chainId)
                             val configHash = GtvDecoder.decodeGtv(rawConfigurationData).toObject<BlockchainConfigurationData>().configHash
-                            if (hasBuiltInitialBlock(eContext) && !hasBuiltBlockWithConfig(eContext, blockHeight, configHash)) {
-                                revertConfiguration(chainId, bTrace, eContext, blockHeight, rawConfigurationData)
+                            if (hasBuiltInitialBlock(eContext) && !hasBuiltBlockWithConfig(eContext, blockHeight, configHash) && (e is UserMistake || e is FaultyExtensionException)) {
+                                revertConfiguration(chainId, bTrace, eContext, blockHeight, rawConfigurationData, e.message ?: "Unknown error")
                             } else {
                                 blockBuilderStorage.closeWriteConnection(eContext, false)
                             }
@@ -284,8 +285,8 @@ open class BaseBlockchainProcessManager(
     }
 
     private fun revertConfiguration(chainId: Long, bTrace: BlockTrace?, eContext: EContext, blockHeight: Long,
-                                    failedConfig: ByteArray) {
-        logger.info("Reverting faulty configuration at height $blockHeight")
+                                    failedConfig: ByteArray, errorMessage: String) {
+        logger.info("Reverting faulty configuration at height $blockHeight: $errorMessage")
         val failedConfigHash = GtvFactory.decodeGtv(failedConfig).toObject<BlockchainConfigurationData>().configHash
 
         DatabaseAccess.of(eContext).apply {

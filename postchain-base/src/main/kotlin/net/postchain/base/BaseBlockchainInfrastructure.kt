@@ -8,7 +8,6 @@ import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -24,6 +23,7 @@ import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.BlockchainState
 import net.postchain.core.DynamicClassName
 import net.postchain.core.EContext
+import net.postchain.core.FaultyExtensionException
 import net.postchain.core.Storage
 import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.core.SynchronizationInfrastructureExtension
@@ -165,7 +165,7 @@ open class BaseBlockchainInfrastructure(
             try {
                 getSynchronizationInfrastructureExtension(it).connectProcess(process)
             } catch (e: Exception) {
-                throw ProgrammerMistake("Error when connecting sync-infra extension ${it.className}: ${e.message}", e)
+                throw FaultyExtensionException("Error when connecting sync-infra extension ${it.className}: ${e.message}", e)
             }
         }
         apiInfrastructure.connectProcess(process)

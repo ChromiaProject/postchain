@@ -27,6 +27,7 @@ import net.postchain.core.BlockchainEngine
 import net.postchain.core.BlockchainRestartNotifier
 import net.postchain.core.ConfigurationMismatchException
 import net.postchain.core.EContext
+import net.postchain.core.FaultyExtensionException
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.Storage
 import net.postchain.core.Transaction
@@ -274,9 +275,9 @@ open class BaseBlockchainEngine(
             }
             if (e !is ForceStopBlockBuildingException) {
                 try {
-                    if (hasBuiltInitialBlock()) {
+                    if (hasBuiltInitialBlock() && e is FaultyExtensionException) {
                         if (!hasBuiltFirstBlockAfterConfigUpdate) {
-                            revertConfiguration(blockBuilder.height, blockchainConfiguration.configHash)
+                            revertConfiguration(blockBuilder.height, blockchainConfiguration.configHash, e.cause?.message ?: e.message)
                         } else {
                             // See if we have a configuration update that potentially can fix our block building issues
                             checkForNewConfiguration()
@@ -416,8 +417,8 @@ open class BaseBlockchainEngine(
 
     private fun hasBuiltInitialBlock() = DatabaseAccess.of(currentEContext).getLastBlockHeight(currentEContext) > -1L
 
-    private fun revertConfiguration(blockHeight: Long?, failedConfigHash: ByteArray) {
-        logger.info("Reverting faulty configuration with hash ${failedConfigHash.toHex()} at height $blockHeight")
+    private fun revertConfiguration(blockHeight: Long?, failedConfigHash: ByteArray, errorMessage: String?) {
+        logger.info("Reverting faulty configuration with hash ${failedConfigHash.toHex()} at height $blockHeight: $errorMessage")
         currentEContext.conn.rollback() // rollback any DB updates the new and faulty configuration did
         blockHeight?.let {
             DatabaseAccess.of(currentEContext).apply {
