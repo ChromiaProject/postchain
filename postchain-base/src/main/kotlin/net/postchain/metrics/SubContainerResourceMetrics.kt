@@ -3,6 +3,7 @@ package net.postchain.metrics
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.Meter
 import io.micrometer.core.instrument.Metrics
+import io.micrometer.core.instrument.TimeGauge
 import mu.KLogging
 import net.postchain.containers.bpm.ContainerResourceUsage
 import java.io.Closeable
@@ -11,12 +12,14 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.reflect.KProperty1
 
+
 const val SUB_CONTAINER_METRICS_MEMORY_USAGE = "sub_container,memory_usage"
 const val SUB_CONTAINER_METRICS_MEMORY_USAGE_PERCENTAGE = "sub_container,memory_usage_percentage"
 const val SUB_CONTAINER_METRICS_CPU_USAGE_PERCENTAGE = "sub_container,cpu_usage_percentage"
 const val SUB_CONTAINER_METRICS_SPACE_USAGE_MIB = "sub_container,space_usage_mib"
 const val SUB_CONTAINER_METRICS_SPACE_USAGE_PERCENTAGE = "sub_container,space_usage_percentage"
 const val SUB_CONTAINER_METRICS_SPACE_LEFT_MB = "sub_container,space_left_mb"
+const val SUB_CONTAINER_METRICS_SPACE_UPDATE_TIME = "sub_container,space_update_time"
 const val SUB_CONTAINER_CONTAINER_NAME_TAG = "containerName"
 
 /**
@@ -65,6 +68,19 @@ class SubContainerResourceMetrics(
 //                .filter { enableSpaceMetrics || !it.isSpaceMetric } TODO revert
                 .forEach(this::gaugeMetric)
 
+        TimeGauge.builder(SUB_CONTAINER_METRICS_SPACE_UPDATE_TIME, {
+            if (lastSpaceCheckTime != null) {
+                lastSpaceCheckTime!!.toEpochMilli()
+            } else {
+                Double.NaN
+            }
+        }, TimeUnit.MILLISECONDS)
+                .tags(SUB_CONTAINER_CONTAINER_NAME_TAG, directoryContainer)
+                .register(Metrics.globalRegistry)
+                .apply {
+                    metrics.add(this)
+                }
+
         scheduledExecutorService.scheduleWithFixedDelay(this::updateMetrics, 0, refreshInterval, TimeUnit.MILLISECONDS)
     }
 
@@ -90,12 +106,13 @@ class SubContainerResourceMetrics(
     }
 
     private fun checkSpaceUsage(): Boolean {
-        if (enableSpaceMetrics && (lastSpaceCheckTime ?: Instant.MIN)
-                        .isBefore(Instant.now().minusMillis(spaceRefreshInterval))) {
+        // TODO revert
+//        if (enableSpaceMetrics && (lastSpaceCheckTime ?: Instant.MIN)
+//                        .isBefore(Instant.now().minusMillis(spaceRefreshInterval))) {
             lastSpaceCheckTime = Instant.now()
             return true
-        }
-        return false
+//        }
+//        return false
     }
 
     private fun gaugeMetric(metricSpec: SubContainerResourceMetricData): Gauge {
