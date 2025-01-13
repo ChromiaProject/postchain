@@ -42,7 +42,9 @@ class SubContainerResourceMetrics(
 
             val metric = Metrics.globalRegistry.meters.find { metric ->
                 metric.id.name == metricName && metric.id.tags.any { tag ->
-                    tag.key == SUB_CONTAINER_CONTAINER_NAME_TAG && tag.value == containerName } }
+                    tag.key == SUB_CONTAINER_CONTAINER_NAME_TAG && tag.value == containerName
+                }
+            }
 
             return metric?.measure()?.iterator()?.next()?.value
         }
@@ -65,7 +67,7 @@ class SubContainerResourceMetrics(
 
     init {
         metricDefinitions
-//                .filter { enableSpaceMetrics || !it.isSpaceMetric } TODO revert
+                .filter { enableSpaceMetrics || !it.isSpaceMetric }
                 .forEach(this::gaugeMetric)
 
         TimeGauge.builder(SUB_CONTAINER_METRICS_SPACE_UPDATE_TIME, {
@@ -96,8 +98,6 @@ class SubContainerResourceMetrics(
                 }
                 lastResourceUsage = resourceUsage
             }
-            // TODO revert
-            lastResourceUsage = ContainerResourceUsage(spaceLeftMib = 100)
 
             logger.debug { "Fetching resource usage for container $directoryContainer took ${System.currentTimeMillis() - start} ms, with space check: $includeSpaceUsage" }
         } catch (e: Exception) {
@@ -106,13 +106,12 @@ class SubContainerResourceMetrics(
     }
 
     private fun checkSpaceUsage(): Boolean {
-        // TODO revert
-//        if (enableSpaceMetrics && (lastSpaceCheckTime ?: Instant.MIN)
-//                        .isBefore(Instant.now().minusMillis(spaceRefreshInterval))) {
+        if (enableSpaceMetrics && (lastSpaceCheckTime ?: Instant.MIN)
+                        .isBefore(Instant.now().minusMillis(spaceRefreshInterval))) {
             lastSpaceCheckTime = Instant.now()
             return true
-//        }
-//        return false
+        }
+        return false
     }
 
     private fun gaugeMetric(metricSpec: SubContainerResourceMetricData): Gauge {
@@ -127,7 +126,7 @@ class SubContainerResourceMetrics(
                 .register(Metrics.globalRegistry)
                 .apply {
                     metrics.add(this)
-                 }
+                }
     }
 
     override fun close() {
