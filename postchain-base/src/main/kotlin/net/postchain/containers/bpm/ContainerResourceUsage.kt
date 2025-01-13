@@ -15,6 +15,7 @@ class ContainerResourceUsage(
         spaceLimitMiB: Long? = null,
         spaceUsagePercentage: Double? = null,
         spaceLeftMib: Long? = null,
+        spaceUpdateTime: Long? = null,
 ) {
 
     var memoryUsage: Long? = memoryUsage
@@ -33,6 +34,7 @@ class ContainerResourceUsage(
         private set
     var spaceLeftMib: Long? = spaceLeftMib
         private set
+    var spaceUpdateTime: Long? = spaceUpdateTime
 
     companion object {
 
@@ -85,5 +87,6 @@ class ContainerResourceUsage(
         this.spaceLimitMiB = lastResourceUsage.spaceLimitMiB
         this.spaceUsagePercentage = lastResourceUsage.spaceUsagePercentage
         this.spaceLeftMib = lastResourceUsage.spaceLeftMib
+        this.spaceUpdateTime = lastResourceUsage.spaceUpdateTime
     }
 }

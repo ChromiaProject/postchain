@@ -2,6 +2,7 @@ package net.postchain.metrics
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isGreaterThan
 import assertk.assertions.isNull
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.prometheus.PrometheusConfig
@@ -40,6 +41,7 @@ class SubContainerResourceMetricsTest {
                     assertThat(getContainerMetricValue("container-1", SUB_CONTAINER_METRICS_CPU_USAGE_PERCENTAGE)).isEqualTo(4.0)
                     assertThat(getContainerMetricValue("container-1", SUB_CONTAINER_METRICS_SPACE_USAGE_MIB)).isEqualTo(5.0)
                     assertThat(getContainerMetricValue("container-1", SUB_CONTAINER_METRICS_SPACE_USAGE_PERCENTAGE)).isEqualTo(7.0)
+                    assertThat(getContainerMetricValue("container-1", SUB_CONTAINER_METRICS_SPACE_UPDATE_TIME)!!).isGreaterThan(0.0)
                 }
 
         metrics.close()
@@ -76,6 +78,7 @@ class SubContainerResourceMetricsTest {
                 .untilAsserted {
                     assertThat(getContainerMetricValue("container-1", SUB_CONTAINER_METRICS_MEMORY_USAGE)).isEqualTo(1.0)
                     assertThat(getContainerMetricValue("container-1", SUB_CONTAINER_METRICS_SPACE_USAGE_MIB)).isNull()
+                    assertThat(getContainerMetricValue("container-1", SUB_CONTAINER_METRICS_SPACE_UPDATE_TIME)).isNull()
                 }
 
         metrics.close()

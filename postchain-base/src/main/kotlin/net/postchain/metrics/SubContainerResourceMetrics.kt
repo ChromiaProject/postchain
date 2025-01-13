@@ -3,7 +3,6 @@ package net.postchain.metrics
 import io.micrometer.core.instrument.Gauge
 import io.micrometer.core.instrument.Meter
 import io.micrometer.core.instrument.Metrics
-import io.micrometer.core.instrument.TimeGauge
 import mu.KLogging
 import net.postchain.containers.bpm.ContainerResourceUsage
 import java.io.Closeable
@@ -57,6 +56,7 @@ class SubContainerResourceMetrics(
                 SubContainerResourceMetricData(SUB_CONTAINER_METRICS_SPACE_USAGE_MIB, "Space usage in MiB", ContainerResourceUsage::spaceUsageMiB, true),
                 SubContainerResourceMetricData(SUB_CONTAINER_METRICS_SPACE_USAGE_PERCENTAGE, "Space usage in percent", ContainerResourceUsage::spaceUsagePercentage, true),
                 SubContainerResourceMetricData(SUB_CONTAINER_METRICS_SPACE_LEFT_MB, "Space left in MB", ContainerResourceUsage::spaceLeftMib, true),
+                SubContainerResourceMetricData(SUB_CONTAINER_METRICS_SPACE_UPDATE_TIME, "Space update time", ContainerResourceUsage::spaceUpdateTime, true),
         )
     }
 
@@ -70,19 +70,6 @@ class SubContainerResourceMetrics(
                 .filter { enableSpaceMetrics || !it.isSpaceMetric }
                 .forEach(this::gaugeMetric)
 
-        TimeGauge.builder(SUB_CONTAINER_METRICS_SPACE_UPDATE_TIME, {
-            if (lastSpaceCheckTime != null) {
-                lastSpaceCheckTime!!.toEpochMilli()
-            } else {
-                Double.NaN
-            }
-        }, TimeUnit.MILLISECONDS)
-                .tags(SUB_CONTAINER_CONTAINER_NAME_TAG, directoryContainer)
-                .register(Metrics.globalRegistry)
-                .apply {
-                    metrics.add(this)
-                }
-
         scheduledExecutorService.scheduleWithFixedDelay(this::updateMetrics, 0, refreshInterval, TimeUnit.MILLISECONDS)
     }
 
@@ -93,6 +80,7 @@ class SubContainerResourceMetrics(
             val start = System.currentTimeMillis()
             val resourceUsage = getContainerResourceUsage(includeSpaceUsage)
             if (resourceUsage != null) {
+                resourceUsage.spaceUpdateTime = lastSpaceCheckTime?.toEpochMilli()
                 if (!includeSpaceUsage && lastResourceUsage != null) {
                     resourceUsage.copySpacePropertiesFrom(lastResourceUsage!!)
                 }
