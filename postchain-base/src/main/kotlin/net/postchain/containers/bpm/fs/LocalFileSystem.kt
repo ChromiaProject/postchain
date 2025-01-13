@@ -30,12 +30,12 @@ open class LocalFileSystem(protected val containerConfig: ContainerNodeConfig, p
                 return null
             }
             logger.info("Container dir has been created: $root")
-            /*containerConfig.subnodeUser?.let { subnodeUser ->
+            containerConfig.subnodeUser?.let { subnodeUser ->
                 commandExecutor.runCommand(arrayOf("chown", subnodeUser, root.toString()))?.let {
                     logger.warn("Unable change owner of $root to $subnodeUser: $it")
                     return null
                 }
-            }*/
+            }
         }
         return root
     }
@@ -44,12 +44,12 @@ open class LocalFileSystem(protected val containerConfig: ContainerNodeConfig, p
     protected fun createPgdata(containerName: ContainerName): Boolean {
         val hostPgdata = hostPgdataOf(containerName)
         hostPgdata.toFile().mkdirs()
-        /*containerConfig.subnodeUser?.let { subnodeUser ->
+        containerConfig.subnodeUser?.let { subnodeUser ->
             commandExecutor.runCommand(arrayOf("chown", subnodeUser, hostPgdata.toString()))?.let {
                 logger.warn("Unable change owner of $hostPgdata to $subnodeUser: $it")
                 return false
             }
-        }*/
+        }
         return true
     }
 
