@@ -4,6 +4,7 @@ package net.postchain.base
 
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
@@ -15,17 +16,16 @@ import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockDetailsTruncated
-import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockQueryHeightFilter
 import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.core.block.BlockStore
 import net.postchain.core.block.MultiSigBlockWitness
+import net.postchain.core.block.SimpleBlockHeader
 import net.postchain.crypto.Digester
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
-import net.postchain.gtv.Gtv
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import java.sql.SQLException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
@@ -40,8 +40,8 @@ import java.util.concurrent.CompletionStage
  * @param chainId Blockchain identifier
  * @param mySubjectId Public key related to the private key used for signing blocks
  */
-open class BaseBlockQueries(
-        private val digester: Digester,
+abstract class BaseBlockQueries(
+        digester: Digester,
         private val storage: Storage,
         val blockStore: BlockStore,
         private val chainId: Long,
@@ -160,15 +160,12 @@ open class BaseBlockQueries(
         blockStore.isTransactionConfirmed(it, txRID)
     }
 
-    override fun query(name: String, args: Gtv): CompletionStage<Gtv> =
-            CompletableFuture.failedStage(UserMistake("Queries are not supported"))
-
-    override fun getConfirmationProof(txRID: ByteArray): CompletionStage<ConfirmationProof?> = runOpRegardless {
-        blockStore.getConfirmationProofMaterial(it, txRID)?.let { material ->
+    override fun getConfirmationProof(txRID: ByteArray): CompletionStage<ConfirmationProof?> = runOpRegardless { ctx ->
+        blockStore.getConfirmationProofMaterial(ctx, txRID)?.let { material ->
             val decodedWitness = decodeWitness(material.witness)
-            val decodedBlockHeader = decodeBlockHeader(material.header)
 
-            val result = decodedBlockHeader.merkleProofTree(material.txHash, material.txHashes)
+            val version = blockStore.getMerkleHashVersion(ctx, BlockHeaderData.fromBinary(material.header).getHeight())
+            val result = merkleProofTree(material.txHash, material.txHashes, makeMerkleHashCalculator(version))
             val txIndex = result.first
             val merkleProofTree = result.second
             ConfirmationProof(
@@ -179,11 +176,6 @@ open class BaseBlockQueries(
                     txIndex
             )
         }
-    }
-
-    override fun getBlockHeader(blockRID: ByteArray): CompletionStage<BlockHeader> = runOpRegardless {
-        val headerBytes = blockStore.getBlockHeader(it, blockRID)
-        decodeBlockHeader(headerBytes)
     }
 
     /**
@@ -205,7 +197,10 @@ open class BaseBlockQueries(
                     val headerBytes = blockStore.getBlockHeader(it, blockRID)
                     val witnessBytes = blockStore.getWitnessData(it, blockRID)
                     val txBytes = if (includeTransactions) blockStore.getBlockTransactions(it, blockRID) else listOf()
-                    val header = decodeBlockHeader(headerBytes)
+                    val header = SimpleBlockHeader(
+                            prevBlockRID = BlockHeaderData.fromBinary(headerBytes).getPreviousBlockRid(),
+                            rawData = headerBytes,
+                            blockRID = blockRID)
                     val witness = decodeWitness(witnessBytes)
 
                     BlockDataWithWitness(header, txBytes, witness)
@@ -216,9 +211,7 @@ open class BaseBlockQueries(
         isShutdown = true
     }
 
-    protected open fun decodeBlockHeader(headerData: ByteArray): BaseBlockHeader =
-            BaseBlockHeader(headerData, GtvMerkleHashCalculator(digester))
+    protected abstract fun decodeBlockHeader(headerData: ByteArray): BaseBlockHeader
 
-    protected open fun decodeWitness(witnessData: ByteArray): MultiSigBlockWitness =
-            BaseBlockWitness.fromBytes(witnessData)
+    protected abstract fun decodeWitness(witnessData: ByteArray): MultiSigBlockWitness
 }

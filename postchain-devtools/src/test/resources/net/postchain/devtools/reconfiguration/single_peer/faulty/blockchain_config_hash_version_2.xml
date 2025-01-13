@@ -7,6 +7,9 @@
             <entry key="merkle_hash_version"><int>2</int></entry>
         </dict>
     </entry>
+    <entry key="config_consensus_strategy">
+        <string>HEADER_HASH</string>
+    </entry>
     <entry key="blockstrategy">
         <!--
         This block strategy is the default one if no config is made
@@ -24,7 +27,7 @@
         This is the main blockchain configuration class for chain 1
         Examples:
         * Single node GTX: SingleNodeGtxBlockchainConfigurationFactory
-        * Normal Gtx: GTXBlockchainConfigurationFactory
+        * Normal Gtx: net.postchain.gtx.GTXBlockchainConfigurationFactory
         -->
         <string>net.postchain.gtx.GTXBlockchainConfigurationFactory</string>
     </entry>

@@ -16,7 +16,7 @@ class GtvMerkleHashSummaryFactory(
     /**
      * Note: should have looked in cache before this, because here we will do the calculation no matter what.
      */
-    override fun calculateMerkleRoot(value: Gtv, calculator: MerkleHashCalculator<Gtv>): MerkleHashSummary {
+    override fun calculateMerkleRoot(value: Gtv, calculator: MerkleHashCalculator<Gtv, GtvPathSet>): MerkleHashSummary {
         val gtvTreeFactory = treeFactory as GtvBinaryTreeFactory
         val binaryTree = gtvTreeFactory.buildFromGtv(value)
 
@@ -26,7 +26,7 @@ class GtvMerkleHashSummaryFactory(
         return calculateMerkleRoot(proofTree, calculator)
     }
 
-    override fun buildProofTree(value: Gtv, calculator: MerkleHashCalculator<Gtv>): GtvMerkleProofTree {
+    override fun buildProofTree(value: Gtv, calculator: MerkleHashCalculator<Gtv, GtvPathSet>): GtvMerkleProofTree {
         val gtvTreeFactory = treeFactory as GtvBinaryTreeFactory
         val root: GtvBinaryTree = gtvTreeFactory.buildFromGtv(value)
         val gtvProofFactory = proofFactory as GtvMerkleProofTreeFactory

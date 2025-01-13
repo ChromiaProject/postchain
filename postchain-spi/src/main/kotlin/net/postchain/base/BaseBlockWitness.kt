@@ -6,6 +6,7 @@ import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
+import net.postchain.core.BlockRid
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.MultiSigBlockWitness
@@ -84,17 +85,22 @@ class BaseBlockWitness(private val _rawData: ByteArray, private val _signatures:
  * Class containing the necessary data and functionality necessary for building a block witness.
  * Will collect signatures and release a BlockWitness instance when a threshold number is reached.
  *
- * @property blockHeader The header of the block to which [signatures] applies
+ * @property blockRID The RID of the block to which [signatures] applies
  * @property subjects Public keys eligible for signing a block
  * @property threshold Minimum amount of signatures necessary for witness to be valid
  */
 class BaseBlockWitnessBuilder(val cryptoSystem: CryptoSystem,
-                              val blockHeader: BlockHeader,
+                              val blockRID: BlockRid,
                               private val subjects: Array<ByteArray>,
                               override val threshold: Int) : MultiSigBlockWitnessBuilder {
 
+    constructor(cryptoSystem: CryptoSystem,
+                blockHeader: BlockHeader,
+                subjects: Array<ByteArray>,
+                threshold: Int) : this(cryptoSystem, BlockRid(blockHeader.blockRID), subjects, threshold)
+
     /**
-     * Signatures from [subjects] that have signed the [blockHeader]
+     * Signatures from [subjects] that have signed the block
      */
     val signatures = mutableListOf<Signature>()
 
@@ -124,7 +130,7 @@ class BaseBlockWitnessBuilder(val cryptoSystem: CryptoSystem,
     }
 
     /**
-     * Add signature [s] to [signatures] if one of the public keys found in [subjects] verifies [s] for [blockHeader]
+     * Add signature [s] to [signatures] if one of the public keys found in [subjects] verifies [s] for the block
      *
      * @throws UserMistake If subject is not authorized to sign blocks
      * @throws UserMistake If subject attempts to add more than one signature
@@ -138,7 +144,7 @@ class BaseBlockWitnessBuilder(val cryptoSystem: CryptoSystem,
         if (signatures.any { it.subjectID.contentEquals(s.subjectID) }) {
             return
         }
-        if (!cryptoSystem.verifyDigest(blockHeader.blockRID, s)) {
+        if (!cryptoSystem.verifyDigest(blockRID.data, s)) {
             throw UserMistake("Invalid signature from subject ${s.subjectID.toHex()}")
         }
         signatures.add(s)

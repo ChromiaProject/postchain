@@ -36,8 +36,9 @@ import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.config.Chain0BlockchainConfigurationFactory
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.managed.config.ManagedDataSourceAware
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.withLock
 import kotlin.math.max
 import kotlin.system.measureTimeMillis
@@ -74,7 +75,6 @@ import kotlin.system.measureTimeMillis
  * Doc: see the /doc/postchain_ManagedModeFlow.graphml (created with yEd)
  *
  */
-@Suppress("PropertyName")
 open class ManagedBlockchainProcessManager(
         postchainContext: PostchainContext,
         blockchainInfrastructure: BlockchainInfrastructure,
@@ -88,7 +88,7 @@ open class ManagedBlockchainProcessManager(
 ) {
 
     protected open lateinit var dataSource: ManagedNodeDataSource
-    protected val areBlockchainsPruning = AtomicBoolean(false)
+    protected val blockchainPruningExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
 
     @Volatile
     protected var currentInactiveBlockchainsHeight = 0L
@@ -96,7 +96,7 @@ open class ManagedBlockchainProcessManager(
     companion object : KLogging()
 
     init {
-        executor.scheduleWithFixedDelay(
+        blockchainPruningExecutor.scheduleWithFixedDelay(
                 ::pruneRemovedBlockchains, appConfig.housekeepingIntervalMs, appConfig.housekeepingIntervalMs, TimeUnit.MILLISECONDS)
     }
 
@@ -241,7 +241,7 @@ open class ManagedBlockchainProcessManager(
     private fun saveConfigurationHashInDatabaseIfNotAlreadyExists(bctx: BlockEContext, blockchainConfig: BlockchainConfiguration) {
         val db = DatabaseAccess.of(bctx)
         if (!db.configurationHashExists(bctx, blockchainConfig.configHash)) {
-            db.addConfigurationHash(bctx, bctx.height, blockchainConfig.configHash)
+            db.addConfigurationHash(bctx, bctx.height, blockchainConfig.configHash, blockchainConfig.merkleHashVersion)
         }
     }
 
@@ -291,13 +291,11 @@ open class ManagedBlockchainProcessManager(
 
     protected fun pruneRemovedBlockchains() {
         if (!::dataSource.isInitialized) return
-        if (!areBlockchainsPruning.compareAndSet(false, true)) return
 
         try {
             val inactiveChains = dataSource.findNextInactiveBlockchains(currentInactiveBlockchainsHeight)
             withLoggingContext(CHAIN_IID_TAG to CHAIN0.toString()) {
-                val chainsToLog = inactiveChains.associate { it.rid.toHex() to (it.state to it.height) }
-                logger.debug { "Inactive blockchains starting from height $currentInactiveBlockchainsHeight: $chainsToLog" }
+                logger.debug { "Inactive blockchains starting from height $currentInactiveBlockchainsHeight: ${inactiveChains.associate { it.rid.toHex() to (it.state to it.height) }}" }
 
                 // No inactive chains, OR some of the inactive chains have not yet been stopped. We'll be back on the next iteration.
                 when {
@@ -324,7 +322,7 @@ open class ManagedBlockchainProcessManager(
                 ) {
                     if (inactiveChainId != null) {
                         if (chain.state == BlockchainState.REMOVED) {
-                            logger.debug { "Deleting blockchain" }
+                            logger.info { "Deleting blockchain" }
                             val elapsed = measureTimeMillis {
                                 withReadWriteConnection(sharedStorage, inactiveChainId) {
                                     BlockchainApi.deleteBlockchain(it)
@@ -332,7 +330,7 @@ open class ManagedBlockchainProcessManager(
                             }
                             logger.debug { "Blockchain deleted in $elapsed ms" }
                         } else if (chain.state == BlockchainState.ARCHIVED) {
-                            logger.debug { "Archiving blockchain" }
+                            logger.info { "Archiving blockchain" }
                             val elapsed = measureTimeMillis {
                                 withReadWriteConnection(sharedStorage, inactiveChainId) {
                                     BlockchainApi.archiveBlockchain(it)
@@ -348,8 +346,6 @@ open class ManagedBlockchainProcessManager(
             currentInactiveBlockchainsHeight = inactiveChains.first().height
         } catch (e: Exception) {
             logger.error(e) { e.message }
-        } finally {
-            areBlockchainsPruning.set(false)
         }
     }
 
@@ -391,7 +387,7 @@ open class ManagedBlockchainProcessManager(
                 }
                 val config = currentBlockDataSource.getConfiguration(brid.data, nextConfigHeight)!!
                 try {
-                    GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(config), brid)
+                    GTXBlockchainConfigurationFactory.validateConfiguration(GtvDecoder.decodeGtv(config), brid, bctx)
                     db.addConfigurationData(bctx, nextConfigHeight, config)
                 } catch (e: Exception) {
                     logger.error("Configuration for height $nextConfigHeight is invalid and will not be applied", e)

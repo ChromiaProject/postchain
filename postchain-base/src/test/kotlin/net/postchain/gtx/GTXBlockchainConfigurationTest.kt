@@ -13,12 +13,12 @@ import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.configuration.BlockchainFeatures
 import net.postchain.base.gtv.GtvToBlockchainRidFactory
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.ExecutionContext
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.core.NodeRid
 import net.postchain.crypto.devtools.MockCryptoSystem
-import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.mapper.toObject
 import org.junit.jupiter.api.Test
@@ -59,13 +59,13 @@ class GTXBlockchainConfigurationTest {
     fun `unsupported feature version`() {
         assertFailure {
             testConfig("unsupported_feature.xml")
-        }.isInstanceOf(UserMistake::class).messageContains("Unsupported merkle_hash_version version: 2")
+        }.isInstanceOf(ProgrammerMistake::class).messageContains("Unknown merkle hash version 3")
     }
 
     private fun testConfig(fileName: String): GTXBlockchainConfiguration {
         val configGtv = GtvMLParser.parseGtvML(javaClass.getResource(fileName)!!.readText())
-        val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configGtv, ::sha256Digest)
         val configData = configGtv.toObject<BlockchainConfigurationData>()
+        val blockchainRid = GtvToBlockchainRidFactory.calculateBlockchainRid(configData)
         val gtxModule = GTXBlockchainConfigurationFactory.makeGtxModule(blockchainRid, configData)
         gtxModule.initializeDB(object : ExecutionContext {
             override val chainID: Long = 1L

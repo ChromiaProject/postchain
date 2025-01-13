@@ -4,7 +4,7 @@ package net.postchain.base
 
 import net.postchain.common.BlockchainRid
 import net.postchain.crypto.Secp256K1CryptoSystem
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -14,7 +14,7 @@ class BaseBlockHeaderTest {
     val blockchainRID = BlockchainRid.ZERO_RID
     val prevBlockRID0 = ByteArray(32, { if (it == 31) 99 else 0 }) // This is incorrect. Should include 99 at the end
     val cryptoSystem = Secp256K1CryptoSystem()
-    val merkeHashCalculator = GtvMerkleHashCalculator(cryptoSystem)
+    val merkeHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem)
 
     @Test
     fun makeHeaderWithCchainId0() {

@@ -19,7 +19,7 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.managed.query.QueryRunner
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -175,7 +175,7 @@ class BaseManagedNodeDataSourceTest {
 
     companion object {
 
-        private val hashCalculator: GtvMerkleHashCalculator = GtvMerkleHashCalculator(Secp256K1CryptoSystem())
+        private val hashCalculator = GtvMerkleHashCalculatorV2(Secp256K1CryptoSystem())
 
         @JvmStatic
         fun getPeerInfosTestData(): List<Array<Any>> {
@@ -265,7 +265,9 @@ class BaseManagedNodeDataSourceTest {
         fun getPendingBlockchainConfigurationTestData(): List<Array<Any?>> {
             val pubKey0 = PubKey(ByteArray(33) { 0 })
 
-            val baseConfig0: Gtv = gtv(mapOf())
+            val baseConfig0: Gtv = gtv(mapOf(
+                    "configurationfactory" to gtv(""),
+            ))
             val encodedConfig0 = GtvEncoder.encodeGtv(baseConfig0)
             val gtvResult0 = gtv(mapOf(
                     "base_config" to gtv(encodedConfig0),

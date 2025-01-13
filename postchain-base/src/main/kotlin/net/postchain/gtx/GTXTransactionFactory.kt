@@ -10,7 +10,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkleHash
 
 /**
@@ -18,9 +18,8 @@ import net.postchain.gtv.merkleHash
  * The most normal way would be to build from binary, but sometimes we might have deserialized the binary data already
  */
 class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXModule, val cs: CryptoSystem,
+                            val gtvMerkleHashCalculator: GtvMerkleHashCalculatorBase,
                             val maxTransactionSize: Long = 1024 * 1024, val maxTransactionSignatures: Long = 100) : TransactionFactory {
-
-    val gtvMerkleHashCalculator = GtvMerkleHashCalculator(cs) // Here we are using the standard cache
 
     override fun decodeTransaction(data: ByteArray): Transaction {
         if (data.size > maxTransactionSize) {

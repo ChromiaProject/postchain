@@ -16,6 +16,7 @@ import net.postchain.core.block.BlockWitness
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import kotlin.time.Duration
 
 /**
@@ -36,6 +37,8 @@ interface BlockchainConfiguration {
     val syncInfrastructureExtensionNames: List<DynamicClassName>
     val transactionQueueSize: Int
     val transactionQueueRecheckInterval: Duration
+    val merkleHashVersion: Long
+    val merkleHashCalculator: GtvMerkleHashCalculatorBase
     val configHash: ByteArray
 
     fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader

@@ -6,9 +6,10 @@ import net.postchain.common.BlockchainRid
 import net.postchain.configurations.GTXTestModule
 import net.postchain.crypto.Secp256K1CryptoSystem
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXTransactionFactory
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 
 class TxCacheTest {
     val cryptoSystem = Secp256K1CryptoSystem()
@@ -17,8 +18,8 @@ class TxCacheTest {
             2L to BlockchainRid.buildFromHex("1001100110011001100110011001100110011001100110011001100110011001")
     )
     private val gtxTestModule =  GTXTestModule()
-    private val factory1 = GTXTransactionFactory(blockchainRids[1L]!!, gtxTestModule, cryptoSystem)
-    private val factory2 = GTXTransactionFactory(blockchainRids[2L]!!, gtxTestModule, cryptoSystem)
+    private val factory1 = GTXTransactionFactory(blockchainRids[1L]!!, gtxTestModule, cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
+    private val factory2 = GTXTransactionFactory(blockchainRids[2L]!!, gtxTestModule, cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
     private val factoryMap = mapOf(
             1L to factory1,
             2L to factory2)

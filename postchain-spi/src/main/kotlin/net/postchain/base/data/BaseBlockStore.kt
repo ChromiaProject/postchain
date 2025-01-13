@@ -158,6 +158,10 @@ class BaseBlockStore : BlockStore {
         return DatabaseAccess.of(ctx).getBlockHeightInfo(ctx, blockchainRID)
     }
 
+    override fun getMerkleHashVersion(ctx: EContext, height: Long): Long {
+        return DatabaseAccess.of(ctx).getMerkleHashVersionForHeight(ctx, height)
+    }
+
     override fun getLastBlockTimestamp(ctx: EContext): Long {
         return DatabaseAccess.of(ctx).getLastBlockTimestamp(ctx)
     }

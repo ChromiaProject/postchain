@@ -35,7 +35,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.mapper.GtvObjectMapper
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -45,9 +45,6 @@ import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.spy
 import org.mockito.kotlin.whenever
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
 
@@ -72,7 +69,7 @@ class RestApiConfirmBlockEndpointTest {
 
     // block header
     val blockHeader = BaseBlockHeader.make(
-            merkleHashCalculator = GtvMerkleHashCalculator(cryptoSystem),
+            merkleHashCalculator = GtvMerkleHashCalculatorV2(cryptoSystem),
             iBlockData = InitialBlockData(
                     blockchainRid = blockchainRID,
                     blockIID = 0,
@@ -148,7 +145,7 @@ class RestApiConfirmBlockEndpointTest {
                 bcConfig1, mock(), blockQueries, blockchainRID, mock(), postchainContext, mock(), 0L
         ))
 
-        restApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
     }
 
     @AfterEach

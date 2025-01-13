@@ -19,3 +19,5 @@ class FailedConfigurationMismatchException(message: String, cause: Exception? = 
 class MissingDependencyException(message: String, cause: Exception? = null) : BadDataException(message, cause)
 class MissingPeerInfoException(message: String, cause: Exception? = null) : BadDataException(message, cause)
 class PrevBlockMismatchException(message: String, cause: Exception? = null) : BadDataException(message, cause)
+
+class FaultyExtensionException(message: String, cause: Exception? = null) : RuntimeException(message, cause)

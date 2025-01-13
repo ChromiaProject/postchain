@@ -2,12 +2,13 @@ package net.postchain.gtx
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
+import net.postchain.common.toHex
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.ToGtv
-import net.postchain.gtv.merkle.MerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.data.ExtOpData
 
@@ -22,7 +23,7 @@ class GtxBody(
 
     private lateinit var rid: Hash
 
-    fun calculateTxRid(calculator: MerkleHashCalculator<Gtv>): Hash {
+    fun calculateTxRid(calculator: GtvMerkleHashCalculatorBase): Hash {
         if (!this::rid.isInitialized) rid = toGtv().merkleHash(calculator)
         return rid
     }
@@ -71,6 +72,8 @@ class GtxBody(
         }
         return result
     }
+
+    override fun toString() = "GtxBody(blockchainRid=$blockchainRid, operations=$operations, signers=${signers.map { it.toHex() }})"
 
     companion object {
 

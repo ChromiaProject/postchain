@@ -13,6 +13,7 @@ import net.postchain.core.block.SpecialTxHandlerAware
 import java.time.Clock
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.log2
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 
@@ -22,7 +23,7 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
                                      private val clock: Clock
 ) : BlockBuildingStrategy, SpecialTxHandlerAware {
 
-    private var lastBlockTime: Long
+    private var lastBlockTime: Long = max(0, blockQueries.getLastBlockTimestamp().get())
     private var firstTxTime = 0L
 
     private var failedBlockTime: Long = 0
@@ -39,16 +40,6 @@ open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyCo
     private val forceStopBlockBuilding: AtomicBoolean = AtomicBoolean(false)
 
     private val maxFailCount = log2(maxBackoffTime.toDouble() - minBackoffTime).toLong()
-
-    init {
-        val height = blockQueries.getLastBlockHeight().get()
-        lastBlockTime = if (height == -1L) {
-            0
-        } else {
-            val blockRID = blockQueries.getBlockRid(height).get()!!
-            (blockQueries.getBlockHeader(blockRID).get() as BaseBlockHeader).timestamp
-        }
-    }
 
     override var specialTxHandler: SpecialTransactionHandler? = null
 

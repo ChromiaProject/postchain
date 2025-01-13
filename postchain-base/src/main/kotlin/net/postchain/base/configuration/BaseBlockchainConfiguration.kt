@@ -8,7 +8,6 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.BaseBlockBuildingStrategyConfigurationData
 import net.postchain.base.BaseBlockHeader
-import net.postchain.base.BaseBlockQueries
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.BlockWitnessProvider
@@ -18,9 +17,7 @@ import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.BaseBlockWitnessProvider
-import net.postchain.base.data.BaseTransactionFactory
 import net.postchain.base.extension.ConfigurationHashBlockBuilderExtension
-import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
@@ -31,8 +28,6 @@ import net.postchain.core.DynamicClassName
 import net.postchain.core.EContext
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.core.NODE_ID_READ_ONLY
-import net.postchain.core.Storage
-import net.postchain.core.TransactionFactory
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
@@ -42,11 +37,9 @@ import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.SpecialTxHandlerAware
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
-import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import java.lang.reflect.InvocationTargetException
@@ -54,7 +47,7 @@ import java.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
-open class BaseBlockchainConfiguration(
+abstract class BaseBlockchainConfiguration(
         val configData: BlockchainConfigurationData,
         val cryptoSystem: CryptoSystem,
         partialContext: BlockchainContext,
@@ -70,7 +63,7 @@ open class BaseBlockchainConfiguration(
         }
 
         configData.features[BlockchainFeatures.merkle_hash_version.name]?.let {
-            if (it.asInteger() != 1L)
+            if (it.asInteger() !in 1..2)
                 throw UserMistake("Unsupported ${BlockchainFeatures.merkle_hash_version.name} version: ${it.asInteger()}")
         }
     }
@@ -94,7 +87,9 @@ open class BaseBlockchainConfiguration(
     final override val transactionQueueSize = configData.txQueueSize.toInt()
     final override val transactionQueueRecheckInterval: Duration = configData.txQueueRecheckInterval.milliseconds
 
-    override val configHash = GtvToBlockchainRidFactory.calculateBlockchainRid(rawConfig, ::sha256Digest).data
+    override val merkleHashVersion: Long = configData.merkleHashVersion
+    override val merkleHashCalculator = configData.merkleHashCalculator
+    override val configHash = configData.configHash
 
     private val blockBuildingStrategyConstructor = constructorOf<BlockBuildingStrategy>(
             configData.blockStrategyName,
@@ -133,7 +128,7 @@ open class BaseBlockchainConfiguration(
     private val specialTransactionHandler: SpecialTransactionHandler = NullSpecialTransactionHandler()
 
     override fun decodeBlockHeader(rawBlockHeader: ByteArray): BlockHeader {
-        return BaseBlockHeader(rawBlockHeader, GtvMerkleHashCalculator(cryptoSystem))
+        return BaseBlockHeader(rawBlockHeader, configData.merkleHashCalculator)
     }
 
     override fun decodeWitness(rawWitness: ByteArray): BlockWitness {
@@ -144,10 +139,6 @@ open class BaseBlockchainConfiguration(
      * We can get the [BlockWitnessProvider] directly from the config, don't have to go to the [BlockBuilder]
      */
     override fun getBlockHeaderValidator(): BlockWitnessProvider = blockWitnessProvider
-
-    override fun getTransactionFactory(): TransactionFactory {
-        return BaseTransactionFactory()
-    }
 
     open fun getSpecialTxHandler(): SpecialTransactionHandler {
         return specialTransactionHandler // Must be overridden in subclass
@@ -182,7 +173,8 @@ open class BaseBlockchainConfiguration(
                 },
                 configData.maxBlockFutureTime,
                 if (configData.addPrimaryKeyToHeader) blockchainContext.nodeRID else null,
-                isSyncing
+                isSyncing,
+                configData.merkleHashCalculator,
         )
 
         return bb
@@ -208,9 +200,6 @@ open class BaseBlockchainConfiguration(
         }
     }
 
-    override fun makeBlockQueries(storage: Storage): BlockQueries =
-            BaseBlockQueries(cryptoSystem, storage, blockStore, chainID, blockchainContext.nodeRID)
-
     override fun hasQuery(name: String): Boolean = false
 
     override fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy =
@@ -229,7 +218,7 @@ open class BaseBlockchainConfiguration(
 
     private fun makeDefaultBBExtensions(): List<BaseBlockBuilderExtension> =
             if (configData.configConsensusStrategy == ConfigConsensusStrategy.HEADER_HASH) {
-                listOf(ConfigurationHashBlockBuilderExtension(configHash))
+                listOf(ConfigurationHashBlockBuilderExtension(merkleHashVersion, configHash))
             } else listOf()
 
     open fun isSuppressSpecialTransactionValidation(): Boolean = false

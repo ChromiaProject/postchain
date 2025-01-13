@@ -13,6 +13,7 @@ import net.postchain.core.TxEContext
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.SimpleGTXModule
@@ -45,7 +46,7 @@ class MaxRevoltExceededSlowIntegrationTest : IntegrationTestSetup() {
         assertThat(delayedTxInfo).isNull()
     }
 
-    private fun buildDelayedOpEventTx(brid: BlockchainRid, delay: Long) = GtxBuilder(brid, emptyList(), cryptoSystem)
+    private fun buildDelayedOpEventTx(brid: BlockchainRid, delay: Long) = GtxBuilder(brid, emptyList(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
             .addOperation("delayed_op", gtv(delay))
             .addNop()
             .finish()

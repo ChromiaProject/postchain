@@ -4,9 +4,9 @@ import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import net.postchain.PostchainContext
 import net.postchain.api.rest.X_POSTCHAIN_SIGNATURE_HEADER
+import net.postchain.api.rest.controller.FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.RestApi
-import net.postchain.api.rest.controller.FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER
 import net.postchain.api.rest.controller.UNAUTHORIZED_INVALID_SIGNATURE
 import net.postchain.api.rest.controller.UNAUTHORIZED_REQUIRE_SIGNATURE_IN_MANAGED_MODE
 import net.postchain.common.BlockchainRid
@@ -22,7 +22,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvFileReader
 import net.postchain.gtv.gtvml.GtvMLEncoder
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.config.ManagedBlockchainConfiguration
@@ -42,9 +42,6 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.io.File
 import java.nio.file.Paths
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 
 class RestApiValidateConfigEndpointTest {
 
@@ -64,7 +61,7 @@ class RestApiValidateConfigEndpointTest {
     fun setup() {
         setManagedModel()
 
-        restApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
     }
 
     @AfterEach
@@ -280,20 +277,20 @@ class RestApiValidateConfigEndpointTest {
 
     private fun buildValidHeaderAuth(config: Gtv): String {
 
-        val signature = sigMaker0.signDigest(config.merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
+        val signature = sigMaker0.signDigest(config.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem)))
         return "${signature.subjectID.toHex()}:${signature.data.toHex()}"
     }
 
     private fun buildInvalidAndValidHeaderAuth(config: Gtv): String {
 
-        val invalid = sigMaker0.signDigest(gtv(0).merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
-        val valid = sigMaker0.signDigest(config.merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
+        val invalid = sigMaker0.signDigest(gtv(0).merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem)))
+        val valid = sigMaker0.signDigest(config.merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem)))
         return "Postchain ${invalid.subjectID.toHex()}:${invalid.data.toHex()},${valid.subjectID.toHex()}:${valid.data.toHex()}"
     }
 
     private fun buildInvalidSigHashHeaderAuth(): String {
 
-        val signature = sigMaker0.signDigest(gtv(0).merkleHash(GtvMerkleHashCalculator(cryptoSystem)))
+        val signature = sigMaker0.signDigest(gtv(0).merkleHash(GtvMerkleHashCalculatorV2(cryptoSystem)))
         return "Postchain ${signature.subjectID.toHex()}:${signature.data.toHex()}"
     }
 

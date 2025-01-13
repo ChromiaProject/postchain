@@ -1,10 +1,10 @@
 package net.postchain.api.internal
 
 import net.postchain.base.BlockchainRelatedInfo
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DependenciesValidator
-import net.postchain.base.gtv.GtvToBlockchainRidFactory
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
@@ -13,10 +13,10 @@ import net.postchain.core.AppContext
 import net.postchain.core.EContext
 import net.postchain.core.MissingPeerInfoException
 import net.postchain.crypto.PubKey
-import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 
 object BlockchainApi {
@@ -36,14 +36,14 @@ object BlockchainApi {
             throw IllegalStateException("Cannot add configuration at $height, since last block is already at $lastBlockHeight")
         }
 
-        val configHash = GtvToBlockchainRidFactory.calculateBlockchainRid(config, ::sha256Digest)
-        if (configurationExists(ctx, configHash.data)) {
-            throw IllegalStateException("Configuration already exists: $configHash")
+        val configHash = config.toObject<BlockchainConfigurationData>().configHash
+        if (configurationExists(ctx, configHash)) {
+            throw IllegalStateException("Configuration already exists: ${configHash.toHex()}")
         }
 
         return if (override || db.getConfigurationData(ctx, height) == null) {
             if (validate) {
-                GTXBlockchainConfigurationFactory.validateConfiguration(config, blockchainRid)
+                GTXBlockchainConfigurationFactory.validateConfiguration(config, blockchainRid, ctx)
             }
             db.addConfigurationData(ctx, height, GtvEncoder.encodeGtv(config))
             addFutureSignersAsReplicas(ctx, db, height, config, allowUnknownSigners)
@@ -131,7 +131,7 @@ object BlockchainApi {
             DependenciesValidator.validateBlockchainRids(ctx, givenDependencies)
             // TODO: Blockchain dependencies [DependenciesValidator#validateBlockchainRids]
             if (validate) {
-                GTXBlockchainConfigurationFactory.validateConfiguration(config, brid)
+                GTXBlockchainConfigurationFactory.validateConfiguration(config, brid, ctx)
             }
             db.addConfigurationData(ctx, 0, GtvEncoder.encodeGtv(config))
             true

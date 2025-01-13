@@ -1,7 +1,11 @@
 package net.postchain.integrationtest.reconfiguration
 
+import assertk.assertFailure
 import assertk.assertThat
+import assertk.assertions.hasMessage
+import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
+import assertk.assertions.isInstanceOf
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isTrue
@@ -9,8 +13,10 @@ import mu.KLogging
 import net.postchain.base.SpecialTransactionPosition
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.SQLDatabaseAccess
+import net.postchain.base.runStorageCommand
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
@@ -18,6 +24,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
 import net.postchain.devtools.getModules
+import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.data.OpData
@@ -64,6 +71,24 @@ class FaultyConfigTest : IntegrationTestSetup() {
             val db = DatabaseAccess.of(ctx)
             assertThat(db.getConfigurationData(ctx, 2)).isNull()
         }
+    }
+
+    @Test
+    fun `cannot downgrade merkle hash version in config`() {
+        val (node) = createNodes(1, "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_hash_version_2.xml")
+        withReadConnection(node.postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            assertThat(db.getCurrentMerkleHashVersion(ctx)).isEqualTo(2)
+        }
+
+        val invalidConfig = readBlockchainConfig(
+                "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_hash_version_1.xml"
+        )
+        assertFailure {
+            withReadConnection(node.postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { eContext: EContext ->
+                GTXBlockchainConfigurationFactory.validateConfiguration(invalidConfig, node.getBlockchainRid(DEFAULT_CHAIN_IID)!!, eContext)
+            }
+        }.isInstanceOf(UserMistake::class).hasMessage("Cannot downgrade merkle hash version from 2 to 1")
     }
 
     @Test
@@ -198,6 +223,38 @@ class FaultyConfigTest : IntegrationTestSetup() {
             }
         } finally {
             TogglableFaultyGtxModule.shouldFail = false
+        }
+    }
+
+    @Test
+    fun `config is not reverted in case exception is not caused by it being faulty`() {
+        val (node) = createNodes(1, "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_initial_1.xml")
+
+        val newConfig = readBlockchainConfig(
+                "/net/postchain/devtools/reconfiguration/single_peer/faulty/blockchain_config_correct_1.xml"
+        )
+
+        node.addConfiguration(DEFAULT_CHAIN_IID, 2, newConfig)
+        buildBlock(DEFAULT_CHAIN_IID, 1)
+
+        // Assert new config is loaded
+        Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted {
+            assertThat(node.getModules(DEFAULT_CHAIN_IID).any { it is CorrectConfigGTXModule })
+        }
+
+        // This should make the block building fail with a ProgrammerMistake (prev block has no RID)
+        runStorageCommand(node.appConfig, DEFAULT_CHAIN_IID) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            db.insertBlock(ctx, 2)
+        }
+        // Assert that block building fails
+        val (_, error) = node.getBlockchainInstance().blockchainEngine.buildBlock()
+        assertThat(error is ProgrammerMistake).isTrue()
+
+        // Assert that config was not reverted
+        runStorageCommand(node.appConfig, DEFAULT_CHAIN_IID) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            assertThat(db.getFaultyConfiguration(ctx)).isNull()
         }
     }
 }

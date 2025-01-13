@@ -9,7 +9,7 @@ import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import java.time.Instant
 
 // approximate conservative values since it is difficult to calculate tx size exactly
@@ -23,13 +23,14 @@ open class GtxBuilder(
         private val blockchainRid: BlockchainRid,
         private val signers: List<ByteArray>,
         private val cryptoSystem: CryptoSystem,
+        private val calculator: GtvMerkleHashCalculatorBase,
         val maxTxSize: Int = -1,
         operations: List<GtxOp> = listOf()
 ) {
     companion object {
         val EMPTY_SIGNATURE = ByteArray(0)
     }
-    private val calculator = GtvMerkleHashCalculator(cryptoSystem)
+
     private val operations = mutableListOf<GtxOp>()
 
     internal var totalSize: Int = TX_SIZE_OVERHEAD

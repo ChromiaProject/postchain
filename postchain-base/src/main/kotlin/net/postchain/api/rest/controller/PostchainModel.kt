@@ -12,7 +12,6 @@ import net.postchain.api.rest.BlockchainNodeState
 import net.postchain.api.rest.TransactionsCount
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
-import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.ConfirmationProof
 import net.postchain.base.configuration.BaseBlockchainConfiguration
@@ -57,7 +56,6 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.mapper.toObject
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.UnknownQuery
@@ -138,8 +136,7 @@ open class PostchainModel(
                     blockSigMaker,
                     blockchainConfiguration.signers.toTypedArray()
             )
-            val blockHeader = BaseBlockHeader(it.header, GtvMerkleHashCalculator(postchainContext.cryptoSystem))
-            val witnessBuilder = witnessProvider.createWitnessBuilderWithOwnSignature(blockHeader) as MultiSigBlockWitnessBuilder
+            val witnessBuilder = witnessProvider.createWitnessBuilderWithOwnSignature(blockRID) as MultiSigBlockWitnessBuilder
             BlockSignature.fromSignature(witnessBuilder.getMySignature())
         }
     }
@@ -240,6 +237,7 @@ open class PostchainModel(
             val config = factory.makeBlockchainConfiguration(blockConfData, partialContext, blockSigMaker, eContext, postchainContext.cryptoSystem)
             DependenciesValidator.validateBlockchainRids(eContext, config.blockchainDependencies)
             config.initializeModules(postchainContext)
+            GTXBlockchainConfigurationFactory.extraConfigurationValidation(blockConfData, eContext)
 
             false
         }

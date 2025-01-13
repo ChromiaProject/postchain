@@ -2,6 +2,7 @@ package net.postchain.gtx
 
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfigurationFactory
@@ -19,13 +20,22 @@ import net.postchain.gtv.mapper.toObject
 open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
 
     companion object {
-        fun validateConfiguration(config: Gtv, blockchainRid: BlockchainRid) {
+        fun validateConfiguration(config: Gtv, blockchainRid: BlockchainRid, eContext: EContext) {
             val configurationData = try {
                 config.toObject<BlockchainConfigurationData>()
             } catch (e: IllegalArgumentException) {
                 throw UserMistake("Unable to parse configuration: ${e.message}", e)
             }
+            extraConfigurationValidation(configurationData, eContext)
             makeGtxModule(blockchainRid, configurationData)
+        }
+
+        fun extraConfigurationValidation(configurationData: BlockchainConfigurationData, eContext: EContext) {
+            val currentMerkleHashVersion = DatabaseAccess.of(eContext).getCurrentMerkleHashVersion(eContext)
+            val newMerkleHashVersion = configurationData.merkleHashVersion
+            if (newMerkleHashVersion < currentMerkleHashVersion) {
+                throw UserMistake("Cannot downgrade merkle hash version from $currentMerkleHashVersion to $newMerkleHashVersion")
+            }
         }
 
         internal fun makeGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData): GTXModule {
@@ -42,7 +52,11 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
                     else -> name
                 }
 
-                val moduleClass = Class.forName(className).getConstructor()
+                val moduleClass = try {
+                    Class.forName(className).getConstructor()
+                } catch (e: ClassNotFoundException) {
+                    throw UserMistake("Module class was not found: $className")
+                }
                 return when (val instance = moduleClass.newInstance()) {
                     is GTXModule -> instance
                     is GTXModuleFactory -> instance.makeModule(data.rawConfig, blockchainRID) //TODO

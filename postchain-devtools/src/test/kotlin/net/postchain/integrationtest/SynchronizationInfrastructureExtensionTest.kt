@@ -8,8 +8,8 @@ import assertk.assertions.isTrue
 import net.postchain.PostchainContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
-import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.BlockchainProcess
+import net.postchain.core.FaultyExtensionException
 import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
@@ -38,7 +38,7 @@ class SynchronizationInfrastructureExtensionTest : IntegrationTestSetup() {
 
     @Test
     fun `Extension that throws exception when connecting process will be propagated`() {
-        assertThrows<ProgrammerMistake> {
+        assertThrows<FaultyExtensionException> {
             createNodes(3, "/net/postchain/devtools/syncinfra_extensions/blockchain_config_bad_connect.xml")
         }
     }

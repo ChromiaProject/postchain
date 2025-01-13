@@ -137,7 +137,7 @@
         </dependency>
         <dependency>
             <groupId>org.http4k</groupId>
-            <artifactId>http4k-metrics-micrometer</artifactId>
+            <artifactId>http4k-ops-micrometer</artifactId>
         </dependency>
 
         <!-- Netty -->

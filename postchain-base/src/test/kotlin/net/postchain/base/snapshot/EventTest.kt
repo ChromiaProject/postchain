@@ -9,6 +9,7 @@ import net.postchain.common.data.Hash
 import net.postchain.common.toHex
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.gtv.GtvFactory
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.GtxNop
@@ -33,10 +34,10 @@ class EventTest : SnapshotBaseIT() {
             val blockIid = db.insertBlock(ctx, 1)
             val bctx = BaseBlockEContext(ctx, 0, blockIid, 10, mapOf(), mock())
             val signers = listOf(keypair.pubKey.data)
-            val gtxData = GtxBuilder(BlockchainRid.ZERO_RID, signers, cs)
+            val gtxData = GtxBuilder(BlockchainRid.ZERO_RID, signers, cs, GtvMerkleHashCalculatorV2(cs))
                     .addOperation(GtxNop.OP_NAME, GtvFactory.gtv(42))
                     .finish().sign(cs.buildSigMaker(keypair)).buildGtx().encode()
-            val tx = GTXTransactionFactory(BlockchainRid.ZERO_RID, StandardOpsGTXModule(), cs)
+            val tx = GTXTransactionFactory(BlockchainRid.ZERO_RID, StandardOpsGTXModule(), cs, GtvMerkleHashCalculatorV2(cs))
                     .decodeTransaction(gtxData)
             val txIid = db.insertTransaction(bctx, tx, 1)
             val txEContext = BaseTxEContext(bctx, txIid, tx)

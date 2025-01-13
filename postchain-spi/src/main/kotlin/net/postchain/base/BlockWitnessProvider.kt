@@ -2,6 +2,7 @@
 
 package net.postchain.base
 
+import net.postchain.core.BlockRid
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockWitness
 import net.postchain.core.block.BlockWitnessBuilder
@@ -38,4 +39,6 @@ interface BlockWitnessProvider {
             witnessBuilder: BlockWitnessBuilder
     )
 
+    fun createWitnessBuilderWithOwnSignature(blockRID: BlockRid): BlockWitnessBuilder
+    fun createWitnessBuilderWithoutOwnSignature(blockRID: BlockRid): BlockWitnessBuilder
 }

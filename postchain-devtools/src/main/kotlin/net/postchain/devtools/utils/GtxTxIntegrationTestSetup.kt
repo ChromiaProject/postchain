@@ -8,12 +8,13 @@ import net.postchain.devtools.*
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
 import net.postchain.devtools.utils.configuration.NodeSeqNumber
 import net.postchain.devtools.utils.configuration.SystemSetup
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXTransactionFactory
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Assertions.assertArrayEquals
-import java.util.concurrent.TimeoutException
 import org.junit.jupiter.api.Assertions.assertEquals
+import java.util.concurrent.TimeoutException
 
 /**
  * Extends [IntegrationTestSetup] with extra functions relevant for real GTX transactions on multi chain tests
@@ -116,7 +117,8 @@ open class GtxTxIntegrationTestSetup : IntegrationTestSetup() {
             // Must create the TX factories before any transactions can be created
             systemSetup.blockchainMap.values.forEach { chainSetup ->
                 if (chainSetup.shouldHaveNormalTx()) {
-                    factoryMap[chainSetup.chainId.toLong()] = GTXTransactionFactory(chainSetup.rid, gtxTestModule, cryptoSystem)
+                    factoryMap[chainSetup.chainId.toLong()] = GTXTransactionFactory(chainSetup.rid, gtxTestModule,
+                            cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
                 }
             }
         }

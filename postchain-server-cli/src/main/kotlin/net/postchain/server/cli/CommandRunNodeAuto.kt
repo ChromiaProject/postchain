@@ -19,6 +19,7 @@ import net.postchain.core.EContext
 import net.postchain.core.MissingPeerInfoException
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFileReader
+import net.postchain.gtv.mapper.toObject
 import java.io.File
 import java.nio.file.Paths
 
@@ -159,7 +160,7 @@ class CommandRunNodeAuto : CliktCommand(name = "run-node-auto") {
         // If brid is specified in nodeConfigFile, use that instead of calculating it from blockchain configuration.
         val keyString = "brid.chainid.$chainId"
         val brid = if (appConfig.containsKey(keyString)) BlockchainRid.buildFromHex(appConfig.getString(keyString)) else
-            GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig, appConfig.cryptoSystem)
+            GtvToBlockchainRidFactory.calculateBlockchainRid(blockchainConfig.toObject())
 
         return runStorageCommand(appConfig, chainId, true) { ctx ->
             BlockchainApi.initializeBlockchain(ctx, brid, false, blockchainConfig, listOf())

@@ -29,10 +29,10 @@ class GTXBlockQueries(private val blockchainConfiguration: GTXBlockchainConfigur
             blockchainConfiguration.getTransactionFactory().decodeTransaction(txBytes)
     }
 
-    override fun decodeWitness(witnessData: ByteArray): MultiSigBlockWitness =
-            blockchainConfiguration.decodeWitness(witnessData) as MultiSigBlockWitness
-
     override fun decodeBlockHeader(headerData: ByteArray): BaseBlockHeader =
             blockchainConfiguration.decodeBlockHeader(headerData) as BaseBlockHeader
+
+    override fun decodeWitness(witnessData: ByteArray): MultiSigBlockWitness =
+            blockchainConfiguration.decodeWitness(witnessData) as MultiSigBlockWitness
 
 }

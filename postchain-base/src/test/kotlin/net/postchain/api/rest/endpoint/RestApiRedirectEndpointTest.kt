@@ -20,9 +20,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.time.Clock
-import java.time.Instant
-import java.time.ZoneOffset
 
 class RestApiRedirectEndpointTest {
     private val basePath = "/api"
@@ -49,8 +46,8 @@ class RestApiRedirectEndpointTest {
     @BeforeEach
     fun setup() {
         model = HttpExternalModel(basePath, "http://localhost:${MockPostchainRestApi.port}", 1L, "")
-        restApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC))
-        httpRedirectRestApi = RestApi(0, basePath, gracefulShutdown = false, clock = Clock.fixed(Instant.EPOCH, ZoneOffset.UTC), subnodeHttpRedirect = true)
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
+        httpRedirectRestApi = RestApi(0, basePath, gracefulShutdown = false, subnodeHttpRedirect = true)
         apisToTest = listOf(restApi, httpRedirectRestApi)
     }
 

@@ -2,6 +2,7 @@
 
 package net.postchain.core
 
+import net.postchain.common.toHex
 import net.postchain.core.block.hexStringLength
 import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.mapper.Nullable
@@ -33,6 +34,8 @@ data class TxDetail(
         result = 31 * result + (data?.contentHashCode() ?: 0)
         return result
     }
+
+    override fun toString() = "TxDetail(rid=${rid.toHex()}, hash=${hash.toHex()}, data=${data?.toHex()})"
 }
 
 fun TxDetail.hexStringLength(): Int {

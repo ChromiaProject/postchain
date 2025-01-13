@@ -47,7 +47,6 @@ interface BlockDatabase {
 
     fun applyAndVerifyBlockSignature(s: Signature): Boolean
     fun getBlockSignature(blockRID: ByteArray): CompletionStage<Signature>
-    fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): CompletionStage<BlockDataWithWitness?>
 
     fun setBlockTrace(blockTrace: BlockTrace) // Only debugging
 }

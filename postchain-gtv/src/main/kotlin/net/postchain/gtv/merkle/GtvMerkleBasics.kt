@@ -2,7 +2,6 @@
 
 package net.postchain.gtv.merkle
 
-import net.postchain.gtv.merkle.proof.GtvMerkleHashSummaryFactory
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTreeFactory
 import net.postchain.gtv.merkle.virtual.GtvVirtualFactory
 
@@ -17,14 +16,9 @@ object GtvMerkleBasics {
     // Note: Probably ok to use the (forbidden) singleton pattern here to get to instances, since we (at least for now)
     // have no plans for replacing these factories in tests.
     // --------------------------------------------------------------
-    private val treeFactory = GtvBinaryTreeFactory()
     private val proofFactory = GtvMerkleProofTreeFactory()
-    private val summaryFactory = GtvMerkleHashSummaryFactory(treeFactory, proofFactory)
     private val virtualFactory = GtvVirtualFactory
 
-    fun getGtvBinaryTreeFactory() = treeFactory
     fun getGtvMerkleProofTreeFactory() = proofFactory
-    fun getGtvMerkleHashSummaryFactory() = summaryFactory
     fun getGtvVirtualFactory() = virtualFactory
-
 }

@@ -21,6 +21,7 @@ import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
@@ -237,8 +238,8 @@ class PcuManagedModeTest : ManagedModeTest() {
 
         // Build a block with pending config calling new tx in test module
         val blockchainRid = ChainUtil.ridOf(chain)
-        val transaction = GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
-                .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
+        val transaction = GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
+                .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
                         .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("bogus"))
                         .finish().buildGtx())
         buildBlockNoWait(nodes, chain, 3, transaction)
@@ -276,8 +277,8 @@ class PcuManagedModeTest : ManagedModeTest() {
 
         // See that blocks still can be built on ALL nodes
         val blockchainRid = ChainUtil.ridOf(chain)
-        val transaction = GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem)
-                .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem)
+        val transaction = GTXTransactionFactory(blockchainRid, GTXTestModule(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
+                .build(GtxBuilder(blockchainRid, listOf(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
                         .addOperation(GTX_TEST_OP_NAME, gtv(1), gtv("bogus"))
                         .finish().buildGtx())
         buildBlockNoWait(nodes, chain, 2, transaction)

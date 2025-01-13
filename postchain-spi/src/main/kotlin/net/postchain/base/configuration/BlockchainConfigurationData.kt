@@ -11,6 +11,8 @@ import net.postchain.gtv.mapper.Nested
 import net.postchain.gtv.mapper.Nullable
 import net.postchain.gtv.mapper.RawGtv
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtv.merkle.makeMerkleHashCalculator
+import net.postchain.gtv.merkleHash
 
 data class BlockchainConfigurationData(
         @RawGtv
@@ -74,6 +76,13 @@ data class BlockchainConfigurationData(
     val historicBrid = historicBridAsByteArray?.let { BlockchainRid(it) }
     val blockchainDependencies = blockchainDependenciesRaw?.let { BaseDependencyFactory.build(it) } ?: listOf()
     val configConsensusStrategy = configConsensusStrategyString?.let { ConfigConsensusStrategy.valueOf(it) }
+    val merkleHashVersion: Long = features[BlockchainFeatures.merkle_hash_version.name]?.asInteger() ?: 1L
+    val merkleHashCalculator by lazy {
+        makeMerkleHashCalculator(merkleHashVersion)
+    }
+    val configHash by lazy {
+        rawConfig.merkleHash(merkleHashCalculator)
+    }
 
     companion object {
         @JvmStatic

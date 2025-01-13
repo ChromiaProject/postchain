@@ -9,8 +9,11 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.concurrent.util.get
 import net.postchain.configurations.GTXTestModule
+import net.postchain.crypto.sha256Digest
 import net.postchain.devtools.IntegrationTestSetup
+import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
 import net.postchain.devtools.RestTools
 import net.postchain.devtools.testinfra.TestOneOpGtxTransaction
 import net.postchain.devtools.utils.configuration.SystemSetup
@@ -19,12 +22,13 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvProofTreeTestHelper
 import net.postchain.gtv.mapper.GtvObjectMapper
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkle.proof.merkleHash
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.integrationtest.JsonTools
 import net.postchain.integrationtest.JsonTools.jsonAsMap
-import org.junit.jupiter.api.Assertions.assertArrayEquals
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -36,11 +40,12 @@ class ConfirmationProofSlowIntegrationTest : IntegrationTestSetup() {
     private val gtxTestModule = GTXTestModule()
     private val chainIid = 1
     private val nodeCount = 4
-    private val bcConfFileName = "/net/postchain/devtools/api/blockchain_config.xml"
+    private val bcConfFileName = "/net/postchain/devtools/api/blockchain_config_new_hash.xml"
+    private val bcConfLegacyHashFileName = "/net/postchain/devtools/api/blockchain_config_legacy_hash.xml"
 
-    private fun doSystemSetup(): SystemSetup {
+    private fun doSystemSetup(configFile: String): SystemSetup {
         configOverrides.setProperty("testpeerinfos", createPeerInfos(nodeCount))
-        val bcConfFileMap = mapOf(chainIid to bcConfFileName)
+        val bcConfFileMap = mapOf(chainIid to configFile)
         val sysSetup = SystemSetupFactory.buildSystemSetup(bcConfFileMap)
         assertEquals(nodeCount, sysSetup.nodeMap.size, "We didn't get the nodes we expected, check BC config file")
         sysSetup.needRestApi = true // NOTE!! This is important in this test!!
@@ -51,11 +56,11 @@ class ConfirmationProofSlowIntegrationTest : IntegrationTestSetup() {
 
     @Test
     fun testConfirmationProof() {
-        val sysSetup = doSystemSetup()
+        val sysSetup = doSystemSetup(bcConfFileName)
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
 
-        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem)
+        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem, GtvMerkleHashCalculatorV2(::sha256Digest))
 
         var blockHeight = 0
         var currentId = 0
@@ -63,7 +68,7 @@ class ConfirmationProofSlowIntegrationTest : IntegrationTestSetup() {
         for (txCount in 1..16) {
             println("----------------- Running testConfirmationProof with txCount: $txCount ---------------------")
             val txList = mutableListOf<TestOneOpGtxTransaction>()
-            for (i in 1..txCount) {
+            (1..txCount).forEach { i ->
                 txList.add(postGtxTransaction(factory, ++currentId, blockHeight, blockchainRIDBytes))
             }
 
@@ -82,9 +87,39 @@ class ConfirmationProofSlowIntegrationTest : IntegrationTestSetup() {
             for (i in 0 until txCount) {
                 val realTx = txArr[i]
                 val jsonResponse = fetchConfirmationProof(realTx, i, blockchainRIDBytes)
-                checkConfirmationProofForTx(realTx, jsonResponse)
+                checkConfirmationProofForTx(realTx, jsonResponse, GtvMerkleHashCalculatorV2(cryptoSystem))
             }
         }
+    }
+
+    @Test
+    fun testConfirmationProofAfterSwitchingHashAlgorithm() {
+        val sysSetup = doSystemSetup(bcConfLegacyHashFileName)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+
+        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem, GtvMerkleHashCalculatorV1(cryptoSystem))
+
+        val tx = postGtxTransaction(factory, 0, 0, blockchainRIDBytes)
+        awaitConfirmed(blockchainRID, tx.getRID())
+
+        val jsonResponse = fetchConfirmationProof(tx, 0, blockchainRIDBytes)
+        checkConfirmationProofForTx(tx, jsonResponse, GtvMerkleHashCalculatorV1(cryptoSystem))
+
+        val blockchainConfigNewHash = readBlockchainConfig(bcConfFileName)
+
+        val nextHeight = nodes[0].blockQueries().getLastBlockHeight().get() + 2
+        nodes.forEach {
+            it.addConfiguration(DEFAULT_CHAIN_IID, nextHeight, blockchainConfigNewHash)
+        }
+        val tx2 = postGtxTransaction(factory, 1, 1, blockchainRIDBytes)
+        awaitConfirmed(blockchainRID, tx2.getRID())
+
+        assertEquals(blockchainConfigNewHash, nodes[0].getBlockchainInstance().blockchainEngine.getConfiguration().rawConfig)
+        val jsonResponseAfterNewConfig = fetchConfirmationProof(tx, 0, blockchainRIDBytes)
+        checkConfirmationProofForTx(tx, jsonResponseAfterNewConfig, GtvMerkleHashCalculatorV1(cryptoSystem))
+
+        assertEquals(jsonResponse, jsonResponseAfterNewConfig)
     }
 
     /**
@@ -176,16 +211,16 @@ class ConfirmationProofSlowIntegrationTest : IntegrationTestSetup() {
      * @param realTx - the transaction to check
      * @param jsonBody - proof in JSON format
      */
-    private fun checkConfirmationProofForTx(realTx: TestOneOpGtxTransaction, jsonBody: String) {
+    private fun checkConfirmationProofForTx(realTx: TestOneOpGtxTransaction, jsonBody: String, hashCalculator: GtvMerkleHashCalculatorBase) {
         val confirmationProofGtv = GtvDecoder.decodeGtv((jsonAsMap(gson, jsonBody)["proof"] as String).hexStringToByteArray())
         val confirmationProof = GtvObjectMapper.fromGtv(confirmationProofGtv, ConfirmationProof::class)
 
         // Assert tx hash
-        assertArrayEquals(realTx.getHash(), confirmationProof.hash)
+        assertEquals(realTx.getHash().toHex(), confirmationProof.hash.toHex())
 
         // Assert signatures
         val blockHeaderRaw = confirmationProof.blockHeader
-        val blockHeader = BaseBlockHeader(blockHeaderRaw, GtvMerkleHashCalculator(cryptoSystem))
+        val blockHeader = BaseBlockHeader(blockHeaderRaw, hashCalculator)
         val blockRid = blockHeader.blockRID
 
         confirmationProof.witness.getSignatures().forEach {
@@ -204,7 +239,7 @@ class ConfirmationProofSlowIntegrationTest : IntegrationTestSetup() {
         assertTrue(found, "The proof does not contain the hash we expected")
 
         // b) Calculate the merkle root of the proof
-        val myNewBlockHash = confirmationProof.merkleProofTree.merkleHash(GtvMerkleHashCalculator(cryptoSystem))
+        val myNewBlockHash = confirmationProof.merkleProofTree.merkleHash(hashCalculator)
 
         // Assert we get the same block RID
         println("Block merkle root - calculated : ${myNewBlockHash.toHex()}")

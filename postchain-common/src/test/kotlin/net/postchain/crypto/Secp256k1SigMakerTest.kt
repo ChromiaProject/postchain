@@ -30,7 +30,7 @@ class Secp256k1SigMakerTest {
         // Accidentally swap public key with the private key
         assertThat(assertThrows<UserMistake> {
             Secp256k1SigMaker(privKey, privKey, dummyDigestFun)
-        }.message).startsWith("Invalid public key: Invalid point encoding 0x")
+        }.message).startsWith("Invalid public key")
 
         // Invalid uncompressed pubkeys
         assertThat(assertThrows<UserMistake> {

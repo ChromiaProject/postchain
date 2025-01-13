@@ -10,6 +10,11 @@ The idea is that this config should be the simplest possible to build real block
  3. The most primitive GTX test module, but also the Standard Ops (b/c we want the Special TXs that "real" block have)
 ================================================================================= -->
 <dict>
+    <entry key="features">
+        <dict>
+            <entry key="merkle_hash_version"><int>2</int></entry>
+        </dict>
+    </entry>
     <entry key="blockstrategy">
         <dict>
             <entry key="name">

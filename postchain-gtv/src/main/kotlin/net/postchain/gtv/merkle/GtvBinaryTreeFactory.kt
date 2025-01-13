@@ -19,14 +19,14 @@ import net.postchain.gtv.merkle.path.GtvPathSet
  * 2. Same as above, but we also marked each Gtv sub structure that should be a path leaf.
  *    If you want this option (2) you have to provide a list of [GtvPath]
  */
-class GtvBinaryTreeFactory : BinaryTreeFactory<Gtv, GtvPathSet>() {
+class GtvBinaryTreeFactory(val gtvHashVersion: Int) : BinaryTreeFactory<Gtv, GtvPathSet>() {
 
     /**
      * Generic builder.
      * @param gtv will take any damn thing
      */
     fun buildFromGtv(gtv: Gtv): GtvBinaryTree {
-        return buildFromGtvAndPath(gtv, GtvPath.NO_PATHS)
+        return buildBinaryTree(gtv, GtvPath.NO_PATHS)
     }
 
     /**
@@ -34,7 +34,7 @@ class GtvBinaryTreeFactory : BinaryTreeFactory<Gtv, GtvPathSet>() {
      * @param gtv will take any damn thing
      * @param gtvPaths will tell us what element that are path leaves
      */
-    fun buildFromGtvAndPath(gtv: Gtv, gtvPaths: GtvPathSet): GtvBinaryTree {
+    override fun buildBinaryTree(gtv: Gtv, gtvPaths: GtvPathSet): GtvBinaryTree {
         if (logger.isTraceEnabled) {
             logger.trace("--------------------------------------------")
             logger.trace("--- Converting GTV to binary tree ----------")
@@ -85,8 +85,8 @@ class GtvBinaryTreeFactory : BinaryTreeFactory<Gtv, GtvPathSet>() {
     override fun innerHandleLeaf(leaf: Gtv, paths: GtvPathSet): BinaryTreeElement {
         return when (leaf) {
             is GtvPrimitive -> handlePrimitiveLeaf(leaf, paths)
-            is GtvArray -> GtvBinaryTreeFactoryArray.buildFromGtvArray(leaf, paths)
-            is GtvDictionary -> GtvBinaryTreeFactoryDict.buildFromGtvDictionary(leaf, paths)
+            is GtvArray -> GtvBinaryTreeFactoryArray.buildFromGtvArray(leaf, paths, this)
+            is GtvDictionary -> GtvBinaryTreeFactoryDict.buildFromGtvDictionary(leaf, paths, this)
             is GtvCollection -> throw IllegalStateException("Programmer should have dealt with this container type: ${leaf.type}")
             else -> throw IllegalStateException("What is this? Not container and not primitive? type: ${leaf.type}")
         }

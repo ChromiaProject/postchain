@@ -21,6 +21,7 @@ import net.postchain.core.EContext
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
+import net.postchain.crypto.sha256Digest
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode
 import net.postchain.devtools.RestTools
@@ -31,7 +32,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvFileReader
-import net.postchain.gtv.merkle.GtvMerkleHashCalculator
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.SimpleGTXModule
@@ -72,7 +73,7 @@ class RestApiIT : IntegrationTestSetup() {
     @Test
     fun testMixedAPICalls() {
         val nodeCount = 4
-        val sysSetup = doSystemSetup(nodeCount, "/net/postchain/devtools/api/blockchain_config.xml")
+        val sysSetup = doSystemSetup(nodeCount, "/net/postchain/devtools/api/blockchain_config_new_hash.xml")
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
 
@@ -83,7 +84,7 @@ class RestApiIT : IntegrationTestSetup() {
                     jsonAsMap(gson, it))
         }
 
-        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem)
+        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem, GtvMerkleHashCalculatorV2(::sha256Digest))
 
         val blockHeight = 0 // If we set it to zero the node with index 0 will get the post
         val tx = postGtxTransaction(factory, 1, blockHeight, nodeCount, blockchainRIDBytes)
@@ -197,7 +198,7 @@ class RestApiIT : IntegrationTestSetup() {
         val bcRid = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = bcRid.toHex()
 
-        val builder = GtxBuilder(bcRid, listOf(pubKey(0)), cryptoSystem)
+        val builder = GtxBuilder(bcRid, listOf(pubKey(0)), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
                 .addOperation("gtx_test", gtv(1L), gtv("rejectMe"))
                 .finish()
                 .sign(cryptoSystem.buildSigMaker(KeyPair(pubKey(0), privKey(0))))
@@ -211,7 +212,7 @@ class RestApiIT : IntegrationTestSetup() {
                 200)
 
         // Asserting
-        val txRidHex = builder.calculateTxRid(GtvMerkleHashCalculator(cryptoSystem)).toHex()
+        val txRidHex = builder.calculateTxRid(GtvMerkleHashCalculatorV2(cryptoSystem)).toHex()
         val expected = """
             {
                 "status": "rejected",
@@ -244,7 +245,7 @@ class RestApiIT : IntegrationTestSetup() {
         val blockchainRID = blockchainRIDBytes.toHex()
 
         // ---- To post a TX ---
-        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem)
+        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem, GtvMerkleHashCalculatorV2(::sha256Digest))
 
         val blockHeight = 0
         var currentId = 0
@@ -278,7 +279,7 @@ class RestApiIT : IntegrationTestSetup() {
     @Test
     fun testGetBlockchainConfiguration() {
         val nodeCount = 4
-        val blockChainFile = "/net/postchain/devtools/api/blockchain_config.xml"
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_new_hash.xml"
         val sysSetup = doSystemSetup(nodeCount, blockChainFile)
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
@@ -295,7 +296,7 @@ class RestApiIT : IntegrationTestSetup() {
     @Test
     fun testGetBlockchainConfigurationWithInvalidHeight() {
         val nodeCount = 4
-        val blockChainFile = "/net/postchain/devtools/api/blockchain_config.xml"
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_new_hash.xml"
         val sysSetup = doSystemSetup(nodeCount, blockChainFile)
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
@@ -370,6 +371,22 @@ class RestApiIT : IntegrationTestSetup() {
     }
 
     @Test
+    fun testValidateMerkleHashDowngrade() {
+        val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
+        val blockChainFileToValidate = "/net/postchain/devtools/api/blockchain_config_legacy_hash.xml"
+        val sysSetup = doSystemSetup(1, blockChainFile)
+        val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
+        val blockchainRID = blockchainRIDBytes.toHex()
+        val config = GtvEncoder.encodeGtv(GtvFileReader.readFile(Paths.get(javaClass.getResource(blockChainFileToValidate)!!.toURI()).toFile()))
+        given().port(nodes[0].getRestApiHttpPort())
+                .header("Content-Type", ContentType.BINARY)
+                .body(config)
+                .post("/config/$blockchainRID")
+                .then()
+                .statusCode(400)
+    }
+
+    @Test
     fun testGetBlockchainNodeState() {
         val blockChainFile = "/net/postchain/devtools/api/blockchain_config_1.xml"
         val sysSetup = doSystemSetup(1, blockChainFile)
@@ -389,7 +406,7 @@ class RestApiIT : IntegrationTestSetup() {
         val sysSetup = doSystemSetup(nodeCount, blockChainFile)
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
-        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem)
+        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem, GtvMerkleHashCalculatorV2(::sha256Digest))
         val blocks = mutableListOf<List<TestOneOpGtxTransaction>>()
         val blockCount = 3
         val txPerBlockCount = 3
@@ -426,7 +443,7 @@ class RestApiIT : IntegrationTestSetup() {
         val sysSetup = doSystemSetup(nodeCount, "/net/postchain/devtools/api/blockchain_config_faulty_1.xml")
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
-        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem)
+        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem, GtvMerkleHashCalculatorV2(::sha256Digest))
         val blocks = mutableListOf<List<TestOneOpGtxTransaction>>()
         val blockCount = 3
         val txPerBlockCount = 3
@@ -460,11 +477,11 @@ class RestApiIT : IntegrationTestSetup() {
     @Test
     fun testDuplicateTx() {
         val nodeCount = 4
-        val sysSetup = doSystemSetup(nodeCount, "/net/postchain/devtools/api/blockchain_config.xml")
+        val sysSetup = doSystemSetup(nodeCount, "/net/postchain/devtools/api/blockchain_config_new_hash.xml")
         val blockchainRIDBytes = sysSetup.blockchainMap[chainIid]!!.rid
         val blockchainRID = blockchainRIDBytes.toHex()
 
-        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem)
+        val factory = GTXTransactionFactory(blockchainRIDBytes, gtxTestModule, cryptoSystem, GtvMerkleHashCalculatorV2(::sha256Digest))
         val tx = TestOneOpGtxTransaction(factory, 1)
 
         testStatusPost(

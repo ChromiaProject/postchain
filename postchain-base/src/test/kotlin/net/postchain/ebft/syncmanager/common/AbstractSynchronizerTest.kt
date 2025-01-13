@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyBoolean
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.ArgumentMatchers.anyString
+import org.mockito.kotlin.any
 import org.mockito.kotlin.atLeastOnce
 import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.doReturn
@@ -157,7 +158,7 @@ class AbstractSynchronizerTest {
     private val peerStatuses: PeerStatuses = mock()
     private val blockWitnessBuilder: BlockWitnessBuilder = mock()
     private val baseBlockWitnessProvider: BaseBlockWitnessProvider = mock {
-        on { createWitnessBuilderWithoutOwnSignature(isA()) } doReturn blockWitnessBuilder
+        on { createWitnessBuilderWithoutOwnSignature(any<BlockHeader>()) } doReturn blockWitnessBuilder
     }
 
     private val baseBlockWitnessProviderProvider: BaseBlockWitnessProviderProvider = { _, _, _ -> baseBlockWitnessProvider }
@@ -294,7 +295,7 @@ class AbstractSynchronizerTest {
         val exception = ConfigurationMismatchException("Failure")
         val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
         doReturn(false).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
-        doReturn(null).whenever(baseBlockHeader).extraData
+        doReturn(mapOf<String, Gtv>()).whenever(baseBlockHeader).extraData
         // execute
         sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
         // verify
@@ -359,7 +360,7 @@ class AbstractSynchronizerTest {
         // setup
         val exception = FailedConfigurationMismatchException("Failure")
         val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
-        doReturn(null).whenever(baseBlockHeader).extraData
+        doReturn(mapOf<String, Gtv>()).whenever(baseBlockHeader).extraData
         // execute
         sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
         // verify
