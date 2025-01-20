@@ -2,6 +2,7 @@ package net.postchain.base.configuration
 
 import net.postchain.base.BaseDependencyFactory
 import net.postchain.common.BlockchainRid
+import net.postchain.common.data.Hash
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.mapper.DefaultEmpty
@@ -11,6 +12,7 @@ import net.postchain.gtv.mapper.Nested
 import net.postchain.gtv.mapper.Nullable
 import net.postchain.gtv.mapper.RawGtv
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import net.postchain.gtv.merkleHash
 
@@ -89,5 +91,17 @@ data class BlockchainConfigurationData(
         fun fromRaw(
                 rawConfigurationData: ByteArray): BlockchainConfigurationData =
                 GtvFactory.decodeGtv(rawConfigurationData).toObject()
+
+        @JvmStatic
+        fun merkleHash(configuration: Gtv): Hash {
+            return configuration.merkleHash(merkelHashCalculator(configuration))
+        }
+
+        @JvmStatic
+        fun merkelHashCalculator(configuration: Gtv): GtvMerkleHashCalculatorBase {
+            val features = configuration[KEY_FEATURES]?.asDict()
+            val merkleHashVersion: Long = features?.get(BlockchainFeatures.merkle_hash_version.name)?.asInteger() ?: 1L
+            return makeMerkleHashCalculator(merkleHashVersion)
+        }
     }
 }
