@@ -412,11 +412,15 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData 
 	public final fun getTxQueueRecheckInterval ()J
 	public final fun getTxQueueSize ()J
 	public fun hashCode ()I
+	public static final fun merkelHashCalculator (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;
+	public static final fun merkleHash (Lnet/postchain/gtv/Gtv;)[B
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class net/postchain/base/configuration/BlockchainConfigurationData$Companion {
 	public final fun fromRaw ([B)Lnet/postchain/base/configuration/BlockchainConfigurationData;
+	public final fun merkelHashCalculator (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;
+	public final fun merkleHash (Lnet/postchain/gtv/Gtv;)[B
 }
 
 public final class net/postchain/base/configuration/BlockchainConfigurationFieldsKt {
