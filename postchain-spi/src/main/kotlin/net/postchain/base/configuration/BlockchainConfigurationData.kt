@@ -94,14 +94,18 @@ data class BlockchainConfigurationData(
 
         @JvmStatic
         fun merkleHash(configuration: Gtv): Hash {
-            return configuration.merkleHash(merkelHashCalculator(configuration))
+            return configuration.merkleHash(merkleHashCalculator(configuration))
         }
 
         @JvmStatic
-        fun merkelHashCalculator(configuration: Gtv): GtvMerkleHashCalculatorBase {
+        fun merkleHashCalculator(configuration: Gtv): GtvMerkleHashCalculatorBase {
+            return makeMerkleHashCalculator(merkleHashVersion(configuration))
+        }
+
+        @JvmStatic
+        fun merkleHashVersion(configuration: Gtv): Long {
             val features = configuration[KEY_FEATURES]?.asDict()
-            val merkleHashVersion: Long = features?.get(BlockchainFeatures.merkle_hash_version.name)?.asInteger() ?: 1L
-            return makeMerkleHashCalculator(merkleHashVersion)
+            return features?.get(BlockchainFeatures.merkle_hash_version.name)?.asInteger() ?: 1L
         }
     }
 }
