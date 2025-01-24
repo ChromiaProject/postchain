@@ -85,7 +85,11 @@ class ContainerManagedBlockchainProcessManager(
                         withLoggingContext(CONTAINER_NAME_TAG to psContainer.containerName.dockerContainer) {
                             logger.info("Stopping subnode $name...")
                             psContainer.stop()
-                            containerJobHandler.stopContainer(psContainer)
+                            try {
+                                containerJobHandler.stopContainer(psContainer)
+                            } catch (e: Exception) {
+                                logger.warn(e) { "Could not stop container: ${e.message}" }
+                            }
                         }
                     }
                     logger.info("Stopping subnode containers done")
