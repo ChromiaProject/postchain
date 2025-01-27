@@ -47,6 +47,8 @@ internal class ContainerHandlerIT {
                 File(javaClass.getResource("/net/postchain/containers/bpm/job/node.properties")!!.toURI()),
                 mapOf(
                         fullKey(KEY_MASTER_HOST) to dockerHost,
+                        "metrics.sub_container_resource_interval_ms" to -1,
+                        "metrics.sub_container_space_resource_interval_ms" to -1,
                         fullKey(KEY_SUBNODE_HOST) to System.getProperty("DOCKER_HOST_SUBNODE", dockerHost),
                         fullKey(KEY_HOST_MOUNT_DIR) to (System.getenv("TEST_MOUNT_DIRECTORY") ?: tempDir.toAbsolutePath().toString()),
                 )

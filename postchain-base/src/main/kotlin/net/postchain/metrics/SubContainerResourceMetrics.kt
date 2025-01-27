@@ -11,12 +11,14 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import kotlin.reflect.KProperty1
 
+
 const val SUB_CONTAINER_METRICS_MEMORY_USAGE = "sub_container,memory_usage"
 const val SUB_CONTAINER_METRICS_MEMORY_USAGE_PERCENTAGE = "sub_container,memory_usage_percentage"
 const val SUB_CONTAINER_METRICS_CPU_USAGE_PERCENTAGE = "sub_container,cpu_usage_percentage"
 const val SUB_CONTAINER_METRICS_SPACE_USAGE_MIB = "sub_container,space_usage_mib"
 const val SUB_CONTAINER_METRICS_SPACE_USAGE_PERCENTAGE = "sub_container,space_usage_percentage"
-const val SUB_CONTAINER_METRICS_SPACE_LEFT_MB = "sub_container,space_left_mb"
+const val SUB_CONTAINER_METRICS_SPACE_LEFT_MIB = "sub_container,space_left_mib"
+const val SUB_CONTAINER_METRICS_SPACE_UPDATE_TIME = "sub_container,space_update_time"
 const val SUB_CONTAINER_CONTAINER_NAME_TAG = "containerName"
 
 /**
@@ -39,7 +41,9 @@ class SubContainerResourceMetrics(
 
             val metric = Metrics.globalRegistry.meters.find { metric ->
                 metric.id.name == metricName && metric.id.tags.any { tag ->
-                    tag.key == SUB_CONTAINER_CONTAINER_NAME_TAG && tag.value == containerName } }
+                    tag.key == SUB_CONTAINER_CONTAINER_NAME_TAG && tag.value == containerName
+                }
+            }
 
             return metric?.measure()?.iterator()?.next()?.value
         }
@@ -51,7 +55,8 @@ class SubContainerResourceMetrics(
                 SubContainerResourceMetricData(SUB_CONTAINER_METRICS_CPU_USAGE_PERCENTAGE, "CPU usage in percent", ContainerResourceUsage::cpuUsagePercentage),
                 SubContainerResourceMetricData(SUB_CONTAINER_METRICS_SPACE_USAGE_MIB, "Space usage in MiB", ContainerResourceUsage::spaceUsageMiB, true),
                 SubContainerResourceMetricData(SUB_CONTAINER_METRICS_SPACE_USAGE_PERCENTAGE, "Space usage in percent", ContainerResourceUsage::spaceUsagePercentage, true),
-                SubContainerResourceMetricData(SUB_CONTAINER_METRICS_SPACE_LEFT_MB, "Space left in MB", ContainerResourceUsage::spaceLeftMib, true),
+                SubContainerResourceMetricData(SUB_CONTAINER_METRICS_SPACE_LEFT_MIB, "Space left in MiB", ContainerResourceUsage::spaceLeftMib, true),
+                SubContainerResourceMetricData(SUB_CONTAINER_METRICS_SPACE_UPDATE_TIME, "Space update time", ContainerResourceUsage::spaceUpdateTime, true),
         )
     }
 
@@ -75,6 +80,7 @@ class SubContainerResourceMetrics(
             val start = System.currentTimeMillis()
             val resourceUsage = getContainerResourceUsage(includeSpaceUsage)
             if (resourceUsage != null) {
+                resourceUsage.spaceUpdateTime = lastSpaceCheckTime?.toEpochMilli()
                 if (!includeSpaceUsage && lastResourceUsage != null) {
                     resourceUsage.copySpacePropertiesFrom(lastResourceUsage!!)
                 }
@@ -108,7 +114,7 @@ class SubContainerResourceMetrics(
                 .register(Metrics.globalRegistry)
                 .apply {
                     metrics.add(this)
-                 }
+                }
     }
 
     override fun close() {

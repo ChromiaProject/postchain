@@ -207,11 +207,11 @@ class AppConfig(private val config: Configuration) : Config {
         get() = getEnvOrInt("POSTCHAIN_PROMETHEUS_PORT", "metrics.prometheus.port", -1)
 
     val subContainerResourceUsageMetricIntervalMs
-        get() = getEnvOrLong("POSTCHAIN_METRICS_SUB_CONTAINER_RESOURCE_INTERVAL_MS", "metrics.sub_container_resource_interval_ms", -1)
+        get() = getEnvOrLong("POSTCHAIN_METRICS_SUB_CONTAINER_RESOURCE_INTERVAL_MS", "metrics.sub_container_resource_interval_ms", 60_000)
 
     val subContainerResourceSpaceUsageMetricIntervalMs
         get(): Long {
-            val value = getEnvOrLong("POSTCHAIN_METRICS_SUB_CONTAINER_SPACE_RESOURCE_INTERVAL_MS", "metrics.sub_container_space_resource_interval_ms", -1)
+            val value = getEnvOrLong("POSTCHAIN_METRICS_SUB_CONTAINER_SPACE_RESOURCE_INTERVAL_MS", "metrics.sub_container_space_resource_interval_ms", 60_000)
             require(value >= subContainerResourceUsageMetricIntervalMs) { "Sub container space resource interval must be greater than or equal to sub container resource usage metric interval" }
             return value
         }
