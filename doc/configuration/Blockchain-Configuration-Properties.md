@@ -55,3 +55,13 @@ Configuration under the key `revolt`.
 | `exponential_delay_max`          | Maximum possible revolt timeout in milliseconds                                                                                                               | int     | 600 000 |
 | `fast_revolt_status_timeout`     | Timeout in milliseconds since last received status message before considering a node disconnected and revolting immediately. -1 to disable this functionality | int     | -1      |
 | `revolt_when_should_build_block` | Only start counting revolt timeout after we ourselves consider it possible to actually build a block                                                          | boolean | false   |
+
+## Features
+
+Configuration under the key `features`. This will contain feature flags to toggle behavior. Unknown feature flags will
+not be accepted by a node. This is to prevent old versions of Postchain from running blockchains with features that
+it actually does not support.
+
+| Name                  | Description                                 | Type    | Default |
+|-----------------------|---------------------------------------------|---------|---------|
+| `merkle_hash_version` | The version of merkle hash algorithm to use | int     | 1       |
