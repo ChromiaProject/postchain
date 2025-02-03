@@ -33,7 +33,7 @@ interface BlockStore {
     fun getBlocksBetweenHeights(ctx: EContext, heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated
     fun getBlocksFromHeight(ctx: EContext, fromHeight: Long, limit: Int): List<DatabaseAccess.BlockInfoExt>
     fun getBlock(ctx: EContext, blockRID: ByteArray, txHashesOnly: Boolean): BlockDetail?
-    fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt?
+    fun getTransactionInfo(ctx: EContext, txRID: ByteArray, includeTxData: Boolean = true): TransactionInfoExt?
     fun getTransactionsInfo(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated
     fun getTransactionsInfoBySigner(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated
     fun getLastTransactionNumber(ctx: EContext): Long

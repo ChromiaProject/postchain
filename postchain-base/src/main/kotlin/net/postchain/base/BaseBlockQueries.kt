@@ -114,8 +114,8 @@ abstract class BaseBlockQueries(
         blockStore.getTxBytes(it, txRID)
     }
 
-    override fun getTransactionInfo(txRID: ByteArray): CompletionStage<TransactionInfoExt?> = runOpRegardless {
-        blockStore.getTransactionInfo(it, txRID)
+    override fun getTransactionInfo(txRID: ByteArray, includeTxData: Boolean): CompletionStage<TransactionInfoExt?> = runOpRegardless {
+        blockStore.getTransactionInfo(it, txRID, includeTxData)
     }
 
     override fun getTransactionsInfo(timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated> =

@@ -43,7 +43,7 @@ interface BlockQueries : Shutdownable {
     fun getBlockTransactionRids(blockRID: ByteArray): CompletionStage<List<ByteArray>>
     fun getTransaction(txRID: ByteArray): CompletionStage<Transaction?>
     fun getTransactionRawData(txRID: ByteArray): CompletionStage<ByteArray?>
-    fun getTransactionInfo(txRID: ByteArray): CompletionStage<TransactionInfoExt?>
+    fun getTransactionInfo(txRID: ByteArray, includeTxData: Boolean = true): CompletionStage<TransactionInfoExt?>
     fun getTransactionsInfo(timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated>
     fun getTransactionsInfoBySigner(timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated>
     fun getLastTransactionNumber(): CompletionStage<Long>

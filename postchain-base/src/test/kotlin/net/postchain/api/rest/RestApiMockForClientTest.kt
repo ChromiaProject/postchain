@@ -193,10 +193,11 @@ class RestApiMockForClientManual {
             TODO("Not yet implemented")
         }
 
-        override fun getTransactionInfo(txRID: TxRid): TransactionInfoExt {
+        override fun getTransactionInfo(txRID: TxRid, includeTxData: Boolean): TransactionInfoExt {
             val block = blocks.filter { block -> block.transactions.filter { tx -> cryptoSystem.digest(tx.data!!).contentEquals(txRID.bytes) }.size > 0 }[0]
             val tx = block.transactions.filter { tx -> cryptoSystem.digest(tx.data!!).contentEquals(txRID.bytes) }[0]
-            return TransactionInfoExt(block.rid, block.height, block.header, block.witness, block.timestamp, cryptoSystem.digest(tx.data!!), tx.data!!.slice(IntRange(0, 4)).toByteArray(), tx.data!!)
+            return TransactionInfoExt(block.rid, block.height, block.header, block.witness, block.timestamp, cryptoSystem.digest(tx.data!!),
+                    tx.data!!.slice(IntRange(0, 4)).toByteArray(), if (includeTxData) tx.data!! else null)
         }
 
         override fun getTransactionsInfo(timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated {

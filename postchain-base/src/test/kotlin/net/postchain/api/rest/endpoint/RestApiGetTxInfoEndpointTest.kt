@@ -17,7 +17,9 @@ import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.block.BlockQueryTimeFilter
 import org.hamcrest.CoreMatchers.equalTo
+import org.hamcrest.CoreMatchers.not
 import org.hamcrest.CoreMatchers.nullValue
+import org.hamcrest.Matchers.hasKey
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -50,14 +52,14 @@ class RestApiGetTxInfoEndpointTest {
     }
 
     @Test
-    fun testGetTxInfo() {
+    fun testGetTxInfoWithDataDefault() {
         val tx = "tx2".toByteArray()
         val txRID = cryptoSystem.digest(tx)
         val response = TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(),
                 "signatures".toByteArray(), 1574849940, txRID, "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), tx)
 
         whenever(
-                model.getTransactionInfo(TxRid(txRID))
+                model.getTransactionInfo(TxRid(txRID), true)
         ).thenReturn(response)
         restApi.attachModel(blockchainRID, model)
 
@@ -68,6 +70,51 @@ class RestApiGetTxInfoEndpointTest {
                 .contentType(ContentType.JSON)
                 .header("Cache-Control", equalTo("public, max-age=31536000"))
                 .body("blockRID", equalTo("0404040404040404040404040404040404040404040404040404040404040404"))
+                .body("txData", equalTo(tx.toHex()))
+    }
+
+    @Test
+    fun testGetTxInfoWithData() {
+        val tx = "tx2".toByteArray()
+        val txRID = cryptoSystem.digest(tx)
+        val response = TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(),
+                "signatures".toByteArray(), 1574849940, txRID, "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), tx)
+
+        whenever(
+                model.getTransactionInfo(TxRid(txRID), true)
+        ).thenReturn(response)
+        restApi.attachModel(blockchainRID, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/transactions/$blockchainRID/${txRID.toHex()}?tx-data=true")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .header("Cache-Control", equalTo("public, max-age=31536000"))
+                .body("blockRID", equalTo("0404040404040404040404040404040404040404040404040404040404040404"))
+                .body("txData", equalTo(tx.toHex()))
+    }
+
+    @Test
+    fun testGetTxInfoWithoutData() {
+        val tx = "tx2".toByteArray()
+        val txRID = cryptoSystem.digest(tx)
+        val response = TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(),
+                "signatures".toByteArray(), 1574849940, txRID, "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), null)
+
+        whenever(
+                model.getTransactionInfo(TxRid(txRID), false)
+        ).thenReturn(response)
+        restApi.attachModel(blockchainRID, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/transactions/$blockchainRID/${txRID.toHex()}?tx-data=false")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .header("Cache-Control", equalTo("public, max-age=31536000"))
+                .body("blockRID", equalTo("0404040404040404040404040404040404040404040404040404040404040404"))
+                .body("$", not(hasKey("txData"))) // Ensures it’s absent.
     }
 
     @Test
@@ -76,7 +123,7 @@ class RestApiGetTxInfoEndpointTest {
         val txRID = cryptoSystem.digest(tx)
 
         whenever(
-                model.getTransactionInfo(TxRid(txRID))
+                model.getTransactionInfo(TxRid(txRID), true)
         ).thenReturn(null)
         restApi.attachModel(blockchainRID, model)
 

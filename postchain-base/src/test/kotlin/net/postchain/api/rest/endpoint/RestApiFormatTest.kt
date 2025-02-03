@@ -51,7 +51,7 @@ class RestApiFormatTest {
                 "signatures".toByteArray(), 1574849940, txRID, "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), tx)
 
         whenever(
-                model.getTransactionInfo(TxRid(txRID))
+                model.getTransactionInfo(TxRid(txRID), true)
         ).thenReturn(response)
         restApi.attachModel(blockchainRID, model)
 

@@ -580,7 +580,7 @@ public final class net/postchain/base/data/BaseBlockStore : net/postchain/core/b
 	public fun getLastBlockTimestamp (Lnet/postchain/core/ExecutionContext;)J
 	public fun getLastTransactionNumber (Lnet/postchain/core/ExecutionContext;)J
 	public fun getMerkleHashVersion (Lnet/postchain/core/ExecutionContext;J)J
-	public fun getTransactionInfo (Lnet/postchain/core/ExecutionContext;[B)Lnet/postchain/core/TransactionInfoExt;
+	public fun getTransactionInfo (Lnet/postchain/core/ExecutionContext;[BZ)Lnet/postchain/core/TransactionInfoExt;
 	public fun getTransactionsInfo (Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockQueryTimeFilter;II)Lnet/postchain/core/TransactionInfoExtsTruncated;
 	public fun getTransactionsInfoBySigner (Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockQueryTimeFilter;ILnet/postchain/crypto/PubKey;I)Lnet/postchain/core/TransactionInfoExtsTruncated;
 	public fun getTxBytes (Lnet/postchain/core/ExecutionContext;[B)[B
@@ -675,7 +675,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getPageEqualOrLowerThanHeight (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JIJ)Lnet/postchain/base/snapshot/Page;
 	public abstract fun getPeerInfoCollection (Lnet/postchain/core/AppContext;)[Lnet/postchain/base/PeerInfo;
 	public abstract fun getPrunablePages (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;J)Ljava/util/List;
-	public abstract fun getTransactionInfo (Lnet/postchain/core/ExecutionContext;[B)Lnet/postchain/core/TransactionInfoExt;
+	public abstract fun getTransactionInfo (Lnet/postchain/core/ExecutionContext;[BZ)Lnet/postchain/core/TransactionInfoExt;
 	public abstract fun getTransactionsInfo (Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockQueryTimeFilter;II)Lnet/postchain/core/TransactionInfoExtsTruncated;
 	public abstract fun getTransactionsInfoBySigner (Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockQueryTimeFilter;ILnet/postchain/crypto/PubKey;I)Lnet/postchain/core/TransactionInfoExtsTruncated;
 	public abstract fun getTxBytes (Lnet/postchain/core/ExecutionContext;[B)[B
@@ -753,6 +753,7 @@ public final class net/postchain/base/data/DatabaseAccess$DefaultImpls {
 	public static synthetic fun addPeerInfo$default (Lnet/postchain/base/data/DatabaseAccess;Lnet/postchain/core/AppContext;Ljava/lang/String;ILjava/lang/String;Ljava/time/Instant;ILjava/lang/Object;)Z
 	public static synthetic fun getAllBlocksWithTransactions$default (Lnet/postchain/base/data/DatabaseAccess;Lnet/postchain/core/ExecutionContext;JJLkotlin/jvm/functions/Function1;ILjava/lang/Object;)V
 	public static synthetic fun getLowestSnapshotHeightToKeep$default (Lnet/postchain/base/data/DatabaseAccess;Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JIILjava/lang/Object;)Ljava/lang/Long;
+	public static synthetic fun getTransactionInfo$default (Lnet/postchain/base/data/DatabaseAccess;Lnet/postchain/core/ExecutionContext;[BZILjava/lang/Object;)Lnet/postchain/core/TransactionInfoExt;
 	public static fun initializeApp (Lnet/postchain/base/data/DatabaseAccess;Ljava/sql/Connection;I)V
 	public static synthetic fun initializeApp$default (Lnet/postchain/base/data/DatabaseAccess;Ljava/sql/Connection;IZILjava/lang/Object;)V
 	public static synthetic fun removeAllBlockchainSpecificTables$default (Lnet/postchain/base/data/DatabaseAccess;Lnet/postchain/core/ExecutionContext;Ljava/util/List;ILjava/lang/Object;)V
@@ -1664,7 +1665,7 @@ public abstract interface class net/postchain/core/block/BlockQueries : net/post
 	public abstract fun getLastBlockTimestamp ()Ljava/util/concurrent/CompletionStage;
 	public abstract fun getLastTransactionNumber ()Ljava/util/concurrent/CompletionStage;
 	public abstract fun getTransaction ([B)Ljava/util/concurrent/CompletionStage;
-	public abstract fun getTransactionInfo ([B)Ljava/util/concurrent/CompletionStage;
+	public abstract fun getTransactionInfo ([BZ)Ljava/util/concurrent/CompletionStage;
 	public abstract fun getTransactionRawData ([B)Ljava/util/concurrent/CompletionStage;
 	public abstract fun getTransactionsInfo (Lnet/postchain/core/block/BlockQueryTimeFilter;II)Ljava/util/concurrent/CompletionStage;
 	public abstract fun getTransactionsInfoBySigner (Lnet/postchain/core/block/BlockQueryTimeFilter;ILnet/postchain/crypto/PubKey;I)Ljava/util/concurrent/CompletionStage;
@@ -1674,6 +1675,7 @@ public abstract interface class net/postchain/core/block/BlockQueries : net/post
 
 public final class net/postchain/core/block/BlockQueries$DefaultImpls {
 	public static synthetic fun getBlockAtHeight$default (Lnet/postchain/core/block/BlockQueries;JZILjava/lang/Object;)Ljava/util/concurrent/CompletionStage;
+	public static synthetic fun getTransactionInfo$default (Lnet/postchain/core/block/BlockQueries;[BZILjava/lang/Object;)Ljava/util/concurrent/CompletionStage;
 }
 
 public abstract interface class net/postchain/core/block/BlockQueriesProvider {
@@ -1743,13 +1745,17 @@ public abstract interface class net/postchain/core/block/BlockStore {
 	public abstract fun getLastBlockTimestamp (Lnet/postchain/core/ExecutionContext;)J
 	public abstract fun getLastTransactionNumber (Lnet/postchain/core/ExecutionContext;)J
 	public abstract fun getMerkleHashVersion (Lnet/postchain/core/ExecutionContext;J)J
-	public abstract fun getTransactionInfo (Lnet/postchain/core/ExecutionContext;[B)Lnet/postchain/core/TransactionInfoExt;
+	public abstract fun getTransactionInfo (Lnet/postchain/core/ExecutionContext;[BZ)Lnet/postchain/core/TransactionInfoExt;
 	public abstract fun getTransactionsInfo (Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockQueryTimeFilter;II)Lnet/postchain/core/TransactionInfoExtsTruncated;
 	public abstract fun getTransactionsInfoBySigner (Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockQueryTimeFilter;ILnet/postchain/crypto/PubKey;I)Lnet/postchain/core/TransactionInfoExtsTruncated;
 	public abstract fun getTxBytes (Lnet/postchain/core/ExecutionContext;[B)[B
 	public abstract fun getTxRIDsAtHeight (Lnet/postchain/core/ExecutionContext;J)[[B
 	public abstract fun getWitnessData (Lnet/postchain/core/ExecutionContext;[B)[B
 	public abstract fun isTransactionConfirmed (Lnet/postchain/core/ExecutionContext;[B)Z
+}
+
+public final class net/postchain/core/block/BlockStore$DefaultImpls {
+	public static synthetic fun getTransactionInfo$default (Lnet/postchain/core/block/BlockStore;Lnet/postchain/core/ExecutionContext;[BZILjava/lang/Object;)Lnet/postchain/core/TransactionInfoExt;
 }
 
 public final class net/postchain/core/block/BlockTrace {
