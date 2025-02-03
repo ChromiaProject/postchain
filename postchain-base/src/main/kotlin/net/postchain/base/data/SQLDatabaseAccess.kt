@@ -313,9 +313,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return DatabaseAccess.BlockInfo(blockIid, blockHeader, witness)
     }
 
-    override fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt? {
+    override fun getTransactionInfo(ctx: EContext, txRID: ByteArray, includeTxData: Boolean): TransactionInfoExt? {
         val sql = """
-            SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_rid, t.tx_hash, t.tx_data 
+            SELECT b.block_rid, b.block_height, b.block_header_data, b.block_witness, b.timestamp, t.tx_rid, t.tx_hash ${if (includeTxData) ", t.tx_data" else ""}, t.tx_iid 
                     FROM ${tableBlocks(ctx)} as b 
                     JOIN ${tableTransactions(ctx)} as t ON (t.block_iid = b.block_iid) 
                     WHERE t.tx_rid = ?
@@ -398,7 +398,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val blockTimestamp = txInfo["timestamp"] as Long
         val resultTxRID = txInfo["tx_rid"] as ByteArray
         val txHash = txInfo["tx_hash"] as ByteArray
-        val txData = txInfo["tx_data"] as ByteArray
+        val txData = txInfo["tx_data"] as ByteArray?
         return TransactionInfoExt(
                 blockRID, blockHeight, blockHeader, blockWitness, blockTimestamp, resultTxRID, txHash, txData)
     }

@@ -137,7 +137,7 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
     fun test_get_one_tx() {
         val txRID = tx(0).getRID()
 
-        val tx = nodes[0].getRestApiModel().getTransactionInfo(TxRid((txRID)))
+        val tx = nodes[0].getRestApiModel().getTransactionInfo(TxRid((txRID)), true)
         assertThat(tx).isNotNull()
     }
 
@@ -157,7 +157,7 @@ class GetLastBlocksExplorerTest : IntegrationTestSetup() {
     @Test
     fun test_get_a_tx_does_not_exist() {
         val randomTxRID = "ce4ae9fbb66228a5dbaf89384217d1466df478753f3f3970af9cae8f485100f2".hexStringToByteArray()
-        val tx = nodes[0].getRestApiModel().getTransactionInfo(TxRid((randomTxRID)))
+        val tx = nodes[0].getRestApiModel().getTransactionInfo(TxRid((randomTxRID)), true)
         assertThat(tx).isNull()
     }
 

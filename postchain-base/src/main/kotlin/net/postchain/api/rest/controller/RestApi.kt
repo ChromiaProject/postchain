@@ -55,6 +55,7 @@ import net.postchain.api.rest.statusBody
 import net.postchain.api.rest.textBody
 import net.postchain.api.rest.transactionsCountBody
 import net.postchain.api.rest.txBody
+import net.postchain.api.rest.txDataQuery
 import net.postchain.api.rest.txInfoBody
 import net.postchain.api.rest.txInfosBody
 import net.postchain.api.rest.txRidPath
@@ -177,7 +178,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 12
+        const val REST_API_VERSION = 13
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -370,8 +371,9 @@ class RestApi(
     }
 
     private fun getTransactionInfo(request: Request): Response {
+        val txData = txDataQuery(request) != false
         val txInfo = runTxActionOnModel(model(request), txRidPath(request)) { model, txRID ->
-            model.getTransactionInfo(txRID)
+            model.getTransactionInfo(txRID, includeTxData = txData)
         }
         return Response(OK).with(txInfoBody of txInfo)
     }

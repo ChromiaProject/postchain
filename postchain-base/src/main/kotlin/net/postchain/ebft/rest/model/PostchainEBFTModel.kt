@@ -9,8 +9,14 @@ import net.postchain.api.rest.controller.DuplicateTnxException
 import net.postchain.api.rest.controller.InvalidTnxException
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.UnavailableException
+import net.postchain.api.rest.model.ApiStatus
+import net.postchain.api.rest.model.TxRid
 import net.postchain.common.BlockchainRid
 import net.postchain.common.tx.EnqueueTransactionResult
+import net.postchain.common.tx.TransactionStatus.CONFIRMED
+import net.postchain.common.tx.TransactionStatus.REJECTED
+import net.postchain.common.tx.TransactionStatus.UNKNOWN
+import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.Storage
@@ -61,6 +67,22 @@ class PostchainEBFTModel(
             EnqueueTransactionResult.OK -> {
                 sample.stop(metrics.okTransactions)
             }
+        }
+    }
+
+    override fun getStatus(txRID: TxRid): ApiStatus {
+        var status = txQueue.getTransactionStatus(txRID.bytes)
+
+        if (status == UNKNOWN) {
+            status = if (blockQueries.isTransactionConfirmed(txRID.bytes).get())
+                CONFIRMED else UNKNOWN
+        }
+
+        return if (status == REJECTED) {
+            val exception = txQueue.getRejectionReason(txRID.bytes.wrap())
+            ApiStatus(status, exception?.message)
+        } else {
+            ApiStatus(status)
         }
     }
 }

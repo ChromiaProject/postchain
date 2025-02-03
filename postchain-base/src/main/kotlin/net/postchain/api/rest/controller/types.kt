@@ -42,7 +42,7 @@ interface Model : ChainModel {
 
     fun postTransaction(tx: ByteArray)
     fun getTransaction(txRID: TxRid): ByteArray?
-    fun getTransactionInfo(txRID: TxRid): TransactionInfoExt?
+    fun getTransactionInfo(txRID: TxRid, includeTxData: Boolean = true): TransactionInfoExt?
     fun getTransactionsInfo(timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated
     fun getTransactionsInfoBySigner(timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated
     fun getLastTransactionNumber(): TransactionsCount

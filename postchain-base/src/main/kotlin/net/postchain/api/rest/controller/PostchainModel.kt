@@ -26,10 +26,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
-import net.postchain.common.tx.TransactionStatus.CONFIRMED
-import net.postchain.common.tx.TransactionStatus.REJECTED
-import net.postchain.common.tx.TransactionStatus.UNKNOWN
-import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockRid
 import net.postchain.core.BlockchainConfiguration
@@ -98,7 +94,8 @@ open class PostchainModel(
 
     override fun getTransaction(txRID: TxRid): ByteArray? = blockQueries.getTransactionRawData(txRID.bytes).get()
 
-    override fun getTransactionInfo(txRID: TxRid): TransactionInfoExt? = blockQueries.getTransactionInfo(txRID.bytes).get()
+    override fun getTransactionInfo(txRID: TxRid, includeTxData: Boolean): TransactionInfoExt? =
+            blockQueries.getTransactionInfo(txRID.bytes, includeTxData).get()
 
     override fun getTransactionsInfo(timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated =
             blockQueries.getTransactionsInfo(timeFilter, limit, maxDataSize).get()
@@ -144,21 +141,7 @@ open class PostchainModel(
     override fun getConfirmationProof(txRID: TxRid): ConfirmationProof? =
             blockQueries.getConfirmationProof(txRID.bytes).get()
 
-    override fun getStatus(txRID: TxRid): ApiStatus {
-        var status = txQueue.getTransactionStatus(txRID.bytes)
-
-        if (status == UNKNOWN) {
-            status = if (blockQueries.isTransactionConfirmed(txRID.bytes).get())
-                CONFIRMED else UNKNOWN
-        }
-
-        return if (status == REJECTED) {
-            val exception = txQueue.getRejectionReason(txRID.bytes.wrap())
-            ApiStatus(status, exception?.message)
-        } else {
-            ApiStatus(status)
-        }
-    }
+    override fun getStatus(txRID: TxRid): ApiStatus = throw NotSupported("Checking transaction status on a non-signer node is not supported.")
 
     override fun query(query: GtxQuery): Gtv {
         val timerBuilder = Timer.builder(QUERIES_METRIC_NAME)

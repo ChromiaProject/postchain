@@ -53,7 +53,7 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: "12"
+  version: "13"
 paths:
   /tx/{blockchainRid}:
     post:
@@ -64,6 +64,7 @@ paths:
         Submit a transaction to a chain.
         The request body can either contain hex encoded GTX transaction in JSON wrapper, 
         or binary GTV (by specifying `Content-Type: application/octet-stream).
+        Read replicas does not support this endpoint.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       requestBody:
@@ -176,6 +177,13 @@ paths:
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
+        - name: tx-data
+          description: Return full transaction data
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
       responses:
         200:
           description: Found
@@ -325,6 +333,7 @@ paths:
       description: |
         Fetch the status of a transaction from a chain
         **Note**: The node stores up to 1000 rejected transaction statuses per chain in memory. Once this limit is reached, the oldest entry is discarded to make room for a new one.
+        Read replicas does not support this endpoint, use `GET /transactions/{blockchainRid}/{txRid}?tx-data=false` instead
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"

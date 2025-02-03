@@ -102,8 +102,8 @@ class BaseBlockStore : BlockStore {
                 .map { it.data as ByteArray }
     }
 
-    override fun getTransactionInfo(ctx: EContext, txRID: ByteArray): TransactionInfoExt? {
-        return DatabaseAccess.of(ctx).getTransactionInfo(ctx, txRID)
+    override fun getTransactionInfo(ctx: EContext, txRID: ByteArray, includeTxData: Boolean): TransactionInfoExt? {
+        return DatabaseAccess.of(ctx).getTransactionInfo(ctx, txRID, includeTxData)
     }
 
     override fun getTransactionsInfo(ctx: EContext, timeFilter: BlockQueryTimeFilter, limit: Int, maxDataSize: Int): TransactionInfoExtsTruncated {

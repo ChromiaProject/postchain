@@ -33,7 +33,7 @@ class MaxRevoltExceededSlowIntegrationTest : IntegrationTestSetup() {
         buildBlock(DEFAULT_CHAIN_IID, 0L, normalTx, delayedTx)
 
         val blockQueries = nodes[0].getBlockchainInstance().blockchainEngine.getBlockQueries()
-        val normalTxInfo = blockQueries.getTransactionInfo(normalTx.getRID())
+        val normalTxInfo = blockQueries.getTransactionInfo(normalTx.getRID(), includeTxData = true)
                 .get()
         assertThat(normalTxInfo).isNotNull()
         assertThat(normalTxInfo!!.blockHeight).isEqualTo(0)
@@ -41,7 +41,7 @@ class MaxRevoltExceededSlowIntegrationTest : IntegrationTestSetup() {
         val transactionQueue = nodes[0].getBlockchainInstance().blockchainEngine.getTransactionQueue()
         assertThat(transactionQueue.getTransactionStatus(delayedTx.getRID()))
                 .isEqualTo(TransactionStatus.UNKNOWN)
-        val delayedTxInfo = blockQueries.getTransactionInfo(delayedTx.getRID())
+        val delayedTxInfo = blockQueries.getTransactionInfo(delayedTx.getRID(), includeTxData = true)
                 .get()
         assertThat(delayedTxInfo).isNull()
     }

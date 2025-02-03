@@ -1,5 +1,9 @@
 package net.postchain.base.data
 
+import assertk.assertThat
+import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
+import assertk.isContentEqualTo
 import net.postchain.StorageBuilder
 import net.postchain.base.BaseDependencyFactory
 import net.postchain.base.BlockchainRelatedInfo
@@ -14,6 +18,7 @@ import net.postchain.base.withReadWriteConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.hexStringToByteArray
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.core.EContext
@@ -383,6 +388,50 @@ class DatabaseIT {
             withReadConnection(storage, chainId) { readCtx ->
                 val readAccess = DatabaseAccess.of(readCtx)
                 assertEquals(BlockchainRid.ZERO_RID, readAccess.getBlockchainRid(readCtx))
+            }
+        }
+    }
+
+    @Test
+    fun getTransactionInfoWithData() {
+        val configData1 = gtv(mapOf(
+                "signers" to gtv(listOf()),
+                "configurationfactory" to gtv("")
+        ))
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData1)
+            testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData1), listOf(
+                    listOf("first"),
+            ))
+            val txRID = "E8EB594138E98F6FA84175C0C5213E2FB5EE02943A3EEE47D4593292F9135F17".hexStringToByteArray()
+            withReadConnection(storage, testBlockChainBuilder.chainId) { readCtx ->
+                val readAccess = DatabaseAccess.of(readCtx)
+                val transactionInfo = readAccess.getTransactionInfo(readCtx, txRID, includeTxData = true)
+                assertThat(transactionInfo!!.txRID).isContentEqualTo(txRID)
+                assertThat(Gtx.decode(transactionInfo!!.txData!!).gtxBody.operations[0].asOpData().args[1].asString()).isEqualTo("first")
+            }
+        }
+    }
+
+    @Test
+    fun getTransactionInfoWithoutData() {
+        val configData1 = gtv(mapOf(
+                "signers" to gtv(listOf()),
+                "configurationfactory" to gtv("")
+        ))
+
+        StorageBuilder.buildStorage(appConfig, wipeDatabase = true).use { storage ->
+            val testBlockChainBuilder = TestBlockchainBuilder(storage, configData1)
+            testBlockChainBuilder.buildBlockchainWithTestTransactions(listOf(0L to configData1), listOf(
+                    listOf("first"),
+            ))
+            val txRID = "E8EB594138E98F6FA84175C0C5213E2FB5EE02943A3EEE47D4593292F9135F17".hexStringToByteArray()
+            withReadConnection(storage, testBlockChainBuilder.chainId) { readCtx ->
+                val readAccess = DatabaseAccess.of(readCtx)
+                val transactionInfo = readAccess.getTransactionInfo(readCtx, txRID, includeTxData = false)
+                assertThat(transactionInfo!!.txRID).isContentEqualTo(txRID)
+                assertThat(transactionInfo.txData).isNull()
             }
         }
     }
