@@ -54,6 +54,23 @@ info:
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
   version: "13"
+tags:
+  - name: block
+    description: Fetch block(s)
+  - name: blockchain
+    description: Blockchain information
+  - name: configuration
+    description: Manage blockchain configurations
+  - name: error
+    description: Information about errors
+  - name: experimental
+    description: Experimental endpoints, use with caution
+  - name: node
+    description: Node information
+  - name: query
+    description: Make a query
+  - name: transaction
+    description: Submit or fetch transaction(s)
 paths:
   /tx/{blockchainRid}:
     post:
@@ -74,14 +91,14 @@ paths:
               $ref: "#/components/schemas/tx"
           application/octet-stream: { }
       responses:
-        200:
+        '200':
           description: Transaction queued
           content:
             application/json:
               schema:
                 type: object
             application/octet-stream: { }
-        400:
+        '400':
           description: Bad request
           content:
             application/json:
@@ -101,7 +118,7 @@ paths:
                   value:
                     error: "Transaction is invalid"
             application/octet-stream: { }
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -112,7 +129,7 @@ paths:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
             application/octet-stream: { }
-        409:
+        '409':
           description: Transaction already in queue
           content:
             application/json:
@@ -123,7 +140,7 @@ paths:
                   value:
                     error: "Transaction already in queue"
             application/octet-stream: { }
-        503:
+        '503':
           description: Transaction queue is full
           content:
             application/json:
@@ -147,14 +164,14 @@ paths:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
       responses:
-        200:
+        '200':
           description: Found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/tx"
             application/octet-stream: { }
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -185,13 +202,13 @@ paths:
             type: boolean
             default: true
       responses:
-        200:
+        '200':
           description: Found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/txInfo"
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -242,7 +259,7 @@ paths:
           schema:
             $ref: "#/components/schemas/hex"
       responses:
-        200:
+        '200':
           description: Found
           content:
             application/json:
@@ -256,7 +273,7 @@ paths:
               required: true
               schema:
                 type: boolean
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -275,13 +292,13 @@ paths:
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
-        200:
+        '200':
           description: Found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/transactionsCount"
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -304,14 +321,14 @@ paths:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
       responses:
-        200:
+        '200':
           description: Found
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/confirmationProof"
             application/octet-stream: { }
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -338,7 +355,7 @@ paths:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -364,7 +381,7 @@ paths:
                   value:
                     status: rejected
                     rejectReason: "[module:operation(dapp/module/module.rell:17)] Operation 'module:operation' failed: Requirement error"
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -434,7 +451,7 @@ paths:
             type: boolean
             default: false
       responses:
-        200:
+        '200':
           description: Found
           headers:
             X-Data-Truncated:
@@ -448,7 +465,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/blockInfo"
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -478,7 +495,7 @@ paths:
             type: boolean
             default: false
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -487,7 +504,7 @@ paths:
                   - $ref: "#/components/schemas/blockInfo"
                   - $ref: "#/components/schemas/nullValue"
             application/octet-stream: { }
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -518,7 +535,7 @@ paths:
             type: boolean
             default: false
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -527,7 +544,7 @@ paths:
                   - $ref: "#/components/schemas/blockInfo"
                   - $ref: "#/components/schemas/nullValue"
             application/octet-stream: { }
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -551,7 +568,7 @@ paths:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/blockRid"
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -560,7 +577,7 @@ paths:
                   - $ref: "#/components/schemas/blockSignature"
                   - $ref: "#/components/schemas/nullValue"
             application/octet-stream: { }
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -588,13 +605,13 @@ paths:
             type: string
           example: my_query
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 description: Query result as JSON
-        400:
+        '400':
           description: Invalid query
           content:
             application/json:
@@ -607,7 +624,7 @@ paths:
                 unknownQuery:
                   value:
                     error: "Unknown query: the_query"
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -632,13 +649,13 @@ paths:
             schema:
               $ref: "#/components/schemas/query"
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 description: Query result as JSON
-        400:
+        '400':
           description: Invalid query
           content:
             application/json:
@@ -651,7 +668,7 @@ paths:
                 unknownQuery:
                   value:
                     error: "Unknown query: the_query"
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -681,9 +698,9 @@ paths:
             type: string
           example: get_picture
       responses:
-        200:
+        '200':
           description: OK
-        400:
+        '400':
           description: Invalid query
           content:
             application/json:
@@ -696,7 +713,7 @@ paths:
                 unknownQuery:
                   value:
                     error: "Unknown query: the_query"
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -724,9 +741,9 @@ paths:
             type: string
           example: web_resource
       responses:
-        200:
+        '200':
           description: OK
-        400:
+        '400':
           description: Invalid query
           content:
             application/json:
@@ -739,7 +756,7 @@ paths:
                 unknownQuery:
                   value:
                     error: "Unknown query: the_query"
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -775,15 +792,15 @@ paths:
           schema:
             $ref: "#/components/schemas/hex"
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/octet-stream: { }
-        400:
+        '400':
           description: Invalid query
           content:
             application/octet-stream: { }
-        404:
+        '404':
           description: Not found
           content:
             application/octet-stream: { }
@@ -801,15 +818,15 @@ paths:
         content:
           application/octet-stream: { }
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/octet-stream: { }
-        400:
+        '400':
           description: Invalid query
           content:
             application/octet-stream: { }
-        404:
+        '404':
           description: Not found
           content:
             application/octet-stream: { }
@@ -821,13 +838,13 @@ paths:
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/nodeStatus"
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -845,7 +862,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -853,7 +870,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/nodeStatus"
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -878,7 +895,7 @@ paths:
             format: int64
           example: 100
       responses:
-        200:
+        '200':
           description: |
             OK. The response is an unquoted string in plain/text format.
           content:
@@ -886,7 +903,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/hash"
               example: "0398A1E7B0F87709AFD14CD1821EAAAFB41931A8097FFA2D83E5FE10DA7E4DD5"
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -911,7 +928,7 @@ paths:
             type: string
           example: my_container
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -919,7 +936,7 @@ paths:
                 $ref: "#/components/schemas/blockHeight"
               example:
                 blockHeight: 4711
-        404:
+        '404':
           description: Chain not found
           content:
             application/json:
@@ -941,7 +958,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -974,7 +991,7 @@ paths:
                       * UNARCHIVING_READ_ONLY - Unarchiving blockchain and is running in read-only mode
               example:
                 state: RUNNING_VALIDATOR
-        404:
+        '404':
           description: Chain not found
           content:
             application/json:
@@ -1006,7 +1023,7 @@ paths:
             default: -1
           example: 42
       responses:
-        200:
+        '200':
           description: Found
           content:
             text/xml:
@@ -1043,7 +1060,7 @@ paths:
                     </entry>
                 </dict>
             application/octet-stream: { }
-        400:
+        '400':
           description: Invalid height
           content:
             application/json:
@@ -1053,7 +1070,7 @@ paths:
                 configurationNotFound:
                   value:
                     error: "Failed to find configuration"
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -1106,13 +1123,13 @@ paths:
               </dict>
           application/octet-stream: { }
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 type: object
-        400:
+        '400':
           description: Invalid configuration
           content:
             application/json:
@@ -1122,7 +1139,7 @@ paths:
                 invalidConfiguration:
                   value:
                     error: "Invalid configuration"
-        401:
+        '401':
           description: Signature is required, invalid or not the dapp provider of this blockchain
           content:
             application/json:
@@ -1132,7 +1149,7 @@ paths:
                 invalidConfiguration:
                   value:
                     error: "Configuration must be signed by blockchain provider"
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -1160,7 +1177,7 @@ paths:
             format: int64
           example: 42
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -1170,7 +1187,7 @@ paths:
                   - $ref: "#/components/schemas/nullValue"
               example:
                 blockHeight: 4711
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -1186,8 +1203,10 @@ paths:
         - error
       summary: Fetch blockchain errors
       description: Fetch any errors which have occurred in a blockchain
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
       responses:
-        200:
+        '200':
           description: Found
           content:
             application/json:
@@ -1195,7 +1214,7 @@ paths:
                 type: array
                 items:
                   type: string
-        404:
+        '404':
           description: Not found
           content:
             application/json:
@@ -1211,7 +1230,7 @@ paths:
         - node
       summary: Get API version
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -1227,19 +1246,19 @@ paths:
         - node
       summary: Get infrastructure version
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/infrastructureVersion"
-              example: | 
-                {
-                  "postchain": "3.16.4",
-                  "infrastructure" : "net.postchain.d1.D1InfrastructureFactory",
-                  "infrastructure-version": "3.16.15",
-                  "rest-api": "8"
-                }
+              examples:
+                infrastructure_version:
+                  value:
+                    postchain: "3.16.4"
+                    infrastructure: "net.postchain.d1.D1InfrastructureFactory"
+                    infrastructure-version: "3.16.15"
+                    rest-api: "8"
   /highest_block_height_anchoring_check/{blockchainRid}:
     get:
       tags:
@@ -1250,7 +1269,7 @@ paths:
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
-        200:
+        '200':
           description: OK
           content:
             application/json:
@@ -1266,7 +1285,7 @@ paths:
                     match: true
                   evm:
                     error: "Unable to verify last anchored height on EVM."
-        404:
+        '404':
           description: Chain not found
           content:
             application/json:
@@ -1310,7 +1329,7 @@ components:
       required: true
       schema:
         $ref: "#/components/schemas/height"
-      example: "123"
+      example: 123
     headerSignature:
       name: X-Postchain-Signature
       description: Signature(s) of body data used as authentication for restricted endpoints on format `<pubkey>:<signed data>,...`.
