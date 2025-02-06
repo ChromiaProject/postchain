@@ -46,6 +46,10 @@ open class ContainerHandler(
         dockerClient.stopContainerCmd(psContainer.containerId!!).withTimeout(10).exec()
     }
 
+    fun removeContainer(psContainer: PostchainContainer) {
+        dockerClient.removeContainerCmd(psContainer.containerName.dockerContainer).exec()
+    }
+
     fun findContainer(containerId: String): Container? {
         val all = dockerClient.listSubContainersCmd(containerNodeConfig)
                 .exec()

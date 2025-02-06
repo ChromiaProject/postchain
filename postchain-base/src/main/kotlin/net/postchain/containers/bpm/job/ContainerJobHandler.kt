@@ -82,7 +82,10 @@ class ContainerJobHandler(
         // 2. Start Docker container
         val dockerContainer = findContainer(job.containerName.dockerContainer)
         if (dockerContainer == null && job.chainsToStart.isNotEmpty()) {
-            startDockerContainer(psContainer, job)
+            logger.debug { dcLog(psContainer.containerName, "not found", null) }
+            startDockerContainer(psContainer)
+            logger.info { dcLog(psContainer.containerName, "started", psContainer) }
+            job.postpone(1_000)
             return result(false)
         }
 
@@ -108,8 +111,8 @@ class ContainerJobHandler(
         val dcState = dockerContainer.state
         if (dcState in listOf("exited", "created", "paused")) {
             logger.info { dcLog(psContainer.containerName, "$dcState and will be started", psContainer) }
-            updateResourceLimits(psContainer)
-            startContainer(psContainer)
+            removeContainer(psContainer)
+            startDockerContainer(psContainer)
 
             // We may have new ports so let's ensure we re-connect with those
             if (psContainer.state == ContainerState.RUNNING) psContainer.reset()
@@ -163,15 +166,12 @@ class ContainerJobHandler(
         }
     }
 
-    private fun startDockerContainer(psContainer: PostchainContainer, job: ContainerJob) {
-        logger.debug { dcLog(psContainer.containerName, "not found", null) }
+    private fun startDockerContainer(psContainer: PostchainContainer) {
         updateResourceLimits(psContainer)
         psContainer.checkResourceLimits(fileSystem)
         psContainer.updateImage()
         psContainer.containerId = pullAndCreateDockerContainer(psContainer)
         startContainer(psContainer)
-        logger.info { dcLog(psContainer.containerName, "started", psContainer) }
-        job.postpone(1_000)
     }
 
     private fun updateResourceLimits(psContainer: PostchainContainer) {
