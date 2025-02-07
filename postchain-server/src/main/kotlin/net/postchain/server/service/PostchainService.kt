@@ -125,7 +125,7 @@ class PostchainService(private val nodeProvider: NodeProvider) {
     ): ImportResult = ImporterExporter.importBlockchain(
             KeyPair(PubKey(postchainNode.appConfig.pubKey), PrivKey(postchainNode.appConfig.privKey)),
             postchainNode.postchainContext.cryptoSystem,
-            postchainNode.postchainContext.sharedStorage,
+            postchainNode.postchainContext.blockBuilderStorage,
             getChainId(blockchainRidData) ?: chainId,
             configurationsFile = configurationFile,
             blocksFile = blocksFile,
@@ -134,7 +134,7 @@ class PostchainService(private val nodeProvider: NodeProvider) {
     )
 
     fun importBlocks(chainId: Long, blockData: List<Gtv>, skipPrimaryFieldValidation: Boolean): LongRange = ImporterExporter.importBlocks(
-            postchainNode.postchainContext.sharedStorage,
+            postchainNode.postchainContext.blockBuilderStorage,
             chainId,
             blockData,
             KeyPair(PubKey(postchainNode.appConfig.pubKey), PrivKey(postchainNode.appConfig.privKey)),
