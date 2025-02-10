@@ -21,7 +21,7 @@ open class BaseDirectoryDataSource(
                 buildArgs("pubkey" to gtv(appConfig.pubKeyByteArray))
         )
         res.asArray().map { it.asString() }
-    } catch (e: UserMistake) { // this can fail if we are the genesis node before having initialized the network, since we are not registered as node yet
+    } catch (_: UserMistake) { // this can fail if we are the genesis node before having initialized the network, since we are not registered as node yet
         listOf()
     }
 

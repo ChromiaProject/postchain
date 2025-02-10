@@ -34,7 +34,6 @@ import net.postchain.core.NODE_ID_AUTO
 import net.postchain.core.Storage
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionInfoExtsTruncated
-import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockDetailsTruncated
 import net.postchain.core.block.BlockQueries
@@ -72,7 +71,6 @@ import net.postchain.metrics.QUERIES_METRIC_NAME
 
 open class PostchainModel(
         val blockchainConfiguration: BlockchainConfiguration,
-        val txQueue: TransactionQueue,
         val blockQueries: BlockQueries,
         final override val blockchainRid: BlockchainRid,
         val storage: Storage,
@@ -90,7 +88,7 @@ open class PostchainModel(
 
     override var live = true
 
-    override fun postTransaction(tx: ByteArray): Unit = throw NotSupported("Posting a transaction on a non-signer node is not supported.")
+    override fun postTransaction(tx: ByteArray): Unit = throw NotSupported("Posting a transaction to this blockchain on this node is not supported")
 
     override fun getTransaction(txRID: TxRid): ByteArray? = blockQueries.getTransactionRawData(txRID.bytes).get()
 
@@ -141,7 +139,7 @@ open class PostchainModel(
     override fun getConfirmationProof(txRID: TxRid): ConfirmationProof? =
             blockQueries.getConfirmationProof(txRID.bytes).get()
 
-    override fun getStatus(txRID: TxRid): ApiStatus = throw NotSupported("Checking transaction status on a non-signer node is not supported.")
+    override fun getStatus(txRID: TxRid): ApiStatus = throw NotSupported("Checking transaction status is not supported for this blockchain on this node")
 
     override fun query(query: GtxQuery): Gtv {
         val timerBuilder = Timer.builder(QUERIES_METRIC_NAME)

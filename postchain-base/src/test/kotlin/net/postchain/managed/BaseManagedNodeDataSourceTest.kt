@@ -1,6 +1,7 @@
 package net.postchain.managed
 
 import assertk.assertThat
+import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.BlockchainConfigurationOptions
@@ -172,6 +173,17 @@ class BaseManagedNodeDataSourceTest {
         assertEquals(expected, sut.isBlockchainProvider(KeyPairHelper.keyPair(0).pubKey, ZERO_RID))
     }
 
+    @ParameterizedTest
+    @MethodSource("getBlockchainApiUrlsTestData")
+    fun getBlockchainApiUrls(gtvResult: Gtv, expected: List<String>) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("cm_get_blockchain_api_urls"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock {
+            on { pubKeyByteArray } doReturn byteArrayOf()
+        })
+        assertThat(sut.getBlockchainApiUrls(ZERO_RID)).isEqualTo(expected)
+    }
 
     companion object {
 
@@ -383,5 +395,11 @@ class BaseManagedNodeDataSourceTest {
                     arrayOf(19, gtv(false), false),
             )
         }
+
+        @JvmStatic
+        fun getBlockchainApiUrlsTestData(): List<Array<Any>> = listOf(
+                arrayOf(gtv(gtv("https://my.node:7740")), listOf("https://my.node:7740")),
+                arrayOf(gtv(gtv("https://my.node1:7740"), gtv("https://my.node2:7740")), listOf("https://my.node1:7740", "https://my.node2:7740")),
+        )
     }
 }

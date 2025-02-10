@@ -226,4 +226,10 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
 
         return res.asBoolean()
     }
+
+    override fun getBlockchainApiUrls(brid: BlockchainRid): List<String> =
+            query(
+                    "cm_get_blockchain_api_urls",
+                    buildArgs("blockchain_rid" to gtv(brid.data))
+            ).asArray().map { it.asString() }
 }

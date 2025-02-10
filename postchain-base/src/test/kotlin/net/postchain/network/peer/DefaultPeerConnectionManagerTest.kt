@@ -37,7 +37,6 @@ import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.atLeast
-import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
@@ -48,6 +47,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.CompletableFuture
+import kotlin.random.Random
 
 class DefaultPeerConnectionManagerTest {
 
@@ -68,6 +68,8 @@ class DefaultPeerConnectionManagerTest {
     private lateinit var appConfig: AppConfig
     private lateinit var nodeConfig: NodeConfig
     private lateinit var nodeConfigProvider: NodeConfigurationProvider
+
+    private val random = Random(17)
 
     @BeforeEach
     fun setUp() {
@@ -114,7 +116,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, random).apply {
             connectChain(chainPeerConfig, false)
         }
 
@@ -138,7 +140,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory)
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, random)
 
         try {
             connectionManager.also { it.connectChain(chainPeerConfig, true) }
@@ -171,7 +173,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, random).apply {
             connectChain(chainPeerConfig, true)
         }
 
@@ -209,7 +211,7 @@ class DefaultPeerConnectionManagerTest {
 
         // When / Then exception
         assertThrows<ProgrammerMistake> {
-            DefaultPeerConnectionManager(nodeConfigProvider, codecFactory).apply {
+            DefaultPeerConnectionManager(nodeConfigProvider, codecFactory, random).apply {
                 connectChain(chainPeerConf, false) // Without connecting to peers
                 connectChainPeer(1, unknownPeerInfo.peerId())
             }
@@ -233,7 +235,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, random).apply {
             connectChain(chainPeerConfig, false) // Without connecting to peers
             connectChainPeer(1, peerInfo2.peerId())
         }
@@ -263,7 +265,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, random).apply {
             connectChain(chainPeerConfig, true) // Auto connect all peers
 
             // Emulates call of onPeerConnected() by XConnector
@@ -313,7 +315,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, random).apply {
             connectChain(chainPeerConfig, true) // With autoConnect
 
             // Then / before peers connected
@@ -387,7 +389,7 @@ class DefaultPeerConnectionManagerTest {
         val connection2: NettyPeerConnection<Int> = mockConnection(peerConnectionDescriptor2)
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, random).apply {
             connectChain(chainPeerConfig, true) // With autoConnect
 
             // Emulates call of onPeerConnected() by XConnector
@@ -414,7 +416,7 @@ class DefaultPeerConnectionManagerTest {
         }
     }
 
-    private fun emptyManager() = DefaultPeerConnectionManager<Int>(nodeConfigProvider, mock())
+    private fun emptyManager() = DefaultPeerConnectionManager<Int>(nodeConfigProvider, mock(), random)
 
     @Test
     fun broadcastPacket_sends_packet_to_all_receivers_successfully() {
@@ -435,7 +437,7 @@ class DefaultPeerConnectionManagerTest {
         val connection2: NettyPeerConnection<Int> = mockConnection(peerConnectionDescriptor2)
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, random).apply {
             connectChain(chainPeerConfig, true) // With autoConnect
 
             // Emulates call of onPeerConnected() by XConnector
@@ -476,7 +478,7 @@ class DefaultPeerConnectionManagerTest {
         Mockito.`when`(nodeConfig.peerInfoMap).doReturn(nodes.getPeerMap())
 
         // When connecting a chain
-        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, clock).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, random, clock).apply {
             connectChain(chainPeerConfig, false)
             connectChainPeer(chainPeerConfig.chainId, peerInfo2.peerId())
         }
@@ -529,7 +531,7 @@ class DefaultPeerConnectionManagerTest {
         }
 
         // When
-        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, clock).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, random, clock).apply {
             getNetworkNodeRids(chainWithPeerConnections)
             getNetworkNodeRids(chainWithPeerConnections)
         }

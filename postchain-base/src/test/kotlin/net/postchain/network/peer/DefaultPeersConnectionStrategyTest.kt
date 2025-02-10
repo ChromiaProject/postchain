@@ -30,6 +30,7 @@ import java.time.Clock
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.TimeUnit
+import kotlin.random.Random
 
 class DefaultPeersConnectionStrategyTest {
 
@@ -86,7 +87,7 @@ class DefaultPeersConnectionStrategyTest {
             }
         }
 
-        return DefaultPeersConnectionStrategy(connMan, me, config, nodeConfigProvider0, clock).apply {
+        return DefaultPeersConnectionStrategy(connMan, me, config, nodeConfigProvider0, Random(17), clock).apply {
             backupConnTimeMax = 102
             backupConnTimeMin = 100
             reconnectTimeMax = 92

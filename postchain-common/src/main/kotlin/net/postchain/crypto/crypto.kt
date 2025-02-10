@@ -3,6 +3,7 @@
 package net.postchain.crypto
 
 import net.postchain.common.data.Hash
+import kotlin.random.Random
 
 /**
  * Can sign digests/messages.
@@ -37,6 +38,8 @@ typealias BasicVerifier = (ByteArray, ByteArray, ByteArray) -> Boolean
  * CryptoSystem implements necessary cryptographic functionalities.
  */
 interface CryptoSystem : Digester {
+    val random: Random
+
     @Deprecated("Pass in KeyPair instead",
             ReplaceWith("buildSigMaker(KeyPair(pubKey, privKey))", imports = ["net.postchain.crypto.KeyPair"]))
     fun buildSigMaker(pubKey: ByteArray, privKey: ByteArray): SigMaker

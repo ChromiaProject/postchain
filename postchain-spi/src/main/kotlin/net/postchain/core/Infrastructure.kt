@@ -7,8 +7,8 @@ import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.config.app.AppConfig
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
-import net.postchain.core.*
 import net.postchain.network.common.ConnectionManager
+import kotlin.random.Random
 
 /**
  * Responsible blockchain process lifecycle, i.e. creating, exiting and restarting blockchain processes.
@@ -113,7 +113,7 @@ interface BlockchainProcessManagerExtension : BlockchainProcessConnectable, Shut
 interface InfrastructureFactory {
     fun makeNodeConfigurationProvider(appConfig: AppConfig, storage: Storage): NodeConfigurationProvider
 
-    fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): ConnectionManager
+    fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider, random: Random): ConnectionManager
 
     fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider
 

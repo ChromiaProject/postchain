@@ -20,7 +20,7 @@ class IntegrationTestContext(
     }
     val peerCommunicationConfig = BasePeerCommConfiguration.build(peerInfos, appConfig1)
 
-    val connectionManager = DefaultPeerConnectionManager<Int>(mock(), mock())
+    val connectionManager = DefaultPeerConnectionManager<Int>(mock(), mock(), mock())
 
     val communicationManager = DefaultPeerCommunicationManager<Int>(
             connectionManager, peerCommunicationConfig, 1L, mock(), mock(), mock()

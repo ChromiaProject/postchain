@@ -1,9 +1,14 @@
 package net.postchain.crypto
 
 import java.security.SecureRandom
+import kotlin.random.Random
+import kotlin.random.asKotlinRandom
 
 abstract class BaseCryptoSystem : CryptoSystem {
     protected val rand = SecureRandom()
+
+    override val random: Random
+        get() = rand.asKotlinRandom()
 
     /**
      * Calculate the hash digest of a message

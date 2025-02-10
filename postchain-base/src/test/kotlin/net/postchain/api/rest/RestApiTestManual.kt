@@ -15,7 +15,7 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 import org.hamcrest.core.IsEqual.equalTo
-import java.util.Random
+import kotlin.random.Random
 
 class RestApiTestManual {
     private val port = 58373
@@ -35,7 +35,7 @@ class RestApiTestManual {
                 .statusCode(200)
                 .body(equalTo("null"))
 
-        val txBytes = buildTestTx(1L, "hello${Random().nextLong()}")
+        val txBytes = buildTestTx(1L, "hello${Random.nextLong()}")
         given().port(port)
                 .body("""{"tx"="${txBytes.toHex()}"}""")
                 .post("/tx")

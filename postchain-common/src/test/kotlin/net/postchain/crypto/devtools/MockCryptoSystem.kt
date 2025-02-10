@@ -10,8 +10,12 @@ import net.postchain.crypto.Verifier
 import net.postchain.crypto.secp256k1_derivePubKey
 import net.postchain.crypto.secp256k1_verify
 import net.postchain.crypto.sha256Digest
+import kotlin.random.Random
 
 class MockCryptoSystem : CryptoSystem {
+
+    override val random: Random
+        get() = Random.Default
 
     override fun digest(bytes: ByteArray): ByteArray = sha256Digest(bytes)
 
