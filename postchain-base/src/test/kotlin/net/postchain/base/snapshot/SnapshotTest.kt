@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import java.util.TreeMap
+import kotlin.random.Random
 
 class SnapshotTest : SnapshotBaseIT() {
 
@@ -200,7 +201,7 @@ class SnapshotTest : SnapshotBaseIT() {
     @ParameterizedTest
     @ValueSource(ints = [7, 35])
     fun testRandomSizeSnapshots(maxSize: Int) {
-        val random = java.util.Random(1234) // Fixed seed for reproducibility
+        val random = Random(1234) // Fixed seed for reproducibility
         val prefix2 = "prefix2"
         val protocolV2 = 2
 

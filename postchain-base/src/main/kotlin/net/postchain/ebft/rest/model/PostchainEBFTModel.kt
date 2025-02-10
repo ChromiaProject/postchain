@@ -26,14 +26,14 @@ import net.postchain.debug.DiagnosticData
 
 class PostchainEBFTModel(
         blockchainConfiguration: BlockchainConfiguration,
-        txQueue: TransactionQueue,
+        private val txQueue: TransactionQueue,
         blockQueries: BlockQueries,
         blockchainRid: BlockchainRid,
         storage: Storage,
         postchainContext: PostchainContext,
         diagnosticData: DiagnosticData,
         queryCacheTtlSeconds: Long
-) : PostchainModel(blockchainConfiguration, txQueue, blockQueries, blockchainRid, storage, postchainContext, diagnosticData, queryCacheTtlSeconds) {
+) : PostchainModel(blockchainConfiguration, blockQueries, blockchainRid, storage, postchainContext, diagnosticData, queryCacheTtlSeconds) {
     private val transactionFactory = blockchainConfiguration.getTransactionFactory()
 
     override fun postTransaction(tx: ByteArray) {
@@ -42,6 +42,11 @@ class PostchainEBFTModel(
         val decodedTransaction = transactionFactory.decodeAndValidateTransaction(tx)
 
         decodedTransaction.checkCorrectness()
+
+        if (decodedTransaction.isSpecial()) {
+            sample.stop(metrics.invalidTransactions)
+            throw InvalidTnxException("Cannot post special transaction")
+        }
 
         if (blockQueries.isTransactionConfirmed(decodedTransaction.getRID()).get()) {
             sample.stop(metrics.duplicateTransactions)

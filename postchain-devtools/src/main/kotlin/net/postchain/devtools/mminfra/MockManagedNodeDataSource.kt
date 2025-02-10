@@ -140,6 +140,10 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         return latestConfig.signers.map { NodeRid(it) }
     }
 
+    override fun getBlockchainApiUrls(brid: BlockchainRid): List<String> {
+        return emptyList()
+    }
+
     fun addExtraReplica(brid: BlockchainRid, replica: NodeRid) {
         extraReplicas.computeIfAbsent(brid) { mutableSetOf() }.add(replica)
     }

@@ -1,4 +1,6 @@
-Below is an attempt to document all node properties that can be configured via `properties` files. Most properties can be set via environment variables. For a list of blockchain configuration properties see this [page](Blockchain-Configuration-Properties.md).
+Below is an attempt to document all node properties that can be configured via `properties` files. Most properties can
+be set via environment variables. For a list of blockchain configuration properties see
+this [page](Blockchain-Configuration-Properties.md).
 
 | Name                                                | Description                                                                                                                                                 | Type    | Default                                      | Environment Variable                                          |
 |-----------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|---------|----------------------------------------------|---------------------------------------------------------------|
@@ -48,6 +50,7 @@ Below is an attempt to document all node properties that can be configured via `
 | `tracked_ebft_message_max_keep_time_ms`             | Max duration to keep track of sent EBFT messages (ms). (-1 = tracking turned off)                                                                           | Long    | -1                                           | `POSTCHAIN_TRACKED_EBFT_MESSAGE_MAX_KEEP_TIME_MS`             |
 | `connection.read_handshake_timeout`                 | Maximum time to wait for a handshake message (ms). (Specify 0 to disable.)                                                                                  | Long    | 10000                                        | `POSTCHAIN_CONNECTION_READ_HANDSHAKE_TIMEOUT`                 |
 | `connection.max_unknown_peer_connections_per_chain` | Maximum number of unknown peer connections per chain. (Specify 0 to disable.)                                                                               | Long    | 20                                           | `POSTCHAIN_CONNECTION_MAX_UNKNOWN_PEER_CONNECTIONS_PER_CHAIN` |
+| `forwarding_replica`                                | If blockchains running in replica mode should forward submitted transactions to signer nodes                                                                | Boolean | false                                        | `POSTCHAIN_FORWARDING_REPLICA`                                |
 
 ### Peers
 
@@ -108,6 +111,7 @@ It is possible to configure peers via node configuration with these properties.
 | `container.mastersub-query-timeout-ms`                  | Timeout for master/subnode async queries (via MasterSubQueryManager)                                                                                   | Int          |                    | 10 000                     | `POSTCHAIN_MASTERSUB_QUERY_TIMEOUT_MS`                  |
 
 ### ZFS
+
 Relevant when `container.filesystem` is configured as `ZFS`.
 
 | Name                             | Description               | Type   | Default | Environment Variable             |
@@ -122,7 +126,6 @@ Used to rate limit requests from other peers
 | Name                | Description                                                                                                                   | Type | Default | Environment Variable        |
 |---------------------|-------------------------------------------------------------------------------------------------------------------------------|------|---------|-----------------------------|
 | `rate-limit.blocks` | Maximum number of unanswered block requests allowed per peer. If exceeded requests will not be answered. Set to 0 to disable. | Int  | 100     | POSTCHAIN_RATE_LIMIT_BLOCKS |
-
 
 ### Anchoring check
 

@@ -35,4 +35,9 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
     fun getMigratingBlockchainNodeInfo(blockchainRid: BlockchainRid): MigratingBlockchainNodeInfo?
 
     fun isBlockchainProvider(providerPubKey: PubKey, blockchainRid: BlockchainRid): Boolean
+
+    /**
+     * Returns the REST API URL:s of signer nodes for a blockchain.
+     */
+    fun getBlockchainApiUrls(brid: BlockchainRid): List<String>
 }

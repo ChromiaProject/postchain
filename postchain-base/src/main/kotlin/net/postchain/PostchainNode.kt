@@ -4,13 +4,13 @@ package net.postchain
 
 import mu.KLogging
 import mu.withLoggingContext
+import net.postchain.base.BaseInfrastructureFactoryProvider
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.withReadConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.NotFound
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
-import net.postchain.base.BaseInfrastructureFactoryProvider
 import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcessManager
 import net.postchain.core.Shutdownable
@@ -64,7 +64,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 nodeConfigProvider,
                 blockBuilderStorage,
                 sharedStorage,
-                infrastructureFactory.makeConnectionManager(nodeConfigProvider),
+                infrastructureFactory.makeConnectionManager(nodeConfigProvider, appConfig.cryptoSystem.random),
                 blockQueriesProvider,
                 JsonNodeDiagnosticContext(version, appConfig.pubKey, infrastructureFactory),
                 blockchainConfigProvider
@@ -106,7 +106,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
     }
 
     fun isBlockchainRunning(chainId: Long): Boolean {
-        return processManager.retrieveBlockchain(chainId)?.isProcessRunning() ?: false
+        return processManager.retrieveBlockchain(chainId)?.isProcessRunning() == true
     }
 
     override fun shutdown() {

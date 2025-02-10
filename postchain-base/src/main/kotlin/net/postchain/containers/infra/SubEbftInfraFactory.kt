@@ -19,6 +19,7 @@ import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.network.mastersub.subnode.DefaultSubConnectionManager
 import net.postchain.network.mastersub.subnode.DefaultSubPeersCommConfigFactory
 import net.postchain.network.mastersub.subnode.SubConnectionManager
+import kotlin.random.Random
 
 class SubEbftInfraFactory : InfrastructureFactory {
 
@@ -26,7 +27,7 @@ class SubEbftInfraFactory : InfrastructureFactory {
         return ManagedNodeConfigurationProvider(appConfig, storage)
     }
 
-    override fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): SubConnectionManager {
+    override fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider, random: Random): SubConnectionManager {
         val appConfig = nodeConfigProvider.getConfiguration().appConfig
         val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
         return DefaultSubConnectionManager(appConfig, containerNodeConfig)

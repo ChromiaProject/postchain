@@ -115,10 +115,11 @@ class BaseTransactionQueue(private val queueCapacity: Int,
     }
 
     private fun dequeueTransaction(): Transaction? {
-        if (txsToRetry.isNotEmpty()) {
-            return txsToRetry.poll().tx
+        val maybeTransaction: WrappedTransaction? = txsToRetry.poll()
+        if (maybeTransaction != null) {
+            return maybeTransaction.tx
         }
-        val tx = queue.pollFirst()
+        val tx: WrappedTransaction? = queue.pollFirst()
         return if (tx != null) {
             taken.add(tx)
             queueMap.remove(WrappedByteArray(tx.tx.getRID()))
@@ -137,8 +138,6 @@ class BaseTransactionQueue(private val queueCapacity: Int,
 
     override fun enqueue(tx: Transaction): EnqueueTransactionResult {
         val txEnter = clock.instant()
-
-        if (tx.isSpecial()) return EnqueueTransactionResult.INVALID
 
         val txRid = WrappedByteArray(tx.getRID())
 
@@ -185,8 +184,8 @@ class BaseTransactionQueue(private val queueCapacity: Int,
 
                     // 3. If queue is full, we first check if transaction can fit in the queue: if its priority is same
                     // or lower than the lowest priority in the queue, new transaction is rejected.
-                    val lowestPrioTx = queue.last()
-                    if (lowestPrioTx == null || priority <= lowestPrioTx.priority) {
+                    val lowestPrioTx: WrappedTransaction = queue.last()
+                    if (priority <= lowestPrioTx.priority) {
                         logger.debug { "Tx $txRid has too low priority $priority" }
                         return EnqueueTransactionResult.FULL
                     }

@@ -137,13 +137,9 @@ class RestApiConfirmBlockEndpointTest {
             on { cryptoSystem } doReturn cs
         }
 
-        model0 = spy(PostchainModel(
-                bcConfig0, mock(), blockQueries, blockchainRID, mock(), postchainContext, mock(), 0L
-        ))
+        model0 = spy(PostchainModel(bcConfig0, blockQueries, blockchainRID, mock(), postchainContext, mock(), 0L))
 
-        model1 = spy(PostchainModel(
-                bcConfig1, mock(), blockQueries, blockchainRID, mock(), postchainContext, mock(), 0L
-        ))
+        model1 = spy(PostchainModel(bcConfig1, blockQueries, blockchainRID, mock(), postchainContext, mock(), 0L))
 
         restApi = RestApi(0, basePath, gracefulShutdown = false)
     }

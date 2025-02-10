@@ -14,6 +14,7 @@ import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.rest.model.PostchainEBFTModel
+import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import java.lang.Integer.min
 
@@ -97,10 +98,20 @@ open class BaseApiInfrastructure(
                         diagnosticData,
                         queryCacheTtlSeconds
                 )
+            } else if (process is ReadOnlyBlockchainProcess && process.isForwardingReplica) {
+                apiModel = PostchainEBFTModel(
+                        blockchainConfiguration,
+                        engine.getTransactionQueue(),
+                        engine.getBlockQueries(),
+                        blockchainRid,
+                        engine.sharedStorage,
+                        postchainContext,
+                        diagnosticData,
+                        queryCacheTtlSeconds
+                )
             } else {
                 apiModel = PostchainModel(
                         blockchainConfiguration,
-                        engine.getTransactionQueue(),
                         engine.getBlockQueries(),
                         blockchainRid,
                         engine.sharedStorage,

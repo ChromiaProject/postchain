@@ -25,6 +25,7 @@ import net.postchain.core.SynchronizationInfrastructure
 import net.postchain.ebft.EbftPacketCodecFactory
 import net.postchain.network.common.ConnectionManager
 import net.postchain.network.peer.DefaultPeerConnectionManager
+import kotlin.random.Random
 
 class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : BlockchainProcess {
 
@@ -77,8 +78,8 @@ class BaseTestInfrastructureFactory : InfrastructureFactory {
         return ManualNodeConfigurationProvider(appConfig, storage)
     }
 
-    override fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider): ConnectionManager =
-            DefaultPeerConnectionManager(nodeConfigProvider, EbftPacketCodecFactory())
+    override fun makeConnectionManager(nodeConfigProvider: NodeConfigurationProvider, random: Random): ConnectionManager =
+            DefaultPeerConnectionManager(nodeConfigProvider, EbftPacketCodecFactory(), random)
 
 
     override fun makeBlockchainConfigurationProvider(): BlockchainConfigurationProvider =

@@ -8,7 +8,7 @@ import net.postchain.metrics.AbstractBlockchainProcessMetrics
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.concurrent.thread
 
-abstract class AbstractBlockchainProcess(private val processName: String, override val blockchainEngine: BlockchainEngine) : BlockchainProcess {
+abstract class AbstractBlockchainProcess(val processName: String, override val blockchainEngine: BlockchainEngine) : BlockchainProcess {
 
     val logger = NamedKLogging(this::class.java.simpleName).logger
 
@@ -20,7 +20,7 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
 
     override fun isProcessRunning() = running.get()
 
-    final override fun start() {
+    override fun start() {
         if (!started.getAndSet(true)) {
             running.set(true)
             process.start()
@@ -40,7 +40,7 @@ abstract class AbstractBlockchainProcess(private val processName: String, overri
                 logger.debug { "Cleanup up resources" }
                 cleanup()
             } catch (e: Exception) {
-                logger.error { "Failed to free resources on shutdown!" }
+                logger.error { "Failed to free resources on shutdown: $e" }
             }
         }
     }

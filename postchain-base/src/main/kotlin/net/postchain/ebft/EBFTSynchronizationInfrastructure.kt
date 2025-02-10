@@ -169,7 +169,12 @@ open class EBFTSynchronizationInfrastructure(
         return when {
             historicBlockchainContext != null -> HistoricBlockchainProcess(workerContext, historicBlockchainContext)
             iAmASigner -> ValidatorBlockchainProcess(workerContext, getStartWithFastSyncValue(blockchainConfig.chainID), blockchainState)
-            else -> ReadOnlyBlockchainProcess(workerContext, blockchainState)
+            else -> {
+                if (workerContext.appConfig.forwardingReplica) {
+                    logger.warn("Forwarding replica not supported in manual mode")
+                }
+                ReadOnlyBlockchainProcess(workerContext, blockchainState)
+            }
         }
     }
 
@@ -279,6 +284,6 @@ open class EBFTSynchronizationInfrastructure(
     }
 
     protected fun getStartWithFastSyncValue(chainId: Long): Boolean {
-        return startWithFastSync[chainId] ?: true
+        return startWithFastSync[chainId] != false
     }
 }

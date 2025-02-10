@@ -33,6 +33,7 @@ class DefaultPeersConnectionStrategy(
         val me: NodeRid,
         val connectionConfig: ConnectionConfig,
         val nodeConfigProvider: NodeConfigurationProvider,
+        val random: Random,
         val clock: Clock = Clock.systemUTC()
 ) : PeersConnectionStrategy {
 
@@ -78,11 +79,11 @@ class DefaultPeersConnectionStrategy(
                             connectionManager.connectChainPeer(chainID, wantedPeerId)
                         }
                     }
-                } catch (e: ProgrammerMistake) {
+                } catch (_: ProgrammerMistake) {
                     // This happens if the chain has been disconnected while we waited
                 }
             }
-        }, Random.nextInt(backupConnTimeMin, backupConnTimeMax).toLong(), TimeUnit.MILLISECONDS)
+        }, random.nextInt(backupConnTimeMin, backupConnTimeMax).toLong(), TimeUnit.MILLISECONDS)
     }
 
     /**
@@ -110,7 +111,7 @@ class DefaultPeersConnectionStrategy(
         if (isLatestConnectionSuccessful(peerId)) peerToDelayMap.remove(peerId)
 
         val delay = peerToDelayMap.computeIfAbsent(peerId) {
-            val delayCounterInitialMillis = Random.nextInt(reconnectTimeMin, reconnectTimeMax).toLong()
+            val delayCounterInitialMillis = random.nextInt(reconnectTimeMin, reconnectTimeMax).toLong()
             ExponentialDelay(delayCounterMillis = delayCounterInitialMillis)
         }
 
@@ -124,7 +125,7 @@ class DefaultPeersConnectionStrategy(
                 try {
                     latestEstablishedConnections.remove(peerId)
                     connectionManager.connectChainPeer(chainID, peerId)
-                } catch (e: ProgrammerMistake) {
+                } catch (_: ProgrammerMistake) {
                     // This happens if the chain has been disconnected while we waited
                 }
             }
@@ -134,7 +135,7 @@ class DefaultPeersConnectionStrategy(
     @TestOnly
     fun isLatestConnectionSuccessful(peerId: NodeRid): Boolean = latestEstablishedConnections[peerId]?.let {
         clock.instant().isAfter(it + SUCCESSFUL_CONNECTION_THRESHOLD)
-    } ?: false
+    } == true
 
     override fun duplicateConnectionDetected(
             chainID: Long,

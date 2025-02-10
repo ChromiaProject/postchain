@@ -215,6 +215,7 @@ public abstract class net/postchain/crypto/BaseCryptoSystem : net/postchain/cryp
 	protected abstract fun deriveSignatureVerificationFromSubject ([B)Lkotlin/jvm/functions/Function3;
 	public fun digest ([B)[B
 	protected final fun getRand ()Ljava/security/SecureRandom;
+	public fun getRandom ()Lkotlin/random/Random;
 	public fun getRandomBytes (I)[B
 	public fun makeVerifier ()Lkotlin/jvm/functions/Function2;
 	public fun verifyDigest ([BLnet/postchain/crypto/Signature;)Z
@@ -234,6 +235,7 @@ public abstract interface class net/postchain/crypto/CryptoSystem : net/postchai
 	public abstract fun buildSigMaker ([B[B)Lnet/postchain/crypto/SigMaker;
 	public abstract fun derivePubKey (Lnet/postchain/crypto/PrivKey;)Lnet/postchain/crypto/PubKey;
 	public abstract fun generateKeyPair ()Lnet/postchain/crypto/KeyPair;
+	public abstract fun getRandom ()Lkotlin/random/Random;
 	public abstract fun getRandomBytes (I)[B
 	public abstract fun makeVerifier ()Lkotlin/jvm/functions/Function2;
 	public abstract fun validatePubKey ([B)Z

@@ -209,7 +209,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
                                 is GetUnfinishedBlock -> sendUnfinishedBlock(nodeIndex)
                                 is GetBlockSignature -> sendBlockSignature(nodeIndex, message.blockRID)
-                                is Transaction -> handleTransaction(message)
+                                is Transaction -> handleTransaction(xPeerId, message)
                                 is BlockHeader -> {
                                     messageDurationTracker.receive(xPeerId, message)
                                     // TODO: This might happen because we've already exited FastSync but other nodes
@@ -278,12 +278,16 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
      *
      * @param message message including the transaction
      */
-    private fun handleTransaction(message: Transaction) {
+    private fun handleTransaction(xPeerId: NodeRid, message: Transaction) {
         // TODO: reject if queue is full
         CompletableFuture.runAsync {
             withLoggingContext(loggingContext) {
                 val tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(message.data)
-                workerContext.engine.getTransactionQueue().enqueue(tx)
+                if (tx.isSpecial()) {
+                    logger.warn("Got special transaction with RID ${tx.getRID()} from peer $xPeerId, ignoring")
+                } else {
+                    workerContext.engine.getTransactionQueue().enqueue(tx)
+                }
             }
         }
     }

@@ -28,6 +28,7 @@ import net.postchain.network.netty2.NettyPeerConnector
 import java.time.Clock
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
+import kotlin.random.Random
 
 /**
  * Default implementation for "peer" based networks (which EBFT is).
@@ -64,6 +65,7 @@ import java.util.concurrent.CompletableFuture
 open class DefaultPeerConnectionManager<PacketType>(
         private val nodeConfigProvider: NodeConfigurationProvider,
         private val packetCodecFactory: XPacketCodecFactory<PacketType>,
+        private val random: Random,
         private val clock: Clock = Clock.systemUTC()
 ) : NetworkTopology, PeerConnectionManager, NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
 
@@ -163,7 +165,7 @@ open class DefaultPeerConnectionManager<PacketType>(
         if (connector == null) {
             myPeerInfo = chainPeersConfig.commConfiguration.myPeerInfo()
             peersConnectionStrategy = DefaultPeersConnectionStrategy(
-                    this, myPeerInfo.peerId(), connectionConfig, nodeConfigProvider)
+                    this, myPeerInfo.peerId(), connectionConfig, nodeConfigProvider, random)
 
             val packetCodec = packetCodecFactory.create(chainPeersConfig.commConfiguration, chainPeersConfig.blockchainRid)
             // We have already given away we are using Netty, so skipping the factory

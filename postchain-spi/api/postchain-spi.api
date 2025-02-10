@@ -990,6 +990,7 @@ public final class net/postchain/config/app/AppConfig : net/postchain/common/con
 	public final fun getEnvOrString (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
 	public final fun getEnvOrString (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
 	public final fun getExitOnFatalError ()Z
+	public final fun getForwardingReplica ()Z
 	public final fun getGenesisPeer ()Lnet/postchain/base/PeerInfo;
 	public final fun getHasPort ()Z
 	public final fun getHousekeepingIntervalMs ()J
@@ -1340,7 +1341,7 @@ public final class net/postchain/core/Infrastructure : java/lang/Enum {
 public abstract interface class net/postchain/core/InfrastructureFactory {
 	public abstract fun makeBlockchainConfigurationProvider ()Lnet/postchain/config/blockchain/BlockchainConfigurationProvider;
 	public abstract fun makeBlockchainInfrastructure (Lnet/postchain/PostchainContext;)Lnet/postchain/core/BlockchainInfrastructure;
-	public abstract fun makeConnectionManager (Lnet/postchain/config/node/NodeConfigurationProvider;)Lnet/postchain/network/common/ConnectionManager;
+	public abstract fun makeConnectionManager (Lnet/postchain/config/node/NodeConfigurationProvider;Lkotlin/random/Random;)Lnet/postchain/network/common/ConnectionManager;
 	public abstract fun makeNodeConfigurationProvider (Lnet/postchain/config/app/AppConfig;Lnet/postchain/core/Storage;)Lnet/postchain/config/node/NodeConfigurationProvider;
 	public abstract fun makeProcessManager (Lnet/postchain/PostchainContext;Lnet/postchain/core/BlockchainInfrastructure;Lnet/postchain/config/blockchain/BlockchainConfigurationProvider;)Lnet/postchain/core/BlockchainProcessManager;
 }

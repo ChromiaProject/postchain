@@ -4,6 +4,7 @@ package net.postchain.ebft.worker
 
 import mu.KLogging
 import mu.withLoggingContext
+import net.postchain.common.exception.UserMistake
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainState
 import net.postchain.core.NODE_ID_READ_ONLY
@@ -25,16 +26,21 @@ import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
+import kotlin.concurrent.thread
+import kotlin.time.Duration.Companion.seconds
 
 class ReadOnlyBlockchainProcess(
         private val workerContext: WorkerContext,
-        private val blockchainState: BlockchainState
+        private val blockchainState: BlockchainState,
+        private val transactionForwarder: TransactionForwarder? = null,
 ) : AbstractBlockchainProcess(
         "${if (blockchainState == BlockchainState.PAUSED) "paused-" else ""}replica-c${workerContext.blockchainConfiguration.chainID}",
         workerContext.engine
 ) {
 
     companion object : KLogging()
+
+    val isForwardingReplica = transactionForwarder != null
 
     private val myPubKey = workerContext.appConfig.pubKey
 
@@ -67,6 +73,29 @@ class ReadOnlyBlockchainProcess(
     )
 
     private var syncMethod = SyncMethod.NOT_SYNCING
+
+    override fun start() {
+        super.start()
+        if (transactionForwarder != null) {
+            thread(name = "$processName-txForwarder", start = true) {
+                withLoggingContext(loggingContext) {
+                    while (isProcessRunning()) {
+                        workerContext.engine.getTransactionQueue().takeTransaction(1.seconds)?.let {
+                            try {
+                                transactionForwarder.forward(it)
+                            } catch (e: UserMistake) {
+                                logger.warn("Unable to forward transaction ${it.getRID()}: ${e.message}")
+                                workerContext.engine.getTransactionQueue().rejectTransaction(it, e)
+                            } catch (e: Exception) {
+                                logger.warn(e) { "Unable to forward transaction ${it.getRID()}: $e" }
+                                workerContext.engine.getTransactionQueue().rejectTransaction(it, e)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     /**
      * For read only nodes we don't want to fast sync forever.

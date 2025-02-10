@@ -216,6 +216,9 @@ class AppConfig(private val config: Configuration) : Config {
             return value
         }
 
+    val forwardingReplica
+        get(): Boolean = getEnvOrBoolean("POSTCHAIN_FORWARDING_REPLICA", "forwarding_replica", false)
+
     /**
      * Wrappers for [Configuration] getters and other functionalities
      */

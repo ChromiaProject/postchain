@@ -13,6 +13,7 @@ import net.postchain.ebft.message.ebftMessageToString
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import java.io.Closeable
+import kotlin.random.Random
 
 class EbftIntegrationTestContext(
         config: PeerCommConfiguration,
@@ -31,7 +32,7 @@ class EbftIntegrationTestContext(
         on { getConfiguration() } doReturn nodeConfig
     }
 
-    val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, EbftPacketCodecFactory())
+    val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, EbftPacketCodecFactory(), Random(17))
 
     val communicationManager = DefaultPeerCommunicationManager(
             connectionManager,
