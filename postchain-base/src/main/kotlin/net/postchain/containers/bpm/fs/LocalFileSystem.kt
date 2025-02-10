@@ -16,6 +16,8 @@ open class LocalFileSystem(protected val containerConfig: ContainerNodeConfig, p
         val root = createRoot(containerName)
 
         if (!createPgdata(containerName)) return null
+        if (!createTmp(containerName)) return null
+        if (!createPgUnixSocket(containerName)) return null
 
         return root
     }
@@ -40,13 +42,23 @@ open class LocalFileSystem(protected val containerConfig: ContainerNodeConfig, p
         return root
     }
 
-
     protected fun createPgdata(containerName: ContainerName): Boolean {
-        val hostPgdata = hostPgdataOf(containerName)
-        hostPgdata.toFile().mkdirs()
+        return createDirectory(hostPgdataOf(containerName))
+    }
+
+    protected fun createTmp(containerName: ContainerName): Boolean {
+        return createDirectory(hostTmpOf(containerName))
+    }
+
+    protected fun createPgUnixSocket(containerName: ContainerName): Boolean {
+        return createDirectory(hostPgUnixSocketOf(containerName))
+    }
+
+    private fun createDirectory(directory: Path): Boolean {
+        directory.toFile().mkdirs()
         containerConfig.subnodeUser?.let { subnodeUser ->
-            commandExecutor.runCommand(arrayOf("chown", subnodeUser, hostPgdata.toString()))?.let {
-                logger.warn("Unable change owner of $hostPgdata to $subnodeUser: $it")
+            commandExecutor.runCommand(arrayOf("chown", subnodeUser, directory.toString()))?.let {
+                logger.warn("Unable change owner of $directory to $subnodeUser: $it")
                 return false
             }
         }

@@ -36,6 +36,8 @@ class Ext4FileSystem(containerConfig: ContainerNodeConfig, commandExecutor: Comm
         }
 
         if (!createPgdata(containerName)) return null
+        if (!createTmp(containerName)) return null
+        if (!createPgUnixSocket(containerName)) return null
 
         return root
     }
