@@ -94,4 +94,5 @@ interface TransactionQueue {
     fun getRejectionReason(txRID: WrappedByteArray): Exception?
     fun retryAllTakenTransactions()
     fun flushTransaction(tx: Transaction)
+    fun takenTransactions(): List<Transaction>
 }

@@ -1481,6 +1481,7 @@ public abstract interface class net/postchain/core/TransactionQueue {
 	public abstract fun retryAllTakenTransactions ()V
 	public abstract fun takeTransaction ()Lnet/postchain/core/Transaction;
 	public abstract fun takeTransaction-LRDsOJo (J)Lnet/postchain/core/Transaction;
+	public abstract fun takenTransactions ()Ljava/util/List;
 }
 
 public abstract interface class net/postchain/core/Transactor {
