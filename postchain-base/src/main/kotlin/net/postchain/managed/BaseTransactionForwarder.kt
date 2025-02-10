@@ -1,9 +1,12 @@
 package net.postchain.managed
 
 import mu.KLogging
+import net.postchain.api.rest.model.ApiStatus
+import net.postchain.api.rest.statusBody
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
+import net.postchain.common.tx.TransactionStatus
 import net.postchain.core.Transaction
 import net.postchain.ebft.worker.TransactionForwarder
 import net.postchain.gtv.Gtv
@@ -29,6 +32,10 @@ class BaseTransactionForwarder(
         private val blockchainRid: BlockchainRid,
         private val random: Random
 ) : TransactionForwarder {
+    init {
+        require(apiUrls.isNotEmpty()) { "At least one API URL must be provided" }
+    }
+
     companion object : KLogging()
 
     override fun forward(tx: Transaction) {
@@ -45,6 +52,27 @@ class BaseTransactionForwarder(
             logger.info { "Unable to forward transaction ${tx.getRID().toHex()} to $apiUrl : ${response.status.code} ${parseErrorResponse(response)}" }
         }
         throw UserMistake("Unable to forward transaction ${tx.getRID().toHex()} to any signer node")
+    }
+
+    override fun checkStatus(tx: Transaction): ApiStatus {
+        val randomizedApiUrls = apiUrls.shuffled(random)
+
+        for (apiUrl in randomizedApiUrls) {
+            val response: Response = client(
+                    Request(Method.GET, "$apiUrl/tx/$blockchainRid/${tx.getRID().toHex()}/status")
+                            .header(ACCEPT, ContentType.APPLICATION_JSON.value))
+            if (response.status.successful) {
+                val apiStatus = statusBody(response)
+                if (apiStatus.status != TransactionStatus.UNKNOWN.status) {
+                    return apiStatus
+                }
+            } else {
+                val errorMessage = parseErrorResponse(response)
+                logger.info { "Unable to check transaction status ${tx.getRID().toHex()} from $apiUrl : ${response.status.code} $errorMessage" }
+            }
+        }
+        logger.info { "Unable to get transaction status for ${tx.getRID().toHex()} from any signer node" }
+        return ApiStatus(TransactionStatus.UNKNOWN)
     }
 
 

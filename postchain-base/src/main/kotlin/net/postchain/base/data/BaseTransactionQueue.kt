@@ -285,6 +285,10 @@ class BaseTransactionQueue(private val queueCapacity: Int,
         }
     }
 
+    override fun takenTransactions(): List<Transaction> = lock.withLock {
+        taken.map { it.tx }
+    }
+
     internal fun recheckPriorities() {
         if (prioritizer != null) {
             logger.debug { "Rechecking transactions" }

@@ -2,6 +2,7 @@ package net.postchain.base.data
 
 import assertk.assertThat
 import assertk.assertions.isBetween
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
@@ -375,5 +376,39 @@ class BaseTransactionQueueTest {
             assertThat(sut.takeTransaction(4.seconds)).isNotNull()
         }
         assertThat(elapsed).isBetween(1000 - 10, 2 * 1000 + 10)
+    }
+
+    @Test
+    fun `takenTransactions returns all current transactions in correct order`() {
+        sut = BaseTransactionQueue(5, INFINITE, INFINITE, { tx, _, _ ->
+            when (tx.myRID[0]) {
+                1.toByte() -> TxPriorityStateV1(account0, 0, 0, ZERO)
+                2.toByte() -> TxPriorityStateV1(account0, 0, 0, ONE)
+                3.toByte() -> TxPriorityStateV1(account0, 0, 0, TWO)
+                else -> TxPriorityStateV1(account0, 0, 0, ZERO)
+            }
+        })
+
+        sut.enqueue(tx3)
+        sut.enqueue(tx1)
+        sut.enqueue(tx2)
+        assertThat(sut.takeTransaction()).isNotNull()
+        assertThat(sut.takeTransaction()).isNotNull()
+        assertThat(sut.takeTransaction()).isNotNull()
+
+        val takenTransactions = sut.takenTransactions()
+        assertThat(takenTransactions.size).isEqualTo(3)
+        assertThat(takenTransactions[0]).isSameAs(tx3)
+        assertThat(takenTransactions[1]).isSameAs(tx2)
+        assertThat(takenTransactions[2]).isSameAs(tx1)
+
+        sut.flushTransaction(tx2)
+        val takenTransactions2 = sut.takenTransactions()
+        assertThat(takenTransactions2.size).isEqualTo(2)
+        assertThat(takenTransactions2[0]).isSameAs(tx3)
+        assertThat(takenTransactions2[1]).isSameAs(tx1)
+
+        sut.removeAll(listOf(tx1, tx3))
+        assertThat(sut.takenTransactions()).isEmpty()
     }
 }

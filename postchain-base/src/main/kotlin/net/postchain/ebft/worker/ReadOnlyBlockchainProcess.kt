@@ -2,9 +2,11 @@
 
 package net.postchain.ebft.worker
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.tx.TransactionStatus
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainState
 import net.postchain.core.NODE_ID_READ_ONLY
@@ -26,6 +28,9 @@ import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.time.Duration.Companion.seconds
 
@@ -39,6 +44,8 @@ class ReadOnlyBlockchainProcess(
 ) {
 
     companion object : KLogging()
+
+    private var txChecker: ScheduledExecutorService? = null
 
     val isForwardingReplica = transactionForwarder != null
 
@@ -94,6 +101,32 @@ class ReadOnlyBlockchainProcess(
                     }
                 }
             }
+
+            txChecker = Executors.newSingleThreadScheduledExecutor(
+                    ThreadFactoryBuilder().setNameFormat("$processName-txStatusChecker").build()
+            ).apply {
+                scheduleAtFixedRate({
+                    for (tx in workerContext.engine.getTransactionQueue().takenTransactions()) {
+                        try {
+                            val apiStatus = transactionForwarder.checkStatus(tx)
+                            when (apiStatus.status) {
+                                TransactionStatus.REJECTED.status -> {
+                                    workerContext.engine.getTransactionQueue().rejectTransaction(tx, apiStatus.rejectReason?.let {
+                                        UserMistake(it)
+                                    })
+                                }
+
+                                // Wait for next iteration for CONFIRMED, WAITING and UNKNOWN
+                            }
+                        } catch (e: Exception) {
+                            logger.warn(e) { "Unable to check transaction status ${tx.getRID()}: $e" }
+                        }
+                    }
+                },
+                        /* initialDelay = */ 0,
+                        /* period = */ 1,
+                        TimeUnit.SECONDS)
+            }
         }
     }
 
@@ -122,6 +155,7 @@ class ReadOnlyBlockchainProcess(
 
     override fun cleanup() {
         withLoggingContext(loggingContext) {
+            txChecker?.shutdown()
             blockDatabase.stop()
             workerContext.shutdown()
         }
