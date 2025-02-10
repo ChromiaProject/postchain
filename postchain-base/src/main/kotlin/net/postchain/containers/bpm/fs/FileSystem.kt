@@ -28,7 +28,11 @@ interface FileSystem {
         const val CONTAINER_LOG4J_PATH = "/opt/chromaway/postchain/log4j2.yml"
         const val CONTAINER_TARGET_PATH = "/opt/chromaway/postchain/target"
         const val CONTAINER_PGDATA_PATH = "/var/lib/postgresql/data/"
+        const val CONTAINER_PG_UNIX_SOCKET_PATH = "/var/run/postgresql/"
+        const val CONTAINER_TMP_PATH = "/tmp/"
         const val PGDATA_DIR = "pgdata"
+        const val TMP_DIR = "tmp"
+        const val PGRUN_DIR = "pgrun"
 
         fun create(containerConfig: ContainerNodeConfig): FileSystem {
             return when (containerConfig.containerFilesystem) {
@@ -62,6 +66,20 @@ interface FileSystem {
      */
     fun hostPgdataOf(containerName: ContainerName): Path {
         return hostRootOf(containerName).resolve(PGDATA_DIR)
+    }
+
+    /**
+     * Returns tmp of container in the host filesystem
+     */
+    fun hostTmpOf(containerName: ContainerName): Path {
+        return hostRootOf(containerName).resolve(TMP_DIR)
+    }
+
+    /**
+     * Returns Postgresql unix socket path of container in the host filesystem
+     */
+    fun hostPgUnixSocketOf(containerName: ContainerName): Path {
+        return hostRootOf(containerName).resolve(PGRUN_DIR)
     }
 
     fun supportsQuotas() = false

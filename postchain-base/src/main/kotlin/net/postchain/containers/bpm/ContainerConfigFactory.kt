@@ -58,6 +58,7 @@ object ContainerConfigFactory : KLogging() {
                 .withPublishAllPorts(false)
                 .withCapDrop(Capability.ALL)
                 .withSecurityOpts(listOf("no-new-privileges:true"))
+                .withReadonlyRootfs(true)
                 .apply {
                     if (resourceLimits.hasRam()) withMemory(resourceLimits.ramBytes())
                 }
@@ -158,6 +159,12 @@ object ContainerConfigFactory : KLogging() {
         if (containerNodeConfig.bindPgdataVolume) {
             volumes.add(Bind(fs.hostPgdataOf(containerName).toString(), Volume(FileSystem.CONTAINER_PGDATA_PATH)))
         }
+
+        // tmp volume (/tmp/)
+        volumes.add(Bind(fs.hostTmpOf(containerName).toString(), Volume(FileSystem.CONTAINER_TMP_PATH)))
+
+        // Postgresql unix socket volume (/var/run/postgresql/)
+        volumes.add(Bind(fs.hostPgUnixSocketOf(containerName).toString(), Volume(FileSystem.CONTAINER_PG_UNIX_SOCKET_PATH)))
 
         if (containerNodeConfig.log4jConfigurationFile != null) {
             volumes.add(Bind(containerNodeConfig.log4jConfigurationFile, Volume(FileSystem.CONTAINER_LOG4J_PATH), AccessMode.ro))
