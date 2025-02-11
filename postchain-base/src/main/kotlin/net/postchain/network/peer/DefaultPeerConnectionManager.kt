@@ -145,78 +145,90 @@ open class DefaultPeerConnectionManager<PacketType>(
 
     @Synchronized
     override fun connectChain(chainPeersConfig: XChainPeersConfiguration, autoConnectAll: Boolean) {
-        logger.debug("Connecting chain")
+        return withLoggingContext(
+                BLOCKCHAIN_RID_TAG to chainPeersConfig.blockchainRid.toHex(),
+                CHAIN_IID_TAG to chainPeersConfig.chainId.toString()
+        ) {
+            logger.debug("Connecting chain")
 
-        if (isShutDown) throw ProgrammerMistake("Already shut down")
-        val chainID = chainPeersConfig.chainId
-        val chainWithConnections = ChainWithPeerConnections(
-                chainPeersConfig.chainId, chainPeersConfig, autoConnectAll
-        )
-        beforeConnect(chainPeersConfig.blockchainRid, chainWithConnections)
+            if (isShutDown) throw ProgrammerMistake("Already shut down")
+            val chainID = chainPeersConfig.chainId
+            val chainWithConnections = ChainWithPeerConnections(
+                    chainPeersConfig.chainId, chainPeersConfig, autoConnectAll
+            )
+            beforeConnect(chainPeersConfig.blockchainRid, chainWithConnections)
 
-        // We used to create the connector at object init. But a
-        // problem with initiating the connector before connecting all chains
-        // is that we might close legit incoming connections that are for blockchains
-        // that haven't been connected yet.
-        // During startup, It'd be better to create the connector once all
-        // currently known chains have been connected.
-        // This solution is getting us half-way. We solve the issue for the first
-        // blockchain started, but not for subsequent ones.
-        if (connector == null) {
-            myPeerInfo = chainPeersConfig.commConfiguration.myPeerInfo()
-            peersConnectionStrategy = DefaultPeersConnectionStrategy(
-                    this, myPeerInfo.peerId(), connectionConfig, nodeConfigProvider, random)
+            // We used to create the connector at object init. But a
+            // problem with initiating the connector before connecting all chains
+            // is that we might close legit incoming connections that are for blockchains
+            // that haven't been connected yet.
+            // During startup, It'd be better to create the connector once all
+            // currently known chains have been connected.
+            // This solution is getting us half-way. We solve the issue for the first
+            // blockchain started, but not for subsequent ones.
+            if (connector == null) {
+                myPeerInfo = chainPeersConfig.commConfiguration.myPeerInfo()
+                peersConnectionStrategy = DefaultPeersConnectionStrategy(
+                        this, myPeerInfo.peerId(), connectionConfig, nodeConfigProvider, random)
 
-            val packetCodec = packetCodecFactory.create(chainPeersConfig.commConfiguration, chainPeersConfig.blockchainRid)
-            // We have already given away we are using Netty, so skipping the factory
-            connector = NettyPeerConnector<PacketType>(this, connectionConfig).apply {
-                init(myPeerInfo, packetCodec)
+                val packetCodec = packetCodecFactory.create(chainPeersConfig.commConfiguration, chainPeersConfig.blockchainRid)
+                // We have already given away we are using Netty, so skipping the factory
+                connector = NettyPeerConnector<PacketType>(this, connectionConfig).apply {
+                    init(myPeerInfo, packetCodec)
+                }
             }
-        }
 
-        if (autoConnectAll) {
-            val commConf = chainPeersConfig.commConfiguration
-            peersConnectionStrategy.connectAll(chainID, chainPeersConfig.blockchainRid, commConf.networkNodes.getPeerIds())
-        }
+            if (autoConnectAll) {
+                val commConf = chainPeersConfig.commConfiguration
+                peersConnectionStrategy.connectAll(chainID, chainPeersConfig.blockchainRid, commConf.networkNodes.getPeerIds())
+            }
 
-        logger.debug("Chain connected")
+            logger.debug("Chain connected")
+        }
     }
 
     private fun connectorConnectPeer(chainPeersConfig: XChainPeersConfiguration, peerId: NodeRid) {
-        logger.info(
-                "Connecting chain peer: chain = ${chainPeersConfig.chainId}, " +
-                        "peer = ${peerName(peerId)}"
-        )
-
-        val descriptor = PeerConnectionDescriptor(
-                chainPeersConfig.blockchainRid,
-                peerId,
-                ConnectionDirection.OUTGOING
-        )
-        val peerInfo = resolvePeerInfo(chainPeersConfig.commConfiguration, peerId)
-                ?: throw ProgrammerMistake("Peer ID not found: ${peerId.toHex()}")
-        if (peerInfo.peerId() != peerId) {
-            // Have to add this check since I see strange things
-            throw ProgrammerMistake(
-                    "Peer id found in comm config not same as we looked for" +
-                            " ${peerId.toHex()}, found: ${peerInfo.peerId().toHex()} "
+        return withLoggingContext(
+                BLOCKCHAIN_RID_TAG to chainPeersConfig.blockchainRid.toHex(),
+                CHAIN_IID_TAG to chainPeersConfig.chainId.toString()
+        ) {
+            logger.info(
+                    "Connecting chain peer: chain = ${chainPeersConfig.chainId}, " +
+                            "peer = ${peerName(peerId)}"
             )
-        }
 
-        val packetCodec = packetCodecFactory.create(chainPeersConfig.commConfiguration, chainPeersConfig.blockchainRid)
-        connector?.connectNode(descriptor, peerInfo, packetCodec)
+            val descriptor = PeerConnectionDescriptor(
+                    chainPeersConfig.blockchainRid,
+                    peerId,
+                    ConnectionDirection.OUTGOING
+            )
+            val peerInfo = resolvePeerInfo(chainPeersConfig.commConfiguration, peerId)
+                    ?: throw ProgrammerMistake("Peer ID not found: ${peerId.toHex()}")
+            if (peerInfo.peerId() != peerId) {
+                // Have to add this check since I see strange things
+                throw ProgrammerMistake(
+                        "Peer id found in comm config not same as we looked for" +
+                                " ${peerId.toHex()}, found: ${peerInfo.peerId().toHex()} "
+                )
+            }
+
+            val packetCodec = packetCodecFactory.create(chainPeersConfig.commConfiguration, chainPeersConfig.blockchainRid)
+            connector?.connectNode(descriptor, peerInfo, packetCodec)
+        }
     }
 
     @Synchronized
     override fun connectChainPeer(chainId: Long, peerId: NodeRid) {
-        val chain = chainsWithConnections.getOrThrow(chainId)
-        if (chain.isConnected(peerId)) {
-            logger.debug {
-                "connectChainPeer() - already connected chain $chainId " +
-                        "to peer: ${peerName(peerId)} so do nothing. "
+        return withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
+            val chain = chainsWithConnections.getOrThrow(chainId)
+            if (chain.isConnected(peerId)) {
+                logger.debug {
+                    "connectChainPeer() - already connected chain $chainId " +
+                            "to peer: ${peerName(peerId)} so do nothing. "
+                }
+            } else {
+                connectorConnectPeer(chain.peerConfig, peerId)
             }
-        } else {
-            connectorConnectPeer(chain.peerConfig, peerId)
         }
     }
 
@@ -246,36 +258,39 @@ open class DefaultPeerConnectionManager<PacketType>(
 
     @Synchronized
     override fun disconnectChainPeer(chainId: Long, peerId: NodeRid) {
-        val chain = chainsWithConnections.getOrThrow(chainId)
-        val conn = chain.getConnection(peerId)
-        if (conn != null) {
-            chain.removeAndCloseConnection(peerId)
-        } else {
-            logger.debug(
-                    "connectChainPeer() - cannot connect chain " +
-                            "to peer: ${peerName(peerId)} b/c chain missing that connection. "
-            )
+        return withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
+            val chain = chainsWithConnections.getOrThrow(chainId)
+            val conn = chain.getConnection(peerId)
+            if (conn != null) {
+                chain.removeAndCloseConnection(peerId)
+            } else {
+                logger.debug(
+                        "connectChainPeer() - cannot connect chain " +
+                                "to peer: ${peerName(peerId)} b/c chain missing that connection. "
+                )
+            }
         }
     }
 
     @Synchronized
     override fun disconnectChain(chainId: Long): CompletableFuture<Void> {
-        logger.debug("Disconnecting chain")
+        return withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
+            logger.debug("Disconnecting chain")
 
-        // Remove the chain before closing connections so that we won't
-        // reconnect in onPeerDisconnected()
-        val chain = chainsWithConnections.remove(chainId)
-        return if (chain != null) {
-            val old = chainIdForBlockchainRid.remove(chain.peerConfig.blockchainRid)
-            if (old != null) {
-                disconnectedChainIdForBlockchainRid[chain.peerConfig.blockchainRid] = old
+            // Remove the chain before closing connections so that we won't
+            // reconnect in onPeerDisconnected()
+            val chain = chainsWithConnections.remove(chainId)
+            if (chain != null) {
+                val old = chainIdForBlockchainRid.remove(chain.peerConfig.blockchainRid)
+                if (old != null) {
+                    disconnectedChainIdForBlockchainRid[chain.peerConfig.blockchainRid] = old
+                }
+                logger.debug("Chain disconnected")
+                chain.closeConnections()
+            } else {
+                logger.debug("Unknown chain")
+                CompletableFuture.completedFuture(null)
             }
-            val future = chain.closeConnections()
-            logger.debug("Chain disconnected")
-            return future
-        } else {
-            logger.debug("Unknown chain")
-            CompletableFuture.completedFuture(null)
         }
     }
 
@@ -444,24 +459,30 @@ open class DefaultPeerConnectionManager<PacketType>(
                         // Here we are forgiving, since it's ok to not know the Chain IID
                         val oldChainID = disconnectedChainIdForBlockchainRid[descriptor.blockchainRid]
                         if (oldChainID != null) {
-                            logger.debug {
-                                "getChainIdOnConnected()  - Found chainIid: $oldChainID in the backup."
+                            withLoggingContext(
+                                    BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex(),
+                                    CHAIN_IID_TAG to oldChainID.toString()
+                            ) {
+                                logger.debug {
+                                    "getChainIdOnConnected()  - Found chainIid: $oldChainID in the backup."
+                                }
                             }
                             oldChainID
                         } else {
-                            logger.info(
-                                    "getChainIdOnConnected() - Chain ID not found (could be due to (1) chain not started or (2) we really don't have it)"
-                            )
-
+                            withLoggingContext(BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex()) {
+                                logger.info(
+                                        "getChainIdOnConnected() - Chain ID not found (could be due to (1) chain not started or (2) we really don't have it)"
+                                )
+                            }
                             connection.close()
                             return null
                         }
                     }
 
                     ConnectionDirection.OUTGOING -> {
-                        logger.error(
-                                "getChainIdOnConnected() - We initiated this contact but lost the Chain ID"
-                        )
+                        withLoggingContext(BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex()) {
+                            logger.error("getChainIdOnConnected() - We initiated this contact but lost the Chain ID")
+                        }
                         connection.close()
                         return null
                     }
@@ -479,13 +500,23 @@ open class DefaultPeerConnectionManager<PacketType>(
         return chainsWithConnections.get(chainIid)
                 ?: when (descriptor.dir) {
                     ConnectionDirection.INCOMING -> {
-                        logger.info("getChainOnConnected() - Chain not found")
+                        withLoggingContext(
+                                BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex(),
+                                CHAIN_IID_TAG to chainIid.toString()
+                        ) {
+                            logger.info("getChainOnConnected() - Chain not found")
+                        }
                         connection.close()
                         return null
                     }
 
                     ConnectionDirection.OUTGOING -> {
-                        logger.error("getChainOnConnected() - We initiated this contact but lost the Chain")
+                        withLoggingContext(
+                                BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex(),
+                                CHAIN_IID_TAG to chainIid.toString()
+                        ) {
+                            logger.error("getChainOnConnected() - We initiated this contact but lost the Chain")
+                        }
                         connection.close()
                         return null
                     }
@@ -509,19 +540,23 @@ open class DefaultPeerConnectionManager<PacketType>(
                         // 1. Another node connects us about chain X, and
                         // 2. we don't have chain X so we close the connection in "onPeerConnection(), and
                         // 3. Netty will make the callback "onPeerDisconnected()", and now we are here.
-                        logger.info(
-                                "getChainIdOnDisconnected() - Chain ID not found (Could be due to 1) chain not started or 2) we really don't have it)"
-                        )
+                        withLoggingContext(BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex()) {
+                            logger.info(
+                                    "getChainIdOnDisconnected() - Chain ID not found (Could be due to 1) chain not started or 2) we really don't have it)"
+                            )
+                        }
                         null
                     }
 
                     ConnectionDirection.OUTGOING -> {
                         // Should never happen
-                        logger.error(
-                                "getChainIdOnDisconnected() - How can we never have seen " +
-                                        "chain: from peer: ${peerName(descriptor.nodeId)} , direction: " +
-                                        "${descriptor.dir}"
-                        )
+                        withLoggingContext(BLOCKCHAIN_RID_TAG to descriptor.blockchainRid.toHex()) {
+                            logger.error(
+                                    "getChainIdOnDisconnected() - How can we never have seen " +
+                                            "chain: from peer: ${peerName(descriptor.nodeId)} , direction: " +
+                                            "${descriptor.dir}"
+                            )
+                        }
                         null
                     }
                 }
@@ -558,10 +593,10 @@ open class DefaultPeerConnectionManager<PacketType>(
             chainsWithConnections.getAllChains().forEach { chain ->
                 val networkNodes = chain.peerConfig.commConfiguration.networkNodes
                 nodes.forEach { node ->
-                        if (node.peerId() in networkNodes) {
-                            networkNodes[node.peerId()] = node
-                        }
+                    if (node.peerId() in networkNodes) {
+                        networkNodes[node.peerId()] = node
                     }
+                }
             }
 
             networkNodesTimestamp = clock.instant()
