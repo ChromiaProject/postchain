@@ -146,7 +146,7 @@ class BlockchainReplicator(
                 var currentHeight = newBlocks.first
                 while (currentHeight <= newBlocks.last) {
 
-                    val blockCountLimit = min(newBlocks.last.toInt() - currentHeight.toInt() + 1, 100)
+                    val blockCountLimit = min(newBlocks.last.toInt() - currentHeight.toInt() + 1, 10)
                     logger.info { "Replicate block range $currentHeight..${newBlocks.last} with max block limit $blockCountLimit and size limit $MAX_PACKAGE_CONTENT_BYTES" }
 
                     val blocks = srcContainer.exportBlocks(chainId, currentHeight, blockCountLimit, MAX_PACKAGE_CONTENT_BYTES)

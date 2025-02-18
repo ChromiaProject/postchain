@@ -42,6 +42,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.math.max
 
 class DefaultSubnodeAdminClient(
         val containerName: ContainerName,
@@ -55,6 +56,9 @@ class DefaultSubnodeAdminClient(
         private const val MAX_RETRIES = 5 * 60 * 1000 / RETRY_INTERVAL // 5 min
         val clientCount = AtomicInteger()
     }
+
+    val defaultTimeoutMs = containerNodeConfig.adminClientTimeoutMs.toLong()
+    val importBlocksTimeoutMs = max(defaultTimeoutMs, 10 * 60 * 1000L) // at least 10 minutes
 
     @Volatile
     private var channel: ManagedChannel? = null
@@ -91,7 +95,6 @@ class DefaultSubnodeAdminClient(
                 val creds = InsecureChannelCredentials.create()
                 channel = Grpc.newChannelBuilder(target, creds).build()
                 service = PostchainServiceGrpc.newBlockingStub(channel)
-                        .withInterceptors(SubnodeAdminClientTimeoutInterceptor(containerNodeConfig))
                 peerService = PeerServiceGrpc.newBlockingStub(channel)
                         .withInterceptors(SubnodeAdminClientTimeoutInterceptor(containerNodeConfig))
                 healthcheckService = HealthGrpc.newBlockingStub(channel)
@@ -195,7 +198,7 @@ class DefaultSubnodeAdminClient(
                         .setChainId(chainId)
                         .build()
 
-                val response = service?.stopBlockchain(request)
+                val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.stopBlockchain(request)
                         ?: throw ProgrammerMistake("subnode admin client not connected")
                 logger.debug { "stopBlockchain($chainId) -- blockchain stopped: service's reply: ${response.message}" }
                 true
@@ -215,7 +218,7 @@ class DefaultSubnodeAdminClient(
                 val request = FindBlockchainRequest.newBuilder()
                         .setChainId(chainId)
                         .build()
-                val response = service?.findBlockchain(request)
+                val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.findBlockchain(request)
                         ?: throw ProgrammerMistake("subnode admin client not connected")
                 logger.debug { "isBlockchainRunning($chainId) -- ${response.active}" }
                 response.active
@@ -240,7 +243,7 @@ class DefaultSubnodeAdminClient(
                 val request = FindBlockchainRequest.newBuilder()
                         .setChainId(chainId)
                         .build()
-                val response = service?.findBlockchain(request)
+                val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.findBlockchain(request)
                         ?: throw ProgrammerMistake("subnode admin client not connected")
                 logger.debug { "getBlockchainLastHeight($chainId) -- ${response.height}" }
                 response.height
@@ -262,7 +265,7 @@ class DefaultSubnodeAdminClient(
                         .setGtv(ByteString.copyFrom(config))
                         .setOverride(true)
                         .build()
-                val response = service?.initializeBlockchain(request)
+                val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.initializeBlockchain(request)
                         ?: throw ProgrammerMistake("subnode admin client not connected")
                 logger.debug { "initializeBlockchain($chainId) -- ${response.success}" }
             } catch (e: Exception) {
@@ -284,7 +287,7 @@ class DefaultSubnodeAdminClient(
                         .setOverride(true)
                         .setAllowUnknownSigners(true)
                         .build()
-                val response = service?.addConfiguration(request)
+                val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.addConfiguration(request)
                         ?: throw ProgrammerMistake("subnode admin client not connected")
                 logger.debug { "addBlockchainConfiguration(chainId = $chainId, height = $height) -- ${response.message}" }
             } catch (e: Exception) {
@@ -305,7 +308,7 @@ class DefaultSubnodeAdminClient(
                         .setBlockCountLimit(blockCountLimit)
                         .setBlocksSizeLimit(blocksSizeLimit)
                         .build()
-                val response = service?.exportBlocks(request)
+                val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.exportBlocks(request)
                         ?: throw ProgrammerMistake("subnode admin client not connected")
                 logger.debug { "exportBlocks(chainId = $chainId, fromHeight = $fromHeight, blockCountLimit = $blockCountLimit, blocksSizeLimit = $blocksSizeLimit)" }
                 response.blockDataList
@@ -327,7 +330,7 @@ class DefaultSubnodeAdminClient(
                         .setChainId(chainId)
                         .addAllBlockData(blockData.map { ByteString.copyFrom(GtvEncoder.encodeGtv(it)) })
                         .build()
-                val response = service?.importBlocks(request)
+                val response = service?.withDeadlineAfter(importBlocksTimeoutMs, TimeUnit.MILLISECONDS)?.importBlocks(request)
                         ?: throw ProgrammerMistake("subnode admin client not connected")
                 logger.debug { "importBlocks(chainId = $chainId) --  fromHeight = ${response.fromHeight}), upToHeight = ${response.upToHeight} -- ${response.message}" }
                 return response.upToHeight
