@@ -70,8 +70,8 @@ class ContainerJobHandler(
 
         fun result(result: Boolean) {
             val msg = when (result) {
-                true -> "Job for container $containerName has been finished successfully"
-                false -> "Job for container $containerName hasn't been finished yet and will be postponed"
+                true -> "Job for container $containerName has been finished successfully: $job"
+                false -> "Job for container $containerName hasn't been finished yet and will be postponed: $job"
             }
             logger.info { msg }
         }

@@ -9,7 +9,7 @@ import assertk.assertions.support.show
  * Asserts the ByteArray content is equal to the content of expected one.
  * @see [ByteArray.contentEquals] function
  */
-fun Assert<ByteArray>.isContentEqualTo(expected: ByteArray) = given { actual -> 
+fun Assert<ByteArray>.isContentEqualTo(expected: ByteArray) = given { actual ->
     if (actual.contentEquals(expected)) return
     expected("ByteArray:${show(expected)} but was ByteArray:${show(actual)}")
 }

@@ -1,6 +1,6 @@
 package net.postchain.containers.bpm
 
-import net.postchain.common.types.WrappedByteArray
+import net.postchain.common.BlockchainRid
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvInteger
 import net.postchain.managed.DirectoryDataSource
@@ -15,6 +15,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
 
 class BlockchainReplicatorTest {
 
@@ -25,11 +26,11 @@ class BlockchainReplicatorTest {
     @BeforeEach
     fun setup() {
         blockchainReplicator = BlockchainReplicator(
-            WrappedByteArray.fromHex("00"),
-            mock(Chain::class.java),
-            mock(Chain::class.java),
-            0L,
-            mock(DirectoryDataSource::class.java)
+                BlockchainRid.ZERO_RID,
+                mock(Chain::class.java),
+                mock(Chain::class.java),
+                0L,
+                mock(DirectoryDataSource::class.java)
         ) { null }
 
         srcContainer = mock<PostchainContainer>()
@@ -49,15 +50,15 @@ class BlockchainReplicatorTest {
         Mockito.`when`(srcContainer.exportBlocks(any(), any(), any(), any())).thenReturn(buildGtvIntegerSequence(1))
 
         blockchainReplicator.replicateBlocks(
-            10L,
-            0L,
-            srcContainer,
-            dstContainer
+                10L,
+                0L,
+                srcContainer,
+                dstContainer
         );
 
         verify(dstContainer, times(10)).importBlocks(
-            any(),
-            argThat { args -> blocksMatchSequence(args, 1) })
+                any(),
+                argThat { args -> blocksMatchSequence(args, 1) })
     }
 
     @Test
@@ -66,15 +67,34 @@ class BlockchainReplicatorTest {
         Mockito.`when`(srcContainer.exportBlocks(any(), any(), any(), any())).thenReturn(buildGtvIntegerSequence(2))
 
         blockchainReplicator.replicateBlocks(
-            10L,
-            0L,
-            srcContainer,
-            dstContainer
+                10L,
+                0L,
+                srcContainer,
+                dstContainer
         );
 
         verify(dstContainer, times(5)).importBlocks(
-            any(),
-            argThat { arg -> blocksMatchSequence(arg, 2) })
+                any(),
+                argThat { arg -> blocksMatchSequence(arg, 2) })
+    }
+
+    @Test
+    fun testReplicationCanceling() {
+
+        Mockito.`when`(srcContainer.exportBlocks(any(), any(), any(), any())).thenReturn(buildGtvIntegerSequence(2))
+
+        // Cancel replication
+        blockchainReplicator.cancel()
+
+        // Continue blocks replication
+        blockchainReplicator.replicateBlocks(
+                10L,
+                0L,
+                srcContainer,
+                dstContainer
+        );
+
+        verify(dstContainer, never()).importBlocks(any(), any())
     }
 
     private fun buildGtvIntegerSequence(upTo: Int): List<GtvInteger> {

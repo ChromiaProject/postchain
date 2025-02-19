@@ -3,9 +3,10 @@ package net.postchain.containers.bpm
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import mu.withLoggingContext
-import net.postchain.common.types.WrappedByteArray
+import net.postchain.common.BlockchainRid
 import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_BLOCKS_IN_PACKAGE
 import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_PACKAGE_CONTENT_BYTES
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.DirectoryDataSource
 import java.util.concurrent.Executors
@@ -15,7 +16,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.min
 
 class BlockchainReplicator(
-        val rid: WrappedByteArray,
+        val blockchainRid: BlockchainRid,
         val srcChain: Chain,
         val dstChain: Chain,
         var upToHeight: Long,
@@ -28,13 +29,13 @@ class BlockchainReplicator(
     enum class ContainerRole { SOURCE, DESTINATION }
 
     private val chainId = srcChain.chainId
-    private val blockchainRid = srcChain.brid
     private val processName = "blockchain-replicator-chainId-$chainId"
     private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
             ThreadFactoryBuilder().setNameFormat(processName).build()
     )
     private val done = AtomicBoolean(false)
-    private val loggingContext = mapOf(CHAIN_IID_TAG to chainId.toString())
+    private val cancelled = AtomicBoolean(false)
+    private val loggingContext = mapOf(CHAIN_IID_TAG to chainId.toString(), BLOCKCHAIN_RID_TAG to blockchainRid.toString())
 
     init {
         executor.scheduleWithFixedDelay(::jobHandler, 5000, 2000, TimeUnit.MILLISECONDS)
@@ -42,6 +43,8 @@ class BlockchainReplicator(
 
     private fun jobHandler() {
         withLoggingContext(loggingContext) {
+            if (cancelled.get()) return
+
             try {
                 val upToHeight0 = upToHeight
 
@@ -119,6 +122,7 @@ class BlockchainReplicator(
         withLoggingContext(loggingContext) {
             var cur = dstLastBlockHeight
             while (true) {
+                if (cancelled.get()) break
                 val next = directoryDataSource.findNextConfigurationHeight(blockchainRid.data, cur)
                 logger.debug { "Next config found at height $next" }
                 if (next == null || next > upToHeight) break
@@ -136,16 +140,17 @@ class BlockchainReplicator(
     }
 
     fun replicateBlocks(upToHeight: Long, dstLastBlockHeight: Long, srcContainer: PostchainContainer, dstContainer: PostchainContainer): Boolean {
-        return withLoggingContext(loggingContext) {
+        withLoggingContext(loggingContext) {
             val newBlocks = dstLastBlockHeight + 1..upToHeight
             if (newBlocks.isEmpty()) {
                 logger.info { "Source chain has no new blocks" }
-                false
+                return false
             } else {
                 logger.info { "Block replication started, $newBlocks blocks will be imported" }
 
                 var currentHeight = newBlocks.first
                 while (currentHeight <= newBlocks.last) {
+                    if (cancelled.get()) return false
 
                     val blockCountLimit = min(newBlocks.last.toInt() - currentHeight.toInt() + 1, MAX_BLOCKS_IN_PACKAGE)
                     logger.info { "Replicate block range $currentHeight..${newBlocks.last} with max block limit $blockCountLimit and size limit $MAX_PACKAGE_CONTENT_BYTES" }
@@ -161,18 +166,28 @@ class BlockchainReplicator(
                 }
 
                 logger.info { "Blockchain replication succeeded, $newBlocks blocks are imported" }
-                true
+                return true
             }
         }
     }
 
     private fun done() {
         withLoggingContext(loggingContext) {
-            executor.shutdown()
             done.set(true)
+            executor.shutdown()
             logger.info { "Replication job $processName is done" }
         }
     }
 
     fun isDone() = upToHeight != -1L && done.get()
+
+    fun cancel() {
+        withLoggingContext(loggingContext) {
+            cancelled.set(true)
+            executor.shutdown()
+            logger.info { "Replication job $processName has been cancelled" }
+        }
+    }
+
+    fun isCancelled() = cancelled.get()
 }
