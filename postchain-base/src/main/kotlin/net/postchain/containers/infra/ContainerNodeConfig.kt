@@ -80,6 +80,7 @@ data class ContainerNodeConfig(
         val postgresMaxLocksPerTransaction: Int,
         val containerConfigProviders: List<String>,
         val adminClientTimeoutMs: Int,
+        val adminClientImportBlocksTimeoutMs: Int,
         val masterSubQueryTimeoutMs: Long,
         val imageVersionTag: String // hidden param, not for configuring manually
 ) : Config {
@@ -121,6 +122,7 @@ data class ContainerNodeConfig(
         const val KEY_POSTGRES_MAX_LOCKS_PER_TRANSACTION = "postgres_max_locks_per_transaction"
         const val KEY_CONFIG_PROVIDERS = "config-providers"
         const val KEY_ADMIN_CLIENT_TIMEOUT_MS = "admin-client-timeout-ms"
+        const val KEY_ADMIN_CLIENT_IMPORT_BLOCK_TIMEOUT_MS = "admin-client-import-block-timeout-ms"
         const val KEY_MASTERSUB_QUERY_TIMEOUT_MS = "mastersub-query-timeout-ms"
         const val KEY_IMAGE_VERSION_TAG = "IMAGE_VERSION_TAG" // hidden param, not for configuring manually
 
@@ -192,6 +194,7 @@ data class ContainerNodeConfig(
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_POSTGRES_MAX_LOCKS_PER_TRANSACTION", KEY_POSTGRES_MAX_LOCKS_PER_TRANSACTION, 1024),
                         getEnvOrListProperty("POSTCHAIN_SUBNODE_CONFIG_PROVIDERS", KEY_CONFIG_PROVIDERS, emptyList()),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_ADMIN_CLIENT_TIMEOUT_MS", KEY_ADMIN_CLIENT_TIMEOUT_MS, 60_000),
+                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_ADMIN_CLIENT_IMPORT_BLOCK_TIMEOUT_MS", KEY_ADMIN_CLIENT_IMPORT_BLOCK_TIMEOUT_MS, 10 * 60 * 1000),
                         getEnvOrLongProperty("POSTCHAIN_MASTERSUB_QUERY_TIMEOUT_MS", KEY_MASTERSUB_QUERY_TIMEOUT_MS, 10_000),
                         System.getenv(KEY_IMAGE_VERSION_TAG) ?: ""
                 )

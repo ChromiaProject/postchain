@@ -42,7 +42,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.math.max
 
 class DefaultSubnodeAdminClient(
         val containerName: ContainerName,
@@ -58,7 +57,7 @@ class DefaultSubnodeAdminClient(
     }
 
     val defaultTimeoutMs = containerNodeConfig.adminClientTimeoutMs.toLong()
-    val importBlocksTimeoutMs = max(defaultTimeoutMs, 10 * 60 * 1000L) // at least 10 minutes
+    val importBlocksTimeoutMs = containerNodeConfig.adminClientImportBlocksTimeoutMs.toLong()
 
     @Volatile
     private var channel: ManagedChannel? = null

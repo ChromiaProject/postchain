@@ -4,6 +4,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.common.types.WrappedByteArray
+import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_BLOCKS_IN_PACKAGE
 import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_PACKAGE_CONTENT_BYTES
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.DirectoryDataSource
@@ -146,7 +147,7 @@ class BlockchainReplicator(
                 var currentHeight = newBlocks.first
                 while (currentHeight <= newBlocks.last) {
 
-                    val blockCountLimit = min(newBlocks.last.toInt() - currentHeight.toInt() + 1, 10)
+                    val blockCountLimit = min(newBlocks.last.toInt() - currentHeight.toInt() + 1, MAX_BLOCKS_IN_PACKAGE)
                     logger.info { "Replicate block range $currentHeight..${newBlocks.last} with max block limit $blockCountLimit and size limit $MAX_PACKAGE_CONTENT_BYTES" }
 
                     val blocks = srcContainer.exportBlocks(chainId, currentHeight, blockCountLimit, MAX_PACKAGE_CONTENT_BYTES)
