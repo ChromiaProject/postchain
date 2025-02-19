@@ -139,6 +139,11 @@ class DefaultPeerCommunicationManager<PacketType>(
     override fun sendToRandomPeer(packet: PacketType, amongPeers: Set<NodeRid>): Pair<NodeRid?, Set<NodeRid>> {
         val possiblePeers = connectionManager.getConnectedNodes(chainId).intersect(amongPeers)
         if (possiblePeers.isEmpty()) {
+            logger.trace {
+                "sendToRandomPeer(...): " +
+                        "amongPeers: ${amongPeers.toTypedArray().contentToString()}, " +
+                        "possiblePeers: ${possiblePeers.toTypedArray().contentToString()}"
+            }
             return null to possiblePeers // We don't want to apply random to an empty list b/c throwing exception is too expensive.
         }
         val peer = possiblePeers.random()
