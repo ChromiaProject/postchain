@@ -653,6 +653,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getConfigurationDataForHeight (Lnet/postchain/core/ExecutionContext;J)[B
 	public abstract fun getContainerIid (Lnet/postchain/core/AppContext;Ljava/lang/String;)Ljava/lang/Integer;
 	public abstract fun getCurrentMerkleHashVersion (Lnet/postchain/core/ExecutionContext;)J
+	public abstract fun getDatabaseServerVersion (Ljava/sql/Connection;)Ljava/lang/String;
 	public abstract fun getDependenciesOnBlockchain (Lnet/postchain/core/ExecutionContext;)Ljava/util/List;
 	public abstract fun getEvent (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;[B)Lnet/postchain/base/data/DatabaseAccess$EventInfo;
 	public abstract fun getEventsAboveHeight (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;J)Ljava/util/List;
@@ -1885,6 +1886,7 @@ public final class net/postchain/debug/DiagnosticProperty : java/lang/Enum {
 	public static final field BLOCK_STATS Lnet/postchain/debug/DiagnosticProperty;
 	public static final field CONTAINER_ID Lnet/postchain/debug/DiagnosticProperty;
 	public static final field CONTAINER_NAME Lnet/postchain/debug/DiagnosticProperty;
+	public static final field DATABASE_SERVER_VERSION Lnet/postchain/debug/DiagnosticProperty;
 	public static final field ERROR Lnet/postchain/debug/DiagnosticProperty;
 	public static final field INFRASTRUCTURE_NAME Lnet/postchain/debug/DiagnosticProperty;
 	public static final field INFRASTRUCTURE_VERSION Lnet/postchain/debug/DiagnosticProperty;

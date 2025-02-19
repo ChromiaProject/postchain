@@ -17,7 +17,7 @@ class CollationIT {
     @Tag("docker")
     fun testCollationTestPass() {
         PostgreSQLContainer(
-                DockerImageName.parse("postgres:16.6-alpine3.21@sha256:aba1fab94626cf8b0f4549055214239a37e0a690f03f142b7bca05b9ed36c6db")
+                DockerImageName.parse("postgres:16.7-alpine3.21@sha256:97a14a17b1fea5ae1ab33024ca556bb4fedc8709bea5722cb8b7665a9cabb656")
                         .asCompatibleSubstituteFor("postgres")).apply {
             withUsername("postchain")
             withPassword("postchain")
@@ -33,7 +33,7 @@ class CollationIT {
     @Tag("docker")
     fun testCollationTestFail() {
         PostgreSQLContainer(
-                DockerImageName.parse("postgres:16.6:c7afedc5c15994625b5be4cb4736c030271b55be0360b78a99c90ec2fbe658b6")
+                DockerImageName.parse("postgres:16.7@sha256:a35ec42526e3c522eb13b4d82eddaee875d0ac6ca9eb5cc5607e412854478c71")
                         .asCompatibleSubstituteFor("postgres")).apply {
             withUsername("postchain")
             withPassword("postchain")

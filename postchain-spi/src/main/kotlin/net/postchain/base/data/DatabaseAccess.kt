@@ -206,6 +206,8 @@ interface DatabaseAccess {
     fun createStateLeafTable(ctx: EContext, prefix: String)
     fun createStateLeafTableIndex(ctx: EContext, prefix: String, index: Int)
 
+    fun getDatabaseServerVersion(connection: Connection): String
+
     companion object {
         fun of(ctx: AppContext): DatabaseAccess {
             return ctx.getInterface(DatabaseAccess::class.java)

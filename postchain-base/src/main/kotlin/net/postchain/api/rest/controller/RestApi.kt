@@ -349,10 +349,11 @@ class RestApi(
     @Suppress("unused")
     private fun getInfraVersion(request: Request): Response = Response(OK).with(
             infraVersionBody of InfraVersion(
-                    nodeDiagnosticContext[DiagnosticProperty.VERSION]?.value?.toString().orEmpty(),
-                    nodeDiagnosticContext[DiagnosticProperty.INFRASTRUCTURE_NAME]?.value?.toString().orEmpty(),
-                    nodeDiagnosticContext[DiagnosticProperty.INFRASTRUCTURE_VERSION]?.value?.toString().orEmpty(),
-                    REST_API_VERSION.toString()
+                    postchain = nodeDiagnosticContext[DiagnosticProperty.VERSION]?.value?.toString().orEmpty(),
+                    infrastructure = nodeDiagnosticContext[DiagnosticProperty.INFRASTRUCTURE_NAME]?.value?.toString().orEmpty(),
+                    infrastructureVersion = nodeDiagnosticContext[DiagnosticProperty.INFRASTRUCTURE_VERSION]?.value?.toString().orEmpty(),
+                    restApi = REST_API_VERSION.toString(),
+                    databaseServerVersion = nodeDiagnosticContext[DiagnosticProperty.DATABASE_SERVER_VERSION]?.value?.toString().orEmpty()
             )
     )
 

@@ -8,6 +8,7 @@ enum class DiagnosticProperty(val prettyName: String) {
 
     INFRASTRUCTURE_NAME("infrastructure"),
     INFRASTRUCTURE_VERSION("infrastructure-version"),
+    DATABASE_SERVER_VERSION("database-server-version"),
 
     PUB_KEY("pub-key"),
 
