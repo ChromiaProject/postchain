@@ -115,7 +115,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
 
         val replicasGtv = query(
                 "nm_get_blockchain_replica_node_map",
-                buildArgs("blockchain_rids" to gtv(blockchains.map { gtv(it.rid) }))
+                buildArgs("blockchain_rids" to gtv(blockchains.map { gtv(it.blockchainRid) }))
         ).asArray()
 
         return replicasGtv.associate { pair ->
@@ -204,7 +204,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         if (res.isNull()) return null
 
         return MigratingBlockchainNodeInfo(
-                res["rid"]?.asByteArray()?.wrap() ?: return null,
+                res["rid"]?.asByteArray()?.let { BlockchainRid(it) } ?: return null,
                 res["source_container"]?.asString() ?: return null,
                 res["destination_container"]?.asString() ?: return null,
                 res["is_source_node"]?.asBoolean() ?: return null,

@@ -295,7 +295,7 @@ open class ManagedBlockchainProcessManager(
         try {
             val inactiveChains = dataSource.findNextInactiveBlockchains(currentInactiveBlockchainsHeight)
             withLoggingContext(CHAIN_IID_TAG to CHAIN0.toString()) {
-                logger.debug { "Inactive blockchains starting from height $currentInactiveBlockchainsHeight: ${inactiveChains.associate { it.rid.toHex() to (it.state to it.height) }}" }
+                logger.debug { "Inactive blockchains starting from height $currentInactiveBlockchainsHeight: ${inactiveChains.associate { it.blockchainRid.toHex() to (it.state to it.height) }}" }
 
                 // No inactive chains, OR some of the inactive chains have not yet been stopped. We'll be back on the next iteration.
                 when {
@@ -311,12 +311,12 @@ open class ManagedBlockchainProcessManager(
 
             inactiveChains.forEach { chain ->
                 val inactiveChainId = withReadConnection(sharedStorage, 0) { ctx0 ->
-                    DatabaseAccess.of(ctx0).getChainId(ctx0, chain.rid)
+                    DatabaseAccess.of(ctx0).getChainId(ctx0, chain.blockchainRid)
                 }
 
                 withLoggingContext(
                         buildMap {
-                            put(BLOCKCHAIN_RID_TAG, chain.rid.toString())
+                            put(BLOCKCHAIN_RID_TAG, chain.blockchainRid.toString())
                             if (inactiveChainId != null) put(CHAIN_IID_TAG, inactiveChainId.toString())
                         }
                 ) {
@@ -351,7 +351,7 @@ open class ManagedBlockchainProcessManager(
 
     protected open fun areChainsAvailableForPruning(chains: List<InactiveBlockchainInfo>): Boolean {
         return processLock.withLock {
-            chains.all { !bridToChainId.containsKey(it.rid) }
+            chains.all { !bridToChainId.containsKey(it.blockchainRid) }
         }
     }
 
@@ -416,26 +416,26 @@ open class ManagedBlockchainProcessManager(
 
         withWriteConnection(blockBuilderStorage, 0) { ctx0 ->
             val db = DatabaseAccess.of(ctx0)
-            val domainBlockchains = dataSource.computeBlockchainInfoList().distinctBy { it.rid }
+            val domainBlockchains = dataSource.computeBlockchainInfoList().distinctBy { it.blockchainRid }
             val all = domainBlockchains.union(locallyConfiguredBlockchainsToReplicate())
             all.forEach { blockchainInfo ->
-                val chainId = db.getChainId(ctx0, blockchainInfo.rid)
-                retrieveTrace("launch chainIid: $chainId, BC RID: ${blockchainInfo.rid.toShortHex()} ")
+                val chainId = db.getChainId(ctx0, blockchainInfo.blockchainRid)
+                retrieveTrace("launch chainIid: $chainId, BC RID: ${blockchainInfo.blockchainRid.toShortHex()} ")
                 val localBlockchainInfo = if (chainId == null) {
                     val newChainId = if (blockchainInfo.system) {
                         val newChainId = db.getLastSystemChainId(ctx0) + 1
                         if (newChainId == 100L) {
-                            logger.error { "Can't create a system chain ${blockchainInfo.rid}. Max system chain IID exceeded." }
+                            logger.error { "Can't create a system chain ${blockchainInfo.blockchainRid}. Max system chain IID exceeded." }
                             return@forEach
                         }
                         withReadWriteConnection(blockBuilderStorage, newChainId) { newCtx ->
-                            db.initializeBlockchain(newCtx, blockchainInfo.rid)
+                            db.initializeBlockchain(newCtx, blockchainInfo.blockchainRid)
                         }
                         newChainId
                     } else {
                         val newChainId = max(db.getLastChainId(ctx0), 99) + 1
                         withReadWriteConnection(blockBuilderStorage, newChainId) { newCtx ->
-                            db.initializeBlockchain(newCtx, blockchainInfo.rid)
+                            db.initializeBlockchain(newCtx, blockchainInfo.blockchainRid)
                             db.setLastChainId(newCtx)
                         }
                         newChainId

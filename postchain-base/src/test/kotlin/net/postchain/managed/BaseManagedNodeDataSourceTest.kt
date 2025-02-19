@@ -55,7 +55,7 @@ class BaseManagedNodeDataSourceTest {
             on { query(eq("nm_compute_blockchain_info_list"), any()) } doReturn gtvResult
         }
         val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
-        assertEquals(expected.sortedBy { it.rid.toHex() }, sut.computeBlockchainInfoList().sortedBy { it.rid.toHex() })
+        assertEquals(expected.sortedBy { it.blockchainRid.toHex() }, sut.computeBlockchainInfoList().sortedBy { it.blockchainRid.toHex() })
     }
 
     @ParameterizedTest
@@ -359,7 +359,7 @@ class BaseManagedNodeDataSourceTest {
                                     "final_height" to gtv(100)
                             )),
                             MigratingBlockchainNodeInfo(
-                                    ZERO_RID.wData,
+                                    ZERO_RID,
                                     "src",
                                     "dst",
                                     isSourceNode = false,
@@ -376,7 +376,7 @@ class BaseManagedNodeDataSourceTest {
                                     "final_height" to gtv(100)
                             )),
                             MigratingBlockchainNodeInfo(
-                                    ZERO_RID.wData,
+                                    ZERO_RID,
                                     "src",
                                     "dst",
                                     isSourceNode = true,

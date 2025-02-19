@@ -53,7 +53,7 @@ open class TestManagedBlockchainProcessManager(
     override fun retrieveBlockchainsToLaunch(): Set<LocalBlockchainInfo> {
         val result = mutableListOf<LocalBlockchainInfo>()
         testDataSource.computeBlockchainInfoList().forEach {
-            val brid = it.rid
+            val brid = it.blockchainRid
             val chainIid = ChainUtil.iidOf(brid)
             result.add(LocalBlockchainInfo(chainIid, it.system, it.state))
             retrieveDebug("NOTE TEST! -- launch chainIid: $chainIid,  BC RID: ${brid.toShortHex()} ")

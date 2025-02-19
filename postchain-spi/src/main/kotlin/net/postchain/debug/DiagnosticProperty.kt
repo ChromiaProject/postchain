@@ -50,7 +50,7 @@ enum class DpNodeType(val prettyName: String) {
     NODE_TYPE_FORCE_READ_ONLY("Force read only")
 }
 
-enum class DpBlockchainNodeState() {
+enum class DpBlockchainNodeState {
     RUNNING_HISTORIC,
     RUNNING_VALIDATOR,
     RUNNING_READ_ONLY,

@@ -38,7 +38,7 @@ object BlockchainApi {
 
         val configHash = config.toObject<BlockchainConfigurationData>().configHash
         if (configurationExists(ctx, configHash)) {
-            throw IllegalStateException("Configuration already exists: ${configHash.toHex()}")
+            throw IllegalStateException("Configuration ${configHash.toHex()} already exists")
         }
 
         return if (override || db.getConfigurationData(ctx, height) == null) {
