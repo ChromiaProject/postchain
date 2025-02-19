@@ -1259,6 +1259,7 @@ paths:
                     infrastructure: "net.postchain.d1.D1InfrastructureFactory"
                     infrastructure-version: "3.16.15"
                     rest-api: "8"
+                    database-server-version: "16.7"
   /highest_block_height_anchoring_check/{blockchainRid}:
     get:
       tags:
@@ -1583,6 +1584,9 @@ components:
         rest-api:
           type: string
           description: REST API version
+        database-server-version:
+          type: string
+          description: Database server version
     transactionsCount:
       type: object
       required:

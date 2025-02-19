@@ -20,6 +20,7 @@ class RestApiVersionEndpointTest {
             DiagnosticProperty.VERSION withValue "3.14.15",
             DiagnosticProperty.INFRASTRUCTURE_NAME withValue "base-infra",
             DiagnosticProperty.INFRASTRUCTURE_VERSION withValue "3.14.1592",
+            DiagnosticProperty.DATABASE_SERVER_VERSION withValue "16.7",
     )
 
     private val diagnosticContext = JsonNodeDiagnosticContext(*properties.toList().toTypedArray())
@@ -51,7 +52,8 @@ class RestApiVersionEndpointTest {
                 "postchain" to properties[DiagnosticProperty.VERSION]?.value?.toString().orEmpty(),
                 "infrastructure" to properties[DiagnosticProperty.INFRASTRUCTURE_NAME]?.value?.toString().orEmpty(),
                 "infrastructure-version" to properties[DiagnosticProperty.INFRASTRUCTURE_VERSION]?.value?.toString().orEmpty(),
-                "rest-api" to RestApi.REST_API_VERSION.toString()
+                "rest-api" to RestApi.REST_API_VERSION.toString(),
+                "database-server-version" to properties[DiagnosticProperty.DATABASE_SERVER_VERSION]?.value?.toString().orEmpty(),
         ))
 
         RestAssured.given().basePath(basePath).port(restApi.actualPort())

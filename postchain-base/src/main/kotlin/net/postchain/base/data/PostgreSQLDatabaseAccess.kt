@@ -7,6 +7,7 @@ import net.postchain.core.BlockEContext
 import net.postchain.core.EContext
 import net.postchain.core.SignableTransaction
 import net.postchain.core.Transaction
+import org.apache.commons.dbutils.handlers.ScalarHandler
 import java.sql.Connection
 
 class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
@@ -351,4 +352,7 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
             }
         }
     }
+
+    override fun getDatabaseServerVersion(connection: Connection): String =
+            queryRunner.query(connection, "SELECT current_setting('server_version')", ScalarHandler<String>())
 }

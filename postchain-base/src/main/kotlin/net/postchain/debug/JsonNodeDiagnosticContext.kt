@@ -12,12 +12,13 @@ class JsonNodeDiagnosticContext private constructor(
         private val blockchainDiagnosticData: MutableMap<BlockchainRid, DiagnosticData>
 ) : NodeDiagnosticContext, MutableMap<DiagnosticProperty, DiagnosticValue> by properties {
 
-    constructor(version: String, pubKey: String, infrastructure: InfrastructureFactory) : this(
+    constructor(version: String, pubKey: String, infrastructure: InfrastructureFactory, databaseServerVersion: String) : this(
             DiagnosticProperty.VERSION withValue version,
             DiagnosticProperty.PUB_KEY withValue pubKey,
             DiagnosticProperty.INFRASTRUCTURE_NAME withValue infrastructure::class.java.name,
             DiagnosticProperty.INFRASTRUCTURE_VERSION withValue (infrastructure::class.java.`package`.implementationVersion
                     ?: "(unknown)"),
+            DiagnosticProperty.DATABASE_SERVER_VERSION withValue databaseServerVersion,
     )
 
     constructor(vararg values: Pair<DiagnosticProperty, DiagnosticValue>) : this(DiagnosticData(*values), Collections.synchronizedMap(mutableMapOf()))

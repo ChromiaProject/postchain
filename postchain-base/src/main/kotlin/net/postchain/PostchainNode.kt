@@ -50,9 +50,13 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 wipeDatabase = wipeDb,
                 name = "shared")
 
-        sharedStorage.withReadConnection { ctx ->
-            DatabaseAccess.of(ctx).checkCollation(ctx.conn, suppressError = appConfig.databaseSuppressCollationCheck)
+
+        val databaseServerVersion = sharedStorage.withReadConnection { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            db.checkCollation(ctx.conn, suppressError = appConfig.databaseSuppressCollationCheck)
+            db.getDatabaseServerVersion(ctx.conn)
         }
+        logger.info("Database server: ${appConfig.databaseDriverclass} $databaseServerVersion")
 
         val infrastructureFactory = BaseInfrastructureFactoryProvider.createInfrastructureFactory(appConfig)
 
@@ -66,7 +70,7 @@ open class PostchainNode(val appConfig: AppConfig, wipeDb: Boolean = false) : Sh
                 sharedStorage,
                 infrastructureFactory.makeConnectionManager(nodeConfigProvider, appConfig.cryptoSystem.random),
                 blockQueriesProvider,
-                JsonNodeDiagnosticContext(version, appConfig.pubKey, infrastructureFactory),
+                JsonNodeDiagnosticContext(version, appConfig.pubKey, infrastructureFactory, databaseServerVersion),
                 blockchainConfigProvider
         )
         blockchainInfrastructure = infrastructureFactory.makeBlockchainInfrastructure(postchainContext)

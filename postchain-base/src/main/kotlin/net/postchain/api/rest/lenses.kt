@@ -247,7 +247,8 @@ data class InfraVersion(
         val postchain: String,
         val infrastructure: String,
         val infrastructureVersion: String,
-        val restApi: String
+        val restApi: String,
+        val databaseServerVersion: String,
 )
 
 data class BlockchainNodeState(val state: String)
