@@ -15,6 +15,7 @@ import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.containers.bpm.ContainerName
 import net.postchain.containers.infra.ContainerNodeConfig
 import net.postchain.crypto.PrivKey
@@ -122,219 +123,205 @@ class DefaultSubnodeAdminClient(
         }
     }
 
-    override fun initializePostchainNode(privKey: PrivKey): Boolean {
-        return withLoggingContext(CONTAINER_NAME_TAG to containerName.dockerContainer) {
-            try {
-                val request = InitNodeRequest.newBuilder().setPrivkey(ByteString.copyFrom(privKey.data)).build()
-                val response = subnodeService?.initNode(request)
-                        ?: throw ProgrammerMistake("subnode admin client not connected")
-                logger.debug { response.message }
+    override fun initializePostchainNode(privKey: PrivKey): Boolean = withLoggingContext(
+            CONTAINER_NAME_TAG to containerName.dockerContainer
+    ) {
+        try {
+            val request = InitNodeRequest.newBuilder().setPrivkey(ByteString.copyFrom(privKey.data)).build()
+            val response = subnodeService?.initNode(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { response.message }
+            true
+        } catch (e: Exception) {
+            if (fromThrowable(e).code == ALREADY_EXISTS.code) {
+                logger.info { "initializePostchainNode -- ${e.message}" }
                 true
-            } catch (e: Exception) {
-                if (fromThrowable(e).code == ALREADY_EXISTS.code) {
-                    logger.info { "initializePostchainNode -- ${e.message}" }
-                    true
-                } else {
-                    logger.error { "initializePostchainNode -- exception occurred: ${e.message}" }
-                    false
-                }
-            }
-        }
-    }
-
-    override fun isSubnodeHealthy(): Boolean {
-        return withLoggingContext(CONTAINER_NAME_TAG to containerName.dockerContainer) {
-            try {
-                logger.debug { "isSubnodeHealthy -- doing health check" }
-                val request = HealthCheckRequest.newBuilder().setService("").build()
-                val reply = healthcheckService?.check(request) ?: return false
-                reply.status == HealthCheckResponse.ServingStatus.SERVING
-            } catch (e: Exception) {
-                if (fromThrowable(e).code != UNAVAILABLE.code) {
-                    logger.warn { "isSubnodeHealthy -- can't do health check: ${e.message}" }
-                }
+            } else {
+                logger.error { "initializePostchainNode -- exception occurred: ${e.message}" }
                 false
             }
         }
     }
 
-    override fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid): Boolean {
-        return withLoggingContext(
-                CHAIN_IID_TAG to chainId.toString(),
-                BLOCKCHAIN_RID_TAG to blockchainRid.toString(),
-                CONTAINER_NAME_TAG to containerName.dockerContainer
-        ) {
-            try {
-                val request = StartSubnodeBlockchainRequest.newBuilder()
-                        .setChainId(chainId)
-                        .setBrid(ByteString.copyFrom(blockchainRid.data))
-                        .build()
-
-                val response = subnodeService?.startSubnodeBlockchain(request)
-                        ?: throw ProgrammerMistake("subnode admin client not connected")
-                logger.debug { "startBlockchain(${chainId}) -- blockchain started ${response.message}" }
-                true
-            } catch (e: Exception) {
-                if (fromThrowable(e).code == DEADLINE_EXCEEDED.code) {
-                    logger.warn { "startBlockchain(${chainId}:${blockchainRid.toShortHex()}) -- timed out waiting for start up" }
-                    true
-                } else {
-                    nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add(ErrorDiagnosticValue("Can't start blockchain: ${e.message}", System.currentTimeMillis()))
-                    logger.error { "startBlockchain(${chainId}:${blockchainRid.toShortHex()}) -- can't start blockchain: ${e.message}" }
-                    false
-                }
+    override fun isSubnodeHealthy(): Boolean = withLoggingContext(
+            CONTAINER_NAME_TAG to containerName.dockerContainer
+    ) {
+        try {
+            logger.debug { "isSubnodeHealthy -- doing health check" }
+            val request = HealthCheckRequest.newBuilder().setService("").build()
+            val reply = healthcheckService?.check(request) ?: return false
+            reply.status == HealthCheckResponse.ServingStatus.SERVING
+        } catch (e: Exception) {
+            if (fromThrowable(e).code != UNAVAILABLE.code) {
+                logger.warn { "isSubnodeHealthy -- can't do health check: ${e.message}" }
             }
+            false
         }
     }
 
-    override fun stopBlockchain(chainId: Long): Boolean {
-        return withLoggingContext(
-                CHAIN_IID_TAG to chainId.toString(),
-                CONTAINER_NAME_TAG to containerName.dockerContainer
-        ) {
-            try {
-                val request = StopBlockchainRequest.newBuilder()
-                        .setChainId(chainId)
-                        .build()
+    override fun startBlockchain(chainId: Long, blockchainRid: BlockchainRid): Boolean = withLoggingContext(
+            CHAIN_IID_TAG to chainId.toString(),
+            BLOCKCHAIN_RID_TAG to blockchainRid.toString(),
+            CONTAINER_NAME_TAG to containerName.dockerContainer
+    ) {
+        try {
+            val request = StartSubnodeBlockchainRequest.newBuilder()
+                    .setChainId(chainId)
+                    .setBrid(ByteString.copyFrom(blockchainRid.data))
+                    .build()
 
-                val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.stopBlockchain(request)
-                        ?: throw ProgrammerMistake("subnode admin client not connected")
-                logger.debug { "stopBlockchain($chainId) -- blockchain stopped: service's reply: ${response.message}" }
+            val response = subnodeService?.startSubnodeBlockchain(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { "startBlockchain(${chainId}) -- blockchain started ${response.message}" }
+            true
+        } catch (e: Exception) {
+            if (fromThrowable(e).code == DEADLINE_EXCEEDED.code) {
+                logger.warn { "startBlockchain(${chainId}:${blockchainRid.toShortHex()}) -- timed out waiting for start up" }
                 true
-            } catch (e: Exception) {
-                logger.error { "stopBlockchain($chainId) -- can't stop blockchain: ${e.message}" }
+            } else {
+                nodeDiagnosticContext.blockchainErrorQueue(blockchainRid).add(ErrorDiagnosticValue("Can't start blockchain: ${e.message}", System.currentTimeMillis()))
+                logger.error { "startBlockchain(${chainId}:${blockchainRid.toShortHex()}) -- can't start blockchain: ${e.message}" }
                 false
             }
         }
     }
 
-    override fun isBlockchainRunning(chainId: Long): Boolean {
-        return withLoggingContext(
-                CHAIN_IID_TAG to chainId.toString(),
-                CONTAINER_NAME_TAG to containerName.dockerContainer
-        ) {
-            try {
-                val request = FindBlockchainRequest.newBuilder()
-                        .setChainId(chainId)
-                        .build()
-                val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.findBlockchain(request)
-                        ?: throw ProgrammerMistake("subnode admin client not connected")
-                logger.debug { "isBlockchainRunning($chainId) -- ${response.active}" }
-                response.active
-            } catch (e: Exception) {
-                if (fromThrowable(e).code == DEADLINE_EXCEEDED.code) {
-                    logger.warn { "isBlockchainRunning($chainId) -- timed out, considered still running" }
-                    true
-                } else {
-                    logger.error { "isBlockchainRunning($chainId) -- exception occurred: ${e.message}" }
-                    false
-                }
+    override fun stopBlockchain(chainId: Long): Boolean = withLoggingContext(
+            CHAIN_IID_TAG to chainId.toString(),
+            CONTAINER_NAME_TAG to containerName.dockerContainer
+    ) {
+        try {
+            val request = StopBlockchainRequest.newBuilder()
+                    .setChainId(chainId)
+                    .build()
+
+            val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.stopBlockchain(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { "stopBlockchain($chainId) -- blockchain stopped: service's reply: ${response.message}" }
+            true
+        } catch (e: Exception) {
+            logger.error { "stopBlockchain($chainId) -- can't stop blockchain: ${e.message}" }
+            false
+        }
+    }
+
+    override fun isBlockchainRunning(chainId: Long): Boolean = withLoggingContext(
+            CHAIN_IID_TAG to chainId.toString(),
+            CONTAINER_NAME_TAG to containerName.dockerContainer
+    ) {
+        try {
+            val request = FindBlockchainRequest.newBuilder()
+                    .setChainId(chainId)
+                    .build()
+            val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.findBlockchain(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { "isBlockchainRunning($chainId) -- ${response.active}" }
+            response.active
+        } catch (e: Exception) {
+            if (fromThrowable(e).code == DEADLINE_EXCEEDED.code) {
+                logger.warn { "isBlockchainRunning($chainId) -- timed out, considered still running" }
+                true
+            } else {
+                logger.error { "isBlockchainRunning($chainId) -- exception occurred: ${e.message}" }
+                false
             }
         }
     }
 
-    override fun getBlockchainLastBlockHeight(chainId: Long): Long {
-        return withLoggingContext(
-                CHAIN_IID_TAG to chainId.toString(),
-                CONTAINER_NAME_TAG to containerName.dockerContainer
-        ) {
-            try {
-                val request = FindBlockchainRequest.newBuilder()
-                        .setChainId(chainId)
-                        .build()
-                val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.findBlockchain(request)
-                        ?: throw ProgrammerMistake("subnode admin client not connected")
-                logger.debug { "getBlockchainLastHeight($chainId) -- ${response.height}" }
-                response.height
-            } catch (e: Exception) {
-                logger.error { "getBlockchainLastHeight($chainId) -- exception occurred: ${e.message}" }
-                -1L
-            }
+    override fun getBlockchainLastBlockHeight(chainId: Long): Long = withLoggingContext(
+            CHAIN_IID_TAG to chainId.toString(),
+            CONTAINER_NAME_TAG to containerName.dockerContainer
+    ) {
+        try {
+            val request = FindBlockchainRequest.newBuilder()
+                    .setChainId(chainId)
+                    .build()
+            val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.findBlockchain(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { "getBlockchainLastHeight($chainId) -- ${response.height}" }
+            response.height
+        } catch (e: Exception) {
+            logger.error { "getBlockchainLastHeight($chainId) -- exception occurred: ${e.message}" }
+            -1L
         }
     }
 
-    override fun initializeBlockchain(chainId: Long, config: ByteArray) {
-        return withLoggingContext(
-                CHAIN_IID_TAG to chainId.toString(),
-                CONTAINER_NAME_TAG to containerName.dockerContainer
-        ) {
-            try {
-                val request = InitializeBlockchainRequest.newBuilder()
-                        .setChainId(chainId)
-                        .setGtv(ByteString.copyFrom(config))
-                        .setOverride(true)
-                        .build()
-                val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.initializeBlockchain(request)
-                        ?: throw ProgrammerMistake("subnode admin client not connected")
-                logger.debug { "initializeBlockchain($chainId) -- ${response.success}" }
-            } catch (e: Exception) {
-                logger.error { "initializeBlockchain($chainId) -- exception occurred: ${e.message}" }
-            }
+    override fun initializeBlockchain(chainId: Long, config: ByteArray): Unit = withLoggingContext(
+            CHAIN_IID_TAG to chainId.toString(),
+            CONTAINER_NAME_TAG to containerName.dockerContainer
+    ) {
+        try {
+            val request = InitializeBlockchainRequest.newBuilder()
+                    .setChainId(chainId)
+                    .setGtv(ByteString.copyFrom(config))
+                    .setOverride(true)
+                    .build()
+            val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.initializeBlockchain(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { "initializeBlockchain($chainId) -- ${response.success}" }
+        } catch (e: Exception) {
+            logger.error { "initializeBlockchain($chainId) -- exception occurred: ${e.message}" }
         }
     }
 
-    override fun addBlockchainConfiguration(chainId: Long, height: Long, config: ByteArray) {
-        withLoggingContext(
-                CHAIN_IID_TAG to chainId.toString(),
-                CONTAINER_NAME_TAG to containerName.dockerContainer
-        ) {
-            try {
-                val request = AddConfigurationRequest.newBuilder()
-                        .setChainId(chainId)
-                        .setHeight(height)
-                        .setGtv(ByteString.copyFrom(config))
-                        .setOverride(true)
-                        .setAllowUnknownSigners(true)
-                        .build()
-                val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.addConfiguration(request)
-                        ?: throw ProgrammerMistake("subnode admin client not connected")
-                logger.debug { "addBlockchainConfiguration(chainId = $chainId, height = $height) -- ${response.message}" }
-            } catch (e: Exception) {
-                logger.error { "addBlockchainConfiguration(chainId = $chainId, height = $height) -- exception occurred: ${e.message}" }
-            }
+    override fun addBlockchainConfiguration(chainId: Long, height: Long, config: ByteArray): Unit = withLoggingContext(
+            CHAIN_IID_TAG to chainId.toString(),
+            CONTAINER_NAME_TAG to containerName.dockerContainer
+    ) {
+        try {
+            val request = AddConfigurationRequest.newBuilder()
+                    .setChainId(chainId)
+                    .setHeight(height)
+                    .setGtv(ByteString.copyFrom(config))
+                    .setOverride(true)
+                    .setAllowUnknownSigners(true)
+                    .build()
+            val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.addConfiguration(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { "addBlockchainConfiguration(chainId = $chainId, height = $height) -- ${response.message}" }
+        } catch (e: Exception) {
+            logger.error { "addBlockchainConfiguration(chainId = $chainId, height = $height) -- exception occurred: ${e.message}" }
         }
     }
 
-    override fun exportBlocks(chainId: Long, fromHeight: Long, blockCountLimit: Int, blocksSizeLimit: Int): List<Gtv> {
-        return withLoggingContext(
-                CHAIN_IID_TAG to chainId.toString(),
-                CONTAINER_NAME_TAG to containerName.dockerContainer
-        ) {
-            try {
-                val request = ExportBlocksRequest.newBuilder()
-                        .setChainId(chainId)
-                        .setFromHeight(fromHeight)
-                        .setBlockCountLimit(blockCountLimit)
-                        .setBlocksSizeLimit(blocksSizeLimit)
-                        .build()
-                val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.exportBlocks(request)
-                        ?: throw ProgrammerMistake("subnode admin client not connected")
-                logger.debug { "exportBlocks(chainId = $chainId, fromHeight = $fromHeight, blockCountLimit = $blockCountLimit, blocksSizeLimit = $blocksSizeLimit)" }
-                response.blockDataList
-                        .map { GtvDecoder.decodeGtv(it.toByteArray()) }
-            } catch (e: Exception) {
-                logger.error { "exportBlocks(chainId = $chainId, fromHeight = $fromHeight, blockCountLimit = $blockCountLimit, blocksSizeLimit = $blocksSizeLimit) -- exception occurred: ${e.message}" }
-                listOf()
-            }
+    override fun exportBlocks(chainId: Long, fromHeight: Long, blockCountLimit: Int, blocksSizeLimit: Int): List<Gtv> = withLoggingContext(
+            CONTAINER_NAME_TAG to containerName.dockerContainer
+    ) {
+        try {
+            val request = ExportBlocksRequest.newBuilder()
+                    .setChainId(chainId)
+                    .setFromHeight(fromHeight)
+                    .setBlockCountLimit(blockCountLimit)
+                    .setBlocksSizeLimit(blocksSizeLimit)
+                    .build()
+            val response = service?.withDeadlineAfter(defaultTimeoutMs, TimeUnit.MILLISECONDS)?.exportBlocks(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { "exportBlocks(chainId = $chainId, fromHeight = $fromHeight, blockCountLimit = $blockCountLimit, blocksSizeLimit = $blocksSizeLimit)" }
+            response.blockDataList
+                    .map { GtvDecoder.decodeGtv(it.toByteArray()) }
+        } catch (e: Exception) {
+            logger.error { "exportBlocks(chainId = $chainId, fromHeight = $fromHeight, blockCountLimit = $blockCountLimit, blocksSizeLimit = $blocksSizeLimit) -- exception occurred: ${e.message}" }
+            listOf()
         }
     }
 
-    override fun importBlocks(chainId: Long, blockData: List<Gtv>): Long {
-        withLoggingContext(
-                CHAIN_IID_TAG to chainId.toString(),
-                CONTAINER_NAME_TAG to containerName.dockerContainer
-        ) {
-            try {
-                val request = ImportBlocksRequest.newBuilder()
-                        .setChainId(chainId)
-                        .addAllBlockData(blockData.map { ByteString.copyFrom(GtvEncoder.encodeGtv(it)) })
-                        .build()
-                val response = service?.withDeadlineAfter(importBlocksTimeoutMs, TimeUnit.MILLISECONDS)?.importBlocks(request)
-                        ?: throw ProgrammerMistake("subnode admin client not connected")
-                logger.debug { "importBlocks(chainId = $chainId) --  fromHeight = ${response.fromHeight}), upToHeight = ${response.upToHeight} -- ${response.message}" }
-                return response.upToHeight
-            } catch (e: Exception) {
-                val errorMessage = "importBlocks(chainId = $chainId) -- exception occurred: ${e.message}"
+    override fun importBlocks(chainId: Long, blockData: List<Gtv>): Long = withLoggingContext(
+            CONTAINER_NAME_TAG to containerName.dockerContainer
+    ) {
+        try {
+            val request = ImportBlocksRequest.newBuilder()
+                    .setChainId(chainId)
+                    .addAllBlockData(blockData.map { ByteString.copyFrom(GtvEncoder.encodeGtv(it)) })
+                    .build()
+            val response = service?.withDeadlineAfter(importBlocksTimeoutMs, TimeUnit.MILLISECONDS)?.importBlocks(request)
+                    ?: throw ProgrammerMistake("subnode admin client not connected")
+            logger.debug { "importBlocks(chainId = $chainId) --  fromHeight = ${response.fromHeight}), upToHeight = ${response.upToHeight} -- ${response.message}" }
+            response.upToHeight
+        } catch (e: Exception) {
+            if (fromThrowable(e).code == DEADLINE_EXCEEDED.code) {
+                throw UserMistake("gRPC timeout from subnode")
+            } else {
+                val errorMessage = "importBlocks: $e"
                 logger.error { errorMessage }
                 throw ProgrammerMistake(errorMessage)
             }

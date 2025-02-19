@@ -4,6 +4,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_BLOCKS_IN_PACKAGE
 import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_PACKAGE_CONTENT_BYTES
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
@@ -35,7 +37,10 @@ class BlockchainReplicator(
     )
     private val done = AtomicBoolean(false)
     private val cancelled = AtomicBoolean(false)
-    private val loggingContext = mapOf(CHAIN_IID_TAG to chainId.toString(), BLOCKCHAIN_RID_TAG to blockchainRid.toString())
+    private val loggingContext = mapOf(
+            CHAIN_IID_TAG to chainId.toString(),
+            BLOCKCHAIN_RID_TAG to blockchainRid.toHex()
+    )
 
     init {
         executor.scheduleWithFixedDelay(::jobHandler, 5000, 2000, TimeUnit.MILLISECONDS)
@@ -159,10 +164,19 @@ class BlockchainReplicator(
                     val blocksSize = blocks.sumOf { it.nrOfBytes() }
                     logger.info { "Exported ${blocks.size} blocks ($currentHeight..${currentHeight + blocks.size - 1}, $blocksSize bytes) from source container/chain" }
 
-                    val importUpToHeight = dstContainer.importBlocks(chainId, blocks)
-                    logger.info { "Imported ${importUpToHeight - currentHeight + 1} blocks ($currentHeight..$importUpToHeight) to destination container/chain" }
-
-                    currentHeight = importUpToHeight + 1
+                    var triesLeft = 3
+                    while (triesLeft > 0) {
+                        try {
+                            logger.info { "Importing ${blocks.size} blocks at $currentHeight to destination container/chain..." }
+                            val importUpToHeight = dstContainer.importBlocks(chainId, blocks)
+                            logger.info { "Imported ${importUpToHeight - currentHeight + 1} blocks ($currentHeight..$importUpToHeight) to destination container/chain" }
+                            currentHeight = importUpToHeight + 1
+                            break
+                        } catch (e: UserMistake) {
+                            triesLeft--
+                            logger.warn { "Import of ${blocks.size} blocks at $currentHeight failed: ${e.message}, ${if (triesLeft > 0) "retrying..." else "giving up"}" }
+                        }
+                    }
                 }
 
                 logger.info { "Blockchain replication succeeded, $newBlocks blocks are imported" }
