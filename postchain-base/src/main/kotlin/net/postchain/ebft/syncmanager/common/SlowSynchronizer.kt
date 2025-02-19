@@ -108,6 +108,10 @@ class SlowSynchronizer(
         val peers = configuredPeers.minus(peerStatuses.excludedNonSyncable(startAtHeight, now)).ifEmpty {
             peerStatuses.markAllSyncable(startAtHeight)
             configuredPeers.minus(peerStatuses.excludedNonSyncable(startAtHeight, now)).ifEmpty {
+                if (!hasLoggedNoPeers) {
+                    logger.info { "No peers to request blocks from. Cannot proceed. Current height: ${startAtHeight - 1}" }
+                }
+                hasLoggedNoPeers = true
                 return
             }
         }
