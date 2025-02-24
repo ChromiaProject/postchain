@@ -204,7 +204,6 @@ val configurationXmlOutBody: BiDiBodyLens<ByteArray> = httpBodyRoot(listOf(Meta(
                     GtvMLEncoder.encodeXMLGtv(GtvDecoder.decodeGtv(it)).byteInputStream()
                 }
         ).toLens()
-val configurationOutBody = ContentNegotiation.auto(configurationXmlOutBody, binaryBody)
 val gtvmlBody = Body.string(ContentType.TEXT_XML, "GtvML").map(
         {
             GtvMLParser.parseGtvML(it)
@@ -222,6 +221,8 @@ val gtvBody = Body.binary(ContentType.OCTET_STREAM, "GTV").map(
         }
 ).toLens()
 val configurationInBody = ContentNegotiation.auto(gtvmlBody, gtvBody)
+val configurationOutBody = ContentNegotiation.auto(configurationXmlOutBody, binaryBody)
+val configurationFeaturesOutBody = ContentNegotiation.auto(gtvJsonBody, gtvBody)
 val versionBody = Body.auto<Version>().toLens()
 val infraVersionBody = Body.string(ContentType.APPLICATION_JSON, "pretty JSON").map(
         {
