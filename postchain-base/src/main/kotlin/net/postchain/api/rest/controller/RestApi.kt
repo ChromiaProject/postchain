@@ -25,6 +25,7 @@ import net.postchain.api.rest.blockHeightBody
 import net.postchain.api.rest.blockRidPath
 import net.postchain.api.rest.blockchainNodeStateBody
 import net.postchain.api.rest.blocksBody
+import net.postchain.api.rest.configurationFeaturesOutBody
 import net.postchain.api.rest.configurationInBody
 import net.postchain.api.rest.configurationOutBody
 import net.postchain.api.rest.containerQuery
@@ -33,11 +34,13 @@ import net.postchain.api.rest.emptyBody
 import net.postchain.api.rest.errorBody
 import net.postchain.api.rest.excludeEmptyQuery
 import net.postchain.api.rest.gtvJsonBody
+import net.postchain.api.rest.gtvmlBody
 import net.postchain.api.rest.heightPath
 import net.postchain.api.rest.heightQuery
 import net.postchain.api.rest.highestBlockHeightAnchoringCheckBody
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.api.rest.infraVersionBody
+import net.postchain.api.rest.json.GtvJsonFactory
 import net.postchain.api.rest.limitQuery
 import net.postchain.api.rest.model.TxRid
 import net.postchain.api.rest.nodeStatusBody
@@ -62,6 +65,7 @@ import net.postchain.api.rest.txRidPath
 import net.postchain.api.rest.txsQuery
 import net.postchain.api.rest.versionBody
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.configuration.KEY_FEATURES
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -335,6 +339,7 @@ class RestApi(
             "/config/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainConfiguration),
             "/config/{blockchainRid}" bind POST to liveBlockchain.then(::validateBlockchainConfiguration),
             "/config/{blockchainRid}/next_height" bind GET to liveBlockchain.then(::getNextBlockchainConfigurationHeight),
+            "/config/{blockchainRid}/features" bind GET to liveBlockchain.then(::getBlockchainConfigurationFeatures),
 
             "/errors/{blockchainRid}" bind GET to blockchain.then(volatileResponse).then(::getErrors),
 
@@ -629,6 +634,21 @@ class RestApi(
         val response = Response(OK).with(configurationOutBody.outbound(request) of configuration)
         return if (height == -1L) {
             volatileResponse.then { response }(request)
+        } else {
+            response
+        }
+    }
+
+    private fun getBlockchainConfigurationFeatures(request: Request): Response {
+        val model = model(request)
+        val height = heightQuery(request)
+        val configuration = model.getBlockchainConfiguration(height)
+                ?: throw UserMistake("Failed to find configuration")
+        val configGtv = GtvDecoder.decodeGtv(configuration)
+        val features = configGtv.asDict().get(KEY_FEATURES) ?: gtv(emptyMap<String, Gtv>())
+        val response = Response(OK).with(configurationFeaturesOutBody.outbound(request) of features)
+        return if (height == -1L) {
+            volatileResponse.then { response } (request)
         } else {
             response
         }
