@@ -75,7 +75,6 @@ class RestApiConfigFeaturesTest {
         restApi.attachModel(blockchainRID, model)
 
         RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .queryParam("height", height)
                 .get("/config/$blockchainRID/features")
                 .then()
                 .statusCode(200)

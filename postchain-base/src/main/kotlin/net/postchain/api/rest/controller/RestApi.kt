@@ -339,7 +339,7 @@ class RestApi(
             "/config/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainConfiguration),
             "/config/{blockchainRid}" bind POST to liveBlockchain.then(::validateBlockchainConfiguration),
             "/config/{blockchainRid}/next_height" bind GET to liveBlockchain.then(::getNextBlockchainConfigurationHeight),
-            "/config/{blockchainRid}/features" bind GET to blockchain.then(::getBlockchainConfigurationFeatures),
+            "/config/{blockchainRid}/features" bind GET to liveBlockchain.then(::getBlockchainConfigurationFeatures),
 
             "/errors/{blockchainRid}" bind GET to blockchain.then(volatileResponse).then(::getErrors),
 
