@@ -34,13 +34,11 @@ import net.postchain.api.rest.emptyBody
 import net.postchain.api.rest.errorBody
 import net.postchain.api.rest.excludeEmptyQuery
 import net.postchain.api.rest.gtvJsonBody
-import net.postchain.api.rest.gtvmlBody
 import net.postchain.api.rest.heightPath
 import net.postchain.api.rest.heightQuery
 import net.postchain.api.rest.highestBlockHeightAnchoringCheckBody
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.api.rest.infraVersionBody
-import net.postchain.api.rest.json.GtvJsonFactory
 import net.postchain.api.rest.limitQuery
 import net.postchain.api.rest.model.TxRid
 import net.postchain.api.rest.nodeStatusBody
@@ -106,7 +104,6 @@ import org.http4k.core.Method.GET
 import org.http4k.core.Method.OPTIONS
 import org.http4k.core.Method.POST
 import org.http4k.core.Request
-import org.http4k.core.RequestContexts
 import org.http4k.core.Response
 import org.http4k.core.Status
 import org.http4k.core.Status.Companion.BAD_REQUEST
@@ -137,7 +134,7 @@ import org.http4k.lens.Invalid
 import org.http4k.lens.LensFailure
 import org.http4k.lens.Meta
 import org.http4k.lens.ParamMeta
-import org.http4k.lens.RequestContextKey
+import org.http4k.lens.RequestKey
 import org.http4k.routing.ResourceLoader
 import org.http4k.routing.bind
 import org.http4k.routing.path
@@ -648,7 +645,7 @@ class RestApi(
         val features = configGtv.asDict().get(KEY_FEATURES) ?: gtv(emptyMap<String, Gtv>())
         val response = Response(OK).with(configurationFeaturesOutBody.outbound(request) of features)
         return if (height == -1L) {
-            volatileResponse.then { response } (request)
+            volatileResponse.then { response }(request)
         } else {
             response
         }
@@ -729,10 +726,9 @@ class RestApi(
             basePath bind app
     )
 
-    private val contexts = RequestContexts()
-    private val chainModelKey = RequestContextKey.required<ChainModel>(contexts)
-    private val blockchainRidKey = RequestContextKey.required<BlockchainRid>(contexts)
-    private val modelKey = RequestContextKey.optional<Model>(contexts)
+    private val chainModelKey = RequestKey.required<ChainModel>("chainModel")
+    private val blockchainRidKey = RequestKey.required<BlockchainRid>("blockchainRid")
+    private val modelKey = RequestKey.optional<Model>("model")
 
     val requestLogContext = Filter { next ->
         { request: Request ->
@@ -746,9 +742,7 @@ class RestApi(
         }
     }
 
-    val server = ServerFilters.InitialiseRequestContext(contexts)
-            .then(ServerFilters.Cors(
-                    CorsPolicy(OriginPolicy.AllowAll(), listOf("Content-Type", "Accept"), listOf(GET, POST, OPTIONS), credentials = false)))
+    val server = ServerFilters.Cors(CorsPolicy(OriginPolicy.AllowAll(), listOf("Content-Type", "Accept"), listOf(GET, POST, OPTIONS), credentials = false))
             .then(requestLogContext)
             .then(Filter { next ->
                 { request ->
