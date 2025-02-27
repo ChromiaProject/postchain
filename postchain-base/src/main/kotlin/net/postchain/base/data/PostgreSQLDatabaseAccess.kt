@@ -355,4 +355,5 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
 
     override fun getDatabaseServerVersion(connection: Connection): String =
             queryRunner.query(connection, "SELECT current_setting('server_version')", ScalarHandler<String>())
+                    .split(' ').first()
 }
