@@ -986,12 +986,12 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, nullableLongRes, blockchainRid.data)
     }
 
-    override fun getLastSystemChainId(ctx: EContext): Long {
+    override fun getLastSystemChainId(ctx: AppContext): Long {
         val sql = "SELECT MAX(chain_iid) FROM ${tableBlockchains()} WHERE chain_iid < 100"
         return queryRunner.query(ctx.conn, sql, nullableLongRes) ?: -1L
     }
 
-    override fun getLastChainId(ctx: EContext): Long {
+    override fun getLastChainId(ctx: AppContext): Long {
         val sql = "SELECT value FROM ${tableMeta()} WHERE key='$TABLE_META_KEY_LAST_CHAIN_IID'"
         return queryRunner.query(ctx.conn, sql, ScalarHandler<String>()).toLong()
     }

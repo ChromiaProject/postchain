@@ -665,8 +665,8 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getLastBlockHeight (Lnet/postchain/core/ExecutionContext;)J
 	public abstract fun getLastBlockRid (Lnet/postchain/core/ExecutionContext;J)[B
 	public abstract fun getLastBlockTimestamp (Lnet/postchain/core/ExecutionContext;)J
-	public abstract fun getLastChainId (Lnet/postchain/core/ExecutionContext;)J
-	public abstract fun getLastSystemChainId (Lnet/postchain/core/ExecutionContext;)J
+	public abstract fun getLastChainId (Lnet/postchain/core/AppContext;)J
+	public abstract fun getLastSystemChainId (Lnet/postchain/core/AppContext;)J
 	public abstract fun getLastTransactionNumber (Lnet/postchain/core/ExecutionContext;)J
 	public abstract fun getLeftIndex (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;Ljava/util/List;)Ljava/util/List;
 	public abstract fun getLowestSnapshotHeightToKeep (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JI)Ljava/lang/Long;
@@ -1403,10 +1403,13 @@ public final class net/postchain/core/SignableTransaction$DefaultImpls {
 }
 
 public abstract interface class net/postchain/core/Storage : java/lang/AutoCloseable {
+	public abstract fun claimSharedContext (Lnet/postchain/core/ExecutionContext;)Lnet/postchain/core/ExecutionContext;
 	public abstract fun closeReadConnection (Lnet/postchain/core/AppContext;)V
 	public abstract fun closeReadConnection (Lnet/postchain/core/ExecutionContext;)V
 	public abstract fun closeWriteConnection (Lnet/postchain/core/AppContext;Z)V
 	public abstract fun closeWriteConnection (Lnet/postchain/core/ExecutionContext;Z)V
+	public abstract fun createSharedContext (Lnet/postchain/core/ExecutionContext;)V
+	public abstract fun getExistingWriteContext (J)Lnet/postchain/core/ExecutionContext;
 	public abstract fun getExitOnFatalError ()Z
 	public abstract fun getReadConcurrency ()I
 	public abstract fun isSavepointSupported ()Z
@@ -1414,6 +1417,7 @@ public abstract interface class net/postchain/core/Storage : java/lang/AutoClose
 	public abstract fun openReadConnection (J)Lnet/postchain/core/ExecutionContext;
 	public abstract fun openWriteConnection ()Lnet/postchain/core/AppContext;
 	public abstract fun openWriteConnection (J)Lnet/postchain/core/ExecutionContext;
+	public abstract fun releaseSharedContext (Lnet/postchain/core/ExecutionContext;)V
 	public abstract fun withSavepoint (Lnet/postchain/core/ExecutionContext;Lkotlin/jvm/functions/Function0;)Ljava/lang/Exception;
 }
 

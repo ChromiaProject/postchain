@@ -12,5 +12,13 @@ open class Chain0BlockchainConfiguration(
         storage: Storage
 ) : ManagedBlockchainConfiguration(
         configuration,
-        BaseManagedNodeDataSource(GtxModuleQueryRunner(configuration, appConfig, storage), appConfig)
+        BaseManagedNodeDataSource(GtxModuleQueryRunner(configuration, appConfig, storage) { op ->
+            val existingWriteCtx = storage.getExistingWriteContext(configuration.chainID)
+            val ctx = existingWriteCtx ?: storage.openReadConnection(configuration.chainID)
+            try {
+                op(ctx)
+            } finally {
+                if (ctx != existingWriteCtx) storage.closeReadConnection(ctx)
+            }
+        }, appConfig)
 )

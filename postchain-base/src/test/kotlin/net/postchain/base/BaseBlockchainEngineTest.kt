@@ -50,6 +50,7 @@ class BaseBlockchainEngineTest {
     private val eContext: EContext = BaseEContext(conn, chainId, db)
     private val blockBuilderStorage: Storage = mock {
         on { openReadConnection(chainId) } doReturn eContext
+        on { claimSharedContext(eContext) } doReturn eContext
     }
     private val sharedStorage: Storage = mock()
     private val blockchainConfigurationProvider: BlockchainConfigurationProvider = mock()
