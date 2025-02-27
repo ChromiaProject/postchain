@@ -43,7 +43,7 @@ info:
     ```
     The blockchain RID, signer public keys and signatures are encoded as byteArray. 
     The signatures are made with ECDSA with the secp256k1 curve. The hash to sign, 
-    which is also use as transaction RID in this API, is SHA-256 computed recursively, 
+    which is also used as transaction RID in this API, is SHA-256 computed recursively, 
     as a Merkle tree. For each node in the tree, a prefix byte is added to data to hash:
     - 1 for a leaf
     - 7 for start of an array
@@ -52,7 +52,7 @@ info:
     
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
-    [JavaScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
+    [TypeScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
   version: "14"
 tags:
   - name: block
@@ -80,7 +80,7 @@ paths:
       description: |
         Submit a transaction to a chain.
         The request body can either contain hex encoded GTX transaction in JSON wrapper, 
-        or binary GTV (by specifying `Content-Type: application/octet-stream).
+        or binary GTV (by specifying `Content-Type: application/octet-stream`).
         Read replicas does not support this endpoint.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
@@ -952,7 +952,7 @@ paths:
       tags:
         - experimental
       summary: Experimental - Fetch current state of blockchain node
-      description: >
+      description: |
         <strong>This endpoint is currently in a beta phase and may be subject to changes.</strong><br>
         Fetch the current state of the blockchain node as a combination of the blockchain state and the node state.
       parameters:
@@ -1163,7 +1163,7 @@ paths:
     get:
       tags:
         - configuration
-      summary: Fetch the next blockchain configuration height following the specified height
+      summary: Fetch the next blockchain configuration height
       description: |
         Fetch the next configuration height for a chain following the specified height.
       parameters:
@@ -1276,7 +1276,7 @@ paths:
               examples:
                 version:
                   value:
-                    version: 5
+                    version: 14
   /infrastructure_version:
     get:
       tags:
@@ -1295,14 +1295,15 @@ paths:
                     postchain: "3.16.4"
                     infrastructure: "net.postchain.d1.D1InfrastructureFactory"
                     infrastructure-version: "3.16.15"
-                    rest-api: "8"
+                    rest-api: "14"
                     database-server-version: "16.7"
   /highest_block_height_anchoring_check/{blockchainRid}:
     get:
       tags:
         - node
-      summary: It takes a BRID as input and returns the highest block height of that chain which has been anchored to CAC, SAC and ETH.
-      description: >
+      summary: Check anchoring status for a blockchain
+      description: |
+        It takes a blockchain RID as input and returns the highest block height of that chain which has been anchored to CAC, SAC and ETH.
         Results are computed periodically using a configurable interval of time for each anchoring level: CAC, SAC and EVM.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
