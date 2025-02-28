@@ -6,6 +6,7 @@ import net.postchain.api.rest.BlockHeight
 import net.postchain.api.rest.BlockSignature
 import net.postchain.api.rest.BlockchainNodeState
 import net.postchain.api.rest.TransactionsCount
+import net.postchain.api.rest.model.ApiRejectedTransaction
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
 import net.postchain.base.ConfirmationProof
@@ -24,6 +25,7 @@ import net.postchain.gtx.GtxQuery
 import org.http4k.core.HttpHandler
 import org.http4k.core.Request
 import org.http4k.core.Response
+import java.time.Instant
 
 sealed interface ChainModel {
     val chainIID: Long
@@ -53,6 +55,9 @@ interface Model : ChainModel {
     fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): BlockDetailsTruncated
     fun getConfirmationProof(txRID: TxRid): ConfirmationProof?
     fun getStatus(txRID: TxRid): ApiStatus
+    fun getWaitingTransactions(): List<TxRid>
+    fun getWaitingTransaction(txRID: TxRid): Pair<ByteArray, Instant>?
+    fun getRejectedTransactions(): List<ApiRejectedTransaction>
     fun query(query: GtxQuery): Gtv
     fun nodeStatusQuery(): StateNodeStatus
     fun nodePeersStatusQuery(): List<StateNodeStatus>

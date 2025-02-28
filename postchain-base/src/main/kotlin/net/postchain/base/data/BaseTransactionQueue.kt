@@ -12,6 +12,7 @@ import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
+import net.postchain.core.RejectedTransaction
 import net.postchain.core.Transaction
 import net.postchain.core.TransactionQueue
 import net.postchain.gtx.GTXTransaction
@@ -81,8 +82,8 @@ class BaseTransactionQueue(private val queueCapacity: Int,
     private val accountTxs = HashMultimap.create<WrappedByteArray, WrappedTransaction>()
     private val taken = mutableListOf<WrappedTransaction>()
     private val txsToRetry: Queue<WrappedTransaction> = LinkedList()
-    private val rejects = object : LinkedHashMap<WrappedByteArray, Exception?>() {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<WrappedByteArray, java.lang.Exception?>?): Boolean {
+    private val rejects = object : LinkedHashMap<WrappedByteArray, Pair<Exception, Instant>>() {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<WrappedByteArray, Pair<java.lang.Exception, Instant>>?): Boolean {
             return size > MAX_REJECTED
         }
     }
@@ -192,7 +193,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
 
                     // 4. Account-based rate limiting
                     // If there are already transactions from the account_id currently in the queue
-                    val evictedTxs = accountId?.let { accountBasedRateLimiting(it, accountPoints = accountPoints, newTxCostPoints = txCostPoints) }
+                    val evictedTxs = accountId?.let { accountBasedRateLimiting(it, accountPoints = accountPoints, newTxCostPoints = txCostPoints, now = txEnter) }
                             ?: 0
 
                     // 5. If no transactions were evicted at step 4, transaction with the lowest priority is evicted.
@@ -203,7 +204,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
                         }
                         queue.remove(lowestPrioTx)
                         queueMap.remove(lowestPrioTx.tx.getRID().wrap())
-                        rejects[lowestPrioTx.tx.getRID().wrap()] = UserMistake("Transaction evicted due to prioritization")
+                        rejects[lowestPrioTx.tx.getRID().wrap()] = UserMistake("Transaction evicted due to prioritization") to txEnter
                         lowestPrioTx.accountId?.let { accountTxs.remove(it, lowestPrioTx) }
                     }
 
@@ -213,7 +214,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
             }
         } catch (e: UserMistake) {
             logger.debug { "Tx $txRid didn't pass the check: ${e.message}" }
-            rejectTransaction(tx, e)
+            rejectTransaction(tx, e, txEnter)
             return EnqueueTransactionResult.INVALID
         }
     }
@@ -243,10 +244,10 @@ class BaseTransactionQueue(private val queueCapacity: Int,
         }
     }
 
-    override fun rejectTransaction(tx: Transaction, reason: Exception?) {
+    override fun rejectTransaction(tx: Transaction, reason: Exception, timestamp: Instant?) {
         lock.withLock {
             taken.remove(WrappedTransaction(tx, null, 0L, BigDecimal.ZERO, 0L, Instant.EPOCH, Instant.EPOCH))
-            rejects[WrappedByteArray(tx.getRID())] = reason
+            rejects[WrappedByteArray(tx.getRID())] = reason to (timestamp ?: clock.instant())
         }
     }
 
@@ -263,8 +264,12 @@ class BaseTransactionQueue(private val queueCapacity: Int,
         }
     }
 
-    override fun getRejectionReason(txRID: WrappedByteArray): Exception? = lock.withLock {
+    override fun getRejectionReason(txRID: WrappedByteArray): Pair<Exception, Instant>? = lock.withLock {
         rejects[txRID]
+    }
+
+    override fun rejectedTransactions(): List<RejectedTransaction> = lock.withLock {
+        rejects.toList().map { RejectedTransaction(it.first, it.second.first, it.second.second) }
     }
 
     override fun retryAllTakenTransactions() {
@@ -289,6 +294,14 @@ class BaseTransactionQueue(private val queueCapacity: Int,
         taken.map { it.tx }
     }
 
+    override fun waitingTransactions(): List<Transaction> = lock.withLock {
+        queue.map { it.tx }.toList()
+    }
+
+    override fun waitingTransaction(txRID: WrappedByteArray): Pair<ByteArray, Instant>? = lock.withLock {
+        queueMap[txRID]?.let { it.tx.getRawData() to it.enter }
+    }
+
     internal fun recheckPriorities() {
         if (prioritizer != null) {
             logger.debug { "Rechecking transactions" }
@@ -309,7 +322,8 @@ class BaseTransactionQueue(private val queueCapacity: Int,
                                     accountBasedRateLimiting(
                                             accountId,
                                             accountPoints = transactionPriority.accountPoints,
-                                            newTxCostPoints = 0
+                                            newTxCostPoints = 0,
+                                            now
                                     )
                                 }
                             }
@@ -325,7 +339,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
     // We check if sum of tx_cost_points for all transactions including the new one. If it is above account_points
     // we order transactions by priority and removes ones after the running sum exceeds account_points.
     // If a new tx was removed, it is reported as rejected. Note: more than one transaction might be evicted.
-    private fun accountBasedRateLimiting(accountId: WrappedByteArray, accountPoints: Long, newTxCostPoints: Long): Int {
+    private fun accountBasedRateLimiting(accountId: WrappedByteArray, accountPoints: Long, newTxCostPoints: Long, now: Instant): Int {
         var evictedTxs = 0
         val txsForAccount = accountTxs.get(accountId)
         var pointsSum = txsForAccount.sumOf { it.txCostPoints } + newTxCostPoints
@@ -340,7 +354,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
                 prioritizedTxsForAccount.remove(lowestPrioTxForAccount)
                 queue.remove(lowestPrioTxForAccount)
                 queueMap.remove(lowestPrioTxForAccount.tx.getRID().wrap())
-                rejects[lowestPrioTxForAccount.tx.getRID().wrap()] = UserMistake("Transaction evicted due to account prioritization")
+                rejects[lowestPrioTxForAccount.tx.getRID().wrap()] = UserMistake("Transaction evicted due to account prioritization") to now
                 evictedTxs++
                 pointsSum -= lowestPrioTxForAccount.txCostPoints
             }

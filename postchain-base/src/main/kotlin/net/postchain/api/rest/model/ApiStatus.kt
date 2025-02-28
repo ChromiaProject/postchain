@@ -4,7 +4,7 @@ package net.postchain.api.rest.model
 
 import net.postchain.common.tx.TransactionStatus
 
-class ApiStatus(txStatus: TransactionStatus, val rejectReason: String? = null) {
+class ApiStatus(txStatus: TransactionStatus, val rejectReason: String? = null, val rejectTimestamp: Long? = null) {
 
     val status: String = txStatus.status
 
@@ -12,6 +12,9 @@ class ApiStatus(txStatus: TransactionStatus, val rejectReason: String? = null) {
         if (txStatus != TransactionStatus.REJECTED) {
             check(rejectReason == null) {
                 "rejectReason field can only be used with status: REJECTED"
+            }
+            check(rejectTimestamp == null) {
+                "rejectTimestamp field can only be used with status: REJECTED"
             }
         }
     }

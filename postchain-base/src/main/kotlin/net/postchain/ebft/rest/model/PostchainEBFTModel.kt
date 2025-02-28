@@ -9,6 +9,7 @@ import net.postchain.api.rest.controller.DuplicateTnxException
 import net.postchain.api.rest.controller.InvalidTnxException
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.UnavailableException
+import net.postchain.api.rest.model.ApiRejectedTransaction
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
 import net.postchain.common.BlockchainRid
@@ -23,6 +24,7 @@ import net.postchain.core.Storage
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockQueries
 import net.postchain.debug.DiagnosticData
+import java.time.Instant
 
 class PostchainEBFTModel(
         blockchainConfiguration: BlockchainConfiguration,
@@ -84,10 +86,19 @@ class PostchainEBFTModel(
         }
 
         return if (status == REJECTED) {
-            val exception = txQueue.getRejectionReason(txRID.bytes.wrap())
-            ApiStatus(status, exception?.message)
+            val exceptionAndTimestamp = txQueue.getRejectionReason(txRID.bytes.wrap())
+            ApiStatus(status, exceptionAndTimestamp?.first?.message, exceptionAndTimestamp?.second?.toEpochMilli())
         } else {
             ApiStatus(status)
         }
     }
+
+    override fun getWaitingTransactions(): List<TxRid> = txQueue.waitingTransactions().map { TxRid(it.getRID()) }
+
+    override fun getWaitingTransaction(txRID: TxRid): Pair<ByteArray, Instant>? = txQueue.waitingTransaction(txRID.bytes.wrap())
+
+    override fun getRejectedTransactions(): List<ApiRejectedTransaction> =
+            txQueue.rejectedTransactions().map { it ->
+                ApiRejectedTransaction(TxRid(it.txRID.data), it.reason.message ?: "", it.timestamp.toEpochMilli())
+            }
 }

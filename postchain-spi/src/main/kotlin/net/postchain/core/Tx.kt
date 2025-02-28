@@ -7,6 +7,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.tx.EnqueueTransactionResult
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.common.types.WrappedByteArray
+import java.time.Instant
 import kotlin.time.Duration
 
 /**
@@ -70,6 +71,8 @@ interface TransactionFactory {
     fun decodeAndValidateTransaction(data: ByteArray): Transaction
 }
 
+data class RejectedTransaction(val txRID: WrappedByteArray, val reason: Exception, val timestamp: Instant)
+
 interface TransactionQueue {
     /**
      * Take a transaction from queue without waiting.
@@ -90,9 +93,12 @@ interface TransactionQueue {
     fun getTransactionStatus(txRID: ByteArray): TransactionStatus
     fun getTransactionQueueSize(): Int
     fun removeAll(transactionsToRemove: Collection<Transaction>)
-    fun rejectTransaction(tx: Transaction, reason: Exception?)
-    fun getRejectionReason(txRID: WrappedByteArray): Exception?
+    fun rejectTransaction(tx: Transaction, reason: Exception, timestamp: Instant? = null)
+    fun getRejectionReason(txRID: WrappedByteArray): Pair<Exception, Instant>?
     fun retryAllTakenTransactions()
     fun flushTransaction(tx: Transaction)
     fun takenTransactions(): List<Transaction>
+    fun waitingTransactions(): List<Transaction>
+    fun waitingTransaction(txRID: WrappedByteArray): Pair<ByteArray, Instant>?
+    fun rejectedTransactions(): List<RejectedTransaction>
 }

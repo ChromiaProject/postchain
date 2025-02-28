@@ -10,6 +10,7 @@ import net.postchain.api.rest.BlockHeight
 import net.postchain.api.rest.BlockSignature
 import net.postchain.api.rest.BlockchainNodeState
 import net.postchain.api.rest.TransactionsCount
+import net.postchain.api.rest.model.ApiRejectedTransaction
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
 import net.postchain.base.BaseBlockchainContext
@@ -68,6 +69,7 @@ import net.postchain.managed.config.ManagedDataSourceAware
 import net.postchain.metrics.PostchainModelMetrics
 import net.postchain.metrics.QUERIES_METRIC_DESCRIPTION
 import net.postchain.metrics.QUERIES_METRIC_NAME
+import java.time.Instant
 
 open class PostchainModel(
         val blockchainConfiguration: BlockchainConfiguration,
@@ -139,7 +141,17 @@ open class PostchainModel(
     override fun getConfirmationProof(txRID: TxRid): ConfirmationProof? =
             blockQueries.getConfirmationProof(txRID.bytes).get()
 
-    override fun getStatus(txRID: TxRid): ApiStatus = throw NotSupported("Checking transaction status is not supported for this blockchain on this node")
+    override fun getStatus(txRID: TxRid): ApiStatus =
+            throw NotSupported("Checking transaction status is not supported for this blockchain on this node")
+
+    override fun getWaitingTransactions(): List<TxRid> =
+            throw NotSupported("Fetching waiting transactions is not supported for this blockchain on this node")
+
+    override fun getWaitingTransaction(txRID: TxRid): Pair<ByteArray, Instant>? =
+            throw NotSupported("Fetching waiting transaction is not supported for this blockchain on this node")
+
+    override fun getRejectedTransactions(): List<ApiRejectedTransaction> =
+            throw NotSupported("Fetching rejected transactions is not supported for this blockchain on this node")
 
     override fun query(query: GtxQuery): Gtv {
         val timerBuilder = Timer.builder(QUERIES_METRIC_NAME)

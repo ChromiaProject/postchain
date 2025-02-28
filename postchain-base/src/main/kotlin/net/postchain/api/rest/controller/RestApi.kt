@@ -49,6 +49,7 @@ import net.postchain.api.rest.pathPath
 import net.postchain.api.rest.prettyGson
 import net.postchain.api.rest.prettyJsonBody
 import net.postchain.api.rest.proofBody
+import net.postchain.api.rest.rejectedTransactionsBody
 import net.postchain.api.rest.signatureBody
 import net.postchain.api.rest.signatureHeader
 import net.postchain.api.rest.signerQuery
@@ -57,9 +58,10 @@ import net.postchain.api.rest.textBody
 import net.postchain.api.rest.transactionsCountBody
 import net.postchain.api.rest.txBody
 import net.postchain.api.rest.txDataQuery
-import net.postchain.api.rest.txInfoBody
-import net.postchain.api.rest.txInfosBody
+import net.postchain.api.rest.txInfoExtBody
+import net.postchain.api.rest.txInfoExtsBody
 import net.postchain.api.rest.txRidPath
+import net.postchain.api.rest.txRidsBody
 import net.postchain.api.rest.txsQuery
 import net.postchain.api.rest.versionBody
 import net.postchain.base.configuration.BlockchainConfigurationData
@@ -154,6 +156,7 @@ const val UNAUTHORIZED_REQUIRE_SIGNATURE_IN_MANAGED_MODE = "Configuration must b
 const val FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER = "Configuration must be signed by blockchain provider"
 
 const val DATA_TRUNCATED_HEADER = "X-Data-Truncated"
+const val TRANSACTION_TIMESTAMP = "X-Transaction-Timestamp"
 
 const val QUERY_TYPE = "type"
 const val QUERY_ARGS = "~args"
@@ -179,7 +182,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 14
+        const val REST_API_VERSION = 15
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -305,6 +308,9 @@ class RestApi(
             "/infrastructure_version" bind GET to ::getInfraVersion,
 
             "/tx/{blockchainRid}" bind POST to liveBlockchain.then(::postTransaction),
+            "/tx/{blockchainRid}/waiting" bind GET to blockchain.then(volatileResponse).then(::getWaitingTransactions),
+            "/tx/{blockchainRid}/waiting/{txRid}" bind GET to blockchain.then(volatileResponse).then(::getWaitingTransaction),
+            "/tx/{blockchainRid}/rejected" bind GET to blockchain.then(volatileResponse).then(::getRejectedTransactions),
             "/tx/{blockchainRid}/{txRid}" bind GET to blockchain.then(immutableResponse).then(::getTransaction),
             "/tx/{blockchainRid}/{txRid}/confirmationProof" bind GET to blockchain.then(immutableResponse).then(::getConfirmationProof),
             "/tx/{blockchainRid}/{txRid}/status" bind GET to liveBlockchain.then(volatileResponse).then(::getTransactionStatus),
@@ -366,6 +372,25 @@ class RestApi(
         return Response(OK).with(emptyBody.outbound(request) of Empty)
     }
 
+    private fun getWaitingTransactions(request: Request): Response {
+        val model = model(request)
+        val waitingTransactions = model.getWaitingTransactions()
+        return Response(OK).with(txRidsBody of waitingTransactions)
+    }
+
+    private fun getWaitingTransaction(request: Request): Response {
+        val model = model(request)
+        val txRid = txRidPath(request)
+        val (txData, txTimestamp) = model.getWaitingTransaction(txRid) ?: throw NotFoundError("Can't find waiting transaction with RID: $txRid")
+        return Response(OK).header(TRANSACTION_TIMESTAMP, txTimestamp.toEpochMilli().toString()).with(binaryBody of txData)
+    }
+
+    private fun getRejectedTransactions(request: Request): Response {
+        val model = model(request)
+        val rejectedTransactions = model.getRejectedTransactions()
+        return Response(OK).with(rejectedTransactionsBody of rejectedTransactions)
+    }
+
     private fun getTransaction(request: Request): Response {
         val tx = runTxActionOnModel(model(request), txRidPath(request)) { model, txRID ->
             model.getTransaction(txRID)
@@ -378,7 +403,7 @@ class RestApi(
         val txInfo = runTxActionOnModel(model(request), txRidPath(request)) { model, txRID ->
             model.getTransactionInfo(txRID, includeTxData = txData)
         }
-        return Response(OK).with(txInfoBody of txInfo)
+        return Response(OK).with(txInfoExtBody of txInfo)
     }
 
     private fun getTransactionsInfo(request: Request): Response {
@@ -395,7 +420,7 @@ class RestApi(
         } else {
             model.getTransactionsInfo(timeFilter, limit, maxDataSize)
         }
-        return Response(OK).with(txInfosBody of transactionInfoExts)
+        return Response(OK).with(txInfoExtsBody of transactionInfoExts)
                 .header(DATA_TRUNCATED_HEADER, truncated.toString())
     }
 
@@ -642,7 +667,7 @@ class RestApi(
         val configuration = model.getBlockchainConfiguration(height)
                 ?: throw UserMistake("Failed to find configuration")
         val configGtv = GtvDecoder.decodeGtv(configuration)
-        val features = configGtv.asDict().get(KEY_FEATURES) ?: gtv(emptyMap<String, Gtv>())
+        val features = configGtv.asDict()[KEY_FEATURES] ?: gtv(emptyMap<String, Gtv>())
         val response = Response(OK).with(configurationFeaturesOutBody.outbound(request) of features)
         return if (height == -1L) {
             volatileResponse.then { response }(request)

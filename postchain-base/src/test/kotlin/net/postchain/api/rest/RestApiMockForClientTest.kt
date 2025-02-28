@@ -5,6 +5,7 @@ package net.postchain.api.rest
 import mu.KLogging
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
+import net.postchain.api.rest.model.ApiRejectedTransaction
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
 import net.postchain.base.BaseBlockWitness
@@ -34,6 +35,7 @@ import net.postchain.gtx.GtxQuery
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import java.time.Instant
 
 val cryptoSystem = Secp256K1CryptoSystem()
 
@@ -138,15 +140,25 @@ class RestApiMockForClientManual {
             }
         }
 
-        override fun getStatus(txRID: TxRid): ApiStatus {
-            return when (txRID) {
-                TxRid(statusUnknown.hexStringToByteArray()) -> ApiStatus(TransactionStatus.UNKNOWN)
-                TxRid(statusWaiting.hexStringToByteArray()) -> ApiStatus(TransactionStatus.WAITING)
-                TxRid(statusConfirmed.hexStringToByteArray()) -> ApiStatus(TransactionStatus.CONFIRMED)
-                TxRid(statusRejected.hexStringToByteArray()) -> ApiStatus(TransactionStatus.REJECTED)
-                else -> throw ProgrammerMistake("unexpected error")
-            }
+        override fun getStatus(txRID: TxRid): ApiStatus = when (txRID) {
+            TxRid(statusUnknown.hexStringToByteArray()) -> ApiStatus(TransactionStatus.UNKNOWN)
+            TxRid(statusWaiting.hexStringToByteArray()) -> ApiStatus(TransactionStatus.WAITING)
+            TxRid(statusConfirmed.hexStringToByteArray()) -> ApiStatus(TransactionStatus.CONFIRMED)
+            TxRid(statusRejected.hexStringToByteArray()) -> ApiStatus(TransactionStatus.REJECTED, "some reason")
+            else -> throw ProgrammerMistake("unexpected error")
         }
+
+        override fun getWaitingTransactions(): List<TxRid> = listOf(
+                TxRid(statusWaiting.hexStringToByteArray()),
+        )
+
+        override fun getWaitingTransaction(txRID: TxRid): Pair<ByteArray, Instant>? = when (txRID) {
+            TxRid(statusWaiting.hexStringToByteArray()) -> "1111".hexStringToByteArray() to Instant.now()
+            else -> null
+        }
+
+        override fun getRejectedTransactions(): List<ApiRejectedTransaction> =
+                listOf(ApiRejectedTransaction(TxRid(statusRejected.hexStringToByteArray()), "some reason", 1574849700))
 
         override fun query(query: GtxQuery): Gtv {
             return when (query.args) {
@@ -194,7 +206,7 @@ class RestApiMockForClientManual {
         }
 
         override fun getTransactionInfo(txRID: TxRid, includeTxData: Boolean): TransactionInfoExt {
-            val block = blocks.filter { block -> block.transactions.filter { tx -> cryptoSystem.digest(tx.data!!).contentEquals(txRID.bytes) }.size > 0 }[0]
+            val block = blocks.filter { block -> block.transactions.any { tx -> cryptoSystem.digest(tx.data!!).contentEquals(txRID.bytes) } }[0]
             val tx = block.transactions.filter { tx -> cryptoSystem.digest(tx.data!!).contentEquals(txRID.bytes) }[0]
             return TransactionInfoExt(block.rid, block.height, block.header, block.witness, block.timestamp, cryptoSystem.digest(tx.data!!),
                     tx.data!!.slice(IntRange(0, 4)).toByteArray(), if (includeTxData) tx.data!! else null)
