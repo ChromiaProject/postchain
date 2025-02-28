@@ -21,7 +21,7 @@ class ContainerChain0BlockchainConfiguration(
             try {
                 op(ctx)
             } finally {
-                if (ctx != existingWriteCtx) storage.closeReadConnection(ctx)
+                if (ctx.id != existingWriteCtx?.id) storage.closeReadConnection(ctx)
             }
         }, appConfig)
 )

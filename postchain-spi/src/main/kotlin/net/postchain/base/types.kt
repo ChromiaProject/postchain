@@ -9,6 +9,7 @@ import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.*
 import net.postchain.gtv.Gtv
 import java.sql.Connection
+import java.util.UUID
 
 class ConfirmationProofMaterial(
         val txHash: WrappedByteArray,
@@ -33,7 +34,8 @@ open class BaseAppContext(
 open class BaseEContext(
     override val conn: Connection,
     override val chainID: Long,
-    private val dbAccess: DatabaseAccess
+    private val dbAccess: DatabaseAccess,
+    override val id: String = UUID.randomUUID().toString(),
 ) : EContext {
 
     @Suppress("UNCHECKED_CAST")

@@ -92,6 +92,7 @@ public class net/postchain/base/BaseBlockEContext : net/postchain/core/BlockECon
 	public final fun getDependencyHeightMap ()Ljava/util/Map;
 	public final fun getEctx ()Lnet/postchain/core/ExecutionContext;
 	public fun getHeight ()J
+	public fun getId ()Ljava/lang/String;
 	public fun getInterface (Ljava/lang/Class;)Ljava/lang/Object;
 	public fun getTimestamp ()J
 	public final fun getTxEventSink ()Lnet/postchain/base/TxEventSink;
@@ -159,9 +160,11 @@ public final class net/postchain/base/BaseDependencyFactory {
 }
 
 public class net/postchain/base/BaseEContext : net/postchain/core/ExecutionContext {
-	public fun <init> (Ljava/sql/Connection;JLnet/postchain/base/data/DatabaseAccess;)V
+	public fun <init> (Ljava/sql/Connection;JLnet/postchain/base/data/DatabaseAccess;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/sql/Connection;JLnet/postchain/base/data/DatabaseAccess;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun getChainID ()J
 	public fun getConn ()Ljava/sql/Connection;
+	public fun getId ()Ljava/lang/String;
 	public fun getInterface (Ljava/lang/Class;)Ljava/lang/Object;
 }
 
@@ -181,6 +184,7 @@ public class net/postchain/base/BaseTxEContext : net/postchain/core/BlockEContex
 	public final fun getEventSink ()Lnet/postchain/base/TxEventSink;
 	public final fun getEvents ()Ljava/util/List;
 	public fun getHeight ()J
+	public fun getId ()Ljava/lang/String;
 	public fun getInterface (Ljava/lang/Class;)Ljava/lang/Object;
 	public fun getTimestamp ()J
 	public final fun getTx ()Lnet/postchain/core/Transaction;
@@ -1305,6 +1309,7 @@ public final class net/postchain/core/EngineKt {
 
 public abstract interface class net/postchain/core/ExecutionContext : net/postchain/core/AppContext {
 	public abstract fun getChainID ()J
+	public abstract fun getId ()Ljava/lang/String;
 }
 
 public final class net/postchain/core/ExecutionContext$DefaultImpls {

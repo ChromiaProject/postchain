@@ -25,6 +25,7 @@ interface AppContext {
 }
 
 interface ExecutionContext : AppContext {
+    val id: String
     val chainID: Long
 }
 

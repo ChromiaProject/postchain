@@ -28,7 +28,7 @@ class BaseStorage(
 
     private val cachedConnection = ThreadLocal<CachedConnection>()
     private val openChainWriteConnections = ThreadLocal.withInitial { mutableMapOf<Long, EContext>() }
-    private val sharedChainWriteConnections = ConcurrentHashMap<EContext, ReentrantLock>()
+    private val sharedChainWriteConnections = ConcurrentHashMap<String, ReentrantLock>()
 
     companion object : KLogging()
 
@@ -85,7 +85,7 @@ class BaseStorage(
         try {
             closeWriteConnection(context.conn, commit)
         } finally {
-            sharedChainWriteConnections.remove(context)?.let {
+            sharedChainWriteConnections.remove(context.id)?.let {
                 if (it.isHeldByCurrentThread) it.unlock()
             }
         }
@@ -111,11 +111,11 @@ class BaseStorage(
     }
 
     override fun createSharedContext(eContext: EContext) {
-        sharedChainWriteConnections[eContext] = ReentrantLock().also { it.lock() }
+        sharedChainWriteConnections[eContext.id] = ReentrantLock().also { it.lock() }
     }
 
     override fun releaseSharedContext(eContext: EContext) {
-        val lock = sharedChainWriteConnections[eContext]
+        val lock = sharedChainWriteConnections[eContext.id]
                 ?: throw ProgrammerMistake("This context is not shared. Call createSharedContext first.")
         lock.unlock()
         // Did we release the connection completely?
@@ -123,7 +123,7 @@ class BaseStorage(
     }
 
     override fun claimSharedContext(eContext: EContext): EContext {
-        val lock = sharedChainWriteConnections[eContext] ?: throw ProgrammerMistake("This context is not shared")
+        val lock = sharedChainWriteConnections[eContext.id] ?: throw ProgrammerMistake("This context is not shared")
         lock.lock()
         openChainWriteConnections.get()[eContext.chainID] = eContext
         return eContext

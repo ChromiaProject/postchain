@@ -101,7 +101,7 @@ open class BaseBlockchainEngine(
                 activeHeight > configHeight
             }
         } finally {
-            if (ctx == initialEContext) {
+            if (ctx.id == initialEContext.id) {
                 blockBuilderStorage.releaseSharedContext(ctx)
             } else {
                 blockBuilderStorage.closeReadConnection(ctx)
@@ -447,7 +447,7 @@ open class BaseBlockchainEngine(
         currentEContext = if (currentEContext.conn.isClosed) {
             blockBuilderStorage.openWriteConnection(chainID)
         } else {
-            if (currentEContext == initialEContext) {
+            if (currentEContext.id == initialEContext.id) {
                 blockBuilderStorage.claimSharedContext(currentEContext)
             }
             currentEContext
@@ -455,7 +455,7 @@ open class BaseBlockchainEngine(
         return try {
             op(currentEContext)
         } finally {
-            if (currentEContext == initialEContext) {
+            if (currentEContext.id == initialEContext.id) {
                 blockBuilderStorage.releaseSharedContext(currentEContext)
             }
         }
