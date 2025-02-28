@@ -1374,6 +1374,21 @@ public final class net/postchain/core/PrevBlockMismatchException : net/postchain
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Exception;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 }
 
+public final class net/postchain/core/RejectedTransaction {
+	public fun <init> (Lnet/postchain/common/types/WrappedByteArray;Ljava/lang/Exception;Ljava/time/Instant;)V
+	public final fun component1 ()Lnet/postchain/common/types/WrappedByteArray;
+	public final fun component2 ()Ljava/lang/Exception;
+	public final fun component3 ()Ljava/time/Instant;
+	public final fun copy (Lnet/postchain/common/types/WrappedByteArray;Ljava/lang/Exception;Ljava/time/Instant;)Lnet/postchain/core/RejectedTransaction;
+	public static synthetic fun copy$default (Lnet/postchain/core/RejectedTransaction;Lnet/postchain/common/types/WrappedByteArray;Ljava/lang/Exception;Ljava/time/Instant;ILjava/lang/Object;)Lnet/postchain/core/RejectedTransaction;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getReason ()Ljava/lang/Exception;
+	public final fun getTimestamp ()Ljava/time/Instant;
+	public final fun getTxRID ()Lnet/postchain/common/types/WrappedByteArray;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public abstract interface class net/postchain/core/RemoteBlockchainProcess {
 	public abstract fun getBlockchainRid ()Lnet/postchain/common/BlockchainRid;
 	public abstract fun getChainId ()J
@@ -1474,15 +1489,22 @@ public abstract interface class net/postchain/core/TransactionQueue {
 	public abstract fun enqueue (Lnet/postchain/core/Transaction;)Lnet/postchain/common/tx/EnqueueTransactionResult;
 	public abstract fun findTransaction (Lnet/postchain/common/types/WrappedByteArray;)Lnet/postchain/core/Transaction;
 	public abstract fun flushTransaction (Lnet/postchain/core/Transaction;)V
-	public abstract fun getRejectionReason (Lnet/postchain/common/types/WrappedByteArray;)Ljava/lang/Exception;
+	public abstract fun getRejectionReason (Lnet/postchain/common/types/WrappedByteArray;)Lkotlin/Pair;
 	public abstract fun getTransactionQueueSize ()I
 	public abstract fun getTransactionStatus ([B)Lnet/postchain/common/tx/TransactionStatus;
-	public abstract fun rejectTransaction (Lnet/postchain/core/Transaction;Ljava/lang/Exception;)V
+	public abstract fun rejectTransaction (Lnet/postchain/core/Transaction;Ljava/lang/Exception;Ljava/time/Instant;)V
+	public abstract fun rejectedTransactions ()Ljava/util/List;
 	public abstract fun removeAll (Ljava/util/Collection;)V
 	public abstract fun retryAllTakenTransactions ()V
 	public abstract fun takeTransaction ()Lnet/postchain/core/Transaction;
 	public abstract fun takeTransaction-LRDsOJo (J)Lnet/postchain/core/Transaction;
 	public abstract fun takenTransactions ()Ljava/util/List;
+	public abstract fun waitingTransaction (Lnet/postchain/common/types/WrappedByteArray;)Lkotlin/Pair;
+	public abstract fun waitingTransactions ()Ljava/util/List;
+}
+
+public final class net/postchain/core/TransactionQueue$DefaultImpls {
+	public static synthetic fun rejectTransaction$default (Lnet/postchain/core/TransactionQueue;Lnet/postchain/core/Transaction;Ljava/lang/Exception;Ljava/time/Instant;ILjava/lang/Object;)V
 }
 
 public abstract interface class net/postchain/core/Transactor {

@@ -1,6 +1,7 @@
 package net.postchain.base.data
 
 import assertk.assertThat
+import assertk.assertions.containsExactly
 import assertk.assertions.isBetween
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
@@ -11,10 +12,13 @@ import assertk.assertions.isSameAs
 import net.postchain.base.TransactionPrioritizer
 import net.postchain.base.TxPriorityStateV1
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToWrappedByteArray
 import net.postchain.common.tx.EnqueueTransactionResult
+import net.postchain.common.wrap
 import net.postchain.configurations.GTXTestOp
 import net.postchain.configurations.GTX_TEST_OP_NAME
+import net.postchain.core.RejectedTransaction
 import net.postchain.crypto.devtools.MockCryptoSystem
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -96,13 +100,27 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `queue size is bounded`() {
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) })
+        val now = Instant.now()
+        val clock: Clock = mock {
+            on { instant() } doReturn now
+        }
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) }, clock)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
+        whenever(clock.instant()).doReturn(now + Duration.ofMillis(1000))
         assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
+        whenever(clock.instant()).doReturn(now + Duration.ofMillis(2000))
         assertThat(sut.enqueue(tx3)).isEqualTo(EnqueueTransactionResult.OK)
+        whenever(clock.instant()).doReturn(now + Duration.ofMillis(3000))
         assertThat(sut.enqueue(tx4)).isEqualTo(EnqueueTransactionResult.FULL)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(3)
+        assertThat(sut.waitingTransactions()).containsExactly(tx1, tx2, tx3)
+        assertThat(sut.waitingTransaction(tx1.getRID().wrap())).isEqualTo(tx1.getRawData() to now)
+        assertThat(sut.findTransaction(tx1.getRID().wrap())).isEqualTo(tx1)
+        assertThat(sut.waitingTransaction(tx2.getRID().wrap())).isEqualTo(tx2.getRawData() to now + Duration.ofMillis(1000))
+        assertThat(sut.findTransaction(tx2.getRID().wrap())).isEqualTo(tx2)
+        assertThat(sut.waitingTransaction(tx3.getRID().wrap())).isEqualTo(tx3.getRawData() to now + Duration.ofMillis(2000))
+        assertThat(sut.findTransaction(tx3.getRID().wrap())).isEqualTo(tx3)
         assertThat(sut.takeTransaction()).isNotNull()
         assertThat(sut.takeTransaction()).isNotNull()
         assertThat(sut.takeTransaction()).isNotNull()
@@ -122,11 +140,13 @@ class BaseTransactionQueueTest {
             }
         })
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
+        assertThat(sut.waitingTransactions()).isEmpty()
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx3)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx4)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(3)
+        assertThat(sut.waitingTransactions()).containsExactly(tx4, tx3, tx2)
         assertThat(sut.takeTransaction()).isEqualTo(tx4)
         assertThat(sut.takeTransaction()).isEqualTo(tx3)
         assertThat(sut.takeTransaction()).isEqualTo(tx2)
@@ -178,10 +198,13 @@ class BaseTransactionQueueTest {
         assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx3)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(3)
+        assertThat(sut.waitingTransactions()).containsExactly(tx1, tx2, tx3)
         sut.removeAll(listOf(tx1, tx3))
         assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
+        assertThat(sut.waitingTransactions()).containsExactly(tx2)
         assertThat(sut.takeTransaction()).isSameAs(tx2)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
+        assertThat(sut.waitingTransactions()).isEmpty()
     }
 
     @Test
@@ -214,6 +237,7 @@ class BaseTransactionQueueTest {
         assertThat(sut.enqueue(tx3)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx4)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(3)
+        assertThat(sut.waitingTransactions()).containsExactly(tx4, tx3, tx1)
         assertThat(sut.takeTransaction()).isSameAs(tx4)
         assertThat(sut.takeTransaction()).isSameAs(tx3)
         assertThat(sut.takeTransaction()).isSameAs(tx1)
@@ -236,6 +260,7 @@ class BaseTransactionQueueTest {
         assertThat(sut.enqueue(tx3)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.enqueue(tx4)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(3)
+        assertThat(sut.waitingTransactions()).containsExactly(tx4, tx3, tx2)
         assertThat(sut.takeTransaction()).isSameAs(tx4)
         assertThat(sut.takeTransaction()).isSameAs(tx3)
         assertThat(sut.takeTransaction()).isSameAs(tx2)
@@ -247,6 +272,7 @@ class BaseTransactionQueueTest {
         sut = BaseTransactionQueue(3, INFINITE, INFINITE, { _, _, _ -> throw Exception("boom") })
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
+        assertThat(sut.waitingTransactions()).containsExactly(tx1)
         assertThat(sut.takeTransaction()).isSameAs(tx1)
     }
 
@@ -298,6 +324,7 @@ class BaseTransactionQueueTest {
         whenever(prioritizer.prioritize(eq(tx1), any(), any())) doReturn TxPriorityStateV1(account1, accountPoints = 2, txCostPoints = 1, ZERO)
         sut.recheckPriorities()
         assertThat(sut.getTransactionQueueSize()).isEqualTo(3)
+        assertThat(sut.waitingTransactions()).containsExactly(tx3, tx2, tx4)
         assertThat(sut.takeTransaction()).isSameAs(tx3)
         assertThat(sut.takeTransaction()).isSameAs(tx2)
         assertThat(sut.takeTransaction()).isSameAs(tx4)
@@ -410,5 +437,35 @@ class BaseTransactionQueueTest {
 
         sut.removeAll(listOf(tx1, tx3))
         assertThat(sut.takenTransactions()).isEmpty()
+    }
+
+    @Test
+    fun `rejected transactions are handled correctly`() {
+        val now = Instant.now()
+        val clock: Clock = mock {
+            on { instant() } doReturn now
+        }
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, { _, _, _ -> TxPriorityStateV1(account0, 0, 0, ONE) }, clock)
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
+        assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
+        assertThat(sut.enqueue(tx2)).isEqualTo(EnqueueTransactionResult.OK)
+        assertThat(sut.enqueue(tx3)).isEqualTo(EnqueueTransactionResult.OK)
+        assertThat(sut.takeTransaction()).isNotNull()
+        assertThat(sut.takeTransaction()).isNotNull()
+        val reason1 = UserMistake("the first reason")
+        val timestamp1 = now
+        sut.rejectTransaction(tx2, reason1)
+        val reason2 = UserMistake("the second reason")
+        val timestamp2 = now + Duration.ofMillis(11990)
+        whenever(clock.instant()).doReturn(timestamp2)
+        sut.rejectTransaction(tx3, reason2)
+        assertThat(sut.takeTransaction()).isNotNull()
+        assertThat(sut.rejectedTransactions()).containsExactly(
+                RejectedTransaction(tx2.getRID().wrap(), reason1, timestamp1),
+                RejectedTransaction(tx3.getRID().wrap(), reason2, timestamp2),
+        )
+        assertThat(sut.getRejectionReason(tx2.getRID().wrap())).isEqualTo(reason1 to timestamp1)
+        assertThat(sut.getRejectionReason(tx3.getRID().wrap())).isEqualTo(reason2 to timestamp2)
+        assertThat(sut.getRejectionReason(tx1.getRID().wrap())).isNull()
     }
 }

@@ -44,8 +44,6 @@ import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.core.IsEqual
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.skyscreamer.jsonassert.JSONAssert
-import org.skyscreamer.jsonassert.JSONCompareMode
 import java.nio.file.Paths
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Semaphore
@@ -213,21 +211,13 @@ class RestApiIT : IntegrationTestSetup() {
 
         // Asserting
         val txRidHex = builder.calculateTxRid(GtvMerkleHashCalculatorV2(cryptoSystem)).toHex()
-        val expected = """
-            {
-                "status": "rejected",
-                "rejectReason": "You were asking for it"
-            }
-        """.trimIndent()
-
         await().untilAsserted {
-            val body = given().port(nodes[0].getRestApiHttpPort())
+            given().port(nodes[0].getRestApiHttpPort())
                     .get("/tx/$blockchainRID/$txRidHex/status")
                     .then()
                     .statusCode(200)
-                    .extract().body().asString()
-
-            JSONAssert.assertEquals(expected, body, JSONCompareMode.STRICT)
+                    .body("status", equalTo("rejected"))
+                    .body("rejectReason", equalTo("You were asking for it"))
         }
     }
 

@@ -53,7 +53,7 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [TypeScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: "14"
+  version: "15"
 tags:
   - name: block
     description: Fetch block(s)
@@ -151,6 +151,112 @@ paths:
                   value:
                     error: "Transaction queue is full"
             application/octet-stream: { }
+  /tx/{blockchainRid}/waiting:
+    get:
+      tags:
+        - transaction
+      summary: Fetch list of waiting transaction RIDs
+      description: |
+        Fetch a list of all waiting transaction RIDs from a chain.
+        Read replicas does not support this endpoint.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      responses:
+        '200':
+          description: Found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/hash"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /tx/{blockchainRid}/waiting/{txRid}:
+    get:
+      tags:
+        - transaction
+      summary: Fetch waiting transaction
+      description: |
+        Fetch a waiting transaction from a chain.
+        Will give binary response with `application/octet-stream` content-type.
+        Read replicas does not support this endpoint.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/txRid"
+      responses:
+        '200':
+          description: Found
+          content:
+            application/octet-stream: { }
+          headers:
+            X-Transaction-Timestamp:
+              description: When the transaction was submitted
+              required: true
+              schema:
+                $ref: "#/components/schemas/timestamp"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+                txNotFound:
+                  value:
+                    error: "Can't find waiting transaction with RID: <hex-string>"
+            application/octet-stream: { }
+  /tx/{blockchainRid}/rejected:
+    get:
+      tags:
+        - transaction
+      summary: Fetch list of rejected transactions
+      description: | 
+        Fetch a list of rejected transaction RIDs and rejection reason
+        Read replicas does not support this endpoint.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      responses:
+        '200':
+          description: Found
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - txRID
+                    - rejectReason
+                    - rejectTimestamp
+                  properties:
+                    txRID:
+                      $ref: "#/components/schemas/hash"
+                    rejectReason:
+                      type: string
+                    rejectTimestamp:
+                      $ref: "#/components/schemas/timestamp"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
   /tx/{blockchainRid}/{txRid}:
     get:
       tags:
@@ -243,15 +349,13 @@ paths:
           in: query
           required: false
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/timestamp"
         - name: after-time
           description: Return only transactions after this time
           in: query
           required: false
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/timestamp"
         - name: signer
           description: Return only transactions signed by public key
           in: query
@@ -381,6 +485,7 @@ paths:
                   value:
                     status: rejected
                     rejectReason: "[module:operation(dapp/module/module.rell:17)] Operation 'module:operation' failed: Requirement error"
+                    rejectTimestamp: 1740659274153
         '404':
           description: Not found
           content:
@@ -413,15 +518,13 @@ paths:
           in: query
           required: false
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/timestamp"
         - name: after-time
           description: Return only blocks after this time. Incompatible with `before-height` and `after-height`.
           in: query
           required: false
           schema:
-            type: integer
-            format: int64
+            $ref: "#/components/schemas/timestamp"
         - name: before-height
           description: Return only blocks before this height. Incompatible with `before-time` and `after-time`.
           in: query
@@ -1409,8 +1512,7 @@ components:
         witness:
           $ref: "#/components/schemas/hex"
         timestamp:
-          type: integer
-          format: int64
+          $ref: "#/components/schemas/timestamp"
         txRID:
           $ref: "#/components/schemas/hash"
         txHash:
@@ -1456,6 +1558,7 @@ components:
       required:
         - status
         - rejectReason
+        - rejectTimestamp
       properties:
         status:
           type: string
@@ -1463,6 +1566,8 @@ components:
             - "rejected"
         rejectReason:
           type: string
+        rejectTimestamp:
+          $ref: "#/components/schemas/timestamp"
     blockInfo:
       type: object
       required:
@@ -1506,8 +1611,7 @@ components:
           items:
             $ref: "#/components/schemas/hex"
         timestamp:
-          type: integer
-          format: int64
+          $ref: "#/components/schemas/timestamp"
     blockHeight:
       type: object
       required:
@@ -1595,6 +1699,12 @@ components:
     height:
       type: integer
       description: Block height
+    timestamp:
+      type: integer
+      minimum: -1
+      format: int64
+      description: Timestamp, milliseconds since midnight, January 1, 1970 UTC.
+      example: 1740659274153
     nullValue:
       type: "null"
     version:

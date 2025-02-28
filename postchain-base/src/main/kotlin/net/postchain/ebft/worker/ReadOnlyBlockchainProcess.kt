@@ -28,6 +28,7 @@ import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
+import java.time.Instant
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -113,7 +114,7 @@ class ReadOnlyBlockchainProcess(
                                 TransactionStatus.REJECTED.status -> {
                                     workerContext.engine.getTransactionQueue().rejectTransaction(tx, apiStatus.rejectReason?.let {
                                         UserMistake(it)
-                                    })
+                                    } ?: UserMistake("Unknown reason from API"), apiStatus.rejectTimestamp?.let { Instant.ofEpochMilli(it) })
                                 }
 
                                 // Wait for next iteration for CONFIRMED, WAITING and UNKNOWN

@@ -5,6 +5,7 @@ import com.google.gson.JsonNull
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.json.JsonFactory.auto
 import net.postchain.api.rest.json.JsonFactory.json
+import net.postchain.api.rest.model.ApiRejectedTransaction
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
 import net.postchain.base.ConfirmationProof
@@ -100,8 +101,10 @@ val errorGtvBody = Body.binary(ContentType.OCTET_STREAM, "error GTV").map(
 ).toLens()
 val errorBody = ContentNegotiation.auto(errorJsonBody, errorGtvBody)
 val txBody = Body.auto<Tx>().map({ it.tx.hexStringToByteArray() }, { Tx(it.toHex()) }).toLens()
-val txInfoBody = Body.auto<TransactionInfoExt>().toLens()
-val txInfosBody = Body.auto<List<TransactionInfoExt>>().toLens()
+val txInfoExtBody = Body.auto<TransactionInfoExt>().toLens()
+val txInfoExtsBody = Body.auto<List<TransactionInfoExt>>().toLens()
+val txRidsBody = Body.auto<List<TxRid>>().toLens()
+val rejectedTransactionsBody = Body.auto<List<ApiRejectedTransaction>>().toLens()
 val proofJsonBody = Body.auto<ConfirmationProof>().toLens()
 val proofGtvBody = Body.binary(ContentType.OCTET_STREAM, "confirmationProof GTV").map(
         { inputStream ->

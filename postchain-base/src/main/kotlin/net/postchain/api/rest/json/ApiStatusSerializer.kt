@@ -2,7 +2,11 @@
 
 package net.postchain.api.rest.json
 
-import com.google.gson.*
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.JsonPrimitive
+import com.google.gson.JsonSerializationContext
+import com.google.gson.JsonSerializer
 import net.postchain.api.rest.model.ApiStatus
 import java.lang.reflect.Type
 
@@ -13,6 +17,7 @@ internal class ApiStatusSerializer : JsonSerializer<ApiStatus> {
                 add("status", JsonPrimitive(src!!.status))
                 src.rejectReason?.let {
                     add("rejectReason", JsonPrimitive(src.rejectReason))
+                    add("rejectTimestamp", JsonPrimitive(src.rejectTimestamp))
                 }
             }
 }

@@ -10,12 +10,14 @@ import net.postchain.api.rest.model.TxRid
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
+import org.hamcrest.Matchers.equalTo
 import org.hamcrest.Matchers.equalToIgnoringCase
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 /**
  * [GetStatus] and [GetTx] endpoints have common part,
@@ -68,5 +70,21 @@ class RestApiGetStatusEndpointTest {
                 .then()
                 .statusCode(200)
                 .body("status", equalToIgnoringCase("CONFIRMED"))
+    }
+
+    @Test
+    fun test_getStatus_rejected() {
+        whenever(model.getStatus(TxRid(txHashHex.hexStringToByteArray()))).thenReturn(
+                ApiStatus(TransactionStatus.REJECTED, "Some reason", 1740659274153)
+        )
+        restApi.attachModel(blockchainRID, model)
+
+        given().basePath(basePath).port(restApi.actualPort())
+                .get("/tx/$blockchainRID/$txHashHex/status")
+                .then()
+                .statusCode(200)
+                .body("status", equalToIgnoringCase("REJECTED"))
+                .body("rejectReason", equalTo("Some reason"))
+                .body("rejectTimestamp", equalTo(1740659274153))
     }
 }
