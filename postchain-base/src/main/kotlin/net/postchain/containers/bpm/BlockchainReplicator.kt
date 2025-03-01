@@ -3,7 +3,6 @@ package net.postchain.containers.bpm
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import mu.withLoggingContext
-import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_BLOCKS_IN_PACKAGE
@@ -18,7 +17,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.min
 
 class BlockchainReplicator(
-        val blockchainRid: BlockchainRid,
+        val migrationRid: WrappedByteArray,
         val srcChain: Chain,
         val dstChain: Chain,
         var upToHeight: Long,
@@ -31,6 +30,7 @@ class BlockchainReplicator(
     enum class ContainerRole { SOURCE, DESTINATION }
 
     private val chainId = srcChain.chainId
+    private val blockchainRid = srcChain.brid
     private val processName = "blockchain-replicator-chainId-$chainId"
     private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
             ThreadFactoryBuilder().setNameFormat(processName).build()
@@ -48,7 +48,12 @@ class BlockchainReplicator(
 
     private fun jobHandler() {
         withLoggingContext(loggingContext) {
-            if (cancelled.get()) return
+            logger.info { "Blockchain replication handler started: from $srcChain to $dstChain" }
+
+            if (cancelled.get()) {
+                logger.info { "Blockchain replication has been cancelled" }
+                return
+            }
 
             try {
                 val upToHeight0 = upToHeight
@@ -71,6 +76,7 @@ class BlockchainReplicator(
                 } else {
                     upToHeight0
                 }
+                logger.debug { "currentUpToHeight: $currentUpToHeight" }
 
                 val dstLastBlockHeight = dstContainer.getBlockchainLastBlockHeight(chainId)
                 logger.debug { "Destination chain lastBlockHeight: $dstLastBlockHeight" }
@@ -95,6 +101,7 @@ class BlockchainReplicator(
             } catch (e: Exception) {
                 logger.error(e) { "$processName has got an error and will be renewed" }
             }
+            logger.info { "Blockchain replication handler finished: from $srcChain to $dstChain" }
         }
     }
 
@@ -126,19 +133,40 @@ class BlockchainReplicator(
     private fun replicateConfigurations(upToHeight: Long, dstLastBlockHeight: Long, dstContainer: PostchainContainer) {
         withLoggingContext(loggingContext) {
             var cur = dstLastBlockHeight
+            logger.info { "Configuration replication started from height $cur on the destination container" }
             while (true) {
-                if (cancelled.get()) break
-                val next = directoryDataSource.findNextConfigurationHeight(blockchainRid.data, cur)
-                logger.debug { "Next config found at height $next" }
-                if (next == null || next > upToHeight) break
-                val config = directoryDataSource.getConfiguration(blockchainRid.data, next)
-                if (config == null) {
-                    logger.debug { "Can't load config at height $next" }
+                if (cancelled.get()) {
+                    logger.info { "Blockchain replication has been cancelled" }
                     break
                 }
-                logger.debug { "Config at height $next fetched from D1" }
+
+                val next = directoryDataSource.findNextConfigurationHeight(blockchainRid.data, cur)
+                when {
+                    next == null -> {
+                        logger.info { "No next config found for height $cur" }
+                        break
+                    }
+
+                    next > upToHeight -> {
+                        logger.info { "Next config is at height $next, but we are limited by height $upToHeight" }
+                        break
+                    }
+
+                    else -> {
+                        logger.info { "Next config found at height $next" }
+                    }
+                }
+
+                val config = directoryDataSource.getConfiguration(blockchainRid.data, next)
+                if (config == null) {
+                    logger.warn { "Can't load config at height $next" }
+                    break
+                }
+                logger.debug { "Config at height $next fetched from managed data source" }
+
                 dstContainer.addBlockchainConfiguration(chainId, next, config)
-                logger.debug { "Config at height $next added to the destination container/chain" }
+                logger.info { "Config at height $next added to the destination container" }
+
                 cur = next
             }
         }
@@ -155,7 +183,10 @@ class BlockchainReplicator(
 
                 var currentHeight = newBlocks.first
                 while (currentHeight <= newBlocks.last) {
-                    if (cancelled.get()) return false
+                    if (cancelled.get()) {
+                        logger.info { "Blockchain replication has been cancelled" }
+                        return false
+                    }
 
                     val blockCountLimit = min(newBlocks.last.toInt() - currentHeight.toInt() + 1, MAX_BLOCKS_IN_PACKAGE)
                     logger.info { "Replicate block range $currentHeight..${newBlocks.last} with max block limit $blockCountLimit and size limit $MAX_PACKAGE_CONTENT_BYTES" }

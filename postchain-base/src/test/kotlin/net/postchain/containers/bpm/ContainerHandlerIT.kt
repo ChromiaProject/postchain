@@ -31,7 +31,7 @@ import java.nio.file.Path
 
 
 internal class ContainerHandlerIT {
-    companion object: KLogging()
+    companion object : KLogging()
 
     private lateinit var sut: ContainerHandler
     private var containerId: String? = null
@@ -50,7 +50,8 @@ internal class ContainerHandlerIT {
                         "metrics.sub_container_resource_interval_ms" to -1,
                         "metrics.sub_container_space_resource_interval_ms" to -1,
                         fullKey(KEY_SUBNODE_HOST) to System.getProperty("DOCKER_HOST_SUBNODE", dockerHost),
-                        fullKey(KEY_HOST_MOUNT_DIR) to (System.getenv("TEST_MOUNT_DIRECTORY") ?: tempDir.toAbsolutePath().toString()),
+                        fullKey(KEY_HOST_MOUNT_DIR) to (System.getenv("TEST_MOUNT_DIRECTORY")
+                                ?: tempDir.toAbsolutePath().toString()),
                 )
         )
         val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
@@ -91,8 +92,8 @@ internal class ContainerHandlerIT {
             logger.info("Collecting logs from container $it...")
 
             val logContainerCmd: LogContainerCmd = ContainerEnvironment.dockerClient.logContainerCmd(it)
-                .withStdOut(true)
-                .withStdErr(true)
+                    .withStdOut(true)
+                    .withStdErr(true)
 
             logContainerCmd.asyncExecAwaitMultiResponse { logEntry ->
                 logger.info("[Subnode] " + String(logEntry.payload).trim())

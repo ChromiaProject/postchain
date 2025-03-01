@@ -8,6 +8,7 @@ import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.core.BlockchainState
@@ -204,7 +205,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         if (res.isNull()) return null
 
         return MigratingBlockchainNodeInfo(
-                res["rid"]?.asByteArray()?.let { BlockchainRid(it) } ?: return null,
+                res["rid"]?.asByteArray()?.let { WrappedByteArray(it) } ?: return null,
                 res["source_container"]?.asString() ?: return null,
                 res["destination_container"]?.asString() ?: return null,
                 res["is_source_node"]?.asBoolean() ?: return null,
