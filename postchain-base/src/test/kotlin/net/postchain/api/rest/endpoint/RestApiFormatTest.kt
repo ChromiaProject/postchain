@@ -8,10 +8,13 @@ import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.model.TxRid
+import net.postchain.base.BaseBlockWitness
 import net.postchain.common.BlockchainRid
+import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
+import net.postchain.crypto.Signature
 import org.hamcrest.CoreMatchers.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
@@ -25,8 +28,16 @@ class RestApiFormatTest {
     private val basePath = "/api/v1"
     private lateinit var restApi: RestApi
     private lateinit var model: Model
-    private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
     private val compactGson = JsonFactory.makeJson()
+    private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
+    private val witness1 = "0320F0B9E7ECF1A1568C31644B04D37ADC05327F996B9F48220E301DC2FEE6F8FF".hexStringToByteArray()
+    private val witness2 = "0307C88BF37C528B14AF95E421749E72F6DA88790BCE74890BDF780D854D063C40".hexStringToByteArray()
+    private val signature1 = ByteArray(16) { 1 }
+    private val signature2 = ByteArray(16) { 2 }
+    private val witness = BaseBlockWitness.fromSignatures(arrayOf(
+            Signature(witness1, signature1),
+            Signature(witness2, signature2)
+    ))
 
     @BeforeEach
     fun setup() {
@@ -48,7 +59,7 @@ class RestApiFormatTest {
         val tx = "tx2".toByteArray()
         val txRID = cryptoSystem.digest(tx)
         val response = TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(),
-                "signatures".toByteArray(), 1574849940, txRID, "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), tx)
+                witness.getRawData(), 1574849940, txRID, "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), tx)
 
         whenever(
                 model.getTransactionInfo(TxRid(txRID), true)
