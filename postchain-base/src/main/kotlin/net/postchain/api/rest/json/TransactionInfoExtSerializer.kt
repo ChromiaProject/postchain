@@ -2,12 +2,14 @@
 
 package net.postchain.api.rest.json
 
+import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
+import net.postchain.base.BaseBlockWitness
 import net.postchain.common.toHex
 import net.postchain.core.TransactionInfoExt
 import net.postchain.gtv.makeStrictGtvGson
@@ -31,6 +33,14 @@ internal class TransactionInfoExtSerializer : JsonSerializer<TransactionInfoExt>
         json.add("blockHeight", JsonPrimitive(src.blockHeight))
         json.add("blockHeader", JsonPrimitive(src.blockHeader.toHex()))
         json.add("witness", JsonPrimitive(src.witness.toHex()))
+        val witnesses = JsonArray()
+        val witnessSignatures = JsonArray()
+        BaseBlockWitness.fromBytes(src.witness).getSignatures().forEach {
+            witnesses.add(it.subjectID.toHex())
+            witnessSignatures.add(it.data.toHex())
+        }
+        json.add("witnesses", witnesses)
+        json.add("witnessSignatures", witnessSignatures)
         json.add("timestamp", JsonPrimitive(src.timestamp))
         json.add("txRID", JsonPrimitive(src.txRID.toHex()))
         json.add("txHash", JsonPrimitive(src.txHash.toHex()))

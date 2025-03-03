@@ -46,10 +46,13 @@ internal class BlockDetailSerializer : JsonSerializer<BlockDetail> {
         json.add("transactions", transactions)
         json.add("witness", JsonPrimitive(src.witness.toHex()))
         val witnesses = JsonArray()
+        val witnessSignatures = JsonArray()
         BaseBlockWitness.fromBytes(src.witness).getSignatures().forEach {
             witnesses.add(it.subjectID.toHex())
+            witnessSignatures.add(it.data.toHex())
         }
         json.add("witnesses", witnesses)
+        json.add("witnessSignatures", witnessSignatures)
         json.add("timestamp", JsonPrimitive(src.timestamp))
         
         return json

@@ -26,6 +26,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.mapper.GtvObjectMapper
 import org.hamcrest.CoreMatchers.equalTo
+import org.hamcrest.CoreMatchers.hasItems
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -37,12 +38,16 @@ class RestApiGetBlockEndpointTest {
     private val basePath = "/api/v1"
     private lateinit var restApi: RestApi
     private lateinit var model: Model
+    private val gson = JsonFactory.makeJson()
     private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a1")
     private val blockchainRID2 = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
-    private val gson = JsonFactory.makeJson()
+    private val witness1 = "0320F0B9E7ECF1A1568C31644B04D37ADC05327F996B9F48220E301DC2FEE6F8FF".hexStringToByteArray()
+    private val witness2 = "0307C88BF37C528B14AF95E421749E72F6DA88790BCE74890BDF780D854D063C40".hexStringToByteArray()
+    private val signature1 = ByteArray(16) { 1 }
+    private val signature2 = ByteArray(16) { 2 }
     private val witness = BaseBlockWitness.fromSignatures(arrayOf(
-            Signature("0320F0B9E7ECF1A1568C31644B04D37ADC05327F996B9F48220E301DC2FEE6F8FF".hexStringToByteArray(), ByteArray(0)),
-            Signature("0307C88BF37C528B14AF95E421749E72F6DA88790BCE74890BDF780D854D063C40".hexStringToByteArray(), ByteArray(0))
+            Signature(witness1, signature1),
+            Signature(witness2, signature2)
     ))
     private val block = BlockDetail(
             "34ED10678AAE0414562340E8754A7CCD174B435B52C7F0A4E69470537AEE47E6".hexStringToByteArray(),
@@ -311,6 +316,9 @@ class RestApiGetBlockEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON)
                 .body("rid", equalTo(block.rid.toHex()))
+                .body("witness", equalTo(witness.getRawData().toHex()))
+                .body("witnesses", hasItems(witness1.toHex(), witness2.toHex()))
+                .body("witnessSignatures", hasItems(signature1.toHex(), signature2.toHex()))
     }
 
     @Test

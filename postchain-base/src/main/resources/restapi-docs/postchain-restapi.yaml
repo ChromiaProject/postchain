@@ -53,7 +53,7 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [TypeScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: "15"
+  version: "16"
 tags:
   - name: block
     description: Fetch block(s)
@@ -1498,6 +1498,8 @@ components:
         - blockHeight
         - blockHeader
         - witness
+        - witnesses
+        - witnessSignatures
         - timestamp
         - txRID
         - txHash
@@ -1510,7 +1512,19 @@ components:
         blockHeader:
           $ref: "#/components/schemas/hex"
         witness:
-          $ref: "#/components/schemas/hex"
+          type: string
+          pattern: "[0-9a-fA-F]{2,}"
+          description: Hex encoded raw witness data
+        witnesses:
+          type: array
+          description: Public key of nodes who are witnesses to this block
+          items:
+            $ref: "#/components/schemas/hex"
+        witnessSignatures:
+          type: array
+          description: Signatures of nodes who are witnesses to this block
+          items:
+            $ref: "#/components/schemas/hex"
         timestamp:
           $ref: "#/components/schemas/timestamp"
         txRID:
@@ -1578,6 +1592,7 @@ components:
         - transactions
         - witness
         - witnesses
+        - witnessSignatures
         - timestamp
       properties:
         rid:
@@ -1604,10 +1619,17 @@ components:
               data:
                 $ref: "#/components/schemas/hex"
         witness:
-          $ref: "#/components/schemas/hex"
+          type: string
+          pattern: "[0-9a-fA-F]{2,}"
+          description: Hex encoded raw witness data
         witnesses:
           type: array
           description: Public key of nodes who are witnesses to this block
+          items:
+            $ref: "#/components/schemas/hex"
+        witnessSignatures:
+          type: array
+          description: Signatures of nodes who are witnesses to this block
           items:
             $ref: "#/components/schemas/hex"
         timestamp:
@@ -1694,7 +1716,7 @@ components:
       description: Hex encoded hash
     hex:
       type: string
-      pattern: "[0-9a-fA-F]"
+      pattern: "[0-9a-fA-F]{0,}"
       description: Hex encoded data
     height:
       type: integer
