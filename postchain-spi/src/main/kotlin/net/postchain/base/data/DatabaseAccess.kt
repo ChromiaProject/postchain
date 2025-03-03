@@ -85,8 +85,8 @@ interface DatabaseAccess {
     fun removeBlockchainFromMustSyncUntil(ctx: EContext): Boolean
     fun getBlockchainTables(ctx: EContext): List<String>
     fun getChainId(ctx: AppContext, blockchainRid: BlockchainRid): Long?
-    fun getLastSystemChainId(ctx: EContext): Long
-    fun getLastChainId(ctx: EContext): Long
+    fun getLastSystemChainId(ctx: AppContext): Long
+    fun getLastChainId(ctx: AppContext): Long
     fun setLastChainId(ctx: EContext)
 
     fun getBlockchainRid(ctx: EContext): BlockchainRid?

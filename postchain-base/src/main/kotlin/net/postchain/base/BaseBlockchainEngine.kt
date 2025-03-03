@@ -64,7 +64,7 @@ open class BaseBlockchainEngine(
         final override val blockBuilderStorage: Storage,
         final override val sharedStorage: Storage,
         override val chainID: Long,
-        initialEContext: EContext,
+        private val initialEContext: EContext,
         private val blockchainConfigurationProvider: BlockchainConfigurationProvider,
         private val restartNotifier: BlockchainRestartNotifier,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
@@ -86,15 +86,25 @@ open class BaseBlockchainEngine(
     private var hasBuiltFirstBlockAfterConfigUpdate = false
 
     init {
-        hasBuiltFirstBlockAfterConfigUpdate = withReadConnection(blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
+        val ctx = if (initialEContext.conn.isClosed)
+            blockBuilderStorage.openReadConnection(blockchainConfiguration.chainID)
+        else blockBuilderStorage.claimSharedContext(initialEContext)
+
+        try {
             val db = DatabaseAccess.of(ctx)
             val configIsSaved = db.configurationHashExists(ctx, blockchainConfiguration.configHash)
-            if (!configIsSaved) {
+            hasBuiltFirstBlockAfterConfigUpdate = if (!configIsSaved) {
                 false
             } else {
                 val activeHeight = db.getLastBlockHeight(ctx) + 1
                 val configHeight = db.findConfigurationHeightForBlock(ctx, activeHeight) ?: 0
                 activeHeight > configHeight
+            }
+        } finally {
+            if (ctx.id == initialEContext.id) {
+                blockBuilderStorage.releaseSharedContext(ctx)
+            } else {
+                blockBuilderStorage.closeReadConnection(ctx)
             }
         }
     }
@@ -129,23 +139,19 @@ open class BaseBlockchainEngine(
         blockchainConfiguration.shutdownModules()
         blockQueries.shutdown()
         if (!currentEContext.conn.isClosed) {
+            // We don't need to claim connection here. Any thread working on this should have been asked to terminate.
+            // Waiting for connection to be released could in worst case lead to deadlock.
             blockBuilderStorage.closeWriteConnection(currentEContext, false)
         }
         transactionQueue.close()
         metrics.close()
     }
 
-    private fun makeBlockBuilder(isSyncing: Boolean): BaseManagedBlockBuilder {
-        if (closed) throw PmEngineIsAlreadyClosed("Engine is already closed")
-        currentEContext = if (currentEContext.conn.isClosed) {
-            blockBuilderStorage.openWriteConnection(chainID)
-        } else {
-            currentEContext
-        }
-        val savepoint = currentEContext.conn.setSavepoint("blockBuilder${nanoTime()}")
+    private fun makeBlockBuilder(ctx: EContext, isSyncing: Boolean): BaseManagedBlockBuilder {
+        val savepoint = ctx.conn.setSavepoint("blockBuilder${nanoTime()}")
 
-        return baseManagedBlockBuilderProvider(currentEContext, savepoint, blockBuilderStorage,
-                blockchainConfiguration.makeBlockBuilder(currentEContext, isSyncing),
+        return baseManagedBlockBuilderProvider(ctx, savepoint, blockBuilderStorage,
+                blockchainConfiguration.makeBlockBuilder(ctx, isSyncing),
                 {
                     val blockBuilder = it as AbstractBlockBuilder
                     beforeCommitHandler(blockBuilder.getBTrace(), blockBuilder.bctx)
@@ -205,100 +211,104 @@ open class BaseBlockchainEngine(
     ): Pair<ManagedBlockBuilder, Exception?> {
         if (hasMismatchingConfiguration(block.header)) throw ConfigurationMismatchException("")
 
-        val grossStart = nanoTime()
-        val blockBuilder = makeBlockBuilder(isSyncing)
-        var exception: Exception? = null
+        return withDBConnection { ctx ->
+            val grossStart = nanoTime()
+            val blockBuilder = makeBlockBuilder(ctx, isSyncing)
+            var exception: Exception? = null
 
-        try {
-            loadLog("Start", blockBuilder.getBTrace())
-            if (logger.isTraceEnabled) {
-                blockBuilder.setBTrace(getBlockTrace(block.header))
-            }
-            blockBuilder.begin(block.header)
-
-            val decodedTxs = transactionsDecoder(block.transactions)
-            var netStart = -1L
-            var netEnd = -1L
-            var numberOfTxs = 0
-            decodedTxs.forEach { tx ->
-                if (!tx.isSpecial()) {
-                    numberOfTxs++
-                    // First non-special tx, start timer
-                    if (netStart == -1L) netStart = nanoTime()
-                } else if (netStart != -1L) {
-                    // End special tx, stop timer
-                    netEnd = nanoTime()
-                }
-                blockBuilder.appendTransaction(tx)
-            }
-            if (netStart == -1L) netStart = nanoTime()
-            if (netEnd == -1L) netEnd = nanoTime()
-
-            blockBuilder.finalizeAndValidate(block.header)
-            val grossEnd = nanoTime()
-
-            val prettyBlockHeader = prettyBlockHeader(
-                    block.header, numberOfTxs, 0, grossStart to grossEnd, netStart to netEnd, 0
-            )
-            logger.info("Loaded block: $prettyBlockHeader")
-        } catch (e: Exception) {
             try {
-                blockBuilder.rollback()
-            } catch (ignore: Exception) {
-            }
-            nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(
-                    ErrorDiagnosticValue(
-                            e.message ?: "Failed to load unfinished block",
-                            System.currentTimeMillis(),
-                            blockBuilder.height
-                    )
-            )
-            exception = e
-        }
+                loadLog("Start", blockBuilder.getBTrace())
+                if (logger.isTraceEnabled) {
+                    blockBuilder.setBTrace(getBlockTrace(block.header))
+                }
+                blockBuilder.begin(block.header)
 
-        return blockBuilder to exception
+                val decodedTxs = transactionsDecoder(block.transactions)
+                var netStart = -1L
+                var netEnd = -1L
+                var numberOfTxs = 0
+                decodedTxs.forEach { tx ->
+                    if (!tx.isSpecial()) {
+                        numberOfTxs++
+                        // First non-special tx, start timer
+                        if (netStart == -1L) netStart = nanoTime()
+                    } else if (netStart != -1L) {
+                        // End special tx, stop timer
+                        netEnd = nanoTime()
+                    }
+                    blockBuilder.appendTransaction(tx)
+                }
+                if (netStart == -1L) netStart = nanoTime()
+                if (netEnd == -1L) netEnd = nanoTime()
+
+                blockBuilder.finalizeAndValidate(block.header)
+                val grossEnd = nanoTime()
+
+                val prettyBlockHeader = prettyBlockHeader(
+                        block.header, numberOfTxs, 0, grossStart to grossEnd, netStart to netEnd, 0
+                )
+                logger.info("Loaded block: $prettyBlockHeader")
+            } catch (e: Exception) {
+                try {
+                    blockBuilder.rollback()
+                } catch (ignore: Exception) {
+                }
+                nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(
+                        ErrorDiagnosticValue(
+                                e.message ?: "Failed to load unfinished block",
+                                System.currentTimeMillis(),
+                                blockBuilder.height
+                        )
+                )
+                exception = e
+            }
+
+            blockBuilder to exception
+        }
     }
 
     override fun buildBlock(maxBuildTimeMs: Long): Pair<ManagedBlockBuilder, Exception?> {
         buildLog("Begin")
         val grossStart = nanoTime()
 
-        val blockBuilder = makeBlockBuilder(false)
-        var exception: Exception? = null
+        return withDBConnection { ctx ->
+            val blockBuilder = makeBlockBuilder(ctx, false)
+            var exception: Exception? = null
 
-        try {
-            buildBlockInternal(blockBuilder, grossStart, maxBuildTimeMs)
-        } catch (e: Exception) {
             try {
-                blockBuilder.rollback()
-            } catch (ignore: Exception) {
-            }
-            if (e !is ForceStopBlockBuildingException) {
+                buildBlockInternal(blockBuilder, grossStart, maxBuildTimeMs)
+            } catch (e: Exception) {
                 try {
-                    if (hasBuiltInitialBlock() && e is FaultyExtensionException) {
-                        if (!hasBuiltFirstBlockAfterConfigUpdate) {
-                            revertConfiguration(blockBuilder.height, blockchainConfiguration.configHash, e.cause?.message ?: e.message)
-                        } else {
-                            // See if we have a configuration update that potentially can fix our block building issues
-                            checkForNewConfiguration()
-                        }
-                    }
-                } catch (e: Exception) {
-                    logger.warn(e) { "Unable to revert configuration: $e" }
+                    blockBuilder.rollback()
+                } catch (ignore: Exception) {
                 }
-                nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(
-                        ErrorDiagnosticValue(
-                                e.message ?: "Failed to build block",
-                                System.currentTimeMillis(),
-                                blockBuilder.height)
-                )
+                if (e !is ForceStopBlockBuildingException) {
+                    try {
+                        if (hasBuiltInitialBlock() && e is FaultyExtensionException) {
+                            if (!hasBuiltFirstBlockAfterConfigUpdate) {
+                                revertConfiguration(blockBuilder.height, blockchainConfiguration.configHash, e.cause?.message ?: e.message)
+                            } else {
+                                // See if we have a configuration update that potentially can fix our block building issues
+                                checkForNewConfiguration()
+                            }
+                        }
+                    } catch (e: Exception) {
+                        logger.warn(e) { "Unable to revert configuration: $e" }
+                    }
+                    nodeDiagnosticContext.blockchainErrorQueue(blockchainConfiguration.blockchainRid).add(
+                            ErrorDiagnosticValue(
+                                    e.message ?: "Failed to build block",
+                                    System.currentTimeMillis(),
+                                    blockBuilder.height)
+                    )
+                }
+
+                exception = e
             }
+            buildLog("End")
 
-            exception = e
+            blockBuilder to exception
         }
-        buildLog("End")
-
-        return blockBuilder to exception
     }
 
     private fun hasMismatchingConfiguration(blockHeader: BlockHeader) =
@@ -430,6 +440,25 @@ open class BaseBlockchainEngine(
 
         restartNotifier.notifyRestart(false)
         closed = true
+    }
+
+    private fun <RT> withDBConnection(op: (EContext) -> RT): RT {
+        if (closed) throw PmEngineIsAlreadyClosed("Engine is already closed")
+        currentEContext = if (currentEContext.conn.isClosed) {
+            blockBuilderStorage.openWriteConnection(chainID)
+        } else {
+            if (currentEContext.id == initialEContext.id) {
+                blockBuilderStorage.claimSharedContext(currentEContext)
+            }
+            currentEContext
+        }
+        return try {
+            op(currentEContext)
+        } finally {
+            if (currentEContext.id == initialEContext.id) {
+                blockBuilderStorage.releaseSharedContext(currentEContext)
+            }
+        }
     }
 
     // -----------------

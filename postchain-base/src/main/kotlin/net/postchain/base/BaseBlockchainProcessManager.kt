@@ -184,11 +184,14 @@ open class BaseBlockchainProcessManager(
                         // Initial configuration will be committed immediately
                         if (DatabaseAccess.of(initialEContext).getLastBlockHeight(initialEContext) == -1L) {
                             blockBuilderStorage.closeWriteConnection(initialEContext, true)
+                        } else {
+                            blockBuilderStorage.createSharedContext(initialEContext)
                         }
                         afterMakeConfiguration(chainId, blockchainConfig)
                         withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainConfig.blockchainRid.toHex()) {
                             startBlockchainImpl(blockchainConfig, chainId, bTrace, initialEContext)
                         }
+                        if (!initialEContext.conn.isClosed) blockBuilderStorage.releaseSharedContext(initialEContext)
                         blockchainConfig.blockchainRid
                     } catch (e: Exception) {
                         var eContext: EContext? = null

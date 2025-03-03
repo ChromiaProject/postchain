@@ -71,6 +71,7 @@ class GTXBlockchainConfigurationTest {
             override val chainID: Long = 1L
             override val conn: Connection
                 get() = throw NotImplementedError()
+            override val id: String = "1"
         })
 
         return GTXBlockchainConfiguration(

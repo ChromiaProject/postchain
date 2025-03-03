@@ -12,6 +12,8 @@ import net.postchain.core.EContext
 import net.postchain.core.Storage
 import java.sql.Connection
 import java.sql.SQLException
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.locks.ReentrantLock
 import javax.sql.DataSource
 import kotlin.system.exitProcess
 
@@ -25,14 +27,13 @@ class BaseStorage(
 ) : Storage {
 
     private val cachedConnection = ThreadLocal<CachedConnection>()
+    private val openChainWriteConnections = ThreadLocal.withInitial { mutableMapOf<Long, EContext>() }
+    private val sharedChainWriteConnections = ConcurrentHashMap<String, ReentrantLock>()
 
     companion object : KLogging()
 
     override fun openReadConnection(): AppContext {
-        val connection = cachedConnection.get()?.let {
-            it.refCount++
-            it.connection
-        } ?: getAndCacheNewReadConnection()
+        val connection = getReadConnection()
 
         val context = buildAppContext(connection)
         if (!context.conn.isReadOnly) {
@@ -60,10 +61,7 @@ class BaseStorage(
     }
 
     override fun openReadConnection(chainID: Long): EContext {
-        val connection = cachedConnection.get()?.let {
-            it.refCount++
-            it.connection
-        } ?: getAndCacheNewReadConnection()
+        val connection = getReadConnection()
 
         val context = buildEContext(chainID, connection)
         if (!context.conn.isReadOnly) {
@@ -77,11 +75,20 @@ class BaseStorage(
     }
 
     override fun openWriteConnection(chainID: Long): EContext {
-        return buildEContext(chainID, writeDataSource.connection)
+        return buildEContext(chainID, writeDataSource.connection).also {
+            openChainWriteConnections.get()[chainID] = it
+        }
     }
 
     override fun closeWriteConnection(context: EContext, commit: Boolean) {
-        closeWriteConnection(context.conn, commit)
+        openChainWriteConnections.get().remove(context.chainID)
+        try {
+            closeWriteConnection(context.conn, commit)
+        } finally {
+            sharedChainWriteConnections.remove(context.id)?.let {
+                if (it.isHeldByCurrentThread) it.unlock()
+            }
+        }
     }
 
     override fun isSavepointSupported(): Boolean = savepointSupport
@@ -102,6 +109,27 @@ class BaseStorage(
 
         return exception
     }
+
+    override fun createSharedContext(eContext: EContext) {
+        sharedChainWriteConnections[eContext.id] = ReentrantLock().also { it.lock() }
+    }
+
+    override fun releaseSharedContext(eContext: EContext) {
+        val lock = sharedChainWriteConnections[eContext.id]
+                ?: throw ProgrammerMistake("This context is not shared. Call createSharedContext first.")
+        lock.unlock()
+        // Did we release the connection completely?
+        if (!lock.isHeldByCurrentThread) openChainWriteConnections.get().remove(eContext.chainID)
+    }
+
+    override fun claimSharedContext(eContext: EContext): EContext {
+        val lock = sharedChainWriteConnections[eContext.id] ?: throw ProgrammerMistake("This context is not shared")
+        lock.lock()
+        openChainWriteConnections.get()[eContext.chainID] = eContext
+        return eContext
+    }
+
+    override fun getExistingWriteContext(chainID: Long): EContext? = openChainWriteConnections.get()[chainID]
 
     override fun close() {
         try {
@@ -162,4 +190,12 @@ class BaseStorage(
 
     private fun buildEContext(chainID: Long, connection: Connection): EContext =
             BaseEContext(connection, chainID, db)
+
+    private fun getReadConnection(): Connection {
+        val connection = cachedConnection.get()?.let {
+            it.refCount++
+            it.connection
+        } ?: getAndCacheNewReadConnection()
+        return connection
+    }
 }

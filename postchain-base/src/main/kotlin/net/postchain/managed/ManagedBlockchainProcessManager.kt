@@ -414,16 +414,16 @@ open class ManagedBlockchainProcessManager(
         // chain-zero is always in the list
         val blockchains = mutableSetOf(LocalBlockchainInfo(CHAIN0, true, BlockchainState.RUNNING))
 
-        withWriteConnection(blockBuilderStorage, 0) { ctx0 ->
-            val db = DatabaseAccess.of(ctx0)
+        blockBuilderStorage.withWriteConnection { appCtx ->
+            val db = DatabaseAccess.of(appCtx)
             val domainBlockchains = dataSource.computeBlockchainInfoList().distinctBy { it.blockchainRid }
             val all = domainBlockchains.union(locallyConfiguredBlockchainsToReplicate())
             all.forEach { blockchainInfo ->
-                val chainId = db.getChainId(ctx0, blockchainInfo.blockchainRid)
+                val chainId = db.getChainId(appCtx, blockchainInfo.blockchainRid)
                 retrieveTrace("launch chainIid: $chainId, BC RID: ${blockchainInfo.blockchainRid.toShortHex()} ")
                 val localBlockchainInfo = if (chainId == null) {
                     val newChainId = if (blockchainInfo.system) {
-                        val newChainId = db.getLastSystemChainId(ctx0) + 1
+                        val newChainId = db.getLastSystemChainId(appCtx) + 1
                         if (newChainId == 100L) {
                             logger.error { "Can't create a system chain ${blockchainInfo.blockchainRid}. Max system chain IID exceeded." }
                             return@forEach
@@ -433,7 +433,7 @@ open class ManagedBlockchainProcessManager(
                         }
                         newChainId
                     } else {
-                        val newChainId = max(db.getLastChainId(ctx0), 99) + 1
+                        val newChainId = max(db.getLastChainId(appCtx), 99) + 1
                         withReadWriteConnection(blockBuilderStorage, newChainId) { newCtx ->
                             db.initializeBlockchain(newCtx, blockchainInfo.blockchainRid)
                             db.setLastChainId(newCtx)
