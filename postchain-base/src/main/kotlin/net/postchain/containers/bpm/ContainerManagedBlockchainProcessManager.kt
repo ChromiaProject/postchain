@@ -10,6 +10,7 @@ import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
@@ -69,7 +70,7 @@ class ContainerManagedBlockchainProcessManager(
             containerNodeConfig, containerJobHandler, containerHealthcheckHandler, ::housekeepingHandler)
     private val runningInContainer = System.getenv("POSTCHAIN_RUNNING_IN_CONTAINER").toBoolean()
     private val blockchainReplicators: MutableMap<Long, BlockchainReplicator> = mutableMapOf()
-    private val completedReplications: MutableMap<BlockchainRid, Pair<Chain, Chain>> = mutableMapOf()
+    private val completedReplications: MutableMap<WrappedByteArray, Pair<Chain, Chain>> = mutableMapOf()
 
     private val metrics = ContainerMetrics(this)
 
@@ -216,13 +217,13 @@ class ContainerManagedBlockchainProcessManager(
                         val dstChain = chains.firstOrNull { it.containerName.directoryContainer == info.destinationContainer }
                         if (srcChain != null && dstChain != null) {
                             // If replication is completed, start only dst chain, otherwise start both chain and replication
-                            if (completedReplications[info.blockchainRid]?.first == srcChain) {
+                            if (completedReplications[info.migrationRid]?.first == srcChain) {
                                 startSubnodeChains(bcInfo, listOf(dstChain), subnodeLaunched[chains.first().chainId])
                             } else {
                                 startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
                                 blockchainReplicators.getOrPut(chain.chainId) {
-                                    BlockchainReplicator(info.blockchainRid, srcChain, dstChain, info.finalHeight, directoryDataSource, ::findPostchainContainer).also {
-                                        logger.debug { "BlockchainReplicator started: brid: ${info.blockchainRid}, srcChain: $srcChain, dstChain: $dstChain" }
+                                    BlockchainReplicator(info.migrationRid, srcChain, dstChain, info.finalHeight, directoryDataSource, ::findPostchainContainer).also {
+                                        logger.info { "Blockchain replication started: migrationRid: ${info.migrationRid}, srcChain: $srcChain, dstChain: $dstChain" }
                                     }
                                 }
                             }
@@ -243,7 +244,7 @@ class ContainerManagedBlockchainProcessManager(
                 containerJobManager.stopChain(replicator.srcChain)
                 // Once dst chain is stopped, it will be restarted by the managed system
                 containerJobManager.stopChain(replicator.dstChain)
-                completedReplications[replicator.blockchainRid] = replicator.srcChain to replicator.dstChain
+                completedReplications[replicator.migrationRid] = replicator.srcChain to replicator.dstChain
             } else if (replicator.upToHeight == -1L) {
                 val info = directoryDataSource.getMigratingBlockchainNodeInfo(replicator.srcChain.brid)
                 if (info != null && info.finalHeight != -1L) {

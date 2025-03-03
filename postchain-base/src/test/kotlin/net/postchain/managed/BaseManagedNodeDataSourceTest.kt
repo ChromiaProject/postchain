@@ -359,7 +359,7 @@ class BaseManagedNodeDataSourceTest {
                                     "final_height" to gtv(100)
                             )),
                             MigratingBlockchainNodeInfo(
-                                    ZERO_RID,
+                                    ZERO_RID.wData,
                                     "src",
                                     "dst",
                                     isSourceNode = false,
@@ -376,7 +376,7 @@ class BaseManagedNodeDataSourceTest {
                                     "final_height" to gtv(100)
                             )),
                             MigratingBlockchainNodeInfo(
-                                    ZERO_RID,
+                                    ZERO_RID.wData,
                                     "src",
                                     "dst",
                                     isSourceNode = true,

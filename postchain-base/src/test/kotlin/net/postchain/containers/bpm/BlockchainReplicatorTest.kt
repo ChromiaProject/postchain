@@ -14,6 +14,7 @@ import org.mockito.Mockito.verify
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 
@@ -26,9 +27,9 @@ class BlockchainReplicatorTest {
     @BeforeEach
     fun setup() {
         blockchainReplicator = BlockchainReplicator(
-                BlockchainRid.ZERO_RID,
-                mock(Chain::class.java),
-                mock(Chain::class.java),
+                BlockchainRid.ZERO_RID.wData,
+                mock { on { brid } doReturn BlockchainRid.ZERO_RID },
+                mock { on { brid } doReturn BlockchainRid.ZERO_RID },
                 0L,
                 mock(DirectoryDataSource::class.java)
         ) { null }
