@@ -3,13 +3,11 @@ package net.postchain.managed.query
 import mu.KLogging
 import net.postchain.config.app.AppConfig
 import net.postchain.core.EContext
-import net.postchain.core.Storage
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GTXBlockchainConfiguration
 
 open class GtxModuleQueryRunner(val configuration: GTXBlockchainConfiguration,
                                 val appConfig: AppConfig,
-                                val storage: Storage,
                                 private val connectionProvider: ((EContext) -> Gtv) -> Gtv
 ) : QueryRunner {
 
