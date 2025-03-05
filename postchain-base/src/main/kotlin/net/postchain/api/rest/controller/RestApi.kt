@@ -799,7 +799,7 @@ class RestApi(
         return when (error) {
             is NotFoundError -> {
                 logger.info { "Not found: ${error.message}" }
-                transformErrorResponseFromDiagnostics(request, NOT_FOUND, error)
+                errorResponse(request, NOT_FOUND, error.message!!)
             }
 
             is IllegalArgumentException -> {
@@ -837,14 +837,14 @@ class RestApi(
                 errorResponse(request, FORBIDDEN, error.message!!)
             }
 
-            is UnavailableException -> {
-                logger.info { "Unavailable: ${error.message}" }
-                transformErrorResponseFromDiagnostics(request, SERVICE_UNAVAILABLE, error)
-            }
-
             is PmEngineIsAlreadyClosed -> {
                 logger.info { "Engine is closed: ${error.message}" }
                 errorResponse(request, SERVICE_UNAVAILABLE, error.message!!)
+            }
+
+            is UnavailableException -> {
+                logger.info { "Unavailable: ${error.message}" }
+                transformErrorResponseFromDiagnostics(request, SERVICE_UNAVAILABLE, error)
             }
 
             else -> {
