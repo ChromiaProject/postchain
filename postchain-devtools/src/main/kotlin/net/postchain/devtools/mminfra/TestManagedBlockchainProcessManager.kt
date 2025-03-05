@@ -87,12 +87,15 @@ open class TestManagedBlockchainProcessManager(
      * Every time this method runs the [lastHeightStarted] gets updated with the restart height.)
      */
     override fun afterStartBlockchain(chainId: Long) {
+        super.afterStartBlockchain(chainId)
         val process = blockchainProcesses[chainId]!!
         val queries = process.blockchainEngine.getBlockQueries()
         val height = queries.getLastBlockHeight().get()
         lastHeightStarted[chainId] = height
         lastConfigStarted[chainId] = process.blockchainEngine.getConfiguration().configHash
     }
+
+    override fun makeBlockQueryDataSource(): ManagedNodeDataSource = testDataSource
 
     /**
      * Awaits a start/restart of a BC.

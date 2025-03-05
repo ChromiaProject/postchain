@@ -22,26 +22,28 @@ import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.core.block.BlockStore
 import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.core.block.SimpleBlockHeader
-import net.postchain.crypto.Digester
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
 import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import java.sql.SQLException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionStage
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.locks.Condition
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
+
 
 /**
  * A collection of methods for various blockchain-related queries. Each query is called with the wrapping method [runOp]
  * which will handle connections and logging.
  *
- * @param digester Digester
  * @param storage Connection manager
  * @param blockStore Blockchain storage facilitator
  * @param chainId Blockchain identifier
  * @param mySubjectId Public key related to the private key used for signing blocks
  */
 abstract class BaseBlockQueries(
-        digester: Digester,
         private val storage: Storage,
         val blockStore: BlockStore,
         private val chainId: Long,
@@ -53,13 +55,30 @@ abstract class BaseBlockQueries(
     @Volatile
     private var isShutdown: Boolean = false
 
-    protected fun <T> runOp(operation: (EContext) -> T): CompletionStage<T> = runOpInternal(operation, true)
+    private var activeExecutions: Int = 0
+    private val lock = ReentrantLock()
+    private val shutdownComplete: Condition = lock.newCondition()
 
-    private fun <T> runOpRegardless(operation: (EContext) -> T): CompletionStage<T> = runOpInternal(operation, false)
+    protected fun <T> runOp(operation: (EContext) -> T): CompletionStage<T> {
+        lock.withLock {
+            if (isShutdown) return CompletableFuture.failedStage(PmEngineIsAlreadyClosed("Engine is closed"))
+            activeExecutions++
+        }
 
-    private fun <T> runOpInternal(operation: (EContext) -> T, checkShutdown: Boolean): CompletionStage<T> {
-        if (checkShutdown && isShutdown) return CompletableFuture.failedStage(PmEngineIsAlreadyClosed("Engine is closed"))
+        return try {
+            runOpInternal(operation)
+        } finally {
+            lock.withLock {
+                if (--activeExecutions == 0 && isShutdown) {
+                    shutdownComplete.signalAll()
+                }
+            }
+        }
+    }
 
+    private fun <T> runOpRegardless(operation: (EContext) -> T): CompletionStage<T> = runOpInternal(operation)
+
+    private fun <T> runOpInternal(operation: (EContext) -> T): CompletionStage<T> {
         val ctx = try {
             storage.openReadConnection(chainId)
         } catch (e: SQLException) {
@@ -208,7 +227,17 @@ abstract class BaseBlockQueries(
             }
 
     override fun shutdown() {
-        isShutdown = true
+        logger.debug { "Shutting down block queries" }
+        lock.withLock {
+            isShutdown = true
+            if (activeExecutions > 0) {
+                logger.debug { "Waiting for $activeExecutions queries to complete..." }
+                if (!shutdownComplete.await(2, TimeUnit.SECONDS)) {
+                    logger.warn("Waiting for block query shutdown timed out. Shutting down with $activeExecutions non-completed queries.")
+                }
+            }
+        }
+        logger.debug { "Block queries shutdown complete" }
     }
 
     protected abstract fun decodeBlockHeader(headerData: ByteArray): BaseBlockHeader

@@ -102,8 +102,8 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         }
     }
 
-    fun getMigratingBlockchainNodeInfo(blockchainRid: BlockchainRid): MigratingBlockchainNodeInfo? {
-        return if (::dataSource.isInitialized) dataSource.getMigratingBlockchainNodeInfo(blockchainRid) else null
+    fun getMigratingBlockchainNodeInfo(chainId: Long, blockchainRid: BlockchainRid): MigratingBlockchainNodeInfo? {
+        return if (chainId != 0L && ::dataSource.isInitialized) dataSource.getMigratingBlockchainNodeInfo(blockchainRid) else null
     }
 
     // --------- Private --------

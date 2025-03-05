@@ -12,8 +12,10 @@ import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
+import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.ManagedNodeConfig
 import net.postchain.config.node.ManagedNodeConfigurationProvider
@@ -26,6 +28,7 @@ import net.postchain.core.BlockchainInfrastructure
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManagerExtension
 import net.postchain.core.BlockchainState
+import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
@@ -88,6 +91,7 @@ open class ManagedBlockchainProcessManager(
 ) {
 
     protected open lateinit var dataSource: ManagedNodeDataSource
+    protected open lateinit var chain0BlockQueries: BlockQueries
     protected val blockchainPruningExecutor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
 
     @Volatile
@@ -100,13 +104,15 @@ open class ManagedBlockchainProcessManager(
                 ::pruneRemovedBlockchains, appConfig.housekeepingIntervalMs, appConfig.housekeepingIntervalMs, TimeUnit.MILLISECONDS)
     }
 
-    protected open fun initManagedEnvironment(dataSource: ManagedNodeDataSource) {
-        this.dataSource = dataSource
-
+    protected open fun initNodeConfigProvider(dataSource: ManagedNodeDataSource) {
         // Setting up managed data source to the nodeConfig
         (postchainContext.nodeConfigProvider as? ManagedNodeConfigurationProvider)
                 ?.setPeerInfoDataSource(dataSource)
                 ?: logger.warn { "Node config is not managed, no peer info updates possible" }
+    }
+
+    protected open fun initManagedEnvironment(dataSource: ManagedNodeDataSource) {
+        this.dataSource = dataSource
 
         // Setting up managed data source to the blockchainConfig
         (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
@@ -116,9 +122,23 @@ open class ManagedBlockchainProcessManager(
 
     override fun afterMakeConfiguration(chainId: Long, blockchainConfig: BlockchainConfiguration) {
         if (chainId == CHAIN0 && blockchainConfig is ManagedDataSourceAware) {
-            initManagedEnvironment(blockchainConfig.dataSource)
+            initNodeConfigProvider(blockchainConfig.dataSource)
         }
     }
+
+    override fun afterStartBlockchain(chainId: Long) {
+        if (chainId == 0L) {
+            chain0BlockQueries = blockchainProcesses[chainId]?.blockchainEngine?.getBlockQueries()
+                    ?: throw ProgrammerMistake("Chain 0 was reported started but process is not registered")
+            if (!::dataSource.isInitialized) {
+                initManagedEnvironment(makeBlockQueryDataSource())
+            }
+        }
+    }
+
+    protected open fun makeBlockQueryDataSource(): ManagedNodeDataSource = BaseManagedNodeDataSource({ name, args ->
+        chain0BlockQueries.query(name, args).get()
+    }, postchainContext.appConfig)
 
     override fun getBlockchainConfigurationFactory(chainId: Long): BlockchainConfigurationFactorySupplier =
             BlockchainConfigurationFactorySupplier { factoryName: String ->
