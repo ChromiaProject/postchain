@@ -35,7 +35,9 @@ class SubNodeBlockchainProcessManager(
             ).toCompletableFuture().get()
         }
 
-        initManagedEnvironment(BaseManagedNodeDataSource(queryRunner, postchainContext.appConfig))
+        val masterDataSource = BaseManagedNodeDataSource(queryRunner, postchainContext.appConfig)
+        initNodeConfigProvider(masterDataSource)
+        initManagedEnvironment(masterDataSource)
     }
 
     override fun createAndRegisterBlockchainProcess(

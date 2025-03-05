@@ -15,7 +15,7 @@ class GTXBlockQueries(private val blockchainConfiguration: GTXBlockchainConfigur
                       chainId: Long,
                       mySubjectId: ByteArray,
                       private val module: GTXModule
-) : BaseBlockQueries(blockchainConfiguration.cryptoSystem, storage, blockStore, chainId, mySubjectId) {
+) : BaseBlockQueries(storage, blockStore, chainId, mySubjectId) {
 
     override fun query(name: String, args: Gtv): CompletionStage<Gtv> = runOp {
         module.query(it, name, args)

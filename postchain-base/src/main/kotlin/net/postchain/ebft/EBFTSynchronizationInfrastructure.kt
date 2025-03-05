@@ -135,7 +135,7 @@ open class EBFTSynchronizationInfrastructure(
                     4. Goto 2
         */
         val migratingInfo = (blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider)
-                ?.getMigratingBlockchainNodeInfo(blockchainConfig.blockchainRid)
+                ?.getMigratingBlockchainNodeInfo(blockchainConfig.chainID, blockchainConfig.blockchainRid)
         return when {
             forceReadOnly -> ForceReadOnlyBlockchainProcess(workerContext, blockchainState)
 
@@ -211,7 +211,7 @@ open class EBFTSynchronizationInfrastructure(
             iAmASigner: Boolean
     ): BlockchainProcess {
         val bcInfo = (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
-                ?.getMigratingBlockchainNodeInfo(blockchainConfig.blockchainRid)
+                ?.getMigratingBlockchainNodeInfo(blockchainConfig.chainID, blockchainConfig.blockchainRid)
         return when {
             bcInfo != null && bcInfo.isSourceNode && !bcInfo.isDestinationNode -> ForceReadOnlyBlockchainProcess(
                     workerContext, blockchainState, bcInfo.finalHeight)

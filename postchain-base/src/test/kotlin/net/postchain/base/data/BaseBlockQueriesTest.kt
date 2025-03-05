@@ -2,6 +2,7 @@ package net.postchain.base.data
 
 import assertk.assertThat
 import assertk.assertions.containsExactly
+import assertk.assertions.isBetween
 import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
@@ -12,11 +13,23 @@ import net.postchain.base.TestBlockchainBuilder
 import net.postchain.common.hexStringToByteArray
 import net.postchain.concurrent.util.get
 import net.postchain.config.app.AppConfig
+import net.postchain.core.Storage
 import net.postchain.core.TxDetail
 import net.postchain.core.block.BlockQueryHeightFilter
 import net.postchain.core.block.BlockQueryTimeFilter
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvString
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtx.GTXBlockQueries
+import net.postchain.gtx.GTXModule
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.any
+import org.mockito.kotlin.doReturn
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import kotlin.system.measureTimeMillis
 
 class BaseBlockQueriesTest {
 
@@ -34,7 +47,6 @@ class BaseBlockQueriesTest {
                     blockChainBuilder.buildBlockchain(listOf(0L to configData0, 2L to configData2), 4)
 
                     val baseBlockQueries = TestBlockQueries(
-                            blockChainBuilder.cryptoSystem,
                             storage,
                             BaseBlockStore(),
                             blockChainBuilder.chainId,
@@ -66,7 +78,6 @@ class BaseBlockQueriesTest {
                     ))
 
                     val baseBlockQueries = TestBlockQueries(
-                            blockChainBuilder.cryptoSystem,
                             storage,
                             BaseBlockStore(),
                             blockChainBuilder.chainId,
@@ -98,7 +109,6 @@ class BaseBlockQueriesTest {
                     ))
 
                     val baseBlockQueries = TestBlockQueries(
-                            blockChainBuilder.cryptoSystem,
                             storage,
                             BaseBlockStore(),
                             blockChainBuilder.chainId,
@@ -130,7 +140,6 @@ class BaseBlockQueriesTest {
                     ))
 
                     val baseBlockQueries = TestBlockQueries(
-                            blockChainBuilder.cryptoSystem,
                             storage,
                             BaseBlockStore(),
                             blockChainBuilder.chainId,
@@ -173,5 +182,34 @@ class BaseBlockQueriesTest {
                                      data=null)
                     )
                 }
+    }
+
+    @Test
+    fun testWaitOnShutdown() {
+        val countDownLatch = CountDownLatch(1)
+        val mockDelayModule: GTXModule = mock()
+        whenever(mockDelayModule.query(any(), any(), any())).thenAnswer {
+            countDownLatch.countDown()
+            Thread.sleep(500)
+            GtvString("dummy")
+        }
+        val mockStorage: Storage = mock {
+            on { openReadConnection(0) } doReturn mock()
+        }
+
+        val blockQueries = GTXBlockQueries(mock(), mockStorage, mock(), 0, ByteArray(0), mockDelayModule)
+
+        val executorService = Executors.newSingleThreadExecutor()
+
+        executorService.submit {
+            blockQueries.query("dummy", GtvNull)
+        }
+
+        countDownLatch.await()
+        val timeInMillis = measureTimeMillis {
+            blockQueries.shutdown()
+        }
+
+        assertThat(timeInMillis).isBetween(400, 600)
     }
 }

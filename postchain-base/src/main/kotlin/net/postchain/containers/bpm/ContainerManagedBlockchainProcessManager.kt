@@ -11,6 +11,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
 import net.postchain.common.types.WrappedByteArray
+import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.containers.bpm.ContainerState.RUNNING
 import net.postchain.containers.bpm.ContainerState.STARTING
@@ -31,6 +32,7 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.logging.CONTAINER_NAME_TAG
+import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.CHAIN0
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.managed.LocalBlockchainInfo
@@ -107,6 +109,10 @@ class ContainerManagedBlockchainProcessManager(
         masterBlockchainInfra.masterConnectionManager.dataSource = dataSource
         super.initManagedEnvironment(dataSource)
     }
+
+    override fun makeBlockQueryDataSource() = BaseDirectoryDataSource({ name, args ->
+        chain0BlockQueries.query(name, args).get()
+    }, postchainContext.appConfig)
 
     override fun getBlockchainConfigurationFactory(chainId: Long): BlockchainConfigurationFactorySupplier =
             BlockchainConfigurationFactorySupplier { factoryName: String ->

@@ -77,7 +77,7 @@ class DefaultSubSyncInfra(
             iAmASigner: Boolean
     ): BlockchainProcess {
         val info = (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
-                ?.getMigratingBlockchainNodeInfo(blockchainConfig.blockchainRid)
+                ?.getMigratingBlockchainNodeInfo(blockchainConfig.chainID, blockchainConfig.blockchainRid)
 
         val type = if (info == null) {
             VALIDATOR_OR_REPLICA
@@ -110,7 +110,7 @@ class DefaultSubSyncInfra(
             blockchainConfig: BlockchainConfiguration
     ): Boolean {
         val info = (blockchainConfigProvider as? ManagedBlockchainConfigurationProvider)
-                ?.getMigratingBlockchainNodeInfo(blockchainConfig.blockchainRid)
+                ?.getMigratingBlockchainNodeInfo(blockchainConfig.chainID, blockchainConfig.blockchainRid)
                 ?: return false
 
         val withinNode = info.isSourceNode && info.isDestinationNode
