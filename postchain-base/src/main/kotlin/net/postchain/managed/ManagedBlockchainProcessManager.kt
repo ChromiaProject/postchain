@@ -342,21 +342,21 @@ open class ManagedBlockchainProcessManager(
                 ) {
                     if (inactiveChainId != null) {
                         if (chain.state == BlockchainState.REMOVED) {
-                            logger.info { "Deleting blockchain" }
+                            logger.info { "Deleting blockchain..." }
                             val elapsed = measureTimeMillis {
                                 withReadWriteConnection(sharedStorage, inactiveChainId) {
                                     BlockchainApi.deleteBlockchain(it)
                                 }
                             }
-                            logger.debug { "Blockchain deleted in $elapsed ms" }
+                            logger.info { "Blockchain deleted in $elapsed ms" }
                         } else if (chain.state == BlockchainState.ARCHIVED) {
-                            logger.info { "Archiving blockchain" }
+                            logger.info { "Archiving blockchain..." }
                             val elapsed = measureTimeMillis {
                                 withReadWriteConnection(sharedStorage, inactiveChainId) {
                                     BlockchainApi.archiveBlockchain(it)
                                 }
                             }
-                            logger.debug { "Blockchain archived in $elapsed ms" }
+                            logger.info { "Blockchain archived in $elapsed ms" }
                         }
                     } else {
                         logger.debug { "Blockchain is already pruned" }
