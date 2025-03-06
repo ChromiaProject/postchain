@@ -963,6 +963,38 @@ synthetic class net/postchain/base/snapshot/SnapshotPageStore$_updateSnapshotV2$
 	public final fun invoke ([B[B)[B
 }
 
+public final class net/postchain/concurrent/util/CompletableFutureHelperKt {
+	public static final fun get (Ljava/util/concurrent/CompletionStage;)Ljava/lang/Object;
+	public static final fun whenCompleteUnwrapped (Ljava/util/concurrent/CompletableFuture;Ljava/util/Map;Ljava/util/function/Consumer;Ljava/util/function/Consumer;Ljava/util/function/BiConsumer;)Ljava/util/concurrent/CompletableFuture;
+	public static final fun whenCompleteUnwrapped (Ljava/util/concurrent/CompletionStage;Ljava/util/Map;Ljava/util/function/Consumer;Ljava/util/function/Consumer;Ljava/util/function/BiConsumer;)Ljava/util/concurrent/CompletionStage;
+	public static synthetic fun whenCompleteUnwrapped$default (Ljava/util/concurrent/CompletableFuture;Ljava/util/Map;Ljava/util/function/Consumer;Ljava/util/function/Consumer;Ljava/util/function/BiConsumer;ILjava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
+	public static synthetic fun whenCompleteUnwrapped$default (Ljava/util/concurrent/CompletionStage;Ljava/util/Map;Ljava/util/function/Consumer;Ljava/util/function/Consumer;Ljava/util/function/BiConsumer;ILjava/lang/Object;)Ljava/util/concurrent/CompletionStage;
+}
+
+public final class net/postchain/concurrent/util/CompletableFutureHelperKt$whenCompleteUnwrapped$lambda$1$$inlined$withLoggingContext$default$1 : kotlin/jvm/internal/Lambda, kotlin/jvm/functions/Function0 {
+	public fun <init> (Ljava/util/Map$Entry;Ljava/lang/String;)V
+	public synthetic fun invoke ()Ljava/lang/Object;
+	public final fun invoke ()V
+}
+
+public final class net/postchain/concurrent/util/CompletableFutureHelperKt$whenCompleteUnwrapped$lambda$1$$inlined$withLoggingContext$default$2 : kotlin/jvm/internal/Lambda, kotlin/jvm/functions/Function0 {
+	public fun <init> (Ljava/util/Map$Entry;)V
+	public synthetic fun invoke ()Ljava/lang/Object;
+	public final fun invoke ()V
+}
+
+public final class net/postchain/concurrent/util/CompletableFutureHelperKt$whenCompleteUnwrapped$lambda$4$$inlined$withLoggingContext$default$1 : kotlin/jvm/internal/Lambda, kotlin/jvm/functions/Function0 {
+	public fun <init> (Ljava/util/Map$Entry;Ljava/lang/String;)V
+	public synthetic fun invoke ()Ljava/lang/Object;
+	public final fun invoke ()V
+}
+
+public final class net/postchain/concurrent/util/CompletableFutureHelperKt$whenCompleteUnwrapped$lambda$4$$inlined$withLoggingContext$default$2 : kotlin/jvm/internal/Lambda, kotlin/jvm/functions/Function0 {
+	public fun <init> (Ljava/util/Map$Entry;)V
+	public synthetic fun invoke ()Ljava/lang/Object;
+	public final fun invoke ()V
+}
+
 public final class net/postchain/config/app/AppConfig : net/postchain/common/config/Config {
 	public static final field Companion Lnet/postchain/config/app/AppConfig$Companion;
 	public static final field DEFAULT_APPLIED_CONFIG_SEND_INTERVAL_MS J
