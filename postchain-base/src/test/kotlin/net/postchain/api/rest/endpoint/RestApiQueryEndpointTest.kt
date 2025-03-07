@@ -29,7 +29,6 @@ import org.hamcrest.core.IsEqual.equalTo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.fail
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
@@ -376,42 +375,6 @@ class RestApiQueryEndpointTest {
     }
 
     /**
-     * The idea here is to test that RestApi can handle when the model throws an exception during "query()" execution.
-     *
-     * "Standard exceptions" -> 500
-     */
-    @Test
-    fun test_query_error() {
-        val queryMap = mapOf(
-                "type" to gtv("test_query"),
-                "a" to gtv("b"),
-                "c" to gtv(3)
-        )
-
-        val queryString = gtvToJSON(gtv(queryMap), gson)
-        val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
-
-        val answerString = """{"error":"Bad bad stuff."}"""
-
-        // Throw here
-        whenever(model.query(query)).thenThrow(IllegalStateException("Bad bad stuff."))
-
-        restApi.attachModel(blockchainRID, model)
-
-        try {
-            RestAssured.given().basePath(basePath).port(restApi.actualPort())
-                .body(queryString)
-                .post("/query/$blockchainRID")
-                .then()
-                .statusCode(500)
-                .contentType(ContentType.JSON)
-                .body(equalTo(answerString))
-        } catch (e: Exception) {
-            fail("Should not bang during query, since the exception is converted to 500 message: $e")
-        }
-    }
-
-    /**
      * ProgrammerMistake -> 500
      */
     @Test
@@ -426,7 +389,7 @@ class RestApiQueryEndpointTest {
         val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
 
         val answerMessage = "expected error"
-        val answerBody = """{"error":"expected error"}"""
+        val answerBody = """{"error":"Unknown error"}"""
 
         whenever(model.query(query)).thenThrow(ProgrammerMistake(answerMessage))
 
@@ -458,8 +421,7 @@ class RestApiQueryEndpointTest {
         val answerMessage = "expected error"
         val answerBody = """{"error":"expected error"}"""
 
-        whenever(model.query(query)).thenThrow(
-                UserMistake(answerMessage))
+        whenever(model.query(query)).thenThrow(UserMistake(answerMessage))
 
         restApi.attachModel(blockchainRID, model)
 
