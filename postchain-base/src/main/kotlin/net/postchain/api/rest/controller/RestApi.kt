@@ -844,20 +844,20 @@ class RestApi(
 
             is UnavailableException -> {
                 logger.info { "Unavailable: ${error.message}" }
-                transformErrorResponseFromDiagnostics(request, SERVICE_UNAVAILABLE, error)
+                transformErrorResponseFromDiagnostics(request, SERVICE_UNAVAILABLE, error.message ?: "Unknown error")
             }
 
             else -> {
                 logger.warn(error) { "Unexpected exception: $error" }
-                transformErrorResponseFromDiagnostics(request, INTERNAL_SERVER_ERROR, error)
+                transformErrorResponseFromDiagnostics(request, INTERNAL_SERVER_ERROR, "Unknown error")
             }
         }
     }
 
-    private fun transformErrorResponseFromDiagnostics(request: Request, status: Status, error: Exception): Response =
+    private fun transformErrorResponseFromDiagnostics(request: Request, status: Status, error: String): Response =
             modelKey(request)?.let { checkDiagnosticError(it.blockchainRid) }?.let { errorMessage ->
                 errorResponse(request, INTERNAL_SERVER_ERROR, errorMessage.toString())
-            } ?: errorResponse(request, status, error.message ?: "Unknown error")
+            } ?: errorResponse(request, status, error)
 
     private fun checkDiagnosticError(blockchainRid: BlockchainRid): List<Any?>? =
             if (nodeDiagnosticContext.hasBlockchainErrors(blockchainRid)) {
