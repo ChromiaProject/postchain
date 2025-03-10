@@ -120,7 +120,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     }
 
     // TODO: [et]: Check out nullability for return value
-    protected fun enqueueTx(node: PostchainTestNode, data: ByteArray, expectedConfirmationHeight: Long): Transaction? {
+    fun enqueueTx(node: PostchainTestNode, data: ByteArray, expectedConfirmationHeight: Long): Transaction? {
         val tx = enqueueTx(node, DEFAULT_CHAIN_IID, data)
 
         if (expectedConfirmationHeight >= 0) {
@@ -131,7 +131,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
         return tx
     }
 
-    protected fun enqueueTx(chainId: Long, merkleHashCalculator: GtvMerkleHashCalculatorBase, vararg ops: GtxOp) {
+    fun enqueueTx(chainId: Long, merkleHashCalculator: GtvMerkleHashCalculatorBase, vararg ops: GtxOp) {
         val blockchainRid = getChainNodes(chainId).first().getBlockchainRid(chainId)!!
         val builder = GtxBuilder(blockchainRid, emptyList(), cryptoSystem, merkleHashCalculator)
         ops.forEach { builder.addOperation(it.opName, *it.args) }
@@ -141,13 +141,13 @@ open class IntegrationTestSetup : AbstractIntegration() {
         enqueueTx(chainId, txData)
     }
 
-    protected fun enqueueTx(chainId: Long, txData: ByteArray) {
+    fun enqueueTx(chainId: Long, txData: ByteArray) {
         for (node in getChainNodes(chainId)) {
             enqueueTx(node, chainId, txData)
         }
     }
 
-    protected fun enqueueTx(node: PostchainTestNode, chainId: Long, txData: ByteArray): Transaction {
+    fun enqueueTx(node: PostchainTestNode, chainId: Long, txData: ByteArray): Transaction {
         val blockchainEngine = node.getBlockchainInstance(chainId).blockchainEngine
         val tx = blockchainEngine.getConfiguration().getTransactionFactory().decodeTransaction(txData)
         blockchainEngine.getTransactionQueue().enqueue(tx)
@@ -271,7 +271,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
     /**
      * @return subclass name or dummy
      */
-    protected fun getTestName() = this::class.java.simpleName ?: "NoName"
+    fun getTestName() = this::class.java.simpleName ?: "NoName"
 
     /**
      * Generates config for all [NodeSetup] objects
@@ -358,7 +358,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
      *
      * @throws TimeoutException if timeout
      */
-    protected fun buildBlock(chainId: Long, toHeight: Long, vararg txs: Transaction, timeout: Duration = Duration.INFINITE) {
+    fun buildBlock(chainId: Long, toHeight: Long, vararg txs: Transaction, timeout: Duration = Duration.INFINITE) {
         buildBlock(getChainNodes(chainId), chainId, toHeight, *txs, timeout = timeout)
     }
 
@@ -369,7 +369,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
      *
      * @throws TimeoutException if timeout
      */
-    protected fun buildBlock(chainId: Long, vararg txs: Transaction, timeout: Duration = Duration.INFINITE) {
+    fun buildBlock(chainId: Long, vararg txs: Transaction, timeout: Duration = Duration.INFINITE) {
         val currentHeight = getChainNodes(chainId).first().currentHeight(chainId)
         buildBlock(getChainNodes(chainId), chainId, currentHeight + 1, *txs, timeout = timeout)
     }
@@ -380,7 +380,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
      *
      * @throws TimeoutException if timeout
      */
-    protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, toHeight: Long, vararg txs: Transaction, timeout: Duration = Duration.INFINITE) {
+    fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, toHeight: Long, vararg txs: Transaction, timeout: Duration = Duration.INFINITE) {
         buildBlockNoWait(nodes, chainId, toHeight, *txs)
         awaitHeight(nodes, chainId, toHeight, timeout)
     }
@@ -392,13 +392,13 @@ open class IntegrationTestSetup : AbstractIntegration() {
      *
      * @throws TimeoutException if timeout
      */
-    protected fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, vararg txs: Transaction, timeout: Duration = Duration.INFINITE) {
+    fun buildBlock(nodes: List<PostchainTestNode>, chainId: Long, vararg txs: Transaction, timeout: Duration = Duration.INFINITE) {
         val currentHeight = nodes.first().currentHeight(chainId)
         buildBlockNoWait(nodes, chainId, currentHeight + 1, *txs)
         awaitHeight(nodes, chainId, currentHeight + 1, timeout)
     }
 
-    protected fun buildBlockNoWait(
+    fun buildBlockNoWait(
             nodes: List<PostchainTestNode>,
             chainId: Long,
             toHeight: Long,
@@ -418,7 +418,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
      *
      * @throws TimeoutException if timeout
      */
-    protected open fun awaitHeight(chainId: Long, height: Long, timeout: Duration = Duration.INFINITE) {
+    open fun awaitHeight(chainId: Long, height: Long, timeout: Duration = Duration.INFINITE) {
         awaitLog("========= AWAIT ALL ${nodes.size} NODES chain:  $chainId, height:  $height (i)")
         awaitHeight(getChainNodes(chainId), chainId, height, timeout)
         awaitLog("========= DONE AWAIT ALL ${nodes.size} NODES chain: $chainId, height: $height (i)")
@@ -430,7 +430,7 @@ open class IntegrationTestSetup : AbstractIntegration() {
      *
      * @throws TimeoutException if timeout
      */
-    protected fun awaitHeight(nodes: List<PostchainTestNode>, chainId: Long, height: Long, timeout: Duration = Duration.INFINITE) {
+    fun awaitHeight(nodes: List<PostchainTestNode>, chainId: Long, height: Long, timeout: Duration = Duration.INFINITE) {
         nodes.forEach {
             awaitLog("++++++ AWAIT node RID: ${NameHelper.peerName(it.pubKey)}, chain: $chainId, height: $height (i)")
             it.awaitHeight(chainId, height, timeout)
@@ -438,9 +438,9 @@ open class IntegrationTestSetup : AbstractIntegration() {
         }
     }
 
-    protected fun getChainNodeSetups(chainId: Long): List<NodeSetup> =
+    fun getChainNodeSetups(chainId: Long): List<NodeSetup> =
             systemSetup.nodeMap.values.filter { it.chainsToSign.contains(chainId.toInt()) || it.chainsToRead.contains(chainId.toInt()) }
 
-    protected fun getChainNodes(chainId: Long): List<PostchainTestNode> =
+    fun getChainNodes(chainId: Long): List<PostchainTestNode> =
             getChainNodeSetups(chainId).map { nodes[it.sequenceNumber.nodeNumber] }
 }
