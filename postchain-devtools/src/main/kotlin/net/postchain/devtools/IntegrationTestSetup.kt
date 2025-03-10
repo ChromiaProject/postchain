@@ -13,10 +13,19 @@ import net.postchain.core.Transaction
 import net.postchain.crypto.devtools.KeyPairCache
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
-import net.postchain.devtools.utils.configuration.*
+import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
+import net.postchain.devtools.utils.configuration.AppConfigGenerator
+import net.postchain.devtools.utils.configuration.BlockchainSetupFactory
+import net.postchain.devtools.utils.configuration.NodeSeqNumber
+import net.postchain.devtools.utils.configuration.NodeSetup
+import net.postchain.devtools.utils.configuration.SystemSetup
+import net.postchain.devtools.utils.configuration.TestBlockchainRidCache
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
+import net.postchain.gtx.GtxBuilder
+import net.postchain.gtx.GtxOp
 import org.apache.commons.configuration2.MapConfiguration
 import org.awaitility.kotlin.await
 import org.junit.jupiter.api.AfterEach
@@ -112,15 +121,36 @@ open class IntegrationTestSetup : AbstractIntegration() {
 
     // TODO: [et]: Check out nullability for return value
     protected fun enqueueTx(node: PostchainTestNode, data: ByteArray, expectedConfirmationHeight: Long): Transaction? {
-        val blockchainEngine = node.getBlockchainInstance().blockchainEngine
-        val tx = blockchainEngine.getConfiguration().getTransactionFactory().decodeTransaction(data)
-        blockchainEngine.getTransactionQueue().enqueue(tx)
+        val tx = enqueueTx(node, DEFAULT_CHAIN_IID, data)
 
         if (expectedConfirmationHeight >= 0) {
             expectedSuccessRids.getOrPut(expectedConfirmationHeight) { mutableListOf() }
                     .add(tx.getRID())
         }
 
+        return tx
+    }
+
+    protected fun enqueueTx(chainId: Long, merkleHashCalculator: GtvMerkleHashCalculatorBase, vararg ops: GtxOp) {
+        val blockchainRid = getChainNodes(chainId).first().getBlockchainRid(chainId)!!
+        val builder = GtxBuilder(blockchainRid, emptyList(), cryptoSystem, merkleHashCalculator)
+        ops.forEach { builder.addOperation(it.opName, *it.args) }
+        val txData = builder
+                .addNop()
+                .finish().buildGtx().encode()
+        enqueueTx(chainId, txData)
+    }
+
+    protected fun enqueueTx(chainId: Long, txData: ByteArray) {
+        for (node in getChainNodes(chainId)) {
+            enqueueTx(node, chainId, txData)
+        }
+    }
+
+    protected fun enqueueTx(node: PostchainTestNode, chainId: Long, txData: ByteArray): Transaction {
+        val blockchainEngine = node.getBlockchainInstance(chainId).blockchainEngine
+        val tx = blockchainEngine.getConfiguration().getTransactionFactory().decodeTransaction(txData)
+        blockchainEngine.getTransactionQueue().enqueue(tx)
         return tx
     }
 
