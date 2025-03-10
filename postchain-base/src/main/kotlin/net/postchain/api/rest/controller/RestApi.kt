@@ -305,7 +305,9 @@ class RestApi(
             "/_debug" bind static(ResourceLoader.Classpath("/restapi-root/_debug")),
 
             "/version" bind GET to ::getVersion,
+            "/version/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainVersion),
             "/infrastructure_version" bind GET to ::getInfraVersion,
+            "/infrastructure_version/{blockchainRid}" bind GET to liveBlockchain.then(::getBlockchainInfraVersion),
 
             "/tx/{blockchainRid}" bind POST to liveBlockchain.then(::postTransaction),
             "/tx/{blockchainRid}/waiting" bind GET to blockchain.then(volatileResponse).then(::getWaitingTransactions),
@@ -354,6 +356,12 @@ class RestApi(
             versionBody of Version(REST_API_VERSION)
     )
 
+    private fun getBlockchainVersion(request: Request): Response {
+        val model = model(request)
+        val version = model.getVersion()
+        return Response(OK).with(versionBody of version)
+    }
+
     @Suppress("unused")
     private fun getInfraVersion(request: Request): Response = Response(OK).with(
             infraVersionBody of InfraVersion(
@@ -364,6 +372,12 @@ class RestApi(
                     databaseServerVersion = nodeDiagnosticContext[DiagnosticProperty.DATABASE_SERVER_VERSION]?.value?.toString().orEmpty()
             )
     )
+
+    private fun getBlockchainInfraVersion(request: Request): Response {
+        val model = model(request)
+        val infraVersion = model.getInfrastructureVersion()
+        return Response(OK).with(infraVersionBody of infraVersion)
+    }
 
     private fun postTransaction(request: Request): Response {
         val model = model(request)

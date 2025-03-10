@@ -243,5 +243,13 @@ class RestApiMockForClientManual {
         override fun getNextBlockchainConfigurationHeight(height: Long): BlockHeight? {
             TODO("Not yet implemented")
         }
+
+        override fun getVersion(): Version {
+            TODO("Not yet implemented")
+        }
+
+        override fun getInfrastructureVersion(): InfraVersion {
+            TODO("Not yet implemented")
+        }
     }
 }

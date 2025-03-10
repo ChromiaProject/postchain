@@ -24,6 +24,7 @@ import net.postchain.core.Storage
 import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockQueries
 import net.postchain.debug.DiagnosticData
+import net.postchain.debug.NodeDiagnosticContext
 import java.time.Instant
 
 class PostchainEBFTModel(
@@ -33,9 +34,10 @@ class PostchainEBFTModel(
         blockchainRid: BlockchainRid,
         storage: Storage,
         postchainContext: PostchainContext,
+        nodeDiagnosticContext: NodeDiagnosticContext,
         diagnosticData: DiagnosticData,
         queryCacheTtlSeconds: Long
-) : PostchainModel(blockchainConfiguration, blockQueries, blockchainRid, storage, postchainContext, diagnosticData, queryCacheTtlSeconds) {
+) : PostchainModel(blockchainConfiguration, blockQueries, blockchainRid, storage, postchainContext, nodeDiagnosticContext, diagnosticData, queryCacheTtlSeconds) {
     private val transactionFactory = blockchainConfiguration.getTransactionFactory()
 
     override fun postTransaction(tx: ByteArray) {

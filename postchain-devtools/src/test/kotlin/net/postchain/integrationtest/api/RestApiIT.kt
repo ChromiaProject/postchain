@@ -12,6 +12,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
+import net.postchain.api.rest.controller.RestApi.Companion.REST_API_VERSION
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
@@ -95,6 +96,18 @@ class RestApiIT : IntegrationTestSetup() {
                     jsonAsMap(gson, "{\"status\"=\"confirmed\"}"),
                     jsonAsMap(gson, it))
         }
+
+        given().port(nodes[0].getRestApiHttpPort())
+                .get("/version")
+                .then()
+                .statusCode(200)
+                .body("version", equalTo(REST_API_VERSION))
+
+        given().port(nodes[0].getRestApiHttpPort())
+                .get("/version/$blockchainRID")
+                .then()
+                .statusCode(200)
+                .body("version", equalTo(REST_API_VERSION))
     }
 
     @Test

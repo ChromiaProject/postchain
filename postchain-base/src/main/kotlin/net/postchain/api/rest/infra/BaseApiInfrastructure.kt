@@ -95,6 +95,7 @@ open class BaseApiInfrastructure(
                         blockchainRid,
                         engine.sharedStorage,
                         postchainContext,
+                        nodeDiagnosticContext,
                         diagnosticData,
                         queryCacheTtlSeconds
                 )
@@ -106,6 +107,7 @@ open class BaseApiInfrastructure(
                         blockchainRid,
                         engine.sharedStorage,
                         postchainContext,
+                        nodeDiagnosticContext,
                         diagnosticData,
                         queryCacheTtlSeconds
                 )
@@ -116,6 +118,7 @@ open class BaseApiInfrastructure(
                         blockchainRid,
                         engine.sharedStorage,
                         postchainContext,
+                        nodeDiagnosticContext,
                         diagnosticData,
                         queryCacheTtlSeconds
                 )
