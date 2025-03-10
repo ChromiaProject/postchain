@@ -78,10 +78,11 @@ paths:
         - transaction
       summary: Submit transaction
       description: |
-        Submit a transaction to a chain.
-        The request body can either contain hex encoded GTX transaction in JSON wrapper, 
-        or binary GTV (by specifying `Content-Type: application/octet-stream`).
-        Read replicas does not support this endpoint.
+        This operation submits a transaction to the chain.  
+
+        The request body can either include a hex-encoded GTX transaction in a JSON wrapper or a binary GTV (by specifying `Content-Type: application/octet-stream`).  
+        
+        Please note that read replicas do not support this endpoint.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       requestBody:
@@ -158,7 +159,7 @@ paths:
       summary: Fetch list of waiting transaction RIDs
       description: |
         Fetch a list of all waiting transaction RIDs from a chain.
-        Read replicas does not support this endpoint.
+        Read replicas do not support this endpoint.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
@@ -186,9 +187,11 @@ paths:
         - transaction
       summary: Fetch waiting transaction
       description: |
-        Fetch a waiting transaction from a chain.
-        Will give binary response with `application/octet-stream` content-type.
-        Read replicas does not support this endpoint.
+        This operation fetches a waiting transaction from the specified chain.
+
+        Will return a binary response with `application/octet-stream` content-type.
+
+        Read replicas do not support this endpoint.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
@@ -223,8 +226,9 @@ paths:
         - transaction
       summary: Fetch list of rejected transactions
       description: | 
-        Fetch a list of rejected transaction RIDs and rejection reason
-        Read replicas does not support this endpoint.
+        Fetches the list of rejected transaction RIDs and the corresponding rejection reasons. 
+
+        Read replicas do not support this endpoint.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
@@ -263,9 +267,11 @@ paths:
         - transaction
       summary: Fetch transaction
       description: |
-        Fetch a transaction from a chain.
-        Specifying `Accept: application/octet-stream` header will give binary GTV response,
-        otherwise defaults to JSON.
+        Retrieve transaction data from a given blockchain.
+
+        When the `Accept: application/octet-stream` header is specified, the operation will return a binary GTV response.
+
+        If the `Accept: application/json` head is specified, returns a JSON object containing the HEX encoded transaction details.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
@@ -296,7 +302,8 @@ paths:
       tags:
         - transaction
       summary: Fetch transaction info
-      description: Fetch info about a transaction from a chain
+      description: |
+        This operation retrieves the information about a transaction from a given blockchain.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
@@ -309,7 +316,13 @@ paths:
             default: true
       responses:
         '200':
-          description: Found
+          description: |
+            - `blockRID` - Unique identifier of the block.
+            - `blockHeight` - The current height of the block.
+            - `witness` - Data that proves the validity of the transaction.
+            - `txRID` - Unique identifier of the transaction.
+            - `txHash` - Transaction hash.
+            - `txData` - Transaction data.
           content:
             application/json:
               schema:
@@ -332,7 +345,9 @@ paths:
       tags:
         - transaction
       summary: Fetch transactions info
-      description: Fetch info about transactions from a chain
+      description: |
+        Fetches a list of the most recent transactions from a specified blockchain, allowing you to retrieve up to 500 of the latest transactions.
+
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: limit
@@ -345,26 +360,32 @@ paths:
             maximum: 600
             default: 25
         - name: before-time
-          description: Return only transactions before this time
+          description: Return transactions only before this time. Specify time in UNIX milliseconds.
           in: query
           required: false
           schema:
             $ref: "#/components/schemas/timestamp"
         - name: after-time
-          description: Return only transactions after this time
+          description: Return transactions only after this time. Specify time in UNIX milliseconds.
           in: query
           required: false
           schema:
             $ref: "#/components/schemas/timestamp"
         - name: signer
-          description: Return only transactions signed by public key
+          description: Return transactions signed only by a specific public key.
           in: query
           required: false
           schema:
             $ref: "#/components/schemas/hex"
       responses:
         '200':
-          description: Found
+          description: |
+            - `blockRID` - Unique identifier of the block.
+            - `blockHeight` - The current height of the block.
+            - `witness` - Data that proves the validity of the transaction.
+            - `txRID` - Unique identifier of the transaction.
+            - `txHash` - Transaction hash.
+            - `txData` - Transaction data.
           content:
             application/json:
               schema:
@@ -391,8 +412,8 @@ paths:
     get:
       tags:
         - transaction
-      summary: Fetch number of successful transactions
-      description: Fetch number of successful transactions for a chain
+      summary: Fetche number of successful transactions
+      description: Retrieves the number of successfully processed transactions in a given blockchain.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
@@ -418,9 +439,10 @@ paths:
         - transaction
       summary: Fetch transaction confirmation proof
       description: |
-        Fetch confirmation proof for a transaction from a chain.
-        Specifying `Accept: application/octet-stream` header will give binary GTV response,
-        otherwise defaults to JSON.
+        Fetches the confirmation proof for a transaction on the specified blockchain.
+
+        When the `application/octet-stream` header is specified, a binary GTV response is returned.
+        If the `application/json` header is specified, a JSON object is returned, containing HEX encoded transaction data.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
@@ -452,9 +474,15 @@ paths:
         - transaction
       summary: Fetch transaction status
       description: |
-        Fetch the status of a transaction from a chain
-        **Note**: The node stores up to 1000 rejected transaction statuses per chain in memory. Once this limit is reached, the oldest entry is discarded to make room for a new one.
-        Read replicas does not support this endpoint, use `GET /transactions/{blockchainRid}/{txRid}?tx-data=false` instead
+        Fetch the status of a transaction on the specified blockchain.
+
+        There are three transaction statuses:
+          - `Waiting` - Transaction is waiting to be included in the block.
+          - `Confirmed` - Transaction is included in the block.
+          - `Rejected` - Transaction has been rejected
+
+        **Note**: The node stores up to 1000 rejected transaction statuses per chain in memory. Once this limit is reached, the oldest entry is discarded to make room for a new one.  
+        Read replicas do not support this endpoint; use `GET /transactions/{blockchainRid}/{txRid}?tx-data=false` instead.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
@@ -501,7 +529,10 @@ paths:
       tags:
         - block
       summary: Fetch blocks info
-      description: Fetch info about blocks from a chain
+      description: |
+        This operation retrieves information about blocks from the specified chain.  
+
+        You can define either a timeframe or block height boundaries to fetch the blocks you're interested in.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: limit
@@ -584,9 +615,8 @@ paths:
         - block
       summary: Fetch block info by block RID
       description: |
-        Fetch info about a block from a chain. 
-        Specifying `Accept: application/octet-stream` header will give binary GTV response,
-        otherwise defaults to JSON.
+        This operation retrieves block details from the specified chain using the block RID.
+        By setting the `Accept: application/octet-stream` header, the response will be returned as a binary GTV; otherwise, it defaults to JSON.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/blockRid"
@@ -624,14 +654,14 @@ paths:
         - block
       summary: Fetch block info by block height
       description: |
-        Fetch info about a block from a chain. 
-        Specifying `Accept: application/octet-stream` header will give binary GTV response,
-        otherwise defaults to JSON.
+        This method retrieves block details from the specified chain using the block height.  
+
+        If you specify the `Accept: application/octet-stream` header, the response will be in binary GTV format; otherwise, it defaults to JSON.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/height"
         - name: txs
-          description: Return full transaction data
+          description: Returns full transaction data
           in: query
           required: false
           schema:
@@ -664,9 +694,9 @@ paths:
         - block
       summary: Confirm block by block RID
       description: |
-        Sign the block and return block signature if the block is committed. 
-        Specifying `Accept: application/octet-stream` header will give binary GTV response,
-        otherwise defaults to JSON.
+        Sign the block and return the block signature if the block is committed.  
+
+        By specifying the `Accept: application/octet-stream` header, the response will be in binary GTV format; otherwise, it defaults to JSON.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/blockRid"
@@ -696,8 +726,17 @@ paths:
       tags:
         - query
       summary: Make query
-      description: Make a query to a chain. Named arguments to query as additional query parameters.
-        This operation is intended for development, testing and simple web apps, more advanced production use cases should use `/query_gtv` instead.
+      description: |
+        This operation enables querying either a node on the Chromia network or a local node.
+
+        To invoke it, you must include a `query` argument in the query string parameters. The `query` argument corresponds 
+        to the name of the query defined in the Rell code.
+
+        You can pass additional arguments for the Rell query defined in the code to this method using the standard REST syntax: 
+        `/type?my_query&arg1=value&arg2=value`. Here, `type` represents the name of the query, and `arg1` and `arg2` are the query arguments.
+
+        This operation is intended for development, testing, and simple web applications. For more complex production use cases, 
+        it is recommended to use `/query_gtv` instead.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: type
@@ -741,8 +780,14 @@ paths:
       tags:
         - query
       summary: Make query
-      description: Make a query to a chain.
-        This operation is deprecated, use `GET /query` or `/query_gtv` instead.
+      description: |
+        This operation is deprecated, and will be removed at some point, use `GET /query` or `/query_gtv` instead.
+
+        To invoke this operation, you must include the `type` property in the JSON body.
+        The `type` property corresponds to the name of the query defined in the Rell code.
+
+        If your query contains multiple arguments, then you must pass their names and values in the 
+        corresponding order as specified in the query.
       deprecated: true
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
@@ -787,15 +832,18 @@ paths:
         - query
       summary: Make direct query
       description: |
-        Make a direct query to a chain. Named arguments to query as additional query parameters.
-        The query result will be served directly with appropriate content type, with no JSON wrapping.
-        This operation is deprecated, use `/web_query` instead.
+        By invoking this operation, you request a specific web resource from the front-end application's 
+        decentralized storage. This resource can be a picture, video, code, or anything else.
+
+        Returns raw data without JSON wrapping.
+
+        This operation is deprecated and will be removed at some point of time; use `/web_query` instead. 
       deprecated: true
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: type
           in: query
-          description: Query name
+          description: The name of the query in the Rell code that returns the web resource.
           required: true
           schema:
             type: string
@@ -832,13 +880,15 @@ paths:
         - query
       summary: Make web query
       description: |
-        Make a web query to a chain. Additional path segments and query parameters will be passed to query.
-        The query result will be served directly with appropriate content type, with no JSON wrapping.
+        By invoking this operation, you request a specific web resource from the front-end application's 
+        decentralized storage. This resource can be a picture, video, code, or anything else.
+
+        Returns raw data without JSON wrapping.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: type
           in: path
-          description: Query name
+          description: The name of the query in the Rell code that returns the web resource.
           required: true
           schema:
             type: string
@@ -883,7 +933,7 @@ paths:
         - $ref: "#/components/parameters/blockchainRid"
         - name: type
           in: query
-          description: Query name
+          description: The name of the query in the Rell code that returns the binary GTV value.
           required: true
           schema:
             type: string
@@ -912,8 +962,10 @@ paths:
         - query
       summary: Make a GTV encoded query
       description: |
-        Make a GTV encoded query to a chain.
+        Make a GTV encoded query to the specified chain.
+        
         Request body contains binary GTV array with the query name as first element (string) and the named parameters as second element (dict).
+        
         Response body contains binary GTV value.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
@@ -938,11 +990,26 @@ paths:
       tags:
         - node
       summary: Query node EBFT status
+      description: |
+        This operation is used to determine the current node operational status, which is helpful for debugging purposes.
+
+        There are three statuses that the operation can return:
+          - `WaitBlock` - The node is waiting for the primary node to build a block.
+          - `HaveBlock` - The node has fetched the newly built block from the primary node and verified its validity.
+          - `Prepared` - This status indicates that the node has received status updates from *2f* other nodes, confirming that 
+          they are in the "HaveBlock" state and that they all hold the same block.
+
+          Returns a JSON object containing the the current node status.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
         '200':
-          description: OK
+          description: |
+            - `state` - The state of the node.
+            - `height` - The current block height.
+            - `serial` - The unique identifier of the protocol state.
+            - `round` - The current round of the consensus protocol.
+            - `revolting` - Indicates whether the node is rejecting or aborting the current process.
           content:
             application/json:
               schema:
@@ -962,11 +1029,26 @@ paths:
       tags:
         - node
       summary: Query all nodes EBFT statuses
+      description: |
+        This operation is used to determine the current operational status of multiple nodes in the cluster, which is helpful for debugging purposes.
+
+        There are three statuses that the operation can return:
+          - `WaitBlock` - The node is waiting for the primary node to build a block.
+          - `HaveBlock` - The node has fetched the newly built block from the primary node and verified its validity.
+          - `Prepared` - This status indicates that the node has received status updates from *2f* other nodes, confirming that 
+          they are in the "HaveBlock" state and that they all hold the same block.
+
+          Returns an array of JSON objects, each containing the current node status. 
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
         '200':
-          description: OK
+          description: |
+            - `state` - The state of the node.
+            - `height` - The current block height.
+            - `serial` - The unique identifier of the protocol state.
+            - `round` - The current round of the consensus protocol.
+            - `revolting` - Indicates whether the node is rejecting or aborting the current process.
           content:
             application/json:
               schema:
@@ -988,6 +1070,10 @@ paths:
       tags:
         - node
       summary: Get blockchain RID
+      description: |
+        Retrieves the current BRID for a given chain ID. 
+        
+        Usually, this method is used to obtain the BRID of the Directory Chain; To do that, specify `0` in the `chainId` property. 
       parameters:
         - name: chainIid
           description: Chain Iid
@@ -1021,6 +1107,8 @@ paths:
       tags:
         - blockchain
       summary: Fetch height of next block to be built/synced
+      description: |
+        This operation fetches the block height for the next block to be built/synced.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: container
@@ -1056,8 +1144,8 @@ paths:
         - experimental
       summary: Experimental - Fetch current state of blockchain node
       description: |
-        <strong>This endpoint is currently in a beta phase and may be subject to changes.</strong><br>
-        Fetch the current state of the blockchain node as a combination of the blockchain state and the node state.
+        <strong>This endpoint is currently in beta and may be subject to changes.</strong><br>
+        Retrieve the current state of the blockchain node, which includes both the blockchain and node states.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
@@ -1111,9 +1199,9 @@ paths:
         - configuration
       summary: Fetch blockchain configuration
       description: |
-        Fetch configuration for a chain. Specifying a height will fetch the active configuration at that height. 
-        Specifying `Accept: application/octet-stream` header will give binary GTV response,
-        otherwise defaults to XML.
+        Retrieve the configuration of a chain. By specifying the height, you can fetch the active configuration at that particular block.  
+
+        If you include the `Accept: application/octet-stream` header, the response will be in binary GTV format; otherwise, it defaults to XML.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: height
@@ -1188,12 +1276,11 @@ paths:
         - configuration
       summary: Validate blockchain configuration
       description: |
-        Check if a configuration is valid for a blockchain in its current state. This operation will not apply the 
-        configuration, only verify it. The configuration can be sent either as XML (using `text/xml` content type)
-        or GTV (using `application/octet-stream` content type).
-        
-        Nodes running in managed mode requires a signature to be included to only allow the blockchain provider verify
-        the configuration,
+        Verify if a configuration is valid for a blockchain in its current state. This operation only checks the validity of the configuration without 
+        applying it. The configuration can be submitted either as XML (using `text/xml` content type) or GTV (using `application/octet-stream` 
+        content type).
+
+        Nodes running in managed mode require a signature to be included, allowing only the blockchain provider to verify the configuration.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/headerSignature"
@@ -1268,7 +1355,9 @@ paths:
         - configuration
       summary: Fetch the next blockchain configuration height
       description: |
-        Fetch the next configuration height for a chain following the specified height.
+        This method retrieves the block height at which the next configuration update will occur. For example, if the current block height is 10 
+        and the update is scheduled for block height 25, querying with a request specifying block height 15 will return 25, as it is the closest 
+        configuration update block height for that blockchain.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: height
@@ -1306,13 +1395,16 @@ paths:
         - configuration
       summary: Fetch the blockchain configuration features
       description: |
-        Fetch configuration features for a chain. Specifying a height will fetch the active configuration at that height. 
-        Specifying `Accept: application/octet-stream` header will give binary GTV response,
+        Retrieves the configuration features for a given blockchain. Currently, only the merkle tree can be obtained by invoking this operation. 
+        
+        When specyfing the height, the method will fetch the active configuration at that height. 
+
+        If the `Accept: application/octet-stream` header is specified, then the operation will return a binary GTV response,
         otherwise defaults to JSON.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: height
-          description: Block height
+          description: Specifies the block height at which to obtain the configuration.
           in: query
           required: false
           schema:
@@ -1342,7 +1434,7 @@ paths:
       tags:
         - error
       summary: Fetch blockchain errors
-      description: Fetch any errors which have occurred in a blockchain
+      description: This method retrieves the last 5 blockchain errors for a given BRID. 
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
@@ -1369,6 +1461,8 @@ paths:
       tags:
         - node
       summary: Get API version
+      description: |
+        Retrieves the current version of the REST API. Every time the API is updated, the version is incremented by 1.
       responses:
         '200':
           description: OK
@@ -1401,6 +1495,8 @@ paths:
       tags:
         - node
       summary: Get infrastructure version
+      description: |
+        Retrieves the current version of the Postchain software that the node is running.
       responses:
         '200':
           description: OK
@@ -1442,8 +1538,9 @@ paths:
         - node
       summary: Check anchoring status for a blockchain
       description: |
-        It takes a blockchain RID as input and returns the highest block height of that chain which has been anchored to CAC, SAC and ETH.
-        Results are computed periodically using a configurable interval of time for each anchoring level: CAC, SAC and EVM.
+          Returns the highest block height of the chain which has been anchored to Cluster Anchoring Chain(CAC), System Anchoring Chain(SAC) and Etherem(ETH). 
+          
+          Results are computed periodically using a configurable interval of time for each anchoring level: CAC, SAC and ETH. 
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
