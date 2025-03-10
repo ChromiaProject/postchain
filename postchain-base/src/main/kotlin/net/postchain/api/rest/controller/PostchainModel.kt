@@ -9,7 +9,10 @@ import net.postchain.PostchainContext
 import net.postchain.api.rest.BlockHeight
 import net.postchain.api.rest.BlockSignature
 import net.postchain.api.rest.BlockchainNodeState
+import net.postchain.api.rest.InfraVersion
 import net.postchain.api.rest.TransactionsCount
+import net.postchain.api.rest.Version
+import net.postchain.api.rest.controller.RestApi.Companion.REST_API_VERSION
 import net.postchain.api.rest.model.ApiRejectedTransaction
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
@@ -46,6 +49,7 @@ import net.postchain.crypto.SigMaker
 import net.postchain.debug.DiagnosticData
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.DpBlockchainNodeState
+import net.postchain.debug.NodeDiagnosticContext
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
@@ -77,6 +81,7 @@ open class PostchainModel(
         final override val blockchainRid: BlockchainRid,
         val storage: Storage,
         val postchainContext: PostchainContext,
+        private val nodeDiagnosticContext: NodeDiagnosticContext,
         private val diagnosticData: DiagnosticData,
         override val queryCacheTtlSeconds: Long
 ) : Model {
@@ -239,6 +244,17 @@ open class PostchainModel(
     override fun getNextBlockchainConfigurationHeight(height: Long): BlockHeight? = withReadConnection(storage, chainIID) { ctx ->
         DatabaseAccess.of(ctx).findNextConfigurationHeight(ctx, height)?.let { BlockHeight(it) }
     }
+
+    override fun getVersion(): Version = Version(REST_API_VERSION)
+
+    override fun getInfrastructureVersion(): InfraVersion =
+            InfraVersion(
+                    postchain = nodeDiagnosticContext[DiagnosticProperty.VERSION]?.value?.toString().orEmpty(),
+                    infrastructure = nodeDiagnosticContext[DiagnosticProperty.INFRASTRUCTURE_NAME]?.value?.toString().orEmpty(),
+                    infrastructureVersion = nodeDiagnosticContext[DiagnosticProperty.INFRASTRUCTURE_VERSION]?.value?.toString().orEmpty(),
+                    restApi = REST_API_VERSION.toString(),
+                    databaseServerVersion = nodeDiagnosticContext[DiagnosticProperty.DATABASE_SERVER_VERSION]?.value?.toString().orEmpty()
+            )
 
     override fun toString(): String = "${this.javaClass.simpleName}(chainId=$chainIID)"
 }

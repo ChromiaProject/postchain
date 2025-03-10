@@ -1380,6 +1380,22 @@ paths:
                 version:
                   value:
                     version: 14
+  /version/{blockchainRid}:
+    get:
+      tags:
+        - blockchain
+      summary: Get API version for the subnode running the given blockchain
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/version"
+              examples:
+                version:
+                  value:
+                    version: 15
   /infrastructure_version:
     get:
       tags:
@@ -1399,6 +1415,26 @@ paths:
                     infrastructure: "net.postchain.d1.D1InfrastructureFactory"
                     infrastructure-version: "3.16.15"
                     rest-api: "14"
+                    database-server-version: "16.7"
+  /infrastructure_version/{blockchainRid}:
+    get:
+      tags:
+        - node
+      summary: Get infrastructure version for the subnode running the given blockchain
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/infrastructureVersion"
+              examples:
+                infrastructure_version:
+                  value:
+                    postchain: "3.16.5"
+                    infrastructure: "net.postchain.d1.D1MasterInfrastructureFactory"
+                    infrastructure-version: "3.16.16"
+                    rest-api: "15"
                     database-server-version: "16.7"
   /highest_block_height_anchoring_check/{blockchainRid}:
     get:

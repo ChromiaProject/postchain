@@ -5,7 +5,9 @@ package net.postchain.api.rest.controller
 import net.postchain.api.rest.BlockHeight
 import net.postchain.api.rest.BlockSignature
 import net.postchain.api.rest.BlockchainNodeState
+import net.postchain.api.rest.InfraVersion
 import net.postchain.api.rest.TransactionsCount
+import net.postchain.api.rest.Version
 import net.postchain.api.rest.model.ApiRejectedTransaction
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
@@ -66,6 +68,8 @@ interface Model : ChainModel {
     fun getBlockchainConfiguration(height: Long = -1): ByteArray?
     fun validateBlockchainConfiguration(configuration: Gtv)
     fun getNextBlockchainConfigurationHeight(height: Long): BlockHeight?
+    fun getVersion(): Version
+    fun getInfrastructureVersion(): InfraVersion
 }
 
 class NotSupported(message: String) : Exception(message)
