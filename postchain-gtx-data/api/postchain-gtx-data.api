@@ -115,13 +115,13 @@ public final class net/postchain/gtx/GtxQuery$Companion {
 	public final fun decode ([B)Lnet/postchain/gtx/GtxQuery;
 }
 
-public final class net/postchain/gtx/data/ExtOpData {
+public final class net/postchain/gtx/data/ExtOpData : net/postchain/gtx/data/GtxOpData {
 	public static final field Companion Lnet/postchain/gtx/data/ExtOpData$Companion;
 	public fun <init> (Ljava/lang/String;I[Lnet/postchain/gtv/Gtv;Lnet/postchain/common/BlockchainRid;[[B[Lnet/postchain/gtx/data/OpData;)V
-	public final fun getArgs ()[Lnet/postchain/gtv/Gtv;
+	public fun getArgs ()[Lnet/postchain/gtv/Gtv;
 	public final fun getBlockchainRID ()Lnet/postchain/common/BlockchainRid;
 	public final fun getOpIndex ()I
-	public final fun getOpName ()Ljava/lang/String;
+	public fun getOpName ()Ljava/lang/String;
 	public final fun getOperations ()[Lnet/postchain/gtx/data/OpData;
 	public final fun getSigners ()[[B
 }
@@ -130,15 +130,20 @@ public final class net/postchain/gtx/data/ExtOpData$Companion {
 	public final fun build (Lnet/postchain/gtx/data/OpData;ILnet/postchain/gtx/GtxBody;[Lnet/postchain/gtx/data/OpData;)Lnet/postchain/gtx/data/ExtOpData;
 }
 
-public final class net/postchain/gtx/data/OpData {
+public abstract interface class net/postchain/gtx/data/GtxOpData {
+	public abstract fun getArgs ()[Lnet/postchain/gtv/Gtv;
+	public abstract fun getOpName ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtx/data/OpData : net/postchain/gtx/data/GtxOpData {
 	public fun <init> (Ljava/lang/String;[Lnet/postchain/gtv/Gtv;)V
 	public final fun component1 ()Ljava/lang/String;
 	public final fun component2 ()[Lnet/postchain/gtv/Gtv;
 	public final fun copy (Ljava/lang/String;[Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtx/data/OpData;
 	public static synthetic fun copy$default (Lnet/postchain/gtx/data/OpData;Ljava/lang/String;[Lnet/postchain/gtv/Gtv;ILjava/lang/Object;)Lnet/postchain/gtx/data/OpData;
 	public fun equals (Ljava/lang/Object;)Z
-	public final fun getArgs ()[Lnet/postchain/gtv/Gtv;
-	public final fun getOpName ()Ljava/lang/String;
+	public fun getArgs ()[Lnet/postchain/gtv/Gtv;
+	public fun getOpName ()Ljava/lang/String;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }

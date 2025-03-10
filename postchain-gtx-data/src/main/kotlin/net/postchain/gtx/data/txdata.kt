@@ -7,7 +7,12 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtx.GtxBody
 import java.util.Arrays
 
-data class OpData(val opName: String, val args: Array<out Gtv>) {
+interface GtxOpData {
+    val opName: String
+    val args: Array<out Gtv>
+}
+
+data class OpData(override val opName: String, override val args: Array<out Gtv>) : GtxOpData {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -28,12 +33,12 @@ data class OpData(val opName: String, val args: Array<out Gtv>) {
     }
 }
 
-class ExtOpData(val opName: String,
+class ExtOpData(override val opName: String,
                 val opIndex: Int,
-                val args: Array<out Gtv>,
+                override val args: Array<out Gtv>,
                 val blockchainRID: BlockchainRid,
                 val signers: Array<ByteArray>,
-                val operations: Array<OpData>) {
+                val operations: Array<OpData>): GtxOpData {
 
     companion object {
 
