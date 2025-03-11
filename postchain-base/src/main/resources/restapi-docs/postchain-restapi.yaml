@@ -1546,7 +1546,7 @@ paths:
         - node
       summary: Check anchoring status for a blockchain
       description: |
-          Returns the highest block height of the chain which has been anchored to Cluster Anchoring Chain (CAC), System Anchoring Chain (SAC) and Etheruem (ETH). 
+          Returns the highest block height of the chain which has been anchored to Cluster Anchoring Chain (CAC), System Anchoring Chain (SAC) and Ethereum (ETH). 
           
           Results are computed periodically using a configurable interval of time for each anchoring level: CAC, SAC and ETH. 
       parameters:
