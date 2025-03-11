@@ -10,6 +10,7 @@ object ArrayToGtvBinaryTreeHelper {
 
     const val empty32bytesHex = "0101010101010101010101010101010101010101010101010101010101010101"
     const val expected1ElementArrayMerkleRoot = "080303" + empty32bytesHex
+    const val expected1ElementArrayOfArrayMerkleRoot = "080904040202020202020202020202020202020202020202020202020202020202020202" + empty32bytesHex
     const val expected4ElementArrayMerkleRoot = "0802040404050204060407"
     const val expected7ElementArrayMerkleRoot = "08020305050506030507050802030509050A040A"
 
@@ -26,6 +27,8 @@ object ArrayToGtvBinaryTreeHelper {
         val gtvArrayList = GtvTreeHelper.transformIntToGtv(intArray.toCollection(ArrayList()))
         return gtv(gtvArrayList)
     }
+
+    fun buildGtvArrayOfArrayOf1() = gtv(listOf(buildGtvArrayOf1()))
 
     // ----------------- 4 -----------------------------
     fun intArrOf4() = intArrayOf(1,2,3,4)
