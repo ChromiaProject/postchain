@@ -271,7 +271,7 @@ paths:
 
         When the `Accept: application/octet-stream` header is specified, the operation will return a binary GTV response.
 
-        If the `Accept: application/json` head is specified, returns a JSON object containing the HEX encoded transaction details.
+        If the `Accept: application/json` header is specified, returns a JSON object containing the HEX encoded transaction details.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
@@ -323,6 +323,10 @@ paths:
             - `txRID` - Unique identifier of the transaction.
             - `txHash` - Transaction hash.
             - `txData` - Transaction data.
+            - `blockHeader` - Public key of nodes who are witnesses to this block.
+            - `witnesses` - Hex encoded raw witness data.
+            - `witnessSignatures` - Signatures of nodes who are witnesses to this block.
+            - `timestamp` - Timestamp, milliseconds since midnight, January 1, 1970 UTC.
           content:
             application/json:
               schema:
@@ -386,6 +390,10 @@ paths:
             - `txRID` - Unique identifier of the transaction.
             - `txHash` - Transaction hash.
             - `txData` - Transaction data.
+            - `blockHeader` - Public key of nodes who are witnesses to this block.
+            - `witnesses` - Hex encoded raw witness data.
+            - `witnessSignatures` - Signatures of nodes who are witnesses to this block.
+            - `timestamp` - Timestamp, milliseconds since midnight, January 1, 1970 UTC.
           content:
             application/json:
               schema:
@@ -412,7 +420,7 @@ paths:
     get:
       tags:
         - transaction
-      summary: Fetche number of successful transactions
+      summary: Fetch number of successful transactions
       description: Retrieves the number of successfully processed transactions in a given blockchain.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
@@ -441,8 +449,8 @@ paths:
       description: |
         Fetches the confirmation proof for a transaction on the specified blockchain.
 
-        When the `application/octet-stream` header is specified, a binary GTV response is returned.
-        If the `application/json` header is specified, a JSON object is returned, containing HEX encoded transaction data.
+        When the `Accept: application/octet-stream` header is specified, a binary GTV response is returned.
+        If the `Accept: application/json` header is specified, a JSON object is returned, containing HEX encoded transaction data.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - $ref: "#/components/parameters/txRid"
@@ -729,11 +737,11 @@ paths:
       description: |
         This operation enables querying either a node on the Chromia network or a local node.
 
-        To invoke it, you must include a `query` argument in the query string parameters. The `query` argument corresponds 
+        To invoke it, you must include a `type` argument in the query string parameters. The `type` argument corresponds 
         to the name of the query defined in the Rell code.
 
         You can pass additional arguments for the Rell query defined in the code to this method using the standard REST syntax: 
-        `/type?my_query&arg1=value&arg2=value`. Here, `type` represents the name of the query, and `arg1` and `arg2` are the query arguments.
+        `/type=my_query&arg1=value&arg2=value`. Here, `type` represents the name of the query, and `arg1` and `arg2` are the query arguments.
 
         This operation is intended for development, testing, and simple web applications. For more complex production use cases, 
         it is recommended to use `/query_gtv` instead.
@@ -933,7 +941,7 @@ paths:
         - $ref: "#/components/parameters/blockchainRid"
         - name: type
           in: query
-          description: The name of the query in the Rell code that returns the binary GTV value.
+          description: The name of the query in the Rell code.
           required: true
           schema:
             type: string
@@ -1071,9 +1079,9 @@ paths:
         - node
       summary: Get blockchain RID
       description: |
-        Retrieves the current BRID for a given chain ID. 
+        Retrieves the current blockchain RID for a given chain ID. 
         
-        Usually, this method is used to obtain the BRID of the Directory Chain; To do that, specify `0` in the `chainId` property. 
+        Usually, this method is used to obtain the blockchain RID of the Directory Chain; To do that, specify `0` in the `chainId` property. 
       parameters:
         - name: chainIid
           description: Chain Iid
@@ -1395,7 +1403,7 @@ paths:
         - configuration
       summary: Fetch the blockchain configuration features
       description: |
-        Retrieves the configuration features for a given blockchain. Currently, only the merkle tree can be obtained by invoking this operation. 
+        Retrieves the configuration features for a given blockchain. Currently, only the merkle hash version can be obtained by invoking this operation. 
         
         When specyfing the height, the method will fetch the active configuration at that height. 
 
@@ -1434,7 +1442,7 @@ paths:
       tags:
         - error
       summary: Fetch blockchain errors
-      description: This method retrieves the last 5 blockchain errors for a given BRID. 
+      description: This method retrieves the last 5 blockchain errors for a given blockchain RID. 
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
       responses:
@@ -1538,7 +1546,7 @@ paths:
         - node
       summary: Check anchoring status for a blockchain
       description: |
-          Returns the highest block height of the chain which has been anchored to Cluster Anchoring Chain(CAC), System Anchoring Chain(SAC) and Etherem(ETH). 
+          Returns the highest block height of the chain which has been anchored to Cluster Anchoring Chain (CAC), System Anchoring Chain (SAC) and Etheruem (ETH). 
           
           Results are computed periodically using a configurable interval of time for each anchoring level: CAC, SAC and ETH. 
       parameters:
