@@ -6,6 +6,7 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.generateProof
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected1ElementArrayMerkleRoot
+import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected1ElementArrayOfArrayMerkleRoot
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected4ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expected7ElementArrayMerkleRoot
 import net.postchain.gtv.merkle.ArrayToGtvBinaryTreeHelper.expectet7and3ElementArrayMerkleRoot
@@ -119,6 +120,67 @@ class ArrayToMerkleProofTreeTest {
         //println(deserializedPrintout)
 
        assertEquals(expectedTree.trim(), deserializedPrintout.trim())
+    }
+
+    @Test
+    fun test_ArrOfArrOf1_proof() {
+        val calculator = MerkleHashCalculatorDummy()
+
+        val path: Array<Any> = arrayOf(0)
+        val gtvPath: GtvPath = GtvPathFactory.buildFromArrayOfPointers(path)
+        val gtvPaths = GtvPathSet(setOf(gtvPath))
+        val orgGtvArr = ArrayToGtvBinaryTreeHelper.buildGtvArrayOfArrayOf1()
+
+        val expectedTree =
+                " +   $ln" +
+                        "/ \\ $ln" +
+                        "*[1] 0000000000000000000000000000000000000000000000000000000000000000"
+
+        val merkleProofTree = orgGtvArr.generateProof(gtvPaths, calculator)
+
+        // Print the result tree
+        val printer = TreePrinter()
+        val pbt = PrintableTreeFactory.buildPrintableTreeFromProofTree(merkleProofTree)
+        val resultPrintout = printer.printNode(pbt)
+        //println(resultPrintout)
+
+        assertEquals(expectedTree.trim(), resultPrintout.trim())
+
+        // Make sure the merkle root stays the same as without proof
+        val merkleProofRoot = merkleProofTree.merkleHash(calculator)
+        assertEquals(expected1ElementArrayOfArrayMerkleRoot, TreeHelper.convertToHex(merkleProofRoot))
+
+        // Proof -> Serialize
+        val serialize: GtvArray = merkleProofTree.toGtv()
+        //println("Serialized: $serialize")
+
+        val expectedSerialization = "[$ln" +
+                "  103,$ln" +  // 103 =  node type is array
+                "  1,$ln" +  // lenght of array
+                "  -10,$ln" + // (no path/position given)
+                "  [$ln" +
+                "    101,$ln" + // 101 = value to prove
+                "    0,$ln" + //path/position = 0
+                "    [1]$ln" + // Actual value
+                "  ],$ln" +
+                "  [$ln" +
+                "    100,$ln" + // 100 = hash
+                "    x\"0000000000000000000000000000000000000000000000000000000000000000\"$ln" +
+                "  ]$ln" +
+                "]$ln"
+
+        assertEquals(stripWhite(expectedSerialization), stripWhite(serialize.toString())) // Not really needed, Can be removed
+
+        // Serialize -> deserialize
+        val deserialized = proofFactory.deserialize(serialize)
+
+
+        // Print the result tree
+        val pbtDes = PrintableTreeFactory.buildPrintableTreeFromProofTree(deserialized)
+        val deserializedPrintout = printer.printNode(pbtDes)
+        //println(deserializedPrintout)
+
+        assertEquals(expectedTree.trim(), deserializedPrintout.trim())
     }
 
     // -------------- Size 4 ------------
