@@ -443,7 +443,7 @@ open class BaseBlockchainEngine(
     }
 
     private fun <RT> withDBConnection(op: (EContext) -> RT): RT {
-        if (closed) throw PmEngineIsAlreadyClosed("Engine is already closed")
+        if (closed) throw PmEngineIsAlreadyClosed("Engine is already closed", chainID)
         currentEContext = if (currentEContext.conn.isClosed) {
             blockBuilderStorage.openWriteConnection(chainID)
         } else {
