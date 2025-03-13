@@ -4,7 +4,7 @@ package net.postchain.core
 
 import net.postchain.common.exception.ProgrammerMistake
 
-open class PmEngineIsAlreadyClosed(message: String, cause: Exception? = null) : ProgrammerMistake(message, cause)
+open class PmEngineIsAlreadyClosed(message: String, val chainId: Long, cause: Exception? = null) : ProgrammerMistake(message, cause)
 
 /**
  * Used when the format of some data is incorrect

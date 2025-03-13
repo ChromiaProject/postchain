@@ -1402,8 +1402,9 @@ public final class net/postchain/core/NodeRidKt {
 }
 
 public class net/postchain/core/PmEngineIsAlreadyClosed : net/postchain/common/exception/ProgrammerMistake {
-	public fun <init> (Ljava/lang/String;Ljava/lang/Exception;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Exception;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;JLjava/lang/Exception;)V
+	public synthetic fun <init> (Ljava/lang/String;JLjava/lang/Exception;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getChainId ()J
 }
 
 public final class net/postchain/core/PrevBlockMismatchException : net/postchain/core/BadDataException {

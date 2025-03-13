@@ -225,7 +225,12 @@ class FastSynchronizer(
         } else {
             if (exception is PmEngineIsAlreadyClosed) {
                 doneTrace("Add block failed for job $job because Db Engine is already closed.")
-                removeJob(job)
+                if (allowJobStart && exception.chainId != blockchainConfiguration.chainID) {
+                    // the problem happened because we had a restart on another chain that we query
+                    restartJob(job)
+                } else {
+                    removeJob(job)
+                }
                 return
             }
 

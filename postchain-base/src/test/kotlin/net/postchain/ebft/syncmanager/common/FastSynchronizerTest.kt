@@ -84,6 +84,7 @@ class FastSynchronizerTest {
     private val transactions: List<ByteArray> = listOf("tx1".toByteArray())
     private val currentTimeMillis = 42L
     private val peerIds = mutableSetOf<NodeRid>()
+    private val ourChainId = 0L
 
     private val headerRec: BlockHeaderData = mock {
         on { getHeight() } doReturn height
@@ -110,6 +111,7 @@ class FastSynchronizerTest {
         on { getBlockHeaderValidator() } doReturn blockWitnessProvider
         on { blockchainRid } doReturn blockRID
         on { signers } doReturn listOf(nodeRid.data)
+        on { chainID } doReturn ourChainId
     }
     private val blockchainEngine: BlockchainEngine = mock {
         on { getBlockQueries() } doReturn blockQueries
@@ -170,15 +172,27 @@ class FastSynchronizerTest {
         }
 
         @Test
-        fun `with PmEngineIsAlreadyClosed should remove job`() {
+        fun `with PmEngineIsAlreadyClosed should remove job if our chain is closed`() {
             // setup
             val job = addJob(height, nodeRid)
-            job.addBlockException = PmEngineIsAlreadyClosed("Failure")
+            job.addBlockException = PmEngineIsAlreadyClosed("Failure", ourChainId)
             // execute
             sut.processDoneJob(job)
             // verify
             assertThat(sut.jobs[job.height]).isNull()
             assertThat(sut.blockHeight.get()).isEqualTo(lastBlockHeight)
+        }
+
+        @Test
+        fun `with PmEngineIsAlreadyClosed should restart job if another chain is closed`() {
+            // setup
+            val job = addJob(height, nodeRid)
+            job.addBlockException = PmEngineIsAlreadyClosed("Failure", ourChainId + 1)
+            // execute
+            sut.processDoneJob(job)
+            // verify
+            verify(sut).restartJob(job)
+            assertThat(sut.jobs[job.height]).isNotNull()
         }
 
         @Test

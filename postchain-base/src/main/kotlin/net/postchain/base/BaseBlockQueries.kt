@@ -61,7 +61,7 @@ abstract class BaseBlockQueries(
 
     protected fun <T> runOp(operation: (EContext) -> T): CompletionStage<T> {
         lock.withLock {
-            if (isShutdown) return CompletableFuture.failedStage(PmEngineIsAlreadyClosed("Engine is closed"))
+            if (isShutdown) return CompletableFuture.failedStage(PmEngineIsAlreadyClosed("Engine is closed", chainId))
             activeExecutions++
         }
 
@@ -82,7 +82,7 @@ abstract class BaseBlockQueries(
         val ctx = try {
             storage.openReadConnection(chainId)
         } catch (e: SQLException) {
-            if (isShutdown) return CompletableFuture.failedStage(PmEngineIsAlreadyClosed("Engine is closed", e))
+            if (isShutdown) return CompletableFuture.failedStage(PmEngineIsAlreadyClosed("Engine is closed", chainId, e))
             return CompletableFuture.failedStage(e)
         }
 
