@@ -110,7 +110,7 @@ class ManagedModeSlowIntegrationTest : ConfigFileBasedIntegrationTest() {
         await().atMost(Duration.ONE_MINUTE).untilAsserted {
             assertEquals(9L, getLastBlockHeight(node.appConfig, 101L))
             val logs = appender.events.filter { it.level == Level.ERROR }.map { it.message.toString() }
-            assertThat(logs).contains("Module class was not found: net.postchain.gtx.UnknownGTXModule")
+            assertThat(logs).contains("GTX module class not found: net.postchain.gtx.UnknownGTXModule")
         }
 
         // Asserting that chain 101 recovers and can build blocks
