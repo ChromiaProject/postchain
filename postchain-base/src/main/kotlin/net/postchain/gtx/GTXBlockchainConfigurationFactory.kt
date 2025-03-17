@@ -1,5 +1,6 @@
 package net.postchain.gtx
 
+import mu.KLogging
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.data.DatabaseAccess
@@ -19,7 +20,7 @@ import net.postchain.gtv.mapper.toObject
  */
 open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
 
-    companion object {
+    companion object : KLogging() {
         fun validateConfiguration(config: Gtv, blockchainRid: BlockchainRid, eContext: EContext) {
             val configurationData = try {
                 config.toObject<BlockchainConfigurationData>()
@@ -54,13 +55,18 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
 
                 val moduleClass = try {
                     Class.forName(className).getConstructor()
-                } catch (e: ClassNotFoundException) {
-                    throw UserMistake("Module class was not found: $className")
+                } catch (_: ClassNotFoundException) {
+                    throw UserMistake("GTX module class not found: $className")
                 }
-                return when (val instance = moduleClass.newInstance()) {
-                    is GTXModule -> instance
-                    is GTXModuleFactory -> instance.makeModule(data.rawConfig, blockchainRID) //TODO
-                    else -> throw UserMistake("Module class not recognized")
+                try {
+                    return when (val instance = moduleClass.newInstance()) {
+                        is GTXModule -> instance
+                        is GTXModuleFactory -> instance.makeModule(data.rawConfig, blockchainRID)
+                        else -> throw UserMistake("GTX module class not recognized: $className. Expected GTXModule or GTXModuleFactory.")
+                    }
+                } catch (e: Exception) {
+                    logger.warn("Unable to create GTX module: ${e.message}", e)
+                    throw UserMistake("Unable to create GTX module: $className")
                 }
             }
 
