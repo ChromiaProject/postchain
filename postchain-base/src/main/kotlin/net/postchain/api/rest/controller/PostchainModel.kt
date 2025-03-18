@@ -235,7 +235,11 @@ open class PostchainModel(
             val config = factory.makeBlockchainConfiguration(blockConfData, partialContext, blockSigMaker, eContext, postchainContext.cryptoSystem)
             DependenciesValidator.validateBlockchainRids(eContext, config.blockchainDependencies)
             config.initializeModules(postchainContext)
-            GTXBlockchainConfigurationFactory.extraConfigurationValidation(blockConfData, eContext)
+            try {
+                GTXBlockchainConfigurationFactory.extraConfigurationValidation(blockConfData, eContext)
+            } finally {
+                config.shutdownModules()
+            }
 
             false
         }
