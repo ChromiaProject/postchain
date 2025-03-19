@@ -28,17 +28,14 @@ import kotlin.random.Random
 
 class BaseTransactionForwarder(
         private val client: HttpHandler,
-        private val apiUrls: List<String>,
+        private val dataSource: ManagedNodeDataSource,
         private val blockchainRid: BlockchainRid,
         private val random: Random
 ) : TransactionForwarder {
-    init {
-        require(apiUrls.isNotEmpty()) { "At least one API URL must be provided" }
-    }
-
     companion object : KLogging()
 
     override fun forward(tx: Transaction) {
+        val apiUrls = dataSource.getBlockchainApiUrls(blockchainRid)
         val randomizedApiUrls = apiUrls.shuffled(random)
 
         for (apiUrl in randomizedApiUrls) {
@@ -55,6 +52,7 @@ class BaseTransactionForwarder(
     }
 
     override fun checkStatus(tx: Transaction): ApiStatus {
+        val apiUrls = dataSource.getBlockchainApiUrls(blockchainRid)
         val randomizedApiUrls = apiUrls.shuffled(random)
 
         for (apiUrl in randomizedApiUrls) {

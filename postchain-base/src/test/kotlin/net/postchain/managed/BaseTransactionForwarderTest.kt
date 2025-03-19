@@ -36,12 +36,14 @@ class BaseTransactionForwarderTest {
         val client: HttpHandler = mock()
         val apiUrls = listOf("https://example1.com", "https://example2.com", "https://example3.com")
         val transaction: Transaction = mock()
+        val dataSource: ManagedNodeDataSource = mock()
 
         whenever(transaction.getRID()).thenReturn(transactionRid)
         whenever(transaction.getRawData()).thenReturn(byteArrayOf(1, 2, 3, 4))
         whenever(client(any())).thenReturn(Response(Status.OK))
+        whenever(dataSource.getBlockchainApiUrls(any())).thenReturn(apiUrls)
 
-        val forwarder = BaseTransactionForwarder(client, apiUrls, blockchainRid, Random(1))
+        val forwarder = BaseTransactionForwarder(client, dataSource, blockchainRid, Random(1))
 
         forwarder.forward(transaction)
 
@@ -58,12 +60,14 @@ class BaseTransactionForwarderTest {
         val client: HttpHandler = mock()
         val apiUrls = listOf("https://example1.com", "https://example2.com", "https://example3.com")
         val transaction: Transaction = mock()
+        val dataSource: ManagedNodeDataSource = mock()
 
         whenever(transaction.getRID()).thenReturn(transactionRid)
         whenever(transaction.getRawData()).thenReturn(byteArrayOf(1, 2, 3, 4))
         whenever(client(any())).thenReturn(Response(Status.BAD_REQUEST))
+        whenever(dataSource.getBlockchainApiUrls(any())).thenReturn(apiUrls)
 
-        val forwarder = BaseTransactionForwarder(client, apiUrls, blockchainRid, Random(17))
+        val forwarder = BaseTransactionForwarder(client, dataSource, blockchainRid, Random(17))
 
         assertFailure {
             forwarder.forward(transaction)
@@ -77,13 +81,15 @@ class BaseTransactionForwarderTest {
         val client: HttpHandler = mock()
         val apiUrls = listOf("https://example1.com", "https://example2.com", "https://example3.com")
         val transaction: Transaction = mock()
-        whenever(transaction.getRID()).thenReturn(transactionRid)
+        val dataSource: ManagedNodeDataSource = mock()
 
+        whenever(transaction.getRID()).thenReturn(transactionRid)
         whenever(client(any())).thenReturn(
                 Response(Status.OK).body("""{"status":"confirmed"}""")
         )
+        whenever(dataSource.getBlockchainApiUrls(any())).thenReturn(apiUrls)
 
-        val forwarder = BaseTransactionForwarder(client, apiUrls, blockchainRid, Random(1))
+        val forwarder = BaseTransactionForwarder(client, dataSource, blockchainRid, Random(1))
 
         assertThat(forwarder.checkStatus(transaction).status).isEqualTo(TransactionStatus.CONFIRMED.status)
     }
@@ -93,13 +99,15 @@ class BaseTransactionForwarderTest {
         val client: HttpHandler = mock()
         val apiUrls = listOf("https://example1.com", "https://example2.com", "https://example3.com")
         val transaction: Transaction = mock()
-        whenever(transaction.getRID()).thenReturn(transactionRid)
+        val dataSource: ManagedNodeDataSource = mock()
 
+        whenever(transaction.getRID()).thenReturn(transactionRid)
         whenever(client(any())).thenReturn(
                 Response(Status.OK).body("""{"status":"rejected", "rejectReason": "Some reason"}""")
         )
+        whenever(dataSource.getBlockchainApiUrls(any())).thenReturn(apiUrls)
 
-        val forwarder = BaseTransactionForwarder(client, apiUrls, blockchainRid, Random(1))
+        val forwarder = BaseTransactionForwarder(client, dataSource, blockchainRid, Random(1))
 
         val status = forwarder.checkStatus(transaction)
         assertThat(status.status).isEqualTo(TransactionStatus.REJECTED.status)
@@ -111,13 +119,15 @@ class BaseTransactionForwarderTest {
         val client: HttpHandler = mock()
         val apiUrls = listOf("https://example1.com", "https://example2.com", "https://example3.com")
         val transaction: Transaction = mock()
-        whenever(transaction.getRID()).thenReturn(transactionRid)
+        val dataSource: ManagedNodeDataSource = mock()
 
+        whenever(transaction.getRID()).thenReturn(transactionRid)
         whenever(client(any())).thenReturn(
                 Response(Status.BAD_REQUEST).body("Some error")
         )
+        whenever(dataSource.getBlockchainApiUrls(any())).thenReturn(apiUrls)
 
-        val forwarder = BaseTransactionForwarder(client, apiUrls, blockchainRid, Random(1))
+        val forwarder = BaseTransactionForwarder(client, dataSource, blockchainRid, Random(1))
         assertThat(forwarder.checkStatus(transaction).status).isEqualTo(TransactionStatus.UNKNOWN.status)
     }
 
@@ -126,11 +136,13 @@ class BaseTransactionForwarderTest {
         val client: HttpHandler = mock()
         val apiUrls = listOf("https://example1.com", "https://example2.com", "https://example3.com")
         val transaction: Transaction = mock()
-        whenever(transaction.getRID()).thenReturn(transactionRid)
+        val dataSource: ManagedNodeDataSource = mock()
 
+        whenever(transaction.getRID()).thenReturn(transactionRid)
         val randomSeed = 5
-        val forwarder = BaseTransactionForwarder(client, apiUrls, blockchainRid, Random(randomSeed))
+        val forwarder = BaseTransactionForwarder(client, dataSource, blockchainRid, Random(randomSeed))
         whenever(client(any())).thenReturn(Response(Status.OK).body("""{"status":"waiting"}"""))
+        whenever(dataSource.getBlockchainApiUrls(any())).thenReturn(apiUrls)
 
         assertThat(forwarder.checkStatus(transaction).status).isEqualTo(TransactionStatus.WAITING.status)
 
@@ -146,11 +158,13 @@ class BaseTransactionForwarderTest {
         val client: HttpHandler = mock()
         val apiUrls = listOf("https://example1.com", "https://example2.com", "https://example3.com")
         val transaction: Transaction = mock()
+        val dataSource: ManagedNodeDataSource = mock()
 
         whenever(transaction.getRID()).thenReturn(transactionRid)
         whenever(client(any())).thenReturn(Response(Status.OK).body("""{"status":"unknown"}"""))
+        whenever(dataSource.getBlockchainApiUrls(any())).thenReturn(apiUrls)
 
-        val forwarder = BaseTransactionForwarder(client, apiUrls, blockchainRid, Random(17))
+        val forwarder = BaseTransactionForwarder(client, dataSource, blockchainRid, Random(17))
 
         assertThat(forwarder.checkStatus(transaction).status).isEqualTo(TransactionStatus.UNKNOWN.status)
 
