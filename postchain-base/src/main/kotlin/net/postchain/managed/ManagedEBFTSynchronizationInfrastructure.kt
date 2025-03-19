@@ -58,7 +58,7 @@ open class ManagedEBFTSynchronizationInfrastructure(postchainContext: PostchainC
                 if (blockchainConfig is ManagedDataSourceAware) {
                     BaseTransactionForwarder(
                             forwardingClient,
-                            blockchainConfig.dataSource.getBlockchainApiUrls(blockchainConfig.blockchainRid),
+                            blockchainConfig.dataSource,
                             blockchainConfig.blockchainRid,
                             workerContext.appConfig.cryptoSystem.random
                     )
