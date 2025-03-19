@@ -1,12 +1,17 @@
 package net.postchain.ebft.syncmanager.common
 
+import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.BaseBlockHeader
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.BaseBlockWitnessProvider
+import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.extension.getConfigHash
 import net.postchain.base.extension.getFailedConfigHash
 import net.postchain.base.withReadConnection
+import net.postchain.base.withWriteConnection
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.toHex
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.core.BadDataException
@@ -26,10 +31,13 @@ import net.postchain.ebft.BDBAbortException
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
+import net.postchain.gtv.GtvDecoder
+import net.postchain.gtx.GTXBlockchainConfigurationFactory.Companion.validateConfiguration
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.managed.PendingBlockchainConfiguration
+import net.postchain.managed.config.ManagedDataSourceAware
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicLong
 
@@ -38,6 +46,8 @@ abstract class AbstractSynchronizer(
         rateLimitConfiguration: RateLimitConfiguration,
         val baseBlockWitnessProviderProvider: BaseBlockWitnessProviderProvider = defaultBaseBlockWitnessProviderProvider()
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker, rateLimitConfiguration) {
+
+    companion object : KLogging()
 
     protected val blockchainConfiguration = workerContext.engine.getConfiguration()
     protected val configuredPeers = workerContext.peerCommConfiguration.networkNodes.getPeerIds()
@@ -185,8 +195,59 @@ abstract class AbstractSynchronizer(
             }
 
             val headerConfigHash = block.header.getConfigHash()
-            return checkIfConfigIsPendingAndCanBeLoaded(block, headerConfigHash)
+            return checkIfConfigIsPendingAndCanBeLoaded(block, headerConfigHash) ||
+                    checkIfChain0PreloadedConfigCanBeLoaded(block, headerConfigHash)
         }
+    }
+
+    private fun checkIfChain0PreloadedConfigCanBeLoaded(block: BlockDataWithWitness, headerConfigHash: ByteArray?): Boolean {
+
+        val chainID = blockchainConfiguration.chainID
+
+        val bcConfigProvider = workerContext.blockchainConfigurationProvider
+        if (chainID == 0L &&
+                bcConfigProvider is ManagedBlockchainConfigurationProvider &&
+                workerContext.blockchainConfiguration is ManagedDataSourceAware &&
+                headerConfigHash != null) {
+
+            val height = getHeight(block.header)
+
+            withReadConnection(workerContext.engine.blockBuilderStorage, chainID) { ctx ->
+                val lastConfigHeight = bcConfigProvider.getHistoricConfigurationHeight(ctx, chainID, height)
+                if (lastConfigHeight != null && lastConfigHeight != height)
+                    workerContext.blockchainConfiguration.dataSource
+                            .getConfiguration(blockchainConfiguration.blockchainRid.data, height)
+                else null
+            }?.let { config ->
+
+                logger.info { "Found a missing preloaded management chain config on height $height" }
+
+                val gtvConfig = GtvDecoder.decodeGtv(config)
+                val configHash = BlockchainConfigurationData.merkleHash(gtvConfig)
+
+                if (configHash.contentEquals(headerConfigHash)) {
+
+                    return withWriteConnection(workerContext.engine.blockBuilderStorage, chainID) { ctx ->
+                        try {
+                            validateConfiguration(gtvConfig, blockchainConfiguration.blockchainRid, ctx)
+                            DatabaseAccess.of(ctx).addConfigurationData(ctx, height, config)
+
+                            logger.info { "A valid configuration for management chain on height $height was loaded. Chain will be restarted." }
+
+                            workerContext.restartNotifier.notifyRestart(false)
+                            true
+                        } catch (e: Exception) {
+                            logger.error("Failed to validate or load configuration on height $height: ${e.message}", e)
+                            false
+                        }
+                    }
+                } else {
+                    logger.warn { "Loaded configuration with hash ${configHash.toHex()} does not match the block header config hash ${headerConfigHash.toHex()}" }
+                }
+            }
+        }
+
+        return false
     }
 
     private fun checkIfConfigIsPendingAndCanBeLoaded(block: BlockDataWithWitness, configHash: ByteArray?): Boolean {
