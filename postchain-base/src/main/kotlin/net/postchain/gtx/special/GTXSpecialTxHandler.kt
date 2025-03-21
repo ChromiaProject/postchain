@@ -14,7 +14,6 @@ import net.postchain.core.FaultyExtensionException
 import net.postchain.core.Transaction
 import net.postchain.core.block.BlockData
 import net.postchain.crypto.CryptoSystem
-import net.postchain.gtv.GtvFactory
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
@@ -61,7 +60,7 @@ open class GTXSpecialTxHandler(val module: GTXModule,
         return extensions.any { it.needsSpecialTransaction(position) }
     }
 
-    override fun createSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Transaction {
+    override fun createSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Transaction? {
         val ops = mutableListOf<GtxOp>()
         for (x in extensions) {
             if (x.needsSpecialTransaction(position)) {
@@ -74,10 +73,9 @@ open class GTXSpecialTxHandler(val module: GTXModule,
                 }
             }
         }
-        if (ops.isEmpty()) {
-            // no extension emitted an operation - add "__nop" (same as "nop" but for spec tx)
-            ops.add(GtxOp(GtxSpecNop.OP_NAME, GtvFactory.gtv(cs.getRandomBytes(32))))
-        }
+        // if no extension emitted an operation we don't create any tx
+        if (ops.isEmpty()) return null
+
         val tx = Gtx(GtxBody(blockchainRID, ops, listOf()), listOf())
         return factory.decodeTransaction(tx.encode())
     }

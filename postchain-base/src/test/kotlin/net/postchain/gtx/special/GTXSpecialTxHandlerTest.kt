@@ -4,14 +4,20 @@ import net.postchain.base.SpecialTransactionPosition
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GTXTransactionFactory
+import net.postchain.gtx.Gtx
+import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxBuilder
+import net.postchain.gtx.GtxOp
+import net.postchain.gtx.GtxSpecNop
 import net.postchain.gtx.data.OpData
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.any
@@ -53,7 +59,7 @@ class GTXSpecialTxHandlerTest {
     }
 
     @Test
-    fun `ext gives empty op list then __nop is added`() {
+    fun `ext gives empty op list then null is returned by createSpecialOperations`() {
         val ext: GTXSpecialTxExtension = mock {
             on { getRelevantOps() } doReturn setOf("op1", "op11")
             on { needsSpecialTransaction(any()) } doReturn true
@@ -67,17 +73,8 @@ class GTXSpecialTxHandlerTest {
 
         val sut = GTXSpecialTxHandler(module, 0L, ZERO_RID, cs, factory)
 
-        // needs
         assertEquals(true, sut.needsSpecialTransaction(mock()))
-        val tx = sut.createSpecialTransaction(mock(), mock()) as GTXTransaction
-
-        // create
-        val ops = tx.gtxData.gtxBody.operations.map { it.opName }
-        assertEquals(listOf("__nop"), ops)
-
-        // validate
-        val validated = sut.validateSpecialTransaction(mock(), tx, mock())
-        assertEquals(true, validated)
+        assertNull(sut.createSpecialTransaction(mock(), mock()))
     }
 
     @Test
@@ -234,11 +231,8 @@ class GTXSpecialTxHandlerTest {
 
         // needs
         assertEquals(true, sut.needsSpecialTransaction(mock()))
-        val tx = sut.createSpecialTransaction(mock(), mock()) as GTXTransaction
-
-        // create
-        val ops = tx.gtxData.gtxBody.operations.map { it.opName }
-        assertEquals(listOf("__nop"), ops)
+        val nopGtx = Gtx(GtxBody(ZERO_RID, listOf(GtxOp(GtxSpecNop.OP_NAME, gtv(cs.getRandomBytes(32)))), listOf()), listOf())
+        val tx = factory.decodeTransaction(nopGtx.encode()) as GTXTransaction
 
         // validate
         val validated = sut.validateSpecialTransaction(mock(), tx, mock())
