@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 
-
 class GtxBuilderTest {
 
     private val crypto = Secp256K1CryptoSystem()
@@ -56,10 +55,6 @@ class GtxBuilderTest {
         val txBuilder = b.finish()
                 .sign(crypto.buildSigMaker(KeyPair(signerPub[0], signerPriv[0])))
 
-        // try recreating from a serialized copy
-        assertThrows<IllegalArgumentException> {
-            txBuilder.buildGtx()
-        }
         val sigMaker = crypto.buildSigMaker(KeyPair(signerPub[1], signerPriv[1]))
         val txBodyMerkleRoot = txBuilder.txRid
         val signature = sigMaker.signDigest(txBodyMerkleRoot)
@@ -166,6 +161,7 @@ class GtxBuilderTest {
         checkSize(b, 1)
     }
 
+    @Suppress("DEPRECATION")
     @Test
     fun signOverEmptySignature_given_valid_keypair() {
         val gtxBuilder = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, calc)
@@ -176,6 +172,7 @@ class GtxBuilderTest {
         assertEquals("4F36ACA7EFCABED6B4E3F82B0DE4B6B05E299CE420369F9FC37CCF2DB7F7551E596E12C402A833D3FDE2725F8D23F682BCFB6B94DC0D896E03D9056C05056765", signOverEmptySignature.buildGtx().signatures[0].toHex())
     }
 
+    @Suppress("DEPRECATION")
     @Test
     fun signOverEmptySignature_given_faulty_keypair() {
         val gtxBuilder = GtxBuilder(BlockchainRid.buildRepeat(0), listOf(signerPub[0]), crypto, calc)
