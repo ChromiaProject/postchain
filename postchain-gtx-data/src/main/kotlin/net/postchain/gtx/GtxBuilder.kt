@@ -1,10 +1,8 @@
 package net.postchain.gtx
 
 import net.postchain.common.BlockchainRid
-import net.postchain.common.exception.TransactionIncorrect
-import net.postchain.common.exception.UserMistake
-import net.postchain.common.toHex
 import net.postchain.crypto.CryptoSystem
+import net.postchain.crypto.KeyPair
 import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
@@ -79,44 +77,41 @@ open class GtxBuilder(
      */
     fun uncheckedSignBuilder(): GtxSignBuilder {
         val body = GtxBody(blockchainRid, operations, signers)
-        return GtxSignBuilder(body,false)
+        return GtxSignBuilder(body, false)
     }
 
-    inner class GtxSignBuilder(private val body: GtxBody, private val check: Boolean = true) {
+    inner class GtxSignBuilder(body: GtxBody, check: Boolean = true) {
 
-        private val signatures = mutableListOf<Signature>()
         val txRid = body.calculateTxRid(calculator)
+        private val delegate = GtxSignatureBuilder(body, txRid, cryptoSystem, check)
 
-        fun isFullySigned() = signatures.size == body.signers.size
+        fun isFullySigned() = delegate.isFullySigned()
 
         /**
          * Sign this transaction
          */
         fun sign(sigMaker: SigMaker) = apply {
-            sign(sigMaker.signDigest(txRid))
+            delegate.sign(sigMaker)
+        }
+
+        /**
+         * Sign this transaction
+         */
+        fun sign(keyPair: KeyPair) = apply {
+            delegate.sign(keyPair)
         }
 
         /**
          * Add a signature to this transaction
          */
         fun sign(signature: Signature) = apply {
-            if (signatures.contains(signature)) throw UserMistake("Signature already exists")
-            if (signers.find { it.contentEquals(signature.subjectID) } == null) throw UserMistake("Signature belongs to unknown signer")
-            if (check) {
-                check(signature)
-            }
-            signatures.add(signature)
-        }
-
-        private fun check(signature: Signature) {
-            if (!cryptoSystem.verifyDigest(txRid, signature)) {
-                throw TransactionIncorrect(txRid, "Signature by ${signature.subjectID.toHex()} is not valid")
-            }
+            delegate.sign(signature)
         }
 
         /**
          * Add empty signature for subjectID. Only successful if [check] = false
          */
+        @Deprecated("This is no longer needed")
         fun emptySign(subjectID: ByteArray) = apply {
             sign(Signature(subjectID, EMPTY_SIGNATURE))
         }
@@ -124,16 +119,9 @@ open class GtxBuilder(
         /**
          * Replace empty signature.
          */
+        @Deprecated("This is no longer needed", replaceWith = ReplaceWith("sign(sigMaker)"))
         fun signOverEmptySignature(sigMaker: SigMaker) = apply {
-            val newSignature = sigMaker.signDigest(txRid)
-            check(newSignature)
-            val index = signatures.indexOfFirst { it.subjectID.contentEquals(newSignature.subjectID) && it.data.contentEquals(EMPTY_SIGNATURE) }
-
-            if (index == -1) {
-                throw UserMistake("No empty signature found for the given subject ID")
-            }
-
-            signatures[index] = newSignature
+            delegate.sign(sigMaker, true)
         }
 
         /**
@@ -142,12 +130,12 @@ open class GtxBuilder(
          * @param signatures List of respective signatures for all [signers]
          */
         fun addSignatures(signatures: List<ByteArray>) = apply {
-            signatures.forEachIndexed{index, signature -> sign(Signature(signers[index], signature))}
+            delegate.addSignatures(signatures)
         }
 
         /**
          * Build a GTX
          */
-        fun buildGtx() = Gtx(body, signatures.map { it.data })
+        fun buildGtx() = delegate.buildGtx()
     }
 }

@@ -66,6 +66,7 @@ public final class net/postchain/gtx/GtxBuilder$GtxSignBuilder {
 	public final fun emptySign ([B)Lnet/postchain/gtx/GtxBuilder$GtxSignBuilder;
 	public final fun getTxRid ()[B
 	public final fun isFullySigned ()Z
+	public final fun sign (Lnet/postchain/crypto/KeyPair;)Lnet/postchain/gtx/GtxBuilder$GtxSignBuilder;
 	public final fun sign (Lnet/postchain/crypto/SigMaker;)Lnet/postchain/gtx/GtxBuilder$GtxSignBuilder;
 	public final fun sign (Lnet/postchain/crypto/Signature;)Lnet/postchain/gtx/GtxBuilder$GtxSignBuilder;
 	public final fun signOverEmptySignature (Lnet/postchain/crypto/SigMaker;)Lnet/postchain/gtx/GtxBuilder$GtxSignBuilder;
@@ -113,6 +114,28 @@ public final class net/postchain/gtx/GtxQuery {
 
 public final class net/postchain/gtx/GtxQuery$Companion {
 	public final fun decode ([B)Lnet/postchain/gtx/GtxQuery;
+}
+
+public final class net/postchain/gtx/GtxSignatureBuilder {
+	public fun <init> (Lnet/postchain/gtx/GtxBody;[BLnet/postchain/crypto/CryptoSystem;Z)V
+	public synthetic fun <init> (Lnet/postchain/gtx/GtxBody;[BLnet/postchain/crypto/CryptoSystem;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun addSignatures (Ljava/util/List;)Lnet/postchain/gtx/GtxSignatureBuilder;
+	public final fun buildGtx ()Lnet/postchain/gtx/Gtx;
+	public final fun getBody ()Lnet/postchain/gtx/GtxBody;
+	public final fun getCryptoSystem ()Lnet/postchain/crypto/CryptoSystem;
+	public final fun getTxRid ()[B
+	public final fun isFullySigned ()Z
+	public final fun sign (Lnet/postchain/crypto/KeyPair;Z)Lnet/postchain/gtx/GtxSignatureBuilder;
+	public final fun sign (Lnet/postchain/crypto/SigMaker;Z)Lnet/postchain/gtx/GtxSignatureBuilder;
+	public final fun sign (Lnet/postchain/crypto/Signature;Z)Lnet/postchain/gtx/GtxSignatureBuilder;
+	public static synthetic fun sign$default (Lnet/postchain/gtx/GtxSignatureBuilder;Lnet/postchain/crypto/KeyPair;ZILjava/lang/Object;)Lnet/postchain/gtx/GtxSignatureBuilder;
+	public static synthetic fun sign$default (Lnet/postchain/gtx/GtxSignatureBuilder;Lnet/postchain/crypto/SigMaker;ZILjava/lang/Object;)Lnet/postchain/gtx/GtxSignatureBuilder;
+	public static synthetic fun sign$default (Lnet/postchain/gtx/GtxSignatureBuilder;Lnet/postchain/crypto/Signature;ZILjava/lang/Object;)Lnet/postchain/gtx/GtxSignatureBuilder;
+}
+
+public final class net/postchain/gtx/SignKt {
+	public static final fun signTransaction ([B[BLjava/util/List;Lnet/postchain/crypto/CryptoSystem;)[B
+	public static synthetic fun signTransaction$default ([B[BLjava/util/List;Lnet/postchain/crypto/CryptoSystem;ILjava/lang/Object;)[B
 }
 
 public final class net/postchain/gtx/data/ExtOpData : net/postchain/gtx/data/GtxOpData {
