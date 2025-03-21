@@ -10,7 +10,7 @@ enum class SpecialTransactionPosition {
 
 interface SpecialTransactionHandler {
     fun needsSpecialTransaction(position: SpecialTransactionPosition): Boolean
-    fun createSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Transaction
+    fun createSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Transaction?
     fun validateSpecialTransaction(position: SpecialTransactionPosition, tx: Transaction, bctx: BlockEContext): Boolean
     fun isAllowedToSkipSpecialTransaction(position: SpecialTransactionPosition, bctx: BlockEContext): Boolean
 

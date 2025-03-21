@@ -156,11 +156,12 @@ open class BaseBlockBuilder(
         super.begin(partialBlockHeader)
         for (x in extensions) x.init(this.bctx, this)
         if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(Begin)) {
-            val stx = specialTxHandler.createSpecialTransaction(Begin, bctx)
-            withLoggingContext(TRANSACTION_RID_TAG to stx.getRID().toHex()) {
-                logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "Begin", Begin)
-                appendTransaction(stx)
-                logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "End", Begin)
+            specialTxHandler.createSpecialTransaction(Begin, bctx)?.let { stx ->
+                withLoggingContext(TRANSACTION_RID_TAG to stx.getRID().toHex()) {
+                    logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "Begin", Begin)
+                    appendTransaction(stx)
+                    logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "End", Begin)
+                }
             }
         }
     }
@@ -278,11 +279,12 @@ open class BaseBlockBuilder(
     override fun finalizeBlock(timestamp: Long): BlockHeader {
         if (buildingNewBlock && specialTxHandler.needsSpecialTransaction(End)) {
             isSpecialEndTransaction = true
-            val stx = specialTxHandler.createSpecialTransaction(End, bctx)
-            withLoggingContext(TRANSACTION_RID_TAG to stx.getRID().toHex()) {
-                logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "Begin", End)
-                appendTransaction(stx)
-                logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "End", End)
+            specialTxHandler.createSpecialTransaction(End, bctx)?.let { stx ->
+                withLoggingContext(TRANSACTION_RID_TAG to stx.getRID().toHex()) {
+                    logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "Begin", End)
+                    appendTransaction(stx)
+                    logger.trace(APPEND_SPECIAL_TRANSACTION_LOG_MESSAGE, "End", End)
+                }
             }
         }
         return super.finalizeBlock(timestamp)
