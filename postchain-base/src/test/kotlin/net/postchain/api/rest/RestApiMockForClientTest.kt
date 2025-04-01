@@ -144,7 +144,7 @@ class RestApiMockForClientManual {
             TxRid(statusUnknown.hexStringToByteArray()) -> ApiStatus(TransactionStatus.UNKNOWN)
             TxRid(statusWaiting.hexStringToByteArray()) -> ApiStatus(TransactionStatus.WAITING)
             TxRid(statusConfirmed.hexStringToByteArray()) -> ApiStatus(TransactionStatus.CONFIRMED)
-            TxRid(statusRejected.hexStringToByteArray()) -> ApiStatus(TransactionStatus.REJECTED, "some reason")
+            TxRid(statusRejected.hexStringToByteArray()) -> ApiStatus(TransactionStatus.REJECTED, "some reason", 1574849700)
             else -> throw ProgrammerMistake("unexpected error")
         }
 
