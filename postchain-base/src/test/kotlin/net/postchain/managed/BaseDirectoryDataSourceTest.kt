@@ -86,6 +86,18 @@ class BaseDirectoryDataSourceTest {
         assertThat(sut.getImageForContainer("my_container")).isEqualTo(expected)
     }
 
+    @ParameterizedTest
+    @MethodSource("getImageForContainerOrDefaultTestData")
+    fun testGetImageForContainerOrDefault(apiVersion: Long, gtvResult1: Gtv, gtvResult2: Gtv, expected: ContainerImageInfo?) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(apiVersion)
+            on { query(eq("nm_get_container_image"), any()) } doReturn gtvResult1
+            on { query(eq("nm_get_container_image_or_default"), any()) } doReturn gtvResult2
+        }
+        val sut = BaseDirectoryDataSource(queryRunner, appConfig)
+        assertThat(sut.getImageForContainerOrDefault("my_container")).isEqualTo(expected)
+    }
+
     companion object {
 
         @JvmStatic
@@ -148,5 +160,29 @@ class BaseDirectoryDataSourceTest {
                 )
         )
 
+        @JvmStatic
+        fun getImageForContainerOrDefaultTestData(): List<Array<Any?>> = listOf(
+                arrayOf(19, GtvNull, GtvNull, null),
+                arrayOf(
+                        20,
+                        gtv(mapOf(
+                                "name" to gtv("image_name"),
+                                "url" to gtv("image_url"),
+                                "digest" to gtv("image_digest"),
+                        )),
+                        GtvNull,
+                        ContainerImageInfo("image_name", "image_url", "image_digest")
+                ),
+                arrayOf(
+                        22,
+                        GtvNull,
+                        gtv(mapOf(
+                                "name" to gtv("image_name"),
+                                "url" to gtv("image_url"),
+                                "digest" to gtv("image_digest"),
+                        )),
+                        ContainerImageInfo("image_name", "image_url", "image_digest")
+                )
+        )
     }
 }

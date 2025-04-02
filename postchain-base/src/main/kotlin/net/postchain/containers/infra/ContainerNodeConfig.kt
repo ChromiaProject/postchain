@@ -22,6 +22,7 @@ import net.postchain.containers.bpm.fs.FileSystem
 data class ContainerNodeConfig(
         val masterPubkey: String,
         val containerImage: String,
+        val containerImageFromDirectoryChain: Boolean,
         val masterHost: String,
         val masterPort: Int,
         val network: String?,
@@ -91,6 +92,7 @@ data class ContainerNodeConfig(
 
         const val KEY_CONTAINER_PREFIX = "container"
         const val KEY_DOCKER_IMAGE = "docker-image"
+        const val KEY_DEFAULT_DOCKER_IMAGE_FROM_DIRECTORY_CHAIN = "default-docker-image-from-directory-chain"
         const val KEY_DOCKER_LOG_DRIVER = "docker-log-driver"
         const val KEY_DOCKER_LOG_OPTS = "docker-log-opts"
         const val KEY_MASTER_HOST = "master-host"
@@ -163,6 +165,7 @@ data class ContainerNodeConfig(
                 ContainerNodeConfig(
                         config.pubKey,
                         subnodeImage,
+                        getEnvOrBooleanProperty("POSTCHAIN_SUBNODE_DEFAULT_DOCKER_IMAGE_FROM_DIRECTORY_CHAIN", KEY_DEFAULT_DOCKER_IMAGE_FROM_DIRECTORY_CHAIN, false),
                         masterHost,
                         getEnvOrIntProperty("POSTCHAIN_MASTER_PORT", KEY_MASTER_PORT, 9860),
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_NETWORK", KEY_NETWORK),
