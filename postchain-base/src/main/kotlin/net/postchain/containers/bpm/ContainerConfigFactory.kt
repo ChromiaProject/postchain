@@ -201,6 +201,7 @@ object ContainerConfigFactory : KLogging() {
         add("POSTCHAIN_PUBKEY=${appConfig.pubKey}")
         add("POSTCHAIN_PORT=${appConfig.port}")
         add("POSTCHAIN_FASTSYNC_EXIT_DELAY=${SyncParameters.fromAppConfig(appConfig).exitDelay}")
+        add("POSTCHAIN_FORWARDING_REPLICA=${appConfig.forwardingReplica}")
 
         /**
          * If restApiPort > -1 subnodePort (in all containers) can always be set to e.g. 7740. We are in
