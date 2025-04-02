@@ -29,7 +29,15 @@ interface DirectoryDataSource : ManagedNodeDataSource {
     fun getResourceLimitForContainer(container: String): ContainerResourceLimits
 
     /**
-     * Returns the Docker image required to run subnode for container.
+     * Returns the Docker image required to run subnode for container,
+     * or `null` if the container does not specify any image.
      */
     fun getImageForContainer(container: String): ContainerImageInfo?
+
+    /**
+     * Returns the Docker image required to run subnode for container,
+     * or the default subnode image if the container does not specify any image,
+     * or `null` if default image is not specified in directory chain.
+     */
+    fun getImageForContainerOrDefault(container: String): ContainerImageInfo?
 }

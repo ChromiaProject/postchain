@@ -32,7 +32,7 @@ class DefaultPostchainContainer(
     override var resourceLimits = dataSource.getResourceLimitForContainer(containerName.directoryContainer)
 
     @Volatile
-    override var image = dataSource.getImageForContainer(containerName.directoryContainer)
+    override var image = getImageForContainer()
 
     override val readOnly = AtomicBoolean(false)
     private var lastUpdated = clock.millis()
@@ -149,7 +149,7 @@ class DefaultPostchainContainer(
 
     override fun updateImage(): Boolean {
         val oldImage = image
-        val newImage = dataSource.getImageForContainer(containerName.directoryContainer)
+        val newImage = getImageForContainer()
         return if (newImage != oldImage) {
             image = newImage
             setLastUpdated()
@@ -158,6 +158,12 @@ class DefaultPostchainContainer(
             false
         }
     }
+
+    private fun getImageForContainer(): ContainerImageInfo? =
+            if (containerNodeConfig.containerImageFromDirectoryChain)
+                dataSource.getImageForContainerOrDefault(containerName.directoryContainer)
+            else
+                dataSource.getImageForContainer(containerName.directoryContainer)
 
     override fun checkResourceLimits(fileSystem: FileSystem): Boolean {
         val readOnlyBeforeCheck = readOnly.get()

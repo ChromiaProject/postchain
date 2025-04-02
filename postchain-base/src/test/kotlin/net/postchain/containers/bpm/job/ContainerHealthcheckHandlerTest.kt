@@ -97,6 +97,25 @@ class ContainerHealthcheckHandlerTest {
     }
 
     @Test
+    fun `container with updated subnode image should be restarted`() {
+        // setup
+        `when`(postchainContainer.containerName).thenReturn(cname)
+        `when`(postchainContainer.updateImage()).thenReturn(true)
+        `when`(postchainContainer.getAllChains()).thenReturn(setOf(CHAIN_ID))
+        `when`(postchainContainer.isSubnodeHealthy()).thenReturn(true)
+        `when`(postchainContainer.checkResourceLimits(any())).thenReturn(true)
+        mockContainerIsRunning()
+        // execute
+        sut.check(emptySet())
+        // verify
+        verify(postchainContainer).reset()
+        verify(dockerClient).stopContainerCmd(anyString())
+        verify(dockerClient).removeContainerCmd(anyString())
+        assertEquals(removedBlockchainProcess!!.first, CHAIN_ID)
+        assertEquals(removedBlockchainProcess!!.second, postchainContainer)
+    }
+
+    @Test
     fun `container without updated resource limits should not be restarted`() {
         // setup
         `when`(postchainContainer.containerName).thenReturn(cname)
