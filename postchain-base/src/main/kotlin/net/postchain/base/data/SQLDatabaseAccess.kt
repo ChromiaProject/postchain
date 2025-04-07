@@ -1,6 +1,7 @@
 package net.postchain.base.data
 
 import mu.KLogging
+import net.postchain.StorageBuilder
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.BlockchainConfigurationData
@@ -643,6 +644,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     override fun getHighestLevelPageAtHeight(ctx: EContext, pageStoreName: String, height: Long): Int {
         val sql = "SELECT COALESCE(MAX(level), 0) FROM ${tablePages(ctx, pageStoreName)} WHERE block_height = ?"
         return queryRunner.query(ctx.conn, sql, intRes, height)
+    }
+
+    override fun initializeAppWithCurrentDbVersion(connection: Connection, allowUpgrade: Boolean) {
+        initializeApp(connection, StorageBuilder.getCurrentDbVersion(), allowUpgrade)
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int, allowUpgrade: Boolean) {

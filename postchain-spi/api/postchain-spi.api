@@ -689,6 +689,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getWitnessData (Lnet/postchain/core/ExecutionContext;[B)[B
 	public abstract fun initializeApp (Ljava/sql/Connection;I)V
 	public abstract fun initializeApp (Ljava/sql/Connection;IZ)V
+	public abstract fun initializeAppWithCurrentDbVersion (Ljava/sql/Connection;Z)V
 	public abstract fun initializeBlockchain (Lnet/postchain/core/ExecutionContext;Lnet/postchain/common/BlockchainRid;)V
 	public abstract fun insertBlock (Lnet/postchain/core/ExecutionContext;J)J
 	public abstract fun insertEvent (Lnet/postchain/core/TxEContext;Ljava/lang/String;JJ[B[B)V
@@ -761,6 +762,7 @@ public final class net/postchain/base/data/DatabaseAccess$DefaultImpls {
 	public static synthetic fun getTransactionInfo$default (Lnet/postchain/base/data/DatabaseAccess;Lnet/postchain/core/ExecutionContext;[BZILjava/lang/Object;)Lnet/postchain/core/TransactionInfoExt;
 	public static fun initializeApp (Lnet/postchain/base/data/DatabaseAccess;Ljava/sql/Connection;I)V
 	public static synthetic fun initializeApp$default (Lnet/postchain/base/data/DatabaseAccess;Ljava/sql/Connection;IZILjava/lang/Object;)V
+	public static synthetic fun initializeAppWithCurrentDbVersion$default (Lnet/postchain/base/data/DatabaseAccess;Ljava/sql/Connection;ZILjava/lang/Object;)V
 	public static synthetic fun removeAllBlockchainSpecificTables$default (Lnet/postchain/base/data/DatabaseAccess;Lnet/postchain/core/ExecutionContext;Ljava/util/List;ILjava/lang/Object;)V
 	public static synthetic fun updatePeerInfo$default (Lnet/postchain/base/data/DatabaseAccess;Lnet/postchain/core/AppContext;Ljava/lang/String;ILnet/postchain/crypto/PubKey;Ljava/time/Instant;ILjava/lang/Object;)Z
 }

@@ -4,6 +4,8 @@ object DatabaseAccessFactory {
 
     const val POSTGRES_DRIVER_CLASS = "org.postgresql.Driver"
 
+    fun createDatabaseAccessWithDefaultDriver(): DatabaseAccess = PostgreSQLDatabaseAccess()
+
     fun createDatabaseAccess(driverClassName: String): DatabaseAccess {
         return when (driverClassName) {
             POSTGRES_DRIVER_CLASS -> PostgreSQLDatabaseAccess()
