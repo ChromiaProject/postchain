@@ -12,6 +12,7 @@ import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.managed.config.ManagedDataSourceAware
+import net.postchain.network.peer.PeersCommConfigFactory
 import org.apache.hc.client5.http.config.ConnectionConfig
 import org.apache.hc.client5.http.config.RequestConfig
 import org.apache.hc.client5.http.cookie.StandardCookieSpec
@@ -25,8 +26,9 @@ import org.http4k.core.then
 import org.http4k.filter.ClientFilters
 import org.http4k.filter.GzipCompressionMode
 
-open class ManagedEBFTSynchronizationInfrastructure(postchainContext: PostchainContext
-) : EBFTSynchronizationInfrastructure(postchainContext, DefaultManagedPeersCommConfigFactory()) {
+open class ManagedEBFTSynchronizationInfrastructure(postchainContext: PostchainContext,
+                                                    peersCommConfigFactory: PeersCommConfigFactory = DefaultManagedPeersCommConfigFactory())
+    : EBFTSynchronizationInfrastructure(postchainContext, peersCommConfigFactory) {
     private val forwardingClient by lazy {
         ClientFilters.GZip(GzipCompressionMode.Streaming()).then(ApacheClient(HttpClients.custom()
                 .setRetryStrategy(DefaultHttpRequestRetryStrategy(0, TimeValue.ZERO_MILLISECONDS)) // no retries

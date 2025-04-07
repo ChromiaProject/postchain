@@ -13,13 +13,13 @@ import net.postchain.containers.infra.DefaultSubSyncInfra.UnarchivingBlockchainP
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainState
-import net.postchain.ebft.EBFTSynchronizationInfrastructure
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.worker.ForceReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
+import net.postchain.managed.ManagedEBFTSynchronizationInfrastructure
 import net.postchain.managed.MigratingBlockchainNodeInfo
 import net.postchain.network.CommunicationManager
 import net.postchain.network.mastersub.subnode.MutedCommunicationManager
@@ -29,7 +29,7 @@ class DefaultSubSyncInfra(
         postchainContext: PostchainContext,
         peersCommConfigFactory: PeersCommConfigFactory,
         val containerNodeConfig: ContainerNodeConfig
-) : EBFTSynchronizationInfrastructure(postchainContext, peersCommConfigFactory) {
+) : ManagedEBFTSynchronizationInfrastructure(postchainContext, peersCommConfigFactory) {
 
     companion object : KLogging()
 
