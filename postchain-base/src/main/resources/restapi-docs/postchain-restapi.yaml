@@ -189,7 +189,7 @@ paths:
       description: |
         This operation fetches a waiting transaction from the specified chain.
 
-        Will return a binary response with `application/octet-stream` content-type.
+        Will return a binary response with `application/octet-stream` content-type with the transaction data.
 
         Read replicas do not support this endpoint.
       parameters:
