@@ -155,7 +155,9 @@ class BaseTransactionQueue(private val queueCapacity: Int,
 
             val transactionPriority = try {
                 prioritizer?.prioritize(tx as GTXTransaction, txEnter, clock.instant())
-            } catch (e: Exception) {
+            } catch (e: UserMistake) { // reject transaction if prioritizer throws UserMistake
+                throw e
+            } catch (e: Exception) { // ignore prioritizer if it throws something else (do not reject transaction)
                 logger.warn { "Prioritizer returned error when enqueuing $txRid: ${e.message}" }
                 null
             }

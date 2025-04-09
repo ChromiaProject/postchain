@@ -268,7 +268,26 @@ class BaseTransactionQueueTest {
     }
 
     @Test
-    fun `errors from prioritizer are handled when enqueuing a transaction`() {
+    fun `UserMistake from prioritizer rejects the transaction`() {
+        val now = Instant.now()
+        val clock: Clock = mock {
+            on { instant() } doReturn now
+        }
+        val userMistake = UserMistake("invalid tx")
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, { _, _, _ -> throw userMistake }, clock)
+        assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.INVALID)
+        assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
+        assertThat(sut.waitingTransactions()).isEmpty()
+        assertThat(sut.takeTransaction()).isNull()
+        assertThat(sut.rejectedTransactions()).containsExactly(RejectedTransaction(
+                txRID = tx1.myRID.wrap(),
+                reason = userMistake,
+                timestamp = now
+        ))
+    }
+
+    @Test
+    fun `other exceptions from prioritizer are handled when enqueuing a transaction`() {
         sut = BaseTransactionQueue(3, INFINITE, INFINITE, { _, _, _ -> throw Exception("boom") })
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
