@@ -1,6 +1,7 @@
 package net.postchain.containers.bpm
 
 import net.postchain.PostchainContext
+import net.postchain.concurrent.util.get
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BlockchainConfiguration
@@ -32,7 +33,7 @@ class SubNodeBlockchainProcessManager(
                     null,
                     name,
                     args
-            ).toCompletableFuture().get()
+            ).get()
         }
 
         val masterDataSource = BaseManagedNodeDataSource(queryRunner, postchainContext.appConfig)
