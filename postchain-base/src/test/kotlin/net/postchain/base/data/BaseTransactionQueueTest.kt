@@ -9,6 +9,7 @@ import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isSameAs
+import net.postchain.base.BaseTransactionPrioritizer
 import net.postchain.base.TransactionPrioritizer
 import net.postchain.base.TxPriorityStateV1
 import net.postchain.common.BlockchainRid
@@ -19,6 +20,7 @@ import net.postchain.common.wrap
 import net.postchain.configurations.GTXTestOp
 import net.postchain.configurations.GTX_TEST_OP_NAME
 import net.postchain.core.RejectedTransaction
+import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.devtools.MockCryptoSystem
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -42,6 +44,7 @@ import java.math.BigDecimal.ZERO
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
 import kotlin.system.measureTimeMillis
@@ -274,7 +277,10 @@ class BaseTransactionQueueTest {
             on { instant() } doReturn now
         }
         val userMistake = UserMistake("invalid tx")
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, { _, _, _ -> throw userMistake }, clock)
+        val blockQueries: BlockQueries = mock {
+            on { query(any(), any()) } doReturn CompletableFuture.failedStage(userMistake)
+        }
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, BaseTransactionPrioritizer(blockQueries), clock)
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.INVALID)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
         assertThat(sut.waitingTransactions()).isEmpty()
@@ -288,7 +294,10 @@ class BaseTransactionQueueTest {
 
     @Test
     fun `other exceptions from prioritizer are handled when enqueuing a transaction`() {
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, { _, _, _ -> throw Exception("boom") })
+        val blockQueries: BlockQueries = mock {
+            on { query(any(), any()) } doReturn CompletableFuture.failedStage(Exception("boom"))
+        }
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, BaseTransactionPrioritizer(blockQueries))
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
         assertThat(sut.waitingTransactions()).containsExactly(tx1)

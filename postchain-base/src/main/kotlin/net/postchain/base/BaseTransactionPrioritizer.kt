@@ -1,12 +1,13 @@
 package net.postchain.base
 
 import net.postchain.common.types.WrappedByteArray
+import net.postchain.concurrent.util.get
+import net.postchain.core.block.BlockQueries
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.mapper.Nullable
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GtxBody
-import net.postchain.managed.query.QueryRunner
 import java.math.BigDecimal
 import java.time.Instant
 
@@ -45,13 +46,13 @@ class TxPriorityStateV1(
         override val priority: BigDecimal
 ) : TransactionPriorityState
 
-class BaseTransactionPrioritizer(private val query: QueryRunner) : TransactionPrioritizer {
+class BaseTransactionPrioritizer(private val blockQueries: BlockQueries) : TransactionPrioritizer {
     override fun prioritize(tx: GTXTransaction, txEnter: Instant, current: Instant): TransactionPriorityState {
-        return GtvObjectMapper.fromGtv(query.query(PRIORITIZE_QUERY_NAME, GtvObjectMapper.toGtvDictionary(PrioritizeQueryRequest(
+        return GtvObjectMapper.fromGtv(blockQueries.query(PRIORITIZE_QUERY_NAME, GtvObjectMapper.toGtvDictionary(PrioritizeQueryRequest(
                 txBody = tx.gtxData.gtxBody,
                 txSize = tx.getRawData().size.toLong(),
                 txEnterTimestamp = txEnter.toEpochMilli(),
                 currentTimestamp = current.toEpochMilli()
-        ))), TxPriorityStateV1::class)
+        ))).get(), TxPriorityStateV1::class)
     }
 }

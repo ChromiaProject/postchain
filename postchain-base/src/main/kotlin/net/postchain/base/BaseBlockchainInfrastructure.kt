@@ -32,7 +32,6 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
 import net.postchain.crypto.SigMaker
-import net.postchain.gtv.Gtv
 import net.postchain.metrics.BaseBlockchainEngineMetrics
 import kotlin.time.Duration.Companion.minutes
 
@@ -111,9 +110,7 @@ open class BaseBlockchainInfrastructure(
                 recheckThreadInterval = 1.minutes,
                 recheckTxInterval = configuration.transactionQueueRecheckInterval,
                 if (configuration.hasQuery(PRIORITIZE_QUERY_NAME))
-                    BaseTransactionPrioritizer { name: String, args: Gtv ->
-                        blockQueries.query(name, args).toCompletableFuture().get()
-                    }
+                    BaseTransactionPrioritizer(blockQueries)
                 else
                     null
         )

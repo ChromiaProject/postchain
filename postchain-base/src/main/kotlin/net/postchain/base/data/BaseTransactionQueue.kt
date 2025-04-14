@@ -158,7 +158,7 @@ class BaseTransactionQueue(private val queueCapacity: Int,
             } catch (e: UserMistake) { // reject transaction if prioritizer throws UserMistake
                 throw e
             } catch (e: Exception) { // ignore prioritizer if it throws something else (do not reject transaction)
-                logger.warn { "Prioritizer returned error when enqueuing $txRid: ${e.message}" }
+                logger.warn(e) { "Prioritizer returned error when enqueuing $txRid: $e" }
                 null
             }
 
