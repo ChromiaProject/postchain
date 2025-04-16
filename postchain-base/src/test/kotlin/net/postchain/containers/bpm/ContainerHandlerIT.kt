@@ -95,9 +95,11 @@ internal class ContainerHandlerIT {
                     .withStdOut(true)
                     .withStdErr(true)
 
-            logContainerCmd.asyncExecAwaitMultiResponse { logEntry ->
+            logContainerCmd.asyncExecAwaitMultiResponse({ logEntry ->
                 logger.info("[Subnode] " + String(logEntry.payload).trim())
-            }
+            }, { throwable ->
+                logger.error("[Subnode] Failed to collect logs", throwable)
+            })
 
             logger.info("Removing container $it...")
             ContainerEnvironment.dockerClient.killContainerCmd(it)

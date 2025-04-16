@@ -5,12 +5,13 @@ import com.github.dockerjava.api.async.ResultCallback
 import com.github.dockerjava.api.command.AsyncDockerCmd
 import com.github.dockerjava.api.command.ListContainersCmd
 import com.github.dockerjava.api.model.Container
+import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.containers.bpm.POSTCHAIN_MASTER_PUBKEY
 import net.postchain.containers.infra.ContainerNodeConfig
 
 
-object DockerTools {
+object DockerTools : KLogging() {
 
     fun Container.hasName(containerName: String): Boolean {
         return names?.contains("/$containerName") ?: false // Prefix '/'
@@ -37,7 +38,22 @@ object DockerTools {
      */
     fun <CMD_T : AsyncDockerCmd<CMD_T, A_RES_T>?, A_RES_T> AsyncDockerCmd<CMD_T, A_RES_T>.asyncExecAwaitSingleResponse(): A_RES_T? {
         var result: A_RES_T? = null
-        asyncExecAwaitMultiResponse { result = it }
+        var error: ProgrammerMistake? = null
+        asyncExecAwaitMultiResponse(onNext = {
+            result = it
+        }, onError = {
+            error = if (it is Exception) {
+                ProgrammerMistake("Async docker call failed: ${it.message}", it)
+            } else {
+                ProgrammerMistake("Async docker call failed")
+            }
+            logger.error("Async docker call failed: ${it?.message}")
+        })
+
+        if (error != null) {
+            throw error as ProgrammerMistake
+        }
+
         return result
     }
 
@@ -48,6 +64,7 @@ object DockerTools {
      */
     fun <CMD_T : AsyncDockerCmd<CMD_T, A_RES_T>?, A_RES_T> AsyncDockerCmd<CMD_T, A_RES_T>.asyncExecAwaitMultiResponse(
             onNext: (A_RES_T) -> Unit,
+            onError: (Throwable?) -> Unit,
     ) {
         exec(object : ResultCallback.Adapter<A_RES_T>() {
             override fun onNext(item: A_RES_T) {
@@ -55,7 +72,8 @@ object DockerTools {
             }
 
             override fun onError(throwable: Throwable?) {
-                throw ProgrammerMistake("Async docker call failed: ${throwable?.message}")
+                onError(throwable)
+                this.close()
             }
         }
         ).awaitCompletion()
