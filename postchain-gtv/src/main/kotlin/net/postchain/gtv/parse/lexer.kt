@@ -26,6 +26,14 @@ sealed interface Token {
             override fun toString() = "null"
         }
 
+        object True : Token {
+            override fun toString() = "true"
+        }
+
+        object False : Token {
+            override fun toString() = "false"
+        }
+
         data class Integer(val v: Long) : Token
         data class BigInteger(val v: java.math.BigInteger) : Token
         data class ByteArray(val v: kotlin.ByteArray) : Token
@@ -49,7 +57,7 @@ fun lexer(input: String): Sequence<Token> = sequence {
 
     fun consume(length: Int): String {
         val sb = StringBuilder()
-        for (i in 0 until length) {
+        (0 until length).forEach { i ->
             sb.append(consume())
         }
         return sb.toString()
@@ -81,6 +89,21 @@ fun lexer(input: String): Sequence<Token> = sequence {
                 expect('l')
                 expect('l')
                 yield(Token.Companion.Null)
+            }
+
+            c == 't' -> {
+                expect('r')
+                expect('u')
+                expect('e')
+                yield(Token.Companion.True)
+            }
+
+            c == 'f' -> {
+                expect('a')
+                expect('l')
+                expect('s')
+                expect('e')
+                yield(Token.Companion.False)
             }
 
             c.isDigit() || c == '-' -> {
