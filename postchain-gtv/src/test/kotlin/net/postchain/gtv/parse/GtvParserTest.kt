@@ -2,8 +2,10 @@ package net.postchain.gtv.parse
 
 import net.postchain.common.hexStringToByteArray
 import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvByteArray
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvString
 import org.junit.jupiter.api.Assertions.assertArrayEquals
@@ -72,7 +74,10 @@ internal class GtvParserTest {
                 arrayOf("'räksmörgås'", GtvString("räksmörgås")),
                 arrayOf("""["räksmörgås": 17]""", gtv(mapOf("räksmörgås" to gtv(17)))),
                 arrayOf("['räksmörgås': 17]", gtv(mapOf("räksmörgås" to gtv(17)))),
-                arrayOf("x'AB'", GtvByteArray("AB".hexStringToByteArray()))
+                arrayOf("x'AB'", GtvByteArray("AB".hexStringToByteArray())),
+                arrayOf("true", GtvInteger(1)),
+                arrayOf("false", GtvInteger(0)),
+                arrayOf("[true,false]", GtvArray(arrayOf(GtvInteger(1), GtvInteger(0)))),
         )
 
         @JvmStatic

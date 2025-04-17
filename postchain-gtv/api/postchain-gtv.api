@@ -1309,6 +1309,11 @@ public final class net/postchain/gtv/parse/Token$Companion$Comma : net/postchain
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class net/postchain/gtv/parse/Token$Companion$False : net/postchain/gtv/parse/Token {
+	public static final field INSTANCE Lnet/postchain/gtv/parse/Token$Companion$False;
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class net/postchain/gtv/parse/Token$Companion$Integer : net/postchain/gtv/parse/Token {
 	public fun <init> (J)V
 	public final fun component1 ()J
@@ -1343,6 +1348,11 @@ public final class net/postchain/gtv/parse/Token$Companion$String : net/postchai
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getV ()Ljava/lang/String;
 	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtv/parse/Token$Companion$True : net/postchain/gtv/parse/Token {
+	public static final field INSTANCE Lnet/postchain/gtv/parse/Token$Companion$True;
 	public fun toString ()Ljava/lang/String;
 }
 

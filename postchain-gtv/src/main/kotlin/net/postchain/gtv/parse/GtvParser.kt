@@ -46,6 +46,14 @@ class GtvParser private constructor(str: String) {
             consume(); GtvNull
         }
 
+        is Token.Companion.True -> {
+            consume(); GtvInteger(1)
+        }
+
+        is Token.Companion.False -> {
+            consume(); GtvInteger(0)
+        }
+
         is Token.Companion.Integer -> {
             consume(); GtvInteger(token.v)
         }
