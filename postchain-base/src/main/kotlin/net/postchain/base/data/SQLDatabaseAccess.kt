@@ -80,7 +80,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     override fun tableName(ctx: EContext, table: String): String = tableName(ctx.chainID, table)
 
-    protected fun tableName(chainId: Long, table: String): String = "\"c${chainId}.$table\""
+    protected fun tableName(chainId: Long, table: String): String = tableName("c${chainId}.$table")
+
+    override fun tableName(table: String) = "\"$table\""
 
     protected fun functionName(chainId: Long, function: String): String = "\"c${chainId}.$function\""
 
