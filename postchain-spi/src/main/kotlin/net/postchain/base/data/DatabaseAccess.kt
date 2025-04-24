@@ -59,6 +59,7 @@ interface DatabaseAccess {
             val transactions: List<ByteArray>)
 
     fun tableName(ctx: EContext, table: String): String
+    fun tableName(table: String): String
 
     fun checkCollation(connection: Connection, suppressError: Boolean)
 
