@@ -3,12 +3,15 @@ package net.postchain.managed
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.config.app.AppConfig
+import net.postchain.containers.ContainerRateLimit
 import net.postchain.containers.bpm.ContainerImageInfo
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.resources.ResourceLimitFactory
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.managed.query.QueryRunner
+import java.time.Instant
+import kotlin.time.Duration.Companion.milliseconds
 
 open class BaseDirectoryDataSource(
         queryRunner: QueryRunner,
@@ -76,6 +79,33 @@ open class BaseDirectoryDataSource(
                 "nm_get_container_image_or_default",
                 buildArgs("name" to gtv(container))
         )
-        return response.toObject<ContainerImageInfo>()
+        return if (response.isNull()) null else
+            response.toObject<ContainerImageInfo>()
+    }
+
+    override fun getContainerCreationTime(container: String): Instant? {
+        if (nmApiVersion < 23) return null
+
+        val response = query(
+                "nm_get_container_creation_time",
+                buildArgs("name" to gtv(container))
+        )
+        return if (response.isNull()) null else
+            Instant.ofEpochMilli(response.asInteger())
+    }
+
+    override fun getContainerRateLimits(container: String): Map<String, ContainerRateLimit> {
+        if (nmApiVersion < 23) return mapOf()
+
+        val response = query(
+                "nm_get_container_rate_limits",
+                buildArgs("name" to gtv(container))
+        )
+        return response.asDict().mapValues {
+            ContainerRateLimit(
+                    periodLength = it.value["period_length_millis"]!!.asInteger().milliseconds,
+                    rateLimit = it.value["rate_limit"]!!.asInteger()
+            )
+        }
     }
 }
