@@ -5,6 +5,7 @@ import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.config.app.AppConfig
+import net.postchain.containers.ContainerRateLimit
 import net.postchain.containers.bpm.ContainerImageInfo
 import net.postchain.containers.bpm.ContainerResourceLimits
 import net.postchain.containers.bpm.resources.Cpu
@@ -24,6 +25,8 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
+import java.time.Instant
+import kotlin.time.Duration.Companion.milliseconds
 
 class BaseDirectoryDataSourceTest {
 
@@ -96,6 +99,28 @@ class BaseDirectoryDataSourceTest {
         }
         val sut = BaseDirectoryDataSource(queryRunner, appConfig)
         assertThat(sut.getImageForContainerOrDefault("my_container")).isEqualTo(expected)
+    }
+
+    @ParameterizedTest
+    @MethodSource("getContainerCreationTimeTestData")
+    fun testGetContainerCreationTime(gtvResult: Gtv, expected: Instant?) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(23)
+            on { query(eq("nm_get_container_creation_time"), any()) } doReturn gtvResult
+        }
+        val sut = BaseDirectoryDataSource(queryRunner, appConfig)
+        assertThat(sut.getContainerCreationTime("my_container")).isEqualTo(expected)
+    }
+
+    @ParameterizedTest
+    @MethodSource("getExtensionRateLimitsTestData")
+    fun testGetExtensionRateLimits(gtvResult: Gtv, expected: Map<String, ContainerRateLimit>) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(23)
+            on { query(eq("nm_get_container_rate_limits"), any()) } doReturn gtvResult
+        }
+        val sut = BaseDirectoryDataSource(queryRunner, appConfig)
+        assertThat(sut.getContainerRateLimits("my_container")).isEqualTo(expected)
     }
 
     companion object {
@@ -182,6 +207,36 @@ class BaseDirectoryDataSourceTest {
                                 "digest" to gtv("image_digest"),
                         )),
                         ContainerImageInfo("image_name", "image_url", "image_digest")
+                )
+        )
+
+        @JvmStatic
+        fun getContainerCreationTimeTestData(): List<Array<Any?>> = listOf(
+                arrayOf(GtvNull, null),
+                arrayOf(gtv(1234567890L), Instant.ofEpochMilli(1234567890L))
+        )
+
+        @JvmStatic
+        fun getExtensionRateLimitsTestData(): List<Array<Any>> = listOf(
+                arrayOf(
+                        gtv(mapOf(
+                                "ext_1" to gtv(mapOf(
+                                        "period_length_millis" to gtv(1000),
+                                        "rate_limit" to gtv(50),
+                                )),
+                                "ext_2" to gtv(mapOf(
+                                        "period_length_millis" to gtv(2000),
+                                        "rate_limit" to gtv(100),
+                                )),
+                        )),
+                        mapOf(
+                                "ext_1" to ContainerRateLimit(1000.milliseconds, 50),
+                                "ext_2" to ContainerRateLimit(2000.milliseconds, 100)
+                        )
+                ),
+                arrayOf(
+                        gtv(emptyMap()),
+                        emptyMap<String, ContainerRateLimit>()
                 )
         )
     }
