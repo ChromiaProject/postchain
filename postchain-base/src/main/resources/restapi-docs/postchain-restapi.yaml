@@ -843,7 +843,7 @@ paths:
         By invoking this operation, you request a specific web resource from the front-end application's 
         decentralized storage. This resource can be a picture, video, code, or anything else.
 
-        Returns raw data without JSON wrapping.
+        Returns raw data without JSON wrapping with the specified Content-Type.
 
         This operation is deprecated and will be removed at some point of time; use `/web_query` instead. 
       deprecated: true
@@ -851,7 +851,7 @@ paths:
         - $ref: "#/components/parameters/blockchainRid"
         - name: type
           in: query
-          description: The name of the query in the Rell code that returns the web resource.
+          description: The name of the query that returns the web resource.
           required: true
           schema:
             type: string
@@ -890,13 +890,25 @@ paths:
       description: |
         By invoking this operation, you request a specific web resource from the front-end application's 
         decentralized storage. This resource can be a picture, video, code, or anything else.
-
-        Returns raw data without JSON wrapping.
+        
+        Any path elements after `type` will be passed to the query as `path: list<text>`.
+        Any query parameters will be passed to the query as `query_params: map<text, list<text?>>`.
+        
+        The query needs to respond with: 
+        ```
+          struct web_query_response {
+            content_type: text;
+            content: byte_array; // or text
+            cache_ttl_seconds: integer = -1;
+          }
+        ```
+        
+        Returns raw data without JSON wrapping with the specified Content-Type.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: type
           in: path
-          description: The name of the query in the Rell code that returns the web resource.
+          description: The name of the query that returns the web resource.
           required: true
           schema:
             type: string
