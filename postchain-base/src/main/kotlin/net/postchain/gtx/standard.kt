@@ -34,6 +34,8 @@ open class GtxNop(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GT
         return true
     }
 
+    override fun isCompound() = true
+
     /**
      * A Nop is correct if
      * 1. It has not more than one argument
@@ -84,6 +86,8 @@ class GtxSpecNop(u: Unit, opData: ExtOpData) : GtxNop(u, opData) {
     companion object : KLogging() {
         const val OP_NAME = "__nop"
     }
+
+    override fun isCompound() = true
 }
 
 /**
@@ -95,6 +99,8 @@ class GtxTimeB(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GTXOp
     companion object {
         const val OP_NAME = "timeb"
     }
+
+    override fun isCompound() = true
 
     /**
      * 1. Nof args must be two
