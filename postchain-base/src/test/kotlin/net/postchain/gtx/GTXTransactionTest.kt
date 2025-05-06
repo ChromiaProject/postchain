@@ -17,6 +17,7 @@ import net.postchain.gtv.GtvNull
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.data.ExtOpData
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -56,7 +57,7 @@ class GTXTransactionTest {
                 byteArrayOf(), GtvNull, Gtx(GtxBody(ZERO_RID, arrayOf(), arrayOf()), arrayOf()), arrayOf(), arrayOf(),
                 arrayOf(
                         GtxNop(Unit, ExtOpData(GtxNop.OP_NAME, 0, arrayOf(), ZERO_RID, arrayOf(), arrayOf())),
-                        GtxSpecNop(Unit, ExtOpData(GtxTimeB.OP_NAME, 1, arrayOf(gtv(1)), ZERO_RID, arrayOf(), arrayOf())),
+                        GtxSpecNop(Unit, ExtOpData(GtxSpecNop.OP_NAME, 1, arrayOf(gtv(1)), ZERO_RID, arrayOf(), arrayOf())),
                         GtxTimeB(Unit, ExtOpData(GtxTimeB.OP_NAME, 2, arrayOf(gtv(1), gtv(2)), ZERO_RID, arrayOf(), arrayOf())),
                         object : Transactor {
                             override fun isSpecial() = false
@@ -69,6 +70,32 @@ class GTXTransactionTest {
 
         assertDoesNotThrow {
             tx.checkCorrectness()
+        }
+    }
+
+    @Test
+    fun `reject multiple single-per-transaction-ops while building`() {
+        val tx = GTXTransaction(
+                byteArrayOf(), GtvNull, Gtx(GtxBody(ZERO_RID, arrayOf(), arrayOf()), arrayOf()), arrayOf(), arrayOf(),
+                arrayOf(
+                        GtxNop(Unit, ExtOpData(GtxNop.OP_NAME, 0, arrayOf(), ZERO_RID, arrayOf(), arrayOf())),
+                        GtxNop(Unit, ExtOpData(GtxNop.OP_NAME, 0, arrayOf(), ZERO_RID, arrayOf(), arrayOf())),
+                        object : Transactor {
+                            override fun isSpecial() = false
+                            override fun checkCorrectness() {}
+                            override fun apply(ctx: TxEContext) = true
+                        }
+                ),
+                byteArrayOf(), byteArrayOf(), cs
+        )
+
+        val e = assertThrows<TransactionIncorrect> {
+            tx.checkCorrectness()
+        }
+        assertThat(e.message).contains("contains more than one 'nop'")
+
+        assertDoesNotThrow {
+            tx.checkCorrectnessWhileSyncing()
         }
     }
 

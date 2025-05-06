@@ -117,33 +117,16 @@ class GTXTransaction(
         val hasNormalOperation = ops.any { !it.isCompound() }
         var totalOps = 0
         var specialOps = 0
-        // A transaction is permitted to have only one occurrence of each operation: nop, __nop, and time.
-        // Otherwise, it is considered spam.
-        var foundNop = false
-        var foundSpecNop = false
-        var foundTimeB = false
+        val foundSingleOps = mutableSetOf<String>()
 
         for (op in ops) {
 
             totalOps++
             if (op.isSpecial()) specialOps++
 
-            if (op.isCompound()) {
-                when (op) {
-                    is GtxSpecNop -> {
-                        if (foundSpecNop) throw TransactionIncorrect(myRID, "contains more than one '__nop'")
-                        foundSpecNop = true
-                    }
-
-                    is GtxNop -> {
-                        if (foundNop) throw TransactionIncorrect(myRID, "contains more than one 'nop'")
-                        foundNop = true
-                    }
-
-                    is GtxTimeB -> {
-                        if (foundTimeB) throw TransactionIncorrect(myRID, "contains more than one 'timeb'")
-                        foundTimeB = true
-                    }
+            if (!isSyncing && op is GTXOperation && op.isSinglePerTransaction()) {
+                if (!foundSingleOps.add(op.data.opName)) {
+                    throw TransactionIncorrect(myRID, "contains more than one '${op.data.opName}'")
                 }
             }
 

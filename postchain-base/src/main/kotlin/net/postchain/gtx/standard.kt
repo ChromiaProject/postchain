@@ -30,11 +30,9 @@ open class GtxNop(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GT
         private const val MAX_SIZE = 64 // Number of bytes/chars we allow per argument
     }
 
-    override fun apply(ctx: TxEContext): Boolean {
-        return true
-    }
-
+    override fun apply(ctx: TxEContext) = true
     override fun isCompound() = true
+    override fun isSinglePerTransaction() = true
 
     /**
      * A Nop is correct if
@@ -99,6 +97,7 @@ class GtxTimeB(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GTXOp
     }
 
     override fun isCompound() = true
+    override fun isSinglePerTransaction() = true
 
     /**
      * 1. Nof args must be two

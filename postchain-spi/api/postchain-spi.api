@@ -2158,6 +2158,7 @@ public abstract class net/postchain/gtx/GTXOperation : net/postchain/core/Transa
 	public final fun getData ()Lnet/postchain/gtx/data/ExtOpData;
 	public fun isCompound ()Z
 	public fun isCorrect ()Z
+	public fun isSinglePerTransaction ()Z
 	public fun isSpecial ()Z
 }
 
