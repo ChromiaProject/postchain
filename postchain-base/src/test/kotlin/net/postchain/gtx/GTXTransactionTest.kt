@@ -5,6 +5,7 @@ package net.postchain.gtx
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
+import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.core.TxEContext
 import net.postchain.crypto.KeyPair
@@ -27,7 +28,7 @@ class GTXTransactionTest {
     private val hashCalculator = GtvMerkleHashCalculatorV2(cs)
 
     @Test
-    fun `tx with only nop op is invalid`() {
+    fun `tx with only compound nop op is invalid while building and valid while syncing`() {
         val signers = listOf(pubKey(0))
         val sigMaker = cs.buildSigMaker(KeyPair(pubKey(0), privKey(0)))
         val factory = GTXTransactionFactory(ZERO_RID, StandardOpsGTXModule(), cs, hashCalculator)
@@ -42,6 +43,10 @@ class GTXTransactionTest {
         // Since we are not allowed to just use nop.
         assertThrows<TransactionIncorrect> {
             tx.checkCorrectness()
+        }
+
+        assertDoesNotThrow {
+            tx.checkCorrectnessWhileSyncing()
         }
     }
 
@@ -178,5 +183,40 @@ class GTXTransactionTest {
         assertThrows<UserMistake> {
             factory.decodeTransaction(gtxData) as GTXTransaction
         }
+    }
+
+    @Test
+    fun `compound op - valid with a additional normal op`() {
+        val dummyModule = object: SimpleGTXModule<Unit>(
+                Unit,
+                mapOf(GtxTimeB.OP_NAME to ::GtxTimeB, DummyTestOp.OP_NAME to ::DummyTestOp),
+                mapOf()
+        ) {
+            override fun initializeDB(ctx: EContext) {}
+        }
+        val gtxBody = GtxBody(ZERO_RID, listOf(
+                GtxOp(GtxTimeB.OP_NAME, gtv(42), GtvNull),
+                GtxOp(DummyTestOp.OP_NAME)
+        ), listOf(pubKey(0)))
+        val signature = cs.buildSigMaker(KeyPair(pubKey(0), privKey(0))).signDigest(gtxBody.calculateTxRid(hashCalculator)).data
+        val factory = GTXTransactionFactory(ZERO_RID, dummyModule, cs, hashCalculator)
+        val gtxData = Gtx(
+                gtxBody,
+                listOf(signature)).encode()
+        val tx = factory.decodeTransaction(gtxData) as GTXTransaction
+        assertDoesNotThrow {
+            tx.checkCorrectness()
+            tx.checkCorrectnessWhileSyncing()
+        }
+    }
+
+    class DummyTestOp(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GTXOperation(opData) {
+
+        companion object {
+            const val OP_NAME = "dummy"
+        }
+
+        override fun checkCorrectness() {}
+        override fun apply(ctx: TxEContext) = true
     }
 }

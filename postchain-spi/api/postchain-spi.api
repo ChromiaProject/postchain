@@ -1455,6 +1455,7 @@ public final class net/postchain/core/SignableTransaction$DefaultImpls {
 	public static fun applyWhileSyncing (Lnet/postchain/core/SignableTransaction;Lnet/postchain/core/TxEContext;)Z
 	public static fun checkCorrectness (Lnet/postchain/core/SignableTransaction;)V
 	public static fun checkCorrectnessWhileSyncing (Lnet/postchain/core/SignableTransaction;)V
+	public static fun isCompound (Lnet/postchain/core/SignableTransaction;)Z
 	public static fun isCorrect (Lnet/postchain/core/SignableTransaction;)Z
 }
 
@@ -1497,6 +1498,7 @@ public final class net/postchain/core/Transaction$DefaultImpls {
 	public static fun applyWhileSyncing (Lnet/postchain/core/Transaction;Lnet/postchain/core/TxEContext;)Z
 	public static fun checkCorrectness (Lnet/postchain/core/Transaction;)V
 	public static fun checkCorrectnessWhileSyncing (Lnet/postchain/core/Transaction;)V
+	public static fun isCompound (Lnet/postchain/core/Transaction;)Z
 	public static fun isCorrect (Lnet/postchain/core/Transaction;)Z
 }
 
@@ -1557,6 +1559,7 @@ public abstract interface class net/postchain/core/Transactor {
 	public abstract fun applyWhileSyncing (Lnet/postchain/core/TxEContext;)Z
 	public abstract fun checkCorrectness ()V
 	public abstract fun checkCorrectnessWhileSyncing ()V
+	public abstract fun isCompound ()Z
 	public abstract fun isCorrect ()Z
 	public abstract fun isSpecial ()Z
 }
@@ -1565,6 +1568,7 @@ public final class net/postchain/core/Transactor$DefaultImpls {
 	public static fun applyWhileSyncing (Lnet/postchain/core/Transactor;Lnet/postchain/core/TxEContext;)Z
 	public static fun checkCorrectness (Lnet/postchain/core/Transactor;)V
 	public static fun checkCorrectnessWhileSyncing (Lnet/postchain/core/Transactor;)V
+	public static fun isCompound (Lnet/postchain/core/Transactor;)Z
 	public static fun isCorrect (Lnet/postchain/core/Transactor;)Z
 }
 
@@ -2152,6 +2156,7 @@ public abstract class net/postchain/gtx/GTXOperation : net/postchain/core/Transa
 	public fun checkCorrectness ()V
 	public fun checkCorrectnessWhileSyncing ()V
 	public final fun getData ()Lnet/postchain/gtx/data/ExtOpData;
+	public fun isCompound ()Z
 	public fun isCorrect ()Z
 	public fun isSpecial ()Z
 }

@@ -22,6 +22,14 @@ interface Transactor {
     fun isSpecial(): Boolean
 
     /**
+     * If `true` this marks this as a compound operation that is required to be used in combination
+     * with at least one `normal` operation. A transaction made up of only compound operations will
+     * be rejected, unless they all are special. An example of compound operation is `iccf_proof` that
+     * requires at least one other operation to be used.
+     */
+    fun isCompound(): Boolean = false
+
+    /**
      * Check if correct given that transactor is applied during syncing.
      * This check should be less restrictive than `checkCorrectness`.
      *
