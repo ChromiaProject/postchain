@@ -6,14 +6,16 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtv.mapper.Name
 import net.postchain.gtv.mapper.Nullable
+import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.GTXTransaction
 import net.postchain.gtx.GtxBody
 import java.math.BigDecimal
 import java.time.Instant
 
-const val PRIORITIZE_QUERY_NAME = "gtx_api.priority_check_v1"
+const val PRIORITIZE_QUERY_NAME_V1 = "gtx_api.priority_check_v1"
+const val PRIORITIZE_QUERY_NAME_V2 = "gtx_api.priority_check_v2"
 
-class PrioritizeQueryRequest(
+class PrioritizeQueryV1Request(
         @Name("tx_body")
         val txBody: GtxBody,
 
@@ -25,6 +27,23 @@ class PrioritizeQueryRequest(
 
         @Name("current_timestamp")
         val currentTimestamp: Long
+)
+
+class PrioritizeQueryV2Request(
+        @Name("tx_body")
+        val txBody: GtxBody,
+
+        @Name("tx_size")
+        val txSize: Long,
+
+        @Name("tx_enter_timestamp")
+        val txEnterTimestamp: Long,
+
+        @Name("current_timestamp")
+        val currentTimestamp: Long,
+
+        @Name("compound_ops")
+        val compoundOps: Set<String>
 )
 
 class TxPriorityStateV1(
@@ -46,13 +65,34 @@ class TxPriorityStateV1(
         override val priority: BigDecimal
 ) : TransactionPriorityState
 
-class BaseTransactionPrioritizer(private val blockQueries: BlockQueries) : TransactionPrioritizer {
+class BaseTransactionPrioritizerV1(private val blockQueries: BlockQueries) : TransactionPrioritizer {
     override fun prioritize(tx: GTXTransaction, txEnter: Instant, current: Instant): TransactionPriorityState {
-        return GtvObjectMapper.fromGtv(blockQueries.query(PRIORITIZE_QUERY_NAME, GtvObjectMapper.toGtvDictionary(PrioritizeQueryRequest(
-                txBody = tx.gtxData.gtxBody,
-                txSize = tx.getRawData().size.toLong(),
-                txEnterTimestamp = txEnter.toEpochMilli(),
-                currentTimestamp = current.toEpochMilli()
-        ))).get(), TxPriorityStateV1::class)
+        return GtvObjectMapper.fromGtv(blockQueries.query(PRIORITIZE_QUERY_NAME_V1,
+                GtvObjectMapper.toGtvDictionary(PrioritizeQueryV1Request(
+                        txBody = tx.gtxData.gtxBody,
+                        txSize = tx.getRawData().size.toLong(),
+                        txEnterTimestamp = txEnter.toEpochMilli(),
+                        currentTimestamp = current.toEpochMilli()
+                ))).get(), TxPriorityStateV1::class)
+    }
+}
+
+class BaseTransactionPrioritizerV2(private val blockQueries: BlockQueries) : TransactionPrioritizer {
+    override fun prioritize(tx: GTXTransaction, txEnter: Instant, current: Instant): TransactionPriorityState {
+
+        val compoundOps = tx.ops
+                .filter { it.isCompound() }
+                .filterIsInstance<GTXOperation>()
+                .map { it.data.opName }
+                .toSet()
+
+        return GtvObjectMapper.fromGtv(blockQueries.query(PRIORITIZE_QUERY_NAME_V2,
+                GtvObjectMapper.toGtvDictionary(PrioritizeQueryV2Request(
+                        txBody = tx.gtxData.gtxBody,
+                        txSize = tx.getRawData().size.toLong(),
+                        txEnterTimestamp = txEnter.toEpochMilli(),
+                        currentTimestamp = current.toEpochMilli(),
+                        compoundOps = compoundOps
+                ))).get(), TxPriorityStateV1::class)
     }
 }
