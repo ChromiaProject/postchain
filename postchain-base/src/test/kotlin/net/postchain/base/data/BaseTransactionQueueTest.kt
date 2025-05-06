@@ -9,7 +9,7 @@ import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isSameAs
-import net.postchain.base.BaseTransactionPrioritizer
+import net.postchain.base.BaseTransactionPrioritizerV1
 import net.postchain.base.TransactionPrioritizer
 import net.postchain.base.TxPriorityStateV1
 import net.postchain.common.BlockchainRid
@@ -280,7 +280,7 @@ class BaseTransactionQueueTest {
         val blockQueries: BlockQueries = mock {
             on { query(any(), any()) } doReturn CompletableFuture.failedStage(userMistake)
         }
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, BaseTransactionPrioritizer(blockQueries), clock)
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, BaseTransactionPrioritizerV1(blockQueries), clock)
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.INVALID)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(0)
         assertThat(sut.waitingTransactions()).isEmpty()
@@ -297,7 +297,7 @@ class BaseTransactionQueueTest {
         val blockQueries: BlockQueries = mock {
             on { query(any(), any()) } doReturn CompletableFuture.failedStage(Exception("boom"))
         }
-        sut = BaseTransactionQueue(3, INFINITE, INFINITE, BaseTransactionPrioritizer(blockQueries))
+        sut = BaseTransactionQueue(3, INFINITE, INFINITE, BaseTransactionPrioritizerV1(blockQueries))
         assertThat(sut.enqueue(tx1)).isEqualTo(EnqueueTransactionResult.OK)
         assertThat(sut.getTransactionQueueSize()).isEqualTo(1)
         assertThat(sut.waitingTransactions()).containsExactly(tx1)
