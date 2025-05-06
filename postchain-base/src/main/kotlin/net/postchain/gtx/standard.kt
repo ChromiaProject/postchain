@@ -86,8 +86,6 @@ class GtxSpecNop(u: Unit, opData: ExtOpData) : GtxNop(u, opData) {
     companion object : KLogging() {
         const val OP_NAME = "__nop"
     }
-
-    override fun isCompound() = true
 }
 
 /**
