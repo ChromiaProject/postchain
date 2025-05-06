@@ -14,6 +14,13 @@ class GTXOpMistake(message: String, opData: ExtOpData, argPos: Int? = null, caus
         cause)
 
 abstract class GTXOperation(val data: ExtOpData) : Transactor {
+
+    /**
+     * Set to `true` to prevent a transaction from containing multiple operations of this type. Any transaction with
+     * multiple operations of this type will fail, no matter what arguments are passed to each operation.
+     */
+    open fun isSinglePerTransaction(): Boolean = false
+
     override fun isSpecial(): Boolean {
         return data.opName.startsWith("__")  // We used to return "false" here always, but that wos just too confusing IMO
     }
