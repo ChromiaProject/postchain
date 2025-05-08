@@ -36,12 +36,7 @@ abstract class AbstractBlockchainProcess(val processName: String, override val b
             logger.error(e) { "Process $processName stopped unexpectedly" }
             running.set(false)
         } finally {
-            try {
-                logger.debug { "Cleanup up resources" }
-                cleanup()
-            } catch (e: Exception) {
-                logger.error { "Failed to free resources on shutdown: $e" }
-            }
+            doCleanUp()
         }
     }
 
@@ -57,14 +52,23 @@ abstract class AbstractBlockchainProcess(val processName: String, override val b
 
     final override fun shutdown() {
         // Clean up the process here if it was never started
-        if (!started.get()) cleanup()
+        if (!started.get()) doCleanUp()
         running.set(false)
         if (process.isAlive) {
             logger.debug { "Shutting down process $processName" }
             process.join()
         }
-        metrics.close()
     }
 
     abstract fun currentBlockHeight(): Long
+
+    private fun doCleanUp() {
+        logger.debug { "Clean up resources" }
+        try {
+            metrics.close()
+            cleanup()
+        } catch (e: Exception) {
+            logger.error { "Failed to free resources on shutdown: $e" }
+        }
+    }
 }
