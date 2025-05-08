@@ -59,9 +59,10 @@ abstract class AbstractBlockchainProcess(val processName: String, override val b
         // Clean up the process here if it was never started
         if (!started.get()) cleanup()
         running.set(false)
-        if (!process.isAlive) return
-        logger.debug { "Shutting down process $processName" }
-        process.join()
+        if (process.isAlive) {
+            logger.debug { "Shutting down process $processName" }
+            process.join()
+        }
         metrics.close()
     }
 
