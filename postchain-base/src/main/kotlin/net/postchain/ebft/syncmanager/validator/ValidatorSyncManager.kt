@@ -507,7 +507,12 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     fun update() {
         if (useFastSyncAlgorithm) {
             logger.debug("Using fast sync") // Doesn't happen very often
-            if (hasRunInitialSync && unloadNonAppliedPendingConfiguration()) return
+            try {
+                if (hasRunInitialSync && unloadNonAppliedPendingConfiguration()) return
+            } catch (e: Exception) {
+                logger.error("Couldn't check for pending config updates, ignoring and continuing", e)
+                return // We will retry again the next update loop
+            }
             // Wait for any queued blocks to commit/fail before starting sync
             blockManager.waitForRunningOperationsToComplete()
             fastSynchronizer.syncUntilResponsiveNodesDrained()
