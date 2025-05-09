@@ -6,6 +6,9 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
+import net.postchain.base.configuration.asyncQueryQueueCapacity
+import net.postchain.base.configuration.asyncQueryResultRetentionSeconds
+import net.postchain.base.configuration.asyncQueryTimeoutSeconds
 import net.postchain.base.data.BaseAsyncQueryQueue
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
@@ -35,7 +38,7 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
 import net.postchain.crypto.SigMaker
-import net.postchain.gtx.GTXBlockchainConfiguration
+import net.postchain.gtx.GTXModuleAware
 import net.postchain.metrics.BaseBlockchainEngineMetrics
 import kotlin.time.Duration.Companion.minutes
 
@@ -124,22 +127,25 @@ open class BaseBlockchainInfrastructure(
         val strategy: BlockBuildingStrategy = configuration.getBlockBuildingStrategy(blockQueries, transactionQueue)
 
         val asyncQueryQueue: AsyncQueryQueue = let {
-            if (configuration is GTXBlockchainConfiguration) {
-                val queueCapacity = configuration.configData.asyncQueryQueueCapacity
+            if (configuration is GTXModuleAware) {
+                val queueCapacity = configuration.asyncQueryQueueCapacity
                 if (queueCapacity > 0) {
+                    logger.info { "Enabling async queries with queue capacity $queueCapacity" }
                     BaseAsyncQueryQueue(
                             queueCapacity = queueCapacity.toInt(),
-                            queryTimeoutSeconds = configuration.configData.asyncQueryTimeoutSeconds,
-                            resultRetentionSeconds = configuration.configData.asyncQueryResultRetentionSeconds,
+                            queryTimeoutSeconds = configuration.asyncQueryTimeoutSeconds,
+                            resultRetentionSeconds = configuration.asyncQueryResultRetentionSeconds,
                             storage = sharedStorage,
                             chainID = configuration.chainID,
                     ) { ctx, query ->
                         configuration.module.query(ctx, query.name, query.args)
                     }
                 } else {
+                    logger.info { "Disabling async queries" }
                     DisabledAsyncQueryQueue()
                 }
             } else {
+                logger.warn { "Disabling async queries, config is not a GTXModuleAware: ${configuration.javaClass.name}" }
                 DisabledAsyncQueryQueue()
             }
         }

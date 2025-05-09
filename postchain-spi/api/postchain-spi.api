@@ -376,17 +376,13 @@ public abstract interface class net/postchain/base/TxEventSink {
 
 public final class net/postchain/base/configuration/BlockchainConfigurationData {
 	public static final field Companion Lnet/postchain/base/configuration/BlockchainConfigurationData$Companion;
-	public fun <init> (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JJJJZLjava/util/Map;)V
+	public fun <init> (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;JZLjava/util/Map;)V
 	public final fun component1 ()Lnet/postchain/gtv/Gtv;
 	public final fun component12 ()Lnet/postchain/gtv/Gtv;
-	public final fun component14 ()Ljava/lang/Long;
-	public final fun component15 ()J
-	public final fun component16 ()J
-	public final fun component17 ()J
-	public final fun component18 ()J
-	public final fun component19 ()Z
+	public final fun component14 ()J
+	public final fun component15 ()Z
+	public final fun component16 ()Ljava/util/Map;
 	public final fun component2 ()Ljava/util/List;
-	public final fun component20 ()Ljava/util/Map;
 	public final fun component3 ()Ljava/lang/String;
 	public final fun component4 ()Ljava/util/List;
 	public final fun component5 ()Ljava/lang/String;
@@ -394,14 +390,11 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData 
 	public final fun component7 ()J
 	public final fun component8 ()Ljava/lang/String;
 	public final fun component9 ()Lnet/postchain/gtv/Gtv;
-	public final fun copy (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JJJJZLjava/util/Map;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
-	public static synthetic fun copy$default (Lnet/postchain/base/configuration/BlockchainConfigurationData;Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JJJJZLjava/util/Map;ILjava/lang/Object;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
+	public final fun copy (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;JZLjava/util/Map;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
+	public static synthetic fun copy$default (Lnet/postchain/base/configuration/BlockchainConfigurationData;Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;JZLjava/util/Map;ILjava/lang/Object;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
 	public fun equals (Ljava/lang/Object;)Z
 	public static final fun fromRaw ([B)Lnet/postchain/base/configuration/BlockchainConfigurationData;
 	public final fun getAddPrimaryKeyToHeader ()Z
-	public final fun getAsyncQueryQueueCapacity ()J
-	public final fun getAsyncQueryResultRetentionSeconds ()J
-	public final fun getAsyncQueryTimeoutSeconds ()J
 	public final fun getBlockStrategy ()Lnet/postchain/gtv/Gtv;
 	public final fun getBlockStrategyName ()Ljava/lang/String;
 	public final fun getBlockchainDependencies ()Ljava/util/List;
@@ -414,7 +407,6 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData 
 	public final fun getMaxBlockFutureTime ()J
 	public final fun getMerkleHashCalculator ()Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;
 	public final fun getMerkleHashVersion ()J
-	public final fun getQueryCacheTtlSeconds ()Ljava/lang/Long;
 	public final fun getRawConfig ()Lnet/postchain/gtv/Gtv;
 	public final fun getSigners ()Ljava/util/List;
 	public final fun getSynchronizationInfrastructure ()Ljava/lang/String;
@@ -476,6 +468,10 @@ public final class net/postchain/base/configuration/BlockchainConfigurationField
 	public static final field KEY_SIGNERS Ljava/lang/String;
 	public static final field KEY_SYNC Ljava/lang/String;
 	public static final field KEY_SYNC_EXT Ljava/lang/String;
+	public static final fun getAsyncQueryQueueCapacity (Lnet/postchain/core/BlockchainConfiguration;)J
+	public static final fun getAsyncQueryResultRetentionSeconds (Lnet/postchain/core/BlockchainConfiguration;)J
+	public static final fun getAsyncQueryTimeoutSeconds (Lnet/postchain/core/BlockchainConfiguration;)J
+	public static final fun getQueryCacheTtlSeconds (Lnet/postchain/core/BlockchainConfiguration;)J
 }
 
 public final class net/postchain/base/configuration/BlockchainConfigurationOptions {
