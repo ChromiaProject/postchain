@@ -62,18 +62,6 @@ data class BlockchainConfigurationData(
         @Name(KEY_CONFIG_CONSENSUS_STRATEGY)
         @Nullable
         private val configConsensusStrategyString: String?,
-        @Name(KEY_QUERY_CACHE_TTL_SECONDS)
-        @DefaultValue(defaultLong = 0)
-        val queryCacheTtlSeconds: Long?,
-        @Name(KEY_ASYNC_QUERY_QUEUE_CAPACITY)
-        @DefaultValue(defaultLong = 0)
-        val asyncQueryQueueCapacity: Long,
-        @Name(KEY_ASYNC_QUERY_TIMEOUT_SECONDS)
-        @DefaultValue(defaultLong = 60 * 60) // 1 hour
-        val asyncQueryTimeoutSeconds: Long,
-        @Name(KEY_ASYNC_QUERY_RESULT_RETENTION_SECONDS)
-        @DefaultValue(defaultLong = 60 * 60) // 1 hour
-        val asyncQueryResultRetentionSeconds: Long,
         @Name(KEY_MAX_BLOCK_FUTURE_TIME)
         @DefaultValue(defaultLong = 60 * 1000) // 1 minute
         val maxBlockFutureTime: Long,

@@ -8,7 +8,7 @@ import net.postchain.api.rest.controller.DebugApi
 import net.postchain.api.rest.controller.DefaultDebugInfoQuery
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.RestApi
-import net.postchain.base.configuration.BaseBlockchainConfiguration
+import net.postchain.base.configuration.queryCacheTtlSeconds
 import net.postchain.common.BlockchainRid
 import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainProcess
@@ -85,9 +85,6 @@ open class BaseApiInfrastructure(
             val blockchainRid = blockchainConfiguration.blockchainRid
             val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainRid)
 
-            val queryCacheTtlSeconds =
-                    (blockchainConfiguration as? BaseBlockchainConfiguration)?.configData?.queryCacheTtlSeconds
-                            ?: 0
             if (process is ValidatorBlockchainProcess) { // TODO: EBFT-specific code, but pretty harmless
                 apiModel = PostchainEBFTModel(
                         blockchainConfiguration,
@@ -98,7 +95,7 @@ open class BaseApiInfrastructure(
                         postchainContext,
                         nodeDiagnosticContext,
                         diagnosticData,
-                        queryCacheTtlSeconds,
+                        blockchainConfiguration.queryCacheTtlSeconds,
                         engine.asyncQueryQueue,
                 )
             } else if (process is ReadOnlyBlockchainProcess && process.isForwardingReplica) {
@@ -111,7 +108,7 @@ open class BaseApiInfrastructure(
                         postchainContext,
                         nodeDiagnosticContext,
                         diagnosticData,
-                        queryCacheTtlSeconds,
+                        blockchainConfiguration.queryCacheTtlSeconds,
                         engine.asyncQueryQueue,
                 )
             } else {
@@ -123,7 +120,7 @@ open class BaseApiInfrastructure(
                         postchainContext,
                         nodeDiagnosticContext,
                         diagnosticData,
-                        queryCacheTtlSeconds,
+                        blockchainConfiguration.queryCacheTtlSeconds,
                         engine.asyncQueryQueue,
                 )
             }

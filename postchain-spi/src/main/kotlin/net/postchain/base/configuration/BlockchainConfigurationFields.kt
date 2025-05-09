@@ -1,5 +1,7 @@
 package net.postchain.base.configuration
 
+import net.postchain.core.BlockchainConfiguration
+
 const val KEY_BLOCKSTRATEGY = "blockstrategy"
 const val KEY_BLOCKSTRATEGY_NAME = "name"
 const val KEY_BLOCKSTRATEGY_MAXBLOCKSIZE = "maxblocksize"
@@ -53,3 +55,15 @@ const val KEY_ASYNC_QUERY_TIMEOUT_SECONDS = "async_query_timeout_seconds"
 const val KEY_ASYNC_QUERY_RESULT_RETENTION_SECONDS = "async_query_result_retention_seconds"
 
 const val KEY_FEATURES = "features"
+
+val BlockchainConfiguration.queryCacheTtlSeconds: Long
+    get() = this.rawConfig[KEY_QUERY_CACHE_TTL_SECONDS]?.asInteger() ?: 0L
+
+val BlockchainConfiguration.asyncQueryQueueCapacity: Long
+    get() = this.rawConfig[KEY_ASYNC_QUERY_QUEUE_CAPACITY]?.asInteger() ?: 0L
+
+val BlockchainConfiguration.asyncQueryTimeoutSeconds: Long
+    get() = this.rawConfig[KEY_ASYNC_QUERY_TIMEOUT_SECONDS]?.asInteger() ?: (60 * 60) // 1 hour
+
+val BlockchainConfiguration.asyncQueryResultRetentionSeconds: Long
+    get() = this.rawConfig[KEY_ASYNC_QUERY_RESULT_RETENTION_SECONDS]?.asInteger() ?: (60 * 60) // 1 hour
