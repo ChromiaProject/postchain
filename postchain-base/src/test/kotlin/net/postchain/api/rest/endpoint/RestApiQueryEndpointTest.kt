@@ -13,6 +13,9 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
+import net.postchain.common.wrap
+import net.postchain.core.AsyncQueryResponse
+import net.postchain.core.AsyncQueryResponseStatus
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -20,6 +23,7 @@ import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvStream
 import net.postchain.gtv.gtvToJSON
 import net.postchain.gtv.makeStrictGtvGson
+import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
 import org.hamcrest.CoreMatchers.containsString
@@ -31,6 +35,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import java.io.ByteArrayInputStream
 import java.math.BigInteger
@@ -426,12 +431,12 @@ class RestApiQueryEndpointTest {
         restApi.attachModel(blockchainRID, model)
 
         RestAssured.given().basePath(basePath).port(restApi.actualPort())
-            .body(queryString)
-            .post("/query/$blockchainRID")
-            .then()
-            .statusCode(400)
-            .contentType(ContentType.JSON)
-            .body(equalTo(answerBody))
+                .body(queryString)
+                .post("/query/$blockchainRID")
+                .then()
+                .statusCode(400)
+                .contentType(ContentType.JSON)
+                .body(equalTo(answerBody))
     }
 
     @Test
@@ -665,5 +670,47 @@ class RestApiQueryEndpointTest {
                 .statusCode(200)
                 .contentType(ContentType.JSON)
                 .body(equalTo(answerString))
+    }
+
+    @Test
+    fun `submit async query`() {
+        val query = GtxQuery("test_query", gtv(mapOf("type" to gtv("value"))))
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .body(query.encode())
+                .post("/query_async/${blockchainRID}")
+                .then()
+                .statusCode(202)
+                .contentType(ContentType.JSON)
+
+        verify(model).enqueueQuery(query)
+    }
+
+    @Test
+    fun `fetch async query response`() {
+        restApi.attachModel(blockchainRID, model)
+
+        val queryRID = ByteArray(32) { it.toByte() }.wrap()
+        val answer = gtv("answer")
+
+        whenever(model.fetchQueryResponse(queryRID)).thenReturn(AsyncQueryResponse(
+                status = AsyncQueryResponseStatus.COMPLETED,
+                queryResponse = answer,
+                errorMessage = null,
+        ))
+
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/query_async/${blockchainRID}/${queryRID}")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(AsyncQueryResponse(
+                status = AsyncQueryResponseStatus.COMPLETED,
+                queryResponse = answer,
+                errorMessage = null,
+        ))))
     }
 }

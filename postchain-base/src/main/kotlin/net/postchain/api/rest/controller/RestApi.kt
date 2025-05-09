@@ -49,6 +49,7 @@ import net.postchain.api.rest.pathPath
 import net.postchain.api.rest.prettyGson
 import net.postchain.api.rest.prettyJsonBody
 import net.postchain.api.rest.proofBody
+import net.postchain.api.rest.queryRidPath
 import net.postchain.api.rest.rejectedTransactionsBody
 import net.postchain.api.rest.signatureBody
 import net.postchain.api.rest.signatureHeader
@@ -92,6 +93,7 @@ import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvStream
 import net.postchain.gtv.GtvString
 import net.postchain.gtv.GtvType
+import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
@@ -108,6 +110,7 @@ import org.http4k.core.Method.POST
 import org.http4k.core.Request
 import org.http4k.core.Response
 import org.http4k.core.Status
+import org.http4k.core.Status.Companion.ACCEPTED
 import org.http4k.core.Status.Companion.BAD_REQUEST
 import org.http4k.core.Status.Companion.CONFLICT
 import org.http4k.core.Status.Companion.FORBIDDEN
@@ -182,7 +185,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 17
+        const val REST_API_VERSION = 18
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -260,7 +263,7 @@ class RestApi(
         { request ->
             if (logger.isDebugEnabled) {
                 val requestInfo = "[${request.source?.address ?: "(unknown)"}] ${request.method} ${request.uri.path}"
-                // Assuming content-type is correctly set we will avoid logging binary request bodies
+                // Assuming the content-type is correctly set, we will avoid logging binary request bodies
                 if (Header.CONTENT_TYPE(request)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
                         && (request.body.length ?: 0) > 0
                         && request.header("content-encoding") != "gzip") {
@@ -282,7 +285,7 @@ class RestApi(
                 }
             }
             if (logger.isDebugEnabled) {
-                // Assuming content-type is correctly set we will avoid logging binary response bodies
+                // Assuming the content-type is correctly set, we will avoid logging binary response bodies
                 if (Header.CONTENT_TYPE(response)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
                         && (response.body.length ?: 0) > 0
                         && response.header("content-encoding") != "gzip") {
@@ -327,12 +330,14 @@ class RestApi(
 
             "/query/{blockchainRid}" bind GET to liveBlockchain.then(::getQuery),
             "/query/{blockchainRid}" bind POST to liveBlockchain.then(::postQuery),
-            // Direct query. That should be used as example: <img src="http://node/dquery/brid?type=get_picture&id=4555" />
+            // Direct query. That should be used as an example: <img src="http://node/dquery/brid?type=get_picture&id=4555" />
             "/dquery/{blockchainRid}" bind GET to liveBlockchain.then(::directQuery),
-            // Web query. That should be used as example: <img src="http://node/web_query/brid/get_picture?id=4555" />
+            // Web query. That should be used as an example: <img src="http://node/web_query/brid/get_picture?id=4555" />
             "/web_query/{blockchainRid}/{path:.*}" bind GET to liveBlockchain.then(::webQuery),
             "/query_gtv/{blockchainRid}" bind GET to liveBlockchain.then(::getQueryGtv),
             "/query_gtv/{blockchainRid}" bind POST to liveBlockchain.then(::postQueryGtv),
+            "/query_async/{blockchainRid}" bind POST to liveBlockchain.then(::postQueryAsync),
+            "/query_async/{blockchainRid}/{queryRid}" bind GET to liveBlockchain.then(::getQueryAsync),
 
             "/node/{blockchainRid}/my_status" bind GET to liveBlockchain.then(volatileResponse).then(::getNodeStatus),
             "/node/{blockchainRid}/statuses" bind GET to liveBlockchain.then(volatileResponse).then(::getNodeStatuses),
@@ -395,7 +400,8 @@ class RestApi(
     private fun getWaitingTransaction(request: Request): Response {
         val model = model(request)
         val txRid = txRidPath(request)
-        val (txData, txTimestamp) = model.getWaitingTransaction(txRid) ?: throw NotFoundError("Can't find waiting transaction with RID: $txRid")
+        val (txData, txTimestamp) = model.getWaitingTransaction(txRid)
+                ?: throw NotFoundError("Can't find waiting transaction with RID: $txRid")
         return Response(OK).header(TRANSACTION_TIMESTAMP, txTimestamp.toEpochMilli().toString()).with(binaryBody of txData)
     }
 
@@ -615,6 +621,27 @@ class RestApi(
         return Response(OK).with(binaryBody of GtvEncoder.encodeGtv(response))
     }
 
+    private fun postQueryAsync(request: Request): Response {
+        val model = model(request)
+        val query = binaryBody(request)
+        val gtvQuery = try {
+            GtxQuery.decode(query)
+        } catch (e: GtvException) {
+            logger.debug { "Invalid GTV data in POST /query_async: $e" }
+            throw IllegalArgumentException("Invalid GTV data")
+        }
+        model.enqueueQuery(query = gtvQuery)
+        return Response(ACCEPTED).with(emptyBody.outbound(request) of Empty)
+    }
+
+    private fun getQueryAsync(request: Request): Response {
+        val model = model(request)
+        val queryRid = queryRidPath(request)
+        val response = model.fetchQueryResponse(queryRid)
+        return Response(OK).with(binaryBody of
+                GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(response)))
+    }
+
     private fun getQueryResponse(model: Model, response: Response, cacheTtlSeconds: Long = -1): Response =
             getQueryResponse(response, if (cacheTtlSeconds > 0) cacheTtlSeconds else model.queryCacheTtlSeconds)
 
@@ -681,7 +708,7 @@ class RestApi(
         val configuration = model.getBlockchainConfiguration(height)
                 ?: throw UserMistake("Failed to find configuration")
         val configGtv = GtvDecoder.decodeGtv(configuration)
-        val features = configGtv.asDict()[KEY_FEATURES] ?: gtv(emptyMap<String, Gtv>())
+        val features = configGtv.asDict()[KEY_FEATURES] ?: gtv(emptyMap())
         val response = Response(OK).with(configurationFeaturesOutBody.outbound(request) of features)
         return if (height == -1L) {
             volatileResponse.then { response }(request)
@@ -841,8 +868,8 @@ class RestApi(
                 errorResponse(request, FORBIDDEN, error.message!!)
             }
 
-            is DuplicateTnxException -> {
-                logger.info { "Duplicate transaction: ${error.message}" }
+            is DuplicateException -> {
+                logger.info { "Duplicate: ${error.message}" }
                 errorResponse(request, CONFLICT, error.message!!)
             }
 
@@ -942,7 +969,7 @@ class RestApi(
     }
 
     /**
-     * We allow two different syntax for finding the blockchain.
+     * We allow two different syntaxes for finding the blockchain.
      * 1. provide BC RID
      * 2. provide Chain IID (should not be used in production, since to ChainIid could be anything).
      */

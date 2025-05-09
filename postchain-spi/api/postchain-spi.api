@@ -376,14 +376,17 @@ public abstract interface class net/postchain/base/TxEventSink {
 
 public final class net/postchain/base/configuration/BlockchainConfigurationData {
 	public static final field Companion Lnet/postchain/base/configuration/BlockchainConfigurationData$Companion;
-	public fun <init> (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JZLjava/util/Map;)V
+	public fun <init> (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JJJJZLjava/util/Map;)V
 	public final fun component1 ()Lnet/postchain/gtv/Gtv;
 	public final fun component12 ()Lnet/postchain/gtv/Gtv;
 	public final fun component14 ()Ljava/lang/Long;
 	public final fun component15 ()J
-	public final fun component16 ()Z
-	public final fun component17 ()Ljava/util/Map;
+	public final fun component16 ()J
+	public final fun component17 ()J
+	public final fun component18 ()J
+	public final fun component19 ()Z
 	public final fun component2 ()Ljava/util/List;
+	public final fun component20 ()Ljava/util/Map;
 	public final fun component3 ()Ljava/lang/String;
 	public final fun component4 ()Ljava/util/List;
 	public final fun component5 ()Ljava/lang/String;
@@ -391,11 +394,14 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData 
 	public final fun component7 ()J
 	public final fun component8 ()Ljava/lang/String;
 	public final fun component9 ()Lnet/postchain/gtv/Gtv;
-	public final fun copy (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JZLjava/util/Map;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
-	public static synthetic fun copy$default (Lnet/postchain/base/configuration/BlockchainConfigurationData;Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JZLjava/util/Map;ILjava/lang/Object;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
+	public final fun copy (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JJJJZLjava/util/Map;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
+	public static synthetic fun copy$default (Lnet/postchain/base/configuration/BlockchainConfigurationData;Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;JJJJZLjava/util/Map;ILjava/lang/Object;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
 	public fun equals (Ljava/lang/Object;)Z
 	public static final fun fromRaw ([B)Lnet/postchain/base/configuration/BlockchainConfigurationData;
 	public final fun getAddPrimaryKeyToHeader ()Z
+	public final fun getAsyncQueryQueueCapacity ()J
+	public final fun getAsyncQueryResultRetentionSeconds ()J
+	public final fun getAsyncQueryTimeoutSeconds ()J
 	public final fun getBlockStrategy ()Lnet/postchain/gtv/Gtv;
 	public final fun getBlockStrategyName ()Ljava/lang/String;
 	public final fun getBlockchainDependencies ()Ljava/util/List;
@@ -431,6 +437,9 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData$
 
 public final class net/postchain/base/configuration/BlockchainConfigurationFieldsKt {
 	public static final field KEY_ADD_PRIMARY_KEY_TO_HEADER Ljava/lang/String;
+	public static final field KEY_ASYNC_QUERY_QUEUE_CAPACITY Ljava/lang/String;
+	public static final field KEY_ASYNC_QUERY_RESULT_RETENTION_SECONDS Ljava/lang/String;
+	public static final field KEY_ASYNC_QUERY_TIMEOUT_SECONDS Ljava/lang/String;
 	public static final field KEY_BLOCKSTRATEGY Ljava/lang/String;
 	public static final field KEY_BLOCKSTRATEGY_MAXBACKOFFTIME Ljava/lang/String;
 	public static final field KEY_BLOCKSTRATEGY_MAXBLOCKSIZE Ljava/lang/String;
@@ -1128,6 +1137,36 @@ public final class net/postchain/core/AppContext$DefaultImpls {
 	public static fun getInterface (Lnet/postchain/core/AppContext;Ljava/lang/Class;)Ljava/lang/Object;
 }
 
+public abstract interface class net/postchain/core/AsyncQueryQueue : net/postchain/core/Shutdownable {
+	public abstract fun enqueueQuery (Lnet/postchain/common/types/WrappedByteArray;Lnet/postchain/gtx/GtxQuery;)V
+	public abstract fun getQueryResponse (Lnet/postchain/common/types/WrappedByteArray;)Lnet/postchain/core/AsyncQueryResponse;
+}
+
+public final class net/postchain/core/AsyncQueryResponse {
+	public fun <init> (Lnet/postchain/core/AsyncQueryResponseStatus;Lnet/postchain/gtv/Gtv;Ljava/lang/String;)V
+	public final fun component1 ()Lnet/postchain/core/AsyncQueryResponseStatus;
+	public final fun component2 ()Lnet/postchain/gtv/Gtv;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun copy (Lnet/postchain/core/AsyncQueryResponseStatus;Lnet/postchain/gtv/Gtv;Ljava/lang/String;)Lnet/postchain/core/AsyncQueryResponse;
+	public static synthetic fun copy$default (Lnet/postchain/core/AsyncQueryResponse;Lnet/postchain/core/AsyncQueryResponseStatus;Lnet/postchain/gtv/Gtv;Ljava/lang/String;ILjava/lang/Object;)Lnet/postchain/core/AsyncQueryResponse;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getErrorMessage ()Ljava/lang/String;
+	public final fun getQueryResponse ()Lnet/postchain/gtv/Gtv;
+	public final fun getStatus ()Lnet/postchain/core/AsyncQueryResponseStatus;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/core/AsyncQueryResponseStatus : java/lang/Enum {
+	public static final field COMPLETED Lnet/postchain/core/AsyncQueryResponseStatus;
+	public static final field FAILED Lnet/postchain/core/AsyncQueryResponseStatus;
+	public static final field NOT_FOUND Lnet/postchain/core/AsyncQueryResponseStatus;
+	public static final field PENDING Lnet/postchain/core/AsyncQueryResponseStatus;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lnet/postchain/core/AsyncQueryResponseStatus;
+	public static fun values ()[Lnet/postchain/core/AsyncQueryResponseStatus;
+}
+
 public final class net/postchain/core/BadBlockException : net/postchain/core/BadDataException {
 	public fun <init> (Ljava/lang/String;Ljava/lang/Exception;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/Exception;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -1238,6 +1277,7 @@ public abstract interface class net/postchain/core/BlockchainContext {
 
 public abstract interface class net/postchain/core/BlockchainEngine : net/postchain/core/Shutdownable {
 	public abstract fun buildBlock (J)Lkotlin/Pair;
+	public abstract fun getAsyncQueryQueue ()Lnet/postchain/core/AsyncQueryQueue;
 	public abstract fun getBlockBuilderStorage ()Lnet/postchain/core/Storage;
 	public abstract fun getBlockBuildingStrategy ()Lnet/postchain/core/block/BlockBuildingStrategy;
 	public abstract fun getBlockQueries ()Lnet/postchain/core/block/BlockQueries;

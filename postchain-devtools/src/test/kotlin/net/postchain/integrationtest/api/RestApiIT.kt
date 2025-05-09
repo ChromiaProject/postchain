@@ -6,6 +6,7 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isGreaterThan
+import assertk.assertions.isNotEqualTo
 import assertk.isContentEqualTo
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
@@ -18,6 +19,8 @@ import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
 import net.postchain.configurations.GTXTestModule
+import net.postchain.core.AsyncQueryResponse
+import net.postchain.core.AsyncQueryResponseStatus
 import net.postchain.core.EContext
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
@@ -33,9 +36,14 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvFileReader
+import net.postchain.gtv.GtvNull
+import net.postchain.gtv.mapper.GtvObjectMapper
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV1
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
+import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.integrationtest.JsonTools
 import net.postchain.integrationtest.JsonTools.jsonAsMap
@@ -588,6 +596,116 @@ class RestApiIT : IntegrationTestSetup() {
         CompletableFuture.allOf(query1Status, query2Status).get(10, TimeUnit.SECONDS)
         assertThat(query1Status.get()).isEqualTo(200)
         assertThat(query2Status.get()).isEqualTo(200)
+    }
+
+    @Test
+    fun testAsyncQuery() {
+        val nodesCount = 1
+        configOverrides.setProperty("testpeerinfos", createPeerInfos(nodesCount))
+        configOverrides.setProperty("api.port", 0)
+        val nodes = createNodes(nodesCount, "/net/postchain/devtools/api/blockchain_config_async_query.xml")
+        val blockchainRIDBytes = nodes[0].getBlockchainRid(1L)!! // Just take first chain from first node.
+        val blockchainRID = blockchainRIDBytes.toHex()
+
+        buildBlockAndCommit(nodes[0])
+
+        val query = GtxQuery("test_query", gtv(mapOf("i" to gtv(100L), "flag" to gtv(true))))
+        val queryRid = query.toGtv().merkleHash(GtvMerkleHashCalculatorV1(::sha256Digest))
+        given().port(nodes[0].getRestApiHttpPort())
+                .header("Content-Type", ContentType.BINARY)
+                .body(GtvEncoder.encodeGtv(query.toGtv()))
+                .post("/query_async/$blockchainRID")
+                .then()
+                .statusCode(202)
+
+        val body = given().port(nodes[0].getRestApiHttpPort())
+                .get("/query_async/$blockchainRID/${queryRid.toHex()}")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+                .extract().asByteArray()
+
+        await().atMost(5, TimeUnit.SECONDS).untilAsserted {
+            assertThat(body).isContentEqualTo(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(AsyncQueryResponse(
+                    status = AsyncQueryResponseStatus.COMPLETED,
+                    queryResponse = gtv(100 * 100),
+                    errorMessage = null,
+            ))))
+        }
+    }
+
+    @Test
+    fun testAsyncQueryTimeout() {
+        val nodesCount = 1
+        configOverrides.setProperty("testpeerinfos", createPeerInfos(nodesCount))
+        configOverrides.setProperty("api.port", 0)
+        val nodes = createNodes(nodesCount, "/net/postchain/devtools/api/blockchain_config_async_query.xml")
+        val blockchainRIDBytes = nodes[0].getBlockchainRid(1L)!! // Just take first chain from first node.
+        val blockchainRID = blockchainRIDBytes.toHex()
+
+        buildBlockAndCommit(nodes[0])
+
+        val query = GtxQuery("slow_query", gtv(mapOf("seconds" to gtv(10L))))
+        val queryRid = query.toGtv().merkleHash(GtvMerkleHashCalculatorV1(::sha256Digest))
+        given().port(nodes[0].getRestApiHttpPort())
+                .header("Content-Type", ContentType.BINARY)
+                .body(GtvEncoder.encodeGtv(query.toGtv()))
+                .post("/query_async/$blockchainRID")
+                .then()
+                .statusCode(202)
+
+        var queryResponse: AsyncQueryResponse? = null
+        await().atMost(7, TimeUnit.SECONDS).untilAsserted {
+            val body = given().port(nodes[0].getRestApiHttpPort())
+                    .get("/query_async/$blockchainRID/${queryRid.toHex()}")
+                    .then()
+                    .statusCode(200)
+                    .contentType(ContentType.BINARY)
+                    .extract().asByteArray()
+            queryResponse = GtvObjectMapper.fromGtv(GtvDecoder.decodeGtv(body), AsyncQueryResponse::class)
+            assertThat(queryResponse.status).isNotEqualTo(AsyncQueryResponseStatus.PENDING)
+        }
+
+        assertThat(queryResponse!!.status).isEqualTo(AsyncQueryResponseStatus.FAILED)
+        assertThat(queryResponse.queryResponse).isEqualTo(GtvNull)
+        assertThat(queryResponse.errorMessage).isEqualTo("Query timed out after 5 seconds")
+    }
+
+    @Test
+    fun testAsyncQueryDbTimeout() {
+        val nodesCount = 1
+        configOverrides.setProperty("testpeerinfos", createPeerInfos(nodesCount))
+        configOverrides.setProperty("api.port", 0)
+        val nodes = createNodes(nodesCount, "/net/postchain/devtools/api/blockchain_config_async_query.xml")
+        val blockchainRIDBytes = nodes[0].getBlockchainRid(1L)!! // Just take first chain from first node.
+        val blockchainRID = blockchainRIDBytes.toHex()
+
+        buildBlockAndCommit(nodes[0])
+
+        val query = GtxQuery("slow_db_query", gtv(mapOf("seconds" to gtv(10L))))
+        val queryRid = query.toGtv().merkleHash(GtvMerkleHashCalculatorV1(::sha256Digest))
+        given().port(nodes[0].getRestApiHttpPort())
+                .header("Content-Type", ContentType.BINARY)
+                .body(GtvEncoder.encodeGtv(query.toGtv()))
+                .post("/query_async/$blockchainRID")
+                .then()
+                .statusCode(202)
+
+        var queryResponse: AsyncQueryResponse? = null
+        await().atMost(12, TimeUnit.SECONDS).untilAsserted {
+            val body = given().port(nodes[0].getRestApiHttpPort())
+                    .get("/query_async/$blockchainRID/${queryRid.toHex()}")
+                    .then()
+                    .statusCode(200)
+                    .contentType(ContentType.BINARY)
+                    .extract().asByteArray()
+            queryResponse = GtvObjectMapper.fromGtv(GtvDecoder.decodeGtv(body), AsyncQueryResponse::class)
+            assertThat(queryResponse.status).isNotEqualTo(AsyncQueryResponseStatus.PENDING)
+        }
+
+        assertThat(queryResponse!!.status).isEqualTo(AsyncQueryResponseStatus.FAILED)
+        assertThat(queryResponse.queryResponse).isEqualTo(GtvNull)
+        assertThat(queryResponse.errorMessage).isEqualTo("Query timed out after 5 seconds")
     }
 
     /**

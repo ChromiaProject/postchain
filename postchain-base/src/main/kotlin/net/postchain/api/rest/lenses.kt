@@ -13,6 +13,7 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.rest.HighestBlockHeightAnchoringCheck
 import net.postchain.common.toHex
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.block.BlockDetail
@@ -65,6 +66,7 @@ val signatureHeader = Header.string()
 
 val txRidPath = Path.regexGroup(ridRegex, 1).map { TxRid(it.hexStringToByteArray()) }.of("txRid", "Hex encoded transaction RID")
 val blockRidPath = Path.regexGroup(ridRegex, 1).map { BlockRid(it.hexStringToByteArray()) }.of("blockRid", "Hex encoded block RID")
+val queryRidPath = Path.regexGroup(ridRegex, 1).map { WrappedByteArray(it.hexStringToByteArray()) }.of("queryRid", "Hex encoded query RID")
 val heightPath = Path.long().of("height", "Block height")
 
 val limitQuery = Query.int().optional("limit")

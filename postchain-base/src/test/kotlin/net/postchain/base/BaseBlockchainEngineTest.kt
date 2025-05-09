@@ -3,6 +3,7 @@ package net.postchain.base
 import net.postchain.base.data.BaseManagedBlockBuilder
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.data.DisabledAsyncQueryQueue
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BeforeCommitHandler
@@ -67,8 +68,8 @@ class BaseBlockchainEngineTest {
     fun beforeEach() {
         sut = BaseBlockchainEngine(blockchainConfiguration, blockBuilderStorage, sharedStorage, chainId, eContext,
                 blockchainConfigurationProvider, restartNotifier, nodeDiagnosticContext, beforeCommitHandler,
-                afterCommitHandler, useParallelDecoding, blockQueries, transactionQueue, metrics, strategy,
-                { _, _, _, _, _, _ -> blockBuilder }, { nanoTime })
+                afterCommitHandler, useParallelDecoding, blockQueries, transactionQueue, metrics, strategy, DisabledAsyncQueryQueue(),
+                { _, _, _, _, _, _ -> blockBuilder }, { nanoTime }, )
         doReturn(false).whenever(db).configurationHashExists(isA(), isA())
     }
 

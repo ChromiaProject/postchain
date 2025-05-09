@@ -30,7 +30,11 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.newInstanceOf
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
+import net.postchain.core.AsyncQueryQueue
+import net.postchain.core.AsyncQueryResponse
 import net.postchain.core.BlockRid
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.DefaultBlockchainConfigurationFactory
@@ -56,6 +60,7 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.UnknownQuery
@@ -83,7 +88,8 @@ open class PostchainModel(
         val postchainContext: PostchainContext,
         private val nodeDiagnosticContext: NodeDiagnosticContext,
         private val diagnosticData: DiagnosticData,
-        override val queryCacheTtlSeconds: Long
+        override val queryCacheTtlSeconds: Long,
+        private val asyncQueryQueue: AsyncQueryQueue,
 ) : Model {
 
     companion object : KLogging()
@@ -107,7 +113,6 @@ open class PostchainModel(
 
     override fun getTransactionsInfoBySigner(timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): TransactionInfoExtsTruncated =
             blockQueries.getTransactionsInfoBySigner(timeFilter, limit, signer, maxDataSize).get()
-
 
     override fun getLastTransactionNumber(): TransactionsCount =
             TransactionsCount(blockQueries.getLastTransactionNumber().get())
@@ -158,6 +163,12 @@ open class PostchainModel(
     override fun getRejectedTransactions(): List<ApiRejectedTransaction> =
             throw NotSupported("Fetching rejected transactions is not supported for this blockchain on this node")
 
+    override fun checkQueryCorrectness(query: GtxQuery) {
+        if (!blockchainConfiguration.hasQuery(query.name)) {
+            throw UnknownQuery(query.name)
+        }
+    }
+
     override fun query(query: GtxQuery): Gtv {
         val timerBuilder = Timer.builder(QUERIES_METRIC_NAME)
                 .description(QUERIES_METRIC_DESCRIPTION)
@@ -181,6 +192,14 @@ open class PostchainModel(
             throw e
         }
     }
+
+    override fun enqueueQuery(query: GtxQuery) {
+        checkQueryCorrectness(query)
+        val queryRid = query.toGtv().merkleHash(blockchainConfiguration.merkleHashCalculator).wrap()
+        asyncQueryQueue.enqueueQuery(queryRid, query)
+    }
+
+    override fun fetchQueryResponse(queryRid: WrappedByteArray): AsyncQueryResponse = asyncQueryQueue.getQueryResponse(queryRid)
 
     override fun nodeStatusQuery(): StateNodeStatus =
             diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS]?.value as? StateNodeStatus

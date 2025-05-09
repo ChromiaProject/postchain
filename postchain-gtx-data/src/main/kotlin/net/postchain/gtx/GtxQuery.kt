@@ -5,10 +5,13 @@ import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.mapper.ToGtv
 
-data class GtxQuery(val name: String, val args: Gtv) {
+data class GtxQuery(val name: String, val args: Gtv) : ToGtv {
 
-    fun encode() = GtvEncoder.encodeGtv(gtv(gtv(name), args))
+    fun encode() = GtvEncoder.encodeGtv(toGtv())
+
+    override fun toGtv(): GtvArray = gtv(gtv(name), args)
 
     companion object {
         @JvmStatic

@@ -96,7 +96,7 @@ public final class net/postchain/gtx/GtxOp$Companion {
 	public final fun fromOpData (Lnet/postchain/gtx/data/OpData;)Lnet/postchain/gtx/GtxOp;
 }
 
-public final class net/postchain/gtx/GtxQuery {
+public final class net/postchain/gtx/GtxQuery : net/postchain/gtv/mapper/ToGtv {
 	public static final field Companion Lnet/postchain/gtx/GtxQuery$Companion;
 	public fun <init> (Ljava/lang/String;Lnet/postchain/gtv/Gtv;)V
 	public final fun component1 ()Ljava/lang/String;
@@ -109,6 +109,8 @@ public final class net/postchain/gtx/GtxQuery {
 	public final fun getArgs ()Lnet/postchain/gtv/Gtv;
 	public final fun getName ()Ljava/lang/String;
 	public fun hashCode ()I
+	public synthetic fun toGtv ()Lnet/postchain/gtv/Gtv;
+	public fun toGtv ()Lnet/postchain/gtv/GtvArray;
 	public fun toString ()Ljava/lang/String;
 }
 

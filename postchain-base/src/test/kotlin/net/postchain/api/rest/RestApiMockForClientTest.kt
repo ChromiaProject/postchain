@@ -15,7 +15,9 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
+import net.postchain.core.AsyncQueryResponse
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionInfoExtsTruncated
@@ -160,6 +162,10 @@ class RestApiMockForClientManual {
         override fun getRejectedTransactions(): List<ApiRejectedTransaction> =
                 listOf(ApiRejectedTransaction(TxRid(statusRejected.hexStringToByteArray()), "some reason", 1574849700))
 
+        override fun checkQueryCorrectness(query: GtxQuery) {
+            TODO("Not yet implemented")
+        }
+
         override fun query(query: GtxQuery): Gtv {
             return when (query.args) {
                 gtv(mapOf("a" to gtv("oknullresponse"), "c" to gtv(3))) -> GtvNull
@@ -169,6 +175,14 @@ class RestApiMockForClientManual {
                 gtv(mapOf("a" to gtv("programmermistake"), "c" to gtv(3))) -> throw ProgrammerMistake("expected error")
                 else -> throw ProgrammerMistake("unexpected error")
             }
+        }
+
+        override fun enqueueQuery(query: GtxQuery) {
+            TODO("Not yet implemented")
+        }
+
+        override fun fetchQueryResponse(queryRid: WrappedByteArray): AsyncQueryResponse {
+            TODO("Not yet implemented")
         }
 
         override fun nodeStatusQuery(): StateNodeStatus = TODO()

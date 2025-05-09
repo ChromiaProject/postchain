@@ -6,13 +6,16 @@ import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
+import net.postchain.base.data.BaseAsyncQueryQueue
 import net.postchain.base.data.BaseTransactionQueue
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.data.DisabledAsyncQueryQueue
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.reflection.constructorOf
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.AfterCommitHandler
 import net.postchain.core.ApiInfrastructure
+import net.postchain.core.AsyncQueryQueue
 import net.postchain.core.BeforeCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainConfigurationFactorySupplier
@@ -32,6 +35,7 @@ import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
 import net.postchain.crypto.SigMaker
+import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.metrics.BaseBlockchainEngineMetrics
 import kotlin.time.Duration.Companion.minutes
 
@@ -119,10 +123,30 @@ open class BaseBlockchainInfrastructure(
         val metrics = BaseBlockchainEngineMetrics(configuration.chainID, configuration.blockchainRid, transactionQueue)
         val strategy: BlockBuildingStrategy = configuration.getBlockBuildingStrategy(blockQueries, transactionQueue)
 
+        val asyncQueryQueue: AsyncQueryQueue = let {
+            if (configuration is GTXBlockchainConfiguration) {
+                val queueCapacity = configuration.configData.asyncQueryQueueCapacity
+                if (queueCapacity > 0) {
+                    BaseAsyncQueryQueue(
+                            queueCapacity = queueCapacity.toInt(),
+                            queryTimeoutSeconds = configuration.configData.asyncQueryTimeoutSeconds,
+                            resultRetentionSeconds = configuration.configData.asyncQueryResultRetentionSeconds,
+                            storage = sharedStorage,
+                            chainID = configuration.chainID,
+                    ) { ctx, query ->
+                        configuration.module.query(ctx, query.name, query.args)
+                    }
+                } else {
+                    DisabledAsyncQueryQueue()
+                }
+            } else {
+                DisabledAsyncQueryQueue()
+            }
+        }
         return BaseBlockchainEngine(configuration, blockBuilderStorage, sharedStorage, configuration.chainID,
                 initialEContext, blockchainConfigurationProvider, restartNotifier,
                 postchainContext.nodeDiagnosticContext, beforeCommitHandler, afterCommitHandler, true,
-                blockQueries, transactionQueue, metrics, strategy)
+                blockQueries, transactionQueue, metrics, strategy, asyncQueryQueue)
     }
 
     override fun makeBlockchainProcess(

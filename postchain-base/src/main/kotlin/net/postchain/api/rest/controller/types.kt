@@ -13,6 +13,8 @@ import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
 import net.postchain.base.ConfirmationProof
 import net.postchain.common.BlockchainRid
+import net.postchain.common.types.WrappedByteArray
+import net.postchain.core.AsyncQueryResponse
 import net.postchain.core.BlockRid
 import net.postchain.core.TransactionInfoExt
 import net.postchain.core.TransactionInfoExtsTruncated
@@ -60,7 +62,15 @@ interface Model : ChainModel {
     fun getWaitingTransactions(): List<TxRid>
     fun getWaitingTransaction(txRID: TxRid): Pair<ByteArray, Instant>?
     fun getRejectedTransactions(): List<ApiRejectedTransaction>
+
+    /**
+     * @throws net.postchain.common.exception.UserMistake if the query is incorrect
+     */
+    fun checkQueryCorrectness(query: GtxQuery)
     fun query(query: GtxQuery): Gtv
+    fun enqueueQuery(query: GtxQuery)
+    fun fetchQueryResponse(queryRid: WrappedByteArray): AsyncQueryResponse
+
     fun nodeStatusQuery(): StateNodeStatus
     fun nodePeersStatusQuery(): List<StateNodeStatus>
     fun getCurrentBlockHeight(): BlockHeight
@@ -76,6 +86,6 @@ class NotSupported(message: String) : Exception(message)
 class NotFoundError(message: String) : Exception(message)
 class UnavailableException(message: String) : Exception(message)
 class InvalidTnxException(message: String) : Exception(message)
-class DuplicateTnxException(message: String) : Exception(message)
+class DuplicateException(message: String) : Exception(message)
 class UnauthorizedException(message: String) : Exception(message)
 class ForbiddenException(message: String) : Exception(message)
