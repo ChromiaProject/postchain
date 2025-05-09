@@ -84,6 +84,7 @@ open class BaseApiInfrastructure(
             val blockchainConfiguration = engine.getConfiguration()
             val blockchainRid = blockchainConfiguration.blockchainRid
             val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainRid)
+
             val queryCacheTtlSeconds =
                     (blockchainConfiguration as? BaseBlockchainConfiguration)?.configData?.queryCacheTtlSeconds
                             ?: 0
@@ -97,7 +98,8 @@ open class BaseApiInfrastructure(
                         postchainContext,
                         nodeDiagnosticContext,
                         diagnosticData,
-                        queryCacheTtlSeconds
+                        queryCacheTtlSeconds,
+                        engine.asyncQueryQueue,
                 )
             } else if (process is ReadOnlyBlockchainProcess && process.isForwardingReplica) {
                 apiModel = PostchainEBFTModel(
@@ -109,7 +111,8 @@ open class BaseApiInfrastructure(
                         postchainContext,
                         nodeDiagnosticContext,
                         diagnosticData,
-                        queryCacheTtlSeconds
+                        queryCacheTtlSeconds,
+                        engine.asyncQueryQueue,
                 )
             } else {
                 apiModel = PostchainModel(
@@ -120,7 +123,8 @@ open class BaseApiInfrastructure(
                         postchainContext,
                         nodeDiagnosticContext,
                         diagnosticData,
-                        queryCacheTtlSeconds
+                        queryCacheTtlSeconds,
+                        engine.asyncQueryQueue,
                 )
             }
 

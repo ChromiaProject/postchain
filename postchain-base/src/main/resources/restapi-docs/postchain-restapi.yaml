@@ -53,7 +53,7 @@ info:
     The exact procedure to calculate the hash can be discovered in the source code in 
     [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
     [TypeScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
-  version: "17"
+  version: "18"
 tags:
   - name: block
     description: Fetch block(s)
@@ -119,6 +119,17 @@ paths:
                   value:
                     error: "Transaction is invalid"
             application/octet-stream: { }
+        '403':
+          description: Not supported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                notSupported:
+                  value:
+                    error: "Posting a transaction to this blockchain on this node is not supported"
+            application/octet-stream: { }
         '404':
           description: Not found
           content:
@@ -171,6 +182,16 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/hash"
+        '403':
+          description: Not supported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                notSupported:
+                  value:
+                    error: "Fetching waiting transactions is not supported for this blockchain on this node"
         '404':
           description: Not found
           content:
@@ -206,6 +227,17 @@ paths:
               required: true
               schema:
                 $ref: "#/components/schemas/timestamp"
+        '403':
+          description: Not supported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                notSupported:
+                  value:
+                    error: "Fetching waiting transaction is not supported for this blockchain on this node"
+            application/octet-stream: { }
         '404':
           description: Not found
           content:
@@ -251,6 +283,16 @@ paths:
                       type: string
                     rejectTimestamp:
                       $ref: "#/components/schemas/timestamp"
+        '403':
+          description: Not supported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                notSupported:
+                  value:
+                    error: "Fetching rejected transactions is not supported for this blockchain on this node"
         '404':
           description: Not found
           content:
@@ -522,6 +564,16 @@ paths:
                     status: rejected
                     rejectReason: "[module:operation(dapp/module/module.rell:17)] Operation 'module:operation' failed: Requirement error"
                     rejectTimestamp: 1740659274153
+        '403':
+          description: Not supported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                notSupported:
+                  value:
+                    error: "Checking transaction status is not supported for this blockchain on this node"
         '404':
           description: Not found
           content:
@@ -1005,6 +1057,123 @@ paths:
           description: Not found
           content:
             application/octet-stream: { }
+  /query_async/{blockchainRid}:
+    post:
+      tags:
+        - query
+      summary: Make an asynchronous query
+      description: |
+        Make an asynchronous query to the specified chain. The query will be queued for background processing, and the
+        response can later be fetched with `GET /query_async/{blockchainRid}/{queryRid}`. 
+        
+        Request body contains binary GTV array with the query name as first element (string) and the named parameters as second element (dict).
+        Query RID is the Merkle hash of that GTV array.
+        ```
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      requestBody:
+        content:
+          application/octet-stream: { }
+      responses:
+        '202':
+          description: Query queued
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Invalid query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                unknownQuery:
+                  value:
+                    error: "Unknown query: the_query"
+        '403':
+          description: Not supported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                notSupported:
+                  value:
+                    error: "Async query is not supported on this blockchain"
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
+        '409':
+          description: Query already in queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                queryAlreadyInQueue:
+                  value:
+                    error: "Query already in queue"
+        '503':
+          description: Query queue is full
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                queueFull:
+                  value:
+                    error: "Query queue is full"
+  /query_async/{blockchainRid}/{queryRid}:
+    get:
+      tags:
+        - query
+      summary: Fetch response of an asynchronous query
+      description: |
+        Fetch response of an asynchronous query from the specified chain that was made with `POST /query_async/{blockchainRid}`. 
+        
+        Response body contains binary GTV value with the following structure (Rell syntax):
+        ```
+        enum async_query_response_status {
+            NOT_FOUND,
+            PENDING,
+            COMPLETED,
+            FAILED,        
+        }
+        struct async_query_response {
+            status: async_query_response_status;
+            response: gtv;
+            error: text?;
+        }
+        ```
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+        - name: queryRid
+          description: Hex encoded query RID
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/hash"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/octet-stream: { }
+        '403':
+          description: Not supported
+          content:
+            application/octet-stream: { }
+        '404':
+          description: Blockchain not found
+          content:
+            application/octet-stream: { }
   /node/{blockchainRid}/my_status:
     get:
       tags:
@@ -1356,7 +1525,20 @@ paths:
               schema:
                 $ref: "#/components/schemas/error"
               examples:
-                invalidConfiguration:
+                signatureRequired:
+                  value:
+                    error: "Configuration must be signed"
+                invalidSignature:
+                  value:
+                    error: "Invalid signature"
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                forbidden:
                   value:
                     error: "Configuration must be signed by blockchain provider"
         '404':

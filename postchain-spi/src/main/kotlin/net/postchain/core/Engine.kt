@@ -3,8 +3,11 @@
 package net.postchain.core
 
 import net.postchain.common.BlockchainRid
-import net.postchain.core.*
-import net.postchain.core.block.*
+import net.postchain.core.block.BlockBuildingStrategy
+import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockQueries
+import net.postchain.core.block.BlockTrace
+import net.postchain.core.block.ManagedBlockBuilder
 import net.postchain.debug.DiagnosticData
 
 interface Shutdownable {
@@ -34,6 +37,7 @@ interface BlockchainEngine : Shutdownable {
     fun getBlockQueries(): BlockQueries
     fun getConfiguration(): BlockchainConfiguration
     fun hasBuiltFirstBlockAfterConfigUpdate(): Boolean
+    val asyncQueryQueue: AsyncQueryQueue
 
     val chainID: Long
     val blockchainRid: BlockchainRid

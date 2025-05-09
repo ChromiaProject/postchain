@@ -21,6 +21,7 @@ import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.core.AfterCommitHandler
+import net.postchain.core.AsyncQueryQueue
 import net.postchain.core.BeforeCommitHandler
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
@@ -75,8 +76,9 @@ open class BaseBlockchainEngine(
         private val transactionQueue: BaseTransactionQueue,
         private val metrics: BaseBlockchainEngineMetrics,
         private val strategy: BlockBuildingStrategy,
+        override val asyncQueryQueue: AsyncQueryQueue,
         private val baseManagedBlockBuilderProvider: BaseManagedBlockBuilderProvider = ::BaseManagedBlockBuilder,
-        private val nanoTime: () -> Long = { System.nanoTime() }
+        private val nanoTime: () -> Long = { System.nanoTime() },
 ) : BlockchainEngine {
 
     companion object : KLogging()
@@ -144,6 +146,7 @@ open class BaseBlockchainEngine(
             blockBuilderStorage.closeWriteConnection(currentEContext, false)
         }
         transactionQueue.close()
+        asyncQueryQueue.shutdown()
         metrics.close()
     }
 

@@ -5,7 +5,7 @@ package net.postchain.ebft.rest.model
 import io.micrometer.core.instrument.Metrics
 import io.micrometer.core.instrument.Timer
 import net.postchain.PostchainContext
-import net.postchain.api.rest.controller.DuplicateTnxException
+import net.postchain.api.rest.controller.DuplicateException
 import net.postchain.api.rest.controller.InvalidTnxException
 import net.postchain.api.rest.controller.PostchainModel
 import net.postchain.api.rest.controller.UnavailableException
@@ -19,6 +19,7 @@ import net.postchain.common.tx.TransactionStatus.REJECTED
 import net.postchain.common.tx.TransactionStatus.UNKNOWN
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
+import net.postchain.core.AsyncQueryQueue
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.Storage
 import net.postchain.core.TransactionQueue
@@ -36,8 +37,9 @@ class PostchainEBFTModel(
         postchainContext: PostchainContext,
         nodeDiagnosticContext: NodeDiagnosticContext,
         diagnosticData: DiagnosticData,
-        queryCacheTtlSeconds: Long
-) : PostchainModel(blockchainConfiguration, blockQueries, blockchainRid, storage, postchainContext, nodeDiagnosticContext, diagnosticData, queryCacheTtlSeconds) {
+        queryCacheTtlSeconds: Long,
+        asyncQueryQueue: AsyncQueryQueue,
+) : PostchainModel(blockchainConfiguration, blockQueries, blockchainRid, storage, postchainContext, nodeDiagnosticContext, diagnosticData, queryCacheTtlSeconds, asyncQueryQueue) {
     private val transactionFactory = blockchainConfiguration.getTransactionFactory()
 
     override fun postTransaction(tx: ByteArray) {
@@ -54,7 +56,7 @@ class PostchainEBFTModel(
 
         if (blockQueries.isTransactionConfirmed(decodedTransaction.getRID()).get()) {
             sample.stop(metrics.duplicateTransactions)
-            throw DuplicateTnxException("Transaction already in database")
+            throw DuplicateException("Transaction already in database")
         }
 
         when (txQueue.enqueue(decodedTransaction)) {
@@ -70,7 +72,7 @@ class PostchainEBFTModel(
 
             EnqueueTransactionResult.DUPLICATE -> {
                 sample.stop(metrics.duplicateTransactions)
-                throw DuplicateTnxException("Transaction already in queue")
+                throw DuplicateException("Transaction already in queue")
             }
 
             EnqueueTransactionResult.OK -> {
