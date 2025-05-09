@@ -17,26 +17,49 @@ import net.postchain.ebft.rest.model.PostchainEBFTModel
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import java.lang.Integer.min
+import kotlin.math.max
 
 open class BaseApiInfrastructure(
         restApiConfig: RestApiConfig,
         val nodeDiagnosticContext: NodeDiagnosticContext,
-        private val postchainContext: PostchainContext
+        private val postchainContext: PostchainContext,
+        masterSubRestThreadAllocations: Boolean = false
 ) : ApiInfrastructure {
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        private const val CONTAINER_CONCURRENCY_DIVIDER = 4
+    }
 
     val restApi: RestApi? = with(restApiConfig) {
         if (port != -1) {
             logger.info { "Starting REST API on port $port and path $basePath/" }
+
+            val (dynamicRequestConcurrency, dynamicRequestConcurrencyLocal, dynamicRequestConcurrencyExternal) =
+                    if (masterSubRestThreadAllocations)
+                        getMasterSubNodeConcurrency(restApiConfig)
+                    else
+                        getStandardNodeConcurrency(restApiConfig)
+            val dynamicContainerRequestConcurrency = getValueOrComputeValue(restApiConfig.containerRequestConcurrency) {
+                if (masterSubRestThreadAllocations) {
+                    val externalConcurrency = if (dynamicRequestConcurrencyExternal > 0)
+                        dynamicRequestConcurrencyExternal else dynamicRequestConcurrency
+                    max(1, externalConcurrency / CONTAINER_CONCURRENCY_DIVIDER)
+                } else {
+                    -1
+                }
+            }
+
             try {
                 RestApi(
                         listenPort = port,
                         basePath = basePath,
                         nodeDiagnosticContext = nodeDiagnosticContext,
                         gracefulShutdown = gracefulShutdown,
-                        requestConcurrency = calcRequestConcurrency(restApiConfig),
+                        requestConcurrency = dynamicRequestConcurrency,
+                        requestConcurrencyLocal = dynamicRequestConcurrencyLocal,
+                        requestConcurrencyExternal = dynamicRequestConcurrencyExternal,
                         chainRequestConcurrency = chainRequestConcurrency,
+                        containerRequestConcurrency = dynamicContainerRequestConcurrency,
                         subnodeHttpRedirect = subnodeHttpRedirect,
                         maxRequestBodySize = maxRequestBodySize,
                         maxDataSize = maxDataSize
@@ -48,6 +71,36 @@ open class BaseApiInfrastructure(
         } else {
             null
         }
+    }
+
+    private fun getMasterSubNodeConcurrency(restApiConfig: RestApiConfig): Triple<Int, Int, Int> {
+        val requestConcurrency = getValueOrComputeValue(restApiConfig.requestConcurrency) {
+            Runtime.getRuntime().availableProcessors() * 2
+        }
+        val requestConcurrencyLocal = getValueOrComputeValue(restApiConfig.requestConcurrencyLocal) {
+            calcRequestConcurrency(restApiConfig)
+        }
+        val requestConcurrencyExternal = getValueOrComputeValue(restApiConfig.requestConcurrencyExternal) {
+            requestConcurrency - requestConcurrencyLocal
+        }
+        return Triple(requestConcurrency, requestConcurrencyLocal, requestConcurrencyExternal)
+    }
+
+    private fun getStandardNodeConcurrency(restApiConfig: RestApiConfig): Triple<Int, Int, Int> {
+        return Triple(
+                getValueOrComputeValue(restApiConfig.requestConcurrency) {
+                    calcRequestConcurrency(restApiConfig)
+                },
+                -1,
+                -1
+        )
+    }
+
+    private fun getValueOrComputeValue(value: Int, function: (Int) -> Int): Int {
+        return if (value == -1 || value > 0)
+            value
+        else
+            function(value)
     }
 
     private fun calcRequestConcurrency(restApiConfig: RestApiConfig) =

@@ -14,7 +14,8 @@ class DefaultMasterApiInfra(
 ) : BaseApiInfrastructure(
         restApiConfig,
         nodeDiagnosticContext,
-        postchainContext
+        postchainContext,
+        masterSubRestThreadAllocations = true,
 ), MasterApiInfra {
 
     override fun connectContainerProcess(process: ContainerBlockchainProcess) {

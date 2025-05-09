@@ -166,8 +166,12 @@ const val QUERY_ARGS = "~args"
  *
  * @param requestConcurrency  number of incoming HTTP requests to handle concurrently,
  *                            specify 0 for default value based on number of available processor cores
+ * @param requestConcurrencyLocal Maximum number of threads in `chainRequestConcurrency` to be used for local model requests.
+ * @param requestConcurrencyExternal Maximum number of threads in `chainRequestConcurrency` to be used for external model requests.
  * @param chainRequestConcurrency  number of incoming HTTP requests to handle concurrently per blockchain,
- *                                 specify `-1` for no extra limit per chain
+ *                                 specify `-1` for no extra limit per chain.
+ * @param containerRequestConcurrency  number of incoming HTTP requests to handle concurrently per container,
+ *                                 specify `-1` for no extra limit per container.
  */
 class RestApi(
         listenPort: Int,
@@ -175,7 +179,10 @@ class RestApi(
         private val nodeDiagnosticContext: NodeDiagnosticContext = JsonNodeDiagnosticContext(),
         gracefulShutdown: Boolean = true,
         requestConcurrency: Int = 0,
+        requestConcurrencyLocal: Int = -1,
+        requestConcurrencyExternal: Int = -1,
         private val chainRequestConcurrency: Int = -1,
+        private val containerRequestConcurrency: Int = -1,
         private val subnodeHttpRedirect: Boolean = false,
         val maxRequestBodySize: Int = RestApiConfig.DEFAULT_MAX_REQUEST_BODY_SIZE,
         val maxDataSize: Int = RestApiConfig.DEFAULT_MAX_DATA_SIZE,
@@ -192,12 +199,23 @@ class RestApi(
         private val chainIidPattern = Regex("iid_([0-9]+)")
     }
 
-    private val models = mutableMapOf<Pair<BlockchainRid, String>, Pair<ChainModel, Semaphore>>() // (blockchainRid, container) -> (chainModel, semaphore)
+    private val internalModelRequestSemaphores: Semaphore? = if (requestConcurrencyLocal > 0)
+        Semaphore(requestConcurrencyLocal) else null
+    private val externalModelRequestSemaphores: Semaphore? = if (requestConcurrencyExternal > 0)
+        Semaphore(requestConcurrencyExternal) else null
+    private val containerRequestSemaphores = mutableMapOf<String, Semaphore>()
+    private val models = mutableMapOf<Pair<BlockchainRid, String>, Pair<ChainModel, Semaphore?>>() // (blockchainRid, container) -> (chainModel, semaphore)
     private val bridByIID = mutableMapOf<Long, BlockchainRid>()
 
     override fun attachModel(blockchainRid: BlockchainRid, chainModel: ChainModel, container: String) {
-        models[blockchainRid to container] = chainModel to Semaphore(if (chainRequestConcurrency < 0) Int.MAX_VALUE else chainRequestConcurrency)
+        models[blockchainRid to container] = chainModel to if (chainRequestConcurrency > 0)
+            Semaphore(chainRequestConcurrency) else null
         bridByIID[chainModel.chainIID] = blockchainRid
+        if (containerRequestConcurrency > 0) {
+            if (chainModel is ExternalModel) {
+                containerRequestSemaphores.computeIfAbsent(chainModel.directoryContainer) { Semaphore(containerRequestConcurrency) }
+            }
+        }
     }
 
     override fun detachModel(blockchainRid: BlockchainRid, container: String) {
@@ -218,26 +236,32 @@ class RestApi(
             if (ref != null) {
                 val blockchainRid = resolveBlockchain(ref)
                 val container = containerQuery(request)
-                val (chainModel, semaphore) = chainModel(blockchainRid, container)
+                val (chainModel, chainSemaphore) = chainModel(blockchainRid, container)
                 if (failOnNonLive && !chainModel.live) throw UnavailableException("Blockchain is unavailable")
                 withLoggingContext(
                         BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
                         CHAIN_IID_TAG to chainModel.chainIID.toString()) {
-                    if (semaphore.tryAcquire()) {
-                        try {
-                            if (subnodeHttpRedirect && chainModel is ExternalModel) {
-                                val request0 = request.removeQuery("container")
-                                Response(TEMPORARY_REDIRECT).header("Location", chainModel.path + request0.uri.toString().substring(basePath.length))
-                            } else {
-                                next(request.with(chainModelKey of chainModel, blockchainRidKey of blockchainRid))
+                    if (chainModel is ExternalModel) {
+                        if (subnodeHttpRedirect) {
+                            val request0 = request.removeQuery("container")
+                            Response(TEMPORARY_REDIRECT).header("Location", chainModel.path + request0.uri.toString().substring(basePath.length))
+                        } else {
+                            maybeTryAcquireSemaphore(externalModelRequestSemaphores, request,
+                                    "Too many concurrent requests for subnode containers") {
+                                maybeTryAcquireSemaphore(containerRequestSemaphores[chainModel.directoryContainer], request,
+                                        "Too many concurrent requests for container ${chainModel.directoryContainer}") {
+                                    maybeTryAcquireSemaphore(chainSemaphore, request,
+                                            "Too many concurrent requests for blockchain $blockchainRid") {
+                                        next(request.with(chainModelKey of chainModel, blockchainRidKey of blockchainRid))
+                                    }
+                                }
                             }
-                        } finally {
-                            semaphore.release()
                         }
                     } else {
-                        Response(SERVICE_UNAVAILABLE).with(
-                                errorBody.outbound(request) of ErrorBody("Too many concurrent requests for blockchain $blockchainRid")
-                        )
+                        maybeTryAcquireSemaphore(internalModelRequestSemaphores, request,
+                                "Too many concurrent requests for internal models") {
+                            next(request.with(chainModelKey of chainModel, blockchainRidKey of blockchainRid))
+                        }
                     }
                 }
             } else {
@@ -351,7 +375,7 @@ class RestApi(
             "/highest_block_height_anchoring_check/{blockchainRid}" bind GET to ::getHighestBlockHeightAnchoringCheck,
     )
 
-    @Suppress("unused")
+    @Suppress("UNUSED_PARAMETER")
     private fun getVersion(request: Request): Response = Response(OK).with(
             versionBody of Version(REST_API_VERSION)
     )
@@ -362,7 +386,7 @@ class RestApi(
         return Response(OK).with(versionBody of version)
     }
 
-    @Suppress("unused")
+    @Suppress("UNUSED_PARAMETER")
     private fun getInfraVersion(request: Request): Response = Response(OK).with(
             infraVersionBody of InfraVersion(
                     postchain = nodeDiagnosticContext[DiagnosticProperty.VERSION]?.value?.toString().orEmpty(),
@@ -807,6 +831,7 @@ class RestApi(
             ))
             .start().also {
                 logger.info { "Rest API is listening on port ${it.port()} and is attached on $basePath/" }
+                logger.info { "Rest API config: requestConcurrency=$requestConcurrency, requestConcurrencyLocal=$requestConcurrencyLocal, requestConcurrencyExternal=$requestConcurrencyExternal, chainRequestConcurrency=$chainRequestConcurrency, containerRequestConcurrency=$containerRequestConcurrency" }
             }
 
     private fun onError(error: Exception, request: Request): Response {
@@ -931,7 +956,7 @@ class RestApi(
             txAction(model, txRid)
                     ?: throw NotFoundError("Can't find transaction with RID: $txRid")
 
-    private fun chainModel(blockchainRid: BlockchainRid, container: String): Pair<ChainModel, Semaphore> {
+    private fun chainModel(blockchainRid: BlockchainRid, container: String): Pair<ChainModel, Semaphore?> {
         return if (container.isEmpty()) {
             models.asSequence().firstOrNull { it.key.first == blockchainRid }?.value
                     ?: throw NotFoundError("Can't find blockchain with blockchainRID: $blockchainRid")
@@ -970,5 +995,20 @@ class RestApi(
             return path.substring(apiEndpointOffset).split("/")[0]
         }
         return null
+    }
+
+    private fun maybeTryAcquireSemaphore(semaphore: Semaphore?, request: Request, unavailableMessage: String, next: () -> Response): Response {
+        if (semaphore != null) {
+            if (semaphore.tryAcquire()) {
+                try {
+                    return next()
+                } finally {
+                    semaphore.release()
+                }
+            } else {
+                return Response(SERVICE_UNAVAILABLE).with(errorBody.outbound(request) of ErrorBody(unavailableMessage))
+            }
+        }
+        return next()
     }
 }
