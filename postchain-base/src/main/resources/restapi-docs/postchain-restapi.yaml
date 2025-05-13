@@ -44,15 +44,10 @@ info:
     The blockchain RID, signer public keys and signatures are encoded as byteArray. 
     The signatures are made with ECDSA with the secp256k1 curve. The hash to sign, 
     which is also used as transaction RID in this API, is SHA-256 computed recursively, 
-    as a Merkle tree. For each node in the tree, a prefix byte is added to data to hash:
-    - 1 for a leaf
-    - 7 for start of an array
-    - 8 for start of a dict
-    - 0 otherwise
+    as a Merkle tree.
     
-    The exact procedure to calculate the hash can be discovered in the source code in 
-    [Kotlin](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) or 
-    [TypeScript](https://bitbucket.org/chromawallet/postchain-client/src/master/).
+    The exact procedure to calculate the hash is documented in the README in 
+    [postchain-gtv](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) module
   version: "18"
 tags:
   - name: block
