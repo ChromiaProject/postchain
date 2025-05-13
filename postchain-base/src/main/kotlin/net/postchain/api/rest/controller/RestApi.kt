@@ -242,26 +242,30 @@ class RestApi(
                         BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
                         CHAIN_IID_TAG to chainModel.chainIID.toString()) {
 
-                    val acquireSemaphores = mutableListOf<Pair<Semaphore?, () -> String>>(chainSemaphore to {
-                        "Too many concurrent requests for blockchain $blockchainRid" })
-
-                    if (chainModel is ExternalModel) {
-                        if (subnodeHttpRedirect) {
-                            val request0 = request.removeQuery("container")
-                            Response(TEMPORARY_REDIRECT).header("Location", chainModel.path + request0.uri.toString().substring(basePath.length))
-                        } else {
-                            acquireSemaphores.add(externalModelRequestSemaphores to {
-                                "Too many concurrent requests for subnode containers" })
-                            acquireSemaphores.add(containerRequestSemaphores[chainModel.directoryContainer] to {
-                                "Too many concurrent requests for container ${chainModel.directoryContainer}" })
-                        }
+                    if (chainModel is ExternalModel && subnodeHttpRedirect) {
+                        val request0 = request.removeQuery("container")
+                        Response(TEMPORARY_REDIRECT).header("Location", chainModel.path + request0.uri.toString().substring(basePath.length))
                     } else {
-                        acquireSemaphores.add(internalModelRequestSemaphores to {
-                            "Too many concurrent requests for internal models" })
-                    }
+                        val acquireSemaphores = mutableListOf<Pair<Semaphore?, () -> String>>(chainSemaphore to {
+                            "Too many concurrent requests for blockchain $blockchainRid"
+                        })
 
-                    maybeTryAcquireSemaphore(acquireSemaphores, request) {
-                        next(request.with(chainModelKey of chainModel, blockchainRidKey of blockchainRid))
+                        if (chainModel is ExternalModel) {
+                            acquireSemaphores.add(externalModelRequestSemaphores to {
+                                "Too many concurrent requests for subnode containers"
+                            })
+                            acquireSemaphores.add(containerRequestSemaphores[chainModel.directoryContainer] to {
+                                "Too many concurrent requests for container ${chainModel.directoryContainer}"
+                            })
+                        } else {
+                            acquireSemaphores.add(internalModelRequestSemaphores to {
+                                "Too many concurrent requests for internal models"
+                            })
+                        }
+
+                        maybeTryAcquireSemaphore(acquireSemaphores, request) {
+                            next(request.with(chainModelKey of chainModel, blockchainRidKey of blockchainRid))
+                        }
                     }
                 }
             } else {
