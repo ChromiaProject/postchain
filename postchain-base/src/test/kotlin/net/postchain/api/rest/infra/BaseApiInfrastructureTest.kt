@@ -2,6 +2,7 @@ package net.postchain.api.rest.infra
 
 import assertk.assertThat
 import assertk.assertions.contains
+import net.postchain.containers.api.DefaultMasterApiInfra
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito.mock
@@ -11,7 +12,7 @@ class BaseApiInfrastructureTest {
     @Test
     fun test() {
         val exception = assertThrows<IllegalArgumentException> {
-            BaseApiInfrastructure(
+            DefaultMasterApiInfra(
                     RestApiConfig(
                             "",
                             0,
@@ -23,7 +24,6 @@ class BaseApiInfrastructureTest {
                     ),
                     mock(),
                     mock(),
-                    true
             )
         }
         assertThat(exception.message!!).contains("Calculated value for api.request-concurrency.external")

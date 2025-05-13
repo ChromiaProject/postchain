@@ -4,6 +4,8 @@ import mu.KLogging
 import org.apache.hc.client5.http.config.RequestConfig
 import org.apache.hc.client5.http.cookie.StandardCookieSpec
 import org.apache.hc.client5.http.impl.classic.HttpClients
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder
+import org.apache.hc.core5.util.TimeValue
 import org.apache.hc.core5.util.Timeout
 import org.http4k.client.ApacheClient
 import org.http4k.core.HttpHandler
@@ -15,7 +17,8 @@ data class HttpExternalModel(
         val basePath: String,
         override val path: String,
         override val chainIID: Long,
-        override val directoryContainer: String
+        override val directoryContainer: String,
+        val maxConnections: Int = 100
 ) : ExternalModel {
 
     companion object : KLogging()
@@ -23,13 +26,20 @@ data class HttpExternalModel(
     override var live = true
 
     val client: HttpHandler = ApacheClient(HttpClients.custom()
+            .setConnectionManager(PoolingHttpClientConnectionManagerBuilder.create()
+                    .setMaxConnTotal(maxConnections)
+                    .setMaxConnPerRoute(maxConnections)
+                    .build())
             .disableContentCompression()
             .setDefaultRequestConfig(RequestConfig.custom()
                     .setRedirectsEnabled(false)
                     .setCookieSpec(StandardCookieSpec.IGNORE)
                     .setConnectionRequestTimeout(Timeout.ofSeconds(60))
                     .setResponseTimeout(Timeout.ofSeconds(60))
-                    .build()).build())
+                    .build()
+            )
+            .evictIdleConnections(TimeValue.ofSeconds(60))
+            .build())
 
     override fun invoke(request: Request): Response {
         val targetUri = Uri.of(path + request.uri.toString().substring(basePath.length))

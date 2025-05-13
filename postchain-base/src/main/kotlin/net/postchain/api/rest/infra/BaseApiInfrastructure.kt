@@ -17,53 +17,21 @@ import net.postchain.ebft.rest.model.PostchainEBFTModel
 import net.postchain.ebft.worker.ReadOnlyBlockchainProcess
 import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import java.lang.Integer.min
-import kotlin.math.max
 
 open class BaseApiInfrastructure(
         restApiConfig: RestApiConfig,
         val nodeDiagnosticContext: NodeDiagnosticContext,
         private val postchainContext: PostchainContext,
-        masterSubRestThreadAllocations: Boolean = false
 ) : ApiInfrastructure {
 
-    companion object : KLogging() {
-        private const val CONTAINER_CONCURRENCY_DIVIDER = 4
-    }
+    companion object : KLogging()
 
     val restApi: RestApi? = with(restApiConfig) {
         if (port != -1) {
             logger.info { "Starting REST API on port $port and path $basePath/" }
 
-            val (dynamicRequestConcurrency, dynamicRequestConcurrencyLocal, dynamicRequestConcurrencyExternal) =
-                    if (masterSubRestThreadAllocations)
-                        getMasterSubNodeConcurrency(restApiConfig)
-                    else
-                        getStandardNodeConcurrency(restApiConfig)
-            val dynamicContainerRequestConcurrency = if (masterSubRestThreadAllocations) {
-                getValueOrComputeValue(restApiConfig.containerRequestConcurrency) {
-                    val externalConcurrency = if (dynamicRequestConcurrencyExternal > 0)
-                        dynamicRequestConcurrencyExternal else dynamicRequestConcurrency
-                    max(1, externalConcurrency / CONTAINER_CONCURRENCY_DIVIDER)
-                }
-            } else {
-                -1
-            }
-
             try {
-                RestApi(
-                        listenPort = port,
-                        basePath = basePath,
-                        nodeDiagnosticContext = nodeDiagnosticContext,
-                        gracefulShutdown = gracefulShutdown,
-                        requestConcurrency = dynamicRequestConcurrency,
-                        requestConcurrencyLocal = dynamicRequestConcurrencyLocal,
-                        requestConcurrencyExternal = dynamicRequestConcurrencyExternal,
-                        chainRequestConcurrency = chainRequestConcurrency,
-                        containerRequestConcurrency = dynamicContainerRequestConcurrency,
-                        subnodeHttpRedirect = subnodeHttpRedirect,
-                        maxRequestBodySize = maxRequestBodySize,
-                        maxDataSize = maxDataSize
-                )
+                restApi(restApiConfig)
             } catch (e: Exception) {
                 logger.error("Unable to start REST API on port $port", e)
                 throw e
@@ -73,40 +41,33 @@ open class BaseApiInfrastructure(
         }
     }
 
-    private fun getMasterSubNodeConcurrency(restApiConfig: RestApiConfig): Triple<Int, Int, Int> {
-        val requestConcurrency = getValueOrComputeValue(restApiConfig.requestConcurrency) {
-            Runtime.getRuntime().availableProcessors() * 2
-        }
-        val requestConcurrencyLocal = getValueOrComputeValue(restApiConfig.requestConcurrencyLocal) {
-            calcRequestConcurrency(restApiConfig)
-        }
-        val requestConcurrencyExternal = getValueOrComputeValue(restApiConfig.requestConcurrencyExternal) {
-            val value = requestConcurrency - requestConcurrencyLocal
-            require(value > 0) {
-                "Calculated value for api.request-concurrency.external is invalid ($value). Please check configuration." }
-            value
-        }
-        return Triple(requestConcurrency, requestConcurrencyLocal, requestConcurrencyExternal)
-    }
-
-    private fun getStandardNodeConcurrency(restApiConfig: RestApiConfig): Triple<Int, Int, Int> {
-        return Triple(
-                getValueOrComputeValue(restApiConfig.requestConcurrency) {
+    open fun restApi(restApiConfig: RestApiConfig) = with(restApiConfig) {
+        RestApi(
+                listenPort = port,
+                basePath = basePath,
+                nodeDiagnosticContext = nodeDiagnosticContext,
+                gracefulShutdown = gracefulShutdown,
+                requestConcurrency = getValueOrComputeValue(restApiConfig.requestConcurrency) {
                     calcRequestConcurrency(restApiConfig)
                 },
-                -1,
-                -1
+                requestConcurrencyLocal = -1,
+                requestConcurrencyExternal = -1,
+                chainRequestConcurrency = chainRequestConcurrency,
+                containerRequestConcurrency = -1,
+                subnodeHttpRedirect = subnodeHttpRedirect,
+                maxRequestBodySize = maxRequestBodySize,
+                maxDataSize = maxDataSize
         )
     }
 
-    private fun getValueOrComputeValue(value: Int, function: (Int) -> Int): Int {
+    fun getValueOrComputeValue(value: Int, function: (Int) -> Int): Int {
         return if (value == -1 || value > 0)
             value
         else
             function(value)
     }
 
-    private fun calcRequestConcurrency(restApiConfig: RestApiConfig) =
+    fun calcRequestConcurrency(restApiConfig: RestApiConfig) =
             if (restApiConfig.requestConcurrency > 0)
                 restApiConfig.requestConcurrency
             else
