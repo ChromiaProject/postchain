@@ -241,27 +241,27 @@ class RestApi(
                 withLoggingContext(
                         BLOCKCHAIN_RID_TAG to blockchainRid.toHex(),
                         CHAIN_IID_TAG to chainModel.chainIID.toString()) {
+
+                    val acquireSemaphores = mutableListOf<Pair<Semaphore?, () -> String>>(chainSemaphore to {
+                        "Too many concurrent requests for blockchain $blockchainRid" })
+
                     if (chainModel is ExternalModel) {
                         if (subnodeHttpRedirect) {
                             val request0 = request.removeQuery("container")
                             Response(TEMPORARY_REDIRECT).header("Location", chainModel.path + request0.uri.toString().substring(basePath.length))
                         } else {
-                            maybeTryAcquireSemaphore(externalModelRequestSemaphores, request,
-                                    "Too many concurrent requests for subnode containers") {
-                                maybeTryAcquireSemaphore(containerRequestSemaphores[chainModel.directoryContainer], request,
-                                        "Too many concurrent requests for container ${chainModel.directoryContainer}") {
-                                    maybeTryAcquireSemaphore(chainSemaphore, request,
-                                            "Too many concurrent requests for blockchain $blockchainRid") {
-                                        next(request.with(chainModelKey of chainModel, blockchainRidKey of blockchainRid))
-                                    }
-                                }
-                            }
+                            acquireSemaphores.add(externalModelRequestSemaphores to {
+                                "Too many concurrent requests for subnode containers" })
+                            acquireSemaphores.add(containerRequestSemaphores[chainModel.directoryContainer] to {
+                                "Too many concurrent requests for container ${chainModel.directoryContainer}" })
                         }
                     } else {
-                        maybeTryAcquireSemaphore(internalModelRequestSemaphores, request,
-                                "Too many concurrent requests for internal models") {
-                            next(request.with(chainModelKey of chainModel, blockchainRidKey of blockchainRid))
-                        }
+                        acquireSemaphores.add(internalModelRequestSemaphores to {
+                            "Too many concurrent requests for internal models" })
+                    }
+
+                    maybeTryAcquireSemaphore(acquireSemaphores, request) {
+                        next(request.with(chainModelKey of chainModel, blockchainRidKey of blockchainRid))
                     }
                 }
             } else {
@@ -997,16 +997,21 @@ class RestApi(
         return null
     }
 
-    private fun maybeTryAcquireSemaphore(semaphore: Semaphore?, request: Request, unavailableMessage: String, next: () -> Response): Response {
-        if (semaphore != null) {
-            if (semaphore.tryAcquire()) {
-                try {
-                    return next()
-                } finally {
-                    semaphore.release()
+    private fun maybeTryAcquireSemaphore(semaphores: List<Pair<Semaphore?, () -> String>>, request: Request, next: () -> Response): Response {
+        if (semaphores.isNotEmpty()) {
+            val (semaphore, unavailableMessage) = semaphores.first()
+            if (semaphore != null) {
+                if (semaphore.tryAcquire()) {
+                    try {
+                        return maybeTryAcquireSemaphore(semaphores.drop(1), request, next)
+                    } finally {
+                        semaphore.release()
+                    }
+                } else {
+                    return Response(SERVICE_UNAVAILABLE).with(errorBody.outbound(request) of ErrorBody(unavailableMessage()))
                 }
             } else {
-                return Response(SERVICE_UNAVAILABLE).with(errorBody.outbound(request) of ErrorBody(unavailableMessage))
+                return maybeTryAcquireSemaphore(semaphores.drop(1), request, next)
             }
         }
         return next()

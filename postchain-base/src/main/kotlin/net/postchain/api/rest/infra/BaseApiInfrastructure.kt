@@ -39,14 +39,14 @@ open class BaseApiInfrastructure(
                         getMasterSubNodeConcurrency(restApiConfig)
                     else
                         getStandardNodeConcurrency(restApiConfig)
-            val dynamicContainerRequestConcurrency = getValueOrComputeValue(restApiConfig.containerRequestConcurrency) {
-                if (masterSubRestThreadAllocations) {
+            val dynamicContainerRequestConcurrency = if (masterSubRestThreadAllocations) {
+                getValueOrComputeValue(restApiConfig.containerRequestConcurrency) {
                     val externalConcurrency = if (dynamicRequestConcurrencyExternal > 0)
                         dynamicRequestConcurrencyExternal else dynamicRequestConcurrency
                     max(1, externalConcurrency / CONTAINER_CONCURRENCY_DIVIDER)
-                } else {
-                    -1
                 }
+            } else {
+                -1
             }
 
             try {
@@ -81,7 +81,10 @@ open class BaseApiInfrastructure(
             calcRequestConcurrency(restApiConfig)
         }
         val requestConcurrencyExternal = getValueOrComputeValue(restApiConfig.requestConcurrencyExternal) {
-            requestConcurrency - requestConcurrencyLocal
+            val value = requestConcurrency - requestConcurrencyLocal
+            require(value > 0) {
+                "Calculated value for api.request-concurrency.external is invalid ($value). Please check configuration." }
+            value
         }
         return Triple(requestConcurrency, requestConcurrencyLocal, requestConcurrencyExternal)
     }
