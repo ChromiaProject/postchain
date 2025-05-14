@@ -9,6 +9,7 @@ import net.postchain.base.PeerCommConfiguration
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.config.app.AppConfig
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
 import net.postchain.config.node.NodeConfig
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
@@ -130,6 +131,7 @@ abstract class EBFTProtocolBase {
         on { networkNodes } doReturn networkNodes
     }
     protected val messageDurationTracker: MessageDurationTracker = mock()
+    protected val blockchainConfigurationProvider: BlockchainConfigurationProvider = mock()
     protected val workerContext: WorkerContext = mock {
         on { appConfig } doReturn appConfig
         on { nodeConfig } doReturn nodeConfig
@@ -138,6 +140,7 @@ abstract class EBFTProtocolBase {
         on { peerCommConfiguration } doReturn peerCommConf
         on { blockchainConfiguration } doReturn blockchainConfiguration
         on { messageDurationTracker } doReturn messageDurationTracker
+        on { blockchainConfigurationProvider } doReturn blockchainConfigurationProvider
     }
     protected val clock: Clock = mock()
     protected val revoltTracker: RevoltTracker = mock()
@@ -190,8 +193,7 @@ abstract class EBFTProtocolBase {
         verifyIntent(BuildBlockIntent)
     }
 
-    private fun createBlockHeader(blockchainRid: BlockchainRid, blockIID: Long, chainId: Long, prevBlockRid: ByteArray, height: Long): BlockHeader {
-        val rootHash = ByteArray(32) { 0 }
+    protected fun createBlockHeader(blockchainRid: BlockchainRid, blockIID: Long, chainId: Long, prevBlockRid: ByteArray, height: Long, rootHash: ByteArray = ByteArray(32) { 0 }): BlockHeader {
         val timestamp = 10000L + height
         val blockData = InitialBlockData(blockchainRid, blockIID, chainId, prevBlockRid, height, timestamp, arrayOf())
         return BaseBlockHeader.make(merkleHashCalculator, blockData, rootHash, timestamp, mapOf())
