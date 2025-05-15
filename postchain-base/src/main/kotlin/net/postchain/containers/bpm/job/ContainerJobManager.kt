@@ -28,10 +28,8 @@ internal class DefaultContainerJobManager(
 ) : ContainerJobManager, Shutdownable {
 
     private val jobs = LinkedHashMap<String, Job>() // name -> job
-    private var currentJob: Job? = null
     private val lockJobs = ReentrantLock()
     private val jobsExecutor: ScheduledExecutorService
-    private var nextHealthcheckTime: Long
     private val healthcheckPeriod = containerNodeConfig.healthcheckRunningContainersCheckPeriod
 
     companion object : KLogging() {
@@ -49,9 +47,19 @@ internal class DefaultContainerJobManager(
                     logger.error("Unexpected exception while checking jobs", e)
                 }
             }, EXECUTION_PERIOD, EXECUTION_PERIOD, TimeUnit.MILLISECONDS)
+            if (healthcheckPeriod > 0) {
+                it.scheduleWithFixedDelay({
+                    try {
+                        val containersInProgress = lockJobs.withLock {
+                            jobs.keys.toSet()
+                        }
+                        containerHealthcheckHandler.check(containersInProgress)
+                    } catch (e: Exception) {
+                        logger.error("Can't handle health check job", e)
+                    }
+                }, healthcheckPeriod, healthcheckPeriod, TimeUnit.MILLISECONDS)
+            }
         }
-
-        nextHealthcheckTime = if (healthcheckPeriod > 0) System.currentTimeMillis() + healthcheckPeriod else 0
     }
 
     override fun <T> withLock(action: () -> T): T {
@@ -82,9 +90,11 @@ internal class DefaultContainerJobManager(
         jobOf(chain.containerName).restartChain(chain)
     }
 
-    override fun hasPendingJobs(containerName: ContainerName) = jobs[containerName.dockerContainer]?.let {
-        (it as ContainerJob).isNotEmpty()
-    } ?: false
+    override fun hasPendingJobs(containerName: ContainerName) = lockJobs.withLock {
+        jobs[containerName.dockerContainer]?.let {
+            (it as ContainerJob).isNotEmpty()
+        } ?: false
+    }
 
     override fun shutdown() {
         jobsExecutor.shutdownNow()
@@ -92,10 +102,8 @@ internal class DefaultContainerJobManager(
     }
 
     private fun checkJobs() {
-        if (runHealthCheck()) return
-
+        var currentJob: Job? = null
         lockJobs.withLock {
-            currentJob = null
             if (jobs.isNotEmpty()) {
                 val first = jobs.iterator().next()
                 jobs.remove(first.key)
@@ -132,19 +140,6 @@ internal class DefaultContainerJobManager(
 
         housekeepingHandler()
     }
-
-    private fun runHealthCheck(): Boolean =
-            if (nextHealthcheckTime > 0 && nextHealthcheckTime <= System.currentTimeMillis()) {
-                nextHealthcheckTime = System.currentTimeMillis() + healthcheckPeriod
-                val containersInProgress = jobs.keys.toSet()
-                try {
-                    containerHealthcheckHandler.check(containersInProgress)
-                } catch (e: Exception) {
-                    logger.error("Can't handle health check job", e)
-                }
-                true
-            } else false
-
 
     private fun jobOf(containerName: ContainerName): ContainerJob {
         lockJobs.withLock {
