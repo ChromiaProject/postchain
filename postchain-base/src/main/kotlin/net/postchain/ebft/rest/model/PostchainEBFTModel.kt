@@ -67,7 +67,9 @@ class PostchainEBFTModel(
 
             EnqueueTransactionResult.INVALID -> {
                 sample.stop(metrics.invalidTransactions)
-                throw InvalidTnxException("Transaction is invalid")
+                val rejectionReason = txQueue.getRejectionReason(decodedTransaction.getRID().wrap())?.first?.message
+                        ?: "Transaction is invalid"
+                throw InvalidTnxException(rejectionReason)
             }
 
             EnqueueTransactionResult.DUPLICATE -> {
