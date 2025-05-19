@@ -21,7 +21,7 @@ import java.lang.Integer.min
 open class BaseApiInfrastructure(
         restApiConfig: RestApiConfig,
         val nodeDiagnosticContext: NodeDiagnosticContext,
-        private val postchainContext: PostchainContext
+        private val postchainContext: PostchainContext,
 ) : ApiInfrastructure {
 
     companion object : KLogging()
@@ -29,18 +29,9 @@ open class BaseApiInfrastructure(
     val restApi: RestApi? = with(restApiConfig) {
         if (port != -1) {
             logger.info { "Starting REST API on port $port and path $basePath/" }
+
             try {
-                RestApi(
-                        listenPort = port,
-                        basePath = basePath,
-                        nodeDiagnosticContext = nodeDiagnosticContext,
-                        gracefulShutdown = gracefulShutdown,
-                        requestConcurrency = calcRequestConcurrency(restApiConfig),
-                        chainRequestConcurrency = chainRequestConcurrency,
-                        subnodeHttpRedirect = subnodeHttpRedirect,
-                        maxRequestBodySize = maxRequestBodySize,
-                        maxDataSize = maxDataSize
-                )
+                restApi(restApiConfig)
             } catch (e: Exception) {
                 logger.error("Unable to start REST API on port $port", e)
                 throw e
@@ -50,7 +41,33 @@ open class BaseApiInfrastructure(
         }
     }
 
-    private fun calcRequestConcurrency(restApiConfig: RestApiConfig) =
+    open fun restApi(restApiConfig: RestApiConfig) = with(restApiConfig) {
+        RestApi(
+                listenPort = port,
+                basePath = basePath,
+                nodeDiagnosticContext = nodeDiagnosticContext,
+                gracefulShutdown = gracefulShutdown,
+                requestConcurrency = getValueOrComputeValue(restApiConfig.requestConcurrency) {
+                    calcRequestConcurrency(restApiConfig)
+                },
+                requestConcurrencyLocal = -1,
+                requestConcurrencyExternal = -1,
+                chainRequestConcurrency = chainRequestConcurrency,
+                containerRequestConcurrency = -1,
+                subnodeHttpRedirect = subnodeHttpRedirect,
+                maxRequestBodySize = maxRequestBodySize,
+                maxDataSize = maxDataSize
+        )
+    }
+
+    fun getValueOrComputeValue(value: Int, function: (Int) -> Int): Int {
+        return if (value == -1 || value > 0)
+            value
+        else
+            function(value)
+    }
+
+    fun calcRequestConcurrency(restApiConfig: RestApiConfig) =
             if (restApiConfig.requestConcurrency > 0)
                 restApiConfig.requestConcurrency
             else
