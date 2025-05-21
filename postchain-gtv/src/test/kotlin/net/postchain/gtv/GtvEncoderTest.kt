@@ -47,6 +47,14 @@ class GtvEncoderTest {
     }
 
     @Test
+    fun testGtvStringNonAscii() {
+        val expected = GtvString("Räksmörgås!")
+        val b = GtvEncoder.encodeGtv(expected)
+        val result = GtvDecoder.decodeGtv(b)
+        assertEquals(expected, result)
+    }
+
+    @Test
     fun testGtvByteArray() {
         val bytes =  ByteArray(3)
         bytes[0] = 0x10
@@ -69,7 +77,7 @@ class GtvEncoderTest {
 
     @Test
     fun testGtvDictionary() {
-        val map = mapOf(Pair("name", GtvString("postchain")))
+        val map = mapOf("name" to GtvString("postchain"), "age" to GtvInteger(42))
         val expected = GtvDictionary.build(map)
         val b = GtvEncoder.encodeGtv(expected)
         val result = GtvDecoder.decodeGtv(b)
