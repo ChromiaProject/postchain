@@ -9,6 +9,8 @@ import net.postchain.containers.bpm.PostchainContainer
 import net.postchain.core.BlockchainState
 import net.postchain.managed.DirectoryDataSource
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
+import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 open class DefaultMasterBlockchainInfra(
         postchainContext: PostchainContext,
@@ -21,7 +23,9 @@ open class DefaultMasterBlockchainInfra(
 ), MasterBlockchainInfra {
     override val masterConnectionManager = masterSyncInfra.masterConnectionManager
 
-    override fun makeMasterBlockchainProcess(
+    private val afterSubnodeCommitListeners = Collections.newSetFromMap(ConcurrentHashMap<AfterSubnodeCommitListener, Boolean>())
+
+    override fun createMasterBlockchainProcess(
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
@@ -29,8 +33,8 @@ open class DefaultMasterBlockchainInfra(
             blockchainState: BlockchainState,
             restApiEnabled: Boolean
     ): ContainerBlockchainProcess {
-        return masterSyncInfra.makeMasterBlockchainProcess(
-                chainId, blockchainRid, dataSource, targetContainer, blockchainState, restApiEnabled
+        return masterSyncInfra.createContainerProcess(
+                chainId, blockchainRid, dataSource, targetContainer, blockchainState, restApiEnabled, afterSubnodeCommitListeners
         ).also {
             if (restApiEnabled) {
                 masterApiInfra.connectContainerProcess(it)
@@ -38,13 +42,13 @@ open class DefaultMasterBlockchainInfra(
         }
     }
 
-    override fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess) {
+    override fun handleMasterBlockchainProcessExit(process: ContainerBlockchainProcess) {
         if (process.restApiEnabled) {
             masterApiInfra.disconnectContainerProcess(process)
         }
     }
 
     override fun registerAfterSubnodeCommitListener(afterSubnodeCommitListener: AfterSubnodeCommitListener) {
-        masterSyncInfra.registerAfterSubnodeCommitListener(afterSubnodeCommitListener)
+        afterSubnodeCommitListeners.add(afterSubnodeCommitListener)
     }
 }

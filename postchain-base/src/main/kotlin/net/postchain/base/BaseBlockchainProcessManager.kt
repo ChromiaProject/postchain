@@ -324,7 +324,7 @@ open class BaseBlockchainProcessManager(
             restartNotifier: BlockchainRestartNotifier,
             blockchainState: BlockchainState
     ) {
-        blockchainProcesses[chainId] = blockchainInfrastructure.makeBlockchainProcess(engine, blockchainConfigProvider, restartNotifier, blockchainState)
+        blockchainProcesses[chainId] = blockchainInfrastructure.createBlockchainProcess(engine, blockchainConfigProvider, restartNotifier, blockchainState)
                 .also {
                     val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainConfig.blockchainRid).also { data ->
                         data[DiagnosticProperty.BLOCKCHAIN_LAST_HEIGHT] = LazyDiagnosticValue { engine.getBlockQueries().getLastBlockHeight().get() }
@@ -398,9 +398,9 @@ open class BaseBlockchainProcessManager(
             stopInfoDebug("Stopping of blockchain: $chainId", bTrace)
             extensions.forEach { ext -> ext.disconnectProcess(it) }
             if (restart) {
-                blockchainInfrastructure.restartBlockchainProcess(it)
+                blockchainInfrastructure.handleBlockchainRestart(it)
             } else {
-                blockchainInfrastructure.exitBlockchainProcess(it)
+                blockchainInfrastructure.handleBlockchainTermination(it)
             }
             it.shutdown()
             stopInfoDebug("Stopping blockchain: $chainId, shutdown complete", bTrace)
@@ -413,7 +413,7 @@ open class BaseBlockchainProcessManager(
         executor.awaitTermination(1000, TimeUnit.MILLISECONDS)
 
         blockchainProcesses.values.forEach {
-            blockchainInfrastructure.exitBlockchainProcess(it)
+            blockchainInfrastructure.handleBlockchainTermination(it)
             extensions.forEach { ext -> ext.disconnectProcess(it) }
             it.shutdown()
         }

@@ -50,7 +50,7 @@ open class EBFTSynchronizationInfrastructure(
 
     override fun shutdown() {}
 
-    override fun makeBlockchainProcess(
+    override fun create(
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
@@ -242,12 +242,12 @@ open class EBFTSynchronizationInfrastructure(
     private fun crossFetchingEnabled(blockchainConfig: BlockchainConfiguration) =
             blockchainConfig.effectiveBlockchainRID != blockchainConfig.blockchainRid
 
-    override fun exitBlockchainProcess(process: BlockchainProcess) {
+    override fun terminate(process: BlockchainProcess) {
         val chainID = process.blockchainEngine.getConfiguration().chainID
         startWithFastSync.remove(chainID) // remove status when process is gone
     }
 
-    override fun restartBlockchainProcess(process: BlockchainProcess) {
+    override fun restart(process: BlockchainProcess) {
         var fastSyncStatus = true
         val chainID = process.blockchainEngine.getConfiguration().chainID
         if (process is ValidatorBlockchainProcess) {

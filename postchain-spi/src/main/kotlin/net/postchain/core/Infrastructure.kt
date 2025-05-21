@@ -18,7 +18,7 @@ interface SynchronizationInfrastructure : Shutdownable {
     /**
      * This is how a blockchain process get created.
      */
-    fun makeBlockchainProcess(
+    fun create(
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
@@ -29,25 +29,49 @@ interface SynchronizationInfrastructure : Shutdownable {
      * Call this hook upon blockchain process restart.
      * Note: responsible for keeping track of the two BC process sync modes (normal sync and fastsync)
      */
-    fun restartBlockchainProcess(process: BlockchainProcess)
+    fun restart(process: BlockchainProcess)
 
     /**
      * Call this hook before blockchain process is killed.
      * Note: responsible for keeping track of the two BC process sync modes (normal sync and fastsync)
      */
-    fun exitBlockchainProcess(process: BlockchainProcess)
+    fun terminate(process: BlockchainProcess)
 }
 
 fun interface BlockchainRestartNotifier {
     fun notifyRestart(loadNextPendingConfig: Boolean)
 }
 
-/**
- * Extends the [SynchronizationInfrastructure] with these BC related concepts:
- * 1. [BlockchainConfiguration]
- * 2. [BlockchainEngine]
- */
-interface BlockchainInfrastructure : SynchronizationInfrastructure {
+interface BlockchainInfrastructure : Shutdownable {
+
+    /**
+     * Creates the blockchain [SynchronizationInfrastructure] and connects any [SynchronizationInfrastructureExtension].
+     * Also connects the process to the [ApiInfrastructure].
+     *
+     * @return A new blockchain process created by the [SynchronizationInfrastructure]
+     */
+    fun createBlockchainProcess(
+            engine: BlockchainEngine,
+            blockchainConfigurationProvider: BlockchainConfigurationProvider,
+            restartNotifier: BlockchainRestartNotifier,
+            blockchainState: BlockchainState
+    ): BlockchainProcess
+
+    /**
+     * Restarts the blockchain [SynchronizationInfrastructure] and any [SynchronizationInfrastructureExtension].
+     * Also notifies [ApiInfrastructure] of the restart.
+     *
+     * @param process The blockchain process that is restarting.
+     */
+    fun handleBlockchainRestart(process: BlockchainProcess)
+
+    /**
+     * Terminates the blockchain [SynchronizationInfrastructure] and any [SynchronizationInfrastructureExtension].
+     * Also notifies [ApiInfrastructure] of the termination.
+     *
+     * @param process The blockchain process that is terminating.
+     */
+    fun handleBlockchainTermination(process: BlockchainProcess)
 
     fun makeBlockchainConfiguration(
             rawConfigurationData: ByteArray,

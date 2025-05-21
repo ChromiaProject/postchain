@@ -295,7 +295,7 @@ class ContainerManagedBlockchainProcessManager(
 
     private fun createBlockchainProcess(chain: Chain, psContainer: PostchainContainer): ContainerBlockchainProcess? {
         val blockchainState = directoryDataSource.getBlockchainState(chain.brid)
-        val process = masterBlockchainInfra.makeMasterBlockchainProcess(
+        val process = masterBlockchainInfra.createMasterBlockchainProcess(
                 chain.chainId,
                 chain.brid,
                 directoryDataSource,
@@ -350,7 +350,7 @@ class ContainerManagedBlockchainProcessManager(
     private fun cleanUpBlockchainProcess(chainId: Long, psContainer: PostchainContainer, process: ContainerBlockchainProcess) {
         extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
                 .forEach { it.disconnectRemoteProcess(process) }
-        masterBlockchainInfra.exitMasterBlockchainProcess(process)
+        masterBlockchainInfra.handleMasterBlockchainProcessExit(process)
         val blockchainRid = chainIdToBrid.remove(chainId)
         nodeDiagnosticContext.removeBlockchainData(blockchainRid)
         bridToChainId.remove(blockchainRid)

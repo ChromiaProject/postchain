@@ -15,7 +15,21 @@ import net.postchain.network.mastersub.master.MasterConnectionManager
 interface MasterSyncInfra : SynchronizationInfrastructure {
     val masterConnectionManager: MasterConnectionManager
 
-    fun makeMasterBlockchainProcess(
+    fun createContainerProcess(
+            chainId: Long,
+            blockchainRid: BlockchainRid,
+            dataSource: DirectoryDataSource,
+            targetContainer: PostchainContainer,
+            blockchainState: BlockchainState,
+            restApiEnabled: Boolean,
+            afterSubnodeCommitListeners: Set<AfterSubnodeCommitListener>
+    ): ContainerBlockchainProcess
+}
+
+interface MasterBlockchainInfra : BlockchainInfrastructure {
+    val masterConnectionManager: MasterConnectionManager
+
+    fun createMasterBlockchainProcess(
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
@@ -24,10 +38,7 @@ interface MasterSyncInfra : SynchronizationInfrastructure {
             restApiEnabled: Boolean
     ): ContainerBlockchainProcess
 
-    fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess)
+    fun handleMasterBlockchainProcessExit(process: ContainerBlockchainProcess)
 
     fun registerAfterSubnodeCommitListener(afterSubnodeCommitListener: AfterSubnodeCommitListener)
-
 }
-
-interface MasterBlockchainInfra : BlockchainInfrastructure, MasterSyncInfra

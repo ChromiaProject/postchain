@@ -1291,7 +1291,10 @@ public final class net/postchain/core/BlockchainEngine$DefaultImpls {
 	public static synthetic fun buildBlock$default (Lnet/postchain/core/BlockchainEngine;JILjava/lang/Object;)Lkotlin/Pair;
 }
 
-public abstract interface class net/postchain/core/BlockchainInfrastructure : net/postchain/core/SynchronizationInfrastructure {
+public abstract interface class net/postchain/core/BlockchainInfrastructure : net/postchain/core/Shutdownable {
+	public abstract fun createBlockchainProcess (Lnet/postchain/core/BlockchainEngine;Lnet/postchain/config/blockchain/BlockchainConfigurationProvider;Lnet/postchain/core/BlockchainRestartNotifier;Lnet/postchain/core/BlockchainState;)Lnet/postchain/core/BlockchainProcess;
+	public abstract fun handleBlockchainRestart (Lnet/postchain/core/BlockchainProcess;)V
+	public abstract fun handleBlockchainTermination (Lnet/postchain/core/BlockchainProcess;)V
 	public abstract fun makeBlockchainConfiguration ([BLnet/postchain/core/ExecutionContext;IJLnet/postchain/core/BlockchainConfigurationFactorySupplier;Lnet/postchain/base/configuration/BlockchainConfigurationOptions;)Lnet/postchain/core/BlockchainConfiguration;
 	public abstract fun makeBlockchainEngine (Lnet/postchain/core/BlockchainConfiguration;Lkotlin/jvm/functions/Function2;Lkotlin/jvm/functions/Function3;Lnet/postchain/core/Storage;Lnet/postchain/core/Storage;Lnet/postchain/core/ExecutionContext;Lnet/postchain/config/blockchain/BlockchainConfigurationProvider;Lnet/postchain/core/BlockchainRestartNotifier;)Lnet/postchain/core/BlockchainEngine;
 }
@@ -1515,9 +1518,9 @@ public abstract interface class net/postchain/core/Storage : java/lang/AutoClose
 }
 
 public abstract interface class net/postchain/core/SynchronizationInfrastructure : net/postchain/core/Shutdownable {
-	public abstract fun exitBlockchainProcess (Lnet/postchain/core/BlockchainProcess;)V
-	public abstract fun makeBlockchainProcess (Lnet/postchain/core/BlockchainEngine;Lnet/postchain/config/blockchain/BlockchainConfigurationProvider;Lnet/postchain/core/BlockchainRestartNotifier;Lnet/postchain/core/BlockchainState;)Lnet/postchain/core/BlockchainProcess;
-	public abstract fun restartBlockchainProcess (Lnet/postchain/core/BlockchainProcess;)V
+	public abstract fun create (Lnet/postchain/core/BlockchainEngine;Lnet/postchain/config/blockchain/BlockchainConfigurationProvider;Lnet/postchain/core/BlockchainRestartNotifier;Lnet/postchain/core/BlockchainState;)Lnet/postchain/core/BlockchainProcess;
+	public abstract fun restart (Lnet/postchain/core/BlockchainProcess;)V
+	public abstract fun terminate (Lnet/postchain/core/BlockchainProcess;)V
 }
 
 public abstract interface class net/postchain/core/SynchronizationInfrastructureExtension : net/postchain/core/BlockchainProcessConnectable, net/postchain/core/Shutdownable {

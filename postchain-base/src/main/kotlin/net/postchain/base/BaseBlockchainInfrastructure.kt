@@ -155,7 +155,7 @@ open class BaseBlockchainInfrastructure(
                 blockQueries, transactionQueue, metrics, strategy, asyncQueryQueue)
     }
 
-    override fun makeBlockchainProcess(
+    override fun createBlockchainProcess(
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
@@ -163,7 +163,7 @@ open class BaseBlockchainInfrastructure(
     ): BlockchainProcess {
         val configuration = engine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
-        val process = synchronizationInfrastructure.makeBlockchainProcess(engine, blockchainConfigurationProvider, restartNotifier, blockchainState)
+        val process = synchronizationInfrastructure.create(engine, blockchainConfigurationProvider, restartNotifier, blockchainState)
         try {
             connectProcess(configuration, process)
         } catch (e: Exception) {
@@ -175,17 +175,17 @@ open class BaseBlockchainInfrastructure(
         return process.apply { start() }
     }
 
-    override fun exitBlockchainProcess(process: BlockchainProcess) {
+    override fun handleBlockchainTermination(process: BlockchainProcess) {
         val configuration = process.blockchainEngine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
-        synchronizationInfrastructure.exitBlockchainProcess(process)
+        synchronizationInfrastructure.terminate(process)
         disconnectProcess(configuration, process, false)
     }
 
-    override fun restartBlockchainProcess(process: BlockchainProcess) {
+    override fun handleBlockchainRestart(process: BlockchainProcess) {
         val configuration = process.blockchainEngine.getConfiguration()
         val synchronizationInfrastructure = getSynchronizationInfrastructure(configuration.syncInfrastructureName)
-        synchronizationInfrastructure.restartBlockchainProcess(process)
+        synchronizationInfrastructure.restart(process)
         disconnectProcess(configuration, process, true)
     }
 
