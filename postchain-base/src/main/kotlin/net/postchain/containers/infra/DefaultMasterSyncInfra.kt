@@ -15,26 +15,24 @@ import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
 import net.postchain.network.mastersub.master.DefaultMasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterCommunicationManager
 import net.postchain.network.mastersub.master.MasterConnectionManager
-import java.util.Collections
-import java.util.concurrent.ConcurrentHashMap
 
 open class DefaultMasterSyncInfra(
         postchainContext: PostchainContext,
         override val masterConnectionManager: MasterConnectionManager,
         private val containerNodeConfig: ContainerNodeConfig,
 ) : ManagedEBFTSynchronizationInfrastructure(postchainContext), MasterSyncInfra {
-    private val afterSubnodeCommitListeners = Collections.newSetFromMap(ConcurrentHashMap<AfterSubnodeCommitListener, Boolean>())
 
     /**
      * We create a new [MasterCommunicationManager] for every new BC process we make.
      */
-    override fun makeMasterBlockchainProcess(
+    override fun createContainerProcess(
             chainId: Long,
             blockchainRid: BlockchainRid,
             dataSource: DirectoryDataSource,
             targetContainer: PostchainContainer,
             blockchainState: BlockchainState,
-            restApiEnabled: Boolean
+            restApiEnabled: Boolean,
+            afterSubnodeCommitListeners: Set<AfterSubnodeCommitListener>
     ): ContainerBlockchainProcess {
 
         val communicationManager = DefaultMasterCommunicationManager(
@@ -63,14 +61,8 @@ open class DefaultMasterSyncInfra(
         )
     }
 
-    override fun exitMasterBlockchainProcess(process: ContainerBlockchainProcess) = Unit
-
     override fun shutdown() {
         super.shutdown()
         masterConnectionManager.shutdown()
-    }
-
-    override fun registerAfterSubnodeCommitListener(afterSubnodeCommitListener: AfterSubnodeCommitListener) {
-        afterSubnodeCommitListeners.add(afterSubnodeCommitListener)
     }
 }

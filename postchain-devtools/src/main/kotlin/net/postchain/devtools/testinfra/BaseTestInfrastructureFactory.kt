@@ -57,7 +57,7 @@ class TestBlockchainProcess(override val blockchainEngine: BlockchainEngine) : B
 
 class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
 
-    override fun makeBlockchainProcess(
+    override fun create(
             engine: BlockchainEngine,
             blockchainConfigurationProvider: BlockchainConfigurationProvider,
             restartNotifier: BlockchainRestartNotifier,
@@ -66,8 +66,8 @@ class TestSynchronizationInfrastructure : SynchronizationInfrastructure {
         return TestBlockchainProcess(engine)
     }
 
-    override fun exitBlockchainProcess(process: BlockchainProcess) = Unit
-    override fun restartBlockchainProcess(process: BlockchainProcess) = Unit
+    override fun terminate(process: BlockchainProcess) = Unit
+    override fun restart(process: BlockchainProcess) = Unit
 
     override fun shutdown() = Unit
 }
