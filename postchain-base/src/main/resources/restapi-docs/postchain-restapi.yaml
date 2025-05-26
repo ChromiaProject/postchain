@@ -47,7 +47,7 @@ info:
     as a Merkle tree.
     
     The exact procedure to calculate the hash is documented in the README in 
-    [postchain-gtv](https://gitlab.com/chromaway/postchain/-/tree/dev/postchain-gtv) module
+    [postchain-gtv](https://gitlab.com/chromaway/core/postchain/-/tree/dev/postchain-gtv) module
   version: "18"
 tags:
   - name: block
