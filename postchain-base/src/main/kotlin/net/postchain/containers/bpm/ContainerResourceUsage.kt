@@ -2,6 +2,8 @@ package net.postchain.containers.bpm
 
 import com.github.dockerjava.api.model.Statistics
 import net.postchain.containers.bpm.fs.ResourceLimitsInfo
+import kotlin.math.max
+import kotlin.math.min
 
 /**
  * Keeps resource statistics for a container.
@@ -74,8 +76,8 @@ class ContainerResourceUsage(
             fsResourceLimits?.apply {
                 containerResourceUsage.spaceUsageMiB = spaceUsedMiB
                 containerResourceUsage.spaceLimitMiB = spaceHardLimitMiB
-                containerResourceUsage.spaceUsagePercentage = ((spaceUsedMiB.toDouble() / spaceHardLimitMiB) * 10000).toInt() / 100.0
-                containerResourceUsage.spaceLeftMib = spaceHardLimitMiB - spaceUsedMiB
+                containerResourceUsage.spaceUsagePercentage = min(((spaceUsedMiB.toDouble() / spaceHardLimitMiB) * 10000).toInt() / 100.0, 100.0)
+                containerResourceUsage.spaceLeftMib = max(spaceHardLimitMiB - spaceUsedMiB, 0)
             }
 
             return containerResourceUsage
