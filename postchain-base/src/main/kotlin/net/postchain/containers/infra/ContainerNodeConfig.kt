@@ -191,7 +191,7 @@ data class ContainerNodeConfig(
                         getEnvOrBooleanProperty("POSTCHAIN_SUBNODE_REMOTE_DEBUG_SUSPEND", KEY_REMOTE_DEBUG_SUSPEND, false),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_PROMETHEUS_PORT", KEY_PROMETHEUS_PORT, -1),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_JMX_BASE_PORT", KEY_JMX_BASE_PORT, -1),
-                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_MIN_SPACE_QUOTA_BUFFER_MB", KEY_MIN_SPACE_QUOTA_BUFFER_MB, 100),
+                        getEnvOrIntProperty("POSTCHAIN_SUBNODE_MIN_SPACE_QUOTA_BUFFER_MB", KEY_MIN_SPACE_QUOTA_BUFFER_MB, 300),
                         labels,
                         getEnvOrStringProperty("POSTCHAIN_SUBNODE_LOG4J_CONFIGURATION_FILE", KEY_LOG4J_CONFIGURATION_FILE),
                         getEnvOrIntProperty("POSTCHAIN_SUBNODE_POSTGRES_MAX_LOCKS_PER_TRANSACTION", KEY_POSTGRES_MAX_LOCKS_PER_TRANSACTION, 1024),
