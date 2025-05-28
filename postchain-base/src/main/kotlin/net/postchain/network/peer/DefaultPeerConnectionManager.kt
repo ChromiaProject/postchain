@@ -232,17 +232,14 @@ open class DefaultPeerConnectionManager<PacketType>(
         }
     }
 
-    @Synchronized
     override fun isPeerConnected(chainId: Long, peerId: NodeRid): Boolean {
         return chainsWithConnections.getNodeConnection(chainId, peerId) != null
     }
 
-    @Synchronized
     override fun sendPacket(data: LazyPacket, chainId: Long, nodeRid: NodeRid) {
         chainsWithConnections.getNodeConnection(chainId, nodeRid)?.sendPacket(data)
     }
 
-    @Synchronized
     override fun broadcastPacket(data: LazyPacket, chainId: Long) {
         val chain = chainsWithConnections.getOrThrow(chainId)
         for (conn in chain.getAllConnections()) {
@@ -250,13 +247,11 @@ open class DefaultPeerConnectionManager<PacketType>(
         }
     }
 
-    @Synchronized
     override fun getConnectedNodes(chainId: Long): List<NodeRid> {
         val chain = chainsWithConnections.get(chainId)
         return chain?.getAllNodes() ?: emptyList()
     }
 
-    @Synchronized
     override fun disconnectChainPeer(chainId: Long, peerId: NodeRid) {
         return withLoggingContext(CHAIN_IID_TAG to chainId.toString()) {
             val chain = chainsWithConnections.getOrThrow(chainId)
