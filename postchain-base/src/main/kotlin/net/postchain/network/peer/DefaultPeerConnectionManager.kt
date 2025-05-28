@@ -10,6 +10,7 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.NodeRid
 import net.postchain.devtools.NameHelper.peerName
@@ -202,7 +203,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                     peerId,
                     ConnectionDirection.OUTGOING
             )
-            val peerInfo = resolvePeerInfo(chainPeersConfig.commConfiguration, peerId)
+            val peerInfo = resolvePeerInfo(chainPeersConfig.chainId, chainPeersConfig.commConfiguration, peerId)
                     ?: throw ProgrammerMistake("Peer ID not found: ${peerId.toHex()}")
             if (peerInfo.peerId() != peerId) {
                 // Have to add this check since I see strange things
@@ -568,13 +569,13 @@ open class DefaultPeerConnectionManager<PacketType>(
         return chainsWithConnections.getNodesTopology(chainIid)
     }
 
-    private fun resolvePeerInfo(commConfiguration: PeerCommConfiguration, nodeId: NodeRid): PeerInfo? {
-        maybeUpdateNetworkNodes()
+    private fun resolvePeerInfo(chainId: Long, commConfiguration: PeerCommConfiguration, nodeId: NodeRid): PeerInfo? {
+        if (nodeConfigProvider !is ManagedNodeConfigurationProvider || chainId != 0L) maybeUpdateNetworkNodes()
         return commConfiguration.networkNodes[nodeId]
     }
 
     internal fun getNetworkNodeRids(chain: ChainWithPeerConnections): Set<NodeRid> {
-        maybeUpdateNetworkNodes()
+        if (nodeConfigProvider !is ManagedNodeConfigurationProvider || chain.iid != 0L) maybeUpdateNetworkNodes()
         return chain.peerConfig.commConfiguration.networkNodes.getPeerIds()
     }
 
