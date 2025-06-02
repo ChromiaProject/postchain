@@ -25,7 +25,6 @@ import net.postchain.network.common.ChainsWithConnections
 import net.postchain.network.common.ConnectionDirection
 import net.postchain.network.common.LazyPacket
 import net.postchain.network.netty2.NettyPeerConnection
-import net.postchain.network.peer.DefaultPeerConnectionManager.Companion.NETWORK_NODES_UPDATE_INTERVAL
 import net.postchain.network.util.peerInfoFromPublicKey
 import org.apache.commons.lang3.reflect.FieldUtils
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -43,9 +42,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
-import java.time.Clock
 import java.time.Duration
-import java.time.Instant
 import java.util.concurrent.CompletableFuture
 import kotlin.random.Random
 
@@ -474,11 +471,10 @@ class DefaultPeerConnectionManagerTest {
             on { blockchainRid } doReturn blockchainRid
             on { commConfiguration } doReturn communicationConfig
         }
-        val clock: Clock = mockClock()
         Mockito.`when`(nodeConfig.peerInfoMap).doReturn(nodes.getPeerMap())
 
         // When connecting a chain
-        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, random, clock).apply {
+        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, random, Duration.ofSeconds(1)).apply {
             connectChain(chainPeerConfig, false)
             connectChainPeer(chainPeerConfig.chainId, peerInfo2.peerId())
         }
@@ -492,10 +488,14 @@ class DefaultPeerConnectionManagerTest {
             }
         }
 
+        verify(nodeConfigProvider, times(1)).getConfiguration()
+
         // Given the peer host is updated
         val updatedPeerInfo2 = PeerInfo("new-host", peerInfo2.port, peerInfo2.pubKey)
         Mockito.`when`(nodeConfig.peerInfoMap).doReturn(mapOf(NodeRid(peerInfo2.pubKey) to updatedPeerInfo2))
-        Mockito.`when`(clock.instant().isAfter(any())).doReturn(true)
+
+        Thread.sleep(1500)
+        verify(nodeConfigProvider, times(2)).getConfiguration()
 
         // When
         connectionManager.connectChainPeer(chainPeerConfig.chainId, updatedPeerInfo2.peerId())
@@ -525,28 +525,20 @@ class DefaultPeerConnectionManagerTest {
             on { peerConfig } doReturn xChainPeersConfiguration
         }
 
-        val initialNetworkNodeTimestamp = Instant.ofEpochSecond(0)
-        val clock: Clock = mock {
-            on { instant() } doReturn initialNetworkNodeTimestamp
-        }
-
         // When
-        val connectionManager = DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, random, clock).apply {
-            getNetworkNodeRids(chainWithPeerConnections)
+        DefaultPeerConnectionManager(nodeConfigProvider, packetCodecFactory, random, Duration.ofSeconds(1)).apply {
             getNetworkNodeRids(chainWithPeerConnections)
         }
 
-        // Then timestamp is unchanged since no update took place
-        assertThat(connectionManager.networkNodesTimestamp).isEqualTo(initialNetworkNodeTimestamp)
+        // Then verify first configuration request
+        verify(nodeConfigProvider, times(1)).getConfiguration()
 
-        // Given time interval passed
-        Mockito.`when`(clock.instant()).doReturn(initialNetworkNodeTimestamp.plus(NETWORK_NODES_UPDATE_INTERVAL).plus(Duration.ofSeconds(1)))
+        // Then no additional configuration request
+        verify(nodeConfigProvider, times(1)).getConfiguration()
 
-        // When
-        connectionManager.getNetworkNodeRids(chainWithPeerConnections)
-
-        // Then timestamp is changed due to update
-        assertThat(connectionManager.networkNodesTimestamp).isNotEqualTo(initialNetworkNodeTimestamp)
+        Thread.sleep(1500)
+        // Then second request after update interval
+        verify(nodeConfigProvider, times(2)).getConfiguration()
     }
 
     fun mockConnection(descriptor: PeerConnectionDescriptor): NettyPeerConnection<Int> {
@@ -554,15 +546,5 @@ class DefaultPeerConnectionManagerTest {
         whenever(m.descriptor()).thenReturn(descriptor)
         whenever(m.close()).thenReturn(CompletableFuture.completedFuture(null))
         return m
-    }
-
-    private fun mockClock(): Clock {
-        val instant = mock<Instant> {
-            on { isAfter(any()) } doReturn false
-        }
-        Mockito.`when`(instant.plus(any())).doReturn(instant)
-        return mock {
-            on { instant() } doReturn instant
-        }
     }
 }
