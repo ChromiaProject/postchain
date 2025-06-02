@@ -2,6 +2,7 @@
 
 package net.postchain.network.peer
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.NetworkNodes
@@ -10,7 +11,6 @@ import net.postchain.base.PeerInfo
 import net.postchain.base.peerId
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
-import net.postchain.config.node.ManagedNodeConfigurationProvider
 import net.postchain.config.node.NodeConfigurationProvider
 import net.postchain.core.NodeRid
 import net.postchain.devtools.NameHelper.peerName
@@ -26,9 +26,11 @@ import net.postchain.network.common.NodeConnector
 import net.postchain.network.common.NodeConnectorEvents
 import net.postchain.network.netty2.ConnectionConfig
 import net.postchain.network.netty2.NettyPeerConnector
-import java.time.Clock
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 
 /**
@@ -67,7 +69,7 @@ open class DefaultPeerConnectionManager<PacketType>(
         private val nodeConfigProvider: NodeConfigurationProvider,
         private val packetCodecFactory: XPacketCodecFactory<PacketType>,
         private val random: Random,
-        private val clock: Clock = Clock.systemUTC()
+        private val networkNodesUpdateInterval: Duration = NETWORK_NODES_UPDATE_INTERVAL
 ) : NetworkTopology, PeerConnectionManager, NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
 
     companion object : KLogging() {
@@ -86,6 +88,18 @@ open class DefaultPeerConnectionManager<PacketType>(
                     ChainWithPeerConnections
                     >()
 
+    private val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor(
+            ThreadFactoryBuilder().setNameFormat("network-peer-updater").build()
+    ).apply {
+        scheduleAtFixedRate({
+            try {
+                updateNetworkNodes()
+            } catch (e: Exception) {
+                logger.error(e) { "Error updating network nodes" }
+            }
+        }, networkNodesUpdateInterval.toMillis(), networkNodesUpdateInterval.toMillis(), TimeUnit.MILLISECONDS)
+    }
+
     /**
      * A cache BC RID -> Chain IID
      */
@@ -100,12 +114,12 @@ open class DefaultPeerConnectionManager<PacketType>(
     // Used by connection strategy, connector and loggers (to distinguish nodes in tests' logs).
     private lateinit var myPeerInfo: PeerInfo
 
-    internal var networkNodesTimestamp = clock.instant()
-        private set
-
     override fun shutdown() {
         connector?.shutdown()
         if (::peersConnectionStrategy.isInitialized) peersConnectionStrategy.shutdown()
+
+        executor.shutdownNow()
+        executor.awaitTermination(1000, TimeUnit.MILLISECONDS)
 
         synchronized(this) {
             isShutDown = true
@@ -203,7 +217,7 @@ open class DefaultPeerConnectionManager<PacketType>(
                     peerId,
                     ConnectionDirection.OUTGOING
             )
-            val peerInfo = resolvePeerInfo(chainPeersConfig.chainId, chainPeersConfig.commConfiguration, peerId)
+            val peerInfo = resolvePeerInfo(chainPeersConfig.commConfiguration, peerId)
                     ?: throw ProgrammerMistake("Peer ID not found: ${peerId.toHex()}")
             if (peerInfo.peerId() != peerId) {
                 // Have to add this check since I see strange things
@@ -569,13 +583,11 @@ open class DefaultPeerConnectionManager<PacketType>(
         return chainsWithConnections.getNodesTopology(chainIid)
     }
 
-    private fun resolvePeerInfo(chainId: Long, commConfiguration: PeerCommConfiguration, nodeId: NodeRid): PeerInfo? {
-        if (nodeConfigProvider !is ManagedNodeConfigurationProvider || chainId != 0L) maybeUpdateNetworkNodes()
+    private fun resolvePeerInfo(commConfiguration: PeerCommConfiguration, nodeId: NodeRid): PeerInfo? {
         return commConfiguration.networkNodes[nodeId]
     }
 
     internal fun getNetworkNodeRids(chain: ChainWithPeerConnections): Set<NodeRid> {
-        if (nodeConfigProvider !is ManagedNodeConfigurationProvider || chain.iid != 0L) maybeUpdateNetworkNodes()
         return chain.peerConfig.commConfiguration.networkNodes.getPeerIds()
     }
 
@@ -583,19 +595,15 @@ open class DefaultPeerConnectionManager<PacketType>(
      * Reload [PeerInfo] from configuration/DC and update each chains [NetworkNodes] if enough time has passed
      * since last reload.
      */
-    private fun maybeUpdateNetworkNodes() {
-        if (clock.instant().isAfter(networkNodesTimestamp + NETWORK_NODES_UPDATE_INTERVAL)) {
-            val nodes = nodeConfigProvider.getConfiguration().peerInfoMap.values
-            chainsWithConnections.getAllChains().forEach { chain ->
-                val networkNodes = chain.peerConfig.commConfiguration.networkNodes
-                nodes.forEach { node ->
-                    if (node.peerId() in networkNodes) {
-                        networkNodes[node.peerId()] = node
-                    }
+    private fun updateNetworkNodes() {
+        val nodes = nodeConfigProvider.getConfiguration().peerInfoMap.values
+        chainsWithConnections.getAllChains().forEach { chain ->
+            val networkNodes = chain.peerConfig.commConfiguration.networkNodes
+            nodes.forEach { node ->
+                if (node.peerId() in networkNodes) {
+                    networkNodes[node.peerId()] = node
                 }
             }
-
-            networkNodesTimestamp = clock.instant()
         }
     }
 }
