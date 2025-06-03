@@ -8,6 +8,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
 import net.postchain.config.blockchain.AbstractBlockchainConfigurationProvider
+import net.postchain.config.blockchain.ConfigurationChangeCheckResult
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.EContext
 
@@ -24,22 +25,22 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
         this.dataSource = dataSource
     }
 
-    override fun getActiveBlockConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray? {
+    override fun getActiveBlockConfiguration(eContext: EContext, chainId: Long, pendingConfigHashToLoad: ByteArray?): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         return if (chainId == 0L) {
-            localProvider.getActiveBlockConfiguration(eContext, chainId, loadNextPendingConfig)
+            localProvider.getActiveBlockConfiguration(eContext, chainId, pendingConfigHashToLoad)
         } else {
             logger.debug { "getConfiguration() - Fetching configuration from chain0 (for chain: $chainId)" }
             if (::dataSource.isInitialized) {
-                getConfigurationFromDataSource(eContext, loadNextPendingConfig)
+                getConfigurationFromDataSource(eContext, pendingConfigHashToLoad)
             } else {
                 throw IllegalStateException("Using managed blockchain configuration provider before it's properly initialized")
             }
         }
     }
 
-    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, checkPendingConfigs: Boolean): Boolean {
+    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, checkPendingConfigs: Boolean): ConfigurationChangeCheckResult {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         return if (chainId == 0L) {
@@ -108,7 +109,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
 
     // --------- Private --------
 
-    protected fun checkNeedConfChangeViaDataSource(eContext: EContext, checkPendingConfigs: Boolean): Boolean {
+    protected fun checkNeedConfChangeViaDataSource(eContext: EContext, checkPendingConfigs: Boolean): ConfigurationChangeCheckResult {
         val dba = DatabaseAccess.of(eContext)
         val blockchainRid = getBlockchainRid(eContext, dba)
         val lastSavedBlockHeight = dba.getLastBlockHeight(eContext)
@@ -117,18 +118,23 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
 
         val appliedConfigFound = activeHeight == dataSource.findNextConfigurationHeight(blockchainRid.data, lastSavedBlockHeight)
         return if (appliedConfigFound) {
-            true
+            ConfigurationChangeCheckResult(true)
         } else if (checkPendingConfigs) {
             val failedConfigHash = dataSource.getFaultyBlockchainConfiguration(blockchainRid, activeHeight)?.wrap()
                     ?: dba.getFaultyConfiguration(eContext)?.configHash
             val pendingConfig = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight).find {
                 !dba.configurationHashExists(eContext, it.configHash.data)
             }
-            (pendingConfig != null && pendingConfig.configHash != failedConfigHash).also {
-                logger.debug { "$logPrefix: new pending configuration detected for activeHeight: $activeHeight - $it" }
+            val newPendingConfigDetected = pendingConfig != null && pendingConfig.configHash != failedConfigHash
+            if (newPendingConfigDetected) {
+                logger.debug { "$logPrefix: new pending configuration detected for activeHeight: $activeHeight" }
+                ConfigurationChangeCheckResult(true, pendingConfig.configHash.data)
+            } else {
+                logger.debug { "$logPrefix: no new pending configuration detected for activeHeight: $activeHeight" }
+                ConfigurationChangeCheckResult(false)
             }
         } else {
-            false
+            ConfigurationChangeCheckResult(false)
         }
     }
 
@@ -164,14 +170,16 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
     }
 
     /**
-     * Loading of next pending config is determined by [loadNextPendingConfig]:
-     * true -> Load next non-applied pending config, if all are applied load the latest one. If there are no pending configs, load from datasource.
-     * false -> Load the latest applied pending config, if none are applied load from datasource. If there are no pending configs, load from datasource.
+     * Loading of next pending config is determined by [pendingConfigHashToLoad]:
+     * if a pending config with that hash exists -> Load it
+     * if a pending config with that hash does not exist or hash is null ->
+     *      Load the latest applied pending config, if none are applied load from datasource.
+     *      If there are no pending configs, load from datasource.
      *
      * Note: Applied means that the config has been used to build at least one block. I.e. it's applied in the context of the blockchain rather than the node.
      * Next pending config is the earliest pending config that has not yet been applied.
      */
-    protected fun getConfigurationFromDataSource(eContext: EContext, loadNextPendingConfig: Boolean): ByteArray? {
+    protected fun getConfigurationFromDataSource(eContext: EContext, pendingConfigHashToLoad: ByteArray?): ByteArray? {
         val dba = DatabaseAccess.of(eContext)
         val blockchainRid = getBlockchainRid(eContext, dba)
         val activeHeight = getActiveBlocksHeight(eContext, dba)
@@ -190,22 +198,20 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
                 val pendingConfigs = dataSource.getPendingBlockchainConfiguration(blockchainRid, activeHeight)
                 if (pendingConfigs.isNotEmpty()) {
                     logger.debug { "$logPrefix: ${pendingConfigs.size} pending config(s) detected at height: $activeHeight" }
-                    val configToApply = if (loadNextPendingConfig) {
-                        pendingConfigs.firstOrNull {
-                            !dba.configurationHashExists(eContext, it.configHash.data)
-                        }
-                    } else {
-                        pendingConfigs.lastOrNull {
-                            dba.configurationHashExists(eContext, it.configHash.data)
-                        }
+                    val wrappedPendingConfigHashToLoad = pendingConfigHashToLoad?.wrap()
+                    val configToApply = wrappedPendingConfigHashToLoad?.let {
+                                pendingConfigs.find { it.configHash == wrappedPendingConfigHashToLoad }
+                            } ?: pendingConfigs.lastOrNull {
+                                dba.configurationHashExists(eContext, it.configHash.data)
+                            }
+
+                    if (wrappedPendingConfigHashToLoad != null && configToApply?.configHash != wrappedPendingConfigHashToLoad) {
+                        logger.info("Requested pending config to load $wrappedPendingConfigHashToLoad was not found, falling back to latest applied config")
                     }
 
                     if (configToApply != null) {
                         logger.debug { "$logPrefix: config ${configToApply.configHash} will be loaded. Signers: ${configToApply.signers}" }
                         configToApply.fullConfig
-                    } else if (loadNextPendingConfig) {
-                        logger.debug { "$logPrefix: all pending configs already applied, loading the latest one" }
-                        pendingConfigs.last().fullConfig
                     } else {
                         logger.debug { "$logPrefix: no pending configs are applied, config will be loaded from DataSource" }
                         dataSource.getConfiguration(blockchainRid.data, activeHeight)

@@ -10,6 +10,8 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
+import net.postchain.config.blockchain.BlockchainConfigurationProvider
+import net.postchain.core.EContext
 import net.postchain.core.NodeRid
 import net.postchain.crypto.Signature
 import net.postchain.ebft.BlockDatabase
@@ -262,14 +264,20 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         val bcConfigProvider = workerContext.blockchainConfigurationProvider
         try {
             withReadConnection(workerContext.engine.blockBuilderStorage, chainId) { ctx ->
-                if (workerContext.engine.hasBuiltFirstBlockAfterConfigUpdate()
-                        && bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, chainId, true)) {
-                    logger.debug("New config found. Reloading.")
-                    workerContext.restartNotifier.notifyRestart(true)
+                if (workerContext.engine.hasBuiltFirstBlockAfterConfigUpdate()) {
+                    checkForConfigurationUpdate(bcConfigProvider, ctx, chainId)
                 }
             }
         } catch (e: Exception) {
             logger.error("Couldn't check for config updates, ignoring and continuing", e)
+        }
+    }
+
+    private fun checkForConfigurationUpdate(bcConfigProvider: BlockchainConfigurationProvider, ctx: EContext, chainId: Long) {
+        val configCheckResult = bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, chainId, true)
+        if (configCheckResult.changeNeeded) {
+            logger.debug("New config found. Reloading.")
+            workerContext.restartNotifier.notifyRestart(configCheckResult.pendingConfigHashToLoad)
         }
     }
 
@@ -592,7 +600,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             }
 
             if (isMyConfigPending) {
-                workerContext.restartNotifier.notifyRestart(false)
+                workerContext.restartNotifier.notifyRestart(null)
                 return true
             }
         }

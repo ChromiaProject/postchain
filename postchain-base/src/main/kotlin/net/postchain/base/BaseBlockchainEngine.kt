@@ -319,9 +319,9 @@ open class BaseBlockchainEngine(
 
     private fun checkForNewConfiguration() {
         withReadConnection(blockBuilderStorage, chainID) { ctx ->
-            if (blockchainConfigurationProvider.activeBlockNeedsConfigurationChange(ctx, chainID, false)) {
+            if (blockchainConfigurationProvider.activeBlockNeedsConfigurationChange(ctx, chainID, false).changeNeeded) {
                 logger.debug("Found new configuration at current height. Will restart and apply it.")
-                restartNotifier.notifyRestart(false)
+                restartNotifier.notifyRestart(null)
                 closed = true
             }
         }
@@ -441,7 +441,7 @@ open class BaseBlockchainEngine(
         }
         blockBuilderStorage.closeWriteConnection(currentEContext, true)
 
-        restartNotifier.notifyRestart(false)
+        restartNotifier.notifyRestart(null)
         closed = true
     }
 
