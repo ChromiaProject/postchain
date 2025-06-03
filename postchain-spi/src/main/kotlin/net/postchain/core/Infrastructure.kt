@@ -39,7 +39,13 @@ interface SynchronizationInfrastructure : Shutdownable {
 }
 
 fun interface BlockchainRestartNotifier {
-    fun notifyRestart(loadNextPendingConfig: Boolean)
+    /**
+     * Notifies that the blockchain should be restarted.
+     * 
+     * @param pendingConfigHash The hash of the pending configuration to load on restart, or null if no pending config should be loaded.
+     * Will fall back to the latest applied configuration if a pending config with this hash does not exist
+     */
+    fun notifyRestart(pendingConfigHash: ByteArray?)
 }
 
 interface BlockchainInfrastructure : Shutdownable {

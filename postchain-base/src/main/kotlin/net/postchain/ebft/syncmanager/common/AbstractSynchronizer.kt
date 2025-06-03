@@ -134,7 +134,7 @@ abstract class AbstractSynchronizer(
             // We don't care if other promoted nodes have applied the config or not, they can't build blocks with older config anyway
             if (relevantSignersThatHaveAppliedConfig.size + promotedNodesAmount >= pendingBftRequiredSignatureCount) {
                 logger.debug { "Incoming config is pending with us as signer, will restart" }
-                workerContext.restartNotifier.notifyRestart(true)
+                workerContext.restartNotifier.notifyRestart(pendingConfigPromotingUsAsSigner)
                 true
             } else {
                 logger.debug { "Incoming config is pending with us as signer, waiting for more nodes to apply it" }
@@ -183,14 +183,14 @@ abstract class AbstractSynchronizer(
     private fun checkIfNewConfigurationCanBeLoaded(block: BlockDataWithWitness): Boolean {
         val bcConfigProvider = workerContext.blockchainConfigurationProvider
         val bcConfig = workerContext.blockchainConfiguration
-        val hasNewConfig = withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
+        val configCheckResult = withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
             bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, false)
         }
 
         withLoggingContext(CHAIN_IID_TAG to blockchainConfiguration.chainID.toString()) {
-            if (hasNewConfig) {
+            if (configCheckResult.changeNeeded) {
                 logger.warn { "Wrong config used. Chain will be restarted" }
-                workerContext.restartNotifier.notifyRestart(false)
+                workerContext.restartNotifier.notifyRestart(null)
                 return true
             }
 
@@ -234,7 +234,7 @@ abstract class AbstractSynchronizer(
 
                             logger.info { "A valid configuration for management chain on height $height was loaded. Chain will be restarted." }
 
-                            workerContext.restartNotifier.notifyRestart(false)
+                            workerContext.restartNotifier.notifyRestart(null)
                             true
                         } catch (e: Exception) {
                             logger.error("Failed to validate or load configuration on height $height: ${e.message}", e)
@@ -270,7 +270,7 @@ abstract class AbstractSynchronizer(
                 try {
                     validator.validateWitness(block.witness, witnessBuilder)
                     logger.debug { "Witness check passed. Reloading chain with pending configuration." }
-                    workerContext.restartNotifier.notifyRestart(true)
+                    workerContext.restartNotifier.notifyRestart(configHash)
                     return true
                 } catch (e: Exception) {
                     logger.error(e) { "Block signature for block with new pending config is not valid" }

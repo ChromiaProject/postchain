@@ -14,6 +14,7 @@ import net.postchain.common.toHex
 import net.postchain.common.wrap
 import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.core.BadDataException
+import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.ConfigurationMismatchException
 import net.postchain.core.FailedConfigurationMismatchException
 import net.postchain.core.PmEngineIsAlreadyClosed
@@ -185,13 +186,13 @@ class BaseBlockManager(
             } else if (incomingBlockFailedConfigHash != bcConfig.configHash.wrap()) {
                 withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
                     val isIncomingFaultyConfigPending = bcConfigProvider.isConfigPending(
-                            ctx, bcConfig.blockchainRid, statusManager.myStatus.height, bcConfig.configHash
+                            ctx, bcConfig.blockchainRid, statusManager.myStatus.height, incomingBlockFailedConfigHash.data
                     )
 
                     if (isIncomingFaultyConfigPending) {
                         // Let's also attempt to load the potentially faulty pending config
                         logger.info("Try to load potentially failing pending config")
-                        workerContext.restartNotifier.notifyRestart(true)
+                        workerContext.restartNotifier.notifyRestart(incomingBlockFailedConfigHash.data)
                     }
                 }
             }
@@ -212,14 +213,21 @@ class BaseBlockManager(
             if (isMyConfigPending) {
                 // early adopter
                 logger.info("Wrong config used. Chain will be restarted")
-                workerContext.restartNotifier.notifyRestart(false)
-            } else if (withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
-                        bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, true)
-                    }) {
-                // late adopter
-                logger.info("Wrong config used. Chain will be restarted")
-                workerContext.restartNotifier.notifyRestart(true)
+                workerContext.restartNotifier.notifyRestart(null)
+            } else {
+                checkForConfigurationUpdate(bcConfig, bcConfigProvider)
             }
+        }
+    }
+
+    private fun checkForConfigurationUpdate(bcConfig: BlockchainConfiguration, bcConfigProvider: ManagedBlockchainConfigurationProvider) {
+        val configCheckResult = withReadConnection(workerContext.engine.blockBuilderStorage, bcConfig.chainID) { ctx ->
+            bcConfigProvider.activeBlockNeedsConfigurationChange(ctx, bcConfig.chainID, true)
+        }
+        if (configCheckResult.changeNeeded) {
+            // late adopter
+            logger.info("Wrong config used. Chain will be restarted")
+            workerContext.restartNotifier.notifyRestart(configCheckResult.pendingConfigHashToLoad)
         }
     }
 

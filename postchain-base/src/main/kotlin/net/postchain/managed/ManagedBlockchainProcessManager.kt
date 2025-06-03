@@ -201,7 +201,7 @@ open class ManagedBlockchainProcessManager(
         fun afterCommitHandlerChain0(bTrace: BlockTrace?, blockTimestamp: Long): Boolean {
             wrTrace("chain0 begin", bTrace)
             // Checking out for chain0 configuration changes
-            val reloadChain0 = isConfigurationChanged(CHAIN0)
+            val reloadChain0 = isConfigurationChanged(CHAIN0).changeNeeded
             startStopBlockchainsAsync(reloadChain0, bTrace)
             return reloadChain0
         }
@@ -215,9 +215,11 @@ open class ManagedBlockchainProcessManager(
             // Checking out for a chain configuration changes
             wrTrace("chainN, begin", bTrace)
 
-            return if (isConfigurationChanged(chainId)) {
+            val configCheckResult = isConfigurationChanged(chainId)
+            return if (configCheckResult.changeNeeded) {
                 wrTrace("chainN, restart needed", bTrace)
-                startBlockchainAsync(chainId, bTrace, blockchainProcesses[chainId]?.isSigner() ?: false)
+                val pendingConfigHashToLoad = if (blockchainProcesses[chainId]?.isSigner() == true) configCheckResult.pendingConfigHashToLoad else null
+                startBlockchainAsync(chainId, bTrace, pendingConfigHashToLoad)
                 true
             } else {
                 wrTrace("chainN, no restart", bTrace)
@@ -247,8 +249,8 @@ open class ManagedBlockchainProcessManager(
                 wrTrace("After", bTrace)
                 restart
             } catch (e: Exception) {
-                logger.error(e) { "Exception in restart handler: $e" }
-                startBlockchainAsync(chainId, bTrace, blockchainProcesses[chainId]?.isSigner() ?: false)
+                logger.error(e) { "Exception in after commit handler: $e" }
+                startBlockchainAsync(chainId, bTrace, null)
                 true // let's hope restarting a blockchain fixes the problem
             } finally {
                 releaseChainLock(chainId)

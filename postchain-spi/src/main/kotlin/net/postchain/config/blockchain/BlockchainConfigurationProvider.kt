@@ -18,13 +18,13 @@ interface BlockchainConfigurationProvider {
     /**
      * @return the configuration we must use for the "active" block (=the block we are currently building)
      */
-    fun getActiveBlockConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray?
+    fun getActiveBlockConfiguration(eContext: EContext, chainId: Long, pendingConfigHashToLoad: ByteArray?): ByteArray?
 
     /**
      * @return true if the given chain will need a new configuration for the "active" block
      * (=the block we are currently building)
      */
-    fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, checkPendingConfigs: Boolean): Boolean
+    fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, checkPendingConfigs: Boolean): ConfigurationChangeCheckResult
 
     /**
      * Use this when you want to know what configuration height was used for a "historic block"
@@ -55,3 +55,8 @@ interface BlockchainConfigurationProvider {
 
     fun getActiveBlockConfigurationOptions(eContext: EContext, chainId: Long): BlockchainConfigurationOptions
 }
+
+class ConfigurationChangeCheckResult(
+        val changeNeeded: Boolean,
+        val pendingConfigHashToLoad: ByteArray? = null,
+)

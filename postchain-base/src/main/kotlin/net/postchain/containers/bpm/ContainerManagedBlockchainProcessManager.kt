@@ -146,7 +146,7 @@ class ContainerManagedBlockchainProcessManager(
                     // Reload/start/stops blockchains
                     rTrace("about to restart chain0", blockTrace)
                     // Checking out for chain0 configuration changes
-                    val reloadChain0 = isConfigurationChanged(CHAIN0)
+                    val reloadChain0 = isConfigurationChanged(CHAIN0).changeNeeded
                     stopStartBlockchains(reloadChain0)
                     reloadChain0
                 }

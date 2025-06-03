@@ -2,6 +2,7 @@ package net.postchain.devtools
 
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.config.blockchain.ConfigurationChangeCheckResult
 import net.postchain.core.EContext
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
@@ -19,13 +20,13 @@ class MockBlockchainConfigurationProvider :
 
     companion object : KLogging()
 
-    override fun getActiveBlockConfiguration(eContext: EContext, chainId: Long, loadNextPendingConfig: Boolean): ByteArray? {
+    override fun getActiveBlockConfiguration(eContext: EContext, chainId: Long, pendingConfigHashToLoad: ByteArray?): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
-        return getConfigurationFromDataSource(eContext, loadNextPendingConfig)
+        return getConfigurationFromDataSource(eContext, pendingConfigHashToLoad)
     }
 
-    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, checkPendingConfigs: Boolean): Boolean {
+    override fun activeBlockNeedsConfigurationChange(eContext: EContext, chainId: Long, checkPendingConfigs: Boolean): ConfigurationChangeCheckResult {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         return checkNeedConfChangeViaDataSource(eContext, checkPendingConfigs)

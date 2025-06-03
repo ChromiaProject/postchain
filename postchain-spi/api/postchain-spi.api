@@ -1083,12 +1083,19 @@ public final class net/postchain/config/app/AppConfig$Companion {
 }
 
 public abstract interface class net/postchain/config/blockchain/BlockchainConfigurationProvider {
-	public abstract fun activeBlockNeedsConfigurationChange (Lnet/postchain/core/ExecutionContext;JZ)Z
-	public abstract fun getActiveBlockConfiguration (Lnet/postchain/core/ExecutionContext;JZ)[B
+	public abstract fun activeBlockNeedsConfigurationChange (Lnet/postchain/core/ExecutionContext;JZ)Lnet/postchain/config/blockchain/ConfigurationChangeCheckResult;
+	public abstract fun getActiveBlockConfiguration (Lnet/postchain/core/ExecutionContext;J[B)[B
 	public abstract fun getActiveBlockConfigurationOptions (Lnet/postchain/core/ExecutionContext;J)Lnet/postchain/base/configuration/BlockchainConfigurationOptions;
 	public abstract fun getActiveBlocksHeight (Lnet/postchain/core/ExecutionContext;Lnet/postchain/base/data/DatabaseAccess;)J
 	public abstract fun getHistoricConfiguration (Lnet/postchain/core/ExecutionContext;JJ)[B
 	public abstract fun getHistoricConfigurationHeight (Lnet/postchain/core/ExecutionContext;JJ)Ljava/lang/Long;
+}
+
+public final class net/postchain/config/blockchain/ConfigurationChangeCheckResult {
+	public fun <init> (Z[B)V
+	public synthetic fun <init> (Z[BILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getChangeNeeded ()Z
+	public final fun getPendingConfigHashToLoad ()[B
 }
 
 public class net/postchain/config/node/NodeConfig : net/postchain/common/config/Config {
@@ -1334,7 +1341,7 @@ public abstract interface class net/postchain/core/BlockchainProcessManagerExten
 }
 
 public abstract interface class net/postchain/core/BlockchainRestartNotifier {
-	public abstract fun notifyRestart (Z)V
+	public abstract fun notifyRestart ([B)V
 }
 
 public final class net/postchain/core/BlockchainState : java/lang/Enum {

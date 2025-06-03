@@ -13,6 +13,7 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
+import net.postchain.config.blockchain.ConfigurationChangeCheckResult
 import net.postchain.config.blockchain.ManualBlockchainConfigurationProvider
 import net.postchain.core.BadBlockException
 import net.postchain.core.BlockchainConfiguration
@@ -250,7 +251,7 @@ class AbstractSynchronizerTest {
         // execute & verify
         assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, incomingHeight)).isFalse()
         // verify
-        verify(restartNotifier, never()).notifyRestart(true)
+        verify(restartNotifier, never()).notifyRestart(incomingConfigHash)
     }
 
     @Test
@@ -261,7 +262,7 @@ class AbstractSynchronizerTest {
         // execute & verify
         assertThat(sut.checkIfWeNeedToApplyPendingConfig(nodeRid, incomingConfigHash, incomingHeight)).isTrue()
         // verify
-        verify(restartNotifier).notifyRestart(true)
+        verify(restartNotifier).notifyRestart(incomingConfigHash)
     }
 
     ///// handle Add block exception /////
@@ -281,12 +282,12 @@ class AbstractSynchronizerTest {
         // setup
         val exception = ConfigurationMismatchException("Failure")
         val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
-        doReturn(true).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
+        doReturn(ConfigurationChangeCheckResult(true)).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
         // execute
         sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
         // verify
         verify(blockchainConfigurationProvider, atLeastOnce()).activeBlockNeedsConfigurationChange(eContext, chainId, false)
-        verify(restartNotifier).notifyRestart(false)
+        verify(restartNotifier).notifyRestart(null)
     }
 
     @Test
@@ -294,7 +295,7 @@ class AbstractSynchronizerTest {
         // setup
         val exception = ConfigurationMismatchException("Failure")
         val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
-        doReturn(false).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
+        doReturn(ConfigurationChangeCheckResult(false)).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
         doReturn(mapOf<String, Gtv>()).whenever(baseBlockHeader).extraData
         // execute
         sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
@@ -308,7 +309,7 @@ class AbstractSynchronizerTest {
         // setup
         val exception = ConfigurationMismatchException("Failure")
         val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
-        doReturn(false).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
+        doReturn(ConfigurationChangeCheckResult(false)).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
         doReturn(null).whenever(blockchainConfigurationProvider).getConfigIfPending(isA(), isA(), anyLong(), isA())
         // execute
         sut.handleAddBlockException(exception, block, null, peerStatuses, nodeRid)
@@ -323,7 +324,7 @@ class AbstractSynchronizerTest {
         val exception = ConfigurationMismatchException("Failure")
         val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
         val pendingConfig: PendingBlockchainConfiguration = mock { }
-        doReturn(false).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
+        doReturn(ConfigurationChangeCheckResult(false)).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
         doReturn(pendingConfig).whenever(blockchainConfigurationProvider).getConfigIfPending(isA(), isA(), anyLong(), isA())
         doThrow(RuntimeException("Failure")).whenever(baseBlockWitnessProvider).validateWitness(isA(), isA())
         // execute
@@ -341,7 +342,7 @@ class AbstractSynchronizerTest {
         val exception = ConfigurationMismatchException("Failure")
         val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
         val pendingConfig: PendingBlockchainConfiguration = mock { }
-        doReturn(false).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
+        doReturn(ConfigurationChangeCheckResult(false)).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
         doReturn(pendingConfig).whenever(blockchainConfigurationProvider).getConfigIfPending(isA(), isA(), anyLong(), isA())
         doNothing().whenever(baseBlockWitnessProvider).validateWitness(isA(), isA())
         // execute
@@ -351,7 +352,7 @@ class AbstractSynchronizerTest {
         verify(baseBlockWitnessProvider).createWitnessBuilderWithoutOwnSignature(baseBlockHeader)
         verify(baseBlockWitnessProvider).validateWitness(blockWitness, blockWitnessBuilder)
         verify(peerStatuses, never()).maybeBlacklist(isA(), anyString())
-        verify(restartNotifier).notifyRestart(true)
+        verify(restartNotifier).notifyRestart(configHash)
     }
 
     ///// handle Add block exception: FailedConfigurationMismatchException /////
@@ -372,7 +373,7 @@ class AbstractSynchronizerTest {
         // setup
         val exception = FailedConfigurationMismatchException("Failure")
         val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
-        doReturn(false).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
+        doReturn(ConfigurationChangeCheckResult(false)).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
         doReturn(null).whenever(blockchainConfigurationProvider).getConfigIfPending(isA(), isA(), anyLong(), isA())
         doNothing().whenever(baseBlockWitnessProvider).validateWitness(isA(), isA())
         // execute
@@ -387,8 +388,8 @@ class AbstractSynchronizerTest {
         // setup
         val exception = FailedConfigurationMismatchException("Failure")
         val block = BlockDataWithWitness(baseBlockHeader, transactions, blockWitness)
-        val pendingConfig: PendingBlockchainConfiguration = mock { }
-        doReturn(false).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
+        val pendingConfig: PendingBlockchainConfiguration = mock {}
+        doReturn(ConfigurationChangeCheckResult(false)).whenever(blockchainConfigurationProvider).activeBlockNeedsConfigurationChange(isA(), anyLong(), anyBoolean())
         doReturn(pendingConfig).whenever(blockchainConfigurationProvider).getConfigIfPending(isA(), isA(), anyLong(), isA())
         doNothing().whenever(baseBlockWitnessProvider).validateWitness(isA(), isA())
         // execute
@@ -398,7 +399,7 @@ class AbstractSynchronizerTest {
         verify(baseBlockWitnessProvider).createWitnessBuilderWithoutOwnSignature(baseBlockHeader)
         verify(baseBlockWitnessProvider).validateWitness(blockWitness, blockWitnessBuilder)
         verify(peerStatuses, never()).maybeBlacklist(isA(), anyString())
-        verify(restartNotifier).notifyRestart(true)
+        verify(restartNotifier).notifyRestart(failedConfigHash)
     }
 
     @Test
