@@ -40,7 +40,7 @@ class GTXTransaction(
         val cs: CryptoSystem
 ) : SignableTransaction {
 
-    var cachedRawData: ByteArray? = null // We are not sure if we have the rawData, and if we ever need to calculate it, it will be cached here.
+    private val cachedRawData by lazy { gtxData.encode() } // We are not sure if we have the rawData, and if we ever need to calculate it, it will be cached here.
     var isChecked: Boolean = false
     var isCheckedWhileSyncing: Boolean = false
 
@@ -146,15 +146,8 @@ class GTXTransaction(
         if (!hasNormalOperation && !isSyncing) throw TransactionIncorrect(myRID, "contains no normal operation")
     }
 
-    @Synchronized
     override fun getRawData(): ByteArray {
-        if (_rawData != null) {
-            return _rawData
-        }
-        if (cachedRawData == null) {
-            cachedRawData = gtxData.encode()
-        }
-        return cachedRawData!!
+        return _rawData ?: cachedRawData
     }
 
     override fun getRID(): ByteArray {

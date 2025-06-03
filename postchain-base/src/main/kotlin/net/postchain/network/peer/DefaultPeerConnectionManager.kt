@@ -144,7 +144,6 @@ open class DefaultPeerConnectionManager<PacketType>(
     /**
      * Before connecting a [ChainWithConnections] we must do some preparations
      */
-    @Synchronized
     fun beforeConnect(
             blockchainRid: BlockchainRid,
             chainWithConnections: ChainWithPeerConnections
