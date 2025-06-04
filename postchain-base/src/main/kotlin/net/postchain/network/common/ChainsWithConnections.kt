@@ -3,6 +3,7 @@ package net.postchain.network.common
 
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.NodeRid
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * A collection of multiple [ChainWithConnections] objects, sorted by the Chain IID.
@@ -21,21 +22,18 @@ class ChainsWithConnections<
         NodeConnectionType,
         ChainType : ChainWithConnections<NodeConnectionType, HandlerType>> {
 
-    private val chainsWithConnections: MutableMap<Long, ChainType> = mutableMapOf()
+    private val chainsWithConnections = ConcurrentHashMap<Long, ChainType>()
 
     // --------------
     // Accessors
     // --------------
 
-    @Synchronized
     fun hasChain(chainIid: Long): Boolean {
-        return chainIid in chainsWithConnections
+        return chainsWithConnections.containsKey(chainIid)
     }
 
-    @Synchronized
     fun get(chainIid: Long) = chainsWithConnections[chainIid]
 
-    @Synchronized
     fun getOrThrow(chainIid: Long): ChainType {
         return chainsWithConnections[chainIid] ?: throw ProgrammerMistake("Chain ID not found: $chainIid")
     }
@@ -45,7 +43,6 @@ class ChainsWithConnections<
     // Mutators
     // --------------
 
-    @Synchronized
     fun add(chain: ChainType) {
         chainsWithConnections[chain.getChainIid()] = chain
     }
@@ -53,7 +50,6 @@ class ChainsWithConnections<
     /**
      * We only remove the item here WITHOUT closing!!
      */
-    @Synchronized
     fun remove(chainIid: Long): ChainType? {
         return chainsWithConnections.remove(chainIid)
     }
@@ -61,7 +57,6 @@ class ChainsWithConnections<
     /**
      * Loop everything and close it
      */
-    @Synchronized
     fun removeAllAndClose() {
         chainsWithConnections.forEach { (_, chain) ->
             chain.closeConnections()
@@ -72,7 +67,6 @@ class ChainsWithConnections<
     // --------------
     //  Domain specific methods
     // --------------
-    @Synchronized
     fun getNodeConnection(chainId: Long, nodeRid: NodeRid): NodeConnectionType? {
         val chWC = getOrThrow(chainId)
         return chWC.getConnection(nodeRid)

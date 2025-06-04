@@ -85,7 +85,6 @@ class DefaultMasterConnectionManager(
         }
     }
 
-    @Synchronized
     override fun disconnectSubChain(chainId: Long) {
         logger.debug("Disconnecting subnode chain")
 
@@ -98,7 +97,6 @@ class DefaultMasterConnectionManager(
         }
     }
 
-    @Synchronized
     override fun onReceivedHandshake(blockchainRid: BlockchainRid) {
         logger.debug { "Received handshake for chain: ${blockchainRid.toShortHex()}" }
         chainsWithOneSubConnection.get(blockchainRid)?.handshakeReceived = true
