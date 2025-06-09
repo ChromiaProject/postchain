@@ -2,7 +2,7 @@ package net.postchain.managed
 
 import mu.KLogging
 import net.postchain.api.rest.model.ApiStatus
-import net.postchain.api.rest.statusBody
+import net.postchain.api.rest.statusJsonBody
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.toHex
@@ -60,7 +60,7 @@ class BaseTransactionForwarder(
                     Request(Method.GET, "$apiUrl/tx/$blockchainRid/${tx.getRID().toHex()}/status")
                             .header(ACCEPT, ContentType.APPLICATION_JSON.value))
             if (response.status.successful) {
-                val apiStatus = statusBody(response)
+                val apiStatus = statusJsonBody(response)
                 if (apiStatus.status != TransactionStatus.UNKNOWN.status) {
                     return apiStatus
                 }

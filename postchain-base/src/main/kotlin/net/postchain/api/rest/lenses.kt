@@ -119,7 +119,17 @@ val proofGtvBody = Body.binary(ContentType.OCTET_STREAM, "confirmationProof GTV"
         }
 ).toLens()
 val proofBody = ContentNegotiation.auto(proofJsonBody, proofGtvBody)
-val statusBody = Body.auto<ApiStatus>().toLens()
+val statusJsonBody = Body.auto<ApiStatus>().toLens()
+val statusGtvBody = Body.binary(ContentType.OCTET_STREAM, "status GTV").map(
+        { inputStream ->
+            val gtv = inputStream.use { GtvDecoder.decodeGtv(it) }
+            GtvObjectMapper.fromGtv(gtv, ApiStatus::class)
+        },
+        {
+            val gtv = it.toGtv()
+            GtvEncoder.encodeGtv(gtv).inputStream()
+        }
+).toLens()
 val blocksBody = Body.auto<List<BlockDetail>>().toLens()
 val blockJsonBody = Body.auto<BlockDetail>().toLens()
 val blockGtvBody = Body.binary(ContentType.OCTET_STREAM, "block GTV").map(

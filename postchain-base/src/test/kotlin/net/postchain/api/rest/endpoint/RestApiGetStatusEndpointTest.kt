@@ -2,7 +2,10 @@
 
 package net.postchain.api.rest.endpoint
 
+import assertk.assertThat
+import assertk.isContentEqualTo
 import io.restassured.RestAssured.given
+import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.api.rest.model.ApiStatus
@@ -10,8 +13,9 @@ import net.postchain.api.rest.model.TxRid
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.tx.TransactionStatus
+import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory.gtv
 import org.hamcrest.Matchers.equalTo
-import org.hamcrest.Matchers.equalToIgnoringCase
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -51,29 +55,29 @@ class RestApiGetStatusEndpointTest {
     }
 
     @Test
-    fun test_getStatus_ok() {
+    fun `getStatus ok`() {
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
                 .get("/tx/$blockchainRID/$txHashHex/status")
                 .then()
                 .statusCode(200)
-                .body("status", equalToIgnoringCase("CONFIRMED"))
+                .body("status", equalTo("confirmed"))
     }
 
     @Test
-    fun test_getStatus_ok_via_ChainIid() {
+    fun `getStatus ok via ChainIid`() {
         restApi.attachModel(blockchainRID, model)
 
         given().basePath(basePath).port(restApi.actualPort())
                 .get("/tx/iid_${chainIid.toInt()}/$txHashHex/status")
                 .then()
                 .statusCode(200)
-                .body("status", equalToIgnoringCase("CONFIRMED"))
+                .body("status", equalTo("confirmed"))
     }
 
     @Test
-    fun test_getStatus_rejected() {
+    fun `getStatus rejected as JSON`() {
         whenever(model.getStatus(TxRid(txHashHex.hexStringToByteArray()))).thenReturn(
                 ApiStatus(TransactionStatus.REJECTED, "Some reason", 1740659274153)
         )
@@ -83,8 +87,32 @@ class RestApiGetStatusEndpointTest {
                 .get("/tx/$blockchainRID/$txHashHex/status")
                 .then()
                 .statusCode(200)
-                .body("status", equalToIgnoringCase("REJECTED"))
+                .contentType(ContentType.JSON)
+                .body("status", equalTo("rejected"))
                 .body("rejectReason", equalTo("Some reason"))
                 .body("rejectTimestamp", equalTo(1740659274153))
+    }
+
+    @Test
+    fun `getStatus rejected as GTV`() {
+        whenever(model.getStatus(TxRid(txHashHex.hexStringToByteArray()))).thenReturn(
+                ApiStatus(TransactionStatus.REJECTED, "Some reason", 1740659274153)
+        )
+        restApi.attachModel(blockchainRID, model)
+
+        val gtv = gtv(mapOf(
+                "status" to gtv("rejected"),
+                "rejectReason" to gtv("Some reason"),
+                "rejectTimestamp" to gtv(1740659274153)
+        ))
+
+        val body = given().basePath(basePath).port(restApi.actualPort())
+                .header("Accept", ContentType.BINARY)
+                .get("/tx/$blockchainRID/$txHashHex/status")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(gtv))
     }
 }
