@@ -54,7 +54,8 @@ import net.postchain.api.rest.rejectedTransactionsBody
 import net.postchain.api.rest.signatureBody
 import net.postchain.api.rest.signatureHeader
 import net.postchain.api.rest.signerQuery
-import net.postchain.api.rest.statusBody
+import net.postchain.api.rest.statusGtvBody
+import net.postchain.api.rest.statusJsonBody
 import net.postchain.api.rest.textBody
 import net.postchain.api.rest.transactionsCountBody
 import net.postchain.api.rest.txBody
@@ -249,7 +250,7 @@ class RestApi(
                         val request0 = request.removeQuery("container")
                         Response(TEMPORARY_REDIRECT).header("Location", chainModel.path + request0.uri.toString().substring(basePath.length))
                     } else {
-                        val acquireSemaphores = mutableListOf<Pair<Semaphore?, () -> String>>(chainSemaphore to {
+                        val acquireSemaphores = mutableListOf(chainSemaphore to {
                             "Too many concurrent requests for blockchain $blockchainRid"
                         })
 
@@ -489,7 +490,8 @@ class RestApi(
         val status = runTxActionOnModel(model(request), txRidPath(request)) { model, txRID ->
             model.getStatus(txRID)
         }
-        return Response(OK).with(statusBody of status)
+        return Response(OK).with(ContentNegotiation.auto(statusJsonBody, statusGtvBody)
+                .outbound(request) of status)
     }
 
     private fun getBlocks(request: Request): Response {
@@ -1031,18 +1033,18 @@ class RestApi(
     private fun maybeTryAcquireSemaphore(semaphores: List<Pair<Semaphore?, () -> String>>, request: Request, next: () -> Response): Response {
         if (semaphores.isNotEmpty()) {
             val (semaphore, unavailableMessage) = semaphores.first()
-            if (semaphore != null) {
+            return if (semaphore != null) {
                 if (semaphore.tryAcquire()) {
                     try {
-                        return maybeTryAcquireSemaphore(semaphores.drop(1), request, next)
+                        maybeTryAcquireSemaphore(semaphores.drop(1), request, next)
                     } finally {
                         semaphore.release()
                     }
                 } else {
-                    return Response(SERVICE_UNAVAILABLE).with(errorBody.outbound(request) of ErrorBody(unavailableMessage()))
+                    Response(SERVICE_UNAVAILABLE).with(errorBody.outbound(request) of ErrorBody(unavailableMessage()))
                 }
             } else {
-                return maybeTryAcquireSemaphore(semaphores.drop(1), request, next)
+                maybeTryAcquireSemaphore(semaphores.drop(1), request, next)
             }
         }
         return next()
