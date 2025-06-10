@@ -48,10 +48,6 @@ public final class net/postchain/gtv/GtvAdapter : com/google/gson/JsonDeserializ
 	public fun serialize (Lnet/postchain/gtv/Gtv;Ljava/lang/reflect/Type;Lcom/google/gson/JsonSerializationContext;)Lcom/google/gson/JsonElement;
 }
 
-public synthetic class net/postchain/gtv/GtvAdapter$WhenMappings {
-	public static final synthetic field $EnumSwitchMapping$0 [I
-}
-
 public final class net/postchain/gtv/GtvArray : net/postchain/gtv/GtvCollection {
 	public fun <init> ([Lnet/postchain/gtv/Gtv;)V
 	public fun asArray ()[Lnet/postchain/gtv/Gtv;
@@ -317,10 +313,6 @@ public final class net/postchain/gtv/ListmapKt {
 	public static final fun listMapAndPrimitivesToGtv (Ljava/lang/Object;)Lnet/postchain/gtv/Gtv;
 }
 
-public synthetic class net/postchain/gtv/ListmapKt$WhenMappings {
-	public static final synthetic field $EnumSwitchMapping$0 [I
-}
-
 public final class net/postchain/gtv/PrettyKt {
 	public static final field INDENT I
 	public static final fun pretty (Lnet/postchain/gtv/Gtv;I)Ljava/lang/String;
@@ -369,10 +361,6 @@ public final class net/postchain/gtv/builder/GtvBuilder$GtvArrayNode : net/postc
 	public fun type ()Lnet/postchain/gtv/GtvType;
 }
 
-public synthetic class net/postchain/gtv/builder/GtvBuilder$GtvArrayNode$WhenMappings {
-	public static final synthetic field $EnumSwitchMapping$0 [I
-}
-
 public final class net/postchain/gtv/builder/GtvBuilder$GtvDictEntry {
 	public fun <init> (Lnet/postchain/gtv/builder/GtvBuilder$GtvNode;Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge;)V
 	public final fun getMerge ()Lnet/postchain/gtv/builder/GtvBuilder$GtvDictMerge;
@@ -406,10 +394,6 @@ public final class net/postchain/gtv/builder/GtvBuilder$GtvDictNode : net/postch
 	public fun type ()Lnet/postchain/gtv/GtvType;
 }
 
-public synthetic class net/postchain/gtv/builder/GtvBuilder$GtvDictNode$WhenMappings {
-	public static final synthetic field $EnumSwitchMapping$0 [I
-}
-
 public abstract class net/postchain/gtv/builder/GtvBuilder$GtvNode {
 	public static final field Companion Lnet/postchain/gtv/builder/GtvBuilder$GtvNode$Companion;
 	public fun asArray ()Lnet/postchain/gtv/builder/GtvBuilder$GtvArrayNode;
@@ -421,10 +405,6 @@ public abstract class net/postchain/gtv/builder/GtvBuilder$GtvNode {
 
 public final class net/postchain/gtv/builder/GtvBuilder$GtvNode$Companion {
 	public final fun decode (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/builder/GtvBuilder$GtvNode;
-}
-
-public synthetic class net/postchain/gtv/builder/GtvBuilder$GtvNode$Companion$WhenMappings {
-	public static final synthetic field $EnumSwitchMapping$0 [I
 }
 
 public final class net/postchain/gtv/builder/GtvBuilder$GtvTermNode : net/postchain/gtv/builder/GtvBuilder$GtvNode {
@@ -523,10 +503,6 @@ public final class net/postchain/gtv/gtvml/GtvMLParser {
 	public final fun parseGtvML (Ljava/lang/String;Ljava/util/Map;)Lnet/postchain/gtv/Gtv;
 	public static synthetic fun parseGtvML$default (Lnet/postchain/gtv/gtvml/GtvMLParser;Ljava/lang/String;Ljava/util/Map;ILjava/lang/Object;)Lnet/postchain/gtv/Gtv;
 	public final fun parseJAXBElementToGtvML (Ljakarta/xml/bind/JAXBElement;Ljava/util/Map;)Lnet/postchain/gtv/Gtv;
-}
-
-public synthetic class net/postchain/gtv/gtvml/GtvMLParser$WhenMappings {
-	public static final synthetic field $EnumSwitchMapping$0 [I
 }
 
 public class net/postchain/gtv/gtxml/ArrayType {
@@ -834,41 +810,9 @@ public abstract class net/postchain/gtv/merkle/GtvMerkleHashCalculatorBase : net
 	public fun merkleHashSummary (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/proof/MerkleHashSummary;
 }
 
-synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculatorBase$calculateLeafHash$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function1 {
-	public static final field INSTANCE Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase$calculateLeafHash$1;
-	public synthetic fun invoke (Ljava/lang/Object;)Ljava/lang/Object;
-	public final fun invoke (Lnet/postchain/gtv/Gtv;)[B
-}
-
-synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculatorBase$calculateLeafHash$2 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
-	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
-	public final fun invoke ([BLnet/postchain/crypto/Digester;)[B
-}
-
-synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculatorBase$calculateNodeHash$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
-	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
-	public final fun invoke ([BLnet/postchain/crypto/Digester;)[B
-}
-
 public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorKt {
 	public static final fun makeMerkleHashCalculator (J)Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;
 	public static final fun serializeGtvToByteArray (Lnet/postchain/gtv/Gtv;)[B
-}
-
-synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculatorKt$makeMerkleHashCalculator$1 : kotlin/jvm/internal/FunctionAdapter, net/postchain/crypto/Digester {
-	public static final field INSTANCE Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorKt$makeMerkleHashCalculator$1;
-	public final fun digest ([B)[B
-	public final fun equals (Ljava/lang/Object;)Z
-	public final fun getFunctionDelegate ()Lkotlin/Function;
-	public final fun hashCode ()I
-}
-
-synthetic class net/postchain/gtv/merkle/GtvMerkleHashCalculatorKt$makeMerkleHashCalculator$2 : kotlin/jvm/internal/FunctionAdapter, net/postchain/crypto/Digester {
-	public static final field INSTANCE Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorKt$makeMerkleHashCalculator$2;
-	public final fun digest ([B)[B
-	public final fun equals (Ljava/lang/Object;)Z
-	public final fun getFunctionDelegate ()Lkotlin/Function;
-	public final fun hashCode ()I
 }
 
 public final class net/postchain/gtv/merkle/GtvMerkleHashCalculatorV1 : net/postchain/gtv/merkle/GtvMerkleHashCalculatorBase {
@@ -1034,16 +978,6 @@ public final class net/postchain/gtv/merkle/path/GtvPathSet : net/postchain/gtv/
 	public fun isEmpty ()Z
 	public final fun keepOnlyArrayPaths ()Lnet/postchain/gtv/merkle/path/GtvPathSet;
 	public final fun keepOnlyDictPaths ()Lnet/postchain/gtv/merkle/path/GtvPathSet;
-}
-
-synthetic class net/postchain/gtv/merkle/path/GtvPathSet$getTailIfFirstElementIsArrayOfThisIndexFromList$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
-	public final fun invoke (ILnet/postchain/gtv/merkle/path/GtvPath;)Lnet/postchain/gtv/merkle/path/GtvPath;
-	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
-}
-
-synthetic class net/postchain/gtv/merkle/path/GtvPathSet$getTailIfFirstElementIsDictOfThisKeyFromList$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function2 {
-	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
-	public final fun invoke (Ljava/lang/String;Lnet/postchain/gtv/merkle/path/GtvPath;)Lnet/postchain/gtv/merkle/path/GtvPath;
 }
 
 public class net/postchain/gtv/merkle/path/Path {
@@ -1261,13 +1195,6 @@ public final class net/postchain/gtv/parse/GtvParser$Companion {
 
 public final class net/postchain/gtv/parse/LexerKt {
 	public static final fun lexer (Ljava/lang/String;)Lkotlin/sequences/Sequence;
-}
-
-final class net/postchain/gtv/parse/LexerKt$lexer$1 : kotlin/coroutines/jvm/internal/RestrictedSuspendLambda, kotlin/jvm/functions/Function2 {
-	public final fun create (Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Lkotlin/coroutines/Continuation;
-	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
-	public final fun invoke (Lkotlin/sequences/SequenceScope;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public final fun invokeSuspend (Ljava/lang/Object;)Ljava/lang/Object;
 }
 
 public abstract interface class net/postchain/gtv/parse/Token {

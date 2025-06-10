@@ -72,9 +72,6 @@ public final class net/postchain/gtx/GtxBuilder$GtxSignBuilder {
 	public final fun signOverEmptySignature (Lnet/postchain/crypto/SigMaker;)Lnet/postchain/gtx/GtxBuilder$GtxSignBuilder;
 }
 
-public final class net/postchain/gtx/GtxBuilderKt {
-}
-
 public final class net/postchain/gtx/GtxOp : net/postchain/gtv/mapper/ToGtv {
 	public static final field Companion Lnet/postchain/gtx/GtxOp$Companion;
 	public fun <init> (Ljava/lang/String;[Lnet/postchain/gtv/Gtv;)V
