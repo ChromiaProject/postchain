@@ -2,28 +2,8 @@ public final class net/postchain/gtv/yaml/GtvConstructor : org/yaml/snakeyaml/co
 	public fun <init> ()V
 }
 
-private final class net/postchain/gtv/yaml/GtvConstructor$ConstructBigInteger : org/yaml/snakeyaml/constructor/AbstractConstruct {
-	public fun <init> (Lnet/postchain/gtv/yaml/GtvConstructor;)V
-	public fun construct (Lorg/yaml/snakeyaml/nodes/Node;)Ljava/lang/Object;
-}
-
-private final class net/postchain/gtv/yaml/GtvConstructor$ConstructByteArray : org/yaml/snakeyaml/constructor/AbstractConstruct {
-	public fun <init> (Lnet/postchain/gtv/yaml/GtvConstructor;)V
-	public fun construct (Lorg/yaml/snakeyaml/nodes/Node;)Ljava/lang/Object;
-}
-
 public final class net/postchain/gtv/yaml/GtvRepresenter : org/yaml/snakeyaml/representer/Representer {
 	public fun <init> ()V
-}
-
-private final class net/postchain/gtv/yaml/GtvRepresenter$RepresentBigInteger : org/yaml/snakeyaml/representer/Represent {
-	public fun <init> (Lnet/postchain/gtv/yaml/GtvRepresenter;)V
-	public fun representData (Ljava/lang/Object;)Lorg/yaml/snakeyaml/nodes/Node;
-}
-
-private final class net/postchain/gtv/yaml/GtvRepresenter$RepresentByteArray : org/yaml/snakeyaml/representer/Represent {
-	public fun <init> (Lnet/postchain/gtv/yaml/GtvRepresenter;)V
-	public fun representData (Ljava/lang/Object;)Lorg/yaml/snakeyaml/nodes/Node;
 }
 
 public final class net/postchain/gtv/yaml/GtvResolver : org/yaml/snakeyaml/resolver/Resolver {

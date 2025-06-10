@@ -221,15 +221,6 @@ public abstract class net/postchain/crypto/BaseCryptoSystem : net/postchain/cryp
 	public fun verifyDigest ([BLnet/postchain/crypto/Signature;)Z
 }
 
-synthetic class net/postchain/crypto/BaseCryptoSystem$deriveSignatureVerification$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function3 {
-	public static final field INSTANCE Lnet/postchain/crypto/BaseCryptoSystem$deriveSignatureVerification$1;
-	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
-	public final fun invoke ([B[B[B)Ljava/lang/Boolean;
-}
-
-public final class net/postchain/crypto/CryptoKt {
-}
-
 public abstract interface class net/postchain/crypto/CryptoSystem : net/postchain/crypto/Digester {
 	public abstract fun buildSigMaker (Lnet/postchain/crypto/KeyPair;)Lnet/postchain/crypto/SigMaker;
 	public abstract fun buildSigMaker ([B[B)Lnet/postchain/crypto/SigMaker;
@@ -327,22 +318,6 @@ public class net/postchain/crypto/Secp256K1CryptoSystem : net/postchain/crypto/B
 	public final fun generatePrivKey ()Lnet/postchain/crypto/PrivKey;
 	public final fun recoverKeyPairFromMnemonic (Ljava/lang/String;)Lkotlin/Pair;
 	public fun validatePubKey ([B)Z
-}
-
-synthetic class net/postchain/crypto/Secp256K1CryptoSystem$buildSigMaker$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function1 {
-	public synthetic fun invoke (Ljava/lang/Object;)Ljava/lang/Object;
-	public final fun invoke ([B)[B
-}
-
-synthetic class net/postchain/crypto/Secp256K1CryptoSystem$buildSigMaker$2 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function1 {
-	public synthetic fun invoke (Ljava/lang/Object;)Ljava/lang/Object;
-	public final fun invoke ([B)[B
-}
-
-synthetic class net/postchain/crypto/Secp256K1CryptoSystem$deriveSignatureVerificationFromSubject$1 : kotlin/jvm/internal/FunctionReferenceImpl, kotlin/jvm/functions/Function3 {
-	public static final field INSTANCE Lnet/postchain/crypto/Secp256K1CryptoSystem$deriveSignatureVerificationFromSubject$1;
-	public synthetic fun invoke (Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
-	public final fun invoke ([B[B[B)Ljava/lang/Boolean;
 }
 
 public final class net/postchain/crypto/Secp256k1Kt {
