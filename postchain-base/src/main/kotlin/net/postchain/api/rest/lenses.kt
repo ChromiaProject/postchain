@@ -7,6 +7,7 @@ import net.postchain.api.rest.json.JsonFactory.auto
 import net.postchain.api.rest.json.JsonFactory.json
 import net.postchain.api.rest.model.ApiRejectedTransaction
 import net.postchain.api.rest.model.ApiStatus
+import net.postchain.api.rest.model.DecodedTransactionInfoExt
 import net.postchain.api.rest.model.TxRid
 import net.postchain.base.ConfirmationProof
 import net.postchain.common.BlockchainRid
@@ -86,6 +87,7 @@ val heightQuery = Query.long().map {
 }.defaulted("height", -1)
 val signerQuery = Query.string().regexGroup("([0-9a-fA-F]+)", 1).optional("signer")
 val containerQuery = Query.string().defaulted("container", "")
+val decodeTxQuery = Query.boolean().optional("decode-tx")
 
 val prettyGson = JsonFactory.makePrettyJson()
 val dashedPrettyGson = JsonFactory.makeCustomJson()
@@ -104,6 +106,7 @@ val errorGtvBody = Body.binary(ContentType.OCTET_STREAM, "error GTV").map(
 val errorBody = ContentNegotiation.auto(errorJsonBody, errorGtvBody)
 val txBody = Body.auto<Tx>().map({ it.tx.hexStringToByteArray() }, { Tx(it.toHex()) }).toLens()
 val txInfoExtBody = Body.auto<TransactionInfoExt>().toLens()
+val decodedTxInfoExtBody = Body.auto<DecodedTransactionInfoExt>().toLens()
 val txInfoExtsBody = Body.auto<List<TransactionInfoExt>>().toLens()
 val txRidsBody = Body.auto<List<TxRid>>().toLens()
 val rejectedTransactionsBody = Body.auto<List<ApiRejectedTransaction>>().toLens()

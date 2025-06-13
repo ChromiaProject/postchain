@@ -8,6 +8,7 @@ import com.google.gson.GsonBuilder
 import net.postchain.api.rest.BlockSignature
 import net.postchain.api.rest.json.JsonFactory.gsonBuilder
 import net.postchain.api.rest.model.ApiStatus
+import net.postchain.api.rest.model.DecodedTransactionInfoExt
 import net.postchain.api.rest.model.TxRid
 import net.postchain.base.ConfirmationProof
 import net.postchain.core.TransactionInfoExt
@@ -32,6 +33,7 @@ object JsonFactory : ConfigurableGson(gsonBuilder(false)) {
             .registerTypeAdapter(ConfirmationProof::class.java, ConfirmationProofSerializer())
             .registerTypeAdapter(ApiStatus::class.java, ApiStatusSerializer())
             .registerTypeAdapter(TransactionInfoExt::class.java, TransactionInfoExtSerializer())
+            .registerTypeAdapter(DecodedTransactionInfoExt::class.java, DecodedTransactionInfoExtSerializer())
             .registerTypeAdapter(BlockDetail::class.java, BlockDetailSerializer())
             .registerTypeAdapter(BlockSignature::class.java, BlockSignatureSerializer())
             .registerTypeAdapter(TxRid::class.java, TxRidSerializer())

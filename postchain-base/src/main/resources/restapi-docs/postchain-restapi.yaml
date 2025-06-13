@@ -48,7 +48,7 @@ info:
     
     The exact procedure to calculate the hash is documented in the README in 
     [postchain-gtv](https://gitlab.com/chromaway/core/postchain/-/tree/dev/postchain-gtv) module
-  version: "18"
+  version: "19"
 tags:
   - name: block
     description: Fetch block(s)
@@ -351,6 +351,13 @@ paths:
           schema:
             type: boolean
             default: true
+        - name: decode-tx
+          description: Decode transaction to JSON
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
       responses:
         '200':
           description: |
@@ -359,7 +366,8 @@ paths:
             - `witness` - Hex encoded raw witness data.
             - `txRID` - Unique identifier of the transaction.
             - `txHash` - Transaction hash.
-            - `txData` - Transaction data.
+            - `txData` - Hex encoded raw transaction data.
+            - `tx` - Decoded transaction.
             - `blockHeader` - Hex encoded raw block header data.
             - `witnesses` - Public key of nodes who are witnesses to this block.
             - `witnessSignatures` - Signatures of nodes who are witnesses to this block.
@@ -1883,6 +1891,41 @@ components:
           $ref: "#/components/schemas/hash"
         txData:
           $ref: "#/components/schemas/hex"
+        tx:
+          $ref: "#/components/schemas/decodedTx"
+    decodedTx:
+      type: object
+      required:
+        - operations
+        - signers
+      properties:
+        operations:
+          type: array
+          items:
+            $ref: "#/components/schemas/decodedOperation"
+        signers:
+          type: array
+          items:
+            $ref: "#/components/schemas/hex"
+    decodedOperation:
+      type: object
+      required:
+        - name
+        - args
+      properties:
+        name:
+          type: string
+        args:
+          type: array
+          items:
+            $ref: "#/components/schemas/gtv"
+    gtv:
+      oneOf:
+        - type: integer
+        - type: string
+        - type: object
+        - type: array
+        - type: null
     confirmationProof:
       type: object
       required:
