@@ -30,6 +30,8 @@ import net.postchain.api.rest.configurationInBody
 import net.postchain.api.rest.configurationOutBody
 import net.postchain.api.rest.containerQuery
 import net.postchain.api.rest.controller.http4k.NettyWithCustomWorkerGroup
+import net.postchain.api.rest.decodeTxQuery
+import net.postchain.api.rest.decodedTxInfoExtBody
 import net.postchain.api.rest.emptyBody
 import net.postchain.api.rest.errorBody
 import net.postchain.api.rest.excludeEmptyQuery
@@ -40,6 +42,7 @@ import net.postchain.api.rest.highestBlockHeightAnchoringCheckBody
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.api.rest.infraVersionBody
 import net.postchain.api.rest.limitQuery
+import net.postchain.api.rest.model.DecodedTransactionInfoExt
 import net.postchain.api.rest.model.TxRid
 import net.postchain.api.rest.nodeStatusBody
 import net.postchain.api.rest.nodeStatusesBody
@@ -193,7 +196,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 18
+        const val REST_API_VERSION = 19
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -291,15 +294,13 @@ class RestApi(
     private val externalRoutingFilter = Filter { next ->
         { request ->
             if (logger.isDebugEnabled) {
-                val requestInfo = "[${request.source?.address ?: "(unknown)"}] ${request.method} ${request.uri.path}"
+                logger.debug("""[${request.source?.address ?: "(unknown)"}] ${request.method} ${request.uri.path}${if (request.uri.query.isBlank()) "" else "?${request.uri.query}"}
+                    |${request.headers.joinToString("\n") { "${it.first}: ${it.second}" }}""".trimMargin())
                 // Assuming the content-type is correctly set, we will avoid logging binary request bodies
                 if (Header.CONTENT_TYPE(request)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
                         && (request.body.length ?: 0) > 0
                         && request.header("content-encoding") != "gzip") {
-                    logger.debug { "$requestInfo with body: ${String(request.body.payload.array())}" }
-                } else {
-                    val queryString = request.uri.query
-                    logger.debug("$requestInfo${if (queryString.isBlank()) "" else "?$queryString"}")
+                    logger.debug { "Request body: ${String(request.body.payload.array())}" }
                 }
             }
             val response = when (val chainModel = chainModelKey(request)) {
@@ -314,6 +315,7 @@ class RestApi(
                 }
             }
             if (logger.isDebugEnabled) {
+                logger.debug("${response.status.toString()}\n${response.headers.joinToString("\n") { "${it.first}: ${it.second}" }}")
                 // Assuming the content-type is correctly set, we will avoid logging binary response bodies
                 if (Header.CONTENT_TYPE(response)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
                         && (response.body.length ?: 0) > 0
@@ -449,10 +451,18 @@ class RestApi(
 
     private fun getTransactionInfo(request: Request): Response {
         val txData = txDataQuery(request) != false
+        val decodeTx = decodeTxQuery(request) == true
+        if (decodeTx && !txData) {
+            throw IllegalArgumentException("Cannot decode transaction without transaction data")
+        }
         val txInfo = runTxActionOnModel(model(request), txRidPath(request)) { model, txRID ->
             model.getTransactionInfo(txRID, includeTxData = txData)
         }
-        return Response(OK).with(txInfoExtBody of txInfo)
+        return if (decodeTx) {
+            Response(OK).with(decodedTxInfoExtBody of DecodedTransactionInfoExt.build(txInfo))
+        } else {
+            Response(OK).with(txInfoExtBody of txInfo)
+        }
     }
 
     private fun getTransactionsInfo(request: Request): Response {
