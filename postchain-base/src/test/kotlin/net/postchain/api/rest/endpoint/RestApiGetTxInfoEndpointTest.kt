@@ -24,6 +24,7 @@ import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.Gtx
 import net.postchain.gtx.GtxBody
 import net.postchain.gtx.GtxOp
@@ -50,8 +51,8 @@ class RestApiGetTxInfoEndpointTest {
     private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
     private val witness1 = "0320F0B9E7ECF1A1568C31644B04D37ADC05327F996B9F48220E301DC2FEE6F8FF".hexStringToByteArray()
     private val witness2 = "0307C88BF37C528B14AF95E421749E72F6DA88790BCE74890BDF780D854D063C40".hexStringToByteArray()
-    private val signature1 = ByteArray(16) { 1 }
-    private val signature2 = ByteArray(16) { 2 }
+    private val signature1 = ByteArray(32) { 1 }
+    private val signature2 = ByteArray(32) { 2 }
     private val witness = BaseBlockWitness.fromSignatures(arrayOf(
             Signature(witness1, signature1),
             Signature(witness2, signature2)
@@ -153,9 +154,9 @@ class RestApiGetTxInfoEndpointTest {
         val txRID = gtxBody.calculateTxRid(hashCalculator)
         val sig1 = cryptoSystem.buildSigMaker(KeyPairHelper.keyPair(1)).signDigest(txRID)
         val sig2 = cryptoSystem.buildSigMaker(KeyPairHelper.keyPair(2)).signDigest(txRID)
-        val tx = Gtx(gtxBody, listOf(sig1.data, sig2.data)).encode()
+        val gtx = Gtx(gtxBody, listOf(sig1.data, sig2.data))
         val response = TransactionInfoExt(BlockRid.buildRepeat(4).data, 3, "guess what? Another header".toByteArray(),
-                witness = witness.getRawData(), 1574849940, txRID, "tx2 - 002".toByteArray().slice(IntRange(0, 4)).toByteArray(), tx)
+                witness = witness.getRawData(), 1574849940, txRID, gtx.toGtv().merkleHash(hashCalculator), gtx.encode())
 
         whenever(
                 model.getTransactionInfo(TxRid(txRID), true)
