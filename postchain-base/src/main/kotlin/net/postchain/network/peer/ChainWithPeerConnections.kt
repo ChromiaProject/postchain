@@ -36,7 +36,7 @@ class ChainWithPeerConnections(
         return peerConfig.commConfiguration.networkNodes.isNodeBehavingWell(nodeId, System.currentTimeMillis())
     }
 
-    override fun getAllNodes() = connections.keys.toList()
+    override fun getAllNodes() = ArrayList(connections.keys)
 
     // ----------
     // Connections
@@ -44,7 +44,7 @@ class ChainWithPeerConnections(
     override fun isConnected(nodeId: NodeRid) = connections.containsKey(nodeId)
     override fun getConnection(nodeId: NodeRid) = connections[nodeId]
     override fun getAllConnections(): List<PeerConnection> {
-        return connections.values.toList()
+        return ArrayList(connections.values)
     }
 
     override fun setConnection(nodeId: NodeRid, conn: PeerConnection) {
