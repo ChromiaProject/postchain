@@ -13,6 +13,13 @@
     <name>Postchain GTV</name>
     <description>Defines a common data transfer format GTV which adheres to ASN.1 format</description>
 
+    <properties>
+        <maven.compiler.release>17</maven.compiler.release>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <kotlin.compiler.jvmTarget>17</kotlin.compiler.jvmTarget>
+    </properties>
+
     <dependencies>
         <dependency>
             <groupId>net.postchain</groupId>
@@ -185,6 +192,30 @@
                 <configuration>
                     <skip>false</skip>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>animal-sniffer-maven-plugin</artifactId>
+                <version>1.24</version>
+                <configuration>
+                    <signature>
+                        <groupId>org.codehaus.mojo.signature</groupId>
+                        <artifactId>java18</artifactId> <!-- Java 1.8 -->
+                        <version>1.0</version>
+                    </signature>
+                    <ignores>
+                        <ignore>java.lang.Class</ignore> <!-- Class.getPackageName() in Java 17 -->
+                    </ignores>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>check-java-api</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
