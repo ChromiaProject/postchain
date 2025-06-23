@@ -315,7 +315,7 @@ object ImporterExporter : KLogging() {
                         val rawConfigData = DatabaseAccess.of(ctx).getConfigurationData(ctx, nextConfigHeight)
                                 ?: throw UserMistake("Cannot load configuration for height $blockHeight")
                         configs[nextConfigHeight] = makeBlockchainConfiguration(rawConfigData, partialContext, blockSigMaker, ctx, cryptoSystem)
-                        logger.info("Building configuration ${configs[nextConfigHeight]?.configHash?.toHex()} for height $blockHeight")
+                        logger.info("Loading configuration ${configs[nextConfigHeight]?.configHash?.toHex()} for height $blockHeight")
                     }
 
                     if (numBlocks % logNBlocks == 0L || firstImportedBlock == -1L) {
