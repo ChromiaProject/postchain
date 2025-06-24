@@ -73,6 +73,7 @@ class ContainerManagedBlockchainProcessManager(
     private val runningInContainer = System.getenv("POSTCHAIN_RUNNING_IN_CONTAINER").toBoolean()
     private val blockchainReplicators: MutableMap<Long, BlockchainReplicator> = mutableMapOf()
     private val completedReplications: MutableMap<WrappedByteArray, Pair<Chain, Chain>> = mutableMapOf()
+    private var lastStorageCleanup: Long = System.currentTimeMillis()
 
     private val metrics = ContainerMetrics(this)
 
@@ -345,6 +346,38 @@ class ContainerManagedBlockchainProcessManager(
                         logger.error("Error when stopping container: $containerName", e)
                     }
                 }
+
+        if (isDataSourceInitialized() &&
+                System.currentTimeMillis() - lastStorageCleanup >= containerNodeConfig.storageCleanupIntervalMs) {
+            lastStorageCleanup = System.currentTimeMillis()
+            cleanupContainerStorage()
+        }
+    }
+
+    // Finds historical containers and removes their disk data
+    private fun cleanupContainerStorage() {
+        directoryDataSource.getNodeContainers()?.let { dcContainers ->
+            try {
+
+                getContainerIids() // All containers managed by this node
+                        .filter { !dcContainers.contains(it.key) } // Exclude current DC containers
+                        .map { ContainerName.create(appConfig.pubKey, it.key, it.value) }
+                        .filter { !postchainContainers.containsKey(it) } // Exclude containers not yet stopped
+                        .forEach {
+
+                            logger.info { "Removes storage for deleted container: $it" }
+
+                            try {
+                                fileSystem.removeRoot(it)
+                                removeContainerIid(it.directoryContainer)
+                            } catch (e: Exception) {
+                                logger.error(e) { "Error when removing container storage: $it: ${e.message}" }
+                            }
+                        }
+            } catch (e: Exception) {
+                logger.error(e) { "Error when cleaning up container storage: ${e.message}" }
+            }
+        }
     }
 
     private fun cleanUpBlockchainProcess(chainId: Long, psContainer: PostchainContainer, process: ContainerBlockchainProcess) {
@@ -369,7 +402,7 @@ class ContainerManagedBlockchainProcessManager(
         val brid = getBridByChainId(chainId)
         return directoryDataSource.getBlockchainContainersForNode(brid).take(2) // Support max 2 containers for now
                 .map { container ->
-                    val containerName = ContainerName.create(appConfig, container, getContainerIid(container))
+                    val containerName = ContainerName.create(appConfig.pubKey, container, getContainerIid(container))
                     chains.computeIfAbsent(chainId to containerName) {
                         Chain(chainId, brid, containerName)
                     }
@@ -382,6 +415,14 @@ class ContainerManagedBlockchainProcessManager(
 
     private fun getContainerIid(name: String): Int = blockBuilderStorage.withWriteConnection { ctx ->
         DatabaseAccess.of(ctx).getContainerIid(ctx, name) ?: DatabaseAccess.of(ctx).createContainer(ctx, name)
+    }
+
+    private fun getContainerIids(): Map<String, Int> = blockBuilderStorage.withReadConnection { ctx ->
+        DatabaseAccess.of(ctx).getContainerIids(ctx)
+    }
+
+    private fun removeContainerIid(name: String) = blockBuilderStorage.withWriteConnection { ctx ->
+        DatabaseAccess.of(ctx).removeContainerIid(ctx, name)
     }
 
     /**

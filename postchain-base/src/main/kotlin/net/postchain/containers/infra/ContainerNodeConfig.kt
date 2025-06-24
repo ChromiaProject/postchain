@@ -68,6 +68,8 @@ data class ContainerNodeConfig(
         val zfsPoolName: String,
         val zfsPoolInitScript: String?,
         val bindPgdataVolume: Boolean,
+        val storageCleanupIntervalMs: Long,
+
         val dockerLogConf: DockerLogConfig?,
         val containerIID: Int,
         val directoryContainer: String,
@@ -114,6 +116,7 @@ data class ContainerNodeConfig(
         const val KEY_ZFS_POOL_NAME = "zfs.pool-name"
         const val KEY_ZFS_POOL_INIT_SCRIPT = "zfs.pool-init-script"
         const val KEY_BIND_PGDATA_VOLUME = "bind-pgdata-volume"
+        const val KEY_STORAGE_CLEANUP_INTERVAL_MS = "storage-cleanup-interval-ms"
         const val KEY_REMOTE_DEBUG_ENABLED = "remote-debug-enabled"
         const val KEY_REMOTE_DEBUG_SUSPEND = "remote-debug-suspend"
         const val KEY_PROMETHEUS_PORT = "metrics.prometheus.port"
@@ -184,6 +187,7 @@ data class ContainerNodeConfig(
                         getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_NAME", KEY_ZFS_POOL_NAME, FileSystem.ZFS_POOL_NAME),
                         getEnvOrStringProperty("POSTCHAIN_ZFS_POOL_INIT_SCRIPT", KEY_ZFS_POOL_INIT_SCRIPT),
                         getEnvOrBooleanProperty("POSTCHAIN_BIND_PGDATA_VOLUME", KEY_BIND_PGDATA_VOLUME, true),
+                        getEnvOrLongProperty("POSTCHAIN_STORAGE_CLEANUP_INTERVAL_MS", KEY_STORAGE_CLEANUP_INTERVAL_MS, 60_000),
                         logConf,
                         System.getenv("POSTCHAIN_CONTAINER_ID")?.toInt() ?: -1,
                         System.getenv("POSTCHAIN_DIRECTORY_CONTAINER")?.toString() ?: "",

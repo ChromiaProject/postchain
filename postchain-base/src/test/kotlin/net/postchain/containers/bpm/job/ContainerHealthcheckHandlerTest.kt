@@ -45,7 +45,7 @@ class ContainerHealthcheckHandlerTest {
     }
     private val fileSystem: FileSystem = mock()
     private val psContainers = mutableMapOf<ContainerName, PostchainContainer>()
-    private val cname = ContainerName.create(appConfig, "directory-container", CONTAINER_IID)
+    private val cname = ContainerName.create(appConfig.pubKey, "directory-container", CONTAINER_IID)
     private val postchainContainers = { psContainers }
     private var removedBlockchainProcess: Pair<Long, PostchainContainer>? = null
     private var chainsRemoved = 0

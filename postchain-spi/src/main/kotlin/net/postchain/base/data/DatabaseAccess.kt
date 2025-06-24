@@ -75,6 +75,8 @@ interface DatabaseAccess {
      */
     fun createContainer(ctx: AppContext, name: String): Int
     fun getContainerIid(ctx: AppContext, name: String): Int?
+    fun getContainerIids(ctx: AppContext): Map<String, Int>
+    fun removeContainerIid(ctx: AppContext, name: String)
 
     fun initializeAppWithCurrentDbVersion(connection: Connection, allowUpgrade: Boolean = false)
     @Deprecated("Use safe version instead", ReplaceWith("initializeApp(connection, expectedDbVersion, false)"))

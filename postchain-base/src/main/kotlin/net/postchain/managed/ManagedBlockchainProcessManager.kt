@@ -523,4 +523,7 @@ open class ManagedBlockchainProcessManager(
     override fun getBlockchainState(chainId: Long, blockchainRid: BlockchainRid): BlockchainState =
             if (chainId == CHAIN0) BlockchainState.RUNNING else dataSource.getBlockchainState(blockchainRid)
 
+    protected fun isDataSourceInitialized(): Boolean {
+        return ::dataSource.isInitialized
+    }
 }

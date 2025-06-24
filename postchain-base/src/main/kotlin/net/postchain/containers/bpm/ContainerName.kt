@@ -1,7 +1,5 @@
 package net.postchain.containers.bpm
 
-import net.postchain.config.app.AppConfig
-
 data class ContainerName private constructor(
         val directoryContainer: String,
         val dockerContainer: String,
@@ -10,8 +8,12 @@ data class ContainerName private constructor(
 
     companion object {
 
-        fun create(appConfig: AppConfig, directoryContainer: String, containerIID: Int): ContainerName {
-            val dockerContainer = "${appConfig.pubKey.take(8)}-${directoryContainer}-${containerIID}"
+        fun containerName(pubKey: String, directoryContainer: String, containerIID: Int): String {
+            return "${pubKey.take(8)}-${directoryContainer}-${containerIID}"
+        }
+
+        fun create(pubKey: String, directoryContainer: String, containerIID: Int): ContainerName {
+            val dockerContainer = containerName(pubKey, directoryContainer, containerIID)
             return ContainerName(directoryContainer, dockerContainer, containerIID)
         }
     }

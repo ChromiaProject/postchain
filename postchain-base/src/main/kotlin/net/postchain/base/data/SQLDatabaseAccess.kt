@@ -916,6 +916,17 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         return queryRunner.query(ctx.conn, sql, nullableIntRes, name)
     }
 
+    override fun getContainerIids(ctx: AppContext): Map<String, Int> {
+        val sql = "SELECT name, container_iid FROM ${tableContainers()}"
+        val result = queryRunner.query(ctx.conn, sql, mapListHandler)
+        return result.associate { it["name"] as String to it["container_iid"] as Int }
+    }
+
+    override fun removeContainerIid(ctx: AppContext, name: String) {
+        val sql = "DELETE FROM ${tableContainers()} WHERE name = ?"
+        queryRunner.update(ctx.conn, sql, name)
+    }
+
     override fun initializeBlockchain(ctx: EContext, blockchainRid: BlockchainRid) {
         val initialized = getBlockchainRid(ctx) != null
 
