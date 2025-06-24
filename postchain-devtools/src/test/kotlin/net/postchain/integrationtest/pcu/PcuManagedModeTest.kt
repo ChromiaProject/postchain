@@ -18,6 +18,7 @@ import net.postchain.devtools.getModules
 import net.postchain.devtools.mminfra.TestManagedEBFTInfrastructureFactory
 import net.postchain.devtools.utils.ChainUtil
 import net.postchain.devtools.utils.configuration.NodeSetup
+import net.postchain.ebft.worker.ValidatorBlockchainProcess
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
@@ -265,8 +266,8 @@ class PcuManagedModeTest : ManagedModeTest() {
 
         // Add incompatible config only to node0 to make it early adopter
         val reconfigHeight = 2L
-        val configWithTestModule = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/pcu/blockchain_config_3.xml")!!.readText())
-        addDappBlockchainConfiguration(chain, GtvEncoder.encodeGtv(configWithTestModule), reconfigHeight, true, mapOf(0 to mockDataSources[0]!!))
+        val configWithoutTestModule = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/pcu/blockchain_config_3.xml")!!.readText())
+        addDappBlockchainConfiguration(chain, GtvEncoder.encodeGtv(configWithoutTestModule), reconfigHeight, true, mapOf(0 to mockDataSources[0]!!))
 
         buildBlockNoWait(nodes, chain, 1)
 
@@ -296,6 +297,103 @@ class PcuManagedModeTest : ManagedModeTest() {
             }
             // Assert that node0 is still trying to apply the pending config on next block
             assertFalse(nodes[0].getModules(chain).any { module -> module is GTXTestModule })
+        }
+    }
+
+    @Test
+    fun earlyAdopterCanReleasePendingConfigBeforeGoingIntoFastsync() {
+        startManagedSystem(4, 0, TestManagedEBFTInfrastructureFactory::class.qualifiedName!!)
+
+        val chainSigners = setOf(0, 1, 2, 3)
+        val initialConfig = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/pcu/blockchain_config_with_test_module_4.xml")!!.readText())
+        val chain = startNewBlockchain(chainSigners, setOf(), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(initialConfig), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
+        buildBlock(chain, 0)
+
+        val node0 = nodes[0]
+        val otherNodes = nodes.subList(1, nodes.size)
+
+        // Add pending config only to node0 to make it early adopter
+        val reconfigHeight = 2L
+        val configWithoutTestModule = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/pcu/blockchain_config_4.xml")!!.readText())
+        addDappBlockchainConfiguration(chain, GtvEncoder.encodeGtv(configWithoutTestModule), reconfigHeight, true, mapOf(0 to mockDataSources[0]!!))
+
+        buildBlockNoWait(nodes, chain, 1)
+
+        // asserting that pending config was loaded on node0
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            assertFalse(node0.getModules(chain).any { it is GTXTestModule })
+        }
+
+        val node0BcProcess = (node0.retrieveBlockchain(chain)!! as ValidatorBlockchainProcess)
+        // Very ugly way to pause processing on node 0
+        synchronized(node0BcProcess.statusManager) {
+            // Let the other nodes rush ahead enough blocks so we can guarantee node 0 will switch into fast synch
+            buildBlock(otherNodes, chain, 4)
+            node0BcProcess.workerContext.communicationManager.getPackets() // Drop all messages that have been sent
+            // Assert node0 is still holding on to config and is still on height 1
+            assertFalse(node0.getModules(chain).any { it is GTXTestModule })
+            assertEquals(1, node0.blockQueries(chain).getLastBlockHeight().get())
+        }
+        // See that node0 can sync up by dropping the pending config before syncing
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            assertTrue(node0.getModules(chain).any { it is GTXTestModule }) // Assert config is dropped
+
+            val blockQueries = node0.blockQueries(chain)
+            assertNotNull(blockQueries)
+            assertEquals(4, blockQueries.getLastBlockHeight().get())
+        }
+    }
+
+    @Test
+    fun earlyAdopterCanReleaseFaultyConfigBeforeGoingIntoFastsync() {
+        startManagedSystem(4, 0, TestManagedEBFTInfrastructureFactory::class.qualifiedName!!)
+
+        val chainSigners = setOf(0, 1, 2, 3)
+        val initialConfig = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/pcu/blockchain_config_with_test_module_4.xml")!!.readText())
+        val chain = startNewBlockchain(chainSigners, setOf(), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(initialConfig), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
+        buildBlock(chain, 0)
+
+        val node0 = nodes[0]
+        val otherNodes = nodes.subList(1, nodes.size)
+
+        // Add pending config to all nodes
+        val reconfigHeight = 2L
+        val configWithoutTestModule = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/pcu/blockchain_config_4.xml")!!.readText())
+        addDappBlockchainConfiguration(chain, GtvEncoder.encodeGtv(configWithoutTestModule), reconfigHeight, true)
+
+        buildBlockNoWait(nodes, chain, 1)
+
+        // asserting that pending config was loaded on all nodes
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            nodes.forEach { node ->
+                assertFalse(node.getModules(chain).any { it is GTXTestModule })
+            }
+        }
+
+        val node0BcProcess = (node0.retrieveBlockchain(chain)!! as ValidatorBlockchainProcess)
+        // Very ugly way to pause processing on node 0
+        synchronized(node0BcProcess.statusManager) {
+            // Now we simulate configuration being marked as faulty
+            markPendingConfigurationAsFaulty(chain, reconfigHeight)
+            // Make sure the other nodes drop it
+            otherNodes.forEach { node ->
+                (node.retrieveBlockchain(chain)!! as ValidatorBlockchainProcess).workerContext.restartNotifier.notifyRestart(null)
+            }
+
+            // Let the other nodes rush ahead enough blocks so we can guarantee node 0 will switch into fast synch
+            buildBlock(otherNodes, chain, 4)
+            node0BcProcess.workerContext.communicationManager.getPackets() // Drop all messages that have been sent to node0
+            // Assert node0 is still holding on to config and is still on height 1
+            assertFalse(node0.getModules(chain).any { it is GTXTestModule })
+            assertEquals(1, node0.blockQueries(chain).getLastBlockHeight().get())
+        }
+        // See that node0 can sync up by dropping the faulty config
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            assertTrue(node0.getModules(chain).any { it is GTXTestModule }) // Assert config is dropped
+
+            val blockQueries = node0.blockQueries(chain)
+            assertNotNull(blockQueries)
+            assertEquals(4, blockQueries.getLastBlockHeight().get())
         }
     }
 

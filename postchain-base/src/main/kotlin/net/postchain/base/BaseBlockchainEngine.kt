@@ -212,7 +212,9 @@ open class BaseBlockchainEngine(
             isSyncing: Boolean,
             transactionsDecoder: (List<ByteArray>) -> List<Transaction>
     ): Pair<ManagedBlockBuilder, Exception?> {
-        if (hasMismatchingConfiguration(block.header)) throw ConfigurationMismatchException("")
+        if (hasMismatchingConfiguration(block.header)) {
+            throw ConfigurationMismatchException("Block configuration hash ${block.header.getConfigHash()?.toHex()} does not match currently loaded configuration hash ${blockchainConfiguration.configHash.toHex()}")
+        }
 
         return withDBConnection { ctx ->
             val grossStart = nanoTime()
