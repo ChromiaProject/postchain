@@ -61,7 +61,7 @@ internal class ContainerHandlerIT {
         sut = ContainerHandler(ContainerEnvironment.dockerClient, appConfig, fileSystem)
 
         sut.pullImage(containerNodeConfig.containerImage)
-        val containerName = ContainerName.create(appConfig, "the_container", 1)
+        val containerName = ContainerName.create(appConfig.pubKey, "the_container", 1)
         val resourceLimits = ContainerResourceLimits.default()
         fileSystem.createContainerRoot(containerName, resourceLimits)
         containerId = sut.createDockerContainer(

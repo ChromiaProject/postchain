@@ -14,6 +14,12 @@ interface DirectoryDataSource : ManagedNodeDataSource {
     fun getContainersToRun(): List<String>?
 
     /**
+     * Get all containers registered in directory chain.
+     * @return A list of container names, or null if the query failed.
+     */
+    fun getAllContainers(): List<String>?
+
+    /**
      * Returns container blockchain is running in.
      * NM API Version: 3
      */

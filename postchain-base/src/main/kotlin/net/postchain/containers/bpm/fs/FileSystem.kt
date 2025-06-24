@@ -82,5 +82,15 @@ interface FileSystem {
         return hostRootOf(containerName).resolve(PGRUN_DIR)
     }
 
+    /**
+     * Remove recursively a root.
+     */
+    fun removeRoot(containerName: ContainerName) {
+
+        logger.info("Removing $containerName container storage located at: ${rootOf(containerName)}")
+
+        rootOf(containerName).toFile().deleteRecursively()
+    }
+
     fun supportsQuotas() = false
 }
