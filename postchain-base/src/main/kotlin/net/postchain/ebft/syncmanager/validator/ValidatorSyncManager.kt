@@ -5,9 +5,11 @@ package net.postchain.ebft.syncmanager.validator
 import io.micrometer.core.instrument.Counter
 import mu.KLogging
 import mu.withLoggingContext
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.withReadConnection
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
+import net.postchain.common.wrap
 import net.postchain.concurrent.util.get
 import net.postchain.concurrent.util.whenCompleteUnwrapped
 import net.postchain.config.blockchain.BlockchainConfigurationProvider
@@ -52,6 +54,7 @@ import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.getBFTRequiredSignatureCount
+import net.postchain.gtv.GtvDecoder
 import net.postchain.managed.CHAIN0
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import net.postchain.metrics.SyncMetrics
@@ -516,7 +519,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         if (useFastSyncAlgorithm) {
             logger.debug("Using fast sync") // Doesn't happen very often
             try {
-                if (hasRunInitialSync && unloadNonAppliedPendingConfiguration()) return
+                if (hasRunInitialSync && unloadNonAppliedConfiguration()) return
             } catch (e: Exception) {
                 logger.error("Couldn't check for pending config updates, ignoring and continuing", e)
                 return // We will retry again the next update loop
@@ -586,20 +589,24 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     }
 
     /**
-     * Unloads any non-applied pending configuration before entering fast-sync to ensure we are not early adopters
+     * Unloads any non-applied pending or reported faulty configuration before entering fast-sync to ensure we are not early adopters
+     * or holding on to a faulty configuration.
      *
      * @return true if any configuration was unloaded
      */
-    private fun unloadNonAppliedPendingConfiguration(): Boolean {
+    private fun unloadNonAppliedConfiguration(): Boolean {
         val bcConfigProvider = workerContext.blockchainConfigurationProvider as? ManagedBlockchainConfigurationProvider
         if (bcConfigProvider != null && blockchainConfiguration.chainID != CHAIN0) {
-            val isMyConfigPending = withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
-                bcConfigProvider.isConfigPending(
-                        ctx, blockchainConfiguration.blockchainRid, statusManager.myStatus.height, blockchainConfiguration.configHash
-                )
+            val isCurrentConfigNotApplied = withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
+                val latestAppliedConfigHash = bcConfigProvider.getActiveBlockConfiguration(ctx, blockchainConfiguration.chainID, null)?.let {
+                    BlockchainConfigurationData.merkleHash(GtvDecoder.decodeGtv(it)).wrap()
+                }
+
+                blockchainConfiguration.configHash.wrap() != latestAppliedConfigHash
             }
 
-            if (isMyConfigPending) {
+            if (isCurrentConfigNotApplied) {
+                logger.info("Detected non-applied configuration before going into fast sync, unloading it")
                 workerContext.restartNotifier.notifyRestart(null)
                 return true
             }
