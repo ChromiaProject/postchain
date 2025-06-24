@@ -87,7 +87,7 @@ interface FileSystem {
      */
     fun removeRoot(containerName: ContainerName) {
 
-        logger.info("Removes $containerName container storage located at: ${rootOf(containerName)}")
+        logger.info("Removing $containerName container storage located at: ${rootOf(containerName)}")
 
         rootOf(containerName).toFile().deleteRecursively()
     }

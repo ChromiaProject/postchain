@@ -362,7 +362,7 @@ class ContainerManagedBlockchainProcessManager(
                 getContainerIids() // All containers managed by this node
                         .filter { !dcContainers.contains(it.key) } // Exclude current DC containers
                         .map { ContainerName.create(appConfig.pubKey, it.key, it.value) }
-                        .filter { !postchainContainers.containsKey(it) } // Exclude containers not yet stopped
+                        .filter { !postchainContainers.containsKey(it) } // Exclude containers that are still running
                         .forEach {
 
                             logger.info { "Removes storage for deleted container: $it" }
