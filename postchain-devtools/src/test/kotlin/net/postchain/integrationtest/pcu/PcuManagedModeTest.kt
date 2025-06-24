@@ -379,6 +379,12 @@ class PcuManagedModeTest : ManagedModeTest() {
             otherNodes.forEach { node ->
                 (node.retrieveBlockchain(chain)!! as ValidatorBlockchainProcess).workerContext.restartNotifier.notifyRestart(null)
             }
+            // Await restart with new config
+            Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+                otherNodes.forEach { node ->
+                    assertTrue(node.getModules(chain).any { it is GTXTestModule })
+                }
+            }
 
             // Let the other nodes rush ahead enough blocks so we can guarantee node 0 will switch into fast synch
             buildBlock(otherNodes, chain, 4)
