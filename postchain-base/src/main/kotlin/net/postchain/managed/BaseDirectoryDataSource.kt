@@ -28,12 +28,12 @@ open class BaseDirectoryDataSource(
         listOf()
     }
 
-    override fun getNodeContainers(): List<String>? {
+    override fun getAllContainers(): List<String>? {
         if (nmApiVersion >= 24) {
             try {
                 val res = query(
-                        "nm_get_all_node_containers",
-                        buildArgs("pubkey" to gtv(appConfig.pubKeyByteArray))
+                        "nm_get_all_containers",
+                        buildArgs()
                 )
                 return res.asArray().map { it.asString() }
             } catch (_: UserMistake) { // this can fail if we are the genesis node before having initialized the network, since we are not registered as node yet

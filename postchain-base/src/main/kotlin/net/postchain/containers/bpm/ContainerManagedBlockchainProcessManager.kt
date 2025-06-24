@@ -356,7 +356,7 @@ class ContainerManagedBlockchainProcessManager(
 
     // Finds historical containers and removes their disk data
     private fun cleanupContainerStorage() {
-        directoryDataSource.getNodeContainers()?.let { dcContainers ->
+        directoryDataSource.getAllContainers()?.let { dcContainers ->
             try {
 
                 getContainerIids() // All containers managed by this node
