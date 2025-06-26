@@ -529,10 +529,11 @@ paths:
       description: |
         Fetch the status of a transaction on the specified blockchain.
 
-        There are three transaction statuses:
+        There are four transaction statuses:
+          - `Unknown` - Transaction status cannot be fetched from the node, e.g., if the transaction was rejected or has not yet been synced. 
           - `Waiting` - Transaction is waiting to be included in the block.
           - `Confirmed` - Transaction is included in the block.
-          - `Rejected` - Transaction has been rejected
+          - `Rejected` - Transaction has been rejected.
 
         **Note**: The node stores up to 1000 rejected transaction statuses per chain in memory. Once this limit is reached, the oldest entry is discarded to make room for a new one.  
         Read replicas do not support this endpoint; use `GET /transactions/{blockchainRid}/{txRid}?tx-data=false` instead.
