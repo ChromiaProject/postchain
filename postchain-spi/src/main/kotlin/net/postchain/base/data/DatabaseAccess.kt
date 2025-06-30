@@ -52,6 +52,12 @@ interface DatabaseAccess {
             val stateN: Long,
             val data: ByteArray)
 
+    class StateData(
+            val blockHeight: Long,
+            val stateN: Long,
+            val data: ByteArray
+    )
+
     class BlockWithTransactions(
             val blockHeight: Long,
             val blockHeader: ByteArray,
@@ -169,7 +175,9 @@ interface DatabaseAccess {
     fun getEventsAboveHeight(ctx: EContext, prefix: String, blockHeight: Long): List<EventInfo>
     fun pruneEvents(ctx: EContext, prefix: String, heightMustBeHigherThan: Long)
     fun insertState(ctx: EContext, prefix: String, height: Long, stateN: Long, data: ByteArray)
+    @Deprecated("Use getState()", ReplaceWith("getState(ctx, prefix, height, stateN)"))
     fun getAccountState(ctx: EContext, prefix: String, height: Long, stateN: Long): AccountState?
+    fun getState(ctx: EContext, prefix: String, height: Long, stateN: Long): StateData?
     fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, heightMustBeHigherThan: Long)
     fun safePruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, nextSnapshotHeight: Long)
     fun insertPage(ctx: EContext, pageStoreName: String, page: Page)
@@ -209,6 +217,11 @@ interface DatabaseAccess {
     fun createPageTable(ctx: EContext, prefix: String)
     fun createStateLeafTable(ctx: EContext, prefix: String)
     fun createStateLeafTableIndex(ctx: EContext, prefix: String, index: Int)
+
+    fun getOrGenerateSnapshotContextId(ctx: EContext, moduleName: String): Long
+    fun getSnapshotContextId(ctx: EContext, moduleName: String): Long
+    fun getSnapshotModuleContextIds(ctx: EContext): List<Long>
+    fun getSnapshotContextModule(ctx: EContext, contextId: Long): String
 
     fun getDatabaseServerVersion(connection: Connection): String
 

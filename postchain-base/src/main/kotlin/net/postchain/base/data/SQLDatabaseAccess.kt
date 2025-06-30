@@ -63,6 +63,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     internal fun tableConfigurations(ctx: EContext): String = tableName(ctx, "configurations")
     protected fun tableConfigurations(chainId: Long): String = tableName(chainId, "configurations")
     protected fun tableFaultyConfiguration(chainId: Long): String = tableName(chainId, "sys.faulty_configuration")
+    protected fun tableSnapshotContexts(): String = "\"sys.snapshot_contexts\""
     private fun tableFaultyConfiguration(ctx: EContext): String = tableFaultyConfiguration(ctx.chainID)
     internal fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableTransactions(chainId: Long): String = tableName(chainId, "transactions")
@@ -122,6 +123,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdGetAllBlockchainTables(chainId: Long): String
     protected abstract fun cmdGetAllBlockchainFunctions(chainId: Long): String
 
+    protected abstract fun cmdCreateTableSnapshotContexts(): String
+
     // Tables not part of the batch creation run
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
     protected abstract fun cmdCreateTableState(ctx: EContext, prefix: String): String
@@ -140,6 +143,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     var queryRunner = QueryRunner()
     private val intRes = ScalarHandler<Int>()
     val longRes = ScalarHandler<Long>()
+    private val stringRes = ScalarHandler<String>()
     private val nullableByteArrayRes = ScalarHandler<ByteArray?>()
     private val nullableIntRes = ScalarHandler<Int?>()
     private val nullableLongRes = ScalarHandler<Long?>()
@@ -509,14 +513,23 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
-    override fun getAccountState(ctx: EContext, prefix: String, height: Long, stateN: Long): DatabaseAccess.AccountState? {
+    @Deprecated("Use getState()", replaceWith = ReplaceWith("getState(ctx, prefix, height, stateN)"))
+    override fun getAccountState(ctx: EContext, prefix: String, height: Long, stateN: Long) = getState(ctx, prefix, height, stateN)?.let {
+        DatabaseAccess.AccountState(
+                it.blockHeight,
+                it.stateN,
+                it.data
+        )
+    }
+
+    override fun getState(ctx: EContext, prefix: String, height: Long, stateN: Long): DatabaseAccess.StateData? {
         val sql = """SELECT block_height, state_n, data FROM ${tableStateLeafs(ctx, prefix)} 
             WHERE block_height <= ? AND state_n = ? 
             ORDER BY state_iid DESC LIMIT 1"""
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, height, stateN)
         if (rows.isEmpty()) return null
         val data = rows.first()
-        return DatabaseAccess.AccountState(
+        return DatabaseAccess.StateData(
                 data["block_height"] as Long,
                 data["state_n"] as Long,
                 data["data"] as ByteArray
@@ -653,7 +666,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun initializeApp(connection: Connection, expectedDbVersion: Int, allowUpgrade: Boolean) {
-        if (expectedDbVersion !in 1..12) {
+        if (expectedDbVersion !in 1..13) {
             throw UserMistake("Unsupported DB version $expectedDbVersion")
         }
 
@@ -738,6 +751,11 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 version12(connection)
             }
 
+            if (version < 13 && expectedDbVersion >= 13) {
+                logger.info("Upgrading to version 13")
+                version13(connection)
+            }
+
             if (expectedDbVersion > version) {
                 queryRunner.update(connection, "UPDATE ${tableMeta()} set value = ? WHERE key = '$TABLE_META_KEY_VERSION'", expectedDbVersion)
                 logger.info("Database version has been updated to version: $expectedDbVersion")
@@ -798,6 +816,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
             if (expectedDbVersion >= 12) {
                 version12(connection)
+            }
+
+            if (expectedDbVersion >= 13) {
+                version13(connection)
             }
         }
     }
@@ -901,6 +923,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 .forEach { chainId ->
                     queryRunner.update(connection, cmdAddHashVersionToConfigTable(chainId))
                 }
+    }
+
+    private fun version13(connection: Connection) {
+        queryRunner.update(connection, cmdCreateTableSnapshotContexts())
     }
 
     protected fun parseBlockchainConfiguration(configurationData: ByteArray): BlockchainConfigurationData =
@@ -1646,5 +1672,30 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 }
             }
         }
+    }
+
+
+    override fun getOrGenerateSnapshotContextId(ctx: EContext, moduleName: String): Long {
+        // Do an insert or simply return context id if exists
+        val sql = "INSERT INTO ${tableSnapshotContexts()} (context_name)" +
+                " VALUES (?)" +
+                " ON CONFLICT (context_name) DO UPDATE SET context_name = EXCLUDED.context_name" +
+                " RETURNING context_id"
+        return queryRunner.query(ctx.conn, sql, longRes, moduleName).toLong()
+    }
+
+    override fun getSnapshotContextId(ctx: EContext, moduleName: String): Long {
+        val sql = "SELECT context_id FROM ${tableSnapshotContexts()} WHERE context_name = ?"
+        return queryRunner.query(ctx.conn, sql, longRes, moduleName).toLong()
+    }
+
+    override fun getSnapshotModuleContextIds(ctx: EContext): List<Long> {
+        val sql = "SELECT context_id FROM ${tableSnapshotContexts()}"
+        return queryRunner.query(ctx.conn, sql, ColumnListHandler())
+    }
+
+    override fun getSnapshotContextModule(ctx: EContext, contextId: Long): String {
+        val sql = "SELECT context_name FROM ${tableSnapshotContexts()} WHERE context_id = ?"
+        return queryRunner.query(ctx.conn, sql, stringRes, contextId)
     }
 }

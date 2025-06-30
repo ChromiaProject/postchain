@@ -219,6 +219,13 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
             "SELECT routine_name FROM information_schema.routines" +
                     " WHERE routine_schema = current_schema() AND routine_name LIKE 'c${chainId}.%'"
 
+    override fun cmdCreateTableSnapshotContexts(): String {
+        return "CREATE TABLE IF NOT EXISTS ${tableSnapshotContexts()} (" +
+                "context_name VARCHAR(255) NOT NULL PRIMARY KEY, " +
+                " context_id BIGINT GENERATED ALWAYS AS IDENTITY (START WITH 0 MINVALUE 0)" +
+                ")"
+    }
+
     override fun cmdCreateTablePeerInfos(): String {
         return "CREATE TABLE ${tablePeerinfos()} (" +
                 " $TABLE_PEERINFOS_FIELD_HOST text NOT NULL" +

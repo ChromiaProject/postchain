@@ -47,7 +47,7 @@ class SnapshotTest : SnapshotBaseIT() {
             states.forEach { (n, data) -> db.insertState(ctx, PREFIX, height1, n, data) }
             // Verify initial states
             states.forEach { (n, data) ->
-                val accountState = db.getAccountState(ctx, PREFIX, height1, n)
+                val accountState = db.getState(ctx, PREFIX, height1, n)
                 assertNotNull(accountState)
                 assertTrue(accountState!!.data.contentEquals(data))
             }
@@ -75,7 +75,7 @@ class SnapshotTest : SnapshotBaseIT() {
             states2.forEach { (n, data) -> db.insertState(ctx, PREFIX, height2, n, data) }
             // Verify updates
             states2.forEach { (n, data) ->
-                val accountState = db.getAccountState(ctx, PREFIX, height2, n)
+                val accountState = db.getState(ctx, PREFIX, height2, n)
                 assertNotNull(accountState)
                 assertTrue(accountState!!.data.contentEquals(data))
             }
@@ -98,7 +98,7 @@ class SnapshotTest : SnapshotBaseIT() {
             states3.forEach { (n, data) -> db.insertState(ctx, PREFIX, height3, n, data) }
             // Verify updates
             states3.forEach { (n, data) ->
-                val accountState = db.getAccountState(ctx, PREFIX, height3, n)
+                val accountState = db.getState(ctx, PREFIX, height3, n)
                 assertNotNull(accountState)
                 assertTrue(accountState!!.data.contentEquals(data))
             }
@@ -120,7 +120,7 @@ class SnapshotTest : SnapshotBaseIT() {
             states4.forEach { (n, data) -> db.insertState(ctx, PREFIX, height4, n, data) }
             // Verify updates
             states4.forEach { (n, data) ->
-                val accountState = db.getAccountState(ctx, PREFIX, height4, n)
+                val accountState = db.getState(ctx, PREFIX, height4, n)
                 assertNotNull(accountState)
                 assertTrue(accountState!!.data.contentEquals(data))
             }
@@ -141,7 +141,7 @@ class SnapshotTest : SnapshotBaseIT() {
             states5.forEach { (n, data) -> db.insertState(ctx, PREFIX, height5, n, data) }
             // Verify updates
             states5.forEach { (n, data) ->
-                val accountState = db.getAccountState(ctx, PREFIX, height5, n)
+                val accountState = db.getState(ctx, PREFIX, height5, n)
                 assertNotNull(accountState)
                 assertTrue(accountState!!.data.contentEquals(data))
             }

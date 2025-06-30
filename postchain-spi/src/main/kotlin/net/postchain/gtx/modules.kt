@@ -6,6 +6,7 @@ import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.core.BlockEContext
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.EContext
 import net.postchain.core.Shutdownable
@@ -37,6 +38,10 @@ interface PostchainContextAware {
 
 fun interface TransactorMaker {
     fun makeTransactor(opData: ExtOpData): Transactor
+}
+
+fun interface SnapshotContext {
+    fun emitDatum(ctxt: BlockEContext, datumId: Long, datum: Gtv, isPermanent: Boolean)
 }
 
 interface OperationWrapper {
