@@ -409,12 +409,12 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData 
 	public final fun getMerkleHashVersion ()J
 	public final fun getRawConfig ()Lnet/postchain/gtv/Gtv;
 	public final fun getSigners ()Ljava/util/List;
+	public final fun getSnapshotsEnabled ()Z
 	public final fun getSynchronizationInfrastructure ()Ljava/lang/String;
 	public final fun getSynchronizationInfrastructureExtension ()Ljava/util/List;
 	public final fun getTxQueueRecheckInterval ()J
 	public final fun getTxQueueSize ()J
 	public fun hashCode ()I
-	public static final fun isSnapshotEnabled (Lnet/postchain/gtv/Gtv;)Z
 	public static final fun merkleHash (Lnet/postchain/gtv/Gtv;)[B
 	public static final fun merkleHashCalculator (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;
 	public static final fun merkleHashVersion (Lnet/postchain/gtv/Gtv;)J
@@ -423,7 +423,6 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData 
 
 public final class net/postchain/base/configuration/BlockchainConfigurationData$Companion {
 	public final fun fromRaw ([B)Lnet/postchain/base/configuration/BlockchainConfigurationData;
-	public final fun isSnapshotEnabled (Lnet/postchain/gtv/Gtv;)Z
 	public final fun merkleHash (Lnet/postchain/gtv/Gtv;)[B
 	public final fun merkleHashCalculator (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;
 	public final fun merkleHashVersion (Lnet/postchain/gtv/Gtv;)J

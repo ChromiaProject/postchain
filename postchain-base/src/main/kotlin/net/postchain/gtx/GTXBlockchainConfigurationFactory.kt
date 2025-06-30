@@ -70,7 +70,7 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
                 }
             }
 
-            return CompositeGTXModule(list.map(::makeModule).toTypedArray(), gtxConfig.allowOverrides)
+            return CompositeGTXModule(list.map(::makeModule).toTypedArray(), gtxConfig.allowOverrides, data.snapshotsEnabled)
         }
     }
 

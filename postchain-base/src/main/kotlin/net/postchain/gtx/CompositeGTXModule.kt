@@ -3,7 +3,6 @@ package net.postchain.gtx
 import mu.KLogging
 import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockBuilderExtension
-import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.snapshot.LeafStore
 import net.postchain.base.snapshot.RootSnapshotBlockBuilderExtension
@@ -21,7 +20,7 @@ import net.postchain.gtx.special.GTXSpecialTxExtension
 import java.security.MessageDigest
 import java.util.TreeMap
 
-class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean) : GTXModule, PostchainContextAware {
+class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean, val snapshotsEnabled: Boolean) : GTXModule, PostchainContextAware {
 
     lateinit var wrappingOpMap: Map<String, GTXModule>
     lateinit var opmap: Map<String, GTXModule>
@@ -29,7 +28,6 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
     lateinit var ops: Set<String>
     lateinit var _queries: Set<String>
     lateinit var _specialTxExtensions: List<GTXSpecialTxExtension>
-    var snapshotsEnabled = false
 
     companion object : KLogging()
 
@@ -107,12 +105,14 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         _queries = qmap.keys
         _specialTxExtensions = _stxs.toList()
 
-        DatabaseAccess.of(ctx).apply {
-            createPageTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_root_snapshot")
-            modules.filterIsInstance<SnapshotAware>().forEach {
-                val contextId = getOrGenerateSnapshotContextId(ctx, it::class.java.canonicalName)
-                createPageTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_${contextId}_snapshot")
-                createStateLeafTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_$contextId")
+        if (snapshotsEnabled) {
+            DatabaseAccess.of(ctx).apply {
+                createPageTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_root_snapshot")
+                modules.filterIsInstance<SnapshotAware>().forEach {
+                    val contextId = getOrGenerateSnapshotContextId(ctx, it::class.java.canonicalName)
+                    createPageTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_${contextId}_snapshot")
+                    createStateLeafTable(ctx,"${SNAPSHOT_TABLE_PREFIX}_$contextId")
+                }
             }
         }
     }
@@ -122,7 +122,6 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
                 .forEach { it.initializeContext(configuration, postchainContext) }
 
         // Initialize snapshot contexts
-        snapshotsEnabled = BlockchainConfigurationData.isSnapshotEnabled(configuration.rawConfig)
         if (snapshotsEnabled) {
             modules.filterIsInstance<SnapshotAware>()
                     .forEach { module -> module.initializeSnapshotContext({ ctx, datumId, datum, isPermanent ->
