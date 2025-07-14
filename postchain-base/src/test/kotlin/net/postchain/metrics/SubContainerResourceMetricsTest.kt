@@ -30,7 +30,7 @@ class SubContainerResourceMetricsTest {
     @Test
     fun `report and read all metrics`() {
 
-        val metrics = SubContainerResourceMetrics("container-1", true, Long.MAX_VALUE, 0) {
+        val metrics = SubContainerResourceMetrics("container-1", true, Long.MAX_VALUE, 0, 0) {
             ContainerResourceUsage(1, 2, 3.0, 4.0, 5, 6, 7.0)
         }
 
@@ -50,10 +50,10 @@ class SubContainerResourceMetricsTest {
     @Test
     fun `multiple container metrics`() {
 
-        val metrics1 = SubContainerResourceMetrics("container-1", true, Long.MAX_VALUE, 0) {
+        val metrics1 = SubContainerResourceMetrics("container-1", true, Long.MAX_VALUE, 0, 0) {
             ContainerResourceUsage(1)
         }
-        val metrics2 = SubContainerResourceMetrics("container-2", true, Long.MAX_VALUE, 0) {
+        val metrics2 = SubContainerResourceMetrics("container-2", true, Long.MAX_VALUE, 0, 0) {
             ContainerResourceUsage(2)
         }
 
@@ -70,7 +70,7 @@ class SubContainerResourceMetricsTest {
     @Test
     fun `no space metrics`() {
 
-        val metrics = SubContainerResourceMetrics("container-1", false, Long.MAX_VALUE, 0) {
+        val metrics = SubContainerResourceMetrics("container-1", false, Long.MAX_VALUE, 0, 0) {
             ContainerResourceUsage(memoryUsage = 1, spaceUsageMiB = 2)
         }
 

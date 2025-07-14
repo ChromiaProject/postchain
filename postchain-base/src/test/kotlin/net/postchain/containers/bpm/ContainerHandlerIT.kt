@@ -23,7 +23,9 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 import java.io.File
 import java.net.InetAddress
 import java.net.URI
@@ -57,6 +59,8 @@ internal class ContainerHandlerIT {
         val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
         ContainerEnvironment.init(appConfig)
         val fileSystem = LocalFileSystem(containerNodeConfig, DefaultCommandExecutor)
+        whenever(postchainContainerMock.containerName)
+                .doReturn(ContainerName.create(appConfig.pubKey, "docker-container-name", 20))
 
         sut = ContainerHandler(ContainerEnvironment.dockerClient, appConfig, fileSystem)
 

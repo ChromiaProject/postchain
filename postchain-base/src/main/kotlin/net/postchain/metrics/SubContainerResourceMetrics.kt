@@ -29,10 +29,13 @@ class SubContainerResourceMetrics(
         private val enableSpaceMetrics: Boolean,
         refreshInterval: Long,
         private val spaceRefreshInterval: Long,
+        initialDelay: Long = refreshInterval,
         private val getContainerResourceUsage: (includeSpaceUsage: Boolean) -> ContainerResourceUsage?
 ) : Closeable {
 
     companion object : KLogging() {
+
+        private val scheduledExecutorService = Executors.newScheduledThreadPool(1, Thread.ofVirtual().factory())
 
         /**
          * Get metric value for a specific container, or null.
@@ -63,14 +66,12 @@ class SubContainerResourceMetrics(
     private var metrics = mutableListOf<Meter>()
     private var lastResourceUsage: ContainerResourceUsage? = null
     private var lastSpaceCheckTime: Instant? = null
-    private val scheduledExecutorService = Executors.newScheduledThreadPool(100, Thread.ofVirtual().factory())
+    private val scheduledFuture = scheduledExecutorService.scheduleWithFixedDelay(this::updateMetrics, initialDelay, refreshInterval, TimeUnit.MILLISECONDS)
 
     init {
         metricDefinitions
                 .filter { enableSpaceMetrics || !it.isSpaceMetric }
                 .forEach(this::gaugeMetric)
-
-        scheduledExecutorService.scheduleWithFixedDelay(this::updateMetrics, 0, refreshInterval, TimeUnit.MILLISECONDS)
     }
 
     private fun updateMetrics() {
@@ -89,7 +90,7 @@ class SubContainerResourceMetrics(
 
             logger.debug { "Fetching resource usage for container $directoryContainer took ${System.currentTimeMillis() - start} ms, with space check: $includeSpaceUsage" }
         } catch (e: Exception) {
-            logger.error { "Failed to update container resource metrics for container $directoryContainer: ${e.message}" }
+            logger.error(e) { "Failed to update container resource metrics for container $directoryContainer: ${e.message}" }
         }
     }
 
@@ -118,7 +119,7 @@ class SubContainerResourceMetrics(
     }
 
     override fun close() {
-        scheduledExecutorService.shutdownNow()
+        scheduledFuture.cancel(true)
         metrics.forEach(Metrics.globalRegistry::remove)
     }
 }
