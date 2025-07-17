@@ -1,6 +1,7 @@
 package net.postchain.gtx
 
 import mu.KLogging
+import mu.withLoggingContext
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.data.DatabaseAccess
@@ -13,6 +14,8 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.mapper.toObject
+import net.postchain.logging.BLOCKCHAIN_RID_TAG
+import net.postchain.logging.CHAIN_IID_TAG
 
 /**
  * TODO: (Olle) This should be in the "net.postchain.base.gtx" package (setting it apart from the GTX module),
@@ -94,9 +97,12 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
         )
     }
 
-    open fun createGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData, eContext: EContext): GTXModule =
-            makeGtxModule(blockchainRID, data).apply {
-                GTXSchemaManager.initializeDB(eContext)
-                initializeDB(eContext)
-            }
+    open fun createGtxModule(blockchainRID: BlockchainRid, data: BlockchainConfigurationData, eContext: EContext): GTXModule = withLoggingContext(
+            BLOCKCHAIN_RID_TAG to blockchainRID.toHex(), CHAIN_IID_TAG to eContext.chainID.toString()
+    ) {
+        makeGtxModule(blockchainRID, data).apply {
+            GTXSchemaManager.initializeDB(eContext)
+            initializeDB(eContext)
+        }
+    }
 }
