@@ -48,6 +48,16 @@ class GtvEncoderTest {
     }
 
     @Test
+    fun `small negative integer`() {
+        val expected = GtvInteger(-65535)
+        val b = GtvEncoder.encodeGtv(expected)
+        println(b.toHex())
+        val result = GtvDecoder.decodeGtv(b)
+        assertEquals(expected, result)
+        assertEquals(expected.asInteger().toString(10), result.asInteger().toString(10))
+    }
+
+    @Test
     fun `positive big integer`() {
         val expected = GtvBigInteger(BigInteger.valueOf(Long.MAX_VALUE).pow(3))
         val b = GtvEncoder.encodeGtv(expected)
