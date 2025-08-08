@@ -107,16 +107,16 @@ class GtxTimeB(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GTXOp
         if (data.args.size != 2) throw UserMistake("expected 2 args")
         val from = data.args[0].asInteger()
         if (!data.args[1].isNull()) {
-            if (data.args[1].asInteger() < from) throw UserMistake("expected arg0 < arg1")
+            if (data.args[1].asInteger() < from) throw UserMistake("expected arg0 <= arg1")
         }
     }
 
     override fun apply(ctx: TxEContext): Boolean {
         val from = data.args[0].asInteger()
-        if (ctx.timestamp < from) return false
+        if (ctx.timestamp < from) throw UserMistake("transaction cannot be accepted before $from")
         if (!data.args[1].isNull()) {
             val until = data.args[1].asInteger()
-            if (until < ctx.timestamp) return false
+            if (until < ctx.timestamp) throw UserMistake("transaction cannot be accepted after $until")
         }
         return true
     }
