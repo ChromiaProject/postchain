@@ -107,7 +107,7 @@ class GtxTimeB(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GTXOp
         if (data.args.size != 2) throw UserMistake("expected 2 args")
         val from = data.args[0].asInteger()
         if (!data.args[1].isNull()) {
-            if (data.args[1].asInteger() < from) throw UserMistake("expected arg1 < arg0")
+            if (data.args[1].asInteger() < from) throw UserMistake("expected arg0 < arg1")
         }
     }
 
