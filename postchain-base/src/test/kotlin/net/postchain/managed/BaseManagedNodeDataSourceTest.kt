@@ -1,6 +1,7 @@
 package net.postchain.managed
 
 import assertk.assertThat
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import net.postchain.base.PeerInfo
@@ -8,6 +9,7 @@ import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid
 import net.postchain.common.BlockchainRid.Companion.ZERO_RID
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.core.BlockchainState
@@ -24,9 +26,13 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtv.merkleHash
 import net.postchain.managed.query.QueryRunner
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.mockito.kotlin.any
+import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
@@ -66,6 +72,17 @@ class BaseManagedNodeDataSourceTest {
         }
         val sut = BaseManagedNodeDataSource(queryRunner, mock())
         assertEquals(expected?.wrap(), sut.getConfiguration(ZERO_RID.data, 0L)?.wrap())
+    }
+
+    @Test
+    fun testGetConfigurationUserMistake() {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_get_blockchain_configuration"), any()) } doAnswer {
+                throw UserMistake("Unknown blockchain ${ZERO_RID.wData}")
+            }
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock())
+        assertNull(sut.getConfiguration(ZERO_RID.data, 0L))
     }
 
     @ParameterizedTest
@@ -108,6 +125,68 @@ class BaseManagedNodeDataSourceTest {
         assertEquals(expected, sut.getPendingBlockchainConfiguration(ZERO_RID, 0L))
     }
 
+    @Test
+    fun testGetPendingBlockchainConfigurationUserMistake() {
+        val appConfig: AppConfig = mock {
+            on { pubKeyByteArray } doReturn byteArrayOf(0)
+            on { cryptoSystem } doReturn Secp256K1CryptoSystem()
+        }
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(5)
+            on { query(eq("nm_get_pending_blockchain_configuration"), any()) } doAnswer {
+                throw UserMistake("Unknown blockchain ${ZERO_RID.wData}")
+            }
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
+        assertThat(sut.getPendingBlockchainConfiguration(ZERO_RID, 0L)).isEmpty()
+    }
+
+    @ParameterizedTest
+    @MethodSource("getFaultyConfigurationTestData")
+    fun testGetFaultyConfiguration(gtvResult: Gtv, expected: ByteArray?) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(6)
+            on { query(eq("nm_get_faulty_blockchain_configuration"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock())
+        assertEquals(expected?.wrap(), sut.getFaultyBlockchainConfiguration(ZERO_RID, 0L)?.wrap())
+    }
+
+    @Test
+    fun testGetFaultyConfigurationUserMistake() {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(6)
+            on { query(eq("nm_get_faulty_blockchain_configuration"), any()) } doAnswer {
+                throw UserMistake("Unknown blockchain ${ZERO_RID.wData}")
+            }
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock())
+        assertNull(sut.getFaultyBlockchainConfiguration(ZERO_RID, 0L))
+    }
+
+    @ParameterizedTest
+    @MethodSource("getSignersInLatestConfigurationTestData")
+    fun getSignersInLatestConfiguration(gtvResult: Gtv, expected: List<NodeRid>) {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(9)
+            on { query(eq("nm_get_blockchain_signers_in_latest_configuration"), any()) } doReturn gtvResult
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock())
+        assertEquals(expected, sut.getSignersInLatestConfiguration(ZERO_RID))
+    }
+
+    @Test
+    fun testGetSignersInLatestConfigurationUserMistake() {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(9)
+            on { query(eq("nm_get_blockchain_signers_in_latest_configuration"), any()) } doAnswer {
+                throw UserMistake("Unknown blockchain ${ZERO_RID.wData}")
+            }
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock())
+        assertThat(sut.getSignersInLatestConfiguration(ZERO_RID)).isEmpty()
+    }
+
     @ParameterizedTest
     @MethodSource("getBlockchainStateTestData")
     fun testGetBlockchainState(gtvResult: Gtv, expected: BlockchainState) {
@@ -120,6 +199,22 @@ class BaseManagedNodeDataSourceTest {
         }
         val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
         assertEquals(expected, sut.getBlockchainState(ZERO_RID))
+    }
+
+    @Test
+    fun testGetBlockchainStateUserMistake() {
+        val appConfig: AppConfig = mock {
+            on { pubKeyByteArray } doReturn byteArrayOf(0)
+        }
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(6)
+            on { query(eq("nm_get_blockchain_state"), any()) } doAnswer {
+                throw UserMistake("Unknown blockchain ${ZERO_RID.wData}")
+            }
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, appConfig)
+        // Behavior prior to NP API v6: returns the RUNNING state by default
+        assertEquals(BlockchainState.RUNNING, sut.getBlockchainState(ZERO_RID))
     }
 
     @ParameterizedTest
@@ -171,6 +266,21 @@ class BaseManagedNodeDataSourceTest {
             on { pubKeyByteArray } doReturn byteArrayOf()
         })
         assertEquals(expected, sut.isBlockchainProvider(KeyPairHelper.keyPair(0).pubKey, ZERO_RID))
+    }
+
+    @Test
+    fun testIsBlockchainProviderUserMistake() {
+        val queryRunner: QueryRunner = mock {
+            on { query(eq("nm_api_version"), any()) } doReturn gtv(19)
+            on { query(eq("nm_is_blockchain_provider"), any()) } doAnswer {
+                throw UserMistake("Unknown blockchain ${ZERO_RID.wData}")
+            }
+        }
+        val sut = BaseManagedNodeDataSource(queryRunner, mock {
+            on { pubKeyByteArray } doReturn byteArrayOf()
+        })
+        // Behavior prior to NP API v19: returns the `true` by default
+        assertTrue(sut.isBlockchainProvider(KeyPairHelper.keyPair(0).pubKey, ZERO_RID))
     }
 
     @ParameterizedTest
@@ -299,6 +409,25 @@ class BaseManagedNodeDataSourceTest {
             return listOf(
                     arrayOf(gtv(listOf()), listOf<PendingBlockchainConfiguration>()),
                     arrayOf(gtv(listOf(gtvResult0)), listOf(expected0))
+            )
+        }
+
+        @JvmStatic
+        fun getFaultyConfigurationTestData(): List<Array<Any?>> {
+            return listOf(
+                    arrayOf(GtvNull, null),
+                    arrayOf(gtv(byteArrayOf(1, 2, 3)), byteArrayOf(1, 2, 3))
+            )
+        }
+
+        @JvmStatic
+        fun getSignersInLatestConfigurationTestData(): List<Array<Any>> {
+            val node0 = NodeRid(byteArrayOf(10))
+            val node1 = NodeRid(byteArrayOf(20))
+
+            return listOf(
+                    arrayOf(GtvArray(emptyArray()), emptyList<NodeRid>()),
+                    arrayOf(gtv(listOf(gtv(node0.data), gtv(node1.data))), listOf(node0, node1))
             )
         }
 
