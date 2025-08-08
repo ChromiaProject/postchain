@@ -2,6 +2,7 @@ package net.postchain.managed
 
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
+import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
 import net.postchain.containers.ContainerRateLimit
 import net.postchain.containers.bpm.ContainerImageInfo
@@ -24,7 +25,8 @@ open class BaseDirectoryDataSource(
                 buildArgs("pubkey" to gtv(appConfig.pubKeyByteArray))
         )
         res.asArray().map { it.asString() }
-    } catch (_: UserMistake) { // this can fail if we are the genesis node before having initialized the network, since we are not registered as node yet
+    } catch (_: UserMistake) {
+        // This can fail if we are the genesis node before having initialized the network, since we are not registered as node yet
         listOf()
     }
 
@@ -53,8 +55,8 @@ open class BaseDirectoryDataSource(
         }
     }
 
-    override fun getBlockchainContainersForNode(brid: BlockchainRid): List<String> {
-        return if (nmApiVersion >= 14) {
+    override fun getBlockchainContainersForNode(brid: BlockchainRid): List<String> = try {
+        if (nmApiVersion >= 14) {
             query(
                     "nm_get_blockchain_containers_for_node",
                     buildArgs("node_id" to gtv(appConfig.pubKeyByteArray), "blockchain_rid" to gtv(brid.data))
@@ -62,64 +64,101 @@ open class BaseDirectoryDataSource(
         } else {
             listOf(getContainerForBlockchain(brid))
         }
+    } catch (e: UserMistake) {
+        logger.error { "Can't find containers for blockchain ${brid.data.wrap()}: ${e.message}" }
+        listOf()
     }
 
-    override fun getResourceLimitForContainer(container: String): ContainerResourceLimits {
+    override fun getResourceLimitForContainer(container: String): ContainerResourceLimits = try {
         val resourceLimits = query(
                 "nm_get_container_limits",
                 buildArgs("name" to gtv(container))
-        ).asDict().mapValues { (_, v) -> v.asInteger() }.mapNotNull {
+        ).asDict().mapValues { (_, v) ->
+            v.asInteger()
+        }.mapNotNull {
             ResourceLimitFactory.fromPair(it.toPair())
         }.toTypedArray()
 
-        return ContainerResourceLimits(*resourceLimits)
+        ContainerResourceLimits(*resourceLimits)
+
+    } catch (e: UserMistake) {
+        logger.error { "Can't find resource limits for container $container: ${e.message}" }
+        ContainerResourceLimits.default()
     }
 
     override fun getImageForContainer(container: String): ContainerImageInfo? {
-        if (nmApiVersion < 20) return null
+        try {
+            if (nmApiVersion < 20) return null
 
-        val response = query(
-                "nm_get_container_image",
-                buildArgs("name" to gtv(container))
-        )
-        return if (response.isNull()) null else
-            response.toObject<ContainerImageInfo>()
+            val response = query(
+                    "nm_get_container_image",
+                    buildArgs("name" to gtv(container))
+            )
+
+            return if (response.isNull()) null else
+                response.toObject<ContainerImageInfo>()
+
+        } catch (e: UserMistake) {
+            logger.error { "Can't find image for container $container: ${e.message}" }
+            return null
+        }
     }
 
     override fun getImageForContainerOrDefault(container: String): ContainerImageInfo? {
-        if (nmApiVersion < 22) return getImageForContainer(container)
+        try {
+            if (nmApiVersion < 22) return getImageForContainer(container)
 
-        val response = query(
-                "nm_get_container_image_or_default",
-                buildArgs("name" to gtv(container))
-        )
-        return if (response.isNull()) null else
-            response.toObject<ContainerImageInfo>()
+            val response = query(
+                    "nm_get_container_image_or_default",
+                    buildArgs("name" to gtv(container))
+            )
+
+            return if (response.isNull()) null else
+                response.toObject<ContainerImageInfo>()
+
+        } catch (e: UserMistake) {
+            logger.error { "Can't find image for container $container: ${e.message}" }
+            return null
+        }
     }
 
     override fun getContainerCreationTime(container: String): Instant? {
-        if (nmApiVersion < 23) return null
+        try {
+            if (nmApiVersion < 23) return null
 
-        val response = query(
-                "nm_get_container_creation_time",
-                buildArgs("name" to gtv(container))
-        )
-        return if (response.isNull()) null else
-            Instant.ofEpochMilli(response.asInteger())
+            val response = query(
+                    "nm_get_container_creation_time",
+                    buildArgs("name" to gtv(container))
+            )
+
+            return if (response.isNull()) null else
+                Instant.ofEpochMilli(response.asInteger())
+
+        } catch (e: UserMistake) {
+            logger.error { "Can't find creation time for container $container: ${e.message}" }
+            return null
+        }
     }
 
     override fun getContainerRateLimits(container: String): Map<String, ContainerRateLimit> {
-        if (nmApiVersion < 23) return mapOf()
+        try {
+            if (nmApiVersion < 23) return mapOf()
 
-        val response = query(
-                "nm_get_container_rate_limits",
-                buildArgs("name" to gtv(container))
-        )
-        return response.asDict().mapValues {
-            ContainerRateLimit(
-                    periodLength = it.value["period_length_millis"]!!.asInteger().milliseconds,
-                    rateLimit = it.value["rate_limit"]!!.asInteger()
+            val response = query(
+                    "nm_get_container_rate_limits",
+                    buildArgs("name" to gtv(container))
             )
+
+            return response.asDict().mapValues {
+                ContainerRateLimit(
+                        periodLength = it.value["period_length_millis"]!!.asInteger().milliseconds,
+                        rateLimit = it.value["rate_limit"]!!.asInteger()
+                )
+            }
+
+        } catch (e: UserMistake) {
+            logger.error { "Can't find rate limits for container $container: ${e.message}" }
+            return mapOf()
         }
     }
 }

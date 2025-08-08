@@ -213,10 +213,12 @@ class ContainerManagedBlockchainProcessManager(
                 val chains = getOrCreateContainerChains(bcInfo.chainId) // Support max 2 containers for now
                 logger.debug { "Chains: ${chains.toTypedArray().contentToString()}" }
 
-                if (chains.size == 1) {
+                if (chains.isEmpty()) {
+                    logger.info { "ContainerJob -- Skipping blockchain ${bcInfo.chainId} - No containers available" }
+                } else if (chains.size == 1) {
                     startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
                     blockchainReplicators[bcInfo.chainId]?.cancel()
-                } else if (chains.size > 1) {
+                } else {
                     val chain = chains.first()
                     val info = directoryDataSource.getMigratingBlockchainNodeInfo(chain.brid)
                     if (info != null) {
