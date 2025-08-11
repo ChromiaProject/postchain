@@ -526,8 +526,10 @@
             </dependency>
             <dependency>
                 <groupId>com.google.protobuf</groupId>
-                <artifactId>protobuf-java</artifactId>
+                <artifactId>protobuf-bom</artifactId>
                 <version>3.25.8</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
 
             <dependency>
