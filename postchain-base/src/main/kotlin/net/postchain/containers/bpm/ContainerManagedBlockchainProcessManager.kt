@@ -41,7 +41,7 @@ import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.config.DappBlockchainConfigurationFactory
 import net.postchain.metrics.ContainerMetrics
 import net.postchain.network.mastersub.master.AfterSubnodeCommitListener
-import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 const val POSTCHAIN_MASTER_PUBKEY = "postchain-master-pubkey"
 
@@ -63,7 +63,7 @@ class ContainerManagedBlockchainProcessManager(
     private val chains: MutableMap<Pair<Long, ContainerName>, Chain> = mutableMapOf() // (chainId, containerName) -> Chain
     private val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
     private val dockerClient: DockerClient = ContainerEnvironment.dockerClient
-    private val postchainContainers = Collections.synchronizedMap(LinkedHashMap<ContainerName, PostchainContainer>()) // { ContainerName -> PsContainer }
+    private val postchainContainers = ConcurrentHashMap<ContainerName, PostchainContainer>() // { ContainerName -> PsContainer }
     private val fileSystem = FileSystem.create(containerNodeConfig)
     private val containerHealthcheckHandler = ContainerHealthcheckHandler(dockerClient, fileSystem, ::containers, ::removeBlockchainProcess)
     private val containerJobHandler = ContainerJobHandler(appConfig, nodeDiagnosticContext, dockerClient, fileSystem,
