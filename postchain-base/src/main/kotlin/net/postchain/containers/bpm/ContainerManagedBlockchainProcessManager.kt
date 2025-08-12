@@ -31,6 +31,7 @@ import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.logging.CONTAINER_NAME_TAG
 import net.postchain.managed.BaseDirectoryDataSource
 import net.postchain.managed.CHAIN0
@@ -198,49 +199,51 @@ class ContainerManagedBlockchainProcessManager(
 
         // Launching new and updated state blockchains except chain0
         toLaunch.filter { it.chainId != CHAIN0 }.forEach { bcInfo ->
-            if (bcInfo.system) {
-                val process = masterLaunched[bcInfo.chainId]
-                if (process == null) {
-                    logger.debug { "ContainerJob -- Start system chain: ${bcInfo.chainId}" }
-                    startBlockchainAsync(bcInfo.chainId, null)
-                } else if (process.getBlockchainState() != bcInfo.state) {
-                    logger.debug { "ContainerJob -- Restart system chain due to state change: ${bcInfo.chainId}" }
-                    startBlockchainAsync(bcInfo.chainId, null)
+            withLoggingContext(CHAIN_IID_TAG to bcInfo.chainId.toString()) {
+                if (bcInfo.system) {
+                    val process = masterLaunched[bcInfo.chainId]
+                    if (process == null) {
+                        logger.debug { "ContainerJob -- Start system chain: ${bcInfo.chainId}" }
+                        startBlockchainAsync(bcInfo.chainId, null)
+                    } else if (process.getBlockchainState() != bcInfo.state) {
+                        logger.debug { "ContainerJob -- Restart system chain due to state change: ${bcInfo.chainId}" }
+                        startBlockchainAsync(bcInfo.chainId, null)
+                    } else {
+                        logger.debug { "ContainerJob -- System chain already launched, nothing to do: ${bcInfo.chainId}" }
+                    }
                 } else {
-                    logger.debug { "ContainerJob -- System chain already launched, nothing to do: ${bcInfo.chainId}" }
-                }
-            } else {
-                val chains = getOrCreateContainerChains(bcInfo.chainId) // Support max 2 containers for now
-                logger.debug { "Chains: ${chains.toTypedArray().contentToString()}" }
+                    val chains = getOrCreateContainerChains(bcInfo.chainId) // Support max 2 containers for now
+                    logger.debug { "Chains: ${chains.toTypedArray().contentToString()}" }
 
-                if (chains.isEmpty()) {
-                    logger.info { "ContainerJob -- Skipping blockchain ${bcInfo.chainId} - No containers available" }
-                } else if (chains.size == 1) {
-                    startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
-                    blockchainReplicators[bcInfo.chainId]?.cancel()
-                } else {
-                    val chain = chains.first()
-                    val info = directoryDataSource.getMigratingBlockchainNodeInfo(chain.brid)
-                    if (info != null) {
-                        val srcChain = chains.firstOrNull { it.containerName.directoryContainer == info.sourceContainer }
-                        val dstChain = chains.firstOrNull { it.containerName.directoryContainer == info.destinationContainer }
-                        if (srcChain != null && dstChain != null) {
-                            // If replication is completed, start only dst chain, otherwise start both chain and replication
-                            if (completedReplications[info.migrationRid]?.first == srcChain) {
-                                startSubnodeChains(bcInfo, listOf(dstChain), subnodeLaunched[chains.first().chainId])
-                            } else {
-                                startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
-                                blockchainReplicators.getOrPut(chain.chainId) {
-                                    BlockchainReplicator(info.migrationRid, srcChain, dstChain, info.finalHeight, directoryDataSource, ::findPostchainContainer).also {
-                                        logger.info { "Blockchain replication started: migrationRid: ${info.migrationRid}, srcChain: $srcChain, dstChain: $dstChain" }
+                    if (chains.isEmpty()) {
+                        logger.info { "ContainerJob -- Skipping blockchain ${bcInfo.chainId} - No containers available" }
+                    } else if (chains.size == 1) {
+                        startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
+                        blockchainReplicators[bcInfo.chainId]?.cancel()
+                    } else {
+                        val chain = chains.first()
+                        val info = directoryDataSource.getMigratingBlockchainNodeInfo(chain.brid)
+                        if (info != null) {
+                            val srcChain = chains.firstOrNull { it.containerName.directoryContainer == info.sourceContainer }
+                            val dstChain = chains.firstOrNull { it.containerName.directoryContainer == info.destinationContainer }
+                            if (srcChain != null && dstChain != null) {
+                                // If replication is completed, start only dst chain, otherwise start both chain and replication
+                                if (completedReplications[info.migrationRid]?.first == srcChain) {
+                                    startSubnodeChains(bcInfo, listOf(dstChain), subnodeLaunched[chains.first().chainId])
+                                } else {
+                                    startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
+                                    blockchainReplicators.getOrPut(chain.chainId) {
+                                        BlockchainReplicator(info.migrationRid, srcChain, dstChain, info.finalHeight, directoryDataSource, ::findPostchainContainer).also {
+                                            logger.info { "Blockchain replication started: migrationRid: ${info.migrationRid}, srcChain: $srcChain, dstChain: $dstChain" }
+                                        }
                                     }
                                 }
+                            } else {
+                                startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
                             }
                         } else {
                             startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
                         }
-                    } else {
-                        startSubnodeChains(bcInfo, chains, subnodeLaunched[chains.first().chainId])
                     }
                 }
             }
