@@ -200,7 +200,8 @@ open class BaseBlockchainProcessManager(
                             eContext = blockBuilderStorage.openWriteConnection(chainId)
                             val configHash = GtvDecoder.decodeGtv(rawConfigurationData).toObject<BlockchainConfigurationData>().configHash
                             if (hasBuiltInitialBlock(eContext) && !hasBuiltBlockWithConfig(eContext, blockHeight, configHash) && (e is UserMistake || e is FaultyExtensionException)) {
-                                revertConfiguration(chainId, bTrace, eContext, blockHeight, rawConfigurationData, e.message ?: "Unknown error")
+                                revertConfiguration(chainId, bTrace, eContext, blockHeight, rawConfigurationData, e.message
+                                        ?: "Unknown error")
                             } else {
                                 blockBuilderStorage.closeWriteConnection(eContext, false)
                             }
