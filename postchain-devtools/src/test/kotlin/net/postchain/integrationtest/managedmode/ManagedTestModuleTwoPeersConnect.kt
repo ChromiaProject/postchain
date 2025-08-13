@@ -25,7 +25,6 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
         mapOf(
                 "nm_api_version" to ::queryApiVersion,
                 "nm_get_peer_infos" to ::queryGetPeerInfos,
-                "nm_compute_blockchain_list" to ::queryComputeBlockchainList,
                 "nm_get_blockchain_configuration" to ::queryGetConfiguration,
                 "nm_find_next_configuration_height" to ::queryFindNextConfigurationHeight,
                 "nm_get_blockchain_replica_node_map" to ::dummyHandlerArray,
@@ -82,12 +81,6 @@ open class ManagedTestModuleTwoPeersConnect(node: Nodes) : SimpleGTXModule<Manag
                     .map(::peerInfoToGtv)
                     .toTypedArray()
             )
-        }
-
-        @Suppress("UNUSED_PARAMETER")
-        fun queryComputeBlockchainList(node: Nodes, eContext: EContext, args: Gtv): Gtv {
-            logger.log { "Query: nm_compute_blockchain_list" }
-            return GtvArray(arrayOf(gtvBlockchainRid(0L)))
         }
 
         @Suppress("UNUSED_PARAMETER")
