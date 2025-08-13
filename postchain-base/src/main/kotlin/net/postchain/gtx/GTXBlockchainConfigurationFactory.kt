@@ -4,6 +4,7 @@ import mu.KLogging
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.snapshot.SnapshotBlockchainConfigurationData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.BlockchainConfigurationFactory
@@ -70,7 +71,8 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
                 }
             }
 
-            return CompositeGTXModule(list.map(::makeModule).toTypedArray(), gtxConfig.allowOverrides, data.snapshotsEnabled)
+            val snapshotConfig = data.snapshot?.toObject<SnapshotBlockchainConfigurationData>()
+            return CompositeGTXModule(list.map(::makeModule).toTypedArray(), gtxConfig.allowOverrides, data.snapshotsEnabled, snapshotConfig?.snapshotInterval ?: -1)
         }
     }
 

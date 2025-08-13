@@ -189,6 +189,7 @@ interface DatabaseAccess {
     fun getHighestLevelPageAtHeight(ctx: EContext, pageStoreName: String, height: Long): Int
     fun getPrunablePages(ctx: EContext, pageStoreName: String, lowestHeightToKeep: Long): List<Long>
     fun getLowestSnapshotHeightToKeep(ctx: EContext, pageStoreName: String, blockHeight: Long, snapshotsToKeep: Int = 100): Long?
+    fun getLatestSnapshotHeight(ctx: EContext, pageStoreName: String): Long?
 
     // Peers
     fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo>
@@ -222,6 +223,9 @@ interface DatabaseAccess {
     fun getSnapshotContextId(ctx: EContext, moduleName: String): Long
     fun getSnapshotModuleContextIds(ctx: EContext): List<Long>
     fun getSnapshotContextModule(ctx: EContext, contextId: Long): String
+    fun insertUpdatedDatum(ctx: EContext, contextId: Long, datumInfo: DatumInfo)
+    fun getUpdatedDatumsByContext(ctx: EContext): Map<Long, List<DatumInfo>>
+    fun clearUpdatedDatums(ctx: EContext)
 
     fun getDatabaseServerVersion(connection: Connection): String
 

@@ -2,6 +2,7 @@ package net.postchain.integrationtest.snapshot
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNull
 import assertk.isContentEqualTo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
@@ -60,33 +61,37 @@ class SnapshotTest : IntegrationTestSetup() {
         )
 
         buildBlock(DEFAULT_CHAIN_IID, emitDatumsTx)
+        // Assert that we only write snapshot every second block according to interval
+        val blockQueries = nodes[0].blockQueries(DEFAULT_CHAIN_IID)
+        val block0Header = BlockHeaderData.fromBinary(blockQueries.getBlockAtHeight(0).get()!!.header.rawData)
+        assertThat(block0Header.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]).isNull()
+        // Build next block to trigger snapshot
+        buildBlock(DEFAULT_CHAIN_IID)
 
         // Assert correct state hash was added to block header
         val digestSystem = SimpleDigestSystem(MessageDigest.getInstance("SHA-256"))
-        val rootA = digestSystem.hash(
-                digestSystem.hash(gtv("a_datum_0").merkleHash(hashCalc), gtv("a_datum_1").merkleHash(hashCalc)),
-                digestSystem.hash(gtv("a_datum_2").merkleHash(hashCalc), gtv("a_datum_3").merkleHash(hashCalc))
-        )
-        val rootB = digestSystem.hash(
-                digestSystem.hash(gtv("b_datum_0").merkleHash(hashCalc), gtv("b_datum_1").merkleHash(hashCalc)),
-                digestSystem.hash(gtv("b_datum_2").merkleHash(hashCalc), gtv("b_datum_3").merkleHash(hashCalc))
-        )
+        val leftA = digestSystem.hash(gtv("a_datum_0").merkleHash(hashCalc), gtv("a_datum_1").merkleHash(hashCalc))
+        val rightA = digestSystem.hash(gtv("a_datum_2").merkleHash(hashCalc), gtv("a_datum_3").merkleHash(hashCalc))
+        val rootA = digestSystem.hash(leftA, rightA)
+
+        val leftB = digestSystem.hash(gtv("b_datum_0").merkleHash(hashCalc), gtv("b_datum_1").merkleHash(hashCalc))
+        val rightB = digestSystem.hash(gtv("b_datum_2").merkleHash(hashCalc), gtv("b_datum_3").merkleHash(hashCalc))
+        val rootB = digestSystem.hash(leftB, rightB)
         val expectedRootHash = digestSystem.hash(
                 digestSystem.hash(rootA, rootB),
                 digestSystem.hash(EMPTY_HASH, EMPTY_HASH) // Right side of root state tree is empty since we have levelsPerPage = 2 and only two leafs
         )
 
-        val blockQueries = nodes[0].blockQueries(DEFAULT_CHAIN_IID)
-        val block0Header = BlockHeaderData.fromBinary(blockQueries.getBlockAtHeight(0).get()!!.header.rawData)
-        assertThat(block0Header.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]!!.asByteArray()).isContentEqualTo(expectedRootHash)
+        val block1Header = BlockHeaderData.fromBinary(blockQueries.getBlockAtHeight(1).get()!!.header.rawData)
+        assertThat(block1Header.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]!!.asByteArray()).isContentEqualTo(expectedRootHash)
 
         // Assert that permanent and non-permanent datums can be recovered
         val datumRepository = SnapshotDatumRepository(nodes[0].getModules().filterIsInstance<SnapshotAware>())
 
         withReadConnection(nodes[0].postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { ctx ->
             // Permanent
-            val datumA0 = datumRepository.getDatum(ctx, 0, 0, 0)
-            val datumB0 = datumRepository.getDatum(ctx, 0, 1, 0)
+            val datumA0 = datumRepository.getDatum(ctx, 1, 0, 0)
+            val datumB0 = datumRepository.getDatum(ctx, 1, 1, 0)
 
             assertThat(datumA0).isEqualTo(gtv("a_datum_0"))
             assertThat(datumB0).isEqualTo(gtv("b_datum_0"))
@@ -110,18 +115,31 @@ class SnapshotTest : IntegrationTestSetup() {
         )
 
         buildBlock(DEFAULT_CHAIN_IID, emitNewDatumsTx)
+        buildBlock(DEFAULT_CHAIN_IID) // Build an extra block to trigger new snapshot
+
+        val newRightA = digestSystem.hash(gtv("a_datum_2").merkleHash(hashCalc), gtv("a_datum_3_v2").merkleHash(hashCalc))
+        val newRootA = digestSystem.hash(leftA, newRightA)
+        val newRightB = digestSystem.hash(gtv("b_datum_2").merkleHash(hashCalc), gtv("b_datum_3_v2").merkleHash(hashCalc))
+        val newRootB = digestSystem.hash(leftB, newRightB)
+        val newExpectedRootHash = digestSystem.hash(
+                digestSystem.hash(newRootA, newRootB),
+                digestSystem.hash(EMPTY_HASH, EMPTY_HASH)
+        )
+
+        val block3Header = BlockHeaderData.fromBinary(blockQueries.getBlockAtHeight(3).get()!!.header.rawData)
+        assertThat(block3Header.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]!!.asByteArray()).isContentEqualTo(newExpectedRootHash)
 
         withReadConnection(nodes[0].postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { ctx ->
             // Assert still the same value at height 0
-            val datumA3V1 = datumRepository.getDatum(ctx, 0, 0, 3)
-            val datumB3V1 = datumRepository.getDatum(ctx, 0, 1, 3)
+            val datumA3V1 = datumRepository.getDatum(ctx, 1, 0, 3)
+            val datumB3V1 = datumRepository.getDatum(ctx, 1, 1, 3)
 
             assertThat(datumA3V1).isEqualTo(gtv("a_datum_3"))
             assertThat(datumB3V1).isEqualTo(gtv("b_datum_3"))
 
             // Assert new value at height 1
-            val datumA3V2 = datumRepository.getDatum(ctx, 1, 0, 3)
-            val datumB3V2 = datumRepository.getDatum(ctx, 1, 1, 3)
+            val datumA3V2 = datumRepository.getDatum(ctx, 3, 0, 3)
+            val datumB3V2 = datumRepository.getDatum(ctx, 3, 1, 3)
 
             assertThat(datumA3V2).isEqualTo(gtv("a_datum_3_v2"))
             assertThat(datumB3V2).isEqualTo(gtv("b_datum_3_v2"))

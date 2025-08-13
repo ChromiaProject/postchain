@@ -193,5 +193,7 @@ open class SnapshotPageStore(
         val page = readPage(blockHeight, prevHighestLevelPage, 0)
         return page?.getChildHash(levelsPerPage, ds::hash, 0) ?: EMPTY_HASH
     }
+
+    fun getLastSnapshotHeight(): Long = DatabaseAccess.of(ctx).getLatestSnapshotHeight(ctx, name) ?: -1
 }
 

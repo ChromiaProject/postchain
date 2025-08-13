@@ -376,12 +376,13 @@ public abstract interface class net/postchain/base/TxEventSink {
 
 public final class net/postchain/base/configuration/BlockchainConfigurationData {
 	public static final field Companion Lnet/postchain/base/configuration/BlockchainConfigurationData$Companion;
-	public fun <init> (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;JZLjava/util/Map;)V
+	public fun <init> (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;JZLjava/util/Map;Lnet/postchain/gtv/Gtv;)V
 	public final fun component1 ()Lnet/postchain/gtv/Gtv;
 	public final fun component12 ()Lnet/postchain/gtv/Gtv;
 	public final fun component14 ()J
 	public final fun component15 ()Z
 	public final fun component16 ()Ljava/util/Map;
+	public final fun component17 ()Lnet/postchain/gtv/Gtv;
 	public final fun component2 ()Ljava/util/List;
 	public final fun component3 ()Ljava/lang/String;
 	public final fun component4 ()Ljava/util/List;
@@ -390,8 +391,8 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData 
 	public final fun component7 ()J
 	public final fun component8 ()Ljava/lang/String;
 	public final fun component9 ()Lnet/postchain/gtv/Gtv;
-	public final fun copy (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;JZLjava/util/Map;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
-	public static synthetic fun copy$default (Lnet/postchain/base/configuration/BlockchainConfigurationData;Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;JZLjava/util/Map;ILjava/lang/Object;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
+	public final fun copy (Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;JZLjava/util/Map;Lnet/postchain/gtv/Gtv;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
+	public static synthetic fun copy$default (Lnet/postchain/base/configuration/BlockchainConfigurationData;Lnet/postchain/gtv/Gtv;Ljava/util/List;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;JJLjava/lang/String;Lnet/postchain/gtv/Gtv;[BLnet/postchain/gtv/Gtv;Lnet/postchain/gtv/Gtv;Ljava/lang/String;JZLjava/util/Map;Lnet/postchain/gtv/Gtv;ILjava/lang/Object;)Lnet/postchain/base/configuration/BlockchainConfigurationData;
 	public fun equals (Ljava/lang/Object;)Z
 	public static final fun fromRaw ([B)Lnet/postchain/base/configuration/BlockchainConfigurationData;
 	public final fun getAddPrimaryKeyToHeader ()Z
@@ -409,6 +410,7 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData 
 	public final fun getMerkleHashVersion ()J
 	public final fun getRawConfig ()Lnet/postchain/gtv/Gtv;
 	public final fun getSigners ()Ljava/util/List;
+	public final fun getSnapshot ()Lnet/postchain/gtv/Gtv;
 	public final fun getSnapshotsEnabled ()Z
 	public final fun getSynchronizationInfrastructure ()Ljava/lang/String;
 	public final fun getSynchronizationInfrastructureExtension ()Ljava/util/List;
@@ -467,6 +469,7 @@ public final class net/postchain/base/configuration/BlockchainConfigurationField
 	public static final field KEY_REVOLT_TIMEOUT Ljava/lang/String;
 	public static final field KEY_REVOLT_WHEN_SHOULD_BUILD_BLOCK Ljava/lang/String;
 	public static final field KEY_SIGNERS Ljava/lang/String;
+	public static final field KEY_SNAPSHOT Ljava/lang/String;
 	public static final field KEY_SYNC Ljava/lang/String;
 	public static final field KEY_SYNC_EXT Ljava/lang/String;
 	public static final fun getAsyncQueryQueueCapacity (Lnet/postchain/core/BlockchainConfiguration;)J
@@ -607,6 +610,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun addPeerInfo (Lnet/postchain/core/AppContext;Ljava/lang/String;ILjava/lang/String;Ljava/time/Instant;)Z
 	public abstract fun addPeerInfo (Lnet/postchain/core/AppContext;Lnet/postchain/base/PeerInfo;)Z
 	public abstract fun checkCollation (Ljava/sql/Connection;Z)V
+	public abstract fun clearUpdatedDatums (Lnet/postchain/core/ExecutionContext;)V
 	public abstract fun commitBlock (Lnet/postchain/core/BlockEContext;Lnet/postchain/core/block/BlockWitness;)V
 	public abstract fun configurationHashExists (Lnet/postchain/core/ExecutionContext;[B)Z
 	public abstract fun createContainer (Lnet/postchain/core/AppContext;Ljava/lang/String;)I
@@ -666,6 +670,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getLastChainId (Lnet/postchain/core/AppContext;)J
 	public abstract fun getLastSystemChainId (Lnet/postchain/core/AppContext;)J
 	public abstract fun getLastTransactionNumber (Lnet/postchain/core/ExecutionContext;)J
+	public abstract fun getLatestSnapshotHeight (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;)Ljava/lang/Long;
 	public abstract fun getLeftIndex (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;Ljava/util/List;)Ljava/util/List;
 	public abstract fun getLowestSnapshotHeightToKeep (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JI)Ljava/lang/Long;
 	public abstract fun getMerkleHashVersionForHeight (Lnet/postchain/core/ExecutionContext;J)J
@@ -685,6 +690,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getTxBytes (Lnet/postchain/core/ExecutionContext;[B)[B
 	public abstract fun getTxHash (Lnet/postchain/core/ExecutionContext;[B)[B
 	public abstract fun getTxRIDsAtHeight (Lnet/postchain/core/ExecutionContext;J)[[B
+	public abstract fun getUpdatedDatumsByContext (Lnet/postchain/core/ExecutionContext;)Ljava/util/Map;
 	public abstract fun getWitnessData (Lnet/postchain/core/ExecutionContext;[B)[B
 	public abstract fun initializeApp (Ljava/sql/Connection;I)V
 	public abstract fun initializeApp (Ljava/sql/Connection;IZ)V
@@ -695,6 +701,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun insertPage (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;Lnet/postchain/base/snapshot/Page;)V
 	public abstract fun insertState (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JJ[B)V
 	public abstract fun insertTransaction (Lnet/postchain/core/BlockEContext;Lnet/postchain/core/Transaction;J)J
+	public abstract fun insertUpdatedDatum (Lnet/postchain/core/ExecutionContext;JLnet/postchain/base/data/DatumInfo;)V
 	public abstract fun isSavepointSupported ()Z
 	public abstract fun isSchemaExists (Ljava/sql/Connection;Ljava/lang/String;)Z
 	public abstract fun isTransactionConfirmed (Lnet/postchain/core/ExecutionContext;[B)Z
@@ -781,6 +788,21 @@ public final class net/postchain/base/data/DatabaseAccess$StateData {
 	public final fun getBlockHeight ()J
 	public final fun getData ()[B
 	public final fun getStateN ()J
+}
+
+public final class net/postchain/base/data/DatumInfo {
+	public fun <init> (J[B[B)V
+	public final fun component1 ()J
+	public final fun component2 ()[B
+	public final fun component3 ()[B
+	public final fun copy (J[B[B)Lnet/postchain/base/data/DatumInfo;
+	public static synthetic fun copy$default (Lnet/postchain/base/data/DatumInfo;J[B[BILjava/lang/Object;)Lnet/postchain/base/data/DatumInfo;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHash ()[B
+	public final fun getId ()J
+	public final fun getRawValue ()[B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class net/postchain/base/data/GenericBlockHeaderValidator {
@@ -922,9 +944,13 @@ public abstract interface class net/postchain/base/snapshot/PageStore {
 }
 
 public final class net/postchain/base/snapshot/RootSnapshotBlockBuilderExtension : net/postchain/base/BaseBlockBuilderExtension {
-	public fun <init> ()V
+	public static final field Companion Lnet/postchain/base/snapshot/RootSnapshotBlockBuilderExtension$Companion;
+	public fun <init> (J)V
 	public fun finalize ()Ljava/util/Map;
 	public fun init (Lnet/postchain/core/BlockEContext;Lnet/postchain/base/data/BaseBlockBuilder;)V
+}
+
+public final class net/postchain/base/snapshot/RootSnapshotBlockBuilderExtension$Companion : mu/KLogging {
 }
 
 public final class net/postchain/base/snapshot/RootSnapshotBlockBuilderExtensionKt {
@@ -938,6 +964,19 @@ public final class net/postchain/base/snapshot/SimpleDigestSystem : net/postchai
 	public fun hash ([B[B)[B
 }
 
+public final class net/postchain/base/snapshot/SnapshotBlockchainConfigurationData {
+	public fun <init> (Lnet/postchain/gtv/Gtv;J)V
+	public final fun component1 ()Lnet/postchain/gtv/Gtv;
+	public final fun component2 ()J
+	public final fun copy (Lnet/postchain/gtv/Gtv;J)Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;
+	public static synthetic fun copy$default (Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;Lnet/postchain/gtv/Gtv;JILjava/lang/Object;)Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getRawGtv ()Lnet/postchain/gtv/Gtv;
+	public final fun getSnapshotInterval ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class net/postchain/base/snapshot/SnapshotDatumRepository {
 	public fun <init> (Ljava/util/List;)V
 	public final fun getDatum (Lnet/postchain/core/ExecutionContext;JJJ)Lnet/postchain/gtv/Gtv;
@@ -945,6 +984,7 @@ public final class net/postchain/base/snapshot/SnapshotDatumRepository {
 
 public class net/postchain/base/snapshot/SnapshotPageStore : net/postchain/base/snapshot/BasePageStore {
 	public fun <init> (Lnet/postchain/core/ExecutionContext;IILnet/postchain/base/snapshot/DigestSystem;Ljava/lang/String;)V
+	public final fun getLastSnapshotHeight ()J
 	public final fun getRootHashAtHeight (J)[B
 	public final fun getSnapshotsToKeep ()I
 	public fun highestLevelPage (J)I

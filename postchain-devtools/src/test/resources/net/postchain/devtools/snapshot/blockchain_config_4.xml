@@ -8,6 +8,11 @@
             <entry key="merkle_hash_version"><int>2</int></entry>
         </dict>
     </entry>
+    <entry key="snapshot">
+        <dict>
+            <entry key="interval"><int>2</int></entry> <!-- Write every second block -->
+        </dict>
+    </entry>
     <entry key="blockstrategy">
         <!--
         This block strategy is the default one if no config is made

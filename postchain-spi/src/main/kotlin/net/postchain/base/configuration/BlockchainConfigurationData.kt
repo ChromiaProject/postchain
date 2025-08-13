@@ -71,6 +71,9 @@ data class BlockchainConfigurationData(
         @Name(KEY_FEATURES)
         @DefaultEmpty
         val features: Map<String, Gtv>,
+        @Name(KEY_SNAPSHOT)
+        @Nullable
+        val snapshot: Gtv?
 ) {
     val historicBrid = historicBridAsByteArray?.let { BlockchainRid(it) }
     val blockchainDependencies = blockchainDependenciesRaw?.let { BaseDependencyFactory.build(it) } ?: listOf()
@@ -82,6 +85,7 @@ data class BlockchainConfigurationData(
     val configHash by lazy {
         rawConfig.merkleHash(merkleHashCalculator)
     }
+    // TODO: For simplicity and to avoid issues, add validation that snapshot can only be enabled with V2 merkle hash
     val snapshotsEnabled: Boolean = features[BlockchainFeatures.snapshot_enabled.name]?.asBoolean() ?: false
 
     companion object {

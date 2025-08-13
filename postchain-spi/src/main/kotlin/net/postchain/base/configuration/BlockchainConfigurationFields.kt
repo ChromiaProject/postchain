@@ -56,6 +56,8 @@ const val KEY_ASYNC_QUERY_RESULT_RETENTION_SECONDS = "async_query_result_retenti
 
 const val KEY_FEATURES = "features"
 
+const val KEY_SNAPSHOT = "snapshot"
+
 val BlockchainConfiguration.queryCacheTtlSeconds: Long
     get() = this.rawConfig[KEY_QUERY_CACHE_TTL_SECONDS]?.asInteger() ?: 0L
 

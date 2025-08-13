@@ -14,10 +14,6 @@ class SnapshotDatumRepository(
         private val snapshotModules: List<SnapshotAware>
 ) {
 
-    /**
-     * TODO: This assumes that datums can never switch from being permanent to non-permanent and vice versa
-     * Probably makes sense but should be double checked
-     */
     fun getDatum(ctx: EContext, height: Long, contextId: Long, datumId: Long): Gtv {
         val dba = DatabaseAccess.of(ctx)
         val leafStoreState = dba.getState(ctx, "${SNAPSHOT_TABLE_PREFIX}_$contextId", height, datumId)

@@ -1,8 +1,10 @@
 package net.postchain.base.snapshot
 
+import mu.KLogging
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
@@ -12,7 +14,12 @@ import java.util.TreeMap
 
 const val SNAPSHOT_ROOT_EXTRA_HEADER = "snapshot_root"
 
-class RootSnapshotBlockBuilderExtension : BaseBlockBuilderExtension {
+class RootSnapshotBlockBuilderExtension(private val snapshotInterval: Long) : BaseBlockBuilderExtension {
+
+    companion object : KLogging()
+
+    private val digestSystem = SimpleDigestSystem(MessageDigest.getInstance("SHA-256"))
+
     private lateinit var bctx: BlockEContext
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
@@ -20,17 +27,33 @@ class RootSnapshotBlockBuilderExtension : BaseBlockBuilderExtension {
     }
 
     override fun finalize(): Map<String, Gtv> {
-        val snapshotContexts = DatabaseAccess.of(bctx).getSnapshotModuleContextIds(bctx)
-        val digestSystem = SimpleDigestSystem(MessageDigest.getInstance("SHA-256"))
         val rootSnapshotStore = SnapshotPageStore(bctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_root")
+        if (bctx.height - rootSnapshotStore.getLastSnapshotHeight() < snapshotInterval) return emptyMap()
 
-        val leafUpdates = TreeMap<Long, ByteArray>()
-        for (contextId in snapshotContexts) {
-            val moduleSnapshotStore = SnapshotPageStore(bctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_$contextId")
-            leafUpdates[contextId] = moduleSnapshotStore.getRootHashAtHeight(bctx.height)
+        logger.info("Creating snapshot at height ${bctx.height}")
+
+        val rootHash = DatabaseAccess.of(bctx).run {
+            val updatedDatumsByContext = getUpdatedDatumsByContext(bctx)
+            val contextRootHashes = updatedDatumsByContext.map { (contextId, updatedDatums) ->
+                val snapshotPageStore = SnapshotPageStore(
+                        bctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_$contextId"
+                )
+
+                for (datumInfo in updatedDatums) {
+                    if (datumInfo.rawValue != null) {
+                        LeafStore().writeState(bctx, "${SNAPSHOT_TABLE_PREFIX}_$contextId", datumInfo.id, datumInfo.rawValue)
+                    }
+                }
+                contextId to snapshotPageStore.updateSnapshot(bctx.height, TreeMap(updatedDatums.associate { it.id to it.hash }), 2)
+            }
+
+            clearUpdatedDatums(bctx)
+
+            rootSnapshotStore.updateSnapshot(bctx.height, TreeMap(contextRootHashes.associate { it.first to it.second }), 2)
         }
 
-        val rootHash = rootSnapshotStore.updateSnapshot(bctx.height, leafUpdates, 2)
+        logger.info("Completed writing snapshot at height: ${bctx.height} with root hash: ${rootHash.toHex()}")
+
         return mapOf(SNAPSHOT_ROOT_EXTRA_HEADER to gtv(rootHash))
     }
 }

@@ -63,7 +63,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     internal fun tableConfigurations(ctx: EContext): String = tableName(ctx, "configurations")
     protected fun tableConfigurations(chainId: Long): String = tableName(chainId, "configurations")
     protected fun tableFaultyConfiguration(chainId: Long): String = tableName(chainId, "sys.faulty_configuration")
-    protected fun tableSnapshotContexts(): String = "\"sys.snapshot_contexts\""
+    protected fun tableSnapshotContexts(chainId: Long): String = tableName(chainId, "sys.snapshot_contexts")
+    protected fun tableSnapshotUpdatedDatum(chainId: Long): String = tableName(chainId, "sys.snapshot_updated_datum")
     private fun tableFaultyConfiguration(ctx: EContext): String = tableFaultyConfiguration(ctx.chainID)
     internal fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableTransactions(chainId: Long): String = tableName(chainId, "transactions")
@@ -123,7 +124,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected abstract fun cmdGetAllBlockchainTables(chainId: Long): String
     protected abstract fun cmdGetAllBlockchainFunctions(chainId: Long): String
 
-    protected abstract fun cmdCreateTableSnapshotContexts(): String
+    protected abstract fun cmdCreateTableSnapshotContexts(chainId: Long): String
+    protected abstract fun cmdCreateTableSnapshotUpdatedDatum(chainId: Long): String
 
     // Tables not part of the batch creation run
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
@@ -926,7 +928,12 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     private fun version13(connection: Connection) {
-        queryRunner.update(connection, cmdCreateTableSnapshotContexts())
+        queryRunner.query(connection, "SELECT chain_iid FROM ${tableBlockchains()}", mapListHandler)
+                .map { it["chain_iid"] as Long }
+                .forEach { chainId ->
+                    queryRunner.update(connection, cmdCreateTableSnapshotContexts(chainId))
+                    queryRunner.update(connection, cmdCreateTableSnapshotUpdatedDatum(chainId))
+                }
     }
 
     protected fun parseBlockchainConfiguration(configurationData: ByteArray): BlockchainConfigurationData =
@@ -963,6 +970,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdCreateTableTransactionSigners(ctx.chainID))
         queryRunner.update(ctx.conn, cmdCreateTableTransactionSignersIndex(ctx.chainID))
         queryRunner.update(ctx.conn, cmdDropTableConfigurationDataNotNull(ctx.chainID))
+        queryRunner.update(ctx.conn, cmdCreateTableSnapshotContexts(ctx.chainID))
+        queryRunner.update(ctx.conn, cmdCreateTableSnapshotUpdatedDatum(ctx.chainID))
 
         val txIndex = "CREATE INDEX IF NOT EXISTS ${tableName(ctx, "transactions_block_iid_idx")} " +
                 "ON ${tableTransactions(ctx)}(block_iid)"
@@ -1603,6 +1612,12 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         }
     }
 
+    override fun getLatestSnapshotHeight(ctx: EContext, pageStoreName: String): Long? {
+        val sql = "SELECT max(block_height) FROM ${tablePages(ctx, pageStoreName)}"
+
+        return queryRunner.query(ctx.conn, sql, nullableLongRes)
+    }
+
     /**
      * Retrieves prunable pages that are no longer required at the specified height.
      *
@@ -1677,7 +1692,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     override fun getOrGenerateSnapshotContextId(ctx: EContext, moduleName: String): Long {
         // Do an insert or simply return context id if exists
-        val sql = "INSERT INTO ${tableSnapshotContexts()} (context_name)" +
+        val sql = "INSERT INTO ${tableSnapshotContexts(ctx.chainID)} (context_name)" +
                 " VALUES (?)" +
                 " ON CONFLICT (context_name) DO UPDATE SET context_name = EXCLUDED.context_name" +
                 " RETURNING context_id"
@@ -1685,17 +1700,45 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     }
 
     override fun getSnapshotContextId(ctx: EContext, moduleName: String): Long {
-        val sql = "SELECT context_id FROM ${tableSnapshotContexts()} WHERE context_name = ?"
+        val sql = "SELECT context_id FROM ${tableSnapshotContexts(ctx.chainID)} WHERE context_name = ?"
         return queryRunner.query(ctx.conn, sql, longRes, moduleName).toLong()
     }
 
     override fun getSnapshotModuleContextIds(ctx: EContext): List<Long> {
-        val sql = "SELECT context_id FROM ${tableSnapshotContexts()}"
+        val sql = "SELECT context_id FROM ${tableSnapshotContexts(ctx.chainID)}"
         return queryRunner.query(ctx.conn, sql, ColumnListHandler())
     }
 
     override fun getSnapshotContextModule(ctx: EContext, contextId: Long): String {
-        val sql = "SELECT context_name FROM ${tableSnapshotContexts()} WHERE context_id = ?"
+        val sql = "SELECT context_name FROM ${tableSnapshotContexts(ctx.chainID)} WHERE context_id = ?"
         return queryRunner.query(ctx.conn, sql, stringRes, contextId)
+    }
+
+    override fun insertUpdatedDatum(ctx: EContext, contextId: Long, datumInfo: DatumInfo) {
+        val sql = "INSERT INTO ${tableSnapshotUpdatedDatum(ctx.chainID)} (context_id, datum_id, datum_hash, datum) VALUES (?, ?, ?, ?)" +
+                " ON CONFLICT (context_id, datum_id) DO UPDATE SET datum_hash = ?, datum = ?"
+        queryRunner.update(ctx.conn, sql, contextId, datumInfo.id, datumInfo.hash, datumInfo.rawValue, datumInfo.hash, datumInfo.rawValue)
+    }
+
+    override fun getUpdatedDatumsByContext(ctx: EContext): Map<Long, List<DatumInfo>> {
+        val sql = "SELECT context_id, datum_id, datum_hash, datum FROM ${tableSnapshotUpdatedDatum(ctx.chainID)}"
+        val results = queryRunner.query(ctx.conn, sql, mapListHandler)
+
+        return results.groupBy(
+                { it["context_id"] as Long },
+                {
+                    DatumInfo(
+                            it["datum_id"] as Long,
+                            it["datum_hash"] as ByteArray,
+                            it["datum"] as ByteArray?
+                    )
+                }
+        )
+    }
+
+    override fun clearUpdatedDatums(ctx: EContext) {
+        val sql = "DELETE FROM ${tableSnapshotUpdatedDatum(ctx.chainID)}"
+
+        queryRunner.update(ctx.conn, sql)
     }
 }
