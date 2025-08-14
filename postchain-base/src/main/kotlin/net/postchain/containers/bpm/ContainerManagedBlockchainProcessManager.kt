@@ -310,21 +310,23 @@ class ContainerManagedBlockchainProcessManager(
                 chain.restApiEnabled
         )
 
-        nodeDiagnosticContext.blockchainData(chain.brid).putAll(mapOf(
-                DiagnosticProperty.BLOCKCHAIN_LAST_HEIGHT withLazyValue { psContainer.getBlockchainLastBlockHeight(process.chainId) },
-                DiagnosticProperty.CONTAINER_NAME withValue psContainer.containerName.toString(),
-                DiagnosticProperty.CONTAINER_ID withValue (psContainer.shortContainerId() ?: ""),
-        ))
-
         val started = psContainer.startProcess(process)
-        if (started) {
+        return if (started) {
+            nodeDiagnosticContext.blockchainData(chain.brid).putAll(mapOf(
+                    DiagnosticProperty.BLOCKCHAIN_LAST_HEIGHT withLazyValue { psContainer.getBlockchainLastBlockHeight(process.chainId) },
+                    DiagnosticProperty.CONTAINER_NAME withValue psContainer.containerName.toString(),
+                    DiagnosticProperty.CONTAINER_ID withValue (psContainer.shortContainerId() ?: ""),
+            ))
             chainIdToBrid[chain.chainId] = chain.brid
             bridToChainId[chain.brid] = chain.chainId
             extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
                     .forEach { it.connectRemoteProcess(process) }
+            process
+        } else {
+            masterBlockchainInfra.handleMasterBlockchainProcessExit(process)
+            process.shutdown()
+            null
         }
-
-        return process.takeIf { started }
     }
 
     private fun removeBlockchainProcess(chainId: Long, psContainer: PostchainContainer): ContainerBlockchainProcess? =
