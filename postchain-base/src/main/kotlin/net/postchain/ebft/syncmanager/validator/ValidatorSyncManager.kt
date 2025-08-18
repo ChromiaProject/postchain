@@ -224,6 +224,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                     //  are still responding to our old requests. For this case this is harmless.
                                 }
 
+                                is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId)
+
                                 is AppliedConfig -> applyConfig(message.configHash, message.height)
                                 is EbftVersion -> logger.debug { "Received EbftVersion from peer $xPeerId" }
                                 else -> throw ProgrammerMistake("Unhandled type ${message::class}")
