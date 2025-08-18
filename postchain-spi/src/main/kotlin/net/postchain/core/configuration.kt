@@ -17,6 +17,7 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
+import net.postchain.gtx.SnapshotAware
 import kotlin.time.Duration
 
 /**
@@ -51,6 +52,7 @@ interface BlockchainConfiguration {
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy
     fun initializeModules(postchainContext: PostchainContext)
     fun shutdownModules()
+    fun getSnapshotAwareModules(): List<SnapshotAware>
 }
 
 fun interface BlockchainConfigurationFactorySupplier {

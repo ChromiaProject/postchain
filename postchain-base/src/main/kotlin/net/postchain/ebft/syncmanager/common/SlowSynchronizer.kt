@@ -24,6 +24,7 @@ import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.GetLatestSnapshotBlock
+import net.postchain.ebft.message.GetSnapshotData
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
@@ -162,6 +163,8 @@ class SlowSynchronizer(
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight.get())
                     is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight.get()) // A replica might ask us
                     is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(peerId)
+                    is GetSnapshotData -> sendSnapshotData(peerId, blockchainConfiguration.chainID, message.height,
+                            message.contextId, message.datumIdFrom)
 
                     // But we only expect ranges and status to be sent to us
                     is BlockRange -> {

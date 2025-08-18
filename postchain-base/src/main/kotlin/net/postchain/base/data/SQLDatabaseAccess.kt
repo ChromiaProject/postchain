@@ -539,6 +539,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         )
     }
 
+    @Deprecated("Remove?")
     override fun getStatesBySize(ctx: EContext, prefix: String, height: Long, stateNFrom: Long, maxDataSize: Long): List<StateData> {
         val sql = """
             SELECT t.block_height, t.state_n, t.data FROM (

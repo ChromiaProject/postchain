@@ -63,7 +63,7 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
         return GTXBlockQueries(this, storage, blockStore, chainID, blockchainContext.nodeRID, module, snapshotDatumRepository)
     }
 
-    private fun getSnapshotAwareModules(): List<SnapshotAware> =
+    override fun getSnapshotAwareModules(): List<SnapshotAware> =
             when (module) {
                 is CompositeGTXModule -> {
                     module.modules.filterIsInstance<SnapshotAware>()

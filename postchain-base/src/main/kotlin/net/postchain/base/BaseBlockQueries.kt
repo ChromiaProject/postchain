@@ -26,6 +26,7 @@ import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.core.block.SimpleBlockHeader
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import java.sql.SQLException
 import java.util.concurrent.CompletableFuture
@@ -243,6 +244,15 @@ abstract class BaseBlockQueries(
 
             BlockHeaderWithWitness(header, witness)
         }
+    }
+
+    override fun getSnapshotContextMaxIds(height: Long): CompletionStage<Map<Long, Long?>> = runOpRegardless {
+        snapshotDatumRepository.getContextMaxIds(it, height)
+    }
+
+    override fun getSnapshotData(height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long):
+            CompletionStage<List<Triple<Long, Gtv, Boolean>>> = runOpRegardless {
+        snapshotDatumRepository.getDatumsBySize(it, height, contextId, datumIdFrom, maxDataSize)
     }
 
     override fun shutdown() {

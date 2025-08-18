@@ -40,6 +40,7 @@ import net.postchain.crypto.SigMaker
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtx.SnapshotAware
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import java.lang.reflect.InvocationTargetException
@@ -215,6 +216,8 @@ abstract class BaseBlockchainConfiguration(
     override fun initializeModules(postchainContext: PostchainContext) {}
 
     override fun shutdownModules() {}
+
+    override fun getSnapshotAwareModules(): List<SnapshotAware> = emptyList()
 
     private fun makeDefaultBBExtensions(): List<BaseBlockBuilderExtension> =
             if (configData.configConsensusStrategy == ConfigConsensusStrategy.HEADER_HASH) {

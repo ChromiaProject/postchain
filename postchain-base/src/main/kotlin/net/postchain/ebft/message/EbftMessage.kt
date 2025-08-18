@@ -31,6 +31,8 @@ abstract class EbftMessage(val topic: MessageTopic) {
                 MessageTopic.APPLIEDCONFIG.value -> AppliedConfig(data[1].asByteArray(), data[2].asInteger())
                 MessageTopic.EBFTVERSION.value -> EbftVersion(data[1].asInteger())
                 MessageTopic.GETLATESTSNAPSHOT.value -> GetLatestSnapshotBlock()
+                MessageTopic.GETSNAPSHOTDATA.value -> GetSnapshotData.buildFromGtv(data, 1)
+                MessageTopic.SNAPSHOTDATA.value -> SnapshotData.buildFromGtv(data, 1)
                 else -> throw BadMessageException("Message topic $topic is not handled")
             }
         }

@@ -141,14 +141,14 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         if (snapshotsEnabled) {
             modules.filterIsInstance<SnapshotAware>()
                     .forEach { module -> module.initializeSnapshotContext({ ctx, datumId, datum, isPermanent ->
-                        DatabaseAccess.of(ctx).apply {
-                            val contextId = getSnapshotContextId(ctx, module::class.java.canonicalName)
-                            insertUpdatedDatum(ctx, contextId, DatumInfo(
-                                    datumId,
-                                    datum.merkleHash(configuration.merkleHashCalculator),
-                                    if (isPermanent) null else GtvEncoder.encodeGtv(datum)
-                            ))
-                        }
+                            DatabaseAccess.of(ctx).apply {
+                                val contextId = getSnapshotContextId(ctx, module::class.java.canonicalName)
+                                insertUpdatedDatum(ctx, contextId, DatumInfo(
+                                        datumId,
+                                        datum.merkleHash(configuration.merkleHashCalculator),
+                                        if (isPermanent) null else GtvEncoder.encodeGtv(datum)
+                                ))
+                            }
                     })}
         }
     }
