@@ -109,5 +109,11 @@ data class BlockchainConfigurationData(
             val features = configuration[KEY_FEATURES]?.asDict()
             return features?.get(BlockchainFeatures.merkle_hash_version.name)?.asInteger() ?: 1L
         }
+
+        @JvmStatic
+        fun snapshotSyncEnabled(configuration: Gtv): Boolean {
+            val features = configuration[KEY_FEATURES]?.asDict()
+            return features?.get(BlockchainFeatures.snapshot_enabled.name)?.asBoolean() ?: false
+        }
     }
 }

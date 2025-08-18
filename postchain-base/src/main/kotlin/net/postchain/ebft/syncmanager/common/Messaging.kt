@@ -30,6 +30,7 @@ abstract class Messaging(
     private val servedBlockRanges = mutableMapOf<NodeRid, MutableSet<Long>>()
     private val servedBlockAtHeight = mutableMapOf<NodeRid, MutableSet<Long>>()
     private val servedBlockHeaderAndBlock = mutableMapOf<NodeRid, MutableSet<Long>>()
+    private val servedLatestSnapshotHeight = mutableSetOf<NodeRid>()
 
     /**
      * We're going to get a lot of requests from peers in fastsync mode. We should cache our tip
@@ -165,6 +166,26 @@ abstract class Messaging(
         }
     }
 
+    fun sendLatestSnapshotHeight(peerID: NodeRid) {
+        if (peerID in servedLatestSnapshotHeight) {
+            logger.debug { "Already responded to request from peer $peerID for latest snapshot height. Ignoring." }
+            return
+        }
+
+        try {
+            val blockHeader = blockQueries.getLatestSnapshotBlockHeader().get()
+            // TODO: Should we re-use BlockHeader message type for this or create a new message type instead?
+            if (blockHeader != null) {
+                communicationManager.sendPacket(BlockHeader(blockHeader.header.rawData, blockHeader.witness.getRawData(), -1), peerID)
+            } else {
+                communicationManager.sendPacket(BlockHeader(byteArrayOf(), byteArrayOf(), -1), peerID)
+            }
+            servedLatestSnapshotHeight.add(peerID)
+        } catch (e: Exception) {
+            logger.debug(e) { "Error sending latest snapshot height" }
+        }
+    }
+
     private fun isTotalServedBlockRequestLimitReached(peerID: NodeRid): Boolean {
         val limitReached = rateLimitConfiguration.blockRequestRateLimit > 0 &&
                 (MAX_BLOCKS_IN_PACKAGE * (servedBlockRanges[peerID]?.size ?: 0)) +
@@ -179,5 +200,6 @@ abstract class Messaging(
         servedBlockRanges.clear()
         servedBlockAtHeight.clear()
         servedBlockHeaderAndBlock.clear()
+        servedLatestSnapshotHeight.clear()
     }
 }

@@ -21,7 +21,7 @@ import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.BlockWitness
 import net.postchain.devtools.NameHelper
 import net.postchain.ebft.BDBAbortException
-import net.postchain.ebft.BlockDatabase
+import net.postchain.ebft.BlockWriter
 import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.CompleteBlock
 import net.postchain.ebft.message.EbftMessage
@@ -30,6 +30,7 @@ import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
+import net.postchain.ebft.message.GetLatestSnapshotBlock
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.Transaction
 import net.postchain.ebft.message.UnfinishedBlock
@@ -65,7 +66,7 @@ import net.postchain.ebft.message.BlockHeader as BlockHeaderMessage
  */
 class FastSynchronizer(
         workerContext: WorkerContext,
-        private val blockDatabase: BlockDatabase,
+        private val blockDatabase: BlockWriter,
         val params: SyncParameters,
         val peerStatuses: PeerStatuses,
         val isProcessRunning: () -> Boolean,
@@ -101,7 +102,7 @@ class FastSynchronizer(
         try {
             blockHeight.set(blockQueries.getLastBlockHeight().get())
             logger.debug { syncDebug("Start", blockHeight.get()) }
-            while (isProcessRunning() && !exitCondition()) {
+            while (isProcessRunning() && !exitCondition() && (params.syncToExactHeight != -1L || blockHeight.get() >= params.syncToExactHeight)) {
                 refillJobs()
                 processMessages()
                 processDoneJobs(polledFinishedJob)
@@ -392,6 +393,8 @@ class FastSynchronizer(
      * Non-private for testing purposes
      */
     internal fun startJob(height: Long): Boolean {
+        if (params.syncToExactHeight != -1L && height > params.syncToExactHeight) return false
+
         var peer = sendRequest(height)
         if (peer == null) {
             // There were no modern nodes to sync from. Let's try with a legacy node instead
@@ -676,6 +679,7 @@ class FastSynchronizer(
                     is CompleteBlock -> handleCompleteBlock(peerId, message)
                     is EbftVersion -> logger.debug { "Received EbftVersion from peer $peerId" }
                     is Transaction -> logger.trace { "Got transaction from peer $peerId, ignoring" }
+                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(peerId)
 
                     else -> {
                         if (signers.contains(peerId)) {

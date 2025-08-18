@@ -38,6 +38,7 @@ import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
+import net.postchain.ebft.message.GetLatestSnapshotBlock
 import net.postchain.ebft.message.GetUnfinishedBlock
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.Transaction
@@ -220,6 +221,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                     // TODO: This might happen because we've already exited FastSync but other nodes
                                     //  are still responding to our old requests. For this case this is harmless.
                                 }
+
+                                is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId)
 
                                 is AppliedConfig -> applyConfig(message.configHash, message.height)
                                 is EbftVersion -> logger.debug { "Received EbftVersion from peer $xPeerId" }
@@ -526,6 +529,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             }
             // Wait for any queued blocks to commit/fail before starting sync
             blockManager.waitForRunningOperationsToComplete()
+            // TODO: Use snapshot sync here
             fastSynchronizer.syncUntilResponsiveNodesDrained()
             // turn off fast sync, reset current block to null, and query for the last known state from db to prevent
             // possible race conditions

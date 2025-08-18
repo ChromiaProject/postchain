@@ -6,6 +6,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
 import net.postchain.gtx.SnapshotAware
+import java.security.MessageDigest
 
 /**
  * TODO: We need to think about where and how to instantiate this repository
@@ -13,6 +14,7 @@ import net.postchain.gtx.SnapshotAware
 class SnapshotDatumRepository(
         private val snapshotModules: List<SnapshotAware>
 ) {
+    private val digestSystem = SimpleDigestSystem(MessageDigest.getInstance("SHA-256"))
 
     fun getDatum(ctx: EContext, height: Long, contextId: Long, datumId: Long): Gtv {
         val dba = DatabaseAccess.of(ctx)
@@ -27,5 +29,12 @@ class SnapshotDatumRepository(
                 ?: TODO("We need to think more about this scenario, could be a module that is no longer used?")
 
         return module.getPermanentDatum(ctx, datumId) // We assume the module will throw if it can't resolve a datum with this ID
+    }
+
+    // TODO: Does this belong here?
+    fun getLatestSnapshotHeight(ctx: EContext): Long {
+        val rootSnapshotStore = SnapshotPageStore(ctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_root")
+
+        return rootSnapshotStore.getLastSnapshotHeight()
     }
 }

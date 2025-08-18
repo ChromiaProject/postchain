@@ -420,6 +420,7 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData 
 	public static final fun merkleHash (Lnet/postchain/gtv/Gtv;)[B
 	public static final fun merkleHashCalculator (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;
 	public static final fun merkleHashVersion (Lnet/postchain/gtv/Gtv;)J
+	public static final fun snapshotSyncEnabled (Lnet/postchain/gtv/Gtv;)Z
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -428,6 +429,7 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData$
 	public final fun merkleHash (Lnet/postchain/gtv/Gtv;)[B
 	public final fun merkleHashCalculator (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;
 	public final fun merkleHashVersion (Lnet/postchain/gtv/Gtv;)J
+	public final fun snapshotSyncEnabled (Lnet/postchain/gtv/Gtv;)Z
 }
 
 public final class net/postchain/base/configuration/BlockchainConfigurationFieldsKt {
@@ -980,6 +982,7 @@ public final class net/postchain/base/snapshot/SnapshotBlockchainConfigurationDa
 public final class net/postchain/base/snapshot/SnapshotDatumRepository {
 	public fun <init> (Ljava/util/List;)V
 	public final fun getDatum (Lnet/postchain/core/ExecutionContext;JJJ)Lnet/postchain/gtv/Gtv;
+	public final fun getLatestSnapshotHeight (Lnet/postchain/core/ExecutionContext;)J
 }
 
 public class net/postchain/base/snapshot/SnapshotPageStore : net/postchain/base/snapshot/BasePageStore {
@@ -1764,6 +1767,11 @@ public abstract interface class net/postchain/core/block/BlockHeader {
 	public abstract fun getRawData ()[B
 }
 
+public abstract interface class net/postchain/core/block/BlockHeaderWithWitness {
+	public abstract fun getHeader ()Lnet/postchain/core/block/BlockHeader;
+	public abstract fun getWitness ()Lnet/postchain/core/block/BlockWitness;
+}
+
 public abstract interface class net/postchain/core/block/BlockQueries : net/postchain/core/Shutdownable {
 	public abstract fun getBlock ([BZ)Ljava/util/concurrent/CompletionStage;
 	public abstract fun getBlockAtHeight (JZ)Ljava/util/concurrent/CompletionStage;
@@ -1777,6 +1785,7 @@ public abstract interface class net/postchain/core/block/BlockQueries : net/post
 	public abstract fun getLastBlockHeight ()Ljava/util/concurrent/CompletionStage;
 	public abstract fun getLastBlockTimestamp ()Ljava/util/concurrent/CompletionStage;
 	public abstract fun getLastTransactionNumber ()Ljava/util/concurrent/CompletionStage;
+	public abstract fun getLatestSnapshotBlockHeader ()Ljava/util/concurrent/CompletionStage;
 	public abstract fun getTransaction ([B)Ljava/util/concurrent/CompletionStage;
 	public abstract fun getTransactionInfo ([BZ)Ljava/util/concurrent/CompletionStage;
 	public abstract fun getTransactionRawData ([B)Ljava/util/concurrent/CompletionStage;

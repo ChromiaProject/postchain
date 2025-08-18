@@ -16,6 +16,7 @@ import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockDetailsTruncated
+import net.postchain.core.block.BlockHeaderWithWitness
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockQueryHeightFilter
 import net.postchain.core.block.BlockQueryTimeFilter
@@ -225,6 +226,10 @@ abstract class BaseBlockQueries(
                     BlockDataWithWitness(header, txBytes, witness)
                 }
             }
+
+    override fun getLatestSnapshotBlockHeader(): CompletionStage<BlockHeaderWithWitness?> = runOpRegardless {
+        throw Exception("Not implemented yet")
+    }
 
     override fun shutdown() {
         logger.debug { "Shutting down block queries" }
