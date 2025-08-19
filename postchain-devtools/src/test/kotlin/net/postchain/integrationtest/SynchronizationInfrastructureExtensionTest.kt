@@ -14,14 +14,22 @@ import net.postchain.core.SynchronizationInfrastructureExtension
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
 import net.postchain.devtools.utils.configuration.system.SystemSetupFactory
+import net.postchain.integrationtest.bpm.connected
 import org.awaitility.Awaitility.await
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
-var connected = mutableMapOf<Long, Boolean>()
+val connected = ConcurrentHashMap<Long, Boolean>()
 
 class SynchronizationInfrastructureExtensionTest : IntegrationTestSetup() {
+
+    @AfterEach
+    fun cleanup() {
+        connected.clear()
+    }
 
     @Test
     fun `Extension is connected and disconnected properly`() {
