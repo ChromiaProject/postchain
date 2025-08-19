@@ -328,12 +328,18 @@ open class BaseBlockchainProcessManager(
     ) {
         blockchainProcesses[chainId] = blockchainInfrastructure.createBlockchainProcess(engine, blockchainConfigProvider, restartNotifier, blockchainState)
                 .also {
+                    try {
+                        extensions.forEach { ext -> ext.connectProcess(it) }
+                    } catch (e: Exception) {
+                        // Clean up the process
+                        it.shutdown()
+                        throw e
+                    }
                     val diagnosticData = nodeDiagnosticContext.blockchainData(blockchainConfig.blockchainRid).also { data ->
                         data[DiagnosticProperty.BLOCKCHAIN_LAST_HEIGHT] = LazyDiagnosticValue { engine.getBlockQueries().getLastBlockHeight().get() }
                         data[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS] = LazyDiagnosticValue { connectionManager.getNodesTopology(chainId) }
                     }
                     it.registerDiagnosticData(diagnosticData)
-                    extensions.forEach { ext -> ext.connectProcess(it) }
                     chainIdToBrid[chainId] = blockchainConfig.blockchainRid
                     bridToChainId[blockchainConfig.blockchainRid] = chainId
                 }
@@ -398,7 +404,7 @@ open class BaseBlockchainProcessManager(
         }
         blockchainProcesses.remove(chainId)?.also {
             stopInfoDebug("Stopping of blockchain: $chainId", bTrace)
-            extensions.forEach { ext -> ext.disconnectProcess(it) }
+            disconnectProcessFromExtensions(it)
             if (restart) {
                 blockchainInfrastructure.handleBlockchainRestart(it)
             } else {
@@ -416,7 +422,7 @@ open class BaseBlockchainProcessManager(
 
         blockchainProcesses.values.forEach {
             blockchainInfrastructure.handleBlockchainTermination(it)
-            extensions.forEach { ext -> ext.disconnectProcess(it) }
+            disconnectProcessFromExtensions(it)
             it.shutdown()
         }
         blockchainProcesses.clear()
@@ -519,6 +525,15 @@ open class BaseBlockchainProcessManager(
                 unlock()
             }
         } ?: throw ProgrammerMistake("No lock instance exists for chain $chainId")
+    }
+
+    private fun disconnectProcessFromExtensions(process: BlockchainProcess) = extensions.forEach { ext ->
+        try {
+            ext.disconnectProcess(process)
+        } catch (e: Exception) {
+            // We just log this so shutdown can proceed
+            logger.error(e) { "Unable to disconnect process from blockchain process manager extension" }
+        }
     }
 
     // ----------------------------------------------

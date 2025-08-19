@@ -27,6 +27,7 @@ import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainConfigurationFactorySupplier
 import net.postchain.core.BlockchainProcess
 import net.postchain.core.BlockchainProcessManagerExtension
+import net.postchain.core.RemoteBlockchainProcess
 import net.postchain.core.RemoteBlockchainProcessConnectable
 import net.postchain.core.block.BlockTrace
 import net.postchain.debug.DiagnosticProperty
@@ -293,7 +294,10 @@ class ContainerManagedBlockchainProcessManager(
             postchainContainers.values.firstOrNull { it.containerName == containerName }
 
     override fun shutdown() {
-        getStartingOrRunningContainerBlockchains().forEach { stopBlockchain(it.key, null) }
+        getStartingOrRunningContainerBlockchains().forEach {
+            it.value.forEach { (_, proc) -> disconnectRemoteProcessFromExtensions(proc) }
+            stopBlockchain(it.key, null)
+        }
         containerJobManager.shutdown()
         metrics.close()
         super.shutdown()
@@ -388,8 +392,7 @@ class ContainerManagedBlockchainProcessManager(
     }
 
     private fun cleanUpBlockchainProcess(chainId: Long, psContainer: PostchainContainer, process: ContainerBlockchainProcess) {
-        extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
-                .forEach { it.disconnectRemoteProcess(process) }
+        disconnectRemoteProcessFromExtensions(process)
         masterBlockchainInfra.handleMasterBlockchainProcessExit(process)
         val blockchainRid = chainIdToBrid.remove(chainId)
         nodeDiagnosticContext.removeBlockchainData(blockchainRid)
@@ -440,4 +443,14 @@ class ContainerManagedBlockchainProcessManager(
             it.afterCommitInSubnode(blockchainRid, blockHeight)
         }
     }
+
+    private fun disconnectRemoteProcessFromExtensions(process: RemoteBlockchainProcess) = extensions.filterIsInstance<RemoteBlockchainProcessConnectable>()
+            .forEach { ext ->
+                try {
+                    ext.disconnectRemoteProcess(process)
+                } catch (e: Exception) {
+                    // We just log this so shutdown can proceed
+                    logger.error(e) { "Unable to disconnect remote process from blockchain process manager extension" }
+                }
+            }
 }
