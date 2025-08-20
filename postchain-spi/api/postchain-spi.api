@@ -983,6 +983,8 @@ public final class net/postchain/base/snapshot/SnapshotDatumRepository {
 	public fun <init> (Ljava/util/List;)V
 	public final fun getDatum (Lnet/postchain/core/ExecutionContext;JJJ)Lnet/postchain/gtv/Gtv;
 	public final fun getDatumIdMax (Lnet/postchain/core/ExecutionContext;JJ)Ljava/lang/Long;
+	public final fun getDatumWithType (Lnet/postchain/core/ExecutionContext;JJJ)Lkotlin/Pair;
+	public final fun getDatumsBySize (Lnet/postchain/core/ExecutionContext;JJJJ)Ljava/util/List;
 	public final fun getPermanentDatum (Lnet/postchain/core/ExecutionContext;JJ)Lnet/postchain/gtv/Gtv;
 	public final fun getPermanentDatumIdMax (Lnet/postchain/core/ExecutionContext;J)Ljava/lang/Long;
 	public final fun getPermanentDatumsBySize (Lnet/postchain/core/ExecutionContext;JJJ)Ljava/util/List;
