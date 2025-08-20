@@ -684,6 +684,8 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getSnapshotContextModule (Lnet/postchain/core/ExecutionContext;J)Ljava/lang/String;
 	public abstract fun getSnapshotModuleContextIds (Lnet/postchain/core/ExecutionContext;)Ljava/util/List;
 	public abstract fun getState (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JJ)Lnet/postchain/base/data/DatabaseAccess$StateData;
+	public abstract fun getStateNMax (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;J)Ljava/lang/Long;
+	public abstract fun getStatesBySize (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JJJ)Ljava/util/List;
 	public abstract fun getTransactionInfo (Lnet/postchain/core/ExecutionContext;[BZ)Lnet/postchain/core/TransactionInfoExt;
 	public abstract fun getTransactionsInfo (Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockQueryTimeFilter;II)Lnet/postchain/core/TransactionInfoExtsTruncated;
 	public abstract fun getTransactionsInfoBySigner (Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockQueryTimeFilter;ILnet/postchain/crypto/PubKey;I)Lnet/postchain/core/TransactionInfoExtsTruncated;
@@ -980,6 +982,13 @@ public final class net/postchain/base/snapshot/SnapshotBlockchainConfigurationDa
 public final class net/postchain/base/snapshot/SnapshotDatumRepository {
 	public fun <init> (Ljava/util/List;)V
 	public final fun getDatum (Lnet/postchain/core/ExecutionContext;JJJ)Lnet/postchain/gtv/Gtv;
+	public final fun getDatumIdMax (Lnet/postchain/core/ExecutionContext;JJ)Ljava/lang/Long;
+	public final fun getPermanentDatum (Lnet/postchain/core/ExecutionContext;JJ)Lnet/postchain/gtv/Gtv;
+	public final fun getPermanentDatumIdMax (Lnet/postchain/core/ExecutionContext;J)Ljava/lang/Long;
+	public final fun getPermanentDatumsBySize (Lnet/postchain/core/ExecutionContext;JJJ)Ljava/util/List;
+	public final fun getStateDatum (Lnet/postchain/core/ExecutionContext;JJJ)Lnet/postchain/gtv/Gtv;
+	public final fun getStateDatumIdMax (Lnet/postchain/core/ExecutionContext;JJ)Ljava/lang/Long;
+	public final fun getStateDatumsBySize (Lnet/postchain/core/ExecutionContext;JJJJ)Ljava/util/List;
 }
 
 public class net/postchain/base/snapshot/SnapshotPageStore : net/postchain/base/snapshot/BasePageStore {
@@ -2216,7 +2225,10 @@ public final class net/postchain/gtx/SimpleGTXOperation : net/postchain/gtx/GTXO
 }
 
 public abstract interface class net/postchain/gtx/SnapshotAware {
+	public abstract fun constructDatum (Lnet/postchain/core/ExecutionContext;JLnet/postchain/gtv/Gtv;Z)V
 	public abstract fun getPermanentDatum (Lnet/postchain/core/ExecutionContext;J)Lnet/postchain/gtv/Gtv;
+	public abstract fun getPermanentDatumIdMax (Lnet/postchain/core/ExecutionContext;)Ljava/lang/Long;
+	public abstract fun getPermanentDatumsBySize (Lnet/postchain/core/ExecutionContext;JJ)Ljava/util/List;
 	public abstract fun initializeSnapshotContext (Lnet/postchain/gtx/SnapshotContext;)V
 }
 
