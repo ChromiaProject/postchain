@@ -2,6 +2,7 @@ package net.postchain.integrationtest.snapshot
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isZero
 import assertk.isContentEqualTo
@@ -164,7 +165,7 @@ class SnapshotTest : IntegrationTestSetup() {
 
         val emitDatumsTx = transactionFactory.decodeTransaction(GtxBuilder(brid, emptyList(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
                 .apply {
-                    (1..20L).forEach {
+                    (0..20L).forEach {
                         addOperation("emit_datum_a", gtv(it), gtv("a_datum_$it"), gtv(it % 4 == 0L))
                         addOperation("emit_datum_b", gtv(it), gtv("b_datum_$it"), gtv(it % 4 == 0L))
                     }
@@ -182,11 +183,11 @@ class SnapshotTest : IntegrationTestSetup() {
         // Verify data is in place
         withReadConnection(nodes[0].postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { ctx ->
             // Assert still the same value at height 0
-            val datumA3V1 = datumRepository.getDatum(ctx, 1, 0, 3)
-            val datumB19V1 = datumRepository.getDatum(ctx, 1, 1, 19)
+            val datumA3V1 = datumRepository.getDatumWithType(ctx, 1, 0, 3)
+            val datumB19V1 = datumRepository.getDatumWithType(ctx, 1, 1, 19)
 
-            assertThat(datumA3V1).isEqualTo(gtv("a_datum_3"))
-            assertThat(datumB19V1).isEqualTo(gtv("b_datum_19"))
+            assertThat(datumA3V1).isEqualTo(gtv("a_datum_3") to false)
+            assertThat(datumB19V1).isEqualTo(gtv("b_datum_19") to false)
         }
 
         // Clear module tables on node 4
@@ -220,25 +221,18 @@ class SnapshotTest : IntegrationTestSetup() {
                         val destinationNodeModule = nodes[3].getModules(DEFAULT_CHAIN_IID).filterIsInstance<SnapshotTestModule>()
                                 .find { it.conf.tableName == sourceNodeModule.conf.tableName }!!
 
-                        // Restore state datums
-                        var datums = listOf<Pair<Long, Gtv>>()
-                        do {
-                            val offset = datums.maxByOrNull { it.first }?.first?.inc() ?: 0L
-                            datums = datumRepository.getStateDatumsBySize(sourceNodeCtx, height, contextId, offset, bytesLimit)
-                            datums.forEach {
-                                destinationNodeModule.constructDatum(destinationNodeCtx, it.first, it.second, false)
-                            }
-                        } while (datums.isNotEmpty())
+                        val datumIdMax = datumRepository.getDatumIdMax(destinationNodeCtx, Long.MAX_VALUE, contextId)
+                        assertThat(datumIdMax).isNotNull()
 
-                        // Restore permanent datums
-                        datums = listOf()
-                        do {
-                            val offset = datums.maxByOrNull { it.first }?.first?.inc() ?: 0L
-                            datums = datumRepository.getPermanentDatumsBySize(sourceNodeCtx, contextId, offset, bytesLimit)
+                        // Restore datums
+                        var offset = 0L
+                        while (offset <= datumIdMax!!) {
+                            val datums = datumRepository.getDatumsBySize(sourceNodeCtx, height, contextId, offset, bytesLimit)
                             datums.forEach {
-                                destinationNodeModule.constructDatum(destinationNodeCtx, it.first, it.second, true)
+                                destinationNodeModule.constructDatum(destinationNodeCtx, it.first, it.second, it.third)
                             }
-                        } while (datums.isNotEmpty())
+                            offset += datums.size
+                        }
 
                         true
                     }

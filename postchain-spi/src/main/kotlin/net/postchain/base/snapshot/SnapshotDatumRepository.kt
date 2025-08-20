@@ -36,7 +36,15 @@ class SnapshotDatumRepository(
     }
 
     fun getDatum(ctx: EContext, height: Long, contextId: Long, datumId: Long): Gtv {
-        return getStateDatum(ctx, height, contextId, datumId) ?: getPermanentDatum(ctx, contextId, datumId)
+        return getDatumWithType(ctx, height, contextId, datumId).first
+    }
+
+    fun getDatumWithType(ctx: EContext, height: Long, contextId: Long, datumId: Long): Pair<Gtv, Boolean> {
+        val datum = getStateDatum(ctx, height, contextId, datumId)
+        if (datum != null) {
+            return datum to false
+        }
+        return getPermanentDatum(ctx, contextId, datumId) to true
     }
 
     fun getStateDatum(ctx: EContext, height: Long, contextId: Long, datumId: Long): Gtv? {
@@ -48,6 +56,19 @@ class SnapshotDatumRepository(
         return null
     }
 
+    // TODO replace Triple and "bySize"?
+    fun getDatumsBySize(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<Triple<Long, Gtv, Boolean>> {
+        val datums = mutableListOf<Triple<Long, Gtv, Boolean>>()
+        var offset = datumIdFrom
+        do {
+            val (datum, permanent) = getDatumWithType(ctx, height, contextId, offset) ?: break
+            datums.add(Triple(offset, datum, permanent))
+            offset++
+        } while (datums.sumOf { it.second.nrOfBytes() } < maxDataSize)
+        return datums
+    }
+
+    // TODO might not be needed
     fun getStateDatumsBySize(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<Pair<Long, Gtv>> {
         val dba = DatabaseAccess.of(ctx)
         return dba.getStatesBySize(ctx, "${SNAPSHOT_TABLE_PREFIX}_$contextId", height, datumIdFrom, maxDataSize)
@@ -64,6 +85,7 @@ class SnapshotDatumRepository(
         return module.getPermanentDatum(ctx, datumId) // We assume the module will throw if it can't resolve a datum with this ID
     }
 
+    // TODO might not be needed
     fun getPermanentDatumsBySize(ctx: EContext, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<Pair<Long, Gtv>> {
         val dba = DatabaseAccess.of(ctx)
         val moduleName = dba.getSnapshotContextModule(ctx, contextId)
