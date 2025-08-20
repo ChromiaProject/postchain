@@ -25,6 +25,15 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
 
         val initialConfig = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(initialConfig), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
+
+        // Load new config at height 5
+        val newConfig = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_updated_4.xml")!!.readText())
+        addDappBlockchainConfiguration(c1, GtvEncoder.encodeGtv(newConfig), 5)
+        buildBlockNoWait(nodes.subList(0, 3),c1, 4)
+        val nodeSetups = getChainNodeSetups(c1)
+        nodeSetups.subList(0, 3).forEach { awaitChainRunning(it.sequenceNumber.nodeNumber, c1, 4) }
+
+        // Build some more blocks
         buildBlock(nodes.subList(0, 3),c1, 10)
 
         // Assert that we could snapshot sync the chain on the replica node

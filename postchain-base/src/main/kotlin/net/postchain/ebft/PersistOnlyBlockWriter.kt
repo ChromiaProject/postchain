@@ -5,12 +5,16 @@ import mu.withLoggingContext
 import net.postchain.base.BaseBlockEContext
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.data.GenericBlockHeaderValidator
+import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
+import net.postchain.core.AfterCommitHandler
 import net.postchain.core.BadBlockException
+import net.postchain.core.BeforeCommitHandler
 import net.postchain.core.BlockRid
+import net.postchain.core.ConfigurationMismatchException
 import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
 import net.postchain.core.ValidationResult
@@ -27,9 +31,12 @@ class PersistOnlyBlockWriter(
         private val nodeIndex: Int,
         private val chainId: Long,
         private val blockchainRid: BlockchainRid,
+        private val configHash: ByteArray,
         private val blockStore: BlockStore,
         private val storage: Storage,
-        private val transactionFactory: TransactionFactory
+        private val transactionFactory: TransactionFactory,
+        private val beforeCommitHandler: BeforeCommitHandler,
+        private val afterCommitHandler: AfterCommitHandler
 ) : BlockWriter {
 
     companion object : KLogging()
@@ -71,7 +78,12 @@ class PersistOnlyBlockWriter(
                         nextTransactionNumber++
                     }
                     blockStore.finalizeBlock(bctx, block.header)
+                    val bTrace = BlockTrace.build(block.header.blockRID, initialBlockData.height)
+
+                    beforeCommitHandler(bTrace, bctx)
                     blockStore.commitBlock(bctx, block.witness)
+                    afterCommitHandler(bTrace, bctx.height, bctx.timestamp)
+
                     logger.info("Saved block: height: ${initialBlockData.height}, block-rid: ${block.header.blockRID.toHex()}, prev-block-rid: ${block.header.prevBlockRID.toHex()}")
                     true
                 }
@@ -94,6 +106,12 @@ class PersistOnlyBlockWriter(
 
         if (validationResult.result != ValidationResult.Result.OK) {
             throw BadBlockException(validationResult.message)
+        }
+
+        // Witness is already checked by synchronizer, unless config is not currently loaded, so we need to check that
+        val blockConfigHash = header.extraData[CONFIG_HASH_EXTRA_HEADER]?.asByteArray()
+        if (blockConfigHash != null && !blockConfigHash.contentEquals(configHash)) {
+            throw ConfigurationMismatchException("Block configuration hash ${blockConfigHash.toHex()} does not match currently loaded configuration hash ${configHash.toHex()}")
         }
     }
 }

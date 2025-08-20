@@ -7,6 +7,7 @@ import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.data.BaseBlockStore
+import net.postchain.base.withReadConnection
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.concurrent.util.get
@@ -70,9 +71,22 @@ class ReadOnlyBlockchainProcess(
             NODE_ID_READ_ONLY,
             workerContext.blockchainConfiguration.chainID,
             workerContext.blockchainConfiguration.blockchainRid,
+            workerContext.blockchainConfiguration.configHash,
             BaseBlockStore(),
             blockchainEngine.blockBuilderStorage,
-            workerContext.blockchainConfiguration.getTransactionFactory()
+            workerContext.blockchainConfiguration.getTransactionFactory(),
+            { _, _ -> },
+            { _, _, _ ->
+                with(workerContext) {
+                    withReadConnection(blockchainEngine.blockBuilderStorage, blockchainConfiguration.chainID) { eContext ->
+                        val newConfigCheck = blockchainConfigurationProvider.activeBlockNeedsConfigurationChange(eContext, blockchainConfiguration.chainID, false)
+                        if (newConfigCheck.changeNeeded) {
+                            restartNotifier.notifyRestart(null)
+                            true
+                        } else false
+                    }
+                }
+            }
     )
 
     private val params = SyncParameters.fromAppConfig(workerContext.appConfig)
