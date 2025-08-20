@@ -3,15 +3,21 @@ package net.postchain.ebft
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.BaseBlockEContext
+import net.postchain.base.BaseBlockHeader
+import net.postchain.base.data.GenericBlockHeaderValidator
 import net.postchain.base.withWriteConnection
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
+import net.postchain.core.BadBlockException
+import net.postchain.core.BlockRid
 import net.postchain.core.Storage
 import net.postchain.core.TransactionFactory
+import net.postchain.core.ValidationResult
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockStore
 import net.postchain.core.block.BlockTrace
+import net.postchain.core.block.InitialBlockData
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -49,6 +55,8 @@ class PersistOnlyBlockWriter(
                     val initialBlockData = blockStore.beginBlock(ctx, blockchainRid, null)
                     var nextTransactionNumber = blockStore.getLastTransactionNumber(ctx) + 1
 
+                    validateBlockHeader(block, initialBlockData) { height -> blockStore.getBlockRID(ctx, height) }
+
                     val bctx = BaseBlockEContext(
                             ctx,
                             initialBlockData.height,
@@ -69,5 +77,23 @@ class PersistOnlyBlockWriter(
                 }
             }
         }, executor)
+    }
+
+    private fun validateBlockHeader(block: BlockDataWithWitness, initialBlockData: InitialBlockData, blockRidFromHeight: (height: Long) -> ByteArray?) {
+        // Odd to have to cast, but we do that in normal validation as well
+        val header = block.header as BaseBlockHeader
+        // We can't do advanced validation here because we don't apply txs
+        val validationResult = GenericBlockHeaderValidator.basicValidationAgainstKnownBlocks(
+                BlockRid(header.blockRID),
+                BlockRid(header.prevBlockRID),
+                header.blockHeaderRec.getHeight(),
+                BlockRid(initialBlockData.prevBlockRID),
+                initialBlockData.height,
+                blockRidFromHeight
+        )
+
+        if (validationResult.result != ValidationResult.Result.OK) {
+            throw BadBlockException(validationResult.message)
+        }
     }
 }
