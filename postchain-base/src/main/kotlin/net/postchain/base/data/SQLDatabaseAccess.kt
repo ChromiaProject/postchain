@@ -542,12 +542,14 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     override fun getStatesBySize(ctx: EContext, prefix: String, height: Long, stateNFrom: Long, maxDataSize: Long): List<StateData> {
         val sql = """
             SELECT t.block_height, t.state_n, t.data FROM (
-                SELECT block_height, state_n, data, SUM(OCTET_LENGTH(data)) OVER (ORDER BY state_n) AS acc_bytes
+                SELECT block_height, state_n, data,
+                    SUM(OCTET_LENGTH(data)) OVER (ORDER BY state_n) AS acc_bytes,
+                    ROW_NUMBER() OVER (ORDER BY state_n) as row_num
                 FROM ${tableStateLeafs(ctx, prefix)}
                 WHERE block_height <= ? AND state_n >= ?
                 ORDER BY state_n
             ) t
-            WHERE t.acc_bytes <= ?
+            WHERE t.acc_bytes <= ? OR t.row_num = 1
             """
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, height, stateNFrom, maxDataSize)
         if (rows.isEmpty()) return listOf()

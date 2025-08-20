@@ -215,7 +215,6 @@ class SnapshotTest : IntegrationTestSetup() {
                 val datumIdMax = datumRepository.getDatumIdMax(sourceNodeCtx, Long.MAX_VALUE, contextId)
 
                 if (datumIdMax != null) {
-
                     withWriteConnection(nodes[3].postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { destinationNodeCtx ->
 
                         val destinationNodeModule = nodes[3].getModules(DEFAULT_CHAIN_IID).filterIsInstance<SnapshotTestModule>()
@@ -255,7 +254,7 @@ class SnapshotTest : IntegrationTestSetup() {
                         val sql = "SELECT datum_id, datum FROM $it ORDER BY datum_id"
                         val sourceRows = queryRunner.query(sourceNodeCtx.conn, sql, TableStringsHandler())
                         val destinationRows = queryRunner.query(destinationNodeCtx.conn, sql, TableStringsHandler())
-                        assertThat(sourceRows).isEqualTo(destinationRows)
+                        assertThat(destinationRows).isEqualTo(sourceRows)
                     }
                 }
             }
@@ -295,12 +294,13 @@ open class SnapshotTestModule(
         val sql = """
             SELECT t.datum_id, t.datum, t.acc_bytes FROM (
                 SELECT datum_id, datum, 
-                       SUM(OCTET_LENGTH(datum)) OVER (ORDER BY datum_id) as acc_bytes
+                       SUM(OCTET_LENGTH(datum)) OVER (ORDER BY datum_id) as acc_bytes,
+                       ROW_NUMBER() OVER (ORDER BY datum_id) as row_num
                 FROM ${conf.permanentTableName}
                 WHERE datum_id >= $datumIdFrom
                 ORDER BY datum_id
             ) t
-            WHERE t.acc_bytes <= $maxDataSize
+            WHERE t.acc_bytes <= $maxDataSize OR t.row_num = 1
         """.trimIndent()
         return QueryRunner().query(ctx.conn, sql, MapListHandler())
                 .map {
