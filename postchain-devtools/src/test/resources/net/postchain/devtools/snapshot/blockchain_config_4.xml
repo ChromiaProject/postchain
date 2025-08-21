@@ -8,6 +8,9 @@
             <entry key="merkle_hash_version"><int>2</int></entry>
         </dict>
     </entry>
+    <entry key="config_consensus_strategy">
+        <string>HEADER_HASH</string>
+    </entry>
     <entry key="snapshot">
         <dict>
             <entry key="interval"><int>2</int></entry> <!-- Write every second block -->
