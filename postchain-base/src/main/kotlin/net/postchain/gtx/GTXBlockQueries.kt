@@ -2,6 +2,7 @@ package net.postchain.gtx
 
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BaseBlockQueries
+import net.postchain.base.snapshot.BaseSnapshotDatumRepository
 import net.postchain.core.Storage
 import net.postchain.core.Transaction
 import net.postchain.core.block.BlockStore
@@ -14,8 +15,9 @@ class GTXBlockQueries(private val blockchainConfiguration: GTXBlockchainConfigur
                       blockStore: BlockStore,
                       chainId: Long,
                       mySubjectId: ByteArray,
-                      private val module: GTXModule
-) : BaseBlockQueries(storage, blockStore, chainId, mySubjectId) {
+                      private val module: GTXModule,
+                      snapshotDatumRepository: BaseSnapshotDatumRepository
+) : BaseBlockQueries(storage, blockStore, chainId, mySubjectId, snapshotDatumRepository) {
 
     override fun query(name: String, args: Gtv): CompletionStage<Gtv> = runOp {
         module.query(it, name, args)

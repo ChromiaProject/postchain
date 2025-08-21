@@ -51,5 +51,5 @@ class TestBlockchainConfiguration(
     }
 
     override fun makeBlockQueries(storage: Storage): BlockQueries =
-            TestBlockQueries(storage, blockStore, chainID, blockchainContext.nodeRID, data.merkleHashCalculator)
+            TestBlockQueries(storage, blockStore, chainID, blockchainContext.nodeRID, data.merkleHashCalculator, DummySnapshotRepository())
 }

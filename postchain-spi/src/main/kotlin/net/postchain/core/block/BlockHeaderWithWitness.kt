@@ -1,6 +1,6 @@
 package net.postchain.core.block
 
-interface BlockHeaderWithWitness {
-    val header: BlockHeader
+data class BlockHeaderWithWitness(
+    val header: BlockHeader,
     val witness: BlockWitness
-}
+)

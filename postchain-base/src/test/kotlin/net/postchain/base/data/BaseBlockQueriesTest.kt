@@ -51,7 +51,8 @@ class BaseBlockQueriesTest {
                             BaseBlockStore(),
                             blockChainBuilder.chainId,
                             "".toByteArray(),
-                            blockChainBuilder.hashCalculator
+                            blockChainBuilder.hashCalculator,
+                            mock()
                     )
 
                     // Get 2 blocks, 0-1 - limit is hit
@@ -82,7 +83,8 @@ class BaseBlockQueriesTest {
                             BaseBlockStore(),
                             blockChainBuilder.chainId,
                             "".toByteArray(),
-                            blockChainBuilder.hashCalculator
+                            blockChainBuilder.hashCalculator,
+                            mock()
                     )
 
                     val blockDetailsTruncated = baseBlockQueries.getBlocksBetweenTimes(BlockQueryTimeFilter(), 10000, false, 2000, false).get()
@@ -113,7 +115,8 @@ class BaseBlockQueriesTest {
                             BaseBlockStore(),
                             blockChainBuilder.chainId,
                             "".toByteArray(),
-                            blockChainBuilder.hashCalculator
+                            blockChainBuilder.hashCalculator,
+                            mock()
                     )
 
                     val blockDetailsTruncated = baseBlockQueries.getBlocksBetweenHeights(BlockQueryHeightFilter(), 10000, false, 2000, false).get()
@@ -144,7 +147,8 @@ class BaseBlockQueriesTest {
                             BaseBlockStore(),
                             blockChainBuilder.chainId,
                             "".toByteArray(),
-                            blockChainBuilder.hashCalculator
+                            blockChainBuilder.hashCalculator,
+                            mock()
                     )
 
                     val allBlockDetails = baseBlockQueries.getBlocksBetweenTimes(BlockQueryTimeFilter(), 10000, true, 10000, false).get()
@@ -197,7 +201,7 @@ class BaseBlockQueriesTest {
             on { openReadConnection(0) } doReturn mock()
         }
 
-        val blockQueries = GTXBlockQueries(mock(), mockStorage, mock(), 0, ByteArray(0), mockDelayModule)
+        val blockQueries = GTXBlockQueries(mock(), mockStorage, mock(), 0, ByteArray(0), mockDelayModule, mock())
 
         val executorService = Executors.newSingleThreadExecutor()
 

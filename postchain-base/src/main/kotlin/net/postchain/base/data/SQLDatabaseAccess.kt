@@ -6,6 +6,7 @@ import net.postchain.base.BaseBlockHeader
 import net.postchain.base.PeerInfo
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.FaultyConfiguration
+import net.postchain.base.data.DatabaseAccess.StateData
 import net.postchain.base.data.SqlUtils.isUniqueViolation
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.snapshot.Page
@@ -524,18 +525,50 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         )
     }
 
-    override fun getState(ctx: EContext, prefix: String, height: Long, stateN: Long): DatabaseAccess.StateData? {
+    override fun getState(ctx: EContext, prefix: String, height: Long, stateN: Long): StateData? {
         val sql = """SELECT block_height, state_n, data FROM ${tableStateLeafs(ctx, prefix)} 
             WHERE block_height <= ? AND state_n = ? 
             ORDER BY state_iid DESC LIMIT 1"""
         val rows = queryRunner.query(ctx.conn, sql, mapListHandler, height, stateN)
         if (rows.isEmpty()) return null
         val data = rows.first()
-        return DatabaseAccess.StateData(
+        return StateData(
                 data["block_height"] as Long,
                 data["state_n"] as Long,
                 data["data"] as ByteArray
         )
+    }
+
+    override fun getStatesBySize(ctx: EContext, prefix: String, height: Long, stateNFrom: Long, maxDataSize: Long): List<StateData> {
+        val sql = """
+            SELECT t.block_height, t.state_n, t.data FROM (
+                SELECT block_height, state_n, data,
+                    SUM(OCTET_LENGTH(data)) OVER (ORDER BY state_n) AS acc_bytes,
+                    ROW_NUMBER() OVER (ORDER BY state_n) as row_num
+                FROM ${tableStateLeafs(ctx, prefix)}
+                WHERE block_height <= ? AND state_n >= ?
+                ORDER BY state_n
+            ) t
+            WHERE t.acc_bytes <= ? OR t.row_num = 1
+            """
+        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, height, stateNFrom, maxDataSize)
+        if (rows.isEmpty()) return listOf()
+        return rows.map { StateData(
+                    it["block_height"] as Long,
+                    it["state_n"] as Long,
+                    it["data"] as ByteArray
+            )
+        }
+    }
+
+    override fun getStateNMax(ctx: EContext, prefix: String, height: Long): Long? {
+        val sql = """SELECT block_height, MAX(state_n) AS state_n_max FROM ${tableStateLeafs(ctx, prefix)}
+            WHERE block_height <= ?
+            GROUP BY block_height
+            ORDER BY block_height DESC LIMIT 1"""
+        val rows = queryRunner.query(ctx.conn, sql, mapListHandler, height)
+        if (rows.isEmpty()) return null
+        return rows.first()["state_n_max"] as Long
     }
 
     override fun insertEvent(ctx: TxEContext, prefix: String, height: Long, position: Long, hash: Hash, data: ByteArray) {
