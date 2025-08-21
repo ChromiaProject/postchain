@@ -48,7 +48,7 @@ info:
     
     The exact procedure to calculate the hash is documented in the README in 
     [postchain-gtv](https://gitlab.com/chromaway/core/postchain/-/tree/dev/postchain-gtv) module
-  version: "19"
+  version: "20"
 tags:
   - name: block
     description: Fetch block(s)
@@ -1682,6 +1682,77 @@ paths:
                 chainNotFound:
                   value:
                     error: "Can't find blockchain with blockchainRID: <hex-string>"
+  /metadata/{blockchainRid}:
+    get:
+      tags:
+        - metadata
+      summary: Fetch metadata for a blockchain
+      description: This method fetches metadata about operations and queries for a given blockchain RID.
+      parameters:
+        - $ref: "#/components/parameters/blockchainRid"
+      responses:
+        '200':
+          description: Found
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - operations
+                  - queries
+                properties:
+                  operations:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      required:
+                        - gtxModule
+                        - args
+                      properties:
+                        gtxModule:
+                          type: string
+                          example: "net.postchain.gtx.StandardOpsGTXModule"
+                        args:
+                          type: array
+                          items:
+                            $ref: "#/components/schemas/argumentMetadata"
+                  queries:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      required:
+                        - gtxModule
+                        - args
+                        - returnType
+                      properties:
+                        gtxModule:
+                          type: string
+                          example: "net.postchain.gtx.StandardOpsGTXModule"
+                        args:
+                          type: array
+                          items:
+                            $ref: "#/components/schemas/argumentMetadata"
+                        returnType:
+                          type: object
+                          required:
+                            - gtvTypes
+                          properties:
+                            gtvTypes:
+                              type: array
+                              items:
+                                $ref: "#/components/schemas/gtvType"
+                            extendedType:
+                              type: string
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+              examples:
+                chainNotFound:
+                  value:
+                    error: "Can't find blockchain with blockchainRID: <hex-string>"
   /version:
     get:
       tags:
@@ -2184,3 +2255,31 @@ components:
         error:
           type: string
           description: Error message that occurred during verification process.
+    argumentMetadata:
+      type: object
+      required:
+        - name
+        - gtvTypes
+        - required
+      properties:
+        name:
+          type: string
+        gtvTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/gtvType"
+        extendedType:
+          type: string
+        required:
+          type: boolean
+        defaultValue:
+          type: string
+    gtvType:
+      enum:
+        - NULL
+        - BYTEARRAY
+        - STRING
+        - INTEGER
+        - DICT
+        - ARRAY
+        - BIGINTEGER

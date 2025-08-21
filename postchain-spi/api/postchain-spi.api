@@ -2065,6 +2065,26 @@ public final class net/postchain/gtv/GtvStream : net/postchain/gtv/AbstractGtv {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class net/postchain/gtx/ArgumentMetadata {
+	public fun <init> (Ljava/lang/String;Ljava/util/Set;Ljava/lang/String;ZLjava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/Set;Ljava/lang/String;ZLjava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/Set;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Z
+	public final fun component5 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Ljava/util/Set;Ljava/lang/String;ZLjava/lang/String;)Lnet/postchain/gtx/ArgumentMetadata;
+	public static synthetic fun copy$default (Lnet/postchain/gtx/ArgumentMetadata;Ljava/lang/String;Ljava/util/Set;Ljava/lang/String;ZLjava/lang/String;ILjava/lang/Object;)Lnet/postchain/gtx/ArgumentMetadata;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDefaultValue ()Ljava/lang/String;
+	public final fun getExtendedType ()Ljava/lang/String;
+	public final fun getGtvTypes ()Ljava/util/Set;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getRequired ()Z
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public abstract interface class net/postchain/gtx/GTXModule : net/postchain/core/Shutdownable {
 	public abstract fun getOperations ()Ljava/util/Set;
 	public abstract fun getQueries ()Ljava/util/Set;
@@ -2088,6 +2108,19 @@ public abstract interface class net/postchain/gtx/GTXModuleFactory {
 	public abstract fun makeModule (Lnet/postchain/gtv/Gtv;Lnet/postchain/common/BlockchainRid;)Lnet/postchain/gtx/GTXModule;
 }
 
+public final class net/postchain/gtx/GTXModuleMetadata {
+	public fun <init> (Ljava/util/Map;Ljava/util/Map;)V
+	public final fun component1 ()Ljava/util/Map;
+	public final fun component2 ()Ljava/util/Map;
+	public final fun copy (Ljava/util/Map;Ljava/util/Map;)Lnet/postchain/gtx/GTXModuleMetadata;
+	public static synthetic fun copy$default (Lnet/postchain/gtx/GTXModuleMetadata;Ljava/util/Map;Ljava/util/Map;ILjava/lang/Object;)Lnet/postchain/gtx/GTXModuleMetadata;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getOperations ()Ljava/util/Map;
+	public final fun getQueries ()Ljava/util/Map;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class net/postchain/gtx/GTXOpMistake : net/postchain/common/exception/UserMistake {
 	public fun <init> (Ljava/lang/String;Lnet/postchain/gtx/data/ExtOpData;Ljava/lang/Integer;Ljava/lang/Exception;)V
 	public synthetic fun <init> (Ljava/lang/String;Lnet/postchain/gtx/data/ExtOpData;Ljava/lang/Integer;Ljava/lang/Exception;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -2105,6 +2138,10 @@ public abstract class net/postchain/gtx/GTXOperation : net/postchain/core/Transa
 	public fun isSpecial ()Z
 }
 
+public abstract interface class net/postchain/gtx/MetadataProvider {
+	public abstract fun getMetadata ()Lnet/postchain/gtx/GTXModuleMetadata;
+}
+
 public final class net/postchain/gtx/ModulesKt {
 	public static final field NON_STRICT_QUERY_ARGUMENT Ljava/lang/String;
 }
@@ -2114,6 +2151,17 @@ public final class net/postchain/gtx/OperationKt {
 	public static final fun gtxOP (Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;)Lkotlin/jvm/functions/Function2;
 }
 
+public final class net/postchain/gtx/OperationMetadata {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lnet/postchain/gtx/OperationMetadata;
+	public static synthetic fun copy$default (Lnet/postchain/gtx/OperationMetadata;Ljava/util/List;ILjava/lang/Object;)Lnet/postchain/gtx/OperationMetadata;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArgs ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public abstract interface class net/postchain/gtx/OperationWrapper {
 	public abstract fun getWrappingOperations ()Ljava/util/Set;
 	public abstract fun injectDelegateTransactorMaker (Lnet/postchain/gtx/TransactorMaker;)V
@@ -2121,6 +2169,33 @@ public abstract interface class net/postchain/gtx/OperationWrapper {
 
 public abstract interface class net/postchain/gtx/PostchainContextAware {
 	public abstract fun initializeContext (Lnet/postchain/core/BlockchainConfiguration;Lnet/postchain/PostchainContext;)V
+}
+
+public final class net/postchain/gtx/QueryMetadata {
+	public fun <init> (Ljava/util/List;Lnet/postchain/gtx/ReturnMetadata;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Lnet/postchain/gtx/ReturnMetadata;
+	public final fun copy (Ljava/util/List;Lnet/postchain/gtx/ReturnMetadata;)Lnet/postchain/gtx/QueryMetadata;
+	public static synthetic fun copy$default (Lnet/postchain/gtx/QueryMetadata;Ljava/util/List;Lnet/postchain/gtx/ReturnMetadata;ILjava/lang/Object;)Lnet/postchain/gtx/QueryMetadata;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getArgs ()Ljava/util/List;
+	public final fun getReturnType ()Lnet/postchain/gtx/ReturnMetadata;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/gtx/ReturnMetadata {
+	public fun <init> (Ljava/util/Set;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/util/Set;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/util/Set;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Ljava/util/Set;Ljava/lang/String;)Lnet/postchain/gtx/ReturnMetadata;
+	public static synthetic fun copy$default (Lnet/postchain/gtx/ReturnMetadata;Ljava/util/Set;Ljava/lang/String;ILjava/lang/Object;)Lnet/postchain/gtx/ReturnMetadata;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getExtendedType ()Ljava/lang/String;
+	public final fun getGtvTypes ()Ljava/util/Set;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public abstract class net/postchain/gtx/SimpleGTXModule : net/postchain/gtx/GTXModule {

@@ -5,6 +5,7 @@ import com.google.gson.JsonNull
 import net.postchain.api.rest.json.JsonFactory
 import net.postchain.api.rest.json.JsonFactory.auto
 import net.postchain.api.rest.json.JsonFactory.json
+import net.postchain.api.rest.model.ApiMetadata
 import net.postchain.api.rest.model.ApiRejectedTransaction
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.DecodedTransactionInfoExt
@@ -199,6 +200,7 @@ val textBody = Body.string(ContentType.TEXT_PLAIN).toLens()
 val blockHeightBody = Body.auto<BlockHeight>().toLens()
 val blockchainNodeStateBody = Body.auto<BlockchainNodeState>().toLens()
 val transactionsCountBody = Body.auto<TransactionsCount>().toLens()
+val metadataBody = Body.auto<ApiMetadata>().toLens()
 
 val signatureJsonBody = Body.auto<BlockSignature>().toLens()
 val signatureGtvBody = Body.binary(ContentType.OCTET_STREAM, "signature GTV").map(

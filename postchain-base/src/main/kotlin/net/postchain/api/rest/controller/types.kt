@@ -8,6 +8,7 @@ import net.postchain.api.rest.BlockchainNodeState
 import net.postchain.api.rest.InfraVersion
 import net.postchain.api.rest.TransactionsCount
 import net.postchain.api.rest.Version
+import net.postchain.api.rest.model.ApiMetadata
 import net.postchain.api.rest.model.ApiRejectedTransaction
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
@@ -80,6 +81,7 @@ interface Model : ChainModel {
     fun getNextBlockchainConfigurationHeight(height: Long): BlockHeight?
     fun getVersion(): Version
     fun getInfrastructureVersion(): InfraVersion
+    fun getMetadata(): ApiMetadata
 }
 
 class NotSupported(message: String) : Exception(message)

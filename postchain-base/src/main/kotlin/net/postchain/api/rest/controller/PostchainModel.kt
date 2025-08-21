@@ -13,8 +13,11 @@ import net.postchain.api.rest.InfraVersion
 import net.postchain.api.rest.TransactionsCount
 import net.postchain.api.rest.Version
 import net.postchain.api.rest.controller.RestApi.Companion.REST_API_VERSION
+import net.postchain.api.rest.model.ApiMetadata
 import net.postchain.api.rest.model.ApiRejectedTransaction
 import net.postchain.api.rest.model.ApiStatus
+import net.postchain.api.rest.model.OperationMetadata
+import net.postchain.api.rest.model.QueryMetadata
 import net.postchain.api.rest.model.TxRid
 import net.postchain.base.BaseBlockchainContext
 import net.postchain.base.ConfirmationProof
@@ -61,8 +64,11 @@ import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtv.merkleHash
+import net.postchain.gtx.CompositeGTXModule
+import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GtxQuery
+import net.postchain.gtx.MetadataProvider
 import net.postchain.gtx.UnknownQuery
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
@@ -183,7 +189,7 @@ open class PostchainModel(
                     .register(Metrics.globalRegistry))
             result
         } catch (e: UnknownQuery) {
-            // do not add metrics for unknown queries to avoid blowing up QUERY_NAME_TAG dimension
+            // do not add metrics for unknown queries to avoid blowing up the QUERY_NAME_TAG dimension
             throw e
         } catch (e: Exception) {
             sample.stop(timerBuilder
@@ -280,4 +286,25 @@ open class PostchainModel(
             )
 
     override fun toString(): String = "${this.javaClass.simpleName}(chainId=$chainIID)"
+
+    override fun getMetadata(): ApiMetadata {
+        if (blockchainConfiguration !is GTXBlockchainConfiguration) {
+            logger.debug { "Blockchain configuration is not a GTXBlockchainConfiguration, returning empty metadata" }
+            return ApiMetadata(mapOf(), mapOf())
+        }
+
+        val module = blockchainConfiguration.module
+        if (module !is MetadataProvider) {
+            logger.debug { "Blockchain configuration does not provide metadata, returning empty metadata" }
+            return ApiMetadata(mapOf(), mapOf())
+        }
+
+        if (module is CompositeGTXModule) return module.getCompositeMetadata()
+
+        val moduleName = module.javaClass.canonicalName
+        return ApiMetadata(
+                module.getMetadata().operations.mapValues { OperationMetadata(gtxModule = moduleName, it.value.args) },
+                module.getMetadata().queries.mapValues { QueryMetadata(gtxModule = moduleName, it.value.args, it.value.returnType) }
+        )
+    }
 }
