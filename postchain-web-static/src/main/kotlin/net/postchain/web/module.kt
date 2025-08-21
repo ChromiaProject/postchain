@@ -7,8 +7,14 @@ import net.postchain.core.EContext
 import net.postchain.core.Transactor
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvType
+import net.postchain.gtx.ArgumentMetadata
 import net.postchain.gtx.GTXModule
 import net.postchain.gtx.GTXModuleFactory
+import net.postchain.gtx.GTXModuleMetadata
+import net.postchain.gtx.MetadataProvider
+import net.postchain.gtx.QueryMetadata
+import net.postchain.gtx.ReturnMetadata
 import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 
@@ -32,7 +38,7 @@ const val QUERY_NAME = "web_static"
 
 const val INDEX_FILE = "index.html"
 
-class WebStaticGTXModule(private val contentMap: Map<String, Gtv>) : GTXModule {
+class WebStaticGTXModule(private val contentMap: Map<String, Gtv>) : GTXModule, MetadataProvider {
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = listOf()
 
     override fun makeBlockBuilderExtensions(): List<BaseBlockBuilderExtension> = listOf()
@@ -56,4 +62,17 @@ class WebStaticGTXModule(private val contentMap: Map<String, Gtv>) : GTXModule {
                 ?: contentMap[if (key.isEmpty()) INDEX_FILE else "$key/$INDEX_FILE"]
                 ?: throw UserMistake("$key not found")
     }
+
+    override fun getMetadata() = GTXModuleMetadata(
+            operations = mapOf(),
+            queries = mapOf(
+                    QUERY_NAME to QueryMetadata(
+                            args = listOf(ArgumentMetadata(
+                                    name = "path",
+                                    gtvTypes = setOf(GtvType.ARRAY),
+                            )),
+                            returnType = ReturnMetadata(setOf(GtvType.DICT))
+                    ),
+            )
+    )
 }

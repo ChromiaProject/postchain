@@ -45,11 +45,13 @@ import net.postchain.gtx.GTXTransactionFactory
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.SimpleGTXModule
+import net.postchain.gtx.StandardOpsGTXModule
 import net.postchain.integrationtest.JsonTools
 import net.postchain.integrationtest.JsonTools.jsonAsMap
 import net.postchain.integrationtest.reconfiguration.TogglableFaultyGtxModule
 import org.awaitility.Awaitility.await
 import org.hamcrest.CoreMatchers.equalTo
+import org.hamcrest.Matchers
 import org.hamcrest.core.IsEqual
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
@@ -116,6 +118,17 @@ class RestApiIT : IntegrationTestSetup() {
                 .then()
                 .statusCode(200)
                 .body("version", equalTo(REST_API_VERSION))
+
+        given().port(nodes[0].getRestApiHttpPort())
+            .get("/metadata/$blockchainRID")
+            .then()
+            .statusCode(200)
+            .contentType(ContentType.JSON)
+            .body("operations.nop.gtxModule", Matchers.equalTo(StandardOpsGTXModule::class.qualifiedName))
+            .body("operations.nop.args[0].name", Matchers.equalTo("nonce"))
+            .body("operations.nop.args[0].required", Matchers.equalTo(true))
+            .body("queries.last_block_info.gtxModule", Matchers.equalTo(StandardOpsGTXModule::class.qualifiedName))
+            .body("queries.last_block_info.returnType.gtvTypes[0]", Matchers.equalTo("DICT"))
     }
 
     @Test

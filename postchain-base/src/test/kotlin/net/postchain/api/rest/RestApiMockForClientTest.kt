@@ -5,6 +5,7 @@ package net.postchain.api.rest
 import mu.KLogging
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
+import net.postchain.api.rest.model.ApiMetadata
 import net.postchain.api.rest.model.ApiRejectedTransaction
 import net.postchain.api.rest.model.ApiStatus
 import net.postchain.api.rest.model.TxRid
@@ -263,6 +264,10 @@ class RestApiMockForClientManual {
         }
 
         override fun getInfrastructureVersion(): InfraVersion {
+            TODO("Not yet implemented")
+        }
+
+        override fun getMetadata(): ApiMetadata {
             TODO("Not yet implemented")
         }
     }
