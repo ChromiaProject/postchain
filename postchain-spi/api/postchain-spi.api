@@ -420,6 +420,7 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData 
 	public static final fun merkleHash (Lnet/postchain/gtv/Gtv;)[B
 	public static final fun merkleHashCalculator (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;
 	public static final fun merkleHashVersion (Lnet/postchain/gtv/Gtv;)J
+	public static final fun snapshotSyncEnabled (Lnet/postchain/gtv/Gtv;)Z
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -428,6 +429,7 @@ public final class net/postchain/base/configuration/BlockchainConfigurationData$
 	public final fun merkleHash (Lnet/postchain/gtv/Gtv;)[B
 	public final fun merkleHashCalculator (Lnet/postchain/gtv/Gtv;)Lnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;
 	public final fun merkleHashVersion (Lnet/postchain/gtv/Gtv;)J
+	public final fun snapshotSyncEnabled (Lnet/postchain/gtv/Gtv;)Z
 }
 
 public final class net/postchain/base/configuration/BlockchainConfigurationFieldsKt {

@@ -153,6 +153,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(xPeerId, message.height,
                             this.statusManager.myStatus.height - 1)
 
+                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId)
+
                     else -> {
                         if (!isReadOnlyNode) { // This check is actually good DOS protection
                             // validator consensus logic
@@ -221,8 +223,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                     // TODO: This might happen because we've already exited FastSync but other nodes
                                     //  are still responding to our old requests. For this case this is harmless.
                                 }
-
-                                is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId)
 
                                 is AppliedConfig -> applyConfig(message.configHash, message.height)
                                 is EbftVersion -> logger.debug { "Received EbftVersion from peer $xPeerId" }

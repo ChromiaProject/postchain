@@ -4,10 +4,14 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import net.postchain.concurrent.util.get
 import net.postchain.devtools.ManagedModeTest
+import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
 import net.postchain.devtools.utils.configuration.NodeSetup
 import net.postchain.gtv.GtvEncoder
+import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.gtvml.GtvMLParser
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.gtx.GtxBuilder
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Test
@@ -34,7 +38,27 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         nodeSetups.subList(0, 3).forEach { awaitChainRunning(it.sequenceNumber.nodeNumber, c1, 4) }
 
         // Build some more blocks
-        buildBlock(nodes.subList(0, 3),c1, 10)
+        buildBlock(nodes.subList(0, 3),c1, 9)
+        // Emit something here so we get some snapshot data
+        val brid = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.blockchainRid
+        val transactionFactory = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.getConfiguration().getTransactionFactory()
+        val emitDatumsTx = transactionFactory.decodeTransaction(GtxBuilder(brid, emptyList(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
+                // For module A
+                .addOperation("emit_datum_a", gtv(0), gtv("a_datum_0"), gtv(true))
+                .addOperation("emit_datum_a", gtv(1), gtv("a_datum_1"), gtv(true))
+                .addOperation("emit_datum_a", gtv(2), gtv("a_datum_2"), gtv(true))
+                .addOperation("emit_datum_a", gtv(3), gtv("a_datum_3"), gtv(false))
+                // For module B
+                .addOperation("emit_datum_b", gtv(0), gtv("b_datum_0"), gtv(true))
+                .addOperation("emit_datum_b", gtv(1), gtv("b_datum_1"), gtv(true))
+                .addOperation("emit_datum_b", gtv(2), gtv("b_datum_2"), gtv(true))
+                .addOperation("emit_datum_b", gtv(3), gtv("b_datum_3"), gtv(false))
+                .finish()
+                .buildGtx()
+                .encode()
+        )
+
+        buildBlock(nodes.subList(0, 3), DEFAULT_CHAIN_IID, emitDatumsTx)
 
         // Assert that we could snapshot sync the chain on the replica node
         restartNodeClean(4, c1, -1)
