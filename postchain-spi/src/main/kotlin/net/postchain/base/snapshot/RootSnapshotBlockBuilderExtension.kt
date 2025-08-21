@@ -28,7 +28,8 @@ class RootSnapshotBlockBuilderExtension(private val snapshotInterval: Long) : Ba
 
     override fun finalize(): Map<String, Gtv> {
         val rootSnapshotStore = SnapshotPageStore(bctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_root")
-        if (bctx.height - (rootSnapshotStore.getLastSnapshotHeight() ?: -1) < snapshotInterval) return emptyMap()
+        val lastSnapshotHeight = rootSnapshotStore.getLastSnapshotHeight() ?: -1
+        if (bctx.height - lastSnapshotHeight < snapshotInterval) return emptyMap()
 
         logger.info("Creating snapshot at height ${bctx.height}")
 

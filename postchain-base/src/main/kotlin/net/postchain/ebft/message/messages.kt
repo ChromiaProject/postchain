@@ -267,6 +267,12 @@ class EbftVersion(val ebftVersion: Long) : EbftMessage(MessageTopic.EBFTVERSION)
 
 }
 
+class GetLatestSnapshotBlock() : EbftMessage(MessageTopic.GETLATESTSNAPSHOT) {
+    override fun toGtv(version: Long): Gtv {
+        return gtv(topic.toGtv())
+    }
+}
+
 /**
  * We do it this way since we don't want to store the "topic" of the [CompleteBlock] message
  */

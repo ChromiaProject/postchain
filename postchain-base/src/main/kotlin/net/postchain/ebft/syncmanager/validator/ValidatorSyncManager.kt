@@ -38,6 +38,7 @@ import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
+import net.postchain.ebft.message.GetLatestSnapshotBlock
 import net.postchain.ebft.message.GetUnfinishedBlock
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.Transaction
@@ -151,6 +152,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(xPeerId, message.height,
                             this.statusManager.myStatus.height - 1)
+
+                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId)
 
                     else -> {
                         if (!isReadOnlyNode) { // This check is actually good DOS protection
@@ -526,6 +529,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             }
             // Wait for any queued blocks to commit/fail before starting sync
             blockManager.waitForRunningOperationsToComplete()
+            // TODO: Use snapshot sync here
             fastSynchronizer.syncUntilResponsiveNodesDrained()
             // turn off fast sync, reset current block to null, and query for the last known state from db to prevent
             // possible race conditions

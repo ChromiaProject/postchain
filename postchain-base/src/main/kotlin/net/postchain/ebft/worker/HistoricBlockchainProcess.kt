@@ -413,5 +413,6 @@ class HistoricBlockchainProcess(
         SyncMethod.NOT_SYNCING -> blockchainEngine.getBlockQueries().getLastBlockHeight().get()
         SyncMethod.LOCAL_DB -> blockchainEngine.getBlockQueries().getLastBlockHeight().get()
         SyncMethod.SLOW_SYNC -> throw IllegalStateException("HistoricBlockchainProcess does not use slow sync")
+        SyncMethod.SNAPSHOT_SYNC -> throw IllegalStateException("HistoricBlockchainProcess does not use snapshot sync")
     }
 }

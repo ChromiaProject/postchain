@@ -5,6 +5,9 @@ package net.postchain.ebft.worker
 import com.google.common.util.concurrent.ThreadFactoryBuilder
 import mu.KLogging
 import mu.withLoggingContext
+import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.data.BaseBlockStore
+import net.postchain.base.withReadConnection
 import net.postchain.common.exception.UserMistake
 import net.postchain.common.tx.TransactionStatus
 import net.postchain.concurrent.util.get
@@ -18,11 +21,13 @@ import net.postchain.debug.DpNodeType
 import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
+import net.postchain.ebft.PersistOnlyBlockWriter
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.KnownState
 import net.postchain.ebft.syncmanager.common.PeerStatuses
 import net.postchain.ebft.syncmanager.common.SlowSynchronizer
+import net.postchain.ebft.syncmanager.common.SnapshotSynchronizer
 import net.postchain.ebft.syncmanager.common.SyncMethod
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
@@ -61,6 +66,29 @@ class ReadOnlyBlockchainProcess(
             loggingContext, blockchainEngine, blockchainEngine.getBlockQueries(), workerContext.nodeDiagnosticContext, NODE_ID_READ_ONLY
     )
 
+    private val persistOnlyBlockWriter = PersistOnlyBlockWriter(
+            loggingContext,
+            NODE_ID_READ_ONLY,
+            workerContext.blockchainConfiguration.chainID,
+            workerContext.blockchainConfiguration.blockchainRid,
+            workerContext.blockchainConfiguration.configHash,
+            BaseBlockStore(),
+            blockchainEngine.blockBuilderStorage,
+            workerContext.blockchainConfiguration.getTransactionFactory(),
+            { _, _ -> },
+            { _, _, _ ->
+                with(workerContext) {
+                    withReadConnection(blockchainEngine.blockBuilderStorage, blockchainConfiguration.chainID) { eContext ->
+                        val newConfigCheck = blockchainConfigurationProvider.activeBlockNeedsConfigurationChange(eContext, blockchainConfiguration.chainID, false)
+                        if (newConfigCheck.changeNeeded) {
+                            restartNotifier.notifyRestart(null)
+                            true
+                        } else false
+                    }
+                }
+            }
+    )
+
     private val params = SyncParameters.fromAppConfig(workerContext.appConfig)
 
     private val fastSynchronizer = FastSynchronizer(
@@ -76,6 +104,15 @@ class ReadOnlyBlockchainProcess(
             workerContext,
             blockDatabase,
             params,
+            ::isProcessRunning,
+            RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
+    )
+
+    private val snapshotSynchronizer = SnapshotSynchronizer(
+            workerContext,
+            persistOnlyBlockWriter,
+            params,
+            PeerStatuses(params),
             ::isProcessRunning,
             RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
     )
@@ -136,9 +173,16 @@ class ReadOnlyBlockchainProcess(
      * When the nodes are drained we move to slow sync instead.
      */
     override fun action() {
+        // TODO: Maybe we need to check latest rather than current config?
+        val snapshotSyncEnabled = BlockchainConfigurationData.snapshotSyncEnabled(workerContext.blockchainConfiguration.rawConfig)
         withLoggingContext(loggingContext) {
             if (params.slowSyncEnabled) {
                 logger.debug { "Using slow sync for read only bc process" }
+                // TODO: We should check if snapshots are enabled for this bc
+                if (snapshotSyncEnabled) {
+                    syncMethod = SyncMethod.SNAPSHOT_SYNC
+                    snapshotSynchronizer.trySnapshotSync()
+                }
                 syncMethod = SyncMethod.FAST_SYNC
                 fastSynchronizer.syncUntilResponsiveNodesDrained()
                 // Move to slow sync and proceed until shutdown
@@ -147,6 +191,11 @@ class ReadOnlyBlockchainProcess(
                 syncMethod = SyncMethod.NOT_SYNCING
             } else {
                 logger.debug { "Using fast sync for read only bc process" }
+                // TODO: We should check if snapshots are enabled for this bc
+                if (snapshotSyncEnabled) {
+                    syncMethod = SyncMethod.SNAPSHOT_SYNC
+                    snapshotSynchronizer.trySnapshotSync()
+                }
                 syncMethod = SyncMethod.FAST_SYNC
                 fastSynchronizer.syncUntil { !isProcessRunning() }
                 syncMethod = SyncMethod.NOT_SYNCING
@@ -191,6 +240,7 @@ class ReadOnlyBlockchainProcess(
     override fun currentBlockHeight(): Long = when (syncMethod) {
         SyncMethod.FAST_SYNC -> fastSynchronizer.blockHeight.get()
         SyncMethod.SLOW_SYNC -> slowSynchronizer.blockHeight.get()
+        SyncMethod.SNAPSHOT_SYNC -> blockchainEngine.getBlockQueries().getLastBlockHeight().get() // TODO: I think this is fine? Progress can't be measured in block height anyway.
         SyncMethod.NOT_SYNCING -> blockchainEngine.getBlockQueries().getLastBlockHeight().get()
         SyncMethod.LOCAL_DB -> blockchainEngine.getBlockQueries().getLastBlockHeight().get()
     }
