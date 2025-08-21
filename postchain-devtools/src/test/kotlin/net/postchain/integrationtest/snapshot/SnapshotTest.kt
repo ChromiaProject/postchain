@@ -8,9 +8,9 @@ import assertk.assertions.isZero
 import assertk.isContentEqualTo
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.base.snapshot.BaseSnapshotDatumRepository
 import net.postchain.base.snapshot.SNAPSHOT_ROOT_EXTRA_HEADER
 import net.postchain.base.snapshot.SimpleDigestSystem
-import net.postchain.base.snapshot.SnapshotDatumRepository
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.data.EMPTY_HASH
@@ -93,7 +93,7 @@ class SnapshotTest : IntegrationTestSetup() {
         assertThat(block1Header.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]!!.asByteArray()).isContentEqualTo(expectedRootHash)
 
         // Assert that permanent and non-permanent datums can be recovered
-        val datumRepository = SnapshotDatumRepository(nodes[0].getModules().filterIsInstance<SnapshotAware>())
+        val datumRepository = BaseSnapshotDatumRepository(nodes[0].getModules().filterIsInstance<SnapshotAware>())
 
         withReadConnection(nodes[0].postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { ctx ->
             // Permanent
@@ -177,7 +177,7 @@ class SnapshotTest : IntegrationTestSetup() {
 
         buildBlock(DEFAULT_CHAIN_IID, 2, emitDatumsTx)
 
-        val datumRepository = SnapshotDatumRepository(nodes[0].getModules().filterIsInstance<SnapshotAware>())
+        val datumRepository = BaseSnapshotDatumRepository(nodes[0].getModules().filterIsInstance<SnapshotAware>())
         val queryRunner = QueryRunner()
 
         // Verify data is in place

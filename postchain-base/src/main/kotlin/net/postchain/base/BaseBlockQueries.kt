@@ -5,6 +5,7 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.base.snapshot.SnapshotDatumRepository
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
@@ -16,6 +17,7 @@ import net.postchain.core.TransactionInfoExtsTruncated
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockDetail
 import net.postchain.core.block.BlockDetailsTruncated
+import net.postchain.core.block.BlockHeaderWithWitness
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockQueryHeightFilter
 import net.postchain.core.block.BlockQueryTimeFilter
@@ -47,7 +49,8 @@ abstract class BaseBlockQueries(
         private val storage: Storage,
         val blockStore: BlockStore,
         private val chainId: Long,
-        private val mySubjectId: ByteArray
+        private val mySubjectId: ByteArray,
+        private val snapshotDatumRepository: SnapshotDatumRepository
 ) : BlockQueries {
 
     companion object : KLogging()
@@ -225,6 +228,22 @@ abstract class BaseBlockQueries(
                     BlockDataWithWitness(header, txBytes, witness)
                 }
             }
+
+    override fun getLatestSnapshotBlockHeader(): CompletionStage<BlockHeaderWithWitness?> = runOpRegardless {
+        snapshotDatumRepository.getLatestSnapshotHeight(it)?.let { latestSnapshotHeight ->
+            val blockRID = blockStore.getBlockRID(it, latestSnapshotHeight)
+                    ?: throw ProgrammerMistake("Latest snapshot height $latestSnapshotHeight is not found in the blockchain")
+            val headerBytes = blockStore.getBlockHeader(it, blockRID)
+            val witnessBytes = blockStore.getWitnessData(it, blockRID)
+            val header = SimpleBlockHeader(
+                    prevBlockRID = BlockHeaderData.fromBinary(headerBytes).getPreviousBlockRid(),
+                    rawData = headerBytes,
+                    blockRID = blockRID)
+            val witness = decodeWitness(witnessBytes)
+
+            BlockHeaderWithWitness(header, witness)
+        }
+    }
 
     override fun shutdown() {
         logger.debug { "Shutting down block queries" }

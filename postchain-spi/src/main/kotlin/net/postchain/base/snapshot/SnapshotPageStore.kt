@@ -194,6 +194,6 @@ open class SnapshotPageStore(
         return page?.getChildHash(levelsPerPage, ds::hash, 0) ?: EMPTY_HASH
     }
 
-    fun getLastSnapshotHeight(): Long = DatabaseAccess.of(ctx).getLatestSnapshotHeight(ctx, name) ?: -1
+    fun getLastSnapshotHeight(): Long? = DatabaseAccess.of(ctx).getLatestSnapshotHeight(ctx, name)
 }
 
