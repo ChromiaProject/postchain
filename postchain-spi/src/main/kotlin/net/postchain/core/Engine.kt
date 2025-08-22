@@ -5,6 +5,7 @@ package net.postchain.core
 import net.postchain.common.BlockchainRid
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
 import net.postchain.core.block.ManagedBlockBuilder
@@ -31,6 +32,7 @@ interface BlockchainEngine : Shutdownable {
     fun isRunning(): Boolean
 
     fun loadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?>
+    fun persistBlock(blockDataWithWitness: BlockDataWithWitness): Pair<ManagedBlockBuilder, Exception?>
     fun buildBlock(maxBuildTimeMs: Long = -1): Pair<ManagedBlockBuilder, Exception?>
     fun getTransactionQueue(): TransactionQueue
     fun getBlockBuildingStrategy(): BlockBuildingStrategy

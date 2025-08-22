@@ -47,6 +47,7 @@ interface BlockchainConfiguration {
     fun getBlockHeaderValidator(): BlockWitnessProvider
     fun getTransactionFactory(): TransactionFactory
     fun makeBlockBuilder(ctx: EContext, isSyncing: Boolean, extraExtensions: List<BaseBlockBuilderExtension> = listOf()): BlockBuilder
+    fun makePersistOnlyBlockBuilder(ctx: EContext): BlockBuilder
     fun makeBlockQueries(storage: Storage): BlockQueries
     fun hasQuery(name: String): Boolean
     fun getBlockBuildingStrategy(blockQueries: BlockQueries, txQueue: TransactionQueue): BlockBuildingStrategy

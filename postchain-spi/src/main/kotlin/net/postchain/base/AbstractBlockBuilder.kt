@@ -65,7 +65,7 @@ abstract class AbstractBlockBuilder(
     protected var buildingNewBlock: Boolean = false            // remains "false" as long we got a block from some other node
 
     var blockTrace: BlockTrace? = null               // Only for logging, remains "null" unless TRACE
-    private var nextTransactionNumber: Long = 0
+    protected var nextTransactionNumber: Long = 0
 
     /**
      * Retrieve initial block data and set block context

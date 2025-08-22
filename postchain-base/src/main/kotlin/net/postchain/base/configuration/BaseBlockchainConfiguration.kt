@@ -17,6 +17,7 @@ import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.BaseBlockWitnessProvider
+import net.postchain.base.data.PersistOnlyBlockBuilder
 import net.postchain.base.extension.ConfigurationHashBlockBuilderExtension
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -180,6 +181,14 @@ abstract class BaseBlockchainConfiguration(
 
         return bb
     }
+
+    override fun makePersistOnlyBlockBuilder(ctx: EContext): BlockBuilder = PersistOnlyBlockBuilder(
+            ctx,
+            effectiveBlockchainRID,
+            blockStore,
+            blockWitnessProvider,
+            configHash
+    )
 
     /**
      * Will add ChainID to the dependency list, if needed.
