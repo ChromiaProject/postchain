@@ -9,8 +9,15 @@ import net.postchain.core.EContext
 import net.postchain.core.TxEContext
 import net.postchain.gtv.GtvDictionary
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvType
+import net.postchain.gtx.ArgumentMetadata
+import net.postchain.gtx.GTXModuleMetadata
 import net.postchain.gtx.GTXOperation
 import net.postchain.gtx.GTXSchemaManager
+import net.postchain.gtx.MetadataProvider
+import net.postchain.gtx.OperationMetadata
+import net.postchain.gtx.QueryMetadata
+import net.postchain.gtx.ReturnMetadata
 import net.postchain.gtx.SimpleGTXModule
 import net.postchain.gtx.data.ExtOpData
 import org.apache.commons.dbutils.QueryRunner
@@ -36,6 +43,13 @@ private fun table_transactions(ctx: EContext): String {
 }
 
 class GTXTestOp(@Suppress("UNUSED_PARAMETER") u: Unit, opdata: ExtOpData) : GTXOperation(opdata) {
+
+    companion object {
+        val metadata = OperationMetadata(args = listOf(
+                ArgumentMetadata("first", setOf(GtvType.INTEGER)),
+                ArgumentMetadata("second", setOf(GtvType.STRING)),
+        ))
+    }
 
     /**
      * The only way for the [GTXTestOp] to be considered correct is if first argument is "1" and the second is a string.
@@ -78,9 +92,9 @@ class GTXTestModule : SimpleGTXModule<Unit>(Unit,
                 WHERE t.tx_rid = ?
             """.trimIndent()
             val value = r.query(ctxt.conn, sql, ColumnListHandler<String>(), txRID.asByteArray(true))
-            gtv( value.map { gtv(it) })
+            gtv(value.map { gtv(it) })
         })
-) {
+), MetadataProvider {
     companion object : KLogging()
 
     override fun initializeDB(ctx: EContext) {
@@ -94,4 +108,16 @@ class GTXTestModule : SimpleGTXModule<Unit>(Unit,
             GTXSchemaManager.setModuleVersion(ctx, moduleName, 0)
         }
     }
+
+    override fun getMetadata() = GTXModuleMetadata(
+            operations = mapOf(
+                    GTX_TEST_OP_NAME to GTXTestOp.metadata,
+            ),
+            queries = mapOf(
+                    GTX_TEST_QUERY_NAME to QueryMetadata(
+                            args = listOf(ArgumentMetadata("txRID", setOf(GtvType.BYTEARRAY, GtvType.STRING))),
+                            returnType = ReturnMetadata(setOf(GtvType.ARRAY, GtvType.NULL))
+                    ),
+            )
+    )
 }

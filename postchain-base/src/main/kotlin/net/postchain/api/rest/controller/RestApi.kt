@@ -42,6 +42,7 @@ import net.postchain.api.rest.highestBlockHeightAnchoringCheckBody
 import net.postchain.api.rest.infra.RestApiConfig
 import net.postchain.api.rest.infraVersionBody
 import net.postchain.api.rest.limitQuery
+import net.postchain.api.rest.metadataBody
 import net.postchain.api.rest.model.DecodedTransactionInfoExt
 import net.postchain.api.rest.model.TxRid
 import net.postchain.api.rest.nodeStatusBody
@@ -196,7 +197,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 19
+        const val REST_API_VERSION = 20
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -315,7 +316,7 @@ class RestApi(
                 }
             }
             if (logger.isDebugEnabled) {
-                logger.debug("${response.status.toString()}\n${response.headers.joinToString("\n") { "${it.first}: ${it.second}" }}")
+                logger.debug("${response.status}\n${response.headers.joinToString("\n") { "${it.first}: ${it.second}" }}")
                 // Assuming the content-type is correctly set, we will avoid logging binary response bodies
                 if (Header.CONTENT_TYPE(response)?.equalsIgnoringDirectives(ContentType.OCTET_STREAM) != true
                         && (response.body.length ?: 0) > 0
@@ -383,6 +384,8 @@ class RestApi(
             "/config/{blockchainRid}/features" bind GET to liveBlockchain.then(::getBlockchainConfigurationFeatures),
 
             "/errors/{blockchainRid}" bind GET to blockchain.then(volatileResponse).then(::getErrors),
+
+            "/metadata/{blockchainRid}" bind GET to liveBlockchain.then(::getMetadata),
 
             "/highest_block_height_anchoring_check/{blockchainRid}" bind GET to ::getHighestBlockHeightAnchoringCheck,
     )
@@ -826,6 +829,12 @@ class RestApi(
             }
         }
         return Response(OK).with(prettyJsonBody of errors)
+    }
+
+    private fun getMetadata(request: Request): Response {
+        val model = model(request)
+        val metadata = model.getMetadata()
+        return Response(OK).with(metadataBody of metadata)
     }
 
     val handler = routes(

@@ -345,6 +345,15 @@ open class BaseBlockchainEngine(
                 logger.debug { "buildBlock() - Block building forcefully stopped" }
                 throw ForceStopBlockBuildingException()
             }
+            if (strategy.shouldStopBuildingBlock(blockBuilder.blockBuilder)) {
+                logger.debug { "buildBlock() - Block limit is reached" }
+                val mustWaitTime = mustWaitMinimumBuildBlockTime()
+                if (mustWaitTime > 0) {
+                    Thread.sleep(mustWaitTime)
+                    delayTimer.add(mustWaitTime * 1_000_000)
+                }
+                break
+            }
             logger.trace { "Checking transaction queue" }
             val tx = transactionQueue.takeTransaction(max(20L, mustWaitMinimumBuildBlockTime()).milliseconds)
             if (tx != null) {
@@ -378,16 +387,6 @@ open class BaseBlockchainEngine(
                 } else {
                     acceptedTxs++
                     transactionSample.stop(metrics.acceptedTransactions)
-                    // tx is fine, consider stopping
-                    if (strategy.shouldStopBuildingBlock(blockBuilder.blockBuilder)) {
-                        logger.debug { "buildBlock() - Block limit is reached" }
-                        val mustWaitTime = mustWaitMinimumBuildBlockTime()
-                        if (mustWaitTime > 0) {
-                            Thread.sleep(mustWaitTime)
-                            delayTimer.add(mustWaitTime * 1_000_000)
-                        }
-                        break
-                    }
                 }
             } else {
                 if (shouldStopWaitingForTxs(acceptedTxs)) { // tx == null

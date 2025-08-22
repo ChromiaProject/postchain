@@ -36,6 +36,13 @@ interface PostchainContextAware {
     fun initializeContext(configuration: BlockchainConfiguration, postchainContext: PostchainContext)
 }
 
+/**
+ * A `GTXModule` which implements this interface can provide metadata about itself.
+ */
+fun interface MetadataProvider {
+    fun getMetadata(): GTXModuleMetadata
+}
+
 fun interface TransactorMaker {
     fun makeTransactor(opData: ExtOpData): Transactor
 }

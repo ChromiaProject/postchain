@@ -8,6 +8,7 @@ import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.BlockchainConfigurationOptions
 import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.BlockchainRid
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.common.wrap
 import net.postchain.config.app.AppConfig
@@ -25,6 +26,8 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
     : ManagedNodeDataSource, QueryRunner by queryRunner {
 
     companion object : KLogging()
+
+    fun buildArgs(vararg args: Pair<String, Gtv>): Gtv = gtv(*args)
 
     override val nmApiVersion by lazy {
         query("nm_api_version", buildArgs()).asInteger().toInt()
@@ -51,7 +54,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         }
     }
 
-    override fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray? {
+    override fun getConfiguration(blockchainRidRaw: ByteArray, height: Long): ByteArray? = try {
         val res = query(
                 "nm_get_blockchain_configuration",
                 buildArgs(
@@ -59,7 +62,11 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
                         "height" to gtv(height))
         )
 
-        return if (res.isNull()) null else res.asByteArray()
+        if (res.isNull()) null else res.asByteArray()
+
+    } catch (e: UserMistake) {
+        logger.error { "Can't get configuration for ${blockchainRidRaw.wrap()} at height $height: ${e.message}" }
+        null
     }
 
     override fun findNextConfigurationHeight(blockchainRidRaw: ByteArray, height: Long): Long? {
@@ -76,39 +83,51 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
     override fun getPendingBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): List<PendingBlockchainConfiguration> {
         if (nmApiVersion < 5) return listOf()
 
-        val res = query(
-                "nm_get_pending_blockchain_configuration",
-                buildArgs(
-                        "blockchain_rid" to gtv(blockchainRid.data),
-                        "height" to gtv(height))
-        )
-
-        return res.asArray().map { item ->
-            val gtvBaseConfig = GtvDecoder.decodeGtv(item["base_config"]!!.asByteArray())
-            val fullConfig = gtvBaseConfig.asDict().toMutableMap()
-            fullConfig[KEY_SIGNERS] = item["signers"]!!
-            val gtvConfig = gtv(fullConfig)
-            val hashCalculator = gtvConfig.toObject<BlockchainConfigurationData>().merkleHashCalculator
-            PendingBlockchainConfiguration(
-                    gtvBaseConfig,
-                    gtvConfig.merkleHash(hashCalculator).wrap(),
-                    item["signers"]!!.asArray().map { PubKey(it.asByteArray()) },
-                    item["minimum_height"]!!.asInteger()
+        return try {
+            val res = query(
+                    "nm_get_pending_blockchain_configuration",
+                    buildArgs(
+                            "blockchain_rid" to gtv(blockchainRid.data),
+                            "height" to gtv(height))
             )
+
+            res.asArray().map { item ->
+                val gtvBaseConfig = GtvDecoder.decodeGtv(item["base_config"]!!.asByteArray())
+                val fullConfig = gtvBaseConfig.asDict().toMutableMap()
+                fullConfig[KEY_SIGNERS] = item["signers"]!!
+                val gtvConfig = gtv(fullConfig)
+                val hashCalculator = gtvConfig.toObject<BlockchainConfigurationData>().merkleHashCalculator
+                PendingBlockchainConfiguration(
+                        gtvBaseConfig,
+                        gtvConfig.merkleHash(hashCalculator).wrap(),
+                        item["signers"]!!.asArray().map { PubKey(it.asByteArray()) },
+                        item["minimum_height"]!!.asInteger()
+                )
+            }
+
+        } catch (e: UserMistake) {
+            logger.error { "Can't get pending configuration for ${blockchainRid.data.wrap()} at height $height: ${e.message}" }
+            listOf()
         }
     }
 
     override fun getFaultyBlockchainConfiguration(blockchainRid: BlockchainRid, height: Long): ByteArray? {
         if (nmApiVersion < 6) return null
 
-        val res = query(
-                "nm_get_faulty_blockchain_configuration",
-                buildArgs(
-                        "blockchain_rid" to gtv(blockchainRid.data),
-                        "height" to gtv(height))
-        )
+        return try {
+            val res = query(
+                    "nm_get_faulty_blockchain_configuration",
+                    buildArgs(
+                            "blockchain_rid" to gtv(blockchainRid.data),
+                            "height" to gtv(height))
+            )
 
-        return if (res.isNull()) null else res.asByteArray()
+            if (res.isNull()) null else res.asByteArray()
+
+        } catch (e: UserMistake) {
+            logger.error { "Can't get faulty configuration for ${blockchainRid.data.wrap()} at height $height: ${e.message}" }
+            null
+        }
     }
 
     override fun getBlockchainReplicaNodeMap(): Map<BlockchainRid, List<NodeRid>> {
@@ -129,16 +148,19 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
     override fun getSignersInLatestConfiguration(blockchainRid: BlockchainRid): List<NodeRid> {
         if (nmApiVersion < 9) return emptyList()
 
-        return query(
-                "nm_get_blockchain_signers_in_latest_configuration",
-                buildArgs("blockchain_rid" to gtv(blockchainRid))
-        ).asArray().map { NodeRid(it.asByteArray()) }
+        return try {
+            query(
+                    "nm_get_blockchain_signers_in_latest_configuration",
+                    buildArgs("blockchain_rid" to gtv(blockchainRid))
+            ).asArray().map { NodeRid(it.asByteArray()) }
+        } catch (e: UserMistake) {
+            logger.error { "Can't get signers in latest configuration for ${blockchainRid.data.wrap()}: ${e.message}" }
+            emptyList()
+        }
     }
 
-    fun buildArgs(vararg args: Pair<String, Gtv>): Gtv = gtv(*args)
-
-    override fun getBlockchainState(blockchainRid: BlockchainRid): BlockchainState {
-        return if (nmApiVersion >= 6) {
+    override fun getBlockchainState(blockchainRid: BlockchainRid): BlockchainState = try {
+        if (nmApiVersion >= 6) {
             val res = query(
                     "nm_get_blockchain_state",
                     buildArgs("blockchain_rid" to gtv(blockchainRid.data)))
@@ -146,6 +168,9 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
         } else {
             BlockchainState.RUNNING
         }
+    } catch (e: UserMistake) {
+        logger.error { "Can't get blockchain state for ${blockchainRid.data.wrap()}: ${e.message}" }
+        BlockchainState.RUNNING // Behavior prior to NP API v6: returns the RUNNING state by default
     }
 
     override fun getBlockchainConfigurationOptions(blockchainRid: BlockchainRid, height: Long): BlockchainConfigurationOptions? {
@@ -184,7 +209,7 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
                     )
                 }
             } catch (e: Exception) {
-                logger.error(e) { "Can't parse nm_find_next_inactive_blockchains() query result" }
+                logger.error { "Can't parse nm_find_next_inactive_blockchains() query result: ${e.message}" }
                 emptyList()
             }
         } else {
@@ -217,15 +242,19 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
     override fun isBlockchainProvider(providerPubKey: PubKey, blockchainRid: BlockchainRid): Boolean {
         if (nmApiVersion < 19) return true
 
-        val res = query(
-                "nm_is_blockchain_provider",
-                buildArgs(
-                        "provider_pubkey" to gtv(providerPubKey.data),
-                        "blockchain_rid" to gtv(blockchainRid.data)
-                )
-        )
+        return try {
+            query(
+                    "nm_is_blockchain_provider",
+                    buildArgs(
+                            "provider_pubkey" to gtv(providerPubKey.data),
+                            "blockchain_rid" to gtv(blockchainRid.data)
+                    )
+            ).asBoolean()
 
-        return res.asBoolean()
+        } catch (e: UserMistake) {
+            logger.error { "Can't check if ${providerPubKey.data.wrap()} is a blockchain provider for ${blockchainRid.data.wrap()}: ${e.message}" }
+            true // Behavior prior to NP API v19: returns the `true` by default
+        }
     }
 
     override fun getBlockchainApiUrls(brid: BlockchainRid): List<String> =

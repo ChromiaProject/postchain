@@ -42,7 +42,7 @@ open class ContainerHandler(
     }
 
     fun stopContainer(psContainer: PostchainContainer) {
-        unregisterSubContainerResourceMetrics(psContainer.containerId!!)
+        unregisterSubContainerResourceMetrics(psContainer.containerName.dockerContainer)
         dockerClient.stopContainerCmd(psContainer.containerId!!).withTimeout(10).exec()
     }
 
@@ -71,7 +71,12 @@ open class ContainerHandler(
 
     private fun registerSubContainerResourceMetrics(psContainer: PostchainContainer) {
         if (appConfig.subContainerResourceUsageMetricIntervalMs > 0) {
-            subContainerResourceMetrics[psContainer.containerId!!] = SubContainerResourceMetrics(
+            val dockerContainerName = psContainer.containerName.dockerContainer
+            subContainerResourceMetrics.computeIfPresent(dockerContainerName) { _, _ ->
+                unregisterSubContainerResourceMetrics(dockerContainerName)
+                null
+            }
+            subContainerResourceMetrics[dockerContainerName] = SubContainerResourceMetrics(
                     psContainer.containerName.directoryContainer,
                     psContainer.resourceLimits.hasStorage() && fileSystem.supportsQuotas(),
                     appConfig.subContainerResourceUsageMetricIntervalMs,
@@ -97,7 +102,7 @@ open class ContainerHandler(
         return ContainerResourceUsage.create(containerStats, fsLimits)
     }
 
-    private fun unregisterSubContainerResourceMetrics(containerId: String) {
-        subContainerResourceMetrics[containerId]?.close()
+    private fun unregisterSubContainerResourceMetrics(dockerContainer: String) {
+        subContainerResourceMetrics[dockerContainer]?.close()
     }
 }

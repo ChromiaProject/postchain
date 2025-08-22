@@ -10,7 +10,9 @@ class DiagnosticData(
             this(values.toMap(Collections.synchronizedMap(linkedMapOf())))
 
     override val value: Any
-        get() = properties.map { it.key.prettyName to it.value.value }.toMap()
+        get() = synchronized(properties) {
+            properties.map { it.key.prettyName to it.value.value }.toMap()
+        }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

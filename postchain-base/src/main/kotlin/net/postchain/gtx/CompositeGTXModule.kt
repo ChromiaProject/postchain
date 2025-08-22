@@ -2,6 +2,9 @@ package net.postchain.gtx
 
 import mu.KLogging
 import net.postchain.PostchainContext
+import net.postchain.api.rest.model.ApiMetadata
+import net.postchain.api.rest.model.OperationMetadata
+import net.postchain.api.rest.model.QueryMetadata
 import net.postchain.base.BaseBlockBuilderExtension
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatumInfo
@@ -16,7 +19,8 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 
-class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean, val snapshotsEnabled: Boolean, val snapshotInterval: Long) : GTXModule, PostchainContextAware {
+class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean, val snapshotsEnabled: Boolean, val snapshotInterval: Long)
+    : GTXModule, PostchainContextAware, MetadataProvider {
 
     lateinit var wrappingOpMap: Map<String, GTXModule>
     lateinit var opmap: Map<String, GTXModule>
@@ -24,6 +28,8 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
     lateinit var ops: Set<String>
     lateinit var _queries: Set<String>
     lateinit var _specialTxExtensions: List<GTXSpecialTxExtension>
+    lateinit var _metadata: GTXModuleMetadata
+    lateinit var _compositeMetadata: ApiMetadata
 
     companion object : KLogging()
 
@@ -64,7 +70,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
 
     override fun initializeDB(ctx: EContext) {
         for (module in modules) {
-            logger.debug { "Initialize DB for module: $module" }
+            logger.debug { "Initialize DB for module: ${module.javaClass.name}" }
             module.initializeDB(ctx)
         }
         val _wrappingOpMap = mutableMapOf<String, GTXModule>()
@@ -86,13 +92,13 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
                 _qmap[q] = m
             }
             _stxs.addAll(m.getSpecialTxExtensions())
-            if (m is OperationWrapper) m.injectDelegateTransactorMaker(TransactorMaker { opData ->
+            if (m is OperationWrapper) m.injectDelegateTransactorMaker { opData ->
                 if (opData.opName in opmap.keys) {
                     opmap[opData.opName]!!.makeTransactor(opData)
                 } else {
                     throw UnknownOperation(opData.opName)
                 }
-            })
+            }
         }
         wrappingOpMap = _wrappingOpMap.toMap()
         opmap = _opmap.toMap()
@@ -100,6 +106,20 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         ops = wrappingOpMap.keys + opmap.keys
         _queries = qmap.keys
         _specialTxExtensions = _stxs.toList()
+
+        val metadataCollection = modules.filterIsInstance<MetadataProvider>().map { it.javaClass.canonicalName to it.getMetadata() }
+        _metadata = GTXModuleMetadata(
+                operations = metadataCollection.map { (_, metadata) -> metadata.operations }.fold(mapOf()) { acc, map -> acc + map },
+                queries = metadataCollection.map { (_, metadata) -> metadata.queries }.fold(mapOf()) { acc, map -> acc + map }
+        )
+        _compositeMetadata = ApiMetadata(
+                operations = metadataCollection.map { (moduleName, metadata) ->
+                    metadata.operations.mapValues { OperationMetadata(moduleName, it.value.args) }
+                }.fold(mapOf()) { acc, map -> acc + map },
+                queries = metadataCollection.map { (moduleName, metadata) ->
+                    metadata.queries.mapValues { QueryMetadata(moduleName, it.value.args, it.value.returnType) }
+                }.fold(mapOf()) { acc, map -> acc + map }
+        )
 
         if (snapshotsEnabled) {
             DatabaseAccess.of(ctx).apply {
@@ -138,4 +158,8 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
             module.shutdown()
         }
     }
+
+    override fun getMetadata(): GTXModuleMetadata = _metadata
+
+    fun getCompositeMetadata(): ApiMetadata = _compositeMetadata
 }

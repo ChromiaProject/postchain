@@ -15,6 +15,7 @@ import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvString
+import net.postchain.gtv.GtvType
 import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.special.GTXAutoSpecialTxExtension
 import net.postchain.gtx.special.GTXSpecialTxExtension
@@ -28,6 +29,9 @@ open class GtxNop(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GT
     companion object : KLogging() {
         const val OP_NAME = "nop"
         private const val MAX_SIZE = 64 // Number of bytes/chars we allow per argument
+        val metadata = OperationMetadata(args = listOf(
+                ArgumentMetadata("nonce", setOf(GtvType.NULL, GtvType.INTEGER, GtvType.BYTEARRAY, GtvType.STRING)),
+        ))
     }
 
     override fun apply(ctx: TxEContext) = true
@@ -59,7 +63,7 @@ open class GtxNop(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GT
             is GtvString -> checkSize(arg.asString().length, "GtvString")
             else -> {
                 val message = "Argument of type: ${arg.type} not allowed for operation: $OP_NAME."
-                GtxNop.logger.trace(message)
+                logger.trace(message)
                 throw UserMistake(message)
             }
         }
@@ -67,8 +71,8 @@ open class GtxNop(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GT
 
     private fun checkSize(size: Int, type: String) {
         if (size > MAX_SIZE) {
-            val message = "Argument of type: $type too big. Max: $MAX_SIZE chains but was $size (operation: $OP_NAME) "
-            GtxNop.logger.trace(message)
+            val message = "Argument of type: $type too big. Max: $MAX_SIZE bytes but was $size (operation: $OP_NAME) "
+            logger.trace(message)
             throw UserMistake(message)
         }
     }
@@ -83,6 +87,9 @@ class GtxSpecNop(u: Unit, opData: ExtOpData) : GtxNop(u, opData) {
 
     companion object : KLogging() {
         const val OP_NAME = "__nop"
+        val metadata = OperationMetadata(args = listOf(
+                ArgumentMetadata("nonce", setOf(GtvType.NULL, GtvType.INTEGER, GtvType.BYTEARRAY, GtvType.STRING)),
+        ))
     }
 }
 
@@ -94,6 +101,10 @@ class GtxTimeB(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GTXOp
 
     companion object {
         const val OP_NAME = "timeb"
+        val metadata = OperationMetadata(args = listOf(
+                ArgumentMetadata("from", setOf(GtvType.INTEGER)),
+                ArgumentMetadata("until", setOf(GtvType.NULL, GtvType.INTEGER)),
+        ))
     }
 
     override fun isCompound() = true
@@ -107,16 +118,16 @@ class GtxTimeB(@Suppress("UNUSED_PARAMETER") u: Unit, opData: ExtOpData) : GTXOp
         if (data.args.size != 2) throw UserMistake("expected 2 args")
         val from = data.args[0].asInteger()
         if (!data.args[1].isNull()) {
-            if (data.args[1].asInteger() < from) throw UserMistake("expected arg1 < arg0")
+            if (data.args[1].asInteger() < from) throw UserMistake("expected arg0 <= arg1")
         }
     }
 
     override fun apply(ctx: TxEContext): Boolean {
         val from = data.args[0].asInteger()
-        if (ctx.timestamp < from) return false
+        if (ctx.timestamp < from) throw UserMistake("transaction cannot be accepted before $from")
         if (!data.args[1].isNull()) {
             val until = data.args[1].asInteger()
-            if (until < ctx.timestamp) return false
+            if (until < ctx.timestamp) throw UserMistake("transaction cannot be accepted after $until")
         }
         return true
     }
@@ -175,7 +186,7 @@ class StandardOpsGTXModule : SimpleGTXModule<Unit>(
                 "last_block_info" to ::lastBlockInfoQuery,
                 "tx_confirmation_time" to ::txConfirmationTime
         )
-) {
+), MetadataProvider {
     private val stxs = mutableListOf<GTXSpecialTxExtension>(
             // We put the Auto Extension here, since it's sort of "standard" (and anyways all "real life" configurations
             // will import StandardOps and  thus get access to this extension).
@@ -185,5 +196,23 @@ class StandardOpsGTXModule : SimpleGTXModule<Unit>(
     override fun getSpecialTxExtensions(): List<GTXSpecialTxExtension> = stxs.toList()
 
     override fun initializeDB(ctx: EContext) {}
+
+    override fun getMetadata() = GTXModuleMetadata(
+            operations = mapOf(
+                    GtxNop.OP_NAME to GtxNop.metadata,
+                    GtxSpecNop.OP_NAME to GtxSpecNop.metadata,
+                    GtxTimeB.OP_NAME to GtxTimeB.metadata,
+            ),
+            queries = mapOf(
+                    "last_block_info" to QueryMetadata(
+                            args = listOf(),
+                            returnType = ReturnMetadata(setOf(GtvType.DICT))
+                    ),
+                    "tx_confirmation_time" to QueryMetadata(
+                            args = listOf(ArgumentMetadata("txRID", setOf(GtvType.BYTEARRAY, GtvType.STRING))),
+                            returnType = ReturnMetadata(setOf(GtvType.DICT))
+                    ),
+            )
+    )
 
 }

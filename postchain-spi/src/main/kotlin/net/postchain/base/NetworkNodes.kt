@@ -7,7 +7,7 @@ import net.postchain.common.exception.UserMistake
 import net.postchain.common.types.WrappedByteArray
 import net.postchain.config.app.AppConfig
 import net.postchain.core.NodeRid
-import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Network nodes can be either signers/block builders or nodes that just want to read your data (= replicas).
@@ -27,7 +27,7 @@ class NetworkNodes(
         private val readOnlyNodeContacts: MutableMap<NodeRid, Int>
 ) {
 
-    private val peerInfoMap: MutableMap<NodeRid, PeerInfo> = Collections.synchronizedMap(peerInfoMap.toMutableMap())
+    private val peerInfoMap: MutableMap<NodeRid, PeerInfo> = ConcurrentHashMap(peerInfoMap)
     private var nextTimestamp: Long = 0 // Increases once a day
 
     companion object : KLogging() {
