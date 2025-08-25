@@ -274,6 +274,56 @@ class GetLatestSnapshotBlock() : EbftMessage(MessageTopic.GETLATESTSNAPSHOT) {
 }
 
 /**
+ * Request snapshot data from a node at offset "datumIdFrom".
+ * TODO: Should we let receivers specify the length of the data or just let each peer fill a message?
+ */
+class GetSnapshotData(val height: Long, val contextId: Long, val datumIdFrom: Long) : EbftMessage(MessageTopic.GETSNAPSHOTDATA) {
+    companion object {
+        fun buildFromGtv(data: GtvArray, arrOffset: Int): GetSnapshotData {
+            return GetSnapshotData(
+                    data[0 + arrOffset].asInteger(),
+                    data[1 + arrOffset].asInteger(),
+                    data[2 + arrOffset].asInteger()
+            )
+        }
+    }
+
+    override fun toGtv(version: Long): Gtv {
+        return gtv(topic.toGtv(), gtv(height), gtv(contextId), gtv(datumIdFrom))
+    }
+}
+
+/**
+ * Reply for a [GetSnapshotData] message with the actual snapshot data.
+ *
+ * @param datumIdFrom is the offset we requested the data from
+ * @param data List of datums and their permanent flag. TODO: repace pair?
+ * @param proof Proof that the data is correct. TODO: what format?
+ */
+class SnapshotData(val height: Long, val contextId: Long, val datumIdFrom: Long, val data: List<Pair<Gtv, Boolean>>, val proof: ByteArray) : EbftMessage(MessageTopic.SNAPSHOTDATA) {
+    companion object {
+        fun buildFromGtv(data: GtvArray, arrOffset: Int): SnapshotData {
+            return SnapshotData(
+                    data[0 + arrOffset].asInteger(),
+                    data[1 + arrOffset].asInteger(),
+                    data[2 + arrOffset].asInteger(),
+                    data[3 + arrOffset].asArray().map { it[0] to it[1].asBoolean() },
+                    data[4 + arrOffset].asByteArray()
+            )
+        }
+    }
+
+    override fun toGtv(version: Long): Gtv {
+        return gtv(topic.toGtv(),
+                gtv(height),
+                gtv(contextId),
+                gtv(datumIdFrom),
+                gtv(data.map { gtv(it.first, gtv(it.second)) }),
+                gtv(ByteArray(0)))
+    }
+}
+
+/**
  * We do it this way since we don't want to store the "topic" of the [CompleteBlock] message
  */
 fun completeBlockToGtv(data: BlockData, height: Long, witness: ByteArray): List<Gtv> {

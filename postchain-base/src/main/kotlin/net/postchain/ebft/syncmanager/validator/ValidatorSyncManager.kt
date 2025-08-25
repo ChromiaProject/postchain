@@ -39,7 +39,9 @@ import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.GetLatestSnapshotBlock
+import net.postchain.ebft.message.GetSnapshotData
 import net.postchain.ebft.message.GetUnfinishedBlock
+import net.postchain.ebft.message.MessageTopic
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.Transaction
 import net.postchain.ebft.message.UnfinishedBlock
@@ -155,6 +157,9 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
                     is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId)
 
+                    is GetSnapshotData -> sendSnapshotData(xPeerId, blockchainConfiguration.chainID,
+                            message.height, message.contextId, message.datumIdFrom)
+
                     else -> {
                         if (!isReadOnlyNode) { // This check is actually good DOS protection
                             // validator consensus logic
@@ -223,6 +228,10 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                     // TODO: This might happen because we've already exited FastSync but other nodes
                                     //  are still responding to our old requests. For this case this is harmless.
                                 }
+
+                                is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId)
+//                                is GetSnapshotData -> sendSnapshotData(xPeerId, blockchainConfiguration.chainID,
+//                                        message.height, message.contextId, message.datumIdFrom)
 
                                 is AppliedConfig -> applyConfig(message.configHash, message.height)
                                 is EbftVersion -> logger.debug { "Received EbftVersion from peer $xPeerId" }

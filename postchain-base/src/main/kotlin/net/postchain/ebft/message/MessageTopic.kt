@@ -20,7 +20,9 @@ enum class MessageTopic(val value: Int) {
     BLOCKRANGE(14),
     APPLIEDCONFIG(15),
     EBFTVERSION(16),
-    GETLATESTSNAPSHOT(17);
+    GETLATESTSNAPSHOT(17),
+    GETSNAPSHOTDATA(18), // TODO: skip "data" suffix?
+    SNAPSHOTDATA(19);
 
     fun toGtv() = gtv(value.toLong())
 }

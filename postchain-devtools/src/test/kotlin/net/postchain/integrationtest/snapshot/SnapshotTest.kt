@@ -284,6 +284,7 @@ open class SnapshotTestModule(
         return GtvDecoder.decodeGtv(rawDatum)
     }
 
+    @Deprecated("Remove?")
     override fun getPermanentDatumsBySize(ctx: EContext, datumIdFrom: Long, maxDataSize: Long): List<Pair<Long, Gtv>> {
         val sql = """
             SELECT t.datum_id, t.datum, t.acc_bytes FROM (

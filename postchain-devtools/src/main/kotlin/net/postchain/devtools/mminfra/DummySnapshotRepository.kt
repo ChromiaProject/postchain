@@ -22,17 +22,13 @@ class DummySnapshotRepository : SnapshotDatumRepository {
         TODO("Not yet implemented")
     }
 
-    override fun getStateDatumsBySize(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<Pair<Long, Gtv>> {
-        TODO("Not yet implemented")
-    }
-
     override fun getPermanentDatum(ctx: EContext, contextId: Long, datumId: Long): Gtv {
         TODO("Not yet implemented")
     }
 
-    override fun getPermanentDatumsBySize(ctx: EContext, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<Pair<Long, Gtv>> {
+    override fun getLatestSnapshotHeight(ctx: EContext): Long? = null
+
+    override fun getContextMaxIds(ctx: EContext, height: Long): Map<Long, Long?> {
         TODO("Not yet implemented")
     }
-
-    override fun getLatestSnapshotHeight(ctx: EContext): Long? = null
 }

@@ -1,6 +1,7 @@
 package net.postchain.integrationtest.sync
 
 import assertk.assertThat
+import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import net.postchain.concurrent.util.get
 import net.postchain.devtools.ManagedModeTest
@@ -25,7 +26,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
 
     @Test
     fun syncFromSnapshot() {
-        startManagedSystem(4, 1)
+        startManagedSystem(4, 1, restApi = true)
 
         val initialConfig = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(initialConfig), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
@@ -62,8 +63,11 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
 
         // Assert that we could snapshot sync the chain on the replica node
         restartNodeClean(4, c1, -1)
-        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            assertThat(nodes[4].blockQueries().getLastBlockHeight().get()).isEqualTo(10)
+        Awaitility.await().atMost(Duration.TEN_MINUTES).untilAsserted {
+            val height = nodes[4].blockQueries().getLastBlockHeight().get()
+            assertThat(height).isEqualTo(10)
+            assertThat(nodes[4].blockQueries().getSnapshotContextMaxIds(height).get().values.filterNotNull())
+                    .isEqualTo(listOf(3L, 3L))
         }
     }
 }

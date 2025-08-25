@@ -31,6 +31,7 @@ import net.postchain.ebft.message.GetBlockHeaderAndBlock
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.GetLatestSnapshotBlock
+import net.postchain.ebft.message.GetSnapshotData
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.Transaction
 import net.postchain.ebft.message.UnfinishedBlock
@@ -102,7 +103,7 @@ class FastSynchronizer(
         try {
             blockHeight.set(blockQueries.getLastBlockHeight().get())
             logger.debug { syncDebug("Start", blockHeight.get()) }
-            while (isProcessRunning() && !exitCondition() && (params.syncToExactHeight != -1L || blockHeight.get() >= params.syncToExactHeight)) {
+            while (isProcessRunning() && !exitCondition() && (params.syncToExactHeight == -1L || blockHeight.get() < params.syncToExactHeight)) {
                 refillJobs()
                 processMessages()
                 processDoneJobs(polledFinishedJob)
@@ -680,6 +681,8 @@ class FastSynchronizer(
                     is EbftVersion -> logger.debug { "Received EbftVersion from peer $peerId" }
                     is Transaction -> logger.trace { "Got transaction from peer $peerId, ignoring" }
                     is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(peerId)
+                    is GetSnapshotData -> sendSnapshotData(peerId, blockchainConfiguration.chainID, message.height,
+                            message.contextId, message.datumIdFrom)
 
                     else -> {
                         if (signers.contains(peerId)) {

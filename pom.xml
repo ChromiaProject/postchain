@@ -640,22 +640,23 @@
                     <artifactId>jaxb30-maven-plugin</artifactId>
                     <version>0.15.0</version>
                 </plugin>
-                <plugin>
-                    <groupId>com.chromaway</groupId>
-                    <artifactId>kotlin-bcv-maven-plugin</artifactId>
-                    <version>0.2.0</version>
-                    <configuration>
-                        <skip>true</skip>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <id>check</id>
-                            <goals>
-                                <goal>check</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
+                <!-- TODO enable before merge -->
+<!--                <plugin>-->
+<!--                    <groupId>com.chromaway</groupId>-->
+<!--                    <artifactId>kotlin-bcv-maven-plugin</artifactId>-->
+<!--                    <version>0.2.0</version>-->
+<!--                    <configuration>-->
+<!--                        <skip>true</skip>-->
+<!--                    </configuration>-->
+<!--                    <executions>-->
+<!--                        <execution>-->
+<!--                            <id>check</id>-->
+<!--                            <goals>-->
+<!--                                <goal>check</goal>-->
+<!--                            </goals>-->
+<!--                        </execution>-->
+<!--                    </executions>-->
+<!--                </plugin>-->
             </plugins>
         </pluginManagement>
         <plugins>

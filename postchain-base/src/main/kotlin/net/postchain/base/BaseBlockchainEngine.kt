@@ -36,6 +36,7 @@ import net.postchain.core.TransactionQueue
 import net.postchain.core.block.BlockBuilder
 import net.postchain.core.block.BlockBuildingStrategy
 import net.postchain.core.block.BlockData
+import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockHeader
 import net.postchain.core.block.BlockQueries
 import net.postchain.core.block.BlockTrace
@@ -150,11 +151,11 @@ open class BaseBlockchainEngine(
         metrics.close()
     }
 
-    private fun makeBlockBuilder(ctx: EContext, isSyncing: Boolean): BaseManagedBlockBuilder {
+    private fun makeBlockBuilder(ctx: EContext, isSyncing: Boolean, persistOnly: Boolean = false): BaseManagedBlockBuilder {
         val savepoint = ctx.conn.setSavepoint("blockBuilder${nanoTime()}")
 
         return baseManagedBlockBuilderProvider(ctx, savepoint, blockBuilderStorage,
-                blockchainConfiguration.makeBlockBuilder(ctx, isSyncing),
+                if (persistOnly) blockchainConfiguration.makePersistOnlyBlockBuilder(ctx) else blockchainConfiguration.makeBlockBuilder(ctx, isSyncing),
                 {
                     val blockBuilder = it as AbstractBlockBuilder
                     beforeCommitHandler(blockBuilder.getBTrace(), blockBuilder.bctx)
@@ -177,22 +178,16 @@ open class BaseBlockchainEngine(
 
     override fun loadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
         return if (useParallelDecoding)
-            parallelLoadUnfinishedBlock(block, isSyncing)
+            loadUnfinishedBlockImpl(block, isSyncing, ::parallelTxDecoder)
         else
-            sequentialLoadUnfinishedBlock(block, isSyncing)
+            loadUnfinishedBlockImpl(block, isSyncing, ::sequentialTxDecoder)
     }
 
-    private fun sequentialLoadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
-        return loadUnfinishedBlockImpl(block, isSyncing) { txs ->
-            txs.map { smartDecodeTransaction(it) }
-        }
-    }
+    private fun sequentialTxDecoder(txs: List<ByteArray>): List<Transaction> = txs.map { smartDecodeTransaction(it) }
 
-    private fun parallelLoadUnfinishedBlock(block: BlockData, isSyncing: Boolean): Pair<ManagedBlockBuilder, Exception?> {
-        return loadUnfinishedBlockImpl(block, isSyncing) { txs ->
-            txs.parallelStream().map { smartDecodeTransaction(it) }.collect(Collectors.toList())
-        }
-    }
+    private fun parallelTxDecoder(txs: List<ByteArray>): List<Transaction> = txs.parallelStream().map {
+        smartDecodeTransaction(it)
+    }.collect(Collectors.toList())
 
     private fun smartDecodeTransaction(txData: ByteArray): Transaction {
         var tx = blockchainConfiguration.getTransactionFactory().decodeTransaction(txData)
@@ -314,6 +309,36 @@ open class BaseBlockchainEngine(
 
             blockBuilder to exception
         }
+    }
+
+    override fun persistBlock(blockDataWithWitness: BlockDataWithWitness): Pair<ManagedBlockBuilder, Exception?> {
+        return if (useParallelDecoding)
+            persistBlockImpl(blockDataWithWitness, ::parallelTxDecoder)
+        else
+            persistBlockImpl(blockDataWithWitness, ::sequentialTxDecoder)
+    }
+
+    private fun persistBlockImpl(
+            blockDataWithWitness: BlockDataWithWitness,
+            transactionsDecoder: (List<ByteArray>) -> List<Transaction>
+    ): Pair<ManagedBlockBuilder, Exception?> = withDBConnection { ctx ->
+        var exception: Exception? = null
+        val blockBuilder = makeBlockBuilder(ctx, isSyncing = true, persistOnly = true)
+
+        try {
+            blockBuilder.begin(blockDataWithWitness.header)
+
+            val decodedTxs = transactionsDecoder(blockDataWithWitness.transactions)
+            decodedTxs.forEach {
+                blockBuilder.appendTransaction(it)
+            }
+
+            blockBuilder.finalizeAndValidate(blockDataWithWitness.header)
+        } catch (e: Exception) {
+            exception = e
+        }
+
+        blockBuilder to exception
     }
 
     private fun hasMismatchingConfiguration(blockHeader: BlockHeader) =

@@ -22,6 +22,15 @@ class BaseSnapshotDatumRepository(
         return listOfNotNull(stateMax, permanentMax).maxOrNull()
     }
 
+    override fun getContextMaxIds(ctx: EContext, height: Long): Map<Long, Long?> {
+        val dba = DatabaseAccess.of(ctx)
+        return dba.getSnapshotModuleContextIds(ctx).associateWith { contextId ->
+            val stateMax = getStateDatumIdMax(ctx, height, contextId)
+            val permanentMax = getPermanentDatumIdMax(ctx, contextId)
+            listOfNotNull(stateMax, permanentMax).maxOrNull()
+        }
+    }
+
     override fun getStateDatumIdMax(ctx: EContext, height: Long, contextId: Long): Long? {
         val dba = DatabaseAccess.of(ctx)
         return dba.getStateNMax(ctx, "${SNAPSHOT_TABLE_PREFIX}_$contextId", height)
@@ -63,18 +72,16 @@ class BaseSnapshotDatumRepository(
         val datums = mutableListOf<Triple<Long, Gtv, Boolean>>()
         var offset = datumIdFrom
         do {
-            val (datum, permanent) = getDatumWithType(ctx, height, contextId, offset) ?: break
-            datums.add(Triple(offset, datum, permanent))
+            try {
+                val (datum, permanent) = getDatumWithType(ctx, height, contextId, offset) ?: break
+                datums.add(Triple(offset, datum, permanent))
+            } catch (e: Exception) {
+                // TODO update when decided on how to "identify the end" of available datums
+                break
+            }
             offset++
         } while (datums.sumOf { it.second.nrOfBytes() } < maxDataSize)
         return datums
-    }
-
-    // TODO might not be needed
-    override fun getStateDatumsBySize(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<Pair<Long, Gtv>> {
-        val dba = DatabaseAccess.of(ctx)
-        return dba.getStatesBySize(ctx, "${SNAPSHOT_TABLE_PREFIX}_$contextId", height, datumIdFrom, maxDataSize)
-                .map { it.stateN to GtvDecoder.decodeGtv(it.data) }
     }
 
     override fun getPermanentDatum(ctx: EContext, contextId: Long, datumId: Long): Gtv {
@@ -85,17 +92,6 @@ class BaseSnapshotDatumRepository(
                 ?: TODO("We need to think more about this scenario, could be a module that is no longer used?")
 
         return module.getPermanentDatum(ctx, datumId) // We assume the module will throw if it can't resolve a datum with this ID
-    }
-
-    // TODO might not be needed
-    override fun getPermanentDatumsBySize(ctx: EContext, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<Pair<Long, Gtv>> {
-        val dba = DatabaseAccess.of(ctx)
-        val moduleName = dba.getSnapshotContextModule(ctx, contextId)
-
-        val module = snapshotModules.find { it::class.java.canonicalName == moduleName }
-                ?: TODO("We need to think more about this scenario, could be a module that is no longer used?")
-
-        return module.getPermanentDatumsBySize(ctx, datumIdFrom, maxDataSize)
     }
 
     override fun getLatestSnapshotHeight(ctx: EContext): Long? {
