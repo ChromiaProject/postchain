@@ -5,6 +5,7 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.base.snapshot.SnapshotDatumRepository
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -26,7 +27,6 @@ import net.postchain.core.block.MultiSigBlockWitness
 import net.postchain.core.block.SimpleBlockHeader
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Signature
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.merkle.makeMerkleHashCalculator
 import java.sql.SQLException
 import java.util.concurrent.CompletableFuture
@@ -251,8 +251,8 @@ abstract class BaseBlockQueries(
     }
 
     override fun getSnapshotData(height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long):
-            CompletionStage<List<Triple<Long, Gtv, Boolean>>> = runOpRegardless {
-        snapshotDatumRepository.getDatumsBySize(it, height, contextId, datumIdFrom, maxDataSize)
+            CompletionStage<List<SnapshotDatum>> = runOpRegardless {
+        snapshotDatumRepository.getDatums(it, height, contextId, datumIdFrom, maxDataSize)
     }
 
     override fun shutdown() {

@@ -257,7 +257,7 @@ class AppliedConfig(val configHash: ByteArray, val height: Long) : EbftMessage(M
 /**
  * Message to inform other nodes about which EBFT version our node is supporting.
  *
- * @property version is the version supported
+ * @property ebftVersion is the version supported
  */
 class EbftVersion(val ebftVersion: Long) : EbftMessage(MessageTopic.EBFTVERSION) {
 
@@ -297,17 +297,17 @@ class GetSnapshotData(val height: Long, val contextId: Long, val datumIdFrom: Lo
  * Reply for a [GetSnapshotData] message with the actual snapshot data.
  *
  * @param datumIdFrom is the offset we requested the data from
- * @param data List of datums and their permanent flag. TODO: repace pair?
+ * @param data List of datums data and their permanent flag.
  * @param proof Proof that the data is correct. TODO: what format?
  */
-class SnapshotData(val height: Long, val contextId: Long, val datumIdFrom: Long, val data: List<Pair<Gtv, Boolean>>, val proof: ByteArray) : EbftMessage(MessageTopic.SNAPSHOTDATA) {
+class SnapshotData(val height: Long, val contextId: Long, val datumIdFrom: Long, val data: List<SnapshotDatumData>, val proof: ByteArray) : EbftMessage(MessageTopic.SNAPSHOTDATA) {
     companion object {
         fun buildFromGtv(data: GtvArray, arrOffset: Int): SnapshotData {
             return SnapshotData(
                     data[0 + arrOffset].asInteger(),
                     data[1 + arrOffset].asInteger(),
                     data[2 + arrOffset].asInteger(),
-                    data[3 + arrOffset].asArray().map { it[0] to it[1].asBoolean() },
+                    data[3 + arrOffset].asArray().map { SnapshotDatumData(it[0], it[1].asBoolean()) },
                     data[4 + arrOffset].asByteArray()
             )
         }
@@ -318,10 +318,12 @@ class SnapshotData(val height: Long, val contextId: Long, val datumIdFrom: Long,
                 gtv(height),
                 gtv(contextId),
                 gtv(datumIdFrom),
-                gtv(data.map { gtv(it.first, gtv(it.second)) }),
+                gtv(data.map { gtv(it.data, gtv(it.isPermanent)) }),
                 gtv(ByteArray(0)))
     }
 }
+
+data class SnapshotDatumData(val data: Gtv, val isPermanent: Boolean)
 
 /**
  * We do it this way since we don't want to store the "topic" of the [CompleteBlock] message

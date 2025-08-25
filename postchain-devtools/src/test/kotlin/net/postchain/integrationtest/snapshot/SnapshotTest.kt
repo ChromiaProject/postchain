@@ -2,7 +2,6 @@ package net.postchain.integrationtest.snapshot
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import assertk.assertions.isNotNull
 import assertk.assertions.isNull
 import assertk.assertions.isZero
 import assertk.isContentEqualTo
@@ -11,6 +10,7 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.snapshot.BaseSnapshotDatumRepository
 import net.postchain.base.snapshot.SNAPSHOT_ROOT_EXTRA_HEADER
 import net.postchain.base.snapshot.SimpleDigestSystem
+import net.postchain.base.snapshot.SnapshotDatumData
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.data.EMPTY_HASH
@@ -34,12 +34,12 @@ import net.postchain.gtx.SnapshotContext
 import net.postchain.gtx.data.ExtOpData
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.AbstractListHandler
-import org.apache.commons.dbutils.handlers.MapListHandler
 import org.apache.commons.dbutils.handlers.ScalarHandler
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import java.security.MessageDigest
 import java.sql.ResultSet
-import java.util.LinkedHashMap
 
 class SnapshotTest : IntegrationTestSetup() {
 
@@ -157,8 +157,9 @@ class SnapshotTest : IntegrationTestSetup() {
      * Start 4 nodes and add some module data to build snapshot data. Clear module tables on node 4 and restore it from node 1.
      * Verify the module table data is identical.
      */
-    @Test
-    fun reconstructSnapshotDataTest() {
+    @ParameterizedTest
+    @ValueSource(longs = [1L, 100L, Long.MAX_VALUE])
+    fun reconstructSnapshotDataTest(maxDataSize: Long) {
         val nodes = createNodes(4, "/net/postchain/devtools/snapshot/blockchain_config_4.xml")
         val brid = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.blockchainRid
         val transactionFactory = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.getConfiguration().getTransactionFactory()
@@ -186,8 +187,8 @@ class SnapshotTest : IntegrationTestSetup() {
             val datumA3V1 = datumRepository.getDatumWithType(ctx, 1, 0, 3)
             val datumB19V1 = datumRepository.getDatumWithType(ctx, 1, 1, 19)
 
-            assertThat(datumA3V1).isEqualTo(gtv("a_datum_3") to false)
-            assertThat(datumB19V1).isEqualTo(gtv("b_datum_19") to false)
+            assertThat(datumA3V1).isEqualTo(SnapshotDatumData(gtv("a_datum_3"), false))
+            assertThat(datumB19V1).isEqualTo(SnapshotDatumData(gtv("b_datum_19"), false))
         }
 
         // Clear module tables on node 4
@@ -208,34 +209,29 @@ class SnapshotTest : IntegrationTestSetup() {
         }
 
         // Restore module tables on node 4 from snapshot data on node 1
-        val bytesLimit = 50L
         val height = Long.MAX_VALUE
         nodes[0].getModules(DEFAULT_CHAIN_IID).filterIsInstance<SnapshotTestModule>().forEach { sourceNodeModule ->
             withReadConnection(nodes[0].postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { sourceNodeCtx ->
                 val contextId = DatabaseAccess.of(sourceNodeCtx).getSnapshotContextId(sourceNodeCtx, sourceNodeModule::class.java.canonicalName)
-                val datumIdMax = datumRepository.getDatumIdMax(sourceNodeCtx, Long.MAX_VALUE, contextId)
 
-                if (datumIdMax != null) {
-                    withWriteConnection(nodes[3].postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { destinationNodeCtx ->
+                withWriteConnection(nodes[3].postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { destinationNodeCtx ->
 
-                        val destinationNodeModule = nodes[3].getModules(DEFAULT_CHAIN_IID).filterIsInstance<SnapshotTestModule>()
-                                .find { it.conf.tableName == sourceNodeModule.conf.tableName }!!
+                    val destinationNodeModule = nodes[3].getModules(DEFAULT_CHAIN_IID).filterIsInstance<SnapshotTestModule>()
+                            .find { it.conf.tableName == sourceNodeModule.conf.tableName }!!
 
-                        val datumIdMax = datumRepository.getDatumIdMax(destinationNodeCtx, Long.MAX_VALUE, contextId)
-                        assertThat(datumIdMax).isNotNull()
-
-                        // Restore datums
-                        var offset = 0L
-                        while (offset <= datumIdMax!!) {
-                            val datums = datumRepository.getDatumsBySize(sourceNodeCtx, height, contextId, offset, bytesLimit)
-                            datums.forEach {
-                                destinationNodeModule.constructDatum(destinationNodeCtx, it.first, it.second, it.third)
-                            }
-                            offset += datums.size
+                    var offset = 0L
+                    while (true) {
+                        val datums = datumRepository.getDatums(sourceNodeCtx, height, contextId, offset, maxDataSize)
+                        if (datums.isEmpty()) {
+                            break
                         }
-
-                        true
+                        datums.forEach {
+                            destinationNodeModule.constructDatum(destinationNodeCtx, it.id, it.data, it.isPermanent)
+                        }
+                        offset += datums.size
                     }
+
+                    true
                 }
             }
         }
@@ -278,29 +274,13 @@ open class SnapshotTestModule(
         return rawDatum?.toLong()
     }
 
-    override fun getPermanentDatum(ctx: EContext, datumId: Long): Gtv {
+    override fun getPermanentDatum(ctx: EContext, datumId: Long): Gtv? {
         val sql = "SELECT datum FROM ${conf.permanentTableName} WHERE datum_id = $datumId"
         val rawDatum = QueryRunner().query(ctx.conn, sql, ScalarHandler<ByteArray>())
-        return GtvDecoder.decodeGtv(rawDatum)
-    }
-
-    @Deprecated("Remove?")
-    override fun getPermanentDatumsBySize(ctx: EContext, datumIdFrom: Long, maxDataSize: Long): List<Pair<Long, Gtv>> {
-        val sql = """
-            SELECT t.datum_id, t.datum, t.acc_bytes FROM (
-                SELECT datum_id, datum, 
-                       SUM(OCTET_LENGTH(datum)) OVER (ORDER BY datum_id) as acc_bytes,
-                       ROW_NUMBER() OVER (ORDER BY datum_id) as row_num
-                FROM ${conf.permanentTableName}
-                WHERE datum_id >= $datumIdFrom
-                ORDER BY datum_id
-            ) t
-            WHERE t.acc_bytes <= $maxDataSize OR t.row_num = 1
-        """.trimIndent()
-        return QueryRunner().query(ctx.conn, sql, MapListHandler())
-                .map {
-                    (it["datum_id"] as Int).toLong() to GtvDecoder.decodeGtv(it["datum"] as ByteArray)
-                }
+        if (rawDatum != null) {
+            return GtvDecoder.decodeGtv(rawDatum)
+        }
+        return null
     }
 
     override fun initializeDB(ctx: EContext) {

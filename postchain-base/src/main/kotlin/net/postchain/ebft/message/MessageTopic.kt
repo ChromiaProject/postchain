@@ -21,7 +21,7 @@ enum class MessageTopic(val value: Int) {
     APPLIEDCONFIG(15),
     EBFTVERSION(16),
     GETLATESTSNAPSHOT(17),
-    GETSNAPSHOTDATA(18), // TODO: skip "data" suffix?
+    GETSNAPSHOTDATA(18),
     SNAPSHOTDATA(19);
 
     fun toGtv() = gtv(value.toLong())
