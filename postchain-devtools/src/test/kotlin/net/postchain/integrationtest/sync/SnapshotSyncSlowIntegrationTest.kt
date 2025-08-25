@@ -1,7 +1,6 @@
 package net.postchain.integrationtest.sync
 
 import assertk.assertThat
-import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import net.postchain.concurrent.util.get
 import net.postchain.devtools.ManagedModeTest
@@ -63,11 +62,39 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
 
         // Assert that we could snapshot sync the chain on the replica node
         restartNodeClean(4, c1, -1)
-        Awaitility.await().atMost(Duration.TEN_MINUTES).untilAsserted {
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
             val height = nodes[4].blockQueries().getLastBlockHeight().get()
             assertThat(height).isEqualTo(10)
+
+            // Assert snapshot data is identical
             assertThat(nodes[4].blockQueries().getSnapshotContextMaxIds(height).get().values.filterNotNull())
                     .isEqualTo(listOf(3L, 3L))
+        }
+
+        // Build enough blocks for a new snapshot with updated and new datums
+        buildBlock(nodes.subList(0, 3), DEFAULT_CHAIN_IID, 13,
+                transactionFactory.decodeTransaction(GtxBuilder(brid, emptyList(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
+                        // For module A
+                        .addOperation("emit_datum_a", gtv(0), gtv("a_datum_0-update-1"), gtv(true))
+                        .addOperation("emit_datum_a", gtv(3), gtv("a_datum_3-update-1"), gtv(false))
+                        .addOperation("emit_datum_a", gtv(4), gtv("a_datum_4"), gtv(true))
+                        .addOperation("emit_datum_a", gtv(5), gtv("a_datum_5"), gtv(false))
+                        // For module B
+                        .addOperation("emit_datum_b", gtv(0), gtv("b_datum_0-update-1"), gtv(true))
+                        .addOperation("emit_datum_b", gtv(1), gtv("b_datum_1-update-1"), gtv(true))
+                        .addOperation("emit_datum_b", gtv(3), gtv("b_datum_3-update-1"), gtv(false))
+                        .addOperation("emit_datum_b", gtv(4), gtv("b_datum_4"), gtv(true))
+                        .finish()
+                        .buildGtx()
+                        .encode()))
+
+        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+            assertThat(nodes[0].blockQueries().getLastBlockHeight().get()).isEqualTo(13)
+            assertThat(nodes[4].blockQueries().getLastBlockHeight().get()).isEqualTo(13)
+
+            // Assert snapshot data is identical
+            assertThat(nodes[4].blockQueries().getSnapshotContextMaxIds(14).get().values.filterNotNull())
+                    .isEqualTo(listOf(5L, 4L))
         }
     }
 }
