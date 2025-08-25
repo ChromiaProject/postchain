@@ -26,7 +26,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
 
     @Test
     fun syncFromSnapshot() {
-        startManagedSystem(4, 1)
+        startManagedSystem(4, 1, restApi = true)
 
         val initialConfig = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
         val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(initialConfig), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
@@ -67,7 +67,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
             val height = nodes[4].blockQueries().getLastBlockHeight().get()
             assertThat(height).isEqualTo(10)
             assertThat(nodes[4].blockQueries().getSnapshotContextMaxIds(height).get().values.filterNotNull())
-                    .isEqualTo(listOf(3, 3))
+                    .isEqualTo(listOf(3L, 3L))
         }
     }
 }

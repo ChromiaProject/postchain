@@ -94,17 +94,6 @@ class BaseSnapshotDatumRepository(
         return module.getPermanentDatum(ctx, datumId) // We assume the module will throw if it can't resolve a datum with this ID
     }
 
-    // TODO might not be needed
-    override fun getPermanentDatumsBySize(ctx: EContext, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<Pair<Long, Gtv>> {
-        val dba = DatabaseAccess.of(ctx)
-        val moduleName = dba.getSnapshotContextModule(ctx, contextId)
-
-        val module = snapshotModules.find { it::class.java.canonicalName == moduleName }
-                ?: TODO("We need to think more about this scenario, could be a module that is no longer used?")
-
-        return module.getPermanentDatumsBySize(ctx, datumIdFrom, maxDataSize)
-    }
-
     override fun getLatestSnapshotHeight(ctx: EContext): Long? {
         val rootSnapshotStore = SnapshotPageStore(ctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_root")
 

@@ -16,7 +16,8 @@ class StateNodeStatus(
         val round: Long? = null,
         val blockRid: String? = null,
         val revolting: Boolean? = null,
-        val error: String? = null
+        val error: String? = null,
+        val latestSnapshotSyncId: Long? = null
 )
 
 fun NodeStatus.toStateNodeStatus(pubKey: String, errorQueue: DiagnosticQueue? = null): StateNodeStatus =

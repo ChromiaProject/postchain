@@ -1,12 +1,17 @@
 package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
+import net.postchain.base.BaseBlockEContext
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.base.data.DatumInfo
 import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.base.snapshot.LeafStore
+import net.postchain.base.snapshot.SNAPSHOT_ROOT_EXTRA_HEADER
+import net.postchain.base.snapshot.SimpleDigestSystem
+import net.postchain.base.snapshot.SnapshotPageStore
 import net.postchain.base.withWriteConnection
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockRid
 import net.postchain.core.NodeRid
@@ -24,7 +29,10 @@ import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkleHash
+import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
 import java.lang.Thread.sleep
+import java.security.MessageDigest
+import java.util.TreeMap
 
 class SnapshotSynchronizer(
         workerContext: WorkerContext,
@@ -40,6 +48,9 @@ class SnapshotSynchronizer(
     private var receivedLatestSnapshotHeight = mutableMapOf<NodeRid, BlockHeader>()
     private val waitingForSnapshotDataByContext = mutableMapOf<Long, SnapshotDataRequest>()
     private var snapshotNodes = setOf<NodeRid>()
+    private val digestSystem = SimpleDigestSystem(MessageDigest.getInstance("SHA-256"))
+    private lateinit var blockSnapshotRootHash: ByteArray
+    private lateinit var latestSnapshotRootHash: ByteArray
 
     // TODO: Fetch snapshot info and determine if it is worth it
     fun trySnapshotSync() {
@@ -103,6 +114,9 @@ class SnapshotSynchronizer(
                 validator.validateWitness(BaseBlockWitness.fromBytes(candidate.witness), witnessBuilder)
                 logger.info("Received snapshot info from peers, highest valid height was: ${candidateHeader.getHeight()}")
                 params.syncToExactHeight  = candidateHeader.getHeight()
+                candidateHeader.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]?.asByteArray()?.let {
+                    blockSnapshotRootHash = it
+                }
                 snapshotNodes = receivedLatestSnapshotHeight
                         .map { (node, header) -> if (header.header.contentEquals(candidate.header)) node else null }
                         .filterNotNull()
@@ -153,7 +167,7 @@ class SnapshotSynchronizer(
     }
 
     // Snapshot responses must be validated as proofs
-    fun syncSnapshotUntil() {
+    private fun syncSnapshotUntil() {
 
         if (isProcessRunning()) {
             sendInitialSnapshotDataRequest()
@@ -162,6 +176,13 @@ class SnapshotSynchronizer(
                 processSnapshotMessages()
                 processRequestTimeouts()
                 sleep(params.loopInterval)
+            }
+
+            if (blockSnapshotRootHash.contentEquals(latestSnapshotRootHash)) {
+                logger.info("Finished syncing snapshot")
+            } else {
+                logger.warn("Finished syncing snapshot, but root hashes do not match")
+                throw ProgrammerMistake("Snapshot root hashes do not match")
             }
         }
     }
@@ -203,6 +224,13 @@ class SnapshotSynchronizer(
     private fun storeSnapshotData(message: SnapshotData) {
         if (message.data.isNotEmpty()) {
             withWriteConnection(workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID) { ctx ->
+                val bctx = BaseBlockEContext( // TODO: solve this hack
+                        ctx,
+                        message.height,
+                        -1,
+                        -1,
+                        mapOf()
+                ) { _, _, _ -> }
                 DatabaseAccess.of(ctx).apply {
                     // TODO: Cache or preload this lookup?
                     val snapshotModules = blockchainConfiguration.getSnapshotAwareModules()
@@ -211,22 +239,32 @@ class SnapshotSynchronizer(
                     val module = snapshotModules.find { it::class.java.canonicalName == moduleName }
                             ?: TODO("We need to think more about this scenario, could be a module that is no longer used?")
 
-                    message.data.forEachIndexed { index, datumData ->
+                    val snapshotPageStore = SnapshotPageStore(
+                            ctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_${message.contextId}"
+                    )
+                    val rootSnapshotStore = SnapshotPageStore(bctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_root")
+
+                    val updatedStates = message.data.mapIndexed { index, datumData ->
                         val datumId = message.datumIdFrom + index
                         val gtv = datumData.first
                         val isPermanent = datumData.second
 
-                        // TODO batch insert?
-                        insertUpdatedDatum(ctx, message.contextId, DatumInfo(
-                                datumId,
-                                gtv.merkleHash(workerContext.blockchainConfiguration.merkleHashCalculator),
-                                if (isPermanent) null else GtvEncoder.encodeGtv(gtv)
-                        ))
+                        logger.debug { "Got snapshot data $datumId for context ${message.contextId}" } // TODO remove
 
                         // TODO batch insert?
                         module.constructDatum(ctx, datumId, gtv, isPermanent)
-                    }
+
+                        if (!isPermanent) {
+                            LeafStore().writeState(bctx, "${SNAPSHOT_TABLE_PREFIX}_${message.contextId}", datumId,
+                                    GtvEncoder.encodeGtv(gtv))
+                        }
+                        datumId to gtv.merkleHash(blockchainConfiguration.merkleHashCalculator) // TODO: include hash in message instead for dynamic values?
+                    }.toMap()
+                    val snapshot = snapshotPageStore.updateSnapshot(bctx.height, TreeMap(updatedStates), 2)
+
+                    latestSnapshotRootHash= rootSnapshotStore.updateSnapshot(bctx.height, TreeMap(mapOf(message.contextId to snapshot)), 2)
                 }
+
                 true
             }
         }
@@ -256,13 +294,11 @@ class SnapshotSynchronizer(
 
     private fun sendGetSnapshotData(contextId: Long, offset: Long, sentTo: Set<NodeRid> = setOf()) {
         val requestSnapshotNodes = snapshotNodes.minus(sentTo)
-//        communicationManager.broadcastPacket(GetSnapshotData(params.syncToExactHeight, contextId, offset))
         val (peer, _) = communicationManager.sendToRandomPeer(GetSnapshotData(params.syncToExactHeight, contextId, offset), requestSnapshotNodes)
         if (peer == null) {
             throw TODO("Handle this case - no more nodes?")
         }
         waitingForSnapshotDataByContext[contextId] = SnapshotDataRequest(contextId, offset,
-//                System.currentTimeMillis(), sentTo + setOf())
                 System.currentTimeMillis(), sentTo + setOf(peer))
         logger.debug { "Sent GetSnapshotData to peer $peer for context $contextId, offset $offset. Already sent to: $sentTo" }
     }

@@ -23,10 +23,5 @@ interface SnapshotDatumRepository {
 
     fun getPermanentDatum(ctx: EContext, contextId: Long, datumId: Long): Gtv
 
-    // TODO might not be needed
-    fun getPermanentDatumsBySize(ctx: EContext, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<Pair<Long, Gtv>>
-
     fun getLatestSnapshotHeight(ctx: EContext): Long?
-
-//    fun constructDatum(ctx: EContext, contextId: Long, datumId: Long, datum: Gtv, isPermanent: Boolean)
 }

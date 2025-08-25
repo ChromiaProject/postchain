@@ -192,6 +192,7 @@ abstract class Messaging(
 
     fun sendSnapshotData(peerId: NodeRid, chainId: Long, height: Long, contextId: Long, datumIdFrom: Long) {
 
+        // TODO: remove - or enable to enforce shaky snapshot messaging
 //        if (Random.nextBoolean()) {
 //            logger.info { "JJJ: You are unlucky, this node will ignore this request" }
 //            return
@@ -207,7 +208,7 @@ abstract class Messaging(
         try {
             val datums = blockQueries.getSnapshotData(height, contextId, datumIdFrom,
 //                    BlockPacker.MAX_PACKAGE_CONTENT_BYTES.toLong(),
-                    50L // TODO: revert
+                    1L // TODO: revert - enforce 1 datum per request for testing
             ).get()
             communicationManager.sendPacket(SnapshotData(height, contextId, datumIdFrom,
                     datums.map { it.second to it.third }, ByteArray(0)), peerId)

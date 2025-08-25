@@ -203,7 +203,8 @@ class ReadOnlyBlockchainProcess(
                 }
         )
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS] = LazyDiagnosticValue {
-            StateNodeStatus(myPubKey, DpNodeType.NODE_TYPE_REPLICA.name, syncMethod.name, currentBlockHeight())
+            StateNodeStatus(myPubKey, DpNodeType.NODE_TYPE_REPLICA.name, syncMethod.name, currentBlockHeight(),
+                    latestSnapshotSyncId = latestSnapshotSyncId())
         }
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES] = LazyDiagnosticValue {
             val peerStates: List<Pair<String, KnownState>> = when (syncMethod) {
@@ -224,5 +225,13 @@ class ReadOnlyBlockchainProcess(
         SyncMethod.SNAPSHOT_SYNC -> blockchainEngine.getBlockQueries().getLastBlockHeight().get() // TODO: I think this is fine? Progress can't be measured in block height anyway.
         SyncMethod.NOT_SYNCING -> blockchainEngine.getBlockQueries().getLastBlockHeight().get()
         SyncMethod.LOCAL_DB -> blockchainEngine.getBlockQueries().getLastBlockHeight().get()
+    }
+
+    private fun latestSnapshotSyncId(): Long? = when (syncMethod) {
+        SyncMethod.SNAPSHOT_SYNC -> {
+            blockchainEngine.getBlockQueries().getSnapshotContextMaxIds(Long.MAX_VALUE).get()
+                    .values.filterNotNull().maxOrNull()
+        }
+        else -> null
     }
 }
