@@ -15,12 +15,12 @@ import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.SnapshotData
+import net.postchain.ebft.message.SnapshotDatumData
 import net.postchain.ebft.message.UnfinishedBlock
 import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_BLOCKS_IN_PACKAGE
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.network.CommunicationManager
 import java.util.Objects
-import kotlin.random.Random
 
 abstract class Messaging(
         val blockQueries: BlockQueries,
@@ -191,13 +191,6 @@ abstract class Messaging(
     }
 
     fun sendSnapshotData(peerId: NodeRid, chainId: Long, height: Long, contextId: Long, datumIdFrom: Long) {
-
-        // TODO: remove - or enable to enforce shaky snapshot messaging
-//        if (Random.nextBoolean()) {
-//            logger.info { "JJJ: You are unlucky, this node will ignore this request" }
-//            return
-//        }
-
         val requestId = Objects.hash(chainId, height, contextId, datumIdFrom)
         if (servedSnapshotDataAtOffset[peerId]?.contains(requestId) == true) {
             logger.debug { "Already responded to request from peer $peerId for snapshot data for chainID $chainId, height $height, contextID $contextId and datumIDFrom $datumIdFrom. Ignoring." }
@@ -211,11 +204,11 @@ abstract class Messaging(
                     1L // TODO: revert - enforce 1 datum per request for testing
             ).get()
             communicationManager.sendPacket(SnapshotData(height, contextId, datumIdFrom,
-                    datums.map { it.second to it.third }, ByteArray(0)), peerId)
+                    datums.map { SnapshotDatumData(it.data, it.isPermanent) }, ByteArray(0)), peerId)
 
             servedSnapshotDataAtOffset.getOrPut(peerId) { mutableSetOf() }.add(requestId)
         } catch (e: Exception) {
-            logger.debug(e) { "Error sending snapshot data" } // TODO better error handling?
+            logger.debug(e) { "Error sending snapshot data for height $height and context id $contextId to $peerId" }
         }
     }
 

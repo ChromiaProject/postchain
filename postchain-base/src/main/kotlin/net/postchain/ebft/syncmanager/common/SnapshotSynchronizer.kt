@@ -222,8 +222,8 @@ class SnapshotSynchronizer(
 
                     message.data.forEachIndexed { index, datumData ->
                         val datumId = message.datumIdFrom + index
-                        val gtv = datumData.first
-                        val isPermanent = datumData.second
+                        val gtv = datumData.data
+                        val isPermanent = datumData.isPermanent
 
                         logger.debug { "Got snapshot data $datumId for context ${message.contextId}" } // TODO remove
 
@@ -290,7 +290,7 @@ class SnapshotSynchronizer(
     }
 
     private fun requestNextSnapshotData(message: SnapshotData) {
-        // TODO: Is it enough to identify the end by an empty response? Or do we need to match it against each context real max ids?
+        // Request next batch unless last was empty, which means we are done
         if (message.data.isNotEmpty()) {
             val offset = message.datumIdFrom + message.data.size
             sendGetSnapshotData(message.contextId, offset)

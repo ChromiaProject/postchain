@@ -1,6 +1,7 @@
 package net.postchain.base.snapshot
 
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
@@ -15,6 +16,7 @@ class BaseSnapshotDatumRepository(
         private val snapshotModules: List<SnapshotAware>
 ) : SnapshotDatumRepository {
     private val digestSystem = SimpleDigestSystem(MessageDigest.getInstance("SHA-256"))
+    private val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAware>()
 
     override fun getDatumIdMax(ctx: EContext, height: Long, contextId: Long): Long? {
         val stateMax = getStateDatumIdMax(ctx, height, contextId)
@@ -31,34 +33,34 @@ class BaseSnapshotDatumRepository(
         }
     }
 
-    override fun getStateDatumIdMax(ctx: EContext, height: Long, contextId: Long): Long? {
+    private fun getStateDatumIdMax(ctx: EContext, height: Long, contextId: Long): Long? {
         val dba = DatabaseAccess.of(ctx)
         return dba.getStateNMax(ctx, "${SNAPSHOT_TABLE_PREFIX}_$contextId", height)
     }
 
-    override fun getPermanentDatumIdMax(ctx: EContext, contextId: Long): Long? {
+    private fun getPermanentDatumIdMax(ctx: EContext, contextId: Long): Long? {
         val dba = DatabaseAccess.of(ctx)
-        val moduleName = dba.getSnapshotContextModule(ctx, contextId)
-
-        val module = snapshotModules.find { it::class.java.canonicalName == moduleName }
-                ?: TODO("We need to think more about this scenario, could be a module that is no longer used?")
-
+        val module = dba.getSnapshotAwareModuleByContext(ctx, contextId)
         return module.getPermanentDatumIdMax(ctx)
     }
 
-    override fun getDatum(ctx: EContext, height: Long, contextId: Long, datumId: Long): Gtv {
-        return getDatumWithType(ctx, height, contextId, datumId).first
+    override fun getDatum(ctx: EContext, height: Long, contextId: Long, datumId: Long): Gtv? {
+        return getDatumWithType(ctx, height, contextId, datumId)?.data
     }
 
-    override fun getDatumWithType(ctx: EContext, height: Long, contextId: Long, datumId: Long): Pair<Gtv, Boolean> {
+    override fun getDatumWithType(ctx: EContext, height: Long, contextId: Long, datumId: Long): SnapshotDatumData? {
         val datum = getStateDatum(ctx, height, contextId, datumId)
         if (datum != null) {
-            return datum to false
+            return SnapshotDatumData(datum, false)
         }
-        return getPermanentDatum(ctx, contextId, datumId) to true
+        val permanentDatum = getPermanentDatum(ctx, contextId, datumId)
+        if (permanentDatum != null) {
+            return SnapshotDatumData(permanentDatum, true)
+        }
+        return null
     }
 
-    override fun getStateDatum(ctx: EContext, height: Long, contextId: Long, datumId: Long): Gtv? {
+    private fun getStateDatum(ctx: EContext, height: Long, contextId: Long, datumId: Long): Gtv? {
         val dba = DatabaseAccess.of(ctx)
         val leafStoreState = dba.getState(ctx, "${SNAPSHOT_TABLE_PREFIX}_$contextId", height, datumId)
 
@@ -67,30 +69,22 @@ class BaseSnapshotDatumRepository(
         return null
     }
 
-    // TODO replace Triple and "bySize"?
-    override fun getDatumsBySize(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<Triple<Long, Gtv, Boolean>> {
-        val datums = mutableListOf<Triple<Long, Gtv, Boolean>>()
+    override fun getDatums(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<SnapshotDatum> {
+        val datums = mutableListOf<SnapshotDatum>()
+        var size = 0
         var offset = datumIdFrom
         do {
-            try {
-                val (datum, permanent) = getDatumWithType(ctx, height, contextId, offset) ?: break
-                datums.add(Triple(offset, datum, permanent))
-            } catch (e: Exception) {
-                // TODO update when decided on how to "identify the end" of available datums
-                break
-            }
+            val datum = getDatumWithType(ctx, height, contextId, offset) ?: break
+            datums.add(SnapshotDatum(offset, datum.data, datum.isPermanent))
+            size += datum.data.nrOfBytes()
             offset++
-        } while (datums.sumOf { it.second.nrOfBytes() } < maxDataSize)
+        } while (size < maxDataSize)
         return datums
     }
 
-    override fun getPermanentDatum(ctx: EContext, contextId: Long, datumId: Long): Gtv {
+    private fun getPermanentDatum(ctx: EContext, contextId: Long, datumId: Long): Gtv? {
         val dba = DatabaseAccess.of(ctx)
-        val moduleName = dba.getSnapshotContextModule(ctx, contextId)
-
-        val module = snapshotModules.find { it::class.java.canonicalName == moduleName }
-                ?: TODO("We need to think more about this scenario, could be a module that is no longer used?")
-
+        val module = dba.getSnapshotAwareModuleByContext(ctx, contextId)
         return module.getPermanentDatum(ctx, datumId) // We assume the module will throw if it can't resolve a datum with this ID
     }
 
@@ -99,4 +93,15 @@ class BaseSnapshotDatumRepository(
 
         return rootSnapshotStore.getLastSnapshotHeight()
     }
+
+    private fun DatabaseAccess.getSnapshotAwareModuleByContext(ctx: EContext, contextId: Long): SnapshotAware {
+        return snapshotModuleByContextMap[contextId] ?: let {
+            val moduleName = getSnapshotContextModule(ctx, contextId)
+            val module = snapshotModules.find { it::class.java.canonicalName == moduleName }
+                    ?: throw ProgrammerMistake("No module found for snapshot context id $contextId")
+            snapshotModuleByContextMap[contextId] = module
+            module
+        }
+    }
 }
+

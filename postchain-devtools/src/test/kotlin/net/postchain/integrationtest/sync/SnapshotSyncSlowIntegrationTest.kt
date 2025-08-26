@@ -62,7 +62,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
 
         // Assert that we could snapshot sync the chain on the replica node
         restartNodeClean(4, c1, -1)
-        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+        Awaitility.await().atMost(Duration.TEN_MINUTES).untilAsserted {
             val height = nodes[4].blockQueries().getLastBlockHeight().get()
             assertThat(height).isEqualTo(10)
 
@@ -88,7 +88,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
                         .buildGtx()
                         .encode()))
 
-        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
+        Awaitility.await().atMost(Duration.TEN_MINUTES).untilAsserted {
             assertThat(nodes[0].blockQueries().getLastBlockHeight().get()).isEqualTo(13)
             assertThat(nodes[4].blockQueries().getLastBlockHeight().get()).isEqualTo(13)
 

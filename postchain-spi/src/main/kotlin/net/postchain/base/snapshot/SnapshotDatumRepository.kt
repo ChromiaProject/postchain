@@ -8,20 +8,14 @@ interface SnapshotDatumRepository {
 
     fun getContextMaxIds(ctx: EContext, height: Long): Map<Long, Long?>
 
-    fun getStateDatumIdMax(ctx: EContext, height: Long, contextId: Long): Long?
+    fun getDatum(ctx: EContext, height: Long, contextId: Long, datumId: Long): Gtv?
 
-    fun getPermanentDatumIdMax(ctx: EContext, contextId: Long): Long?
+    fun getDatumWithType(ctx: EContext, height: Long, contextId: Long, datumId: Long): SnapshotDatumData?
 
-    fun getDatum(ctx: EContext, height: Long, contextId: Long, datumId: Long): Gtv
-
-    fun getDatumWithType(ctx: EContext, height: Long, contextId: Long, datumId: Long): Pair<Gtv, Boolean>
-
-    fun getStateDatum(ctx: EContext, height: Long, contextId: Long, datumId: Long): Gtv?
-
-    // TODO replace Triple and "bySize"?
-    fun getDatumsBySize(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<Triple<Long, Gtv, Boolean>>
-
-    fun getPermanentDatum(ctx: EContext, contextId: Long, datumId: Long): Gtv
+    fun getDatums(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<SnapshotDatum>
 
     fun getLatestSnapshotHeight(ctx: EContext): Long?
 }
+
+data class SnapshotDatum(val id: Long, val data: Gtv, val isPermanent: Boolean)
+data class SnapshotDatumData(val data: Gtv, val isPermanent: Boolean)
