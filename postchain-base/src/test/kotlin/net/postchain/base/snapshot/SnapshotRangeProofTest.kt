@@ -2,10 +2,10 @@ package net.postchain.base.snapshot
 
 import assertk.assertThat
 import assertk.assertions.hasSize
+import assertk.assertions.isEmpty
 import assertk.assertions.isEqualTo
 import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockEContext
-import net.postchain.base.BaseTxEContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.runStorageCommand
 import net.postchain.common.BlockchainRid
@@ -13,85 +13,116 @@ import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.wrap
-import net.postchain.crypto.devtools.KeyPairHelper
-import net.postchain.gtv.GtvFactory
-import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
-import net.postchain.gtx.GTXTransactionFactory
-import net.postchain.gtx.GtxBuilder
-import net.postchain.gtx.GtxNop
-import net.postchain.gtx.StandardOpsGTXModule
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import java.math.BigInteger
+import java.util.TreeMap
 
-class EventMultiProofTest : SnapshotBaseIT() {
+class SnapshotRangeProofTest : SnapshotBaseIT() {
 
-    private val keypair = KeyPairHelper.keyPair(0)
-
-    private data class Setup(val db: DatabaseAccess, val txCtx: BaseTxEContext, val event: EventPageStore)
-
-    private fun withEventStore(test: (Setup) -> Unit) {
+    private fun withSnapshotStore(test: (SnapshotPageStore) -> Unit) {
         runStorageCommand(appConfig, 0L) { ctx ->
             val db = DatabaseAccess.of(ctx).apply {
                 initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
-                createPageTable(ctx, "${PREFIX}_event")
-                createEventLeafTable(ctx, PREFIX)
+                createPageTable(ctx, "${PREFIX}_snapshot")
             }
             val blockIid = db.insertBlock(ctx, 1)
             val bctx = BaseBlockEContext(ctx, 0, blockIid, 10, mapOf(), mock())
-            val signers = listOf(keypair.pubKey.data)
-            val gtxData = GtxBuilder(BlockchainRid.ZERO_RID, signers, cs, GtvMerkleHashCalculatorV2(cs))
-                    .addOperation(GtxNop.OP_NAME, GtvFactory.gtv(42))
-                    .finish().sign(cs.buildSigMaker(keypair)).buildGtx().encode()
-            val tx = GTXTransactionFactory(BlockchainRid.ZERO_RID, StandardOpsGTXModule(), cs, GtvMerkleHashCalculatorV2(cs))
-                    .decodeTransaction(gtxData)
-            val txIid = db.insertTransaction(bctx, tx, 1)
-            val txEContext = BaseTxEContext(bctx, txIid, tx)
-            val event = EventPageStore(bctx, levelsPerPage, ds, PREFIX)
-            test(Setup(db, txEContext, event))
+            val snapshotStore = SnapshotPageStore(bctx, levelsPerPage, 0, ds, PREFIX)
+            test(snapshotStore)
         }
     }
 
-    private fun buildAndWrite(eventSetup: Setup, blockHeight: Long, count: Int): List<Hash> {
-        val (db, txCtx, _) = eventSetup
-        val leafs = arrayListOf<Hash>()
+    private fun buildAndWrite(snapshotStore: SnapshotPageStore, blockHeight: Long, count: Int): TreeMap<Long, Hash> {
+        val leafs = TreeMap<Long, Hash>()
         for (i in 0 until count) {
             val data = BigInteger.valueOf(i.toLong() + 1).toByteArray()
             val hash = ds.digest(data)
-            db.insertEvent(txCtx, PREFIX, blockHeight, i.toLong(), hash, data)
-            leafs.add(hash)
+            leafs[i.toLong()] = hash
         }
-        eventSetup.event.writeEventTree(blockHeight, leafs)
+        snapshotStore.updateSnapshot(blockHeight, leafs, 2)
         return leafs
     }
 
     @Test
-    fun rangeProofIsOptimalAndCorrect() {
-        withEventStore { setup ->
+    fun rangeProofIsCorrect() {
+        withSnapshotStore { snapshotStore ->
             val blockHeight = 1L
-            val leafs = buildAndWrite(setup, blockHeight, 32)
+            val leafs = buildAndWrite(snapshotStore, blockHeight, 32)
             val start = 3L
             val end = 9L
 
-            val rangeProof = setup.event.getMerkleProof(blockHeight, start, end)
+            val rangeProof = snapshotStore.getMerkleProof(blockHeight, start, end)
 
             // Verify we have the expected left boundary proofs
             assertThat(rangeProof.leftBoundaryHashes).hasSize(2)
-            assertThat(rangeProof.leftBoundaryHashes[0].wrap()).isEqualTo(leafs[2].wrap())
-            assertThat(rangeProof.leftBoundaryHashes[1].wrap()).isEqualTo(ds.hash(leafs[0], leafs[1]).wrap())
+            assertThat(rangeProof.leftBoundaryHashes[0].wrap()).isEqualTo(leafs[2]!!.wrap())
+            assertThat(rangeProof.leftBoundaryHashes[1].wrap()).isEqualTo(ds.hash(leafs[0]!!, leafs[1]!!).wrap())
 
             // Verify we have the expected right boundary proofs
             assertThat(rangeProof.rightBoundaryHashes).hasSize(2)
-            assertThat(rangeProof.rightBoundaryHashes[0].wrap()).isEqualTo(ds.hash(leafs[10], leafs[11]).wrap())
+            assertThat(rangeProof.rightBoundaryHashes[0].wrap()).isEqualTo(ds.hash(leafs[10]!!, leafs[11]!!).wrap())
             assertThat(rangeProof.rightBoundaryHashes[1].wrap()).isEqualTo(ds.hash(
-                    ds.hash(leafs[12], leafs[13]),
-                    ds.hash(leafs[14], leafs[15]),
+                    ds.hash(leafs[12]!!, leafs[13]!!),
+                    ds.hash(leafs[14]!!, leafs[15]!!),
             ).wrap())
 
             // Test 2: Verify the range proof can reconstruct the correct root
-            val root = setup.event.writeEventTree(blockHeight, leafs)
-            val match = verifyRangeProof(root, rangeProof, start, leafs.subList(3, 10))
+            val root = snapshotStore.updateSnapshot(blockHeight, leafs, 2)
+            val match = verifyRangeProof(root, rangeProof, start, leafs.subMap(3L, 10L).values.toList())
             assertThat(match).isTrue()
+        }
+    }
+
+    @Test
+    fun rangeProofEdgeCases() {
+        withSnapshotStore { snapshotStore ->
+            val blockHeight = 1L
+            val leafs = buildAndWrite(snapshotStore, blockHeight, 32)
+            val root = snapshotStore.updateSnapshot(blockHeight, leafs, 2)
+
+            // One leaf node
+            val rangeProofOneNode = snapshotStore.getMerkleProof(blockHeight, 4, 4)
+            assertThat(verifyRangeProof(root, rangeProofOneNode, 4, leafs.subMap(4L, 5L).values.toList())).isTrue()
+
+            // Two adjacent leaf nodes
+            val rangeProofTwoAdjacent = snapshotStore.getMerkleProof(blockHeight, 4, 5)
+            assertThat(verifyRangeProof(root, rangeProofTwoAdjacent, 4, leafs.subMap(4L, 6L).values.toList())).isTrue()
+
+            // Two non-adjacent leaf nodes
+            val rangeProofTwoNonAdjacent = snapshotStore.getMerkleProof(blockHeight, 5, 6)
+            assertThat(verifyRangeProof(root, rangeProofTwoNonAdjacent, 5, leafs.subMap(5L, 7L).values.toList())).isTrue()// Two non-adjacent leaf nodes
+
+            // Range is the whole tree
+            val rangeProofWholeTree = snapshotStore.getMerkleProof(blockHeight, 0, 31)
+            assertThat(verifyRangeProof(root, rangeProofWholeTree, 0, leafs.values.toList())).isTrue()
+
+            val rangeProofTwoAdjacentRight = snapshotStore.getMerkleProof(blockHeight, 28, 29)
+            assertThat(verifyRangeProof(root, rangeProofTwoAdjacentRight, 28, leafs.subMap(28L, 30L).values.toList())).isTrue()
+
+            val rangeProofTwoNonAdjacentRight = snapshotStore.getMerkleProof(blockHeight, 27, 28)
+            assertThat(verifyRangeProof(root, rangeProofTwoNonAdjacentRight, 27, leafs.subMap(27L, 29L).values.toList())).isTrue()
+
+//            TODO: Range that spans non-existing leaf nodes, would be cool if we could support it
+//            val rangeProofSpanningNonExisting = snapshotStore.getMerkleProof(blockHeight, 30, 35)
+//            val emptyLeafs = List(3) { EMPTY_HASH }
+//            assertThat(verifyRangeProof(root, rangeProofSpanningNonExisting, 30, leafs.subMap(30L, 33L).values.toList() + emptyLeafs)).isTrue()
+        }
+    }
+
+    @Test
+    fun testEmptyProof() {
+        withSnapshotStore { snapshotStore ->
+            val blockHeight = 1L
+            val leafs = buildAndWrite(snapshotStore, blockHeight, 64)
+            val root = snapshotStore.updateSnapshot(blockHeight, leafs, 2)
+
+            // This is a complete tree without any padding with empty hashes so proof will be completely empty
+            val rangeProofWholeTree = snapshotStore.getMerkleProof(blockHeight, 0, 63)
+            assertThat(rangeProofWholeTree.commonPath).isEmpty()
+            assertThat(rangeProofWholeTree.leftBoundaryHashes).isEmpty()
+            assertThat(rangeProofWholeTree.rightBoundaryHashes).isEmpty()
+            assertThat(verifyRangeProof(root, rangeProofWholeTree, 0, leafs.values.toList())).isTrue()
         }
     }
 
