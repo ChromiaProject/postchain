@@ -26,6 +26,7 @@ import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.GetLatestSnapshotBlock
 import net.postchain.ebft.message.GetSnapshotData
+import net.postchain.ebft.message.SnapshotBlockHeader
 import net.postchain.ebft.message.SnapshotData
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
@@ -45,11 +46,17 @@ class SnapshotSynchronizer(
 
     companion object : KLogging()
 
-    private var receivedLatestSnapshotHeight = mutableMapOf<NodeRid, BlockHeader>()
+    private var receivedLatestSnapshotHeight = mutableMapOf<NodeRid, SnapshotBlockHeader>()
     private val waitingForSnapshotDataByContext = mutableMapOf<Long, SnapshotDataRequest>()
-    private var snapshotNodes = setOf<NodeRid>()
     private lateinit var blockSnapshotRootHash: ByteArray
-    private val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAware>()
+    internal val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAware>()
+
+    private var snapshotNodes = mutableSetOf<NodeRid>()
+    private var noneSnapshotNodes = mutableListOf<NodeRid>()
+    private var lastSnapshotNodesUpdate = Long.MAX_VALUE
+
+    var snapshotSyncMaxId: Long? = null
+        private set
 
     // TODO: Fetch snapshot info and determine if it is worth it
     fun trySnapshotSync() {
@@ -74,10 +81,11 @@ class SnapshotSynchronizer(
         var lastRequestForSnapshotHeight = 0L
         var numberOfTries = 0
         while (isProcessRunning()) {
+            val peersLeft = configuredPeers - receivedLatestSnapshotHeight.keys
+            if (peersLeft.isEmpty()) break
+
             if (System.currentTimeMillis() - lastRequestForSnapshotHeight >= params.jobTimeout) {
                 if (numberOfTries > 3) break
-                val peersLeft = configuredPeers - receivedLatestSnapshotHeight.keys
-                if (peersLeft.isEmpty()) break
 
                 peersLeft.forEach {
                     communicationManager.sendPacket(GetLatestSnapshotBlock(), it)
@@ -116,11 +124,14 @@ class SnapshotSynchronizer(
                 candidateHeader.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]?.asByteArray()?.let {
                     blockSnapshotRootHash = it
                 }
-                // TODO refresh this now and then to update nodes we can retrieve snapshot data from?
+                snapshotSyncMaxId = candidate.datumIdMax
                 snapshotNodes = receivedLatestSnapshotHeight
-                        .map { (node, header) -> if (header.header.contentEquals(candidate.header)) node else null }
-                        .filterNotNull()
-                        .toSet()
+                        .filterValues { it.header.contentEquals(candidate.header) }
+                        .keys
+                        .toMutableSet()
+                noneSnapshotNodes = (configuredPeers - snapshotNodes).toMutableList()
+                lastSnapshotNodesUpdate = System.currentTimeMillis()
+                logger.info("Snapshot sync starts from nodes: $snapshotNodes")
                 return true
             } catch (e: Exception) {
                 logger.warn("Received invalid snapshot header from peer: ${e.message}")
@@ -150,7 +161,7 @@ class SnapshotSynchronizer(
                     is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight.get())
                     is GetBlockSignature -> sendBlockSignature(peerId, message.blockRID)
 
-                    is BlockHeader -> {
+                    is SnapshotBlockHeader -> {
                         if (awaitsSnapshotHeights) {
                             receivedLatestSnapshotHeight[peerId] = message
                             if (message.header.isNotEmpty()) {
@@ -162,7 +173,7 @@ class SnapshotSynchronizer(
                     }
                     is SnapshotData -> {
                         if (!awaitsSnapshotHeights) {
-                            verifyAndGetExpectedRequest(message)?.let {
+                            verifyAndGetExpectedRequest(message, peerId)?.let {
                                 waitingForSnapshotDataByContext.remove(it.contextId)
 
                                 requestNextSnapshotData(message)
@@ -188,6 +199,7 @@ class SnapshotSynchronizer(
             while (isProcessRunning() && waitingForSnapshotDataByContext.isNotEmpty()) {
                 processMessages(false)
                 processRequestTimeouts()
+                addMoreSnapshotNodes()
                 sleep(params.loopInterval)
             }
 
@@ -198,6 +210,19 @@ class SnapshotSynchronizer(
                 logger.warn("Finished syncing snapshot, but root hashes do not match")
                 throw ProgrammerMistake("Snapshot root hashes do not match")
             }
+        }
+    }
+
+    private fun addMoreSnapshotNodes() {
+        if (
+                params.snapshotSyncNodesUpdateIntervalTime > 0 &&
+                noneSnapshotNodes.isNotEmpty() &&
+                System.currentTimeMillis() - lastSnapshotNodesUpdate >= params.snapshotSyncNodesUpdateIntervalTime
+        ) {
+            val node = noneSnapshotNodes.removeFirst()
+            logger.debug { "Node $node added to snapshot node list: $noneSnapshotNodes" }
+            snapshotNodes.add(node)
+            lastSnapshotNodesUpdate = System.currentTimeMillis()
         }
     }
 
@@ -215,7 +240,10 @@ class SnapshotSynchronizer(
     }
 
     private fun storeSnapshotData(message: SnapshotData) {
-        if (message.data.isNotEmpty()) {
+        if (!message.data.isNullOrEmpty()) {
+
+            logger.debug { "Store ${message.data.size} datums from offset ${message.datumIdFrom} for context id ${message.contextId}" }
+
             withWriteConnection(workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID) { ctx ->
                 DatabaseAccess.of(ctx).apply {
                     val module = getSnapshotAwareModuleByContext(ctx, message.contextId)
@@ -224,8 +252,6 @@ class SnapshotSynchronizer(
                         val datumId = message.datumIdFrom + index
                         val gtv = datumData.data
                         val isPermanent = datumData.isPermanent
-
-                        logger.debug { "Got snapshot data $datumId for context ${message.contextId}" } // TODO remove
 
                         // TODO batch insert?
                         insertUpdatedDatum(ctx, message.contextId, DatumInfo(
@@ -256,15 +282,20 @@ class SnapshotSynchronizer(
         }
     }
 
-    private fun verifyAndGetExpectedRequest(message: SnapshotData): SnapshotDataRequest? {
+    private fun verifyAndGetExpectedRequest(message: SnapshotData, peerId: NodeRid): SnapshotDataRequest? {
         // TODO more verification and check proof
         val request = waitingForSnapshotDataByContext[message.contextId]
         if (request == null) {
             logger.debug { "Received snapshot data for unknown context ${message.contextId}" }
         } else if (message.datumIdFrom != request.offset) {
             logger.debug { "Received snapshot data for wrong context ${message.contextId}, expected ${request.offset}, got ${message.datumIdFrom}" }
-        } else  if (message.height != params.syncToExactHeight) {
+        } else if (message.height != params.syncToExactHeight) {
             logger.debug { "Received snapshot data for wrong height, expected ${params.syncToExactHeight}, got ${message.height}" }
+        } else if (message.data == null) {
+            logger.debug { "Node $peerId does not have requested height ${message.height} in snapshot context ${message.contextId}. Node is removed from list and request is sent to another node." }
+            snapshotNodes.remove(peerId)
+            noneSnapshotNodes.add(peerId)
+            sendGetSnapshotData(message.contextId, message.datumIdFrom)
         } else {
             return request
         }
@@ -279,10 +310,14 @@ class SnapshotSynchronizer(
     }
 
     private fun sendGetSnapshotData(contextId: Long, offset: Long, sentTo: Set<NodeRid> = setOf()) {
-        val requestSnapshotNodes = snapshotNodes.minus(sentTo)
-        val (peer, _) = communicationManager.sendToRandomPeer(GetSnapshotData(params.syncToExactHeight, contextId, offset), requestSnapshotNodes)
+        val message = GetSnapshotData(params.syncToExactHeight, contextId, offset)
+        val noRequestedNodes = snapshotNodes.minus(sentTo)
+        val peer = communicationManager.sendToRandomPeer(message, noRequestedNodes).first ?: let {
+            logger.info { "Snapshot data request has been sent to all available nodes without any response. Retrying with random nodes." }
+            communicationManager.sendToRandomPeer(message, snapshotNodes).first
+        }
         if (peer == null) {
-            throw TODO("Handle this case - no more nodes?")
+            throw ProgrammerMistake("Couldn't find any nodes to send snapshot data request to")
         }
         waitingForSnapshotDataByContext[contextId] = SnapshotDataRequest(contextId, offset,
                 System.currentTimeMillis(), sentTo + setOf(peer))
@@ -291,7 +326,7 @@ class SnapshotSynchronizer(
 
     private fun requestNextSnapshotData(message: SnapshotData) {
         // Request next batch unless last was empty, which means we are done
-        if (message.data.isNotEmpty()) {
+        if (message.data!!.isNotEmpty()) {
             val offset = message.datumIdFrom + message.data.size
             sendGetSnapshotData(message.contextId, offset)
         }
@@ -309,6 +344,7 @@ class SnapshotSynchronizer(
     }
 }
 
+/** Track active requests */
 data class SnapshotDataRequest(
         val contextId: Long,
         val offset: Long,

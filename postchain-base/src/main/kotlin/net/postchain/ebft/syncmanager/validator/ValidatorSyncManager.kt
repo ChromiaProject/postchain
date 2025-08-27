@@ -41,7 +41,6 @@ import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.GetLatestSnapshotBlock
 import net.postchain.ebft.message.GetSnapshotData
 import net.postchain.ebft.message.GetUnfinishedBlock
-import net.postchain.ebft.message.MessageTopic
 import net.postchain.ebft.message.Status
 import net.postchain.ebft.message.Transaction
 import net.postchain.ebft.message.UnfinishedBlock
@@ -92,6 +91,9 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     private val messageDurationTracker = workerContext.messageDurationTracker
     private var appliedConfigSenderEnsured = false
     private var hasRunInitialSync: Boolean
+    private val params = SyncParameters.fromAppConfig(workerContext.appConfig) {
+        it.mustSyncUntilHeight = workerContext.nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
+    }
 
     @Volatile
     private var useFastSyncAlgorithm: Boolean
@@ -106,10 +108,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
         this.currentTimeout = defaultTimeout
         this.processingIntent = DoNothingIntent
         this.lastStatusLogged = Date().time
-        val nodeConfig = workerContext.nodeConfig
-        val params = SyncParameters.fromAppConfig(workerContext.appConfig) {
-            it.mustSyncUntilHeight = nodeConfig.mustSyncUntilHeight?.get(blockchainConfiguration.chainID) ?: -1
-        }
         fastSynchronizer = FastSynchronizer(
                 workerContext,
                 blockDatabase,
@@ -158,7 +156,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                     is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId)
 
                     is GetSnapshotData -> sendSnapshotData(xPeerId, blockchainConfiguration.chainID,
-                            message.height, message.contextId, message.datumIdFrom)
+                            message.height, message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize)
 
                     else -> {
                         if (!isReadOnlyNode) { // This check is actually good DOS protection
@@ -228,10 +226,6 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                     // TODO: This might happen because we've already exited FastSync but other nodes
                                     //  are still responding to our old requests. For this case this is harmless.
                                 }
-
-                                is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId)
-//                                is GetSnapshotData -> sendSnapshotData(xPeerId, blockchainConfiguration.chainID,
-//                                        message.height, message.contextId, message.datumIdFrom)
 
                                 is AppliedConfig -> applyConfig(message.configHash, message.height)
                                 is EbftVersion -> logger.debug { "Received EbftVersion from peer $xPeerId" }

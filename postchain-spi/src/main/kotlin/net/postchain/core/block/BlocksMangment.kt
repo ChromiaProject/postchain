@@ -35,6 +35,7 @@ interface BlockQueries : Shutdownable {
     fun getLastBlockTimestamp(): CompletionStage<Long>
     fun getBlockRid(height: Long): CompletionStage<ByteArray?>
     fun getBlockAtHeight(height: Long, includeTransactions: Boolean = true): CompletionStage<BlockDataWithWitness?>
+    fun getLatestSnapshotHeight(): CompletionStage<Long?>
     fun getLatestSnapshotBlockHeader(): CompletionStage<BlockHeaderWithWitness?>
     fun getSnapshotContextMaxIds(height: Long): CompletionStage<Map<Long, Long?>>
     fun getSnapshotData(height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long): CompletionStage<List<SnapshotDatum>>

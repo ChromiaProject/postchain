@@ -12,6 +12,7 @@ import net.postchain.ebft.message.NullableGtv.nullableByteArrayToGtv
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvArray
 import net.postchain.gtv.GtvFactory.gtv
+import net.postchain.gtv.GtvNull
 
 class Transaction(val data: ByteArray) : EbftMessage(MessageTopic.TX) {
 
@@ -267,15 +268,32 @@ class EbftVersion(val ebftVersion: Long) : EbftMessage(MessageTopic.EBFTVERSION)
 
 }
 
-class GetLatestSnapshotBlock() : EbftMessage(MessageTopic.GETLATESTSNAPSHOT) {
+class GetLatestSnapshotBlock : EbftMessage(MessageTopic.GETLATESTSNAPSHOT) {
     override fun toGtv(version: Long): Gtv {
         return gtv(topic.toGtv())
     }
 }
 
+class SnapshotBlockHeader(val header: ByteArray, val witness: ByteArray, val datumIdMax: Long?)
+    : EbftMessage(MessageTopic.SNAPSHOTBLOCKHEADER) {
+
+    companion object {
+        fun buildFromGtv(data: GtvArray, arrOffset: Int): SnapshotBlockHeader {
+            return SnapshotBlockHeader(
+                    data[0 + arrOffset].asByteArray(),
+                    data[1 + arrOffset].asByteArray(),
+                    data[2 + arrOffset].let { if (it.isNull()) null else it.asInteger() },
+            )
+        }
+    }
+
+    override fun toGtv(version: Long): Gtv {
+        return gtv(topic.toGtv(), gtv(header), gtv(witness), if (datumIdMax == null) GtvNull else gtv(datumIdMax))
+    }
+}
+
 /**
  * Request snapshot data from a node at offset "datumIdFrom".
- * TODO: Should we let receivers specify the length of the data or just let each peer fill a message?
  */
 class GetSnapshotData(val height: Long, val contextId: Long, val datumIdFrom: Long) : EbftMessage(MessageTopic.GETSNAPSHOTDATA) {
     companion object {
@@ -297,18 +315,18 @@ class GetSnapshotData(val height: Long, val contextId: Long, val datumIdFrom: Lo
  * Reply for a [GetSnapshotData] message with the actual snapshot data.
  *
  * @param datumIdFrom is the offset we requested the data from
- * @param data List of datums data and their permanent flag.
+ * @param data List of datums data and their permanent flag, or null if this snapshot data isn't available on this node.
  * @param proof Proof that the data is correct. TODO: what format?
  */
-class SnapshotData(val height: Long, val contextId: Long, val datumIdFrom: Long, val data: List<SnapshotDatumData>, val proof: ByteArray) : EbftMessage(MessageTopic.SNAPSHOTDATA) {
+class SnapshotData(val height: Long, val contextId: Long, val datumIdFrom: Long, val data: List<SnapshotDatumData>?, val proof: ByteArray?) : EbftMessage(MessageTopic.SNAPSHOTDATA) {
     companion object {
         fun buildFromGtv(data: GtvArray, arrOffset: Int): SnapshotData {
             return SnapshotData(
                     data[0 + arrOffset].asInteger(),
                     data[1 + arrOffset].asInteger(),
                     data[2 + arrOffset].asInteger(),
-                    data[3 + arrOffset].asArray().map { SnapshotDatumData(it[0], it[1].asBoolean()) },
-                    data[4 + arrOffset].asByteArray()
+                    data[3 + arrOffset].let { gtv -> if (gtv.isNull()) null else gtv.asArray().map { SnapshotDatumData(it[0], it[1].asBoolean()) } },
+                    data[4 + arrOffset].let { gtv -> if (gtv.isNull()) null else gtv.asByteArray() }
             )
         }
     }
@@ -318,8 +336,8 @@ class SnapshotData(val height: Long, val contextId: Long, val datumIdFrom: Long,
                 gtv(height),
                 gtv(contextId),
                 gtv(datumIdFrom),
-                gtv(data.map { gtv(it.data, gtv(it.isPermanent)) }),
-                gtv(ByteArray(0)))
+                if (data == null) GtvNull else gtv(data.map { gtv(it.data, gtv(it.isPermanent)) }),
+                if (proof == null) GtvNull else gtv(ByteArray(0)))
     }
 }
 

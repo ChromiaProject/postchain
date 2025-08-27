@@ -230,6 +230,10 @@ abstract class BaseBlockQueries(
                 }
             }
 
+    override fun getLatestSnapshotHeight(): CompletionStage<Long?>  = runOpRegardless {
+        snapshotDatumRepository.getLatestSnapshotHeight(it)
+    }
+
     override fun getLatestSnapshotBlockHeader(): CompletionStage<BlockHeaderWithWitness?> = runOpRegardless {
         snapshotDatumRepository.getLatestSnapshotHeight(it)?.let { latestSnapshotHeight ->
             val blockRID = blockStore.getBlockRID(it, latestSnapshotHeight)
