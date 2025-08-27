@@ -56,7 +56,7 @@ class SnapshotRangeProofTest : SnapshotBaseIT() {
             val start = 3L
             val end = 9L
 
-            val rangeProof = snapshotStore.getMerkleProof(blockHeight, start, end)
+            val rangeProof = snapshotStore.getRangeMerkleProof(blockHeight, start, end)
 
             // Verify we have the expected left boundary proofs
             assertThat(rangeProof.leftBoundaryHashes).hasSize(2)
@@ -86,25 +86,25 @@ class SnapshotRangeProofTest : SnapshotBaseIT() {
             val root = snapshotStore.updateSnapshot(blockHeight, leafs, 2)
 
             // One leaf node
-            val rangeProofOneNode = snapshotStore.getMerkleProof(blockHeight, 4, 4)
+            val rangeProofOneNode = snapshotStore.getRangeMerkleProof(blockHeight, 4, 4)
             assertThat(verifyRangeProof(root, rangeProofOneNode, 4, leafs.subMap(4L, 5L).values.toList())).isTrue()
 
             // Two adjacent leaf nodes
-            val rangeProofTwoAdjacent = snapshotStore.getMerkleProof(blockHeight, 4, 5)
+            val rangeProofTwoAdjacent = snapshotStore.getRangeMerkleProof(blockHeight, 4, 5)
             assertThat(verifyRangeProof(root, rangeProofTwoAdjacent, 4, leafs.subMap(4L, 6L).values.toList())).isTrue()
 
             // Two non-adjacent leaf nodes
-            val rangeProofTwoNonAdjacent = snapshotStore.getMerkleProof(blockHeight, 5, 6)
+            val rangeProofTwoNonAdjacent = snapshotStore.getRangeMerkleProof(blockHeight, 5, 6)
             assertThat(verifyRangeProof(root, rangeProofTwoNonAdjacent, 5, leafs.subMap(5L, 7L).values.toList())).isTrue()// Two non-adjacent leaf nodes
 
             // Range is the whole tree
-            val rangeProofWholeTree = snapshotStore.getMerkleProof(blockHeight, 0, 31)
+            val rangeProofWholeTree = snapshotStore.getRangeMerkleProof(blockHeight, 0, 31)
             assertThat(verifyRangeProof(root, rangeProofWholeTree, 0, leafs.values.toList())).isTrue()
 
-            val rangeProofTwoAdjacentRight = snapshotStore.getMerkleProof(blockHeight, 28, 29)
+            val rangeProofTwoAdjacentRight = snapshotStore.getRangeMerkleProof(blockHeight, 28, 29)
             assertThat(verifyRangeProof(root, rangeProofTwoAdjacentRight, 28, leafs.subMap(28L, 30L).values.toList())).isTrue()
 
-            val rangeProofTwoNonAdjacentRight = snapshotStore.getMerkleProof(blockHeight, 27, 28)
+            val rangeProofTwoNonAdjacentRight = snapshotStore.getRangeMerkleProof(blockHeight, 27, 28)
             assertThat(verifyRangeProof(root, rangeProofTwoNonAdjacentRight, 27, leafs.subMap(27L, 29L).values.toList())).isTrue()
         }
     }
@@ -120,7 +120,7 @@ class SnapshotRangeProofTest : SnapshotBaseIT() {
             val leafs = buildAndWrite(snapshotStore, blockHeight, 32)
             val root = snapshotStore.updateSnapshot(blockHeight, leafs, 2)
 
-            val rangeProofSpanningNonExisting = snapshotStore.getMerkleProof(blockHeight, 30, 35)
+            val rangeProofSpanningNonExisting = snapshotStore.getRangeMerkleProof(blockHeight, 30, 35)
             val emptyLeafs = List(3) { EMPTY_HASH }
             assertThat(verifyRangeProof(root, rangeProofSpanningNonExisting, 30, leafs.subMap(30L, 33L).values.toList() + emptyLeafs)).isTrue()
         }
@@ -129,7 +129,7 @@ class SnapshotRangeProofTest : SnapshotBaseIT() {
             val blockHeight = 1L
 
             assertThrows<UserMistake> {
-                snapshotStore.getMerkleProof(blockHeight, 30, 35)
+                snapshotStore.getRangeMerkleProof(blockHeight, 30, 35)
             }
         }
     }
@@ -142,7 +142,7 @@ class SnapshotRangeProofTest : SnapshotBaseIT() {
             val root = snapshotStore.updateSnapshot(blockHeight, leafs, 2)
 
             // This is a complete tree without any padding with empty hashes, so the proof will be completely empty (obviously only if levelsPerPage is 2 like in this test)
-            val rangeProofWholeTree = snapshotStore.getMerkleProof(blockHeight, 0, 63)
+            val rangeProofWholeTree = snapshotStore.getRangeMerkleProof(blockHeight, 0, 63)
             assertThat(rangeProofWholeTree.commonPath).isEmpty()
             assertThat(rangeProofWholeTree.leftBoundaryHashes).isEmpty()
             assertThat(rangeProofWholeTree.rightBoundaryHashes).isEmpty()

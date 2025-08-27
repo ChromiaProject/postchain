@@ -34,7 +34,7 @@ open class BasePageStore(
     override fun getMerkleProof(blockHeight: Long, leafPos: Long): List<Hash> =
             getMerkleProofForLeafFromLevel(blockHeight, leafPos, 0)
 
-    override fun getMerkleProof(blockHeight: Long, startLeafPos: Long, endLeafPos: Long): RangeProof {
+    override fun getRangeMerkleProof(blockHeight: Long, startLeafPos: Long, endLeafPos: Long): RangeProof {
         if (startLeafPos > endLeafPos) throw ProgrammerMistake("startLeaf must be <= endLeaf")
         if (startLeafPos == endLeafPos) {
             return RangeProof(listOf(), listOf(), getMerkleProof(blockHeight, startLeafPos))
@@ -44,19 +44,11 @@ open class BasePageStore(
         val rightBoundaryHashes = mutableListOf<Hash>()
 
         // Find convergence level - where paths merge
-        var convergenceLevel = 0
-        var tempStart = startLeafPos
-        var tempEnd = endLeafPos
-
-        while (tempStart != tempEnd) {
-            tempStart = tempStart shr 1
-            tempEnd = tempEnd shr 1
-            convergenceLevel++
-        }
+        val convergenceLevel = (startLeafPos xor endLeafPos).takeHighestOneBit().countTrailingZeroBits() + 1
 
         // Build left and right boundary proofs up to convergence
         for (level in 0 until convergenceLevel step levelsPerPage) {
-            val actualLevelsInPage = minOf(levelsPerPage, convergenceLevel - level)
+            val maxRelLevel = minOf(levelsPerPage, convergenceLevel - level)
             val leafsInPage = 1L shl (level + levelsPerPage)
 
             // Process left boundary
@@ -65,7 +57,7 @@ open class BasePageStore(
             val leftPage = readPage(blockHeight, level, leftInEntry)
 
             var leftRelPos = ((startLeafPos - leftPageLeft) shr level).toInt()
-            for (relLevel in 0 until actualLevelsInPage) {
+            for (relLevel in 0 until maxRelLevel) {
                 if (leftRelPos % 2 == 1) { // We're the right child, sibling is on the left
                     val sibling = leftRelPos xor 1
                     val hash = leftPage?.getChildHash(relLevel, ds::hash, sibling) ?: EMPTY_HASH
@@ -80,7 +72,7 @@ open class BasePageStore(
             val rightPage = readPage(blockHeight, level, leftInRightEntry)
 
             var rightRelPos = ((endLeafPos - rightPageLeft) shr level).toInt()
-            for (relLevel in 0 until actualLevelsInPage) {
+            for (relLevel in 0 until maxRelLevel) {
                 if (rightRelPos % 2 == 0) { // We're the left child, sibling is on the right
                     val sibling = rightRelPos xor 1
                     val hash = rightPage?.getChildHash(relLevel, ds::hash, sibling) ?: EMPTY_HASH
@@ -114,7 +106,6 @@ open class BasePageStore(
         // Find which page contains the start level
         val pageLevel = (startLevel / levelsPerPage) * levelsPerPage
         val startingRelLevel = startLevel - pageLevel
-
         var nextPageLevel = pageLevel
 
         // First iteration: handle the partial page if startLevel is not page-aligned
