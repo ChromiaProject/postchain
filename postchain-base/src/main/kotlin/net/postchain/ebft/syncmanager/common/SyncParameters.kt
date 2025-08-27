@@ -69,7 +69,16 @@ data class SyncParameters(
         /**
          * The minimum number of blocks to be behind to use snapshot syncing
          */
-        var snapshotSyncThreshold: Long = 100_000
+        var snapshotSyncThreshold: Long = 100_000,
+        /**
+         * The interval at which to check if an unused node can serve the snapshot height we request.
+         */
+        var snapshotSyncNodesUpdateIntervalTime: Long = 1000 * 60 * 5,
+        /**
+         * The size limit of a snapshot sync data message, in bytes. A [SnapshotData] message is filled with snapshot
+         * datums until this limit is reached.
+         */
+        var snapshotSyncMaxDataSize: Long = BlockPacker.MAX_PACKAGE_CONTENT_BYTES.toLong(),
 ) : Config {
     companion object {
         @JvmStatic
@@ -92,6 +101,8 @@ data class SyncParameters(
                     slowSyncMinSleepTime = config.getEnvOrLong("POSTCHAIN_SLOWSYNC_MIN_SLEEP_TIME", "slowsync.min_sleep_time", 20),
                     slowSyncMaxPeerWaitTime = config.getEnvOrLong("POSTCHAIN_SLOWSYNC_MAX_PEER_WAIT_TIME", "slowsync.max_peer_wait_time", 2000),
                     snapshotSyncThreshold = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_THRESHOLD", "snapshotsync.threshold", 100_000),
+                    snapshotSyncNodesUpdateIntervalTime = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_NODE_UPDATE_INTERVAL_TIME", "snapshotsync.nodes_update_interval_time", 300000),
+                    snapshotSyncMaxDataSize = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_MAX_DATA_SIZE", "snapshotsync.max_data_size", BlockPacker.MAX_PACKAGE_CONTENT_BYTES.toLong()),
             ).also(init)
         }
     }

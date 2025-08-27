@@ -204,7 +204,7 @@ class ReadOnlyBlockchainProcess(
         )
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS] = LazyDiagnosticValue {
             StateNodeStatus(myPubKey, DpNodeType.NODE_TYPE_REPLICA.name, syncMethod.name, currentBlockHeight(),
-                    latestSnapshotSyncId = latestSnapshotSyncId())
+                    latestSnapshotSyncId = latestSnapshotSyncId(), snapshotSyncMaxId = snapshotSyncMaxId())
         }
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES] = LazyDiagnosticValue {
             val peerStates: List<Pair<String, KnownState>> = when (syncMethod) {
@@ -231,6 +231,13 @@ class ReadOnlyBlockchainProcess(
         SyncMethod.SNAPSHOT_SYNC -> {
             blockchainEngine.getBlockQueries().getSnapshotContextMaxIds(Long.MAX_VALUE).get()
                     .values.filterNotNull().maxOrNull()
+        }
+        else -> null
+    }
+
+    private fun snapshotSyncMaxId(): Long? = when (syncMethod) {
+        SyncMethod.SNAPSHOT_SYNC -> {
+            snapshotSynchronizer.snapshotSyncMaxId
         }
         else -> null
     }

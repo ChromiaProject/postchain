@@ -682,7 +682,7 @@ class FastSynchronizer(
                     is Transaction -> logger.trace { "Got transaction from peer $peerId, ignoring" }
                     is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(peerId)
                     is GetSnapshotData -> sendSnapshotData(peerId, blockchainConfiguration.chainID, message.height,
-                            message.contextId, message.datumIdFrom)
+                            message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize)
 
                     else -> {
                         if (signers.contains(peerId)) {

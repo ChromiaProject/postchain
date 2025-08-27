@@ -21,6 +21,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
         super.addNodeConfigurationOverrides(nodeSetup)
         nodeSetup.nodeSpecificConfigs.setProperty("snapshotsync.threshold", 5)
+//        nodeSetup.nodeSpecificConfigs.setProperty("snapshotsync.max_data_size", 1) // To enforce 1 datum per message
     }
 
     @Test
