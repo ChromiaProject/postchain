@@ -17,6 +17,7 @@ import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.data.BaseBlockBuilder
 import net.postchain.base.data.BaseBlockStore
 import net.postchain.base.data.BaseBlockWitnessProvider
+import net.postchain.base.data.TestBlockBuilder
 import net.postchain.base.extension.ConfigurationHashBlockBuilderExtension
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -178,6 +179,36 @@ abstract class BaseBlockchainConfiguration(
         )
 
         return bb
+    }
+
+    override fun makeTestBlockBuilder(ctx: EContext, extraExtensions: List<BaseBlockBuilderExtension>): BlockBuilder {
+        addChainIDToDependencies(ctx) // We wait until now with this, b/c now we have an EContext
+
+        return TestBlockBuilder(
+                effectiveBlockchainRID,
+                cryptoSystem,
+                ctx,
+                blockStore,
+                getSpecialTxHandler(),
+                signers.toTypedArray(),
+                blockSigMaker,
+                blockWitnessProvider,
+                blockchainDependencies,
+                makeDefaultBBExtensions() + makeBBExtensions() + extraExtensions,
+                effectiveBlockchainRID != blockchainRid,
+                blockStrategyConfig.maxBlockSize,
+                blockStrategyConfig.maxBlockTransactions,
+                blockStrategyConfig.maxSpecialEndTransactionSize,
+                isSuppressSpecialTransactionValidation().also {
+                    withLoggingContext(BLOCKCHAIN_RID_TAG to blockchainRid.toHex(), CHAIN_IID_TAG to chainID.toString()) {
+                        logger.debug { "suppressSpecialTransactionValidation: $it" }
+                    }
+                },
+                configData.maxBlockFutureTime,
+                if (configData.addPrimaryKeyToHeader) blockchainContext.nodeRID else null,
+                isSyncing = false,
+                configData.merkleHashCalculator
+        )
     }
 
     /**
