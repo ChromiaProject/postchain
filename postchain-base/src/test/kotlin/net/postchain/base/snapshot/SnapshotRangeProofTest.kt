@@ -103,10 +103,9 @@ class SnapshotRangeProofTest : SnapshotBaseIT() {
             val rangeProofTwoNonAdjacentRight = snapshotStore.getMerkleProof(blockHeight, 27, 28)
             assertThat(verifyRangeProof(root, rangeProofTwoNonAdjacentRight, 27, leafs.subMap(27L, 29L).values.toList())).isTrue()
 
-//            TODO: Range that spans non-existing leaf nodes, would be cool if we could support it
-//            val rangeProofSpanningNonExisting = snapshotStore.getMerkleProof(blockHeight, 30, 35)
-//            val emptyLeafs = List(3) { EMPTY_HASH }
-//            assertThat(verifyRangeProof(root, rangeProofSpanningNonExisting, 30, leafs.subMap(30L, 33L).values.toList() + emptyLeafs)).isTrue()
+            val rangeProofSpanningNonExisting = snapshotStore.getMerkleProof(blockHeight, 30, 35)
+            val emptyLeafs = List(3) { EMPTY_HASH }
+            assertThat(verifyRangeProof(root, rangeProofSpanningNonExisting, 30, leafs.subMap(30L, 33L).values.toList() + emptyLeafs)).isTrue()
         }
     }
 
