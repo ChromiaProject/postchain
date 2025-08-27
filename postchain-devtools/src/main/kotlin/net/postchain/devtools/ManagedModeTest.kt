@@ -16,7 +16,6 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockchainState
-import net.postchain.core.EContext
 import net.postchain.core.Infrastructure
 import net.postchain.core.NODE_ID_AUTO
 import net.postchain.crypto.KeyPair
@@ -116,11 +115,11 @@ open class ManagedModeTest : AbstractSyncTest() {
 
             val context = BaseBlockchainContext(chainId, brid, NODE_ID_AUTO, pubkey)
             val confData = data.getDict().toObject<BlockchainConfigurationData>()
-            val bcConfFactory = { _: EContext -> TestBlockchainConfiguration(confData, context, sigMaker, dataSource) }
+            val bcConf = TestBlockchainConfiguration(confData, context, sigMaker, dataSource)
             if (pending) {
-                dataSource.addPendingConf(chainId, brid, height, bcConfFactory, GtvEncoder.encodeGtv(data.getDict()))
+                dataSource.addPendingConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
             } else {
-                dataSource.addConf(chainId, brid, height, bcConfFactory, GtvEncoder.encodeGtv(data.getDict()))
+                dataSource.addConf(chainId, brid, height, bcConf, GtvEncoder.encodeGtv(data.getDict()))
             }
         }
     }
@@ -133,19 +132,21 @@ open class ManagedModeTest : AbstractSyncTest() {
             val bcConf = BlockchainConfigurationData.fromRaw(rawConfig)
             val dappBcFactory = DappBlockchainConfigurationFactory(GTXBlockchainConfigurationFactory(), dataSource)
             val postchainContext = nodes[nodeId].postchainContext
-            val bcConfigFactory = { ctx: EContext ->
-                dappBcFactory.makeBlockchainConfiguration(
+            withWriteConnection(postchainContext.blockBuilderStorage, chainId) { ctx ->
+                DatabaseAccess.of(ctx).apply { initializeBlockchain(ctx, brid) }
+                val bcConfig = dappBcFactory.makeBlockchainConfiguration(
                         bcConf,
                         BaseBlockchainContext(chainId, brid, NODE_ID_AUTO, pubkey),
                         sigMaker,
                         ctx,
                         postchainContext.cryptoSystem
                 )
-            }
-            if (pending) {
-                dataSource.addPendingConf(chainId, brid, height, bcConfigFactory, rawConfig)
-            } else {
-                dataSource.addConf(chainId, brid, height, bcConfigFactory, rawConfig)
+                if (pending) {
+                    dataSource.addPendingConf(chainId, brid, height, bcConfig, rawConfig)
+                } else {
+                    dataSource.addConf(chainId, brid, height, bcConfig, rawConfig)
+                }
+                true
             }
         }
     }
@@ -233,11 +234,13 @@ open class ManagedModeTest : AbstractSyncTest() {
                 val bcFactory = blockchainConfigurationFactory ?: GTXBlockchainConfigurationFactory()
                 val dappBcFactory = DappBlockchainConfigurationFactory(bcFactory, dataSource)
                 val postchainContext = nodes[nodeId].postchainContext
-
-                val bcConfigFactory = { ctx: EContext ->
-                    dappBcFactory.makeBlockchainConfiguration(bcConf, BaseBlockchainContext(newChainId, brid, NODE_ID_AUTO, pubkey), sigMaker, ctx, postchainContext.cryptoSystem)
+                withWriteConnection(postchainContext.blockBuilderStorage, newChainId) { ctx ->
+                    DatabaseAccess.of(ctx).apply { initializeBlockchain(ctx, brid) }
+                    dataSource.addConf(newChainId, brid, 0,
+                            dappBcFactory.makeBlockchainConfiguration(bcConf, BaseBlockchainContext(newChainId, brid, NODE_ID_AUTO, pubkey), sigMaker, ctx, postchainContext.cryptoSystem),
+                            rawBlockchainConfiguration)
+                    true
                 }
-                dataSource.addConf(newChainId, brid, 0, bcConfigFactory, rawBlockchainConfiguration)
             }
         } else {
             val signerKeys = signers.associateWith { nodes[it].pubKey.hexStringToByteArray() }
