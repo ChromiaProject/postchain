@@ -49,37 +49,16 @@ open class BasePageStore(
         // Build left and right boundary proofs up to convergence
         for (level in 0 until convergenceLevel step levelsPerPage) {
             val maxRelLevel = minOf(levelsPerPage, convergenceLevel - level)
-            val leafsInPage = 1L shl (level + levelsPerPage)
 
             // Process left boundary
-            val leftPageLeft = startLeafPos - startLeafPos % leafsInPage
-            val leftInEntry = leftPageLeft shr level
-            val leftPage = readPage(blockHeight, level, leftInEntry)
-
-            var leftRelPos = ((startLeafPos - leftPageLeft) shr level).toInt()
-            for (relLevel in 0 until maxRelLevel) {
-                if (leftRelPos % 2 == 1) { // We're the right child, sibling is on the left
-                    val sibling = leftRelPos xor 1
-                    val hash = leftPage?.getChildHash(relLevel, ds::hash, sibling) ?: EMPTY_HASH
-                    leftBoundaryHashes.add(hash)
-                }
-                leftRelPos = leftRelPos shr 1
-            }
+            leftBoundaryHashes.addAll(
+                    processPageLevel(blockHeight, level, startLeafPos, relLevelEnd = maxRelLevel, addPositionToProofPredicate = { it % 2 == 1 })
+            )
 
             // Process right boundary
-            val rightPageLeft = endLeafPos - endLeafPos % leafsInPage
-            val leftInRightEntry = rightPageLeft shr level
-            val rightPage = readPage(blockHeight, level, leftInRightEntry)
-
-            var rightRelPos = ((endLeafPos - rightPageLeft) shr level).toInt()
-            for (relLevel in 0 until maxRelLevel) {
-                if (rightRelPos % 2 == 0) { // We're the left child, sibling is on the right
-                    val sibling = rightRelPos xor 1
-                    val hash = rightPage?.getChildHash(relLevel, ds::hash, sibling) ?: EMPTY_HASH
-                    rightBoundaryHashes.add(hash)
-                }
-                rightRelPos = rightRelPos shr 1
-            }
+            rightBoundaryHashes.addAll(
+                    processPageLevel(blockHeight, level, endLeafPos, relLevelEnd = maxRelLevel, addPositionToProofPredicate = { it % 2 == 0 })
+            )
         }
 
         // Builds the common path from convergence point to root - same as standard proof
@@ -111,48 +90,58 @@ open class BasePageStore(
         // First iteration: handle the partial page if startLevel is not page-aligned
         if (startingRelLevel > 0) {
             // Convert startNode position from startLevel to pageLevel
-            val leafsInPage = 1L shl (pageLevel + levelsPerPage)
-            val left = leafPos - (leafPos % leafsInPage)
-            val leftInEntry = left shr pageLevel
-            val page = readPage(blockHeight, pageLevel, leftInEntry)
-
-            if (page == null) {
-                repeat(levelsPerPage - startingRelLevel) { path.add(EMPTY_HASH) }
-            } else {
-                var relPos = ((leafPos - left) shr pageLevel).toInt()
-                // Shift to the starting level within the page
-                relPos = relPos shr startingRelLevel
-
-                // Start from the startingRelLevel within the page
-                for (relLevel in startingRelLevel until levelsPerPage) {
-                    val another = relPos xor 0x1
-                    val hash = page.getChildHash(relLevel, ds::hash, another)
-                    path.add(hash)
-                    relPos = relPos shr 1
-                }
-            }
-
+            path.addAll(processPageLevel(blockHeight, pageLevel, leafPos, startingRelLevel))
             nextPageLevel = pageLevel + levelsPerPage
         }
 
         // Continue with the remaining page-aligned levels
         for (level in nextPageLevel..highest step levelsPerPage) {
-            val leafsInPage = 1L shl (level + levelsPerPage)
-            val left = leafPos - leafPos % leafsInPage
-            val leftInEntry = left shr level
-            val page = readPage(blockHeight, level, leftInEntry)
-            if (page == null) {
-                repeat(levelsPerPage) { path.add(EMPTY_HASH) }
-                continue
-            }
-            var relPos = ((leafPos - left) shr level).toInt() // relative position of entry on a level
-            for (relLevel in 0 until levelsPerPage) {
-                val another = relPos xor 0x1 // flip the lowest bit to find the other child of same node
-                val hash = page.getChildHash(relLevel, ds::hash, another)
-                path.add(hash)
-                relPos = relPos shr 1
-            }
+            path.addAll(
+                    processPageLevel(blockHeight, level, leafPos)
+            )
         }
         return path
     }
+
+    /**
+     * Process and emits proof hashes for a specific level
+     *
+     * @param blockHeight Height for which proof is generated
+     * @param level Level to process
+     * @param leafPosition Position of the leaf in the tree
+     * @param relLevelStart Relative level from which to start processing (0 means start at page level)
+     * @param relLevelEnd Relative level until which to process (levelsPerPage means process until the next page)
+     * @param addPositionToProofPredicate Optional predicate that decides whether to add the position to the proof or not
+     */
+    private fun processPageLevel(
+            blockHeight: Long,
+            level: Int,
+            leafPosition: Long,
+            relLevelStart: Int = 0,
+            relLevelEnd: Int = levelsPerPage,
+            addPositionToProofPredicate: ((Int) -> Boolean)? = null
+    ): List<Hash> {
+        val hashes = mutableListOf<Hash>()
+        val leafsInPage = 1L shl (level + levelsPerPage)
+        val left = leafPosition - leafPosition % leafsInPage
+        val leftInEntry = left shr level
+        val page = readPage(blockHeight, level, leftInEntry)
+
+        var relPos = ((leafPosition - left) shr level).toInt()
+        relPos = relPos shr relLevelStart // Adjust position if we start at a non-zero relative level
+        for (relLevel in relLevelStart until relLevelEnd) {
+            if (addPositionToProofPredicate == null || addPositionToProofPredicate(relPos)) {
+                if (page == null) {
+                    hashes.add(EMPTY_HASH)
+                } else {
+                    val another = relPos xor 0x1
+                    val hash = page.getChildHash(relLevel, ds::hash, another)
+                    hashes.add(hash)
+                }
+            }
+            relPos = relPos shr 1
+        }
+        return hashes
+    }
+
 }
