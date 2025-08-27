@@ -151,7 +151,7 @@ class EdgeCasesOfAccountStateTreeTest : SnapshotBaseIT() {
             )
             // Non-existing account
             // Note: Protocol v1 returns an empty proof (empty list) for a non-existing account
-            val proofForNonExistingAccount = snapshot.getMerkleProof(0, 123)
+            val proofForNonExistingAccount = snapshot.getMerkleProof(0, 64)
             assertArrayEquals(
                     Array(6) { EMPTY_HASH },
                     proofForNonExistingAccount.toTypedArray()
