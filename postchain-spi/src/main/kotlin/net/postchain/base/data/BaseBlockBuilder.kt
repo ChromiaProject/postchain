@@ -93,7 +93,7 @@ open class BaseBlockBuilder(
         private val myPubKey: ByteArray?,
         isSyncing: Boolean,
         val merkleHashCalculator: GtvMerkleHashCalculatorBase,
-        val clock: Clock = Clock.systemUTC()
+        val clock: Clock = Clock.systemUTC(),
 ) : AbstractBlockBuilder(eContext, blockchainRID, store, isSyncing) {
 
     companion object : KLogging() {
@@ -330,7 +330,7 @@ open class BaseBlockBuilder(
         logger.trace(FINALIZE_AND_VALIDATE, "End")
     }
 
-    private fun checkSpecialTransaction(tx: Transaction) {
+    protected open fun checkSpecialTransaction(tx: Transaction) {
         if (haveSpecialEndTransaction) {
             throw BadBlockException("Cannot append transactions after end special transaction")
         }
