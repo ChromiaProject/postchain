@@ -12,24 +12,28 @@ import net.postchain.common.BlockchainRid
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.common.wrap
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito.mock
 import java.math.BigInteger
 import java.util.TreeMap
 
 class SnapshotRangeProofTest : SnapshotBaseIT() {
 
-    private fun withSnapshotStore(test: (SnapshotPageStore) -> Unit) {
-        runStorageCommand(appConfig, 0L) { ctx ->
-            val db = DatabaseAccess.of(ctx).apply {
-                initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
-                createPageTable(ctx, "${PREFIX}_snapshot")
+    private fun withSnapshotStore(levelsPerPageToTest: List<Int> = listOf(2), test: (SnapshotPageStore) -> Unit) {
+        for (levelsPerPage in levelsPerPageToTest) {
+            runStorageCommand(appConfig, 0L, wipeDatabase = true) { ctx ->
+                val db = DatabaseAccess.of(ctx).apply {
+                    initializeBlockchain(ctx, BlockchainRid.ZERO_RID)
+                    createPageTable(ctx, "${PREFIX}_snapshot")
+                }
+                val blockIid = db.insertBlock(ctx, 1)
+                val bctx = BaseBlockEContext(ctx, 0, blockIid, 10, mapOf(), mock())
+                val snapshotStore = SnapshotPageStore(bctx, levelsPerPage, 0, ds, PREFIX)
+                test(snapshotStore)
             }
-            val blockIid = db.insertBlock(ctx, 1)
-            val bctx = BaseBlockEContext(ctx, 0, blockIid, 10, mapOf(), mock())
-            val snapshotStore = SnapshotPageStore(bctx, levelsPerPage, 0, ds, PREFIX)
-            test(snapshotStore)
         }
     }
 
@@ -46,7 +50,7 @@ class SnapshotRangeProofTest : SnapshotBaseIT() {
 
     @Test
     fun rangeProofIsCorrect() {
-        withSnapshotStore { snapshotStore ->
+        withSnapshotStore(listOf(1, 2, 3, 4)) { snapshotStore ->
             val blockHeight = 1L
             val leafs = buildAndWrite(snapshotStore, blockHeight, 32)
             val start = 3L
@@ -76,7 +80,7 @@ class SnapshotRangeProofTest : SnapshotBaseIT() {
 
     @Test
     fun rangeProofEdgeCases() {
-        withSnapshotStore { snapshotStore ->
+        withSnapshotStore(listOf(1, 2, 3, 4)) { snapshotStore ->
             val blockHeight = 1L
             val leafs = buildAndWrite(snapshotStore, blockHeight, 32)
             val root = snapshotStore.updateSnapshot(blockHeight, leafs, 2)
@@ -102,10 +106,31 @@ class SnapshotRangeProofTest : SnapshotBaseIT() {
 
             val rangeProofTwoNonAdjacentRight = snapshotStore.getMerkleProof(blockHeight, 27, 28)
             assertThat(verifyRangeProof(root, rangeProofTwoNonAdjacentRight, 27, leafs.subMap(27L, 29L).values.toList())).isTrue()
+        }
+    }
+
+    @Test
+    fun nonExistingRangeProof() {
+        // Can't test with levels per page = 1 here b/c such a tree has a different padding at root level.
+        // This limitation exists in single leaf proof as well
+        // We just verify here that in the cases where we still can give a valid proof we get one and that otherwise
+        // we get an exception
+        withSnapshotStore(listOf(2, 3, 4)) { snapshotStore ->
+            val blockHeight = 1L
+            val leafs = buildAndWrite(snapshotStore, blockHeight, 32)
+            val root = snapshotStore.updateSnapshot(blockHeight, leafs, 2)
 
             val rangeProofSpanningNonExisting = snapshotStore.getMerkleProof(blockHeight, 30, 35)
             val emptyLeafs = List(3) { EMPTY_HASH }
             assertThat(verifyRangeProof(root, rangeProofSpanningNonExisting, 30, leafs.subMap(30L, 33L).values.toList() + emptyLeafs)).isTrue()
+        }
+
+        withSnapshotStore(listOf(1)) { snapshotStore ->
+            val blockHeight = 1L
+
+            assertThrows<UserMistake> {
+                snapshotStore.getMerkleProof(blockHeight, 30, 35)
+            }
         }
     }
 
@@ -116,7 +141,7 @@ class SnapshotRangeProofTest : SnapshotBaseIT() {
             val leafs = buildAndWrite(snapshotStore, blockHeight, 64)
             val root = snapshotStore.updateSnapshot(blockHeight, leafs, 2)
 
-            // This is a complete tree without any padding with empty hashes so proof will be completely empty
+            // This is a complete tree without any padding with empty hashes, so the proof will be completely empty (obviously only if levelsPerPage is 2 like in this test)
             val rangeProofWholeTree = snapshotStore.getMerkleProof(blockHeight, 0, 63)
             assertThat(rangeProofWholeTree.commonPath).isEmpty()
             assertThat(rangeProofWholeTree.leftBoundaryHashes).isEmpty()
@@ -148,8 +173,8 @@ class SnapshotRangeProofTest : SnapshotBaseIT() {
         // Keep building up until we have a single node (convergence point)
         while (currentLevel.size > 1 || currentStart != currentEnd) {
             val nextLevel = mutableListOf<Hash>()
-            var levelStart = currentStart
-            var levelEnd = currentEnd
+            val levelStart = currentStart
+            val levelEnd = currentEnd
             var nodeIndex = 0
 
             // Process all nodes at this level
@@ -203,7 +228,7 @@ class SnapshotRangeProofTest : SnapshotBaseIT() {
             } else {
                 ds.hash(commonHash, result)  // We're right child
             }
-            nodeIndex = nodeIndex / 2
+            nodeIndex /= 2
         }
 
         return result.contentEquals(expectedRoot)

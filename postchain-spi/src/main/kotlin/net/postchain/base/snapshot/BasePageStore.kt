@@ -4,6 +4,7 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
 
 // base page store can be used for query merkle proof
@@ -89,8 +90,10 @@ open class BasePageStore(
             }
         }
 
-        // Build common path from convergence point to root - same as standard proof
-        val commonPath = getMerkleProofForLeafFromLevel(blockHeight, startLeaf, convergenceLevel)
+        // Builds the common path from convergence point to root - same as standard proof
+        // We could provide any leaf in the range, but we use endLeaf so we trigger the range check in
+        // getMerkleProofForLeafFromLevel
+        val commonPath = getMerkleProofForLeafFromLevel(blockHeight, endLeaf, convergenceLevel)
 
         return RangeProof(leftBoundaryHashes, rightBoundaryHashes, commonPath)
     }
@@ -101,6 +104,12 @@ open class BasePageStore(
     private fun getMerkleProofForLeafFromLevel(blockHeight: Long, leaf: Long, startLevel: Int): List<Hash> {
         val path = mutableListOf<Hash>()
         val highest = highestLevelPage(blockHeight)
+
+        // Sometimes we can actually build a valid proof even though the leaf does not exist in the tree.
+        // So we try to accommodate this if possible.
+        if (leaf > 1 shl (highest + levelsPerPage)) {
+            throw UserMistake("Can't build a valid proof for Leaf position $leaf when current highest page level in tree is $highest")
+        }
 
         // Find which page contains the start level
         val pageLevel = (startLevel / levelsPerPage) * levelsPerPage
