@@ -183,13 +183,14 @@ class ContainerJobHandler(
         val containerImageInfo = psContainer.image
         val image = if (containerImageInfo != null) {
             val imageSpec = "${containerImageInfo.url}@${containerImageInfo.digest}"
-            logger.info("Pulling image $imageSpec...")
-            pullImage(imageSpec)
+            logger.info("Using image from directory chain")
             imageSpec
         } else {
             logger.info("Using default image")
             getDefaultContainerImage(containerNodeConfig)
         }
+        logger.info("Pulling image $image...")
+        pullImage(image)
         return createDockerContainer(psContainer.containerName, psContainer.resourceLimits, psContainer.readOnly.get(), image).also {
             logger.debug { dcLog(psContainer.containerName, "created", psContainer) }
         }
