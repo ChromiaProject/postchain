@@ -26,18 +26,18 @@ class RootSnapshotBlockBuilder(
 
         val rootHash = DatabaseAccess.of(bctx).run {
             // TODO: This size might be too big? Do we need to limit it?
-            val updatedDatumsByContext = getUpdatedDatumsByContext(bctx)
-            val contextRootHashes = updatedDatumsByContext.map { (contextId, updatedDatums) ->
+            val updatedDataByContext = getUpdatedDatumsByContext(bctx)
+            val contextRootHashes = updatedDataByContext.map { (contextId, updatedData) ->
                 val snapshotPageStore = SnapshotPageStore(
                         bctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_$contextId"
                 )
 
-                for (datumInfo in updatedDatums) {
+                for (datumInfo in updatedData) {
                     if (datumInfo.rawValue != null) {
                         LeafStore().writeState(bctx, "${SNAPSHOT_TABLE_PREFIX}_$contextId", datumInfo.id, datumInfo.rawValue)
                     }
                 }
-                contextId to snapshotPageStore.updateSnapshot(bctx.height, TreeMap(updatedDatums.associate { it.id to it.hash }), 2)
+                contextId to snapshotPageStore.updateSnapshot(bctx.height, TreeMap(updatedData.associate { it.id to it.hash }), 2)
             }
 
             clearUpdatedDatums(bctx)

@@ -10,7 +10,7 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.snapshot.BaseSnapshotDatumRepository
 import net.postchain.base.snapshot.SNAPSHOT_ROOT_EXTRA_HEADER
 import net.postchain.base.snapshot.SimpleDigestSystem
-import net.postchain.base.snapshot.SnapshotDatumData
+import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.base.withReadConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.data.EMPTY_HASH
@@ -187,8 +187,8 @@ class SnapshotTest : IntegrationTestSetup() {
             val datumA3V1 = datumRepository.getDatumWithType(ctx, 1, 0, 3)
             val datumB19V1 = datumRepository.getDatumWithType(ctx, 1, 1, 19)
 
-            assertThat(datumA3V1).isEqualTo(SnapshotDatumData(gtv("a_datum_3"), false))
-            assertThat(datumB19V1).isEqualTo(SnapshotDatumData(gtv("b_datum_19"), false))
+            assertThat(datumA3V1).isEqualTo(SnapshotDatum(3, gtv("a_datum_3"), false))
+            assertThat(datumB19V1).isEqualTo(SnapshotDatum(19, gtv("b_datum_19"), false))
         }
 
         // Clear module tables on node 4
@@ -305,6 +305,28 @@ open class SnapshotTestModule(
             ON CONFLICT (datum_id) DO UPDATE SET datum = EXCLUDED.datum
             """.trimIndent(), datumId, GtvEncoder.encodeGtv(datum))
     }
+
+    override fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>) {
+        if (datumList.isEmpty()) return
+
+        insertDatumBatch(ctx, datumList.filter { !it.isPermanent }, conf.tableName!!)
+        insertDatumBatch(ctx, datumList.filter { it.isPermanent }, conf.permanentTableName!!)
+    }
+
+    private fun insertDatumBatch(ctx: EContext, datums: List<SnapshotDatum>, tableName: String) {
+        if (datums.isEmpty()) return
+
+        val sql = "INSERT INTO $tableName VALUES (?, ?) ON CONFLICT (datum_id) DO UPDATE SET datum = EXCLUDED.datum"
+        ctx.conn.prepareStatement(sql).use { ps ->
+            datums.forEach { datum ->
+                ps.setLong(1, datum.id)
+                ps.setBytes(2, GtvEncoder.encodeGtv(datum.data))
+                ps.addBatch()
+            }
+            ps.executeBatch()
+        }
+    }
+
 }
 
 class SnapshotModuleA : SnapshotTestModule("a")

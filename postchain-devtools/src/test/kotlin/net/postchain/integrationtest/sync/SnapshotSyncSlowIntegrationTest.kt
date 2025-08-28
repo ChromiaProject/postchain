@@ -14,6 +14,7 @@ import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GtxBuilder
 import org.awaitility.Awaitility
 import org.awaitility.Duration
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
@@ -96,6 +97,50 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
             // Assert snapshot data is identical
             assertThat(nodes[4].blockQueries().getSnapshotContextMaxIds(14).get().values.filterNotNull())
                     .isEqualTo(listOf(5L, 4L))
+        }
+    }
+
+
+    @Test
+    @Disabled
+    fun syncMoreData() {
+        startManagedSystem(4, 1, restApi = true)
+
+        val initialConfig = GtvMLParser.parseGtvML(Any::class::class.java.getResource("/net/postchain/devtools/snapshot/blockchain_config_4.xml")!!.readText())
+        val c1 = startNewBlockchain(setOf(0, 1, 2, 3), setOf(4), null, rawBlockchainConfiguration = GtvEncoder.encodeGtv(initialConfig), blockchainConfigurationFactory = GTXBlockchainConfigurationFactory())
+
+        buildBlock(nodes.subList(0, 3),c1, 9)
+        // Emit something here so we get some snapshot data
+        val brid = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.blockchainRid
+        val transactionFactory = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.getConfiguration().getTransactionFactory()
+
+        (0..3).forEach { round ->
+            val emitDatumsTx = transactionFactory.decodeTransaction(GtxBuilder(brid, emptyList(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
+                    .apply {
+                        (0..800L).forEach {
+                            addOperation("emit_datum_a", gtv(it), gtv("a_datum_$it"), gtv(false))
+                            addOperation("emit_datum_b", gtv(it), gtv("b_datum_$it"), gtv(true))
+                        }
+                    }
+                    .addNop()
+                        .finish()
+                        .buildGtx()
+                        .encode()
+                )
+            buildBlock(nodes.subList(0, 3), DEFAULT_CHAIN_IID, emitDatumsTx)
+        }
+
+        buildBlock(nodes.subList(0, 3), DEFAULT_CHAIN_IID)
+        buildBlock(nodes.subList(0, 3), DEFAULT_CHAIN_IID)
+        buildBlock(nodes.subList(0, 3), DEFAULT_CHAIN_IID)
+        buildBlock(nodes.subList(0, 3), DEFAULT_CHAIN_IID)
+        val height = nodes[0].blockQueries().getLastBlockHeight().get()
+
+        // Assert that we could snapshot sync the chain on the replica node
+        restartNodeClean(4, c1, -1)
+        Awaitility.await().atMost(Duration.TEN_MINUTES).untilAsserted {
+            val replicaHeight = nodes[4].blockQueries().getLastBlockHeight().get()
+            assertThat(replicaHeight).isEqualTo(height)
         }
     }
 }

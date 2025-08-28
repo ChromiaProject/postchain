@@ -162,7 +162,7 @@ class SlowSynchronizer(
                     is GetBlockAtHeight -> sendBlockAtHeight(peerId, message.height)
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(peerId, message.height, blockHeight.get())
                     is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight.get()) // A replica might ask us
-                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(peerId)
+                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(peerId, workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID)
                     is GetSnapshotData -> sendSnapshotData(peerId, blockchainConfiguration.chainID, message.height,
                             message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize)
 

@@ -1,10 +1,16 @@
 package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
+import net.postchain.base.BaseBlockEContext
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.base.snapshot.SimpleDigestSystem
+import net.postchain.base.snapshot.SnapshotDatum
+import net.postchain.base.snapshot.SnapshotPageStore
+import net.postchain.base.withReadWriteConnection
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.concurrent.util.get
 import net.postchain.core.NodeRid
+import net.postchain.core.Storage
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockQueries
 import net.postchain.crypto.Signature
@@ -16,12 +22,16 @@ import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.GetBlockAtHeight
 import net.postchain.ebft.message.GetBlockRange
 import net.postchain.ebft.message.SnapshotBlockHeader
+import net.postchain.ebft.message.SnapshotBlockHeaderContextData
 import net.postchain.ebft.message.SnapshotData
 import net.postchain.ebft.message.SnapshotDatumData
+import net.postchain.ebft.message.SnapshotRangeProof
 import net.postchain.ebft.message.UnfinishedBlock
 import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_BLOCKS_IN_PACKAGE
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
+import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
 import net.postchain.network.CommunicationManager
+import java.security.MessageDigest
 import java.util.Objects
 
 abstract class Messaging(
@@ -172,7 +182,7 @@ abstract class Messaging(
         }
     }
 
-    fun sendLatestSnapshotHeight(peerID: NodeRid) {
+    fun sendLatestSnapshotHeight(peerID: NodeRid, blockBuilderStorage: Storage, chainID: Long) {
         if (peerID in servedLatestSnapshotHeight) {
             logger.debug { "Already responded to request from peer $peerID for latest snapshot height. Ignoring." }
             return
@@ -182,12 +192,23 @@ abstract class Messaging(
             val blockHeader = blockQueries.getLatestSnapshotBlockHeader().get()
             if (blockHeader != null) {
                 val headerData = BlockHeaderData.fromBinary(blockHeader.header.rawData)
-                val datumMaxId = blockQueries.getSnapshotContextMaxIds(headerData.getHeight()).get()
-                        .values.filterNotNull().maxOrNull()
+
+                // TODO: move?
+                val contextRootHashes = withReadWriteConnection(blockBuilderStorage, chainID) { ctx ->
+                    // TODO: keep, or change LeafStore interface?
+                    val bctx = BaseBlockEContext(ctx, headerData.getHeight(), -1, -1, mapOf()) { _, _, _ -> }
+                    val digestSystem = SimpleDigestSystem(MessageDigest.getInstance("SHA-256")) // TODO
+                    val rootSnapshotStore = SnapshotPageStore(bctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_root")
+                    rootSnapshotStore.getAllLeafHashes(headerData.getHeight())
+                }
+
+                val contextDataList = blockQueries.getSnapshotContextMaxIds(headerData.getHeight()).get().map {
+                    SnapshotBlockHeaderContextData(it.key, contextRootHashes[it.key.toInt()], it.value)
+                }
                 communicationManager.sendPacket(SnapshotBlockHeader(blockHeader.header.rawData,
-                        blockHeader.witness.getRawData(), datumMaxId), peerID)
+                        blockHeader.witness.getRawData(), contextDataList), peerID)
             } else {
-                communicationManager.sendPacket(SnapshotBlockHeader(byteArrayOf(), byteArrayOf(), null), peerID)
+                communicationManager.sendPacket(SnapshotBlockHeader(byteArrayOf(), byteArrayOf(), emptyList()), peerID)
             }
             servedLatestSnapshotHeight.add(peerID)
         } catch (e: Exception) {
@@ -204,16 +225,22 @@ abstract class Messaging(
         // TODO need something as this? if (isTotalServedBlockRequestLimitReached(peerId)) return
 
         try {
-            val (datums, proof) = blockQueries.getSnapshotData(height, contextId, datumIdFrom, maxDataSize).get().let { datums ->
-                if (datums.isEmpty() && (blockQueries.getLatestSnapshotHeight().get() ?: -1) < height) {
-                    null to null
+            val (data, proof) = blockQueries.getSnapshotData(height, contextId, datumIdFrom, maxDataSize).get().let { data ->
+                if (data.isEmpty()) {
+                    if ((blockQueries.getLatestSnapshotHeight().get() ?: -1) < height)
+                        null to null
+                    else
+                        emptyList<SnapshotDatum>() to null
                 } else {
-                    datums to ByteArray(0)
+                    val proof = blockQueries.getSnapshotRangeProof(height, contextId, datumIdFrom, datumIdFrom + data.size - 1).get()
+                    data to proof
                 }
             }
 
             communicationManager.sendPacket(SnapshotData(height, contextId, datumIdFrom,
-                    datums?.map { SnapshotDatumData(it.data, it.isPermanent) }, proof), peerId)
+                    data?.map { SnapshotDatumData(it.data, it.isPermanent) },
+                    proof?.let { SnapshotRangeProof(proof.leftBoundaryHashes, proof.rightBoundaryHashes, proof.commonPath) }),
+                    peerId)
             servedSnapshotDataAtOffset.getOrPut(peerId) { mutableSetOf() }.add(requestId)
         } catch (e: Exception) {
             logger.debug(e) { "Error sending snapshot data for height $height and context id $contextId to $peerId" }

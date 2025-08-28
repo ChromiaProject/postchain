@@ -1,6 +1,7 @@
 package net.postchain.base.snapshot
 
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.common.data.SHA256
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
@@ -48,14 +49,14 @@ class BaseSnapshotDatumRepository(
         return getDatumWithType(ctx, height, contextId, datumId)?.data
     }
 
-    override fun getDatumWithType(ctx: EContext, height: Long, contextId: Long, datumId: Long): SnapshotDatumData? {
+    override fun getDatumWithType(ctx: EContext, height: Long, contextId: Long, datumId: Long): SnapshotDatum? {
         val datum = getStateDatum(ctx, height, contextId, datumId)
         if (datum != null) {
-            return SnapshotDatumData(datum, false)
+            return SnapshotDatum(datumId, datum, false)
         }
         val permanentDatum = getPermanentDatum(ctx, contextId, datumId)
         if (permanentDatum != null) {
-            return SnapshotDatumData(permanentDatum, true)
+            return SnapshotDatum(datumId, permanentDatum, true)
         }
         return null
     }
@@ -80,6 +81,15 @@ class BaseSnapshotDatumRepository(
             offset++
         } while (size < maxDataSize)
         return datums
+    }
+
+    override fun getRangeProof(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long): RangeProof {
+        val digestSystem = SimpleDigestSystem(MessageDigest.getInstance(SHA256)) // TODO move
+        // TODO base on common config
+        val snapshotPageStore = SnapshotPageStore(
+                ctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_$contextId"
+        )
+        return snapshotPageStore.getRangeMerkleProof(height, datumIdFrom, datumIdTo)
     }
 
     private fun getPermanentDatum(ctx: EContext, contextId: Long, datumId: Long): Gtv? {

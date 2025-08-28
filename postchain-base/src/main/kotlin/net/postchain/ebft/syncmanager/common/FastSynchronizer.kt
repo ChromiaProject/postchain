@@ -680,7 +680,7 @@ class FastSynchronizer(
                     is CompleteBlock -> handleCompleteBlock(peerId, message)
                     is EbftVersion -> logger.debug { "Received EbftVersion from peer $peerId" }
                     is Transaction -> logger.trace { "Got transaction from peer $peerId, ignoring" }
-                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(peerId)
+                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(peerId, workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID)
                     is GetSnapshotData -> sendSnapshotData(peerId, blockchainConfiguration.chainID, message.height,
                             message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize)
 

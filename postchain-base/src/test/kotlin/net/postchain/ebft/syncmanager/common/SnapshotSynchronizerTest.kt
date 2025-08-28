@@ -8,7 +8,10 @@ import net.postchain.base.NetworkNodes
 import net.postchain.base.PeerCommConfiguration
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.base.snapshot.RangeProof
 import net.postchain.base.snapshot.SNAPSHOT_ROOT_EXTRA_HEADER
+import net.postchain.base.snapshot.SnapshotDatum
+import net.postchain.base.snapshot.VerifyRangeProof
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
@@ -25,8 +28,10 @@ import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.GetSnapshotData
 import net.postchain.ebft.message.MessageDurationTracker
 import net.postchain.ebft.message.SnapshotBlockHeader
+import net.postchain.ebft.message.SnapshotBlockHeaderContextData
 import net.postchain.ebft.message.SnapshotData
 import net.postchain.ebft.message.SnapshotDatumData
+import net.postchain.ebft.message.SnapshotRangeProof
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
 import net.postchain.gtv.Gtv
@@ -142,7 +147,11 @@ class SnapshotSynchronizerTest {
     fun setup() {
         snapshotModuleByContextMap.clear()
         messageQueue.clear()
-        ss = spy(SnapshotSynchronizer(workerContext, blockDatabase, params, peerStatuses, { isProcessRunning }, RateLimitConfiguration(100)))
+        val verifyRangeProof = mock<VerifyRangeProof> {
+            on { verify(any<Hash>(), any<RangeProof>(), anyLong(), any<List<Hash>>()) } doReturn true
+        }
+        ss = spy(SnapshotSynchronizer(workerContext, blockDatabase, params, peerStatuses, { isProcessRunning },
+                RateLimitConfiguration(100), verifyRangeProof))
     }
 
     @Test
@@ -165,7 +174,7 @@ class SnapshotSynchronizerTest {
         }
         assertThat(exception.message).isEqualTo("Snapshot root hashes do not match")
 
-        // Assert constructed datums
+        // Assert constructed data
         assertThat(snapshotModuleByContextMap[0]!!.constructDatumInvocations.size).isEqualTo(3)
         assertThat(snapshotModuleByContextMap[1]!!.constructDatumInvocations.size).isEqualTo(5)
     }
@@ -239,7 +248,7 @@ class SnapshotSynchronizerTest {
             if (nodesReceivedGetSnapshotData.size < 3) {
                 null
             } else {
-                SnapshotData(message.height, message.contextId, message.datumIdFrom, emptyList(), ByteArray(0))
+                SnapshotData(message.height, message.contextId, message.datumIdFrom, emptyList(), null)
             }
         }
 
@@ -285,7 +294,7 @@ class SnapshotSynchronizerTest {
     private fun whenGetSnapshotDataReplyWith(op: (peer: NodeRid, message: GetSnapshotData) -> List<SnapshotDatumData>?) {
         whenGetSnapshotData { peer, message ->
             SnapshotData(message.height, message.contextId, message.datumIdFrom,
-                    op(peer, message), ByteArray(0))
+                    op(peer, message), SnapshotRangeProof(emptyList(), emptyList(), emptyList()))
         }
     }
 
@@ -302,7 +311,11 @@ class SnapshotSynchronizerTest {
         val witnessBytes = ByteArray(10)
         val witnessBuffer = ByteBuffer.wrap(witnessBytes)
         witnessBuffer.putInt(0)
-        val snapshotBlockHeaderMsg = SnapshotBlockHeader(GtvEncoder.encodeGtv(blockHeaderData.toGtv()), witnessBytes, datumIdMax)
+        val snapshotBlockHeaderMsg = SnapshotBlockHeader(GtvEncoder.encodeGtv(blockHeaderData.toGtv()), witnessBytes,
+                listOf(
+                        SnapshotBlockHeaderContextData(0, ByteArray(0), datumIdMax),
+                        SnapshotBlockHeaderContextData(1, ByteArray(0), datumIdMax))
+        )
         return snapshotBlockHeaderMsg
     }
 
@@ -314,7 +327,7 @@ class SnapshotSynchronizerTest {
 
     class SnapshotAwareTestModule(val contextId: Long, val datumIdMax: Long) : SnapshotAware {
 
-        val constructDatumInvocations = mutableListOf<Triple<Long, Gtv, Boolean>>()
+        val constructDatumInvocations = mutableListOf<SnapshotDatum>()
 
         override fun initializeSnapshotContext(context: SnapshotContext) {}
 
@@ -323,8 +336,12 @@ class SnapshotSynchronizerTest {
         override fun getPermanentDatum(ctx: EContext, datumId: Long): Gtv? = null
 
         override fun constructDatum(ctx: EContext, datumId: Long, datum: Gtv, isPermanent: Boolean) {
-            // Capture datums sent to module for verification
-            constructDatumInvocations.add(Triple(datumId, datum, isPermanent))
+            // Capture data sent to module for verification
+            constructDatumInvocations.add(SnapshotDatum(datumId, datum, isPermanent))
+        }
+
+        override fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>) {
+            datumList.forEach(constructDatumInvocations::add)
         }
     }
 }

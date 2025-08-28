@@ -153,7 +153,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(xPeerId, message.height,
                             this.statusManager.myStatus.height - 1)
 
-                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId)
+                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId, workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID)
 
                     is GetSnapshotData -> sendSnapshotData(xPeerId, blockchainConfiguration.chainID,
                             message.height, message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize)

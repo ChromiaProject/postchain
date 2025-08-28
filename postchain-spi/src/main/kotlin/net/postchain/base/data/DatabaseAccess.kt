@@ -227,6 +227,7 @@ interface DatabaseAccess {
     fun getSnapshotModuleContextIds(ctx: EContext): List<Long>
     fun getSnapshotContextModule(ctx: EContext, contextId: Long): String
     fun insertUpdatedDatum(ctx: EContext, contextId: Long, datumInfo: DatumInfo)
+    fun insertUpdatedDatum(ctx: EContext, contextId: Long, datumInfoList: List<DatumInfo>)
     fun getUpdatedDatumsByContext(ctx: EContext): Map<Long, List<DatumInfo>>
     fun clearUpdatedDatums(ctx: EContext)
 

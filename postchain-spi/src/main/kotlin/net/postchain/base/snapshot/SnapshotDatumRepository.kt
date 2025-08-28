@@ -10,12 +10,14 @@ interface SnapshotDatumRepository {
 
     fun getDatum(ctx: EContext, height: Long, contextId: Long, datumId: Long): Gtv?
 
-    fun getDatumWithType(ctx: EContext, height: Long, contextId: Long, datumId: Long): SnapshotDatumData?
+    fun getDatumWithType(ctx: EContext, height: Long, contextId: Long, datumId: Long): SnapshotDatum?
 
     fun getDatums(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<SnapshotDatum>
+
+    fun getRangeProof(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long): RangeProof
 
     fun getLatestSnapshotHeight(ctx: EContext): Long?
 }
 
 data class SnapshotDatum(val id: Long, val data: Gtv, val isPermanent: Boolean)
-data class SnapshotDatumData(val data: Gtv, val isPermanent: Boolean)
+
