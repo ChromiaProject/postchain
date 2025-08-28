@@ -66,8 +66,17 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
             // We ignore local setting, go to Chain0 directly
             val dba = DatabaseAccess.of(eContext)
             val blockchainRid = getBlockchainRid(eContext, dba)
-            val lastSavedBlockHeight = dba.getLastBlockHeight(eContext)
-            dataSource.findNextConfigurationHeight(blockchainRid.data, lastSavedBlockHeight)
+
+            // We don't have any efficient query for this in directory chain
+            var height = -1L
+            while (height < historicBlockHeight) {
+                val nextHeight = dataSource.findNextConfigurationHeight(blockchainRid.data, height + 1)
+                if (nextHeight == null || nextHeight > historicBlockHeight) {
+                    return height
+                } else height = nextHeight
+            }
+
+            return height
         }
     }
 
