@@ -3,6 +3,7 @@ package net.postchain.ebft.syncmanager.common
 import mu.KLogging
 import net.postchain.base.BaseBlockEContext
 import net.postchain.base.BaseBlockWitness
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.snapshot
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatumInfo
@@ -14,6 +15,7 @@ import net.postchain.base.snapshot.SNAPSHOT_ROOT_EXTRA_HEADER
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.base.snapshot.VerifyRangeProof
+import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.data.Hash
@@ -22,6 +24,9 @@ import net.postchain.concurrent.util.get
 import net.postchain.core.BlockRid
 import net.postchain.core.EContext
 import net.postchain.core.NodeRid
+import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PrivKey
+import net.postchain.crypto.PubKey
 import net.postchain.ebft.BlockWriter
 import net.postchain.ebft.message.BlockHeader
 import net.postchain.ebft.message.EbftVersion
@@ -41,6 +46,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.SnapshotAware
+import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import java.lang.Thread.sleep
 import java.util.TreeMap
 import kotlin.time.DurationUnit
@@ -124,8 +130,36 @@ class SnapshotSynchronizer(
                 val validator = blockchainConfiguration.getBlockHeaderValidator() // We have the snapshot height config now!
                 validator to validator.createWitnessBuilderWithoutOwnSignature(candidateHeaderRid)
             } else {
-                // TODO: FETCH THE CONFIG FOR REAL FROM DB!!!
-                val validator = blockchainConfiguration.getBlockHeaderValidator() // Let's cheat for now
+                val bcConfigProvider = workerContext.blockchainConfigurationProvider
+
+                val snapshotHeightConfig = withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
+                    bcConfigProvider.getHistoricConfiguration(ctx, blockchainConfiguration.chainID, candidateHeader.getHeight())
+                }
+                if (snapshotHeightConfig == null) {
+                    logger.warn("Could not fetch configuration at snapshot height for blockchain. Ignoring.")
+                    continue
+                }
+
+                var snapshotConfigData = BlockchainConfigurationData.fromRaw(snapshotHeightConfig)
+                if (candidateHeaderConfig != null && !snapshotConfigData.configHash.contentEquals(candidateHeaderConfig)) {
+                    // There is a possibility that the snapshot header configuration is pending
+                    if (bcConfigProvider is ManagedBlockchainConfigurationProvider) {
+                        val matchingPendingConfig = getConfigIfPending(bcConfigProvider, candidateHeader.getHeight(), candidateHeaderConfig)
+                        if (matchingPendingConfig != null) {
+                            snapshotConfigData = BlockchainConfigurationData.fromRaw(matchingPendingConfig.fullConfig)
+                        } else {
+                            logger.warn("Could not find a matching configuration at snapshot height for blockchain. Ignoring.")
+                            continue
+                        }
+                    }
+                }
+
+                val myKeyPair = KeyPair(PubKey(workerContext.appConfig.pubKeyByteArray), PrivKey(workerContext.appConfig.privKeyByteArray))
+                val validator = baseBlockWitnessProviderProvider(
+                        workerContext.appConfig.cryptoSystem,
+                        workerContext.appConfig.cryptoSystem.buildSigMaker(myKeyPair),
+                        snapshotConfigData.signers.toTypedArray()
+                )
                 validator to validator.createWitnessBuilderWithoutOwnSignature(candidateHeaderRid)
             }
 
