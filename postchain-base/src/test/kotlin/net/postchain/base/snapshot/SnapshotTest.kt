@@ -7,6 +7,7 @@ import net.postchain.common.data.EMPTY_HASH
 import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
 import net.postchain.common.toHex
+import net.postchain.common.wrap
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -243,15 +244,23 @@ class SnapshotTest : SnapshotBaseIT() {
 
                 val rightmost = states.keys.maxOrNull() ?: 0
 
+                val allLeafHashesFromTree = snapshot.getAllLeafHashes(blockHeight)
                 for (pos in 0L..rightmost) {
+                    val stateAtPos = states[pos] ?: EMPTY_HASH
+                    assertEquals(stateAtPos.wrap(), allLeafHashesFromTree[pos.toInt()].wrap())
+
                     val proof = snapshot.getMerkleProof(blockHeight, pos)
-                    val merkleRoot = calculateMerkleRoot(proof, pos, states[pos] ?: EMPTY_HASH)
+                    val merkleRoot = calculateMerkleRoot(proof, pos, stateAtPos)
 
                     if (stateRootHash.toHex() != merkleRoot.toHex()) {
                         // TODO: we can also try building tree afresh to see what went wrong
-                        analyzeMerkleProofDiscrepancy(snapshot, blockHeight, pos, states[pos] ?: EMPTY_HASH)
+                        analyzeMerkleProofDiscrepancy(snapshot, blockHeight, pos, stateAtPos)
                     }
                     assertEquals(stateRootHash.toHex(), merkleRoot.toHex())
+                }
+                // Verify that trailing leaves are all empty
+                for (pos in rightmost + 1 until allLeafHashesFromTree.size) {
+                    assertEquals(EMPTY_HASH.wrap(), allLeafHashesFromTree[pos.toInt()].wrap())
                 }
             }
 
