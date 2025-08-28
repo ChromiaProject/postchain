@@ -70,6 +70,30 @@ open class BasePageStore(
     }
 
     /**
+     *  Returns all leaf hashes in the tree at the given block height in order from left to right
+     *  Will include trailing empty leaf hashes if the tree is not full at the given height
+     */
+    override fun getAllLeafHashes(blockHeight: Long): List<Hash> {
+        val leafHashes = mutableListOf<Hash>()
+        val highest = highestLevelPage(blockHeight)
+
+        val leafsPerPage = 1L shl levelsPerPage
+        val maxLeft = (1 shl (highest + levelsPerPage))
+        for (left in 0L until maxLeft step leafsPerPage) {
+            val page = readPage(blockHeight, 0, left)
+            if (page == null) {
+                repeat(leafsPerPage.toInt()) {
+                    leafHashes.add(EMPTY_HASH)
+                }
+            } else {
+                leafHashes.addAll(page.childHashes)
+            }
+        }
+
+        return leafHashes
+    }
+
+    /**
      * Gives merkle proof starting from the given level
      */
     private fun getMerkleProofForLeafFromLevel(blockHeight: Long, leafPos: Long, startLevel: Int): List<Hash> {

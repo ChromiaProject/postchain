@@ -8,6 +8,7 @@ interface PageStore {
     fun highestLevelPage(blockHeight: Long): Int
     fun getMerkleProof(blockHeight: Long, leafPos: Long): List<Hash>
     fun getRangeMerkleProof(blockHeight: Long, startLeafPos: Long, endLeafPos: Long): RangeProof
+    fun getAllLeafHashes(blockHeight: Long): List<Hash>
 }
 
 data class RangeProof(
