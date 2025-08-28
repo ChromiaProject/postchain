@@ -127,6 +127,7 @@ class TxEventSinkTestBlockBuilderExtension : BaseBlockBuilderExtension, TxEventS
         baseBB.installEventProcessor(FAILURE_EVENT, this)
     }
 
+    @Suppress("removal")
     override fun finalize() = mapOf(SUCCESS_EVENTS_HEADER to gtv(successFulEvents))
 
     override fun processEmittedEvent(ctxt: TxEContext, type: String, data: Gtv) {

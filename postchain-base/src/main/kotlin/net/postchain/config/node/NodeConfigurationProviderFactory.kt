@@ -13,7 +13,7 @@ import net.postchain.core.Storage
 object NodeConfigurationProviderFactory : KLogging() {
     /**
      * @param appConfig used to find the provider
-     * @param storageFactory
+     * @param storage
      * @return the correct [NodeConfigurationProvider] based on [AppConfig]'s setting
      */
     fun createProvider(

@@ -35,6 +35,7 @@ import org.junit.jupiter.api.assertThrows
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
+@Suppress("SqlSourceToSinkFlow")
 class UpgradeDatabaseIT {
 
     private val appConfig: AppConfig = testDbConfig("upgrade_database_test")

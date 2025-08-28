@@ -4,7 +4,13 @@ package net.postchain.devtools.utils.configuration.pre
 import mu.KLogging
 import net.postchain.base.BaseDependencyFactory
 import net.postchain.base.BlockchainRelatedInfo
-import net.postchain.base.configuration.*
+import net.postchain.base.configuration.KEY_BLOCKSTRATEGY
+import net.postchain.base.configuration.KEY_BLOCKSTRATEGY_NAME
+import net.postchain.base.configuration.KEY_CONFIGURATIONFACTORY
+import net.postchain.base.configuration.KEY_DEPENDENCIES
+import net.postchain.base.configuration.KEY_GTX
+import net.postchain.base.configuration.KEY_GTX_MODULES
+import net.postchain.base.configuration.KEY_SIGNERS
 import net.postchain.common.hexStringToByteArray
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.utils.configuration.NodeSeqNumber
@@ -15,13 +21,13 @@ import net.postchain.gtv.GtvFactory
 /**
  * This setup holds the most important facts about a blockchain we will use during the test.
  * This class is used for test where we don't have a configuration file, and need to generate the GTV configuration.
- * (The goal is to generate a [BlockchainSetup] instance from this instance.)
+ * (The goal is to generate a [net.postchain.devtools.utils.configuration.BlockchainSetup] instance from this instance.)
  * Since we don't have the GTV configuration, we also don't know what the Blockchain RID will be (since it's calculated from config).
  *
  * (The "setup" classes are data holders/builders for test configuration used to generate the "real" classes at a later stage)
  *
  * @property chainId is the ID of the chain
- * @property signerKeys is a map of the priv and pub keys of each node
+ * @property signersKeys is a map of the priv and pub keys of each node
  * @property chainDependencies is a set of the other chain IDs this chain depends on
  */
 data class BlockchainPreSetup(
@@ -100,7 +106,7 @@ data class BlockchainPreSetup(
 
     /**
      * The point of this class is to be able to generate a GTV configuration from the data in this class
-     * (so we can build a [BlockchainSetup] from the GTV conf at the next step).
+     * (so we can build a [net.postchain.devtools.utils.configuration.BlockchainSetup] from the GTV conf at the next step).
      *
      * @param existingBcMap holds all the BC RID we already calculated
      *                      NOTE!!! If we are calling [toGtvConfig] in the wrong order we might not have the BC RID we need to

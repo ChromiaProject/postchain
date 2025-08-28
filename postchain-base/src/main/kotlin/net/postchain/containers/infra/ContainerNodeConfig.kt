@@ -55,8 +55,6 @@ data class ContainerNodeConfig(
 
         /**
          * A path to dir where container volume is placed in the master (container) filesystem.
-         * [net.postchain.containers.bpm.ContainerManagedBlockchainProcessManager.initContainerWorkingDir] uses it to
-         * initialize it.
          *
          * If master node is launched natively or by means of fabric8 maven plugin or Testcontainers Lib or CI/CD,
          * [masterMountDir] has to be equal to [hostMountDir] ([masterMountDir] can be omitted in config)

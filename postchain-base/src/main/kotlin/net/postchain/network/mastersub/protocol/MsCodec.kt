@@ -3,7 +3,17 @@ package net.postchain.network.mastersub.protocol
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
-import net.postchain.network.mastersub.protocol.MsMessageType.*
+import net.postchain.network.mastersub.protocol.MsMessageType.BlockAtHeightRequest
+import net.postchain.network.mastersub.protocol.MsMessageType.BlockAtHeightResponse
+import net.postchain.network.mastersub.protocol.MsMessageType.BlocksFromHeightRequest
+import net.postchain.network.mastersub.protocol.MsMessageType.BlocksFromHeightResponse
+import net.postchain.network.mastersub.protocol.MsMessageType.CommittedBlock
+import net.postchain.network.mastersub.protocol.MsMessageType.ConnectedPeers
+import net.postchain.network.mastersub.protocol.MsMessageType.DataMessage
+import net.postchain.network.mastersub.protocol.MsMessageType.HandshakeMessage
+import net.postchain.network.mastersub.protocol.MsMessageType.QueryFailure
+import net.postchain.network.mastersub.protocol.MsMessageType.QueryRequest
+import net.postchain.network.mastersub.protocol.MsMessageType.QueryResponse
 
 object MsCodec {
 
@@ -21,11 +31,11 @@ object MsCodec {
         val type = gtv[0].asInteger().toInt()
         val payload = gtv[1]
 
-        if (type >= MsMessageType.values().size) {
+        if (type >= MsMessageType.entries.size) {
             throw UnsupportedOperationException("Unknown MsMessage type: $type")
         }
 
-        return when (MsMessageType.values()[type]) {
+        return when (MsMessageType.entries[type]) {
             HandshakeMessage -> MsHandshakeMessage(payload)
             DataMessage -> MsDataMessage(payload)
             ConnectedPeers -> MsConnectedPeersMessage(payload)

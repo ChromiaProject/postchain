@@ -17,6 +17,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
 
+@Suppress("SameReturnValue")
 open class BaseBlockBuildingStrategy(val configData: BaseBlockBuildingStrategyConfigurationData,
                                      blockQueries: BlockQueries,
                                      private val txQueue: TransactionQueue,

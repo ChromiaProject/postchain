@@ -110,7 +110,7 @@ interface BlockchainInfrastructure : Shutdownable {
  */
 interface BlockchainProcessConnectable {
     /**
-     * "connect" here is a loosely defined concept. Often we want to initiate the corresponding [GTXSpecialTxExtension]
+     * "connect" here is a loosely defined concept. Often we want to initiate the corresponding [net.postchain.gtx.special.GTXSpecialTxExtension]
      * during "connect" but it could be anything.
      *
      * @param process is the new process being created.

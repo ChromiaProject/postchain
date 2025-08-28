@@ -268,11 +268,8 @@ open class ManagedBlockchainProcessManager(
     }
 
     /**
-     * Only the chains in the [toLaunch] list should run. Any old chains not in this list must be stopped.
      * Note: any chains not in the new config for this node should actually also be deleted, but not impl yet.
      *
-     * @param toLaunch the chains to run
-     * @param launched is the old chains. Maybe stop some of them.
      * @param reloadChain0 is true if the chain zero must be restarted.
      */
     private fun startStopBlockchainsAsync(reloadChain0: Boolean, bTrace: BlockTrace?) {

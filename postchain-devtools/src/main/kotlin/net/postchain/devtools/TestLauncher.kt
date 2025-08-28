@@ -146,7 +146,6 @@ class TestLauncher : IntegrationTestSetup() {
                     enqueued.add(EnqueuedTx(
                             txIdx.toLong(), tx!!.getRID(), txXml.isFailure
                     ))
-                    Unit
                 } catch (e: Exception) {
                     if (!txXml.isFailure) {
                         failures.add(TransactionFailure(blockNum, txIdx.toLong(), e))

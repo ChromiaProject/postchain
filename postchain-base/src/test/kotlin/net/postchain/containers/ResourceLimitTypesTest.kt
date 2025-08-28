@@ -1,9 +1,20 @@
 package net.postchain.containers
 
-import net.postchain.containers.bpm.resources.*
-import net.postchain.containers.bpm.resources.ResourceLimitType.*
-import org.junit.jupiter.api.Test
+import net.postchain.containers.bpm.resources.Cpu
+import net.postchain.containers.bpm.resources.IoRead
+import net.postchain.containers.bpm.resources.IoWrite
+import net.postchain.containers.bpm.resources.Ram
+import net.postchain.containers.bpm.resources.ResourceLimit
+import net.postchain.containers.bpm.resources.ResourceLimitFactory
+import net.postchain.containers.bpm.resources.ResourceLimitType
+import net.postchain.containers.bpm.resources.ResourceLimitType.CPU
+import net.postchain.containers.bpm.resources.ResourceLimitType.IO_READ
+import net.postchain.containers.bpm.resources.ResourceLimitType.IO_WRITE
+import net.postchain.containers.bpm.resources.ResourceLimitType.RAM
+import net.postchain.containers.bpm.resources.ResourceLimitType.STORAGE
+import net.postchain.containers.bpm.resources.Storage
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
 
 class ResourceLimitTypesTest {
 
@@ -36,6 +47,7 @@ class ResourceLimitTypesTest {
         assertEquals(IO_WRITE, ResourceLimit.limitType(IoWrite(1)))
     }
 
+    @Suppress("AssertBetweenInconvertibleTypes")
     @Test
     fun testResourceLimitFactory() {
         assertEquals(Cpu(10), ResourceLimitFactory.fromPair("cpu" to 10L))

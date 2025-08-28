@@ -5,6 +5,7 @@ import assertk.assertions.isEqualTo
 import net.postchain.core.block.BlockData
 import net.postchain.crypto.Signature
 import net.postchain.ebft.BuildBlockIntent
+import net.postchain.ebft.CommitBlockIntent
 import net.postchain.ebft.DoNothingIntent
 import net.postchain.ebft.FetchCommitSignatureIntent
 import net.postchain.ebft.FetchUnfinishedBlockIntent

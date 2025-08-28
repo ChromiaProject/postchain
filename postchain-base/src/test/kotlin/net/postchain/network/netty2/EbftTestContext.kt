@@ -22,12 +22,14 @@ class EbftTestContext(val config: PeerCommConfiguration, val blockchainRid: Bloc
     var readHandshakeTimeoutHandler = true
 
     val packets: PeerPacketHandler = mock()
-    val connections = Collections.synchronizedList(mutableListOf<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>())
-    val serverConnections = Collections.synchronizedList(mutableListOf<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>())
+    val connections: MutableCollection<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>> =
+            Collections.synchronizedList(mutableListOf<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>())
+    val serverConnections: MutableCollection<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>> =
+            Collections.synchronizedList(mutableListOf<NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>>())
 
     val events = spy(object : NodeConnectorEvents<PeerPacketHandler, PeerConnectionDescriptor> {
 
-        override fun onNodeConnected(connection: NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>): PeerPacketHandler? {
+        override fun onNodeConnected(connection: NodeConnection<PeerPacketHandler, PeerConnectionDescriptor>): PeerPacketHandler {
             connections.add(connection)
             return packets
         }

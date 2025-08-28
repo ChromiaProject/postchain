@@ -162,7 +162,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                                 blockRID = message.blockRID
                                                 revolting = message.revolting
                                                 round = message.round
-                                                state = NodeBlockState.values()[message.state]
+                                                state = NodeBlockState.entries[message.state]
                                                 if (shouldSetSignature(state, message)) {
                                                     logger.trace { "Got signature from Status for ${blockRID?.toHex()} from $xPeerId" }
                                                     signature = message.signature

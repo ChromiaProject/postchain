@@ -3,6 +3,8 @@
 package net.postchain.gtv.merkle.path
 
 import mu.KLogging
+import net.postchain.gtv.Gtv
+
 
 /**
  * [GtvPath] is used for referencing a sub-structure of a Gtv graph (a mix of arrays and dictionaries)

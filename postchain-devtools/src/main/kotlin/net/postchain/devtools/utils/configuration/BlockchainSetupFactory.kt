@@ -17,7 +17,7 @@ object BlockchainSetupFactory : KLogging() {
     /**
      * Builds the [BlockchainSetup] from the config file's Gtv directly. This is meant to be used only for testing,
      * so we are allowed to make shortcuts.
-     * (If you don't have a config file in this test, use [BlockchainPreSetup] to get Gtv config )
+     * (If you don't have a config file in this test, use [net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup] to get Gtv config )
      *
      * @param chainIid usually the chainIid is derived from the file path, so we should know it by now.
      * @param blockchainConfigFilename is the file path
@@ -34,7 +34,7 @@ object BlockchainSetupFactory : KLogging() {
     /**
      * Builds the [BlockchainSetup] from the config file's Gtv directly. This is meant to be used only for testing,
      * so we are allowed to make shortcuts.
-     * (If you don't have a config file in this test, use [BlockchainPreSetup] to get Gtv config )
+     * (If you don't have a config file in this test, use [net.postchain.devtools.utils.configuration.pre.BlockchainPreSetup] to get Gtv config )
      *
      * When we create the [BlockchainSetup] we are interested in these values from the config:
      *
