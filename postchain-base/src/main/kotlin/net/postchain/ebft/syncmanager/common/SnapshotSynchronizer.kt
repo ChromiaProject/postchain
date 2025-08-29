@@ -20,6 +20,7 @@ import net.postchain.base.withReadWriteConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockRid
 import net.postchain.core.EContext
@@ -125,6 +126,7 @@ class SnapshotSynchronizer(
             val candidateHeader = BlockHeaderData.fromBinary(candidate.header)
             val candidateHeaderConfig = candidateHeader.getExtra()[CONFIG_HASH_EXTRA_HEADER]?.asByteArray()
             val candidateHeaderRid = BlockRid(candidateHeader.toGtv().merkleHash(blockchainConfiguration.merkleHashCalculator))
+            val candidateHeaderHeight = candidateHeader.getHeight()
 
             val (validator, witnessBuilder) = if (blockchainConfiguration.configHash.contentEquals(candidateHeaderConfig)) {
                 val validator = blockchainConfiguration.getBlockHeaderValidator() // We have the snapshot height config now!
@@ -132,25 +134,26 @@ class SnapshotSynchronizer(
             } else {
                 val bcConfigProvider = workerContext.blockchainConfigurationProvider
 
-                val snapshotHeightConfig = withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
-                    bcConfigProvider.getHistoricConfiguration(ctx, blockchainConfiguration.chainID, candidateHeader.getHeight())
-                }
-                if (snapshotHeightConfig == null) {
-                    logger.warn("Could not fetch configuration at snapshot height for blockchain. Ignoring.")
-                    continue
-                }
+                var snapshotHeightConfigData: BlockchainConfigurationData? = null
+                while (snapshotHeightConfigData == null) {
+                    withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
+                        bcConfigProvider.getHistoricConfiguration(ctx, blockchainConfiguration.chainID, candidateHeaderHeight)
+                    }?.let {
+                        val snapshotAppliedConfigData = BlockchainConfigurationData.fromRaw(it)
+                        if (candidateHeaderConfig != null && !snapshotAppliedConfigData.configHash.contentEquals(candidateHeaderConfig)) {
+                            // There is a possibility that the snapshot header configuration is pending
+                            if (bcConfigProvider is ManagedBlockchainConfigurationProvider) {
+                                val matchingPendingConfig = getConfigIfPending(bcConfigProvider, candidateHeaderHeight, candidateHeaderConfig)
+                                if (matchingPendingConfig != null) {
+                                    snapshotHeightConfigData = BlockchainConfigurationData.fromRaw(matchingPendingConfig.fullConfig)
+                                }
+                            }
+                        } else snapshotHeightConfigData = snapshotAppliedConfigData
+                    }
 
-                var snapshotConfigData = BlockchainConfigurationData.fromRaw(snapshotHeightConfig)
-                if (candidateHeaderConfig != null && !snapshotConfigData.configHash.contentEquals(candidateHeaderConfig)) {
-                    // There is a possibility that the snapshot header configuration is pending
-                    if (bcConfigProvider is ManagedBlockchainConfigurationProvider) {
-                        val matchingPendingConfig = getConfigIfPending(bcConfigProvider, candidateHeader.getHeight(), candidateHeaderConfig)
-                        if (matchingPendingConfig != null) {
-                            snapshotConfigData = BlockchainConfigurationData.fromRaw(matchingPendingConfig.fullConfig)
-                        } else {
-                            logger.warn("Could not find a matching configuration at snapshot height for blockchain. Ignoring.")
-                            continue
-                        }
+                    if (snapshotHeightConfigData == null) {
+                        logger.warn("Unable to find config with hash ${candidateHeaderConfig?.toHex()} at height $candidateHeaderHeight. Retrying in ${params.jobTimeout} ms...")
+                        sleep(params.jobTimeout)
                     }
                 }
 
@@ -158,15 +161,15 @@ class SnapshotSynchronizer(
                 val validator = baseBlockWitnessProviderProvider(
                         workerContext.appConfig.cryptoSystem,
                         workerContext.appConfig.cryptoSystem.buildSigMaker(myKeyPair),
-                        snapshotConfigData.signers.toTypedArray()
+                        snapshotHeightConfigData.signers.toTypedArray()
                 )
                 validator to validator.createWitnessBuilderWithoutOwnSignature(candidateHeaderRid)
             }
 
             try {
                 validator.validateWitness(BaseBlockWitness.fromBytes(candidate.witness), witnessBuilder)
-                logger.info("Received snapshot info from peers, highest valid height was: ${candidateHeader.getHeight()}")
-                params.syncToExactHeight  = candidateHeader.getHeight()
+                logger.info("Received snapshot info from peers, highest valid height was: $candidateHeaderHeight")
+                params.syncToExactHeight  = candidateHeaderHeight
                 candidateHeader.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]?.asByteArray()?.let {
                     blockSnapshotRootHash = it
                 }
