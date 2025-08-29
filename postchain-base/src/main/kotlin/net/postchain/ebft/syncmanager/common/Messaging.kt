@@ -13,6 +13,7 @@ import net.postchain.core.NodeRid
 import net.postchain.core.Storage
 import net.postchain.core.block.BlockDataWithWitness
 import net.postchain.core.block.BlockQueries
+import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Signature
 import net.postchain.ebft.message.BlockHeader
 import net.postchain.ebft.message.BlockRange
@@ -31,7 +32,6 @@ import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_BLOCKS_IN_PACKAGE
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
 import net.postchain.network.CommunicationManager
-import java.security.MessageDigest
 import java.util.Objects
 
 abstract class Messaging(
@@ -182,7 +182,13 @@ abstract class Messaging(
         }
     }
 
-    fun sendLatestSnapshotHeight(peerID: NodeRid, blockBuilderStorage: Storage, chainID: Long) {
+    fun sendLatestSnapshotHeight(
+            peerID: NodeRid,
+            blockBuilderStorage: Storage,
+            chainID: Long,
+            levelsPerPage: Int,
+            cryptoSystem: CryptoSystem
+    ) {
         if (peerID in servedLatestSnapshotHeight) {
             logger.debug { "Already responded to request from peer $peerID for latest snapshot height. Ignoring." }
             return
@@ -197,8 +203,8 @@ abstract class Messaging(
                 val contextRootHashes = withReadWriteConnection(blockBuilderStorage, chainID) { ctx ->
                     // TODO: keep, or change LeafStore interface?
                     val bctx = BaseBlockEContext(ctx, headerData.getHeight(), -1, -1, mapOf()) { _, _, _ -> }
-                    val digestSystem = SimpleDigestSystem(MessageDigest.getInstance("SHA-256")) // TODO
-                    val rootSnapshotStore = SnapshotPageStore(bctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_root")
+                    val rootSnapshotStore = SnapshotPageStore(bctx, levelsPerPage.toInt(), 0,
+                            SimpleDigestSystem(cryptoSystem), "${SNAPSHOT_TABLE_PREFIX}_root")
                     rootSnapshotStore.getAllLeafHashes(headerData.getHeight())
                 }
 

@@ -1,22 +1,23 @@
 package net.postchain.base.snapshot
 
 import net.postchain.base.data.DatabaseAccess
-import net.postchain.common.data.SHA256
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.EContext
+import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
 import net.postchain.gtx.SnapshotAware
-import java.security.MessageDigest
 
 /**
  * TODO: We need to think about where and how to instantiate this repository
  */
 class BaseSnapshotDatumRepository(
-        private val snapshotModules: List<SnapshotAware>
+        private val snapshotModules: List<SnapshotAware>,
+        private val levelsPerPage: Int,
+        cryptoSystem: CryptoSystem
 ) : SnapshotDatumRepository {
-    private val digestSystem = SimpleDigestSystem(MessageDigest.getInstance("SHA-256"))
+    private val digestSystem = SimpleDigestSystem(cryptoSystem)
     private val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAware>()
 
     override fun getDatumIdMax(ctx: EContext, height: Long, contextId: Long): Long? {
@@ -84,11 +85,7 @@ class BaseSnapshotDatumRepository(
     }
 
     override fun getRangeProof(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long): RangeProof {
-        val digestSystem = SimpleDigestSystem(MessageDigest.getInstance(SHA256)) // TODO move
-        // TODO base on common config
-        val snapshotPageStore = SnapshotPageStore(
-                ctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_$contextId"
-        )
+        val snapshotPageStore = SnapshotPageStore(ctx, levelsPerPage, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_$contextId")
         return snapshotPageStore.getRangeMerkleProof(height, datumIdFrom, datumIdTo)
     }
 
@@ -99,7 +96,7 @@ class BaseSnapshotDatumRepository(
     }
 
     override fun getLatestSnapshotHeight(ctx: EContext): Long? {
-        val rootSnapshotStore = SnapshotPageStore(ctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_root")
+        val rootSnapshotStore = SnapshotPageStore(ctx, levelsPerPage, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_root")
 
         return rootSnapshotStore.getLastSnapshotHeight()
     }

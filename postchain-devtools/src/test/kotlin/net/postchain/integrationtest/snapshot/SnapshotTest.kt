@@ -93,7 +93,8 @@ class SnapshotTest : IntegrationTestSetup() {
         assertThat(block1Header.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]!!.asByteArray()).isContentEqualTo(expectedRootHash)
 
         // Assert that permanent and non-permanent datums can be recovered
-        val datumRepository = BaseSnapshotDatumRepository(nodes[0].getModules().filterIsInstance<SnapshotAware>())
+        val datumRepository = BaseSnapshotDatumRepository(nodes[0].getModules().filterIsInstance<SnapshotAware>(),
+                2, cryptoSystem)
 
         withReadConnection(nodes[0].postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { ctx ->
             // Permanent
@@ -178,7 +179,8 @@ class SnapshotTest : IntegrationTestSetup() {
 
         buildBlock(DEFAULT_CHAIN_IID, 2, emitDatumsTx)
 
-        val datumRepository = BaseSnapshotDatumRepository(nodes[0].getModules().filterIsInstance<SnapshotAware>())
+        val datumRepository = BaseSnapshotDatumRepository(nodes[0].getModules().filterIsInstance<SnapshotAware>(),
+                2, cryptoSystem)
         val queryRunner = QueryRunner()
 
         // Verify data is in place

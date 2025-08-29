@@ -75,7 +75,9 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
             }
 
             val snapshotConfig = data.snapshot?.toObject<SnapshotBlockchainConfigurationData>()
-            return CompositeGTXModule(list.map(::makeModule).toTypedArray(), gtxConfig.allowOverrides, data.snapshotsEnabled, snapshotConfig?.snapshotInterval ?: -1)
+                    ?: SnapshotBlockchainConfigurationData.default
+            return CompositeGTXModule(list.map(::makeModule).toTypedArray(), gtxConfig.allowOverrides,
+                    data.snapshotsEnabled, snapshotConfig.snapshotInterval, snapshotConfig.levelsPerPage)
         }
     }
 

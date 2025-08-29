@@ -15,6 +15,7 @@ import net.postchain.base.snapshot.VerifyRangeProof
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.config.app.AppConfig
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainEngine
 import net.postchain.core.EContext
@@ -48,6 +49,7 @@ import org.awaitility.Duration
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.Mockito.`when`
 import org.mockito.kotlin.KInvocationOnMock
@@ -95,6 +97,7 @@ class SnapshotSynchronizerTest {
         on { createWitnessBuilderWithoutOwnSignature(baseBlockHeader) } doReturn blockWitnessBuilder
     }
     private val blockchainConfiguration: BlockchainConfiguration = mock {
+        on { rawConfig } doReturn gtv(emptyMap())
         on { decodeBlockHeader(header) } doReturn baseBlockHeader
         on { decodeWitness(witness) } doReturn blockWitness
         on { getBlockHeaderValidator() } doReturn blockWitnessProvider
@@ -124,12 +127,16 @@ class SnapshotSynchronizerTest {
         on { networkNodes } doReturn networkNodes
     }
     private val messageDurationTracker: MessageDurationTracker = mock()
+    private val appConfig = mock<AppConfig> {
+        on { cryptoSystem } doReturn mock()
+    }
     private val workerContext: WorkerContext = mock {
         on { engine } doReturn blockchainEngine
         on { communicationManager } doReturn commManager
         on { peerCommConfiguration } doReturn peerCommConf
         on { blockchainConfiguration } doReturn blockchainConfiguration
         on { messageDurationTracker } doReturn messageDurationTracker
+        on { appConfig } doReturn appConfig
     }
     private val blockDatabase: BlockDatabase = mock()
     private val peerStatuses: PeerStatuses = mock()
@@ -140,6 +147,7 @@ class SnapshotSynchronizerTest {
     private val node2 = NodeRid(1) { 2 }
     private val node3 = NodeRid(1) { 3 }
     private val node4 = NodeRid(1) { 4 }
+    private val defaultBlockHeaderRootHash = Hash(10) { 5 }
 
     private lateinit var ss: SnapshotSynchronizer
 
@@ -149,6 +157,7 @@ class SnapshotSynchronizerTest {
         messageQueue.clear()
         val verifyRangeProof = mock<VerifyRangeProof> {
             on { verify(any<Hash>(), any<RangeProof>(), anyLong(), any<List<Hash>>()) } doReturn true
+            on { calculateMerkleRoot(any<List<Hash>>(), anyInt()) } doReturn defaultBlockHeaderRootHash
         }
         ss = spy(SnapshotSynchronizer(workerContext, blockDatabase, params, peerStatuses, { isProcessRunning },
                 RateLimitConfiguration(100), verifyRangeProof))
@@ -298,7 +307,7 @@ class SnapshotSynchronizerTest {
         }
     }
 
-    private fun makeSnapshotBlockHeaderMessage(height: Long, snapshotRootHash: Hash = Hash(10) { 5 }, datumIdMax: Long = 20L): SnapshotBlockHeader {
+    private fun makeSnapshotBlockHeaderMessage(height: Long, snapshotRootHash: Hash = defaultBlockHeaderRootHash, datumIdMax: Long = 20L): SnapshotBlockHeader {
         val blockHeaderData = BlockHeaderData(
                 gtv(BlockchainRid.ZERO_RID.data),
                 gtv(BlockchainRid.ZERO_RID.data),
