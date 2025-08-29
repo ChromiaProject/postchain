@@ -84,7 +84,6 @@ class ProofNodeSimple(left: MerkleProofElement, right: MerkleProofElement): Proo
  *
  * @property content is the value to be proven (in its raw form)
  * @property sizeInBytes is the nr of bytes the original object takes up
- * @property pathElem is the path element that tells us how to find this element in the surrounding collection
  */
 open class ProofValueLeaf<T>(val content: T, val sizeInBytes: Int): MerkleProofElement
 

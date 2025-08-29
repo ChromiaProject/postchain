@@ -54,6 +54,7 @@ import java.io.FileInputStream
 import java.nio.file.Files
 import java.nio.file.Path
 
+@Suppress("SqlSourceToSinkFlow")
 class ImportExportIT {
 
     private val appConfig: AppConfig = testDbConfig("import_export_it")

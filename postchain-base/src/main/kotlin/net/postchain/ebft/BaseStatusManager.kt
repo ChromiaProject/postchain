@@ -475,8 +475,8 @@ class BaseStatusManager(
         }
 
         /**
-         * Takes care of the [HaveBlock] (second) state
-         * Will move to state [Prepared] if enough nodes have reached our BlockRID
+         * Takes care of the [NodeBlockState.HaveBlock] (second) state
+         * Will move to state [NodeBlockState.Prepared] if enough nodes have reached our BlockRID
          */
         fun handleHaveBlockState(): Boolean {
             val count = countNodes(NodeBlockState.HaveBlock, myStatus.height, myStatus.blockRID, myStatus.round) +
@@ -494,7 +494,7 @@ class BaseStatusManager(
 
 
         /**
-         * Takes care of the [Prepared] (last) state
+         * Takes care of the [NodeBlockState.Prepared] (last) state
          */
         fun handlePreparedState(): Boolean {
             if (intent is CommitBlockIntent) return false
@@ -541,9 +541,9 @@ class BaseStatusManager(
         }
 
         /**
-         * Takes care of the [WaitBlock] (initial) state
+         * Takes care of the [NodeBlockState.WaitBlock] (initial) state
          * If: I'm the "primary" node,
-         *     Then: It will by my job to build the block (set intent to [BuildBlockIntent])
+         *     Then: It will be my job to build the block (set intent to [BuildBlockIntent])
          * Else: some other node is building the block, I have to wait until they send me the block
          *       that the primary node has
          */

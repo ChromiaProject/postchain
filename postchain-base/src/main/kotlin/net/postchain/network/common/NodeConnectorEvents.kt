@@ -3,7 +3,7 @@ package net.postchain.network.common
 /**
  * Handles callbacks after the beginning and end of a connection
  *
- * Note: Currently this is only used by [NettyPeerConnector] but the process is rather generic, so could potentially
+ * Note: Currently this is only used by [net.postchain.network.netty2.NettyPeerConnector] but the process is rather generic, so could potentially
  *       be used for "master" and "subnode" too.
  */
 interface NodeConnectorEvents<HandlerType, DescriptorType> {

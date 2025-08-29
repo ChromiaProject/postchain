@@ -20,7 +20,7 @@ Once the Postgres software has been installed we must create a "postchain" user 
 
 When we are inside we create the standard developer's default setup. "<YOUR_NAME>" below is the name of your Linux user.
 
-```sql
+```
   6 postgres=# CREATE DATABASE postchain WITH TEMPLATE = template0 LC_COLLATE = 'C.UTF-8' LC_CTYPE = 'C.UTF-8' ENCODING 'UTF-8';
   7  CREATE DATABASE
   8 postgres=# CREATE USER postchain WITH ENCRYPTED PASSWORD 'postchain';

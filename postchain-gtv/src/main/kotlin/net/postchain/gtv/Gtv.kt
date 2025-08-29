@@ -17,7 +17,7 @@ enum class GtvType(val s: String) {
          * Returns [GtvType] object correspondent to [String]
          */
         fun fromString(s: String): GtvType {
-            return values().firstOrNull { it.s == s } ?: throw IllegalArgumentException("Unknown type of GtvType: $s")
+            return GtvType.entries.firstOrNull { it.s == s } ?: throw IllegalArgumentException("Unknown type of GtvType: $s")
         }
     }
 }

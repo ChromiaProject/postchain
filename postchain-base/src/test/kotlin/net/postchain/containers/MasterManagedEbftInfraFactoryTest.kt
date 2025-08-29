@@ -25,7 +25,7 @@ class MasterManagedEbftInfraFactoryTest {
 
         invalidFormats.forEach {
             println("Testing ${it.key}")
-            var exception = assertThrows<UserMistake> { MasterManagedEbftInfraFactory.validateSubnodeUser(it.key) }
+            val exception = assertThrows<UserMistake> { MasterManagedEbftInfraFactory.validateSubnodeUser(it.key) }
             assertThat(exception.message).isEqualTo(it.value)
         }
 

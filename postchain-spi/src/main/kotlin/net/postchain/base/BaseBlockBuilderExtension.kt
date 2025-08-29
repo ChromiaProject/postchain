@@ -11,5 +11,6 @@ import net.postchain.gtv.Gtv
  */
 interface BaseBlockBuilderExtension {
     fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder)
+    @Suppress("removal")
     fun finalize(): Map<String, Gtv>
 }

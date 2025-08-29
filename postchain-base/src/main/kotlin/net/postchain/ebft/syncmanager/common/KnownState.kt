@@ -7,7 +7,7 @@ import java.time.Clock
  * Keeps notes on a single peer. Some rules:
  *
  * When a peer has been marked UNRESPONSIVE for a certain
- * amount of time ([params.resurrectDrainedTime] it will be given
+ * amount of time (`params.resurrectDrainedTime` it will be given
  * a new chance to serve us blocks. Otherwise, we might run out of
  * peers to sync from over time.
  *

@@ -257,7 +257,7 @@ class AppliedConfig(val configHash: ByteArray, val height: Long) : EbftMessage(M
 /**
  * Message to inform other nodes about which EBFT version our node is supporting.
  *
- * @property version is the version supported
+ * @property ebftVersion is the version supported
  */
 class EbftVersion(val ebftVersion: Long) : EbftMessage(MessageTopic.EBFTVERSION) {
 

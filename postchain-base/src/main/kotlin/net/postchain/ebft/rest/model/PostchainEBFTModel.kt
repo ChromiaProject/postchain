@@ -104,7 +104,7 @@ class PostchainEBFTModel(
     override fun getWaitingTransaction(txRID: TxRid): Pair<ByteArray, Instant>? = txQueue.waitingTransaction(txRID.bytes.wrap())
 
     override fun getRejectedTransactions(): List<ApiRejectedTransaction> =
-            txQueue.rejectedTransactions().map { it ->
+            txQueue.rejectedTransactions().map {
                 ApiRejectedTransaction(TxRid(it.txRID.data), it.reason.message ?: "", it.timestamp.toEpochMilli())
             }
 }

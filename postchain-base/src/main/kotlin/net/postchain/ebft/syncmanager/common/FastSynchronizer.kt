@@ -58,10 +58,10 @@ import net.postchain.ebft.message.BlockHeader as BlockHeaderMessage
  *
  * We only use random known peers (from the peerCommConfiguration) to sync from.
  *
- * If there are no live peers, it will wait [params.exitDelay] until it leaves fastsync and starts
+ * If there are no live peers, it will wait `params.exitDelay` until it leaves fastsync and starts
  * trying to build blocks on its own. This is not a problem in a real world scenario, since you can wait a minute
  * or so upon first start. But in tests, this can be really annoying. So tests that only runs a single node
- * should set [params.exitDelay] to 0.
+ * should set `params.exitDelay` to 0.
  */
 class FastSynchronizer(
         workerContext: WorkerContext,

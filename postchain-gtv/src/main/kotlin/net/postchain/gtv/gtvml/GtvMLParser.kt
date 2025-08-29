@@ -13,7 +13,13 @@ import net.postchain.gtv.GtvInteger
 import net.postchain.gtv.GtvNull
 import net.postchain.gtv.GtvString
 import net.postchain.gtv.GtvType
-import net.postchain.gtv.GtvType.*
+import net.postchain.gtv.GtvType.ARRAY
+import net.postchain.gtv.GtvType.BIGINTEGER
+import net.postchain.gtv.GtvType.BYTEARRAY
+import net.postchain.gtv.GtvType.DICT
+import net.postchain.gtv.GtvType.INTEGER
+import net.postchain.gtv.GtvType.NULL
+import net.postchain.gtv.GtvType.STRING
 import net.postchain.gtv.gtxml.ArrayType
 import net.postchain.gtv.gtxml.DictType
 import net.postchain.gtv.gtxml.ObjectFactory
@@ -61,9 +67,9 @@ object GtvMLParser {
     }
 
     private fun parseDictGtvML(dict: DictType, params: Map<String, Gtv>): GtvDictionary {
-        val parsedDict = dict.entry.map {
+        val parsedDict = dict.entry.associate {
             it.key to parseJAXBElementToGtvML(it.value, params)
-        }.toMap()
+        }
 
         return GtvDictionary.build(parsedDict)
     }

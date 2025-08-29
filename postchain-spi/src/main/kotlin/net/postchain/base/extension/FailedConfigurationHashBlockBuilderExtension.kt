@@ -12,6 +12,7 @@ class FailedConfigurationHashBlockBuilderExtension(private val failedConfigHash:
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {}
 
+    @Suppress("removal")
     override fun finalize(): Map<String, Gtv> = mapOf(
             FAILED_CONFIG_HASH_EXTRA_HEADER to gtv(failedConfigHash)
     )

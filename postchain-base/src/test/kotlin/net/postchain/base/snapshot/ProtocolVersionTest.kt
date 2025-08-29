@@ -14,10 +14,8 @@ class ProtocolVersionTest : SnapshotBaseIT() {
     @OptIn(ExperimentalStdlibApi::class)
     private fun state(nonce: Byte) = nonce.toHexString().padEnd(64, 'f').hexStringToByteArray()
 
-    @Test
-    fun `verify account state proof discrepancy between protocol versions 1 and 2`() {
-        // This is verified in SnapshotIT.`test snapshot root hash, page root hash, and account state proofs`()
-    }
+    // account state proof discrepancy between protocol versions 1 and 2
+    // is verified in SnapshotIT.`test snapshot root hash, page root hash, and account state proofs`()
 
     @Test
     fun `verify account snapshot hash discrepancy between protocol versions 1 and 2`() {

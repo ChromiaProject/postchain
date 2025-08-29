@@ -31,8 +31,8 @@ interface BlockWitnessProvider {
      *
      *  @param blockWitness is the witness data with signatures we will check
      *  @param witnessBuilder includes the header we should validate
-     *  @throws ProgrammerMistake if invalid BlockWitness or BlockWitnessBuilder implementation
-     *  @throws UserMistake if validation fails
+     *  @throws net.postchain.common.exception.ProgrammerMistake if invalid BlockWitness or BlockWitnessBuilder implementation
+     *  @throws net.postchain.common.exception.UserMistake if validation fails
      */
     fun validateWitness(
             blockWitness: BlockWitness,
