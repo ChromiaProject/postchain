@@ -48,7 +48,7 @@ info:
     
     The exact procedure to calculate the hash is documented in the README in 
     [postchain-gtv](https://gitlab.com/chromaway/core/postchain/-/tree/dev/postchain-gtv) module
-  version: "20"
+  version: "21"
 tags:
   - name: block
     description: Fetch block(s)
@@ -113,6 +113,10 @@ paths:
                 invalidTx:
                   value:
                     error: "Transaction is invalid"
+                operationNotFound:
+                  value:
+                    error: "Unknown operation: bogus_op"
+                    code: OPERATION_NOT_FOUND
             application/octet-stream: { }
         '403':
           description: Not supported
@@ -833,6 +837,7 @@ paths:
                 unknownQuery:
                   value:
                     error: "Unknown query: the_query"
+                    code: QUERY_NOT_FOUND
         '404':
           description: Not found
           content:
@@ -883,6 +888,7 @@ paths:
                 unknownQuery:
                   value:
                     error: "Unknown query: the_query"
+                    code: QUERY_NOT_FOUND
         '404':
           description: Not found
           content:
@@ -931,6 +937,7 @@ paths:
                 unknownQuery:
                   value:
                     error: "Unknown query: the_query"
+                    code: QUERY_NOT_FOUND
         '404':
           description: Not found
           content:
@@ -988,6 +995,7 @@ paths:
                 unknownQuery:
                   value:
                     error: "Unknown query: the_query"
+                    code: QUERY_NOT_FOUND
             application/octet-stream: { }
         '404':
           description: Not found
@@ -1101,6 +1109,7 @@ paths:
                 unknownQuery:
                   value:
                     error: "Unknown query: the_query"
+                    code: QUERY_NOT_FOUND
             application/octet-stream: { }
         '403':
           description: Not supported
@@ -2175,6 +2184,9 @@ components:
         error:
           type: string
           description: Error message
+        code:
+          type: string
+          description: Error code
     hash:
       type: string
       pattern: "[0-9a-fA-F]{64}"

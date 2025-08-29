@@ -101,6 +101,8 @@ import net.postchain.gtv.GtvType
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
+import net.postchain.gtx.UnknownOperation
+import net.postchain.gtx.UnknownQuery
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.ManagedNodeDataSource
@@ -197,7 +199,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 20
+        const val REST_API_VERSION = 21
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -870,9 +872,7 @@ class RestApi(
             })
             .then(ServerFilters.CatchLensFailure { request, lensFailure ->
                 logger.info { "Bad request: ${lensFailure.message}" }
-                Response(BAD_REQUEST).with(
-                        errorBody.outbound(request) of ErrorBody(lensFailure.failures.joinToString("; "))
-                )
+                errorResponse(request, BAD_REQUEST, lensFailure.failures.joinToString("; "))
             })
             .then(handler)
             .asServer(NettyWithCustomWorkerGroup(
@@ -896,6 +896,16 @@ class RestApi(
             is IllegalArgumentException -> {
                 logger.info { "Illegal argument: ${error.message}" }
                 errorResponse(request, BAD_REQUEST, error.message!!)
+            }
+
+            is UnknownOperation -> {
+                logger.info { error.message }
+                errorResponse(request, BAD_REQUEST, error.message!!, errorCode = Errors.OPERATION_NOT_FOUND)
+            }
+
+            is UnknownQuery -> {
+                logger.info { error.message }
+                errorResponse(request, BAD_REQUEST, error.message!!, errorCode = Errors.QUERY_NOT_FOUND)
             }
 
             is UserMistake -> {
@@ -957,9 +967,9 @@ class RestApi(
                 null
             }
 
-    private fun errorResponse(request: Request, status: Status, errorMessage: String): Response =
+    private fun errorResponse(request: Request, status: Status, errorMessage: String, errorCode: Errors? = null): Response =
             Response(status).with(
-                    errorBody.outbound(request) of ErrorBody(errorMessage)
+                    errorBody.outbound(request) of ErrorBody(errorMessage, errorCode?.name)
             )
 
     private fun model(request: Request): Model = modelKey(request) ?: throw invalidBlockchainRid()
@@ -1060,7 +1070,7 @@ class RestApi(
                         semaphore.release()
                     }
                 } else {
-                    Response(SERVICE_UNAVAILABLE).with(errorBody.outbound(request) of ErrorBody(unavailableMessage()))
+                    errorResponse(request, SERVICE_UNAVAILABLE, unavailableMessage())
                 }
             } else {
                 maybeTryAcquireSemaphore(semaphores.drop(1), request, next)
