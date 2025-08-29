@@ -59,7 +59,7 @@ class ManualBlockchainConfigurationProvider : AbstractBlockchainConfigurationPro
     override fun getHistoricConfiguration(eContext: EContext, chainId: Long, historicBlockHeight: Long): ByteArray? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
-        return DatabaseAccess.of(eContext).getConfigurationData(eContext, historicBlockHeight)
+        return DatabaseAccess.of(eContext).getConfigurationDataForHeight(eContext, historicBlockHeight)
     }
 
     override fun getActiveBlockConfigurationOptions(eContext: EContext, chainId: Long) = BlockchainConfigurationOptions.DEFAULT
