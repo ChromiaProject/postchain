@@ -7,6 +7,7 @@ import assertk.assertions.isEqualTo
 import assertk.isContentEqualTo
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
+import net.postchain.api.rest.controller.Errors
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
 import net.postchain.common.BlockchainRid
@@ -26,6 +27,7 @@ import net.postchain.gtv.makeStrictGtvGson
 import net.postchain.gtv.mapper.GtvObjectMapper
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
+import net.postchain.gtx.UnknownQuery
 import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.nullValue
 import org.hamcrest.Matchers.greaterThan
@@ -712,5 +714,50 @@ class RestApiQueryEndpointTest {
                 queryResponse = answer,
                 errorMessage = null,
         ))))
+    }
+
+    @Test
+    fun `query not found JSON`() {
+        val queryMap = mapOf(
+                "type" to gtv("test_query"),
+        )
+        val queryString = queryMap.map { "${it.key}=${it.value.toString().trim('"')}" }.joinToString("&")
+        val query = GtxQuery("test_query", gtv(mapOf()))
+
+        whenever(model.query(query)).thenThrow(UnknownQuery("test_query"))
+
+        restApi.attachModel(blockchainRID, model)
+
+        RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .get("/query/$blockchainRID?$queryString")
+                .then()
+                .statusCode(400)
+                .contentType(ContentType.JSON)
+                .body("error", equalTo("Unknown query: test_query"))
+                .body("code", equalTo(Errors.QUERY_NOT_FOUND.name))
+    }
+
+    @Test
+    fun `query not found GTV`() {
+        val queryMap = mapOf(
+                "type" to gtv("test_query"),
+        )
+        val queryString = queryMap.map { "${it.key}=${it.value.toString().trim('"')}" }.joinToString("&")
+        val query = GtxQuery("test_query", gtv(mapOf()))
+
+        whenever(model.query(query)).thenThrow(UnknownQuery("test_query"))
+
+        restApi.attachModel(blockchainRID, model)
+
+        val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .header("Accept", ContentType.BINARY)
+                .get("/query_gtv/${blockchainRID}?$queryString")
+                .then()
+                .statusCode(400)
+                .contentType(ContentType.BINARY)
+
+        assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(
+                gtv(mapOf("error" to gtv("Unknown query: test_query"), "code" to gtv(Errors.QUERY_NOT_FOUND.name)))
+        ))
     }
 }
