@@ -280,7 +280,7 @@ abstract class AbstractSynchronizer(
         return false
     }
 
-    private fun getConfigIfPending(configProvider: ManagedBlockchainConfigurationProvider, height: Long, configHash: ByteArray): PendingBlockchainConfiguration? =
+    protected fun getConfigIfPending(configProvider: ManagedBlockchainConfigurationProvider, height: Long, configHash: ByteArray): PendingBlockchainConfiguration? =
             withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
                 configProvider.getConfigIfPending(
                         ctx,

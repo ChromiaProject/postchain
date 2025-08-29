@@ -3,6 +3,7 @@ package net.postchain.ebft.syncmanager.common
 import mu.KLogging
 import net.postchain.base.BaseBlockEContext
 import net.postchain.base.BaseBlockWitness
+import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.snapshot
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatumInfo
@@ -14,14 +15,19 @@ import net.postchain.base.snapshot.SNAPSHOT_ROOT_EXTRA_HEADER
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.base.snapshot.VerifyRangeProof
+import net.postchain.base.withReadConnection
 import net.postchain.base.withReadWriteConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
+import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockRid
 import net.postchain.core.EContext
 import net.postchain.core.NodeRid
+import net.postchain.crypto.KeyPair
+import net.postchain.crypto.PrivKey
+import net.postchain.crypto.PubKey
 import net.postchain.ebft.BlockWriter
 import net.postchain.ebft.message.BlockHeader
 import net.postchain.ebft.message.EbftVersion
@@ -41,6 +47,7 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.SnapshotAware
+import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import java.lang.Thread.sleep
 import java.util.TreeMap
 import kotlin.time.DurationUnit
@@ -56,7 +63,9 @@ class SnapshotSynchronizer(
         private var verifyRangeProof: VerifyRangeProof = VerifyRangeProof(SimpleDigestSystem(workerContext.appConfig.cryptoSystem))
 ) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        const val SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL = 10_000L
+    }
 
     private var receivedLatestSnapshotHeight = mutableMapOf<NodeRid, SnapshotBlockHeader>()
     private val waitingForSnapshotDataByContext = mutableMapOf<Long, SnapshotDataRequest>()
@@ -119,20 +128,56 @@ class SnapshotSynchronizer(
             val candidateHeader = BlockHeaderData.fromBinary(candidate.header)
             val candidateHeaderConfig = candidateHeader.getExtra()[CONFIG_HASH_EXTRA_HEADER]?.asByteArray()
             val candidateHeaderRid = BlockRid(candidateHeader.toGtv().merkleHash(blockchainConfiguration.merkleHashCalculator))
+            val candidateHeaderHeight = candidateHeader.getHeight()
 
             val (validator, witnessBuilder) = if (blockchainConfiguration.configHash.contentEquals(candidateHeaderConfig)) {
                 val validator = blockchainConfiguration.getBlockHeaderValidator() // We have the snapshot height config now!
                 validator to validator.createWitnessBuilderWithoutOwnSignature(candidateHeaderRid)
             } else {
-                // TODO: FETCH THE CONFIG FOR REAL FROM DB!!!
-                val validator = blockchainConfiguration.getBlockHeaderValidator() // Let's cheat for now
+                val bcConfigProvider = workerContext.blockchainConfigurationProvider
+
+                var snapshotHeightConfigData: BlockchainConfigurationData? = null
+                while (snapshotHeightConfigData == null) {
+                    withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
+                        bcConfigProvider.getHistoricConfiguration(ctx, blockchainConfiguration.chainID, candidateHeaderHeight)
+                    }?.let {
+                        val snapshotAppliedConfigData = BlockchainConfigurationData.fromRaw(it)
+                        if (candidateHeaderConfig != null && !snapshotAppliedConfigData.configHash.contentEquals(candidateHeaderConfig)) {
+                            // There is a possibility that the snapshot header configuration is pending
+                            if (bcConfigProvider is ManagedBlockchainConfigurationProvider) {
+                                val matchingPendingConfig = getConfigIfPending(bcConfigProvider, candidateHeaderHeight, candidateHeaderConfig)
+                                if (matchingPendingConfig != null) {
+                                    snapshotHeightConfigData = BlockchainConfigurationData.fromRaw(matchingPendingConfig.fullConfig)
+                                }
+                            }
+                        } else snapshotHeightConfigData = snapshotAppliedConfigData
+                    }
+
+                    if (snapshotHeightConfigData == null) {
+                        logger.warn("Unable to find config with hash ${candidateHeaderConfig?.toHex()} at height $candidateHeaderHeight. Retrying in $SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL ms...")
+                        val endTime = System.currentTimeMillis() + SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL
+                        while (System.currentTimeMillis() < endTime) {
+                            sleep(100)
+                            if (!isProcessRunning()) return false
+
+                            processMessages(false) // Ensure we continue to process messages
+                        }
+                    }
+                }
+
+                val myKeyPair = KeyPair(PubKey(workerContext.appConfig.pubKeyByteArray), PrivKey(workerContext.appConfig.privKeyByteArray))
+                val validator = baseBlockWitnessProviderProvider(
+                        workerContext.appConfig.cryptoSystem,
+                        workerContext.appConfig.cryptoSystem.buildSigMaker(myKeyPair),
+                        snapshotHeightConfigData.signers.toTypedArray()
+                )
                 validator to validator.createWitnessBuilderWithoutOwnSignature(candidateHeaderRid)
             }
 
             try {
                 validator.validateWitness(BaseBlockWitness.fromBytes(candidate.witness), witnessBuilder)
-                logger.info("Received snapshot info from peers, highest valid height was: ${candidateHeader.getHeight()}")
-                params.syncToExactHeight  = candidateHeader.getHeight()
+                logger.info("Received snapshot info from peers, highest valid height was: $candidateHeaderHeight")
+                params.syncToExactHeight  = candidateHeaderHeight
                 candidateHeader.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]?.asByteArray()?.let {
                     blockSnapshotRootHash = it
                 }
