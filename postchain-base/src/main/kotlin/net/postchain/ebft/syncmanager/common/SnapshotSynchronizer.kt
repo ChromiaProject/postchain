@@ -48,6 +48,7 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.SnapshotAware
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
+import org.apache.commons.io.FileUtils
 import java.lang.Thread.sleep
 import java.util.TreeMap
 import kotlin.time.DurationUnit
@@ -119,12 +120,14 @@ class SnapshotSynchronizer(
             sleep(params.loopInterval)
         }
         // We need to validate the witness of these headers
-        val snapshotCandidates = receivedLatestSnapshotHeight.values.filter { it.header.isNotEmpty() }
-                .sortedByDescending { BlockHeaderData.fromBinary(it.header).getHeight() }
+        val snapshotCandidates = receivedLatestSnapshotHeight
+                .filter { (_, blockHeader) -> blockHeader.header.isNotEmpty() }
+                .map { (peerId, blockHeader) -> peerId to blockHeader }
+                .sortedByDescending { (peerId, blockHeader) -> BlockHeaderData.fromBinary(blockHeader.header).getHeight() }
         // TODO: Return false if we are below snapshot sync threshold?
 
         // We try all but unless peers are malicious or we are lacking config it should be fine
-        for (candidate in snapshotCandidates) {
+        for ((peerId, candidate) in snapshotCandidates) {
             val candidateHeader = BlockHeaderData.fromBinary(candidate.header)
             val candidateHeaderConfig = candidateHeader.getExtra()[CONFIG_HASH_EXTRA_HEADER]?.asByteArray()
             val candidateHeaderRid = BlockRid(candidateHeader.toGtv().merkleHash(blockchainConfiguration.merkleHashCalculator))
@@ -178,26 +181,16 @@ class SnapshotSynchronizer(
                 validator.validateWitness(BaseBlockWitness.fromBytes(candidate.witness), witnessBuilder)
                 logger.info("Received snapshot info from peers, highest valid height was: $candidateHeaderHeight")
                 params.syncToExactHeight  = candidateHeaderHeight
-                candidateHeader.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]?.asByteArray()?.let {
-                    blockSnapshotRootHash = it
-                }
-                val rootHashOfContextHashes = verifyRangeProof.calculateMerkleRoot(
-                        candidate.contextData.map { it.rootHash },
-                        workerContext.blockchainConfiguration.snapshot.levelsPerPage)
-                if (!rootHashOfContextHashes.contentEquals(blockSnapshotRootHash)) {
-                    throw ProgrammerMistake("Merkle root of snapshot context data does not match")
-                }
-                blockHeaderContextData = candidate.contextData.associateBy { it.contextId }
-                snapshotNodes = receivedLatestSnapshotHeight
-                        .filterValues { it.header.contentEquals(candidate.header) }
-                        .keys
-                        .toMutableSet()
-                noneSnapshotNodes = (configuredPeers - snapshotNodes).toMutableList()
-                lastSnapshotNodesUpdate = System.currentTimeMillis()
+                candidateHeader.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]?.asByteArray()?.let { blockSnapshotRootHash = it }
+                blockHeaderContextData = getVerifiedContextData(candidate)
+                setSnapshotNodeLists(candidate)
                 logger.info("Snapshot sync starts from nodes: $snapshotNodes")
                 return true
             } catch (e: Exception) {
-                logger.warn("Received invalid snapshot header from peer: ${e.message}", e)
+                with("Received invalid snapshot header from peer: ${e.message}") {
+                    logger.warn(this, e)
+                    peerStatuses.maybeBlacklist(peerId, this)
+                }
             }
         }
 
@@ -236,8 +229,8 @@ class SnapshotSynchronizer(
                     }
                     is SnapshotData -> {
                         if (!awaitsSnapshotHeights) {
-                            verifyAndGetExpectedRequest(message, peerId)?.let {
-                                waitingForSnapshotDataByContext.remove(it.contextId)
+                            verifyAndGetExpectedRequest(message, peerId)?.let { request ->
+                                waitingForSnapshotDataByContext.remove(request.contextId)
 
                                 if (!message.data.isNullOrEmpty()) {
                                     val preparedData = message.data.mapIndexed { index, datum ->
@@ -253,11 +246,13 @@ class SnapshotSynchronizer(
                                         val processTime = measureTime {
                                             storeSnapshotData(message.contextId, preparedData)
                                         }
-                                        logger.debug { "Stored ${preparedData.size} datums from offset ${message.datumIdFrom} for context id ${message.contextId} in ${processTime.toLong(DurationUnit.MILLISECONDS)} ms" }
+                                        logger.debug { "Stored ${preparedData.size} datums (${FileUtils.byteCountToDisplaySize(preparedData.sumOf { it.data.nrOfBytes() })} bytes) from offset ${message.datumIdFrom} for context id ${message.contextId} in ${processTime.toLong(DurationUnit.MILLISECONDS)} ms" }
                                     } else {
-                                        logger.warn { "Snapshot data received from $peerId is not valid for context ${it.contextId} and offset ${it.offset}" }
-                                        // TODO: Did we just loose the trust on this node? :thinking:
-                                        sendGetSnapshotData(it.contextId, it.offset, it.sentTo + peerId)
+                                        with("Snapshot data received from $peerId is not valid for context ${request.contextId} and offset ${request.offset}") {
+                                            logger.warn(this)
+                                            peerStatuses.maybeBlacklist(peerId, this)
+                                        }
+                                        sendGetSnapshotData(request.contextId, request.offset, request.sentTo + peerId)
                                     }
                                 }
                             }
@@ -313,9 +308,13 @@ class SnapshotSynchronizer(
                 noneSnapshotNodes.isNotEmpty() &&
                 System.currentTimeMillis() - lastSnapshotNodesUpdate >= params.snapshotSyncNodesUpdateIntervalTime
         ) {
-            val node = noneSnapshotNodes.removeFirst()
-            logger.debug { "Node $node added to snapshot node list: $noneSnapshotNodes" }
-            snapshotNodes.add(node)
+            val node = noneSnapshotNodes
+                    .firstOrNull { !peerStatuses.isBlacklisted(it) }
+            if (node != null) {
+                noneSnapshotNodes.remove(node)
+                logger.debug { "Node $node added to snapshot node list: $noneSnapshotNodes" }
+                snapshotNodes.add(node)
+            }
             lastSnapshotNodesUpdate = System.currentTimeMillis()
         }
     }
@@ -363,23 +362,28 @@ class SnapshotSynchronizer(
     }
 
     private fun verifyAndGetExpectedRequest(message: SnapshotData, peerId: NodeRid): SnapshotDataRequest? {
-        // TODO more verification and check proof
         val request = waitingForSnapshotDataByContext[message.contextId]
+        var error: String? = null
         if (request == null) {
-            logger.debug { "Received snapshot data for unknown context ${message.contextId}" }
+            error = "Received snapshot data for unknown context ${message.contextId}"
         } else if (message.datumIdFrom != request.offset) {
-            logger.debug { "Received snapshot data for wrong context ${message.contextId}, expected ${request.offset}, got ${message.datumIdFrom}" }
+            error = "Received snapshot data for wrong context ${message.contextId}, expected ${request.offset}, got ${message.datumIdFrom}"
         } else if (message.height != params.syncToExactHeight) {
-            logger.debug { "Received snapshot data for wrong height, expected ${params.syncToExactHeight}, got ${message.height}" }
+            error = "Received snapshot data for wrong height, expected ${params.syncToExactHeight}, got ${message.height}"
         } else if (message.data == null) {
             logger.debug { "Node $peerId does not have requested height ${message.height} in snapshot context ${message.contextId}. Node is removed from list and request is sent to another node." }
             snapshotNodes.remove(peerId)
             noneSnapshotNodes.add(peerId)
             sendGetSnapshotData(message.contextId, message.datumIdFrom)
         } else if (message.data.isNotEmpty() && message.proof == null) {
-            logger.debug { "Node $peerId did not include snapshot proof for height ${message.height} in context ${message.contextId}." }
+            error = "Node $peerId did not include snapshot proof for height ${message.height} in context ${message.contextId}."
         } else {
             return request
+        }
+
+        if (error != null) {
+            logger.warn(error)
+            peerStatuses.maybeBlacklist(peerId, error)
         }
         return null
     }
@@ -423,6 +427,25 @@ class SnapshotSynchronizer(
             logger.debug { "Snapshot request timed out for context $contextId, sending request to another node" }
             sendGetSnapshotData(contextId, request.offset, request.sentTo)
         }
+    }
+
+    private fun getVerifiedContextData(candidate: SnapshotBlockHeader): Map<Long, SnapshotBlockHeaderContextData> {
+        val rootHashOfContextHashes = verifyRangeProof.calculateMerkleRoot(
+                candidate.contextData.map { it.rootHash },
+                workerContext.blockchainConfiguration.snapshot.levelsPerPage)
+        if (!rootHashOfContextHashes.contentEquals(blockSnapshotRootHash)) {
+            throw ProgrammerMistake("Merkle root of snapshot context data does not match")
+        }
+        return candidate.contextData.associateBy { it.contextId }
+    }
+
+    private fun setSnapshotNodeLists(candidate: SnapshotBlockHeader) {
+        snapshotNodes = receivedLatestSnapshotHeight
+                .filterValues { it.header.contentEquals(candidate.header) }
+                .keys
+                .toMutableSet()
+        noneSnapshotNodes = (configuredPeers - snapshotNodes).toMutableList()
+        lastSnapshotNodesUpdate = System.currentTimeMillis()
     }
 }
 
