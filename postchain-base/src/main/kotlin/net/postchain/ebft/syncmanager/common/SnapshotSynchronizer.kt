@@ -152,7 +152,7 @@ class SnapshotSynchronizer(
                 logger.info("Snapshot sync starts from nodes: $snapshotNodes")
                 return true
             } catch (e: Exception) {
-                logger.warn("Received invalid snapshot header from peer: ${e.message}")
+                logger.warn("Received invalid snapshot header from peer: ${e.message}", e)
             }
         }
 
@@ -194,24 +194,26 @@ class SnapshotSynchronizer(
                             verifyAndGetExpectedRequest(message, peerId)?.let {
                                 waitingForSnapshotDataByContext.remove(it.contextId)
 
-                                val preparedData = message.data!!.mapIndexed { index, datum ->
-                                    FullSnapshotDatumData(
-                                            message.datumIdFrom + index,
-                                            datum.data,
-                                            datum.data.merkleHash(workerContext.blockchainConfiguration.merkleHashCalculator),
-                                            datum.isPermanent)
-                                }
-
-                                if (verifyDataProof(message.contextId, message.datumIdFrom, message.proof!!, preparedData)) {
-                                    requestNextSnapshotData(message)
-                                    val processTime = measureTime {
-                                        storeSnapshotData(message.contextId, preparedData)
+                                if (!message.data.isNullOrEmpty()) {
+                                    val preparedData = message.data.mapIndexed { index, datum ->
+                                        FullSnapshotDatumData(
+                                                message.datumIdFrom + index,
+                                                datum.data,
+                                                datum.data.merkleHash(workerContext.blockchainConfiguration.merkleHashCalculator),
+                                                datum.isPermanent)
                                     }
-                                    logger.debug { "Stored ${preparedData.size} datums from offset ${message.datumIdFrom} for context id ${message.contextId} in ${processTime.toLong(DurationUnit.MILLISECONDS)} ms" }
-                                } else {
-                                    logger.warn { "Snapshot data received from $peerId is not valid for context ${it.contextId} and offset ${it.offset}" }
-                                    // TODO: Did we just loose the trust on this node? :thinking:
-                                    sendGetSnapshotData(it.contextId, it.offset, it.sentTo + peerId)
+
+                                    if (verifyDataProof(message.contextId, message.datumIdFrom, message.proof!!, preparedData)) {
+                                        requestNextSnapshotData(message)
+                                        val processTime = measureTime {
+                                            storeSnapshotData(message.contextId, preparedData)
+                                        }
+                                        logger.debug { "Stored ${preparedData.size} datums from offset ${message.datumIdFrom} for context id ${message.contextId} in ${processTime.toLong(DurationUnit.MILLISECONDS)} ms" }
+                                    } else {
+                                        logger.warn { "Snapshot data received from $peerId is not valid for context ${it.contextId} and offset ${it.offset}" }
+                                        // TODO: Did we just loose the trust on this node? :thinking:
+                                        sendGetSnapshotData(it.contextId, it.offset, it.sentTo + peerId)
+                                    }
                                 }
                             }
                         }
