@@ -7,6 +7,7 @@ import com.github.dockerjava.api.model.ExposedPort
 import mu.KLogging
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.config.app.AppConfig
+import net.postchain.containers.bpm.docker.DockerTools.asyncExecAwaitMultiResponse
 import net.postchain.containers.bpm.docker.DockerTools.asyncExecAwaitSingleResponse
 import net.postchain.containers.bpm.docker.DockerTools.hasName
 import net.postchain.containers.bpm.docker.DockerTools.listSubContainersCmd
@@ -25,7 +26,10 @@ open class ContainerHandler(
     protected val containerNodeConfig = ContainerNodeConfig.fromAppConfig(appConfig)
 
     fun pullImage(imageSpec: String) {
-        dockerClient.pullImageCmd(imageSpec).asyncExecAwaitSingleResponse()
+        logger.info("Pulling image $imageSpec...")
+        dockerClient.pullImageCmd(imageSpec).asyncExecAwaitMultiResponse(onNext = {}, onError = {
+            logger.warn("Unable to pull image $imageSpec: ${it?.message}")
+        })
     }
 
     fun createDockerContainer(containerName: ContainerName, resourceLimits: ContainerResourceLimits,
