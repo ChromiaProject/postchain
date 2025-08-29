@@ -63,7 +63,9 @@ class SnapshotSynchronizer(
         private var verifyRangeProof: VerifyRangeProof = VerifyRangeProof(SimpleDigestSystem(workerContext.appConfig.cryptoSystem))
 ) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {
 
-    companion object : KLogging()
+    companion object : KLogging() {
+        const val SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL = 10_000L
+    }
 
     private var receivedLatestSnapshotHeight = mutableMapOf<NodeRid, SnapshotBlockHeader>()
     private val waitingForSnapshotDataByContext = mutableMapOf<Long, SnapshotDataRequest>()
@@ -152,8 +154,14 @@ class SnapshotSynchronizer(
                     }
 
                     if (snapshotHeightConfigData == null) {
-                        logger.warn("Unable to find config with hash ${candidateHeaderConfig?.toHex()} at height $candidateHeaderHeight. Retrying in ${params.jobTimeout} ms...")
-                        sleep(params.jobTimeout)
+                        logger.warn("Unable to find config with hash ${candidateHeaderConfig?.toHex()} at height $candidateHeaderHeight. Retrying in $SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL ms...")
+                        val endTime = System.currentTimeMillis() + SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL
+                        while (System.currentTimeMillis() < endTime) {
+                            sleep(100)
+                            if (!isProcessRunning()) return false
+
+                            processMessages(false) // Ensure we continue to process messages
+                        }
                     }
                 }
 
