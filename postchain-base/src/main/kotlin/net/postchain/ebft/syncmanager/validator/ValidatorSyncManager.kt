@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.Counter
 import mu.KLogging
 import mu.withLoggingContext
 import net.postchain.base.configuration.BlockchainConfigurationData
+import net.postchain.base.configuration.snapshot
 import net.postchain.base.withReadConnection
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
@@ -153,7 +154,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                     is GetBlockHeaderAndBlock -> sendBlockHeaderAndBlock(xPeerId, message.height,
                             this.statusManager.myStatus.height - 1)
 
-                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId)
+                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId, workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID, workerContext.blockchainConfiguration.snapshot.levelsPerPage, workerContext.appConfig.cryptoSystem)
 
                     is GetSnapshotData -> sendSnapshotData(xPeerId, blockchainConfiguration.chainID,
                             message.height, message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize)

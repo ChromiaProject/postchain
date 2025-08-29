@@ -1754,6 +1754,24 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, sql, contextId, datumInfo.id, datumInfo.hash, datumInfo.rawValue, datumInfo.hash, datumInfo.rawValue)
     }
 
+    override fun insertUpdatedDatum(ctx: EContext, contextId: Long, datumInfoList: List<DatumInfo>) {
+        if (datumInfoList.isEmpty()) return
+        val sql = "INSERT INTO ${tableSnapshotUpdatedDatum(ctx.chainID)} (context_id, datum_id, datum_hash, datum) VALUES (?, ?, ?, ?)" +
+                " ON CONFLICT (context_id, datum_id) DO UPDATE SET datum_hash = ?, datum = ?"
+        ctx.conn.prepareStatement(sql).use { ps ->
+            for (datumInfo in datumInfoList) {
+                ps.setLong(1, contextId)
+                ps.setLong(2, datumInfo.id)
+                ps.setBytes(3, datumInfo.hash)
+                ps.setBytes(4, datumInfo.rawValue)
+                ps.setBytes(5, datumInfo.hash)
+                ps.setBytes(6, datumInfo.rawValue)
+                ps.addBatch()
+            }
+            ps.executeBatch()
+        }
+    }
+
     override fun getUpdatedDatumsByContext(ctx: EContext): Map<Long, List<DatumInfo>> {
         val sql = "SELECT context_id, datum_id, datum_hash, datum FROM ${tableSnapshotUpdatedDatum(ctx.chainID)}"
         val results = queryRunner.query(ctx.conn, sql, mapListHandler)

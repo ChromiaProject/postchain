@@ -19,8 +19,13 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.data.ExtOpData
 import net.postchain.gtx.special.GTXSpecialTxExtension
 
-class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Boolean, val snapshotsEnabled: Boolean, val snapshotInterval: Long)
-    : GTXModule, PostchainContextAware, MetadataProvider {
+class CompositeGTXModule(
+        val modules: Array<GTXModule>,
+        val allowOverrides: Boolean,
+        val snapshotsEnabled: Boolean,
+        val snapshotInterval: Long,
+        val snapshotLevelsPerPage: Int
+) : GTXModule, PostchainContextAware, MetadataProvider {
 
     lateinit var wrappingOpMap: Map<String, GTXModule>
     lateinit var opmap: Map<String, GTXModule>
@@ -38,7 +43,7 @@ class CompositeGTXModule(val modules: Array<GTXModule>, val allowOverrides: Bool
         for (m in modules) {
             l.addAll(m.makeBlockBuilderExtensions())
         }
-        if (snapshotsEnabled) l.add(RootSnapshotBlockBuilderExtension(snapshotInterval))
+        if (snapshotsEnabled) l.add(RootSnapshotBlockBuilderExtension(snapshotInterval, snapshotLevelsPerPage))
         return l
     }
 

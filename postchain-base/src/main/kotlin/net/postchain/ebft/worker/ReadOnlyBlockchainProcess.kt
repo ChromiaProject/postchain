@@ -20,6 +20,7 @@ import net.postchain.debug.EagerDiagnosticValue
 import net.postchain.debug.LazyDiagnosticValue
 import net.postchain.ebft.BaseBlockDatabase
 import net.postchain.ebft.PersistOnlyBlockWriter
+import net.postchain.ebft.rest.contract.SnapshotSyncContextStatus
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.KnownState
@@ -204,7 +205,7 @@ class ReadOnlyBlockchainProcess(
         )
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_STATUS] = LazyDiagnosticValue {
             StateNodeStatus(myPubKey, DpNodeType.NODE_TYPE_REPLICA.name, syncMethod.name, currentBlockHeight(),
-                    latestSnapshotSyncId = latestSnapshotSyncId(), snapshotSyncMaxId = snapshotSyncMaxId())
+                    snapshotSyncContextStatus = currentSnapshotSyncContextStatus())
         }
         diagnosticData[DiagnosticProperty.BLOCKCHAIN_NODE_PEERS_STATUSES] = LazyDiagnosticValue {
             val peerStates: List<Pair<String, KnownState>> = when (syncMethod) {
@@ -227,17 +228,12 @@ class ReadOnlyBlockchainProcess(
         SyncMethod.LOCAL_DB -> blockchainEngine.getBlockQueries().getLastBlockHeight().get()
     }
 
-    private fun latestSnapshotSyncId(): Long? = when (syncMethod) {
+    private fun currentSnapshotSyncContextStatus(): List<SnapshotSyncContextStatus>? = when (syncMethod) {
         SyncMethod.SNAPSHOT_SYNC -> {
-            blockchainEngine.getBlockQueries().getSnapshotContextMaxIds(Long.MAX_VALUE).get()
-                    .values.filterNotNull().maxOrNull()
-        }
-        else -> null
-    }
-
-    private fun snapshotSyncMaxId(): Long? = when (syncMethod) {
-        SyncMethod.SNAPSHOT_SYNC -> {
-            snapshotSynchronizer.snapshotSyncMaxId
+            val localMaxIds = blockchainEngine.getBlockQueries().getSnapshotContextMaxIds(Long.MAX_VALUE).get()
+            snapshotSynchronizer.blockHeaderContextData.values.map {
+                SnapshotSyncContextStatus(it.contextId, localMaxIds[it.contextId], it.datumIdMax)
+            }
         }
         else -> null
     }

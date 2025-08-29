@@ -5,6 +5,7 @@ package net.postchain.core.block
 import net.postchain.base.ConfirmationProof
 import net.postchain.base.SpecialTransactionHandler
 import net.postchain.base.data.DatabaseAccess
+import net.postchain.base.snapshot.RangeProof
 import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.core.Shutdownable
 import net.postchain.core.Transaction
@@ -39,6 +40,7 @@ interface BlockQueries : Shutdownable {
     fun getLatestSnapshotBlockHeader(): CompletionStage<BlockHeaderWithWitness?>
     fun getSnapshotContextMaxIds(height: Long): CompletionStage<Map<Long, Long?>>
     fun getSnapshotData(height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long): CompletionStage<List<SnapshotDatum>>
+    fun getSnapshotRangeProof(height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long): CompletionStage<RangeProof>
     fun getConfirmationProof(txRID: ByteArray): CompletionStage<ConfirmationProof?>
     fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): CompletionStage<BlockDetailsTruncated>
     fun getBlocksBetweenHeights(heightFilter: BlockQueryHeightFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): CompletionStage<BlockDetailsTruncated>

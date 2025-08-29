@@ -1,6 +1,8 @@
 package net.postchain.base.configuration
 
+import net.postchain.base.snapshot.SnapshotBlockchainConfigurationData
 import net.postchain.core.BlockchainConfiguration
+import net.postchain.gtv.mapper.toObject
 
 const val KEY_BLOCKSTRATEGY = "blockstrategy"
 const val KEY_BLOCKSTRATEGY_NAME = "name"
@@ -57,6 +59,8 @@ const val KEY_ASYNC_QUERY_RESULT_RETENTION_SECONDS = "async_query_result_retenti
 const val KEY_FEATURES = "features"
 
 const val KEY_SNAPSHOT = "snapshot"
+const val KEY_SNAPSHOT_INTERVAL = "interval"
+const val KEY_SNAPSHOT_LEVELS_PER_PAGE = "levels_per_page"
 
 val BlockchainConfiguration.queryCacheTtlSeconds: Long
     get() = this.rawConfig[KEY_QUERY_CACHE_TTL_SECONDS]?.asInteger() ?: 0L
@@ -69,3 +73,6 @@ val BlockchainConfiguration.asyncQueryTimeoutSeconds: Long
 
 val BlockchainConfiguration.asyncQueryResultRetentionSeconds: Long
     get() = this.rawConfig[KEY_ASYNC_QUERY_RESULT_RETENTION_SECONDS]?.asInteger() ?: (60 * 60) // 1 hour
+
+val BlockchainConfiguration.snapshot: SnapshotBlockchainConfigurationData
+    get() = rawConfig[KEY_SNAPSHOT]?.toObject() ?: SnapshotBlockchainConfigurationData.default

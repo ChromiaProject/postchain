@@ -3,19 +3,21 @@ package net.postchain.base.snapshot
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.EContext
+import net.postchain.crypto.CryptoSystem
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
 import net.postchain.gtx.SnapshotAware
-import java.security.MessageDigest
 
 /**
  * TODO: We need to think about where and how to instantiate this repository
  */
 class BaseSnapshotDatumRepository(
-        private val snapshotModules: List<SnapshotAware>
+        private val snapshotModules: List<SnapshotAware>,
+        private val levelsPerPage: Int,
+        cryptoSystem: CryptoSystem
 ) : SnapshotDatumRepository {
-    private val digestSystem = SimpleDigestSystem(MessageDigest.getInstance("SHA-256"))
+    private val digestSystem = SimpleDigestSystem(cryptoSystem)
     private val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAware>()
 
     override fun getDatumIdMax(ctx: EContext, height: Long, contextId: Long): Long? {
@@ -48,14 +50,14 @@ class BaseSnapshotDatumRepository(
         return getDatumWithType(ctx, height, contextId, datumId)?.data
     }
 
-    override fun getDatumWithType(ctx: EContext, height: Long, contextId: Long, datumId: Long): SnapshotDatumData? {
+    override fun getDatumWithType(ctx: EContext, height: Long, contextId: Long, datumId: Long): SnapshotDatum? {
         val datum = getStateDatum(ctx, height, contextId, datumId)
         if (datum != null) {
-            return SnapshotDatumData(datum, false)
+            return SnapshotDatum(datumId, datum, false)
         }
         val permanentDatum = getPermanentDatum(ctx, contextId, datumId)
         if (permanentDatum != null) {
-            return SnapshotDatumData(permanentDatum, true)
+            return SnapshotDatum(datumId, permanentDatum, true)
         }
         return null
     }
@@ -82,6 +84,11 @@ class BaseSnapshotDatumRepository(
         return datums
     }
 
+    override fun getRangeProof(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long): RangeProof {
+        val snapshotPageStore = SnapshotPageStore(ctx, levelsPerPage, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_$contextId")
+        return snapshotPageStore.getRangeMerkleProof(height, datumIdFrom, datumIdTo)
+    }
+
     private fun getPermanentDatum(ctx: EContext, contextId: Long, datumId: Long): Gtv? {
         val dba = DatabaseAccess.of(ctx)
         val module = dba.getSnapshotAwareModuleByContext(ctx, contextId)
@@ -89,7 +96,7 @@ class BaseSnapshotDatumRepository(
     }
 
     override fun getLatestSnapshotHeight(ctx: EContext): Long? {
-        val rootSnapshotStore = SnapshotPageStore(ctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_root")
+        val rootSnapshotStore = SnapshotPageStore(ctx, levelsPerPage, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_root")
 
         return rootSnapshotStore.getLastSnapshotHeight()
     }

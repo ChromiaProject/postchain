@@ -205,6 +205,7 @@ class SnapshotTest : SnapshotBaseIT() {
         val random = Random(1234) // Fixed seed for reproducibility
         val prefix2 = "prefix2"
         val protocolV2 = 2
+        val rangeProofVerifier = VerifyRangeProof(ds)
 
         runStorageCommand(appConfig, 0L) { ctx ->
             val db = DatabaseAccess.of(ctx).apply {
@@ -257,6 +258,10 @@ class SnapshotTest : SnapshotBaseIT() {
                         analyzeMerkleProofDiscrepancy(snapshot, blockHeight, pos, stateAtPos)
                     }
                     assertEquals(stateRootHash.toHex(), merkleRoot.toHex())
+
+                    val allLeavesWithValues = allLeafHashesFromTree.subList(0, rightmost.toInt() + 1)
+                    val proofBuiltFromLeaves = rangeProofVerifier.calculateMerkleRoot(allLeavesWithValues, levelsPerPage)
+                    assertEquals(merkleRoot.wrap(), proofBuiltFromLeaves.wrap())
                 }
                 // Verify that trailing leaves are all empty
                 for (pos in rightmost + 1 until allLeafHashesFromTree.size) {

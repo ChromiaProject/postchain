@@ -1,5 +1,6 @@
 package net.postchain.gtx
 
+import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
 
@@ -15,4 +16,5 @@ interface SnapshotAware {
 
     /** Let the module rebuild its table data from snapshot datum data  */
     fun constructDatum(ctx: EContext, datumId: Long, datum: Gtv, isPermanent: Boolean)
+    fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>)
 }

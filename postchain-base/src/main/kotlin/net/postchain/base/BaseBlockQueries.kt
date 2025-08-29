@@ -5,6 +5,7 @@ package net.postchain.base
 import mu.KLogging
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.base.snapshot.RangeProof
 import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.base.snapshot.SnapshotDatumRepository
 import net.postchain.common.exception.ProgrammerMistake
@@ -257,6 +258,11 @@ abstract class BaseBlockQueries(
     override fun getSnapshotData(height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long):
             CompletionStage<List<SnapshotDatum>> = runOpRegardless {
         snapshotDatumRepository.getDatums(it, height, contextId, datumIdFrom, maxDataSize)
+    }
+
+    override fun getSnapshotRangeProof(height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long):
+            CompletionStage<RangeProof> = runOpRegardless {
+        snapshotDatumRepository.getRangeProof(it, height, contextId, datumIdFrom, datumIdTo)
     }
 
     override fun shutdown() {

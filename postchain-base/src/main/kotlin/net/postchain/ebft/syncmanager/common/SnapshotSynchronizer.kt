@@ -3,12 +3,17 @@ package net.postchain.ebft.syncmanager.common
 import mu.KLogging
 import net.postchain.base.BaseBlockEContext
 import net.postchain.base.BaseBlockWitness
+import net.postchain.base.configuration.snapshot
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatumInfo
 import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.gtv.BlockHeaderData
+import net.postchain.base.snapshot.RangeProof
 import net.postchain.base.snapshot.RootSnapshotBlockBuilder
 import net.postchain.base.snapshot.SNAPSHOT_ROOT_EXTRA_HEADER
+import net.postchain.base.snapshot.SimpleDigestSystem
+import net.postchain.base.snapshot.SnapshotDatum
+import net.postchain.base.snapshot.VerifyRangeProof
 import net.postchain.base.withReadWriteConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.data.Hash
@@ -27,13 +32,19 @@ import net.postchain.ebft.message.GetBlockSignature
 import net.postchain.ebft.message.GetLatestSnapshotBlock
 import net.postchain.ebft.message.GetSnapshotData
 import net.postchain.ebft.message.SnapshotBlockHeader
+import net.postchain.ebft.message.SnapshotBlockHeaderContextData
 import net.postchain.ebft.message.SnapshotData
+import net.postchain.ebft.message.SnapshotRangeProof
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
+import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.SnapshotAware
 import java.lang.Thread.sleep
+import java.util.TreeMap
+import kotlin.time.DurationUnit
+import kotlin.time.measureTime
 
 class SnapshotSynchronizer(
         workerContext: WorkerContext,
@@ -42,6 +53,7 @@ class SnapshotSynchronizer(
         val peerStatuses: PeerStatuses,
         val isProcessRunning: () -> Boolean,
         rateLimitConfiguration: RateLimitConfiguration,
+        private var verifyRangeProof: VerifyRangeProof = VerifyRangeProof(SimpleDigestSystem(workerContext.appConfig.cryptoSystem))
 ) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {
 
     companion object : KLogging()
@@ -55,7 +67,7 @@ class SnapshotSynchronizer(
     private var noneSnapshotNodes = mutableListOf<NodeRid>()
     private var lastSnapshotNodesUpdate = Long.MAX_VALUE
 
-    var snapshotSyncMaxId: Long? = null
+    var blockHeaderContextData: Map<Long, SnapshotBlockHeaderContextData> = emptyMap()
         private set
 
     // TODO: Fetch snapshot info and determine if it is worth it
@@ -124,7 +136,13 @@ class SnapshotSynchronizer(
                 candidateHeader.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]?.asByteArray()?.let {
                     blockSnapshotRootHash = it
                 }
-                snapshotSyncMaxId = candidate.datumIdMax
+                val rootHashOfContextHashes = verifyRangeProof.calculateMerkleRoot(
+                        candidate.contextData.map { it.rootHash },
+                        workerContext.blockchainConfiguration.snapshot.levelsPerPage)
+                if (!rootHashOfContextHashes.contentEquals(blockSnapshotRootHash)) {
+                    throw ProgrammerMistake("Merkle root of snapshot context data does not match")
+                }
+                blockHeaderContextData = candidate.contextData.associateBy { it.contextId }
                 snapshotNodes = receivedLatestSnapshotHeight
                         .filterValues { it.header.contentEquals(candidate.header) }
                         .keys
@@ -134,7 +152,7 @@ class SnapshotSynchronizer(
                 logger.info("Snapshot sync starts from nodes: $snapshotNodes")
                 return true
             } catch (e: Exception) {
-                logger.warn("Received invalid snapshot header from peer: ${e.message}")
+                logger.warn("Received invalid snapshot header from peer: ${e.message}", e)
             }
         }
 
@@ -176,8 +194,27 @@ class SnapshotSynchronizer(
                             verifyAndGetExpectedRequest(message, peerId)?.let {
                                 waitingForSnapshotDataByContext.remove(it.contextId)
 
-                                requestNextSnapshotData(message)
-                                storeSnapshotData(message)
+                                if (!message.data.isNullOrEmpty()) {
+                                    val preparedData = message.data.mapIndexed { index, datum ->
+                                        FullSnapshotDatumData(
+                                                message.datumIdFrom + index,
+                                                datum.data,
+                                                datum.data.merkleHash(workerContext.blockchainConfiguration.merkleHashCalculator),
+                                                datum.isPermanent)
+                                    }
+
+                                    if (verifyDataProof(message.contextId, message.datumIdFrom, message.proof!!, preparedData)) {
+                                        requestNextSnapshotData(message)
+                                        val processTime = measureTime {
+                                            storeSnapshotData(message.contextId, preparedData)
+                                        }
+                                        logger.debug { "Stored ${preparedData.size} datums from offset ${message.datumIdFrom} for context id ${message.contextId} in ${processTime.toLong(DurationUnit.MILLISECONDS)} ms" }
+                                    } else {
+                                        logger.warn { "Snapshot data received from $peerId is not valid for context ${it.contextId} and offset ${it.offset}" }
+                                        // TODO: Did we just loose the trust on this node? :thinking:
+                                        sendGetSnapshotData(it.contextId, it.offset, it.sentTo + peerId)
+                                    }
+                                }
                             }
                         }
                     }
@@ -188,6 +225,18 @@ class SnapshotSynchronizer(
                 logger.info("Couldn't handle message $message from peer $peerId. Ignoring and continuing", e)
             }
         }
+    }
+
+    private fun verifyDataProof(contextId: Long, datumIdFrom: Long, snapshotProof: SnapshotRangeProof, data: List<FullSnapshotDatumData>): Boolean {
+        val leafs = TreeMap<Long, Hash>()
+        data.forEach {
+            leafs[it.datumId] = it.hash
+        }
+
+        val proof = with (snapshotProof) {
+            RangeProof(leftBoundaryHashes, rightBoundaryHashes, commonPath)
+        }
+        return verifyRangeProof.verify(blockHeaderContextData[contextId]!!.rootHash, proof, datumIdFrom, leafs.values.toList())
     }
 
     // Snapshot responses must be validated as proofs
@@ -228,41 +277,27 @@ class SnapshotSynchronizer(
 
     private fun buildSnapshot(height: Long): Hash {
         return withReadWriteConnection(workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID) { ctx ->
-            val bctx = BaseBlockEContext( // TODO: keep, or change LeafStore interface?
-                    ctx,
-                    height,
-                    -1,
-                    -1,
-                    mapOf()
-            ) { _, _, _ -> }
-            RootSnapshotBlockBuilder(bctx).build()
+            // TODO: keep, or change LeafStore interface?
+            val bctx = BaseBlockEContext(ctx, height, -1, -1, mapOf()) { _, _, _ -> }
+            RootSnapshotBlockBuilder(bctx, workerContext.blockchainConfiguration.snapshot.levelsPerPage,
+                workerContext.appConfig.cryptoSystem).build()
         }
     }
 
-    private fun storeSnapshotData(message: SnapshotData) {
-        if (!message.data.isNullOrEmpty()) {
-
-            logger.debug { "Store ${message.data.size} datums from offset ${message.datumIdFrom} for context id ${message.contextId}" }
-
+    private fun storeSnapshotData(contextId: Long, data: List<FullSnapshotDatumData>) {
+        if (data.isNotEmpty()) {
             withWriteConnection(workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID) { ctx ->
                 DatabaseAccess.of(ctx).apply {
-                    val module = getSnapshotAwareModuleByContext(ctx, message.contextId)
+                    val module = getSnapshotAwareModuleByContext(ctx, contextId)
 
-                    message.data.forEachIndexed { index, datumData ->
-                        val datumId = message.datumIdFrom + index
-                        val gtv = datumData.data
-                        val isPermanent = datumData.isPermanent
-
-                        // TODO batch insert?
-                        insertUpdatedDatum(ctx, message.contextId, DatumInfo(
-                                datumId,
-                                gtv.merkleHash(workerContext.blockchainConfiguration.merkleHashCalculator),
-                                if (isPermanent) null else GtvEncoder.encodeGtv(gtv)
-                        ))
-
-                        // TODO batch insert?
-                        module.constructDatum(ctx, datumId, gtv, isPermanent)
+                    val datumInfoList = data.map {
+                        DatumInfo(it.datumId, it.hash, if (it.isPermanent) null else GtvEncoder.encodeGtv(it.data))
                     }
+                    val datumList = data.map {
+                        SnapshotDatum(it.datumId, it.data, it.isPermanent)
+                    }
+                    insertUpdatedDatum(ctx, contextId, datumInfoList)
+                    module.constructDatum(ctx, datumList)
                 }
 
                 true
@@ -296,6 +331,8 @@ class SnapshotSynchronizer(
             snapshotNodes.remove(peerId)
             noneSnapshotNodes.add(peerId)
             sendGetSnapshotData(message.contextId, message.datumIdFrom)
+        } else if (message.data.isNotEmpty() && message.proof == null) {
+            logger.debug { "Node $peerId did not include snapshot proof for height ${message.height} in context ${message.contextId}." }
         } else {
             return request
         }
@@ -351,3 +388,5 @@ data class SnapshotDataRequest(
         val timeSent: Long,
         val sentTo: Set<NodeRid>,
 )
+
+data class FullSnapshotDatumData(val datumId: Long, val data: Gtv, val hash: Hash, val isPermanent: Boolean)

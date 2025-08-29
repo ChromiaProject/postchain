@@ -4,6 +4,7 @@ package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
 import net.postchain.base.BaseBlockHeader
+import net.postchain.base.configuration.snapshot
 import net.postchain.base.extension.getConfigHash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
@@ -680,7 +681,9 @@ class FastSynchronizer(
                     is CompleteBlock -> handleCompleteBlock(peerId, message)
                     is EbftVersion -> logger.debug { "Received EbftVersion from peer $peerId" }
                     is Transaction -> logger.trace { "Got transaction from peer $peerId, ignoring" }
-                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(peerId)
+                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(peerId, workerContext.engine.blockBuilderStorage,
+                            workerContext.blockchainConfiguration.chainID, workerContext.blockchainConfiguration.snapshot.levelsPerPage,
+                            workerContext.appConfig.cryptoSystem)
                     is GetSnapshotData -> sendSnapshotData(peerId, blockchainConfiguration.chainID, message.height,
                             message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize)
 
