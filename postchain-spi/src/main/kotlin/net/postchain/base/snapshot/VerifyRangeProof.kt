@@ -101,4 +101,43 @@ class VerifyRangeProof(private val ds: DigestSystem) {
         }
         return r
     }
+
+    /**
+     * @param allLeafs leafs in the tree
+     * @param levelsPerPage levels per page that is used in the page tree, this is necessary to know if we need to pad
+     * with empty hashes at the end of the tree.
+     */
+    fun calculateMerkleRoot(allLeafs: List<Hash>, levelsPerPage: Int): Hash {
+        if (allLeafs.isEmpty()) return EMPTY_HASH
+
+        // Calculate the number of leaves needed to fill the tree
+        var leavesNeeded = 1 shl levelsPerPage
+        while (leavesNeeded < allLeafs.size) {
+            leavesNeeded = leavesNeeded shl levelsPerPage
+        }
+
+        // Create mutable list with actual leaves
+        var currentLevel = allLeafs.toMutableList()
+
+        // Pad with empty hashes if needed
+        while (currentLevel.size < leavesNeeded) {
+            currentLevel.add(EMPTY_HASH)
+        }
+
+        // Keep merging pairs of hashes until we have a single hash (the root)
+        while (currentLevel.size > 1) {
+            val nextLevel = mutableListOf<Hash>()
+
+            // Process pairs of nodes
+            var i = 0
+            while (i < currentLevel.size) {
+                nextLevel.add(ds.hash(currentLevel[i],currentLevel[i + 1]))
+                i += 2
+            }
+        
+            currentLevel = nextLevel
+        }
+    
+        return currentLevel[0]
+    }
 }
