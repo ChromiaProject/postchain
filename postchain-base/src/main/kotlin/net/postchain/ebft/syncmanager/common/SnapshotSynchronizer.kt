@@ -3,6 +3,7 @@ package net.postchain.ebft.syncmanager.common
 import mu.KLogging
 import net.postchain.base.BaseBlockEContext
 import net.postchain.base.BaseBlockWitness
+import net.postchain.base.configuration.snapshot
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatumInfo
 import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
@@ -41,7 +42,6 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.SnapshotAware
 import java.lang.Thread.sleep
-import java.security.MessageDigest
 import java.util.TreeMap
 import kotlin.time.DurationUnit
 import kotlin.time.measureTime
@@ -53,7 +53,7 @@ class SnapshotSynchronizer(
         val peerStatuses: PeerStatuses,
         val isProcessRunning: () -> Boolean,
         rateLimitConfiguration: RateLimitConfiguration,
-        private var verifyRangeProof: VerifyRangeProof = VerifyRangeProof(SimpleDigestSystem(MessageDigest.getInstance("SHA-256"))) // TODO
+        private var verifyRangeProof: VerifyRangeProof = VerifyRangeProof(SimpleDigestSystem(workerContext.appConfig.cryptoSystem))
 ) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {
 
     companion object : KLogging()
@@ -135,6 +135,12 @@ class SnapshotSynchronizer(
                 params.syncToExactHeight  = candidateHeader.getHeight()
                 candidateHeader.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]?.asByteArray()?.let {
                     blockSnapshotRootHash = it
+                }
+                val rootHashOfContextHashes = verifyRangeProof.calculateMerkleRoot(
+                        candidate.contextData.map { it.rootHash },
+                        workerContext.blockchainConfiguration.snapshot.levelsPerPage)
+                if (!rootHashOfContextHashes.contentEquals(blockSnapshotRootHash)) {
+                    throw ProgrammerMistake("Merkle root of snapshot context data does not match")
                 }
                 blockHeaderContextData = candidate.contextData.associateBy { it.contextId }
                 snapshotNodes = receivedLatestSnapshotHeight
@@ -271,7 +277,8 @@ class SnapshotSynchronizer(
         return withReadWriteConnection(workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID) { ctx ->
             // TODO: keep, or change LeafStore interface?
             val bctx = BaseBlockEContext(ctx, height, -1, -1, mapOf()) { _, _, _ -> }
-            RootSnapshotBlockBuilder(bctx).build()
+            RootSnapshotBlockBuilder(bctx, workerContext.blockchainConfiguration.snapshot.levelsPerPage,
+                workerContext.appConfig.cryptoSystem).build()
         }
     }
 
@@ -289,20 +296,6 @@ class SnapshotSynchronizer(
                     }
                     insertUpdatedDatum(ctx, contextId, datumInfoList)
                     module.constructDatum(ctx, datumList)
-
-//                    message.data.forEachIndexed { index, datumData ->
-//                        val datumId = message.datumIdFrom + index
-//                        val gtv = datumData.data
-//                        val isPermanent = datumData.isPermanent
-//
-//                        insertUpdatedDatum(ctx, message.contextId, DatumInfo(
-//                                datumId,
-//                                gtv.merkleHash(workerContext.blockchainConfiguration.merkleHashCalculator),
-//                                if (isPermanent) null else GtvEncoder.encodeGtv(gtv)
-//                        ))
-//
-//                        module.constructDatum(ctx, datumId, gtv, isPermanent)
-//                    }
                 }
 
                 true

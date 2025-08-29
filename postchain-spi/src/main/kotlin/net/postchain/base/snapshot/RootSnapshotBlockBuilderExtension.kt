@@ -9,7 +9,7 @@ import net.postchain.gtv.GtvFactory.gtv
 
 const val SNAPSHOT_ROOT_EXTRA_HEADER = "snapshot_root"
 
-class RootSnapshotBlockBuilderExtension(private val snapshotInterval: Long) : BaseBlockBuilderExtension {
+class RootSnapshotBlockBuilderExtension(private val snapshotInterval: Long, private val levelsPerPage: Int) : BaseBlockBuilderExtension {
 
     companion object : KLogging()
 
@@ -18,7 +18,7 @@ class RootSnapshotBlockBuilderExtension(private val snapshotInterval: Long) : Ba
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {
         bctx = blockEContext
-        snapshotBuilder = RootSnapshotBlockBuilder(blockEContext)
+        snapshotBuilder = RootSnapshotBlockBuilder(blockEContext, levelsPerPage, baseBB.cryptoSystem)
     }
 
     override fun finalize(): Map<String, Gtv> {

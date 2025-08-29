@@ -5,18 +5,19 @@ import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.data.Hash
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
+import net.postchain.crypto.CryptoSystem
 import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
-import java.security.MessageDigest
 import java.util.TreeMap
 
 class RootSnapshotBlockBuilder(
         private val bctx: BlockEContext,
+        private val levelsPerPage: Int,
+        cryptoSystem: CryptoSystem,
 ) {
-    private val rootSnapshotStore = SnapshotPageStore(bctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_root")
+    private val digestSystem = SimpleDigestSystem(cryptoSystem)
+    private val rootSnapshotStore = SnapshotPageStore(bctx, levelsPerPage, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_root")
 
-    companion object : KLogging() {
-        private val digestSystem = SimpleDigestSystem(MessageDigest.getInstance("SHA-256"))
-    }
+    companion object : KLogging()
 
     fun getLastSnapshotHeight(): Long? = rootSnapshotStore.getLastSnapshotHeight()
 
@@ -28,9 +29,7 @@ class RootSnapshotBlockBuilder(
             // TODO: This size might be too big? Do we need to limit it?
             val updatedDataByContext = getUpdatedDatumsByContext(bctx)
             val contextRootHashes = updatedDataByContext.map { (contextId, updatedData) ->
-                val snapshotPageStore = SnapshotPageStore(
-                        bctx, 2, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_$contextId"
-                )
+                val snapshotPageStore = SnapshotPageStore(bctx, levelsPerPage, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_$contextId")
 
                 for (datumInfo in updatedData) {
                     if (datumInfo.rawValue != null) {
