@@ -333,6 +333,8 @@ class PcuManagedModeTest : ManagedModeTest() {
             // Assert node0 is still holding on to config and is still on height 1
             assertFalse(node0.getModules(chain).any { it is GTXTestModule })
             assertEquals(1, node0.blockQueries(chain).getLastBlockHeight().get())
+            // Remove it from datasource so that the node wont load it again when synced
+            dataSources(chain)[0]!!.pendingBridToConfigs.clear()
         }
         // See that node0 can sync up by dropping the pending config before syncing
         Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
