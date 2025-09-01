@@ -73,8 +73,6 @@ class SnapshotSynchronizer(
     private lateinit var blockSnapshotRootHash: ByteArray
     internal val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAware>()
 
-    private var snapshotNodes = mutableSetOf<NodeRid>()
-    private var noneSnapshotNodes = mutableListOf<NodeRid>()
     private var lastSnapshotNodesUpdate = Long.MAX_VALUE
 
     var blockHeaderContextData: Map<Long, SnapshotBlockHeaderContextData> = emptyMap()
@@ -123,7 +121,7 @@ class SnapshotSynchronizer(
         val snapshotCandidates = receivedLatestSnapshotHeight
                 .filter { (_, blockHeader) -> blockHeader.header.isNotEmpty() }
                 .map { (peerId, blockHeader) -> peerId to blockHeader }
-                .sortedByDescending { (peerId, blockHeader) -> BlockHeaderData.fromBinary(blockHeader.header).getHeight() }
+                .sortedByDescending { (_, blockHeader) -> BlockHeaderData.fromBinary(blockHeader.header).getHeight() }
         // TODO: Return false if we are below snapshot sync threshold?
 
         // We try all but unless peers are malicious or we are lacking config it should be fine
@@ -172,7 +170,7 @@ class SnapshotSynchronizer(
                 val validator = baseBlockWitnessProviderProvider(
                         workerContext.appConfig.cryptoSystem,
                         workerContext.appConfig.cryptoSystem.buildSigMaker(myKeyPair),
-                        snapshotHeightConfigData.signers.toTypedArray()
+                        snapshotHeightConfigData!!.signers.toTypedArray()
                 )
                 validator to validator.createWitnessBuilderWithoutOwnSignature(candidateHeaderRid)
             }
@@ -183,8 +181,8 @@ class SnapshotSynchronizer(
                 params.syncToExactHeight  = candidateHeaderHeight
                 candidateHeader.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]?.asByteArray()?.let { blockSnapshotRootHash = it }
                 blockHeaderContextData = getVerifiedContextData(candidate)
-                setSnapshotNodeLists(candidate)
-                logger.info("Snapshot sync starts from nodes: $snapshotNodes")
+                setInitialNodeStates(candidate)
+                logger.info("Snapshot sync starts from nodes: ${peerStatuses.getSyncablePeers(candidateHeaderHeight)}")
                 return true
             } catch (e: Exception) {
                 with("Received invalid snapshot header from peer: ${e.message}") {
@@ -303,18 +301,15 @@ class SnapshotSynchronizer(
     }
 
     private fun addMoreSnapshotNodes() {
+        val drainedNodes = peerStatuses.getPeersWithStatus(KnownState.State.DRAINED)
         if (
                 params.snapshotSyncNodesUpdateIntervalTime > 0 &&
-                noneSnapshotNodes.isNotEmpty() &&
+                drainedNodes.isNotEmpty() &&
                 System.currentTimeMillis() - lastSnapshotNodesUpdate >= params.snapshotSyncNodesUpdateIntervalTime
         ) {
-            val node = noneSnapshotNodes
-                    .firstOrNull { !peerStatuses.isBlacklisted(it) }
-            if (node != null) {
-                noneSnapshotNodes.remove(node)
-                logger.debug { "Node $node added to snapshot node list: $noneSnapshotNodes" }
-                snapshotNodes.add(node)
-            }
+            val node = drainedNodes.random()
+            peerStatuses.markSyncable(node)
+            logger.debug { "Node $node marked as syncable to attempt retrieve snapshot data from node" }
             lastSnapshotNodesUpdate = System.currentTimeMillis()
         }
     }
@@ -372,8 +367,7 @@ class SnapshotSynchronizer(
             error = "Received snapshot data for wrong height, expected ${params.syncToExactHeight}, got ${message.height}"
         } else if (message.data == null) {
             logger.debug { "Node $peerId does not have requested height ${message.height} in snapshot context ${message.contextId}. Node is removed from list and request is sent to another node." }
-            snapshotNodes.remove(peerId)
-            noneSnapshotNodes.add(peerId)
+            peerStatuses.drained(peerId, -1)
             sendGetSnapshotData(message.contextId, message.datumIdFrom)
         } else if (message.data.isNotEmpty() && message.proof == null) {
             error = "Node $peerId did not include snapshot proof for height ${message.height} in context ${message.contextId}."
@@ -397,8 +391,8 @@ class SnapshotSynchronizer(
 
     private fun sendGetSnapshotData(contextId: Long, offset: Long, sentTo: Set<NodeRid> = setOf()) {
         val message = GetSnapshotData(params.syncToExactHeight, contextId, offset)
-        val noRequestedNodes = snapshotNodes.minus(sentTo)
-        val peer = communicationManager.sendToRandomPeer(message, noRequestedNodes).first ?: let {
+        val snapshotNodes = peerStatuses.getSyncablePeers(params.syncToExactHeight)
+        val peer = communicationManager.sendToRandomPeer(message, snapshotNodes.minus(sentTo)).first ?: let {
             logger.info { "Snapshot data request has been sent to all available nodes without any response. Retrying with random nodes." }
             communicationManager.sendToRandomPeer(message, snapshotNodes).first
         }
@@ -439,12 +433,20 @@ class SnapshotSynchronizer(
         return candidate.contextData.associateBy { it.contextId }
     }
 
-    private fun setSnapshotNodeLists(candidate: SnapshotBlockHeader) {
-        snapshotNodes = receivedLatestSnapshotHeight
-                .filterValues { it.header.contentEquals(candidate.header) }
-                .keys
-                .toMutableSet()
-        noneSnapshotNodes = (configuredPeers - snapshotNodes).toMutableList()
+    // Set nodes with candidate heigher syncable, the rest drained or unresponsive
+    private fun setInitialNodeStates(candidate: SnapshotBlockHeader) {
+        configuredPeers.minus(receivedLatestSnapshotHeight.keys).forEach {
+            peerStatuses.unresponsive(it, "Never received LatestSnapshotBlock")
+        }
+        val syncableNodes = receivedLatestSnapshotHeight.filterValues { it.header.contentEquals(candidate.header) }
+        peerStatuses.getAllPeers()
+                .forEach {
+                    if (syncableNodes.containsKey(it)) {
+                        peerStatuses.markSyncable(it)
+                    } else {
+                        peerStatuses.drained(it, BlockHeaderData.fromBinary(receivedLatestSnapshotHeight[it]!!.header).getHeight())
+                    }
+                }
         lastSnapshotNodesUpdate = System.currentTimeMillis()
     }
 }

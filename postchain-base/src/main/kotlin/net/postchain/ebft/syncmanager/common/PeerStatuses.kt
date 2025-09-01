@@ -48,7 +48,7 @@ class PeerStatuses(val params: SyncParameters) {
         }
     }
 
-    fun drained(peerId: NodeRid, height: Long, now: Long, drainedTimeout: Long? = null) {
+    fun drained(peerId: NodeRid, height: Long, now: Long = System.currentTimeMillis(), drainedTimeout: Long? = null) {
         val status = stateOf(peerId)
         if (status.updateAndCheckBlacklisted()) {
             logger.warn("We tried to get block from a blacklisted node: ${NameHelper.peerName(peerId)}, was it recently blacklisted?")
@@ -67,7 +67,7 @@ class PeerStatuses(val params: SyncParameters) {
      * @param now is our current time (we want to send it to keep this pure = testable)
      * @return the nodes we SHOULDN'T sync
      */
-    fun excludedNonSyncable(height: Long, now: Long): Set<NodeRid> {
+    fun excludedNonSyncable(height: Long, now: Long = System.currentTimeMillis()): Set<NodeRid> {
         resurrectPeers(now)
         val excluded = statuses.filter {
             val state = it.value
@@ -75,7 +75,10 @@ class PeerStatuses(val params: SyncParameters) {
             !syncable
         }
         return excluded.keys
+    }
 
+    fun getSyncablePeers(height: Long): Set<NodeRid> {
+        return statuses.filterValues { it.isSyncable(height) }.keys
     }
 
     fun getLegacyPeers(height: Long): Set<NodeRid> {
@@ -146,6 +149,14 @@ class PeerStatuses(val params: SyncParameters) {
         return statuses.filterValues { it.isSyncable(height) && it.isConnected(System.currentTimeMillis()) }.map { it.key }.toSet()
     }
 
+    fun getPeersWithStatus(status: KnownState.State): Set<NodeRid> {
+        return statuses.filterValues { it.state == status }.map { it.key }.toSet()
+    }
+
+    fun getAllPeers(): Set<NodeRid> {
+        return statuses.keys.toSet()
+    }
+
     fun markConnected(peerIds: Set<NodeRid>) {
         peerIds.forEach { stateOf(it).connected() }
     }
@@ -164,5 +175,9 @@ class PeerStatuses(val params: SyncParameters) {
 
     fun markAllSyncable(height: Long) {
         statuses.values.filterNot { it.isSyncable(height) }.forEach { it.markAsSyncable() }
+    }
+
+    fun markSyncable(peerId: NodeRid) {
+        statuses[peerId]?.markAsSyncable()
     }
 }
