@@ -1,6 +1,7 @@
 package net.postchain.ebft.syncmanager.common
 
 import assertk.assertThat
+import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BlockWitnessProvider
@@ -139,7 +140,7 @@ class SnapshotSynchronizerTest {
         on { appConfig } doReturn appConfig
     }
     private val blockDatabase: BlockDatabase = mock()
-    private val peerStatuses: PeerStatuses = mock()
+    private val peerStatuses: PeerStatuses = PeerStatuses(SyncParameters())
     private val params = SyncParameters()
     private val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAwareTestModule>()
     private val messageQueue = LinkedList<Pair<NodeRid, EbftMessage>>()
@@ -208,8 +209,14 @@ class SnapshotSynchronizerTest {
                     ReceivedPacket(node4, 1L, notLatestSnapshotBlockHeaderMsg),
             )
         }.doAnswer(::provideQueuedPackets)
+        var firstGetSnapshotDataReplyWith = true
         val nodesReceivedGetSnapshotData = mutableSetOf<NodeRid>()
         whenGetSnapshotDataReplyWith { randomPeer, message ->
+            // Make sure we only have 1 node to start with
+            if (firstGetSnapshotDataReplyWith) {
+                assertThat(peerStatuses.getSyncablePeers(10)).hasSize(1)
+                firstGetSnapshotDataReplyWith = false
+            }
             nodesReceivedGetSnapshotData.add(randomPeer)
             if (nodesReceivedGetSnapshotData.size < peerIds.size)
                 listOf(SnapshotDatumData(gtv(true), false))
