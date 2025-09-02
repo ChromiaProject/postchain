@@ -11,7 +11,7 @@ import net.postchain.devtools.NameHelper
  * - Unresponsive: We haven't received a timely response from the peer
  * - Responsive: Node should work well
  */
-class PeerStatuses(val params: SyncParameters) {
+class PeerStatuses(val params: SyncPeerParameters) {
 
     companion object : KLogging()
 
@@ -148,10 +148,6 @@ class PeerStatuses(val params: SyncParameters) {
 
     fun getSyncableAndConnected(height: Long): Set<NodeRid> {
         return statuses.filterValues { it.isSyncable(height) && it.isConnected(System.currentTimeMillis()) }.map { it.key }.toSet()
-    }
-
-    fun getPeersWithStatus(status: KnownState.State): Set<NodeRid> {
-        return statuses.filterValues { it.state == status }.map { it.key }.toSet()
     }
 
     fun getAllPeers(): Set<NodeRid> {

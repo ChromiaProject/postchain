@@ -113,7 +113,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                 workerContext,
                 blockDatabase,
                 params,
-                PeerStatuses(params),
+                PeerStatuses(params.syncPeerParameters),
                 isProcessRunning,
                 rateLimitConfiguration
         )

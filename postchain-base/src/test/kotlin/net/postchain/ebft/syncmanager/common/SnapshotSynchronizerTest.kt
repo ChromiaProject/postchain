@@ -138,7 +138,7 @@ class SnapshotSynchronizerTest {
         on { appConfig } doReturn appConfig
     }
     private val blockDatabase: BlockDatabase = mock()
-    private val peerStatuses: PeerStatuses = PeerStatuses(SyncParameters(
+    private val peerStatuses: PeerStatuses = PeerStatuses(SyncPeerParameters(
             maxErrorsBeforeBlacklisting = 1
     ))
     private val params = SyncParameters()
@@ -230,7 +230,7 @@ class SnapshotSynchronizerTest {
 
         // Expected, everything is received but we are not interested in building the snapshot here
         val exception = assertThrows<ProgrammerMistake> {
-            params.snapshotSyncNodesUpdateIntervalTime = 10
+            params.snapshotSyncPeerParameters.resurrectDrainedTime = 10
             ss.trySnapshotSync()
         }
         assertThat(exception.message).isEqualTo("Snapshot root hashes do not match")
@@ -273,9 +273,8 @@ class SnapshotSynchronizerTest {
 
         // Expected, everything is received but we are not interested in building the snapshot here
         val exception = assertThrows<ProgrammerMistake> {
-            params.snapshotSyncNodesUpdateIntervalTime = -1
             params.jobTimeout = 100
-            params.resurrectDrainedTime = 100000000000L
+            params.syncPeerParameters.resurrectDrainedTime = Long.MAX_VALUE // Never
             ss.trySnapshotSync()
         }
         assertThat(exception.message).isEqualTo("Snapshot root hashes do not match")
@@ -290,7 +289,7 @@ class SnapshotSynchronizerTest {
      * All 4 nodes has latest snapshot but one node will send bad data and get blacklisted.
      */
     @Test
-    fun `bad data gets peer blacklisted`() {
+    fun `blacklist node due to bad data`() {
         peerIds.addAll(listOf(node1, node2, node3, node4))
         addTestModules(listOf(10L))
 
@@ -313,7 +312,7 @@ class SnapshotSynchronizerTest {
                 listOf(SnapshotDatumData(gtv(123), false))
             } else {
                 isProcessRunning = false
-                null
+                emptyList()
             }
         }
 
@@ -347,7 +346,7 @@ class SnapshotSynchronizerTest {
         }
     }
 
-    private fun whenGetSnapshotDataReplyWith(op: (peer: NodeRid, message: GetSnapshotData) -> List<SnapshotDatumData>?) {
+    private fun whenGetSnapshotDataReplyWith(op: (peer: NodeRid, message: GetSnapshotData) -> List<SnapshotDatumData>) {
         whenGetSnapshotData { peer, message ->
             SnapshotData(message.height, message.contextId, message.datumIdFrom,
                     op(peer, message), dummyProof)
@@ -390,11 +389,6 @@ class SnapshotSynchronizerTest {
         override fun getPermanentDatumIdMax(ctx: EContext): Long? = null
 
         override fun getPermanentDatum(ctx: EContext, datumId: Long): Gtv? = null
-
-        override fun constructDatum(ctx: EContext, datumId: Long, datum: Gtv, isPermanent: Boolean) {
-            // Capture data sent to module for verification
-            constructDatumInvocations.add(SnapshotDatum(datumId, datum, isPermanent))
-        }
 
         override fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>) {
             datumList.forEach(constructDatumInvocations::add)

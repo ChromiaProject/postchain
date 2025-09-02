@@ -227,9 +227,9 @@ class SnapshotTest : IntegrationTestSetup() {
                         if (datums.isEmpty()) {
                             break
                         }
-                        datums.forEach {
-                            destinationNodeModule.constructDatum(destinationNodeCtx, it.id, it.data, it.isPermanent)
-                        }
+                        destinationNodeModule.constructDatum(destinationNodeCtx, datums.mapIndexed { index, datum ->
+                            SnapshotDatum(offset + index, datum.data, datum.isPermanent)
+                        })
                         offset += datums.size
                     }
 
@@ -295,17 +295,6 @@ open class SnapshotTestModule(
             datum BYTEA
             )""".trimIndent())
         }
-    }
-
-    override fun constructDatum(ctx: EContext, datumId: Long, datum: Gtv, isPermanent: Boolean) {
-        val table = when (isPermanent) {
-            true -> conf.permanentTableName
-            false -> conf.tableName
-        }
-        QueryRunner().update(ctx.conn, """
-            INSERT INTO ${table} VALUES (?, ?)
-            ON CONFLICT (datum_id) DO UPDATE SET datum = EXCLUDED.datum
-            """.trimIndent(), datumId, GtvEncoder.encodeGtv(datum))
     }
 
     override fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>) {
