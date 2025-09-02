@@ -6,13 +6,19 @@ import net.postchain.common.exception.ProgrammerMistake
 
 class VerifyRangeProof(private val ds: DigestSystem) {
 
-    fun verify(expectedRoot: Hash, proof: RangeProof, startLeafIndex: Long, leafHashes: List<Hash>): Boolean {
+    /**
+     * Verify a proof of a range.
+     *
+     * @return A pair made up of <valid proof, range is the end>
+     */
+    fun verify(expectedRoot: Hash, proof: RangeProof, startLeafIndex: Long, leafHashes: List<Hash>): Pair<Boolean, Boolean> {
         if (leafHashes.isEmpty()) throw ProgrammerMistake("Must have at least one leaf")
+        val emptyRight = proof.rightBoundaryHashes.isEmpty() || proof.rightBoundaryHashes.all { it.contentEquals(EMPTY_HASH) }
 
         if (leafHashes.size == 1) {
             // Single leaf case - use standard Merkle proof verification
-            val merkleRoot = calculateMerkleRoot(proof.commonPath, startLeafIndex, leafHashes[0])
-            return merkleRoot.contentEquals(expectedRoot)
+            val (merkleRoot, allRightAreEmptyHash) = calculateMerkleRoot(proof.commonPath, startLeafIndex, leafHashes[0])
+            return merkleRoot.contentEquals(expectedRoot) to (emptyRight && allRightAreEmptyHash)
         }
 
         // Extract the range of leaves from the full leaf array
@@ -72,34 +78,25 @@ class VerifyRangeProof(private val ds: DigestSystem) {
         }
 
         // Now we should have exactly one node - follow the common path to root
-        if (currentLevel.size != 1) return false
+        if (currentLevel.size != 1) return false to false
 
-        var result = currentLevel[0]
-        var nodeIndex = currentStart
+        val (result, allRightAreEmptyHash) = calculateMerkleRoot(proof.commonPath, currentStart, currentLevel[0])
 
-        // Apply the common path hashes
-        for (commonHash in proof.commonPath) {
-            result = if (nodeIndex % 2 == 0L) {
-                ds.hash(result, commonHash)  // We're left child
-            } else {
-                ds.hash(commonHash, result)  // We're right child
-            }
-            nodeIndex /= 2
-        }
-
-        return result.contentEquals(expectedRoot)
+        return result.contentEquals(expectedRoot) to (emptyRight && allRightAreEmptyHash)
     }
 
-    fun calculateMerkleRoot(proofs: List<Hash>, pos: Long, leaf: Hash): Hash {
+    fun calculateMerkleRoot(proofs: List<Hash>, pos: Long, leaf: Hash): Pair<Hash, Boolean> {
         var r = leaf
+        var allRightAreEmptyHash = true
         proofs.forEachIndexed { i, h ->
             r = if (((pos shr i) and 1) != 0L) {
                 ds.hash(h, r)
             } else {
+                allRightAreEmptyHash = allRightAreEmptyHash && h.contentEquals(EMPTY_HASH)
                 ds.hash(r, h)
             }
         }
-        return r
+        return r to allRightAreEmptyHash
     }
 
     /**
