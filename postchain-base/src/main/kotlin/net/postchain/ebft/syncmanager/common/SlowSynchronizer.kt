@@ -54,7 +54,7 @@ class SlowSynchronizer(
         rateLimitConfiguration: RateLimitConfiguration,
         val clock: Clock = Clock.systemUTC(),
         slowSyncStateMachineProvider: (Int) -> SlowSyncStateMachine = { chainId -> SlowSyncStateMachine.buildWithChain(chainId, params) },
-        slowSyncPeerStatusesProvider: () -> PeerStatuses = { PeerStatuses(params) },
+        slowSyncPeerStatusesProvider: () -> PeerStatuses = { PeerStatuses(params.syncPeerParameters) },
         val slowSyncSleepDataProvider: () -> SlowSyncSleepData = { SlowSyncSleepData(params) },
         reentrantLockProvider: () -> ReentrantLock = { ReentrantLock() }
 ) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {

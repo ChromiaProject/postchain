@@ -8,7 +8,7 @@ class FastSyncPeerStatusesKnownStateTest {
 
     @Test
     fun test_drained() {
-        val params = SyncParameters()
+        val params = SyncPeerParameters()
         val state = KnownState(params)
 
         // Initial state
@@ -30,7 +30,7 @@ class FastSyncPeerStatusesKnownStateTest {
 
     @Test
     fun test_resurrect_after_unresponsive() {
-        val params = SyncParameters()
+        val params = SyncPeerParameters()
         val state = KnownState(params)
 
         // Initial state
@@ -55,7 +55,7 @@ class FastSyncPeerStatusesKnownStateTest {
      */
     @Test
     fun test_blacklist_and_timeout() {
-        val params = SyncParameters()
+        val params = SyncPeerParameters()
         val state = KnownState(params)
 
         // Initial state
@@ -86,7 +86,7 @@ class FastSyncPeerStatusesKnownStateTest {
 
     @Test
     fun `error should only persist until error timeout is met`() {
-        val params = SyncParameters()
+        val params = SyncPeerParameters()
         params.maxErrorsBeforeBlacklisting = 3
         params.blacklistingErrorTimeoutMs = 10
         val state = KnownState(params)

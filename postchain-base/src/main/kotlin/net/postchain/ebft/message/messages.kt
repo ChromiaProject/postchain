@@ -343,7 +343,7 @@ class SnapshotData(
         val height: Long,
         val contextId: Long,
         val datumIdFrom: Long,
-        val data: List<SnapshotDatumData>?,
+        val data: List<SnapshotDatumData>,
         val proof: SnapshotRangeProof?
 ) : EbftMessage(MessageTopic.SNAPSHOTDATA) {
     companion object {
@@ -352,7 +352,7 @@ class SnapshotData(
                     data[0 + arrOffset].asInteger(),
                     data[1 + arrOffset].asInteger(),
                     data[2 + arrOffset].asInteger(),
-                    data[3 + arrOffset].let { gtv -> if (gtv.isNull()) null else gtv.asArray().map { SnapshotDatumData(it[0], it[1].asBoolean()) } },
+                    data[3 + arrOffset].asArray().map { SnapshotDatumData(it[0], it[1].asBoolean()) },
                     data[4 + arrOffset].let { gtv -> if (gtv.isNull()) null else SnapshotRangeProof.buildFromGtv(gtv) }
             )
         }
@@ -363,7 +363,7 @@ class SnapshotData(
                 gtv(height),
                 gtv(contextId),
                 gtv(datumIdFrom),
-                if (data == null) GtvNull else gtv(data.map { gtv(it.data, gtv(it.isPermanent)) }),
+                gtv(data.map { gtv(it.data, gtv(it.isPermanent)) }),
                 proof?.toGtv() ?: GtvNull)
     }
 }

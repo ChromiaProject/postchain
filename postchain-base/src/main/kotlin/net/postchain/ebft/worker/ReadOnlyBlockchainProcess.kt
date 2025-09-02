@@ -77,7 +77,7 @@ class ReadOnlyBlockchainProcess(
             workerContext,
             blockDatabase,
             params,
-            PeerStatuses(params),
+            PeerStatuses(params.syncPeerParameters),
             ::isProcessRunning,
             RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
     )
@@ -94,7 +94,7 @@ class ReadOnlyBlockchainProcess(
             workerContext,
             persistOnlyBlockWriter,
             params,
-            PeerStatuses(params),
+            PeerStatuses(params.snapshotSyncPeerParameters),
             ::isProcessRunning,
             RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
     )

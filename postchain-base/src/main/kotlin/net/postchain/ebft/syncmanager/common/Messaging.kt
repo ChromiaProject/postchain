@@ -4,7 +4,6 @@ import mu.KLogging
 import net.postchain.base.BaseBlockEContext
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.snapshot.SimpleDigestSystem
-import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.base.snapshot.SnapshotPageStore
 import net.postchain.base.withReadWriteConnection
 import net.postchain.common.exception.ProgrammerMistake
@@ -207,7 +206,7 @@ abstract class Messaging(
                 val contextRootHashes = withReadWriteConnection(blockBuilderStorage, chainID) { ctx ->
                     // TODO: keep, or change LeafStore interface?
                     val bctx = BaseBlockEContext(ctx, headerData.getHeight(), -1, -1, mapOf()) { _, _, _ -> }
-                    val rootSnapshotStore = SnapshotPageStore(bctx, levelsPerPage.toInt(), 0,
+                    val rootSnapshotStore = SnapshotPageStore(bctx, levelsPerPage, 0,
                             SimpleDigestSystem(cryptoSystem), "${SNAPSHOT_TABLE_PREFIX}_root")
                     rootSnapshotStore.getAllLeafHashes(headerData.getHeight())
                 }
@@ -240,24 +239,20 @@ abstract class Messaging(
         try {
             val timeAndData = measureTimedValue {
                 blockQueries.getSnapshotData(height, contextId, datumIdFrom, maxDataSize, maxTime).get().let { data ->
-                    if (data.isEmpty()) {
-                        if ((blockQueries.getLatestSnapshotHeight().get() ?: -1) < height)
-                            null to null
-                        else
-                            emptyList<SnapshotDatum>() to null
-                    } else {
-                        val proof = blockQueries.getSnapshotRangeProof(height, contextId, datumIdFrom, datumIdFrom + data.size - 1).get()
-                        data to proof
-                    }
+                    val proof = if (data.isNotEmpty())
+                        blockQueries.getSnapshotRangeProof(height, contextId, datumIdFrom, datumIdFrom + data.size - 1).get()
+                    else
+                        null
+                    data to proof
                 }
             }
             val (data, proof) = timeAndData.value
 
-            logger.debug { "Read ${data?.size ?: 0} (${FileUtils.byteCountToDisplaySize(data?.sumOf { it.data.nrOfBytes() })}) snapshot data for height $height and context id $contextId to $peerId in ${timeAndData.duration.toInt(DurationUnit.MILLISECONDS)} ms" }
+            logger.debug { "Read ${data.size} (${FileUtils.byteCountToDisplaySize(data.sumOf { it.data.nrOfBytes() })}) snapshot data for height $height and context id $contextId to $peerId in ${timeAndData.duration.toInt(DurationUnit.MILLISECONDS)} ms" }
 
             val sendTime = measureTime {
                 communicationManager.sendPacket(SnapshotData(height, contextId, datumIdFrom,
-                        data?.map { SnapshotDatumData(it.data, it.isPermanent) },
+                        data.map { SnapshotDatumData(it.data, it.isPermanent) },
                         proof?.let { SnapshotRangeProof(proof.leftBoundaryHashes, proof.rightBoundaryHashes, proof.commonPath) }),
                         peerId)
                 servedSnapshotDataAtOffset.getOrPut(peerId) { mutableSetOf() }.add(requestId)

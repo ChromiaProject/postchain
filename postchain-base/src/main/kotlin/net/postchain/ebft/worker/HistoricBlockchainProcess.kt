@@ -73,7 +73,7 @@ class HistoricBlockchainProcess(
             workerContext,
             blockDatabase,
             syncParams,
-            PeerStatuses(syncParams),
+            PeerStatuses(syncParams.syncPeerParameters),
             ::isProcessRunning,
             RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
     )
@@ -149,7 +149,7 @@ class HistoricBlockchainProcess(
                             historicWorkerContext,
                             blockDatabase,
                             params,
-                            PeerStatuses(params),
+                            PeerStatuses(params.syncPeerParameters),
                             ::isProcessRunning,
                             RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
                     )
