@@ -228,11 +228,7 @@ class SnapshotSynchronizer(
                     is SnapshotData -> {
                         if (!awaitsSnapshotHeights) {
                             verifyAndGetExpectedRequest(message, peerId)?.let { state ->
-                                if (message.data.isNullOrEmpty()) {
-                                    // TODO remove if we can find end by proof
-                                    logger.info { "Node $peerId sends empty snapshot data for context ${state.contextId} and offset ${state.offset} to mark the end" }
-                                    contextSyncState.remove(state.contextId)
-                                } else {
+                                if (!message.data.isNullOrEmpty()) {
                                     val preparedData = message.data.mapIndexed { index, datum ->
                                         FullSnapshotDatumData(
                                                 message.datumIdFrom + index,
@@ -241,13 +237,21 @@ class SnapshotSynchronizer(
                                                 datum.isPermanent)
                                     }
 
-                                    if (verifyDataProof(message.contextId, message.datumIdFrom, message.proof!!, preparedData)) {
+                                    val (valid, end) = verifyDataProof(message.contextId, message.datumIdFrom, message.proof!!, preparedData)
+                                    if (valid) {
+                                        if (!end) {
+                                            requestNextSnapshotData(state, message)
+                                        }
 
-                                        requestNextSnapshotData(state, message)
                                         val storeTime = measureTime {
                                             storeSnapshotData(message.contextId, preparedData)
                                         }
                                         logger.debug { "Stored ${preparedData.size} datums (${FileUtils.byteCountToDisplaySize(preparedData.sumOf { it.data.nrOfBytes() })} bytes) from offset ${message.datumIdFrom} for context id ${message.contextId} in ${storeTime.toLong(DurationUnit.MILLISECONDS)} ms" }
+
+                                        if (end) {
+                                            logger.debug { "Snapshot end reached for context ${state.contextId}" }
+                                            contextSyncState.remove(state.contextId)
+                                        }
                                     } else {
                                         with("Snapshot data received from $peerId is not valid for context ${state.contextId} and offset ${state.offset}") {
                                             logger.warn(this)
@@ -268,7 +272,7 @@ class SnapshotSynchronizer(
         }
     }
 
-    private fun verifyDataProof(contextId: Long, datumIdFrom: Long, snapshotProof: SnapshotRangeProof, data: List<FullSnapshotDatumData>): Boolean {
+    private fun verifyDataProof(contextId: Long, datumIdFrom: Long, snapshotProof: SnapshotRangeProof, data: List<FullSnapshotDatumData>): Pair<Boolean, Boolean> {
         val leafs = TreeMap<Long, Hash>()
         data.forEach {
             leafs[it.datumId] = it.hash

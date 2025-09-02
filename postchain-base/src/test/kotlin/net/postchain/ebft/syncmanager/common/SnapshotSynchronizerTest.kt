@@ -149,12 +149,16 @@ class SnapshotSynchronizerTest {
     private val node3 = NodeRid(1) { 3 }
     private val node4 = NodeRid(1) { 4 }
     private val defaultBlockHeaderRootHash = Hash(10) { 5 }
+    private var verificationEnd = false
     private val verifyRangeProof = mock<VerifyRangeProof> {
-        on { verify(any<Hash>(), any<RangeProof>(), anyLong(), any<List<Hash>>()) } doReturn true
+        on { verify(any<Hash>(), any<RangeProof>(), anyLong(), any<List<Hash>>()) } doAnswer { (true to verificationEnd) }
         on { calculateMerkleRoot(any<List<Hash>>(), anyInt()) } doReturn defaultBlockHeaderRootHash
     }
 
     private lateinit var ss: SnapshotSynchronizer
+
+    private val dummyProof = SnapshotRangeProof(emptyList(), emptyList(), emptyList())
+    private val dummySnapshotData = listOf(SnapshotDatumData(gtv(1), true))
 
     @BeforeEach
     fun setup() {
@@ -167,15 +171,16 @@ class SnapshotSynchronizerTest {
     @Test
     fun `basic flow until building snapshot`() {
         peerIds.addAll(listOf(node1, node2, node3, node4))
-        addTestModules(listOf(2L, 4L))
+        addTestModules(listOf(4L))
         val snapshotBlockHeaderMsg = makeSnapshotBlockHeaderMessage(10)
         `when`(commManager.getPackets()).doAnswer {
             peerIds.map { ReceivedPacket(it, 1L, snapshotBlockHeaderMsg as EbftMessage) }.toMutableList()
         }.doAnswer(::provideQueuedPackets)
-        whenGetSnapshotDataReplyWith { randomPeer, message ->
-            if (message.datumIdFrom <= snapshotModuleByContextMap[message.contextId]!!.datumIdMax)
-                listOf(SnapshotDatumData(gtv(true), false))
-            else emptyList()
+        whenGetSnapshotDataReplyWith { _, message ->
+            if (message.datumIdFrom + 1 > snapshotModuleByContextMap[message.contextId]!!.datumIdMax) {
+                verificationEnd = true
+            }
+            dummySnapshotData
         }
 
         // Expected, everything is received but we are not interested in building the snapshot here
@@ -185,8 +190,7 @@ class SnapshotSynchronizerTest {
         assertThat(exception.message).isEqualTo("Snapshot root hashes do not match")
 
         // Assert constructed data
-        assertThat(snapshotModuleByContextMap[0]!!.constructDatumInvocations.size).isEqualTo(3)
-        assertThat(snapshotModuleByContextMap[1]!!.constructDatumInvocations.size).isEqualTo(5)
+        assertThat(snapshotModuleByContextMap[0]!!.constructDatumInvocations.size).isEqualTo(5)
     }
 
     /**
@@ -196,7 +200,7 @@ class SnapshotSynchronizerTest {
     @Test
     fun `detect new nodes during snapshot syncing`() {
         peerIds.addAll(listOf(node1, node2, node3, node4))
-        addTestModules(listOf(3L, 5L))
+        addTestModules(listOf(Long.MAX_VALUE))
 
         // Node2 has latest only
         val snapshotBlockHeaderMsg = makeSnapshotBlockHeaderMessage(10)
@@ -218,10 +222,10 @@ class SnapshotSynchronizerTest {
                 firstGetSnapshotDataReplyWith = false
             }
             nodesReceivedGetSnapshotData.add(randomPeer)
-            if (nodesReceivedGetSnapshotData.size < peerIds.size)
-                listOf(SnapshotDatumData(gtv(true), false))
-            else
-                emptyList()
+            if (nodesReceivedGetSnapshotData.size >= peerIds.size) {
+                verificationEnd = true
+            }
+            dummySnapshotData
         }
 
         // Expected, everything is received but we are not interested in building the snapshot here
@@ -262,7 +266,8 @@ class SnapshotSynchronizerTest {
             if (nodesReceivedGetSnapshotData.size < 3) {
                 null
             } else {
-                SnapshotData(message.height, message.contextId, message.datumIdFrom, emptyList(), null)
+                verificationEnd = true
+                SnapshotData(message.height, message.contextId, message.datumIdFrom, dummySnapshotData, dummyProof)
             }
         }
 
@@ -270,6 +275,7 @@ class SnapshotSynchronizerTest {
         val exception = assertThrows<ProgrammerMistake> {
             params.snapshotSyncNodesUpdateIntervalTime = -1
             params.jobTimeout = 100
+            params.resurrectDrainedTime = 100000000000L
             ss.trySnapshotSync()
         }
         assertThat(exception.message).isEqualTo("Snapshot root hashes do not match")
@@ -298,7 +304,7 @@ class SnapshotSynchronizerTest {
                     ReceivedPacket(node4, 1L, snapshotBlockHeaderMsg),
             )
         }.doAnswer(::provideQueuedPackets)
-        `when`(verifyRangeProof.verify(any<Hash>(), any<RangeProof>(), anyLong(), any<List<Hash>>())).thenReturn(false)
+        `when`(verifyRangeProof.verify(any<Hash>(), any<RangeProof>(), anyLong(), any<List<Hash>>())).thenReturn(false to false)
         var expectBlacklistedPeer: NodeRid? = null
 
         whenGetSnapshotDataReplyWith { randomPeer, message ->
@@ -344,7 +350,7 @@ class SnapshotSynchronizerTest {
     private fun whenGetSnapshotDataReplyWith(op: (peer: NodeRid, message: GetSnapshotData) -> List<SnapshotDatumData>?) {
         whenGetSnapshotData { peer, message ->
             SnapshotData(message.height, message.contextId, message.datumIdFrom,
-                    op(peer, message), SnapshotRangeProof(emptyList(), emptyList(), emptyList()))
+                    op(peer, message), dummyProof)
         }
     }
 
