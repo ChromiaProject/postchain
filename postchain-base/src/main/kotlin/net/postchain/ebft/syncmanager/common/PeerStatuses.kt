@@ -77,7 +77,8 @@ class PeerStatuses(val params: SyncParameters) {
         return excluded.keys
     }
 
-    fun getSyncablePeers(height: Long): Set<NodeRid> {
+    fun getSyncablePeers(height: Long, now: Long = System.currentTimeMillis()): Set<NodeRid> {
+        resurrectPeers(now)
         return statuses.filterValues { it.isSyncable(height) }.keys
     }
 

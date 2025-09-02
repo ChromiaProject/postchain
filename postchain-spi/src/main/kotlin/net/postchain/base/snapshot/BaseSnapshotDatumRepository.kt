@@ -71,17 +71,21 @@ class BaseSnapshotDatumRepository(
         return null
     }
 
-    override fun getDatums(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long): List<SnapshotDatum> {
-        val datums = mutableListOf<SnapshotDatum>()
+    override fun getDatums(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long, maxTime: Long): List<SnapshotDatum> {
+        val start = System.currentTimeMillis()
+        val data = mutableListOf<SnapshotDatum>()
         var size = 0
         var offset = datumIdFrom
         do {
             val datum = getDatumWithType(ctx, height, contextId, offset) ?: break
-            datums.add(SnapshotDatum(offset, datum.data, datum.isPermanent))
+            data.add(SnapshotDatum(offset, datum.data, datum.isPermanent))
             size += datum.data.nrOfBytes()
             offset++
+            if (System.currentTimeMillis() - start >= maxTime) {
+                break
+            }
         } while (size < maxDataSize)
-        return datums
+        return data
     }
 
     override fun getRangeProof(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long): RangeProof {

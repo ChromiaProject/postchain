@@ -69,7 +69,7 @@ class SnapshotSynchronizer(
     }
 
     private var receivedLatestSnapshotHeight = mutableMapOf<NodeRid, SnapshotBlockHeader>()
-    private val waitingForSnapshotDataByContext = mutableMapOf<Long, SnapshotDataRequest>()
+    private val contextSyncState = mutableMapOf<Long, SnapshotContextState>() // State of progress per context, each context is removed on completion
     private lateinit var blockSnapshotRootHash: ByteArray
     internal val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAware>()
 
@@ -227,10 +227,12 @@ class SnapshotSynchronizer(
                     }
                     is SnapshotData -> {
                         if (!awaitsSnapshotHeights) {
-                            verifyAndGetExpectedRequest(message, peerId)?.let { request ->
-                                waitingForSnapshotDataByContext.remove(request.contextId)
-
-                                if (!message.data.isNullOrEmpty()) {
+                            verifyAndGetExpectedRequest(message, peerId)?.let { state ->
+                                if (message.data.isNullOrEmpty()) {
+                                    // TODO remove if we can find end by proof
+                                    logger.info { "Node $peerId sends empty snapshot data for context ${state.contextId} and offset ${state.offset} to mark the end" }
+                                    contextSyncState.remove(state.contextId)
+                                } else {
                                     val preparedData = message.data.mapIndexed { index, datum ->
                                         FullSnapshotDatumData(
                                                 message.datumIdFrom + index,
@@ -240,17 +242,18 @@ class SnapshotSynchronizer(
                                     }
 
                                     if (verifyDataProof(message.contextId, message.datumIdFrom, message.proof!!, preparedData)) {
-                                        requestNextSnapshotData(message)
-                                        val processTime = measureTime {
+
+                                        requestNextSnapshotData(state, message)
+                                        val storeTime = measureTime {
                                             storeSnapshotData(message.contextId, preparedData)
                                         }
-                                        logger.debug { "Stored ${preparedData.size} datums (${FileUtils.byteCountToDisplaySize(preparedData.sumOf { it.data.nrOfBytes() })} bytes) from offset ${message.datumIdFrom} for context id ${message.contextId} in ${processTime.toLong(DurationUnit.MILLISECONDS)} ms" }
+                                        logger.debug { "Stored ${preparedData.size} datums (${FileUtils.byteCountToDisplaySize(preparedData.sumOf { it.data.nrOfBytes() })} bytes) from offset ${message.datumIdFrom} for context id ${message.contextId} in ${storeTime.toLong(DurationUnit.MILLISECONDS)} ms" }
                                     } else {
-                                        with("Snapshot data received from $peerId is not valid for context ${request.contextId} and offset ${request.offset}") {
+                                        with("Snapshot data received from $peerId is not valid for context ${state.contextId} and offset ${state.offset}") {
                                             logger.warn(this)
                                             peerStatuses.maybeBlacklist(peerId, this)
                                         }
-                                        sendGetSnapshotData(request.contextId, request.offset, request.sentTo + peerId)
+                                        sendGetSnapshotData(state)
                                     }
                                 }
                             }
@@ -270,10 +273,7 @@ class SnapshotSynchronizer(
         data.forEach {
             leafs[it.datumId] = it.hash
         }
-
-        val proof = with (snapshotProof) {
-            RangeProof(leftBoundaryHashes, rightBoundaryHashes, commonPath)
-        }
+        val proof = RangeProof(snapshotProof.leftBoundaryHashes, snapshotProof.rightBoundaryHashes, snapshotProof.commonPath)
         return verifyRangeProof.verify(blockHeaderContextData[contextId]!!.rootHash, proof, datumIdFrom, leafs.values.toList())
     }
 
@@ -283,19 +283,21 @@ class SnapshotSynchronizer(
         if (isProcessRunning()) {
             sendInitialSnapshotDataRequest()
 
-            while (isProcessRunning() && waitingForSnapshotDataByContext.isNotEmpty()) {
+            while (isProcessRunning() && contextSyncState.isNotEmpty()) {
                 processMessages(false)
                 processRequestTimeouts()
                 addMoreSnapshotNodes()
                 sleep(params.loopInterval)
             }
 
-            val latestSnapshotRootHash = buildSnapshot(params.syncToExactHeight)
-            if (blockSnapshotRootHash.contentEquals(latestSnapshotRootHash)) {
-                logger.info("Finished syncing snapshot")
-            } else {
-                logger.warn("Finished syncing snapshot, but root hashes do not match")
-                throw ProgrammerMistake("Snapshot root hashes do not match")
+            if (isProcessRunning() && contextSyncState.isEmpty()) {
+                val latestSnapshotRootHash = buildSnapshot(params.syncToExactHeight)
+                if (blockSnapshotRootHash.contentEquals(latestSnapshotRootHash)) {
+                    logger.info("Finished syncing snapshot")
+                } else {
+                    logger.warn("Finished syncing snapshot, but root hashes do not match")
+                    throw ProgrammerMistake("Snapshot root hashes do not match")
+                }
             }
         }
     }
@@ -356,23 +358,23 @@ class SnapshotSynchronizer(
         }
     }
 
-    private fun verifyAndGetExpectedRequest(message: SnapshotData, peerId: NodeRid): SnapshotDataRequest? {
-        val request = waitingForSnapshotDataByContext[message.contextId]
+    private fun verifyAndGetExpectedRequest(message: SnapshotData, peerId: NodeRid): SnapshotContextState? {
+        val contextState = contextSyncState[message.contextId]
         var error: String? = null
-        if (request == null) {
+        if (contextState == null) {
             error = "Received snapshot data for unknown context ${message.contextId}"
-        } else if (message.datumIdFrom != request.offset) {
-            error = "Received snapshot data for wrong context ${message.contextId}, expected ${request.offset}, got ${message.datumIdFrom}"
+        } else if (message.datumIdFrom != contextState.offset) {
+            error = "Received incorrect offset in snapshot data for context ${message.contextId}, expected offset ${contextState.offset}, got ${message.datumIdFrom}"
         } else if (message.height != params.syncToExactHeight) {
             error = "Received snapshot data for wrong height, expected ${params.syncToExactHeight}, got ${message.height}"
         } else if (message.data == null) {
             logger.debug { "Node $peerId does not have requested height ${message.height} in snapshot context ${message.contextId}. Node is removed from list and request is sent to another node." }
             peerStatuses.drained(peerId, -1)
-            sendGetSnapshotData(message.contextId, message.datumIdFrom)
+            sendGetSnapshotData(contextState)
         } else if (message.data.isNotEmpty() && message.proof == null) {
             error = "Node $peerId did not include snapshot proof for height ${message.height} in context ${message.contextId}."
         } else {
-            return request
+            return contextState
         }
 
         if (error != null) {
@@ -384,42 +386,48 @@ class SnapshotSynchronizer(
 
     private fun sendInitialSnapshotDataRequest() {
         blockQueries.getSnapshotContextMaxIds(params.syncToExactHeight).get()
-                .forEach { (contextId, maxId) ->
-            sendGetSnapshotData(contextId, if (maxId == null) 0 else (maxId + 1))
-        }
+                .forEach { (contextId, _) ->
+                    // TODO we will for now always start from 0, but on restart etc we could continue sync from the same height
+                    val state = SnapshotContextState(contextId)
+                    contextSyncState[state.contextId] = state
+                    sendGetSnapshotData(state)
+                }
     }
 
-    private fun sendGetSnapshotData(contextId: Long, offset: Long, sentTo: Set<NodeRid> = setOf()) {
-        val message = GetSnapshotData(params.syncToExactHeight, contextId, offset)
+    private fun sendGetSnapshotData(contextState: SnapshotContextState) {
+        val message = GetSnapshotData(params.syncToExactHeight, contextState.contextId, contextState.offset)
         val snapshotNodes = peerStatuses.getSyncablePeers(params.syncToExactHeight)
-        val peer = communicationManager.sendToRandomPeer(message, snapshotNodes.minus(sentTo)).first ?: let {
+        val peer = communicationManager.sendToRandomPeer(message, snapshotNodes.minus(contextState.sentTo.toSet())).first ?: let {
             logger.info { "Snapshot data request has been sent to all available nodes without any response. Retrying with random nodes." }
             communicationManager.sendToRandomPeer(message, snapshotNodes).first
         }
         if (peer == null) {
-            throw ProgrammerMistake("Couldn't find any nodes to send snapshot data request to")
+            logger.info { "Couldn't find any node to send snapshot data request to for context ${contextState.contextId} and offset ${contextState.offset}." }
+        } else {
+            contextState.sentTo.add(peer)
+            logger.debug { "Sent GetSnapshotData to peer $peer for context ${contextState.contextId}, offset ${contextState.offset}. Already sent to: ${contextState.sentTo}" }
         }
-        waitingForSnapshotDataByContext[contextId] = SnapshotDataRequest(contextId, offset,
-                System.currentTimeMillis(), sentTo + setOf(peer))
-        logger.debug { "Sent GetSnapshotData to peer $peer for context $contextId, offset $offset. Already sent to: $sentTo" }
+        contextState.timeSent = System.currentTimeMillis()
     }
 
-    private fun requestNextSnapshotData(message: SnapshotData) {
+    private fun requestNextSnapshotData(state: SnapshotContextState, message: SnapshotData) {
         // Request next batch unless last was empty, which means we are done
         if (message.data!!.isNotEmpty()) {
-            val offset = message.datumIdFrom + message.data.size
-            sendGetSnapshotData(message.contextId, offset)
+            state.offset += message.data.size
+            state.sentTo.clear()
+            sendGetSnapshotData(state)
         }
     }
 
     private fun processRequestTimeouts() {
         val now = System.currentTimeMillis()
-        val requestTimeouts = waitingForSnapshotDataByContext
+        contextSyncState
                 .filterValues { it.timeSent + params.jobTimeout < now }
-        waitingForSnapshotDataByContext.keys.removeAll(requestTimeouts.keys)
-        requestTimeouts.forEach { (contextId, request) ->
-            logger.debug { "Snapshot request timed out for context $contextId, sending request to another node" }
-            sendGetSnapshotData(contextId, request.offset, request.sentTo)
+                .values
+                .forEach {
+            logger.debug { "Snapshot request timed out for context ${it.contextId} and offset ${it.offset}, sending request to another node" }
+                    peerStatuses.unresponsive(it.sentTo.last(), "Snapshot request timed out")
+                    sendGetSnapshotData(it)
         }
     }
 
@@ -452,11 +460,13 @@ class SnapshotSynchronizer(
 }
 
 /** Track active requests */
-data class SnapshotDataRequest(
+data class SnapshotContextState(
         val contextId: Long,
-        val offset: Long,
-        val timeSent: Long,
-        val sentTo: Set<NodeRid>,
+        var offset: Long = 0,
+        var timeSent: Long = System.currentTimeMillis(),
+
+        /** Nodes that have already been sent current request, in order */
+        val sentTo: MutableList<NodeRid> = mutableListOf(),
 )
 
 data class FullSnapshotDatumData(val datumId: Long, val data: Gtv, val hash: Hash, val isPermanent: Boolean)

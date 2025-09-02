@@ -223,7 +223,7 @@ class SnapshotTest : IntegrationTestSetup() {
 
                     var offset = 0L
                     while (true) {
-                        val datums = datumRepository.getDatums(sourceNodeCtx, height, contextId, offset, maxDataSize)
+                        val datums = datumRepository.getDatums(sourceNodeCtx, height, contextId, offset, maxDataSize, Long.MAX_VALUE,)
                         if (datums.isEmpty()) {
                             break
                         }

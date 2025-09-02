@@ -165,7 +165,7 @@ class SlowSynchronizer(
                     is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight.get()) // A replica might ask us
                     is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(peerId, workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID, workerContext.blockchainConfiguration.snapshot.levelsPerPage, workerContext.appConfig.cryptoSystem)
                     is GetSnapshotData -> sendSnapshotData(peerId, blockchainConfiguration.chainID, message.height,
-                            message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize)
+                            message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize, params.snapshotSyncMaxTime)
 
                     // But we only expect ranges and status to be sent to us
                     is BlockRange -> {
