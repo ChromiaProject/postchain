@@ -45,8 +45,6 @@ import net.postchain.gtx.SnapshotAware
 import net.postchain.gtx.SnapshotContext
 import net.postchain.network.CommunicationManager
 import net.postchain.network.ReceivedPacket
-import org.awaitility.Awaitility
-import org.awaitility.Duration
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -140,7 +138,9 @@ class SnapshotSynchronizerTest {
         on { appConfig } doReturn appConfig
     }
     private val blockDatabase: BlockDatabase = mock()
-    private val peerStatuses: PeerStatuses = PeerStatuses(SyncParameters())
+    private val peerStatuses: PeerStatuses = PeerStatuses(SyncParameters(
+            maxErrorsBeforeBlacklisting = 1
+    ))
     private val params = SyncParameters()
     private val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAwareTestModule>()
     private val messageQueue = LinkedList<Pair<NodeRid, EbftMessage>>()
@@ -149,6 +149,10 @@ class SnapshotSynchronizerTest {
     private val node3 = NodeRid(1) { 3 }
     private val node4 = NodeRid(1) { 4 }
     private val defaultBlockHeaderRootHash = Hash(10) { 5 }
+    private val verifyRangeProof = mock<VerifyRangeProof> {
+        on { verify(any<Hash>(), any<RangeProof>(), anyLong(), any<List<Hash>>()) } doReturn true
+        on { calculateMerkleRoot(any<List<Hash>>(), anyInt()) } doReturn defaultBlockHeaderRootHash
+    }
 
     private lateinit var ss: SnapshotSynchronizer
 
@@ -156,10 +160,6 @@ class SnapshotSynchronizerTest {
     fun setup() {
         snapshotModuleByContextMap.clear()
         messageQueue.clear()
-        val verifyRangeProof = mock<VerifyRangeProof> {
-            on { verify(any<Hash>(), any<RangeProof>(), anyLong(), any<List<Hash>>()) } doReturn true
-            on { calculateMerkleRoot(any<List<Hash>>(), anyInt()) } doReturn defaultBlockHeaderRootHash
-        }
         ss = spy(SnapshotSynchronizer(workerContext, blockDatabase, params, peerStatuses, { isProcessRunning },
                 RateLimitConfiguration(100), verifyRangeProof))
     }
@@ -167,7 +167,7 @@ class SnapshotSynchronizerTest {
     @Test
     fun `basic flow until building snapshot`() {
         peerIds.addAll(listOf(node1, node2, node3, node4))
-        addTestModules(listOf(3L, 5L))
+        addTestModules(listOf(2L, 4L))
         val snapshotBlockHeaderMsg = makeSnapshotBlockHeaderMessage(10)
         `when`(commManager.getPackets()).doAnswer {
             peerIds.map { ReceivedPacket(it, 1L, snapshotBlockHeaderMsg as EbftMessage) }.toMutableList()
@@ -232,9 +232,7 @@ class SnapshotSynchronizerTest {
         assertThat(exception.message).isEqualTo("Snapshot root hashes do not match")
 
         // Assert all nodes eventually got the request
-        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            assertThat(nodesReceivedGetSnapshotData.size).isEqualTo(4)
-        }
+        assertThat(nodesReceivedGetSnapshotData.size).isEqualTo(4)
     }
 
     /**
@@ -277,9 +275,45 @@ class SnapshotSynchronizerTest {
         assertThat(exception.message).isEqualTo("Snapshot root hashes do not match")
 
         // Assert all nodes eventually got the request
-        Awaitility.await().atMost(Duration.ONE_MINUTE).untilAsserted {
-            assertThat(nodesReceivedGetSnapshotData.size).isEqualTo(3)
+        assertThat(nodesReceivedGetSnapshotData.size).isEqualTo(3)
+        // And since all timed out was marked as unresponsive
+        assertThat(peerStatuses.peersStates.map { it.second }.all { it.state == KnownState.State.UNRESPONSIVE })
+    }
+
+    /**
+     * All 4 nodes has latest snapshot but one node will send bad data and get blacklisted.
+     */
+    @Test
+    fun `bad data gets peer blacklisted`() {
+        peerIds.addAll(listOf(node1, node2, node3, node4))
+        addTestModules(listOf(10L))
+
+        // Node2 has latest only
+        val snapshotBlockHeaderMsg = makeSnapshotBlockHeaderMessage(10)
+        `when`(commManager.getPackets()).doAnswer {
+            mutableListOf(
+                    ReceivedPacket(node1, 1L, snapshotBlockHeaderMsg),
+                    ReceivedPacket(node2, 1L, snapshotBlockHeaderMsg),
+                    ReceivedPacket(node3, 1L, snapshotBlockHeaderMsg),
+                    ReceivedPacket(node4, 1L, snapshotBlockHeaderMsg),
+            )
+        }.doAnswer(::provideQueuedPackets)
+        `when`(verifyRangeProof.verify(any<Hash>(), any<RangeProof>(), anyLong(), any<List<Hash>>())).thenReturn(false)
+        var expectBlacklistedPeer: NodeRid? = null
+
+        whenGetSnapshotDataReplyWith { randomPeer, message ->
+            if (expectBlacklistedPeer == null) {
+                expectBlacklistedPeer = randomPeer
+                listOf(SnapshotDatumData(gtv(123), false))
+            } else {
+                isProcessRunning = false
+                null
+            }
         }
+
+        ss.trySnapshotSync()
+
+        assertThat(peerStatuses.stateOf(expectBlacklistedPeer!!).state).isEqualTo(KnownState.State.BLACKLISTED)
     }
 
     private fun provideQueuedPackets(mock: KInvocationOnMock): MutableList<ReceivedPacket<EbftMessage>> {

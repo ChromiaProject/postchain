@@ -255,9 +255,9 @@ abstract class BaseBlockQueries(
         snapshotDatumRepository.getContextMaxIds(it, height)
     }
 
-    override fun getSnapshotData(height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long):
+    override fun getSnapshotData(height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long, maxTime: Long):
             CompletionStage<List<SnapshotDatum>> = runOpRegardless {
-        snapshotDatumRepository.getDatums(it, height, contextId, datumIdFrom, maxDataSize)
+        snapshotDatumRepository.getDatums(it, height, contextId, datumIdFrom, maxDataSize, maxTime)
     }
 
     override fun getSnapshotRangeProof(height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long):

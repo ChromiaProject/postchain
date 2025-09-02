@@ -39,7 +39,7 @@ interface BlockQueries : Shutdownable {
     fun getLatestSnapshotHeight(): CompletionStage<Long?>
     fun getLatestSnapshotBlockHeader(): CompletionStage<BlockHeaderWithWitness?>
     fun getSnapshotContextMaxIds(height: Long): CompletionStage<Map<Long, Long?>>
-    fun getSnapshotData(height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long): CompletionStage<List<SnapshotDatum>>
+    fun getSnapshotData(height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long, maxTime: Long): CompletionStage<List<SnapshotDatum>>
     fun getSnapshotRangeProof(height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long): CompletionStage<RangeProof>
     fun getConfirmationProof(txRID: ByteArray): CompletionStage<ConfirmationProof?>
     fun getBlocksBetweenTimes(timeFilter: BlockQueryTimeFilter, limit: Int, txHashesOnly: Boolean, maxDataSize: Int, excludeEmpty: Boolean): CompletionStage<BlockDetailsTruncated>

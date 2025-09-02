@@ -76,9 +76,14 @@ data class SyncParameters(
         var snapshotSyncNodesUpdateIntervalTime: Long = 1000 * 60 * 5,
         /**
          * The size limit of a snapshot sync data message, in bytes. A [SnapshotData] message is filled with snapshot
-         * datums until this limit is reached.
+         * data until this limit is reached.
          */
         var snapshotSyncMaxDataSize: Long = BlockPacker.MAX_PACKAGE_CONTENT_BYTES.toLong(),
+        /**
+         * The time limit to spend on populating a snapshot sync data message, in ms. A [SnapshotData] message is filled with snapshot
+         * data until this limit is reached.
+         */
+        var snapshotSyncMaxTime: Long = 5_000,
 ) : Config {
     companion object {
         @JvmStatic
@@ -103,6 +108,7 @@ data class SyncParameters(
                     snapshotSyncThreshold = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_THRESHOLD", "snapshotsync.threshold", 100_000),
                     snapshotSyncNodesUpdateIntervalTime = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_NODE_UPDATE_INTERVAL_TIME", "snapshotsync.nodes_update_interval_time", 300000),
                     snapshotSyncMaxDataSize = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_MAX_DATA_SIZE", "snapshotsync.max_data_size", BlockPacker.MAX_PACKAGE_CONTENT_BYTES.toLong()),
+                    snapshotSyncMaxTime = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_MAX_TIME", "snapshotsync.max_time", 5_000L),
             ).also(init)
         }
     }

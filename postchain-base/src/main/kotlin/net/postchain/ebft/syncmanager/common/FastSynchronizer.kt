@@ -685,7 +685,7 @@ class FastSynchronizer(
                             workerContext.blockchainConfiguration.chainID, workerContext.blockchainConfiguration.snapshot.levelsPerPage,
                             workerContext.appConfig.cryptoSystem)
                     is GetSnapshotData -> sendSnapshotData(peerId, blockchainConfiguration.chainID, message.height,
-                            message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize)
+                            message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize, params.snapshotSyncMaxTime)
 
                     else -> {
                         if (signers.contains(peerId)) {

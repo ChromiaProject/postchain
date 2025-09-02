@@ -32,7 +32,11 @@ import net.postchain.ebft.syncmanager.common.BlockPacker.MAX_BLOCKS_IN_PACKAGE
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
 import net.postchain.network.CommunicationManager
+import org.apache.commons.io.FileUtils
 import java.util.Objects
+import kotlin.time.DurationUnit
+import kotlin.time.measureTime
+import kotlin.time.measureTimedValue
 
 abstract class Messaging(
         val blockQueries: BlockQueries,
@@ -222,7 +226,10 @@ abstract class Messaging(
         }
     }
 
-    fun sendSnapshotData(peerId: NodeRid, chainId: Long, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long) {
+    fun sendSnapshotData(
+            peerId: NodeRid, chainId: Long, height: Long, contextId: Long,
+            datumIdFrom: Long, maxDataSize: Long, maxTime: Long
+    ) {
         val requestId = Objects.hash(chainId, height, contextId, datumIdFrom)
         if (servedSnapshotDataAtOffset[peerId]?.contains(requestId) == true) {
             logger.debug { "Already responded to request from peer $peerId for snapshot data for chainID $chainId, height $height, contextID $contextId and datumIDFrom $datumIdFrom. Ignoring." }
@@ -231,25 +238,34 @@ abstract class Messaging(
         // TODO need something as this? if (isTotalServedBlockRequestLimitReached(peerId)) return
 
         try {
-            val (data, proof) = blockQueries.getSnapshotData(height, contextId, datumIdFrom, maxDataSize).get().let { data ->
-                if (data.isEmpty()) {
-                    if ((blockQueries.getLatestSnapshotHeight().get() ?: -1) < height)
-                        null to null
-                    else
-                        emptyList<SnapshotDatum>() to null
-                } else {
-                    val proof = blockQueries.getSnapshotRangeProof(height, contextId, datumIdFrom, datumIdFrom + data.size - 1).get()
-                    data to proof
+            val timeAndData = measureTimedValue {
+                blockQueries.getSnapshotData(height, contextId, datumIdFrom, maxDataSize, maxTime).get().let { data ->
+                    if (data.isEmpty()) {
+                        if ((blockQueries.getLatestSnapshotHeight().get() ?: -1) < height)
+                            null to null
+                        else
+                            emptyList<SnapshotDatum>() to null
+                    } else {
+                        val proof = blockQueries.getSnapshotRangeProof(height, contextId, datumIdFrom, datumIdFrom + data.size - 1).get()
+                        data to proof
+                    }
                 }
             }
+            val (data, proof) = timeAndData.value
 
-            communicationManager.sendPacket(SnapshotData(height, contextId, datumIdFrom,
-                    data?.map { SnapshotDatumData(it.data, it.isPermanent) },
-                    proof?.let { SnapshotRangeProof(proof.leftBoundaryHashes, proof.rightBoundaryHashes, proof.commonPath) }),
-                    peerId)
-            servedSnapshotDataAtOffset.getOrPut(peerId) { mutableSetOf() }.add(requestId)
+            logger.debug { "Read ${data?.size ?: 0} (${FileUtils.byteCountToDisplaySize(data?.sumOf { it.data.nrOfBytes() })}) snapshot data for height $height and context id $contextId to $peerId in ${timeAndData.duration.toInt(DurationUnit.MILLISECONDS)} ms" }
+
+            val sendTime = measureTime {
+                communicationManager.sendPacket(SnapshotData(height, contextId, datumIdFrom,
+                        data?.map { SnapshotDatumData(it.data, it.isPermanent) },
+                        proof?.let { SnapshotRangeProof(proof.leftBoundaryHashes, proof.rightBoundaryHashes, proof.commonPath) }),
+                        peerId)
+                servedSnapshotDataAtOffset.getOrPut(peerId) { mutableSetOf() }.add(requestId)
+            }
+
+            logger.debug { "Sent snapshot data for height $height and context id $contextId to $peerId in ${sendTime.toInt(DurationUnit.MILLISECONDS)} ms" }
         } catch (e: Exception) {
-            logger.debug(e) { "Error sending snapshot data for height $height and context id $contextId to $peerId" }
+            logger.error(e) { "Error sending snapshot data for height $height and context id $contextId to $peerId" }
         }
     }
 
