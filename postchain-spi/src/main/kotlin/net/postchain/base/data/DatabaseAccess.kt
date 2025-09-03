@@ -179,7 +179,6 @@ interface DatabaseAccess {
     fun getAccountState(ctx: EContext, prefix: String, height: Long, stateN: Long): AccountState?
     fun getState(ctx: EContext, prefix: String, height: Long, stateN: Long): StateData?
     fun getStatesBySize(ctx: EContext, prefix: String, height: Long, stateNFrom: Long, maxDataSize: Long): List<StateData>
-    // TODO: Might not be needed since we can read datums until empty
     fun getStateNMax(ctx: EContext, prefix: String, height: Long): Long?
     fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, heightMustBeHigherThan: Long)
     fun safePruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, nextSnapshotHeight: Long)
