@@ -1,7 +1,6 @@
 package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
-import net.postchain.base.BaseBlockEContext
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.base.snapshot.SnapshotPageStore
@@ -204,9 +203,7 @@ abstract class Messaging(
 
                 // TODO: move?
                 val contextRootHashes = withReadWriteConnection(blockBuilderStorage, chainID) { ctx ->
-                    // TODO: keep, or change LeafStore interface?
-                    val bctx = BaseBlockEContext(ctx, headerData.getHeight(), -1, -1, mapOf()) { _, _, _ -> }
-                    val rootSnapshotStore = SnapshotPageStore(bctx, levelsPerPage, 0,
+                    val rootSnapshotStore = SnapshotPageStore(ctx, levelsPerPage, 0,
                             SimpleDigestSystem(cryptoSystem), "${SNAPSHOT_TABLE_PREFIX}_root")
                     rootSnapshotStore.getAllLeafHashes(headerData.getHeight())
                 }

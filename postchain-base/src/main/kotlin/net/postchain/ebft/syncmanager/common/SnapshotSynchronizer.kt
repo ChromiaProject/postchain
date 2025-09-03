@@ -1,7 +1,6 @@
 package net.postchain.ebft.syncmanager.common
 
 import mu.KLogging
-import net.postchain.base.BaseBlockEContext
 import net.postchain.base.BaseBlockWitness
 import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.snapshot
@@ -72,6 +71,7 @@ class SnapshotSynchronizer(
     private val contextSyncState = mutableMapOf<Long, SnapshotContextState>() // State of progress per context, each context is removed on completion
     private lateinit var blockSnapshotRootHash: ByteArray
     internal val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAware>()
+    private var lastStoredSnapshotData = mutableMapOf<Long, Long>() // TODO: remove later, just for monitoring wasted time
 
     var blockHeaderContextData: Map<Long, SnapshotBlockHeaderContextData> = emptyMap()
         private set
@@ -240,10 +240,15 @@ class SnapshotSynchronizer(
                                         requestNextSnapshotData(state, message)
                                     }
 
+                                    val waitTime = lastStoredSnapshotData[message.contextId]?.let {
+                                        System.currentTimeMillis() - it
+                                    }
+
                                     val storeTime = measureTime {
                                         storeSnapshotData(message.contextId, preparedData)
                                     }
-                                    logger.debug { "Stored ${preparedData.size} datums (${FileUtils.byteCountToDisplaySize(preparedData.sumOf { it.data.nrOfBytes() })} bytes) from offset ${message.datumIdFrom} for context id ${message.contextId} in ${storeTime.toLong(DurationUnit.MILLISECONDS)} ms" }
+                                    logger.debug { "Stored ${preparedData.size} datums (${FileUtils.byteCountToDisplaySize(preparedData.sumOf { it.data.nrOfBytes() })} bytes) from offset ${message.datumIdFrom} for context id ${message.contextId} in ${storeTime.toLong(DurationUnit.MILLISECONDS)} ms. Wasted time from last store: $waitTime ms" }
+                                    lastStoredSnapshotData[message.contextId] = System.currentTimeMillis()
 
                                     if (end) {
                                         logger.debug { "Snapshot end reached for context ${state.contextId}" }
@@ -303,9 +308,7 @@ class SnapshotSynchronizer(
 
     private fun buildSnapshot(height: Long): Hash {
         return withReadWriteConnection(workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID) { ctx ->
-            // TODO: keep, or change LeafStore interface?
-            val bctx = BaseBlockEContext(ctx, height, -1, -1, mapOf()) { _, _, _ -> }
-            RootSnapshotBlockBuilder(bctx, workerContext.blockchainConfiguration.snapshot.levelsPerPage,
+            RootSnapshotBlockBuilder(ctx, height, workerContext.blockchainConfiguration.snapshot.levelsPerPage,
                 workerContext.appConfig.cryptoSystem).build()
         }
     }

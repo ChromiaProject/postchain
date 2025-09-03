@@ -1,10 +1,12 @@
 package net.postchain.base.snapshot
 
 import mu.KLogging
+import net.postchain.base.BaseBlockEContext
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.common.data.Hash
 import net.postchain.common.toHex
 import net.postchain.core.BlockEContext
+import net.postchain.core.EContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
 import java.util.TreeMap
@@ -18,6 +20,10 @@ class RootSnapshotBlockBuilder(
     private val rootSnapshotStore = SnapshotPageStore(bctx, levelsPerPage, 0, digestSystem, "${SNAPSHOT_TABLE_PREFIX}_root")
 
     companion object : KLogging()
+
+    constructor(ctx: EContext, height: Long, levelsPerPage: Int, cryptoSystem: CryptoSystem) : this(
+            BaseBlockEContext(ctx, height, -1, -1, mapOf()) { _, _, _ -> }, levelsPerPage, cryptoSystem
+    )
 
     fun getLastSnapshotHeight(): Long? = rootSnapshotStore.getLastSnapshotHeight()
 
