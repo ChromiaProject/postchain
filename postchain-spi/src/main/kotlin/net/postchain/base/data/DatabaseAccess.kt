@@ -178,6 +178,7 @@ interface DatabaseAccess {
     @Deprecated("Use getState()", ReplaceWith("getState(ctx, prefix, height, stateN)"))
     fun getAccountState(ctx: EContext, prefix: String, height: Long, stateN: Long): AccountState?
     fun getState(ctx: EContext, prefix: String, height: Long, stateN: Long): StateData?
+    fun streamStates(ctx: EContext, prefix: String, height: Long, startN: Long, op: (stateData: StateData?) -> Boolean)
     fun getStatesBySize(ctx: EContext, prefix: String, height: Long, stateNFrom: Long, maxDataSize: Long): List<StateData>
     // TODO: Might not be needed since we can read datums until empty
     fun getStateNMax(ctx: EContext, prefix: String, height: Long): Long?

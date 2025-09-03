@@ -393,5 +393,9 @@ class SnapshotSynchronizerTest {
         override fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>) {
             datumList.forEach(constructDatumInvocations::add)
         }
+
+        override fun streamPermanentDatums(ctx: EContext, datumIdFrom: Long, op: (stateData: SnapshotDatum?) -> Boolean) {
+            TODO("Not yet implemented")
+        }
     }
 }

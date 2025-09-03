@@ -14,6 +14,8 @@ interface SnapshotAware {
 
     fun getPermanentDatum(ctx: EContext, datumId: Long): Gtv?
 
+    fun streamPermanentDatums(ctx: EContext, datumIdFrom: Long, op: (stateData: SnapshotDatum?) -> Boolean)
+
     /** Let the module rebuild its table data from snapshot datum data  */
     fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>)
 }

@@ -539,6 +539,28 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         )
     }
 
+    override fun streamStates(ctx: EContext, prefix: String, height: Long, startN: Long, op: (stateData: StateData?) -> Boolean) {
+        val sql = """SELECT state_n, data FROM ${tableStateLeafs(ctx, prefix)} 
+            WHERE block_height <= ? AND state_n >= ? 
+            ORDER BY state_n ASC"""
+        ctx.conn.prepareStatement(sql).use {
+            it.setLong(1, height)
+            it.setLong(2, startN)
+            val resultSet = it.executeQuery()
+            while (resultSet.next()) {
+                val data = StateData(
+                        height,
+                        resultSet.getLong("state_n"),
+                        resultSet.getBytes("data")
+                )
+                if (!op(data)) {
+                    return
+                }
+            }
+            op(null)
+        }
+    }
+
     @Deprecated("Remove?")
     override fun getStatesBySize(ctx: EContext, prefix: String, height: Long, stateNFrom: Long, maxDataSize: Long): List<StateData> {
         val sql = """

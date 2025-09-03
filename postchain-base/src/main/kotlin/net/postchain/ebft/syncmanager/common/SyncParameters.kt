@@ -73,7 +73,7 @@ data class SyncParameters(
          * The time limit to spend on populating a snapshot sync data message, in ms. A [net.postchain.ebft.message.SnapshotData] message is filled with snapshot
          * data until this limit is reached.
          */
-        var snapshotSyncMaxTime: Long = 5_000,
+        var snapshotSyncMaxLoadTime: Long = 5_000,
         var syncPeerParameters: SyncPeerParameters = SyncPeerParameters(),
         var snapshotSyncPeerParameters: SyncPeerParameters = SyncPeerParameters(),
 ) : Config {
@@ -102,7 +102,7 @@ data class SyncParameters(
                     // TODO: document all snapshot configs
                     snapshotSyncThreshold = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_THRESHOLD", "snapshotsync.threshold", 100_000),
                     snapshotSyncMaxDataSize = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_MAX_DATA_SIZE", "snapshotsync.max_data_size", BlockPacker.MAX_PACKAGE_CONTENT_BYTES.toLong()),
-                    snapshotSyncMaxTime = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_MAX_TIME", "snapshotsync.max_time", 5_000L),
+                    snapshotSyncMaxLoadTime = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_MAX_TIME", "snapshotsync.max_load_time", 5_000L),
                     syncPeerParameters = syncPeerParameters,
                     snapshotSyncPeerParameters = SyncPeerParameters(
                             resurrectDrainedTime = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_RESURRECT_DRAINED_TIME", "snapshotsync.resurrect_drained_time", TimeUnit.MINUTES.toMillis(10)),

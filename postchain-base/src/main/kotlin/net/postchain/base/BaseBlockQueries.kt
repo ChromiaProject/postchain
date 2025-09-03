@@ -10,6 +10,7 @@ import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.base.snapshot.SnapshotDatumRepository
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
+import net.postchain.concurrent.util.get
 import net.postchain.core.EContext
 import net.postchain.core.PmEngineIsAlreadyClosed
 import net.postchain.core.Storage
@@ -256,8 +257,10 @@ abstract class BaseBlockQueries(
     }
 
     override fun getSnapshotData(height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long, maxTime: Long):
-            CompletionStage<List<SnapshotDatum>> = runOpRegardless {
-        snapshotDatumRepository.getDatums(it, height, contextId, datumIdFrom, maxDataSize, maxTime)
+            CompletionStage<List<SnapshotDatum>> = runOpRegardless { ctx1 ->
+                runOpRegardless { ctx2 ->
+                    snapshotDatumRepository.getDatumsFaster(ctx1, ctx2, height, contextId, datumIdFrom, maxDataSize, maxTime)
+                }.get()
     }
 
     override fun getSnapshotRangeProof(height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long):

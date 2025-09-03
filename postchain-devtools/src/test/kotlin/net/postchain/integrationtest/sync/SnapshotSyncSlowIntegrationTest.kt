@@ -21,6 +21,7 @@ import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
+import org.apache.commons.io.FileUtils
 import org.awaitility.Awaitility
 import org.awaitility.Duration
 import org.junit.jupiter.api.Disabled
@@ -181,11 +182,13 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
     @Disabled // TODO just for manual tests, remove or move out?
     fun syncMoreData() {
 
-        nodeConfigurationOverrides["snapshotsync.max_time"] = 8_000
+        nodeConfigurationOverrides["snapshotsync.max_load_time"] = 8_000
 //        nodeConfigurationOverrides["snapshotsync.max_data_size"] = 1024 * 1024 * 1
         val datumLength = 200
         val dataItemsPerContext = 50_000L // per context
         val chunks = 5000
+
+        logger.info { "Generating ${FileUtils.byteCountToDisplaySize(datumLength * dataItemsPerContext)} of data per context and $chunks chunks..." }
 
         startManagedSystem(4, 1, restApi = true)
 

@@ -248,7 +248,7 @@ abstract class Messaging(
             }
             val (data, proof) = timeAndData.value
 
-            logger.debug { "Read ${data.size} (${FileUtils.byteCountToDisplaySize(data.sumOf { it.data.nrOfBytes() })}) snapshot data for height $height and context id $contextId to $peerId in ${timeAndData.duration.toInt(DurationUnit.MILLISECONDS)} ms" }
+            logger.debug { "Read ${data.size} (${FileUtils.byteCountToDisplaySize(data.sumOf { it.data.nrOfBytes() })}) snapshot data for height $height, context id $contextId, offset $datumIdFrom to $peerId in ${timeAndData.duration.toInt(DurationUnit.MILLISECONDS)} ms" }
 
             val sendTime = measureTime {
                 communicationManager.sendPacket(SnapshotData(height, contextId, datumIdFrom,

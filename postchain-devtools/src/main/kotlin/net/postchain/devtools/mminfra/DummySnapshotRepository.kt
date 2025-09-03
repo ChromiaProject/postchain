@@ -16,6 +16,10 @@ class DummySnapshotRepository : SnapshotDatumRepository {
 
     override fun getDatums(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long, maxTime: Long): List<SnapshotDatum> = emptyList()
 
+    override fun getDatumsFaster(ctx1: EContext, ctx2: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long, maxTime: Long): List<SnapshotDatum> {
+        TODO("Not yet implemented")
+    }
+
     override fun getRangeProof(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long): RangeProof {
         TODO("Not yet implemented")
     }

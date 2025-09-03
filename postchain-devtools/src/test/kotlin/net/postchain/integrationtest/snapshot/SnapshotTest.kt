@@ -1,6 +1,7 @@
 package net.postchain.integrationtest.snapshot
 
 import assertk.assertThat
+import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
 import assertk.assertions.isNull
 import assertk.assertions.isZero
@@ -252,6 +253,39 @@ class SnapshotTest : IntegrationTestSetup() {
             }
         }
     }
+
+    @Test
+    fun quickDataRead() {
+        val nodes = createNodes(4, "/net/postchain/devtools/snapshot/blockchain_config_4.xml")
+        val brid = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.blockchainRid
+        val transactionFactory = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.getConfiguration().getTransactionFactory()
+
+        val datums = 2000L
+        buildBlock(DEFAULT_CHAIN_IID, 2, transactionFactory.decodeTransaction(GtxBuilder(brid, emptyList(), cryptoSystem, GtvMerkleHashCalculatorV2(cryptoSystem))
+                .apply {
+                    (0..<datums).forEach {
+                        addOperation("emit_datum_a", gtv(it), gtv("a_datum_$it"), gtv(it % 4 == 0L))
+                        addOperation("emit_datum_b", gtv(it), gtv("b_datum_$it"), gtv(it % 4 == 0L))
+                    }
+                }
+                .finish()
+                .buildGtx()
+                .encode()))
+
+        val datumRepository = BaseSnapshotDatumRepository(nodes[0].getModules().filterIsInstance<SnapshotAware>(),
+                2, cryptoSystem)
+
+        val height = Long.MAX_VALUE
+        nodes[0].getModules(DEFAULT_CHAIN_IID).filterIsInstance<SnapshotTestModule>().forEach { sourceNodeModule ->
+            withReadConnection(nodes[0].postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { sourceNodeCtx ->
+                val contextId = DatabaseAccess.of(sourceNodeCtx).getSnapshotContextId(sourceNodeCtx, sourceNodeModule::class.java.canonicalName)
+                val result = withReadConnection(nodes[0].postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { sourceNodeCtx2 ->
+                    datumRepository.getDatumsFaster(sourceNodeCtx, sourceNodeCtx2, height, contextId, 0, Long.MAX_VALUE, 3_000_000)
+                }
+                assertThat(result).hasSize(datums.toInt())
+            }
+        }
+    }
 }
 
 class SnapshotTestModuleConf {
@@ -283,6 +317,25 @@ open class SnapshotTestModule(
             return GtvDecoder.decodeGtv(rawDatum)
         }
         return null
+    }
+
+    override fun streamPermanentDatums(ctx: EContext, datumIdFrom: Long, op: (stateData: SnapshotDatum?) -> Boolean) {
+        val sql = "SELECT datum_id, datum FROM ${conf.permanentTableName} WHERE datum_id >= ?"
+        ctx.conn.prepareStatement(sql).use {
+            it.setLong(1, datumIdFrom)
+            val resultSet = it.executeQuery()
+            while (resultSet.next()) {
+                val data = SnapshotDatum(
+                        resultSet.getLong("datum_id"),
+                        GtvDecoder.decodeGtv(resultSet.getBytes("datum")),
+                        true
+                )
+                if (!op(data)) {
+                    return
+                }
+            }
+            op(null)
+        }
     }
 
     override fun initializeDB(ctx: EContext) {
