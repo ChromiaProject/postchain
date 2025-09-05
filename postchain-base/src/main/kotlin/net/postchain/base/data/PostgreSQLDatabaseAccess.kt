@@ -234,6 +234,15 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
                     " UNIQUE(context_id, datum_id)" +
                     ")"
 
+    override fun cmdCreateTableSnapshotSyncState(chainId: Long): String {
+        return "CREATE TABLE IF NOT EXISTS ${tableSnapshotSyncState(chainId)} (name TEXT PRIMARY KEY, value TEXT NOT NULL)"
+    }
+
+    override fun cmdCreateTableSnapshotSyncContextState(chainId: Long): String {
+        return "CREATE TABLE IF NOT EXISTS ${tableSnapshotSyncContextState(chainId)} (" +
+                "context_id BIGINT PRIMARY KEY, root_hash BYTEA NOT NULL, datum_id_offset BIGINT NOT NULL, max_datum_id BIGINT NOT NULL)"
+    }
+
     override fun cmdCreateTablePeerInfos(): String {
         return "CREATE TABLE ${tablePeerinfos()} (" +
                 " $TABLE_PEERINFOS_FIELD_HOST text NOT NULL" +

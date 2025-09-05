@@ -104,12 +104,20 @@ class SnapshotSynchronizerTest {
         on { signers } doReturn listOf(nodeRid.data)
         on { chainID } doReturn ourChainId
         on { merkleHashCalculator } doReturn makeMerkleHashCalculator(2)
+        on { getSnapshotAwareModules() } doAnswer {
+            snapshotModuleByContextMap.values.toList()
+        }
     }
-    private val databaeAccess = mock<DatabaseAccess>()
+    private val databaeAccess = mock<DatabaseAccess> {
+        on { getSnapshotContextModule(any<EContext>(), anyLong()) } doAnswer {
+            snapshotModuleByContextMap[it.getArgument(1)]!!.name
+        }
+    }
     private val ctx = mock<EContext> {
         on { getInterface(eq(DatabaseAccess::class.java)) } doReturn databaeAccess
     }
     private val storage = mock<Storage> {
+        on { openReadConnection(anyLong()) } doReturn ctx
         on { openWriteConnection(anyLong()) } doReturn ctx
     }
     private val blockchainEngine: BlockchainEngine = mock {
@@ -141,7 +149,9 @@ class SnapshotSynchronizerTest {
     private val peerStatuses: PeerStatuses = PeerStatuses(SyncPeerParameters(
             maxErrorsBeforeBlacklisting = 1
     ))
-    private val params = SyncParameters()
+    private val params = SyncParameters(
+            snapshotSyncThreshold = 0
+    )
     private val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAwareTestModule>()
     private val messageQueue = LinkedList<Pair<NodeRid, EbftMessage>>()
     private val node1 = NodeRid(1) { 1 }
@@ -293,7 +303,6 @@ class SnapshotSynchronizerTest {
         peerIds.addAll(listOf(node1, node2, node3, node4))
         addTestModules(listOf(10L))
 
-        // Node2 has latest only
         val snapshotBlockHeaderMsg = makeSnapshotBlockHeaderMessage(10)
         `when`(commManager.getPackets()).doAnswer {
             mutableListOf(
@@ -303,7 +312,10 @@ class SnapshotSynchronizerTest {
                     ReceivedPacket(node4, 1L, snapshotBlockHeaderMsg),
             )
         }.doAnswer(::provideQueuedPackets)
-        `when`(verifyRangeProof.verify(any<Hash>(), any<RangeProof>(), anyLong(), any<List<Hash>>())).thenReturn(false to false)
+        `when`(verifyRangeProof.verify(any<Hash>(), any<RangeProof>(), anyLong(), any<List<Hash>>())).thenAnswer {
+            isProcessRunning = false
+            false to false
+        }
         var expectBlacklistedPeer: NodeRid? = null
 
         whenGetSnapshotDataReplyWith { randomPeer, message ->
@@ -311,7 +323,6 @@ class SnapshotSynchronizerTest {
                 expectBlacklistedPeer = randomPeer
                 listOf(SnapshotDatumData(gtv(123), false))
             } else {
-                isProcessRunning = false
                 emptyList()
             }
         }
@@ -353,7 +364,7 @@ class SnapshotSynchronizerTest {
         }
     }
 
-    private fun makeSnapshotBlockHeaderMessage(height: Long, snapshotRootHash: Hash = defaultBlockHeaderRootHash, datumIdMax: Long = 20L): SnapshotBlockHeader {
+    private fun makeSnapshotBlockHeaderMessage(height: Long, snapshotRootHash: Hash = defaultBlockHeaderRootHash): SnapshotBlockHeader {
         val blockHeaderData = BlockHeaderData(
                 gtv(BlockchainRid.ZERO_RID.data),
                 gtv(BlockchainRid.ZERO_RID.data),
@@ -367,9 +378,9 @@ class SnapshotSynchronizerTest {
         val witnessBuffer = ByteBuffer.wrap(witnessBytes)
         witnessBuffer.putInt(0)
         val snapshotBlockHeaderMsg = SnapshotBlockHeader(GtvEncoder.encodeGtv(blockHeaderData.toGtv()), witnessBytes,
-                listOf(
-                        SnapshotBlockHeaderContextData(0, ByteArray(0), datumIdMax),
-                        SnapshotBlockHeaderContextData(1, ByteArray(0), datumIdMax))
+                snapshotModuleByContextMap.values.map {
+                    SnapshotBlockHeaderContextData(it.contextId, ByteArray(0), it.datumIdMax)
+                }
         )
         return snapshotBlockHeaderMsg
     }
@@ -380,7 +391,11 @@ class SnapshotSynchronizerTest {
         ss.snapshotModuleByContextMap.putAll(snapshotModuleByContextMap)
     }
 
-    class SnapshotAwareTestModule(val contextId: Long, val datumIdMax: Long) : SnapshotAware {
+    class SnapshotAwareTestModule(
+            val contextId: Long,
+            val datumIdMax: Long,
+            val name: String = "module_$contextId"
+    ) : SnapshotAware {
 
         val constructDatumInvocations = mutableListOf<SnapshotDatum>()
 

@@ -201,7 +201,6 @@ abstract class Messaging(
             if (blockHeader != null) {
                 val headerData = BlockHeaderData.fromBinary(blockHeader.header.rawData)
 
-                // TODO: move?
                 val contextRootHashes = withReadWriteConnection(blockBuilderStorage, chainID) { ctx ->
                     val rootSnapshotStore = SnapshotPageStore(ctx, levelsPerPage, 0,
                             SimpleDigestSystem(cryptoSystem), "${SNAPSHOT_TABLE_PREFIX}_root")
@@ -255,7 +254,7 @@ abstract class Messaging(
                 servedSnapshotDataAtOffset.getOrPut(peerId) { mutableSetOf() }.add(requestId)
             }
 
-            logger.debug { "Sent snapshot data for height $height and context id $contextId to $peerId in ${sendTime.toInt(DurationUnit.MILLISECONDS)} ms" }
+            logger.debug { "Sent snapshot data for height $height, context id $contextId and offset $datumIdFrom to $peerId in ${sendTime.toInt(DurationUnit.MILLISECONDS)} ms" }
         } catch (e: Exception) {
             logger.error(e) { "Error sending snapshot data for height $height and context id $contextId to $peerId" }
         }

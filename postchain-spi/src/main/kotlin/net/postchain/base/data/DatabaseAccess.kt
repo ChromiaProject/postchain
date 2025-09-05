@@ -191,7 +191,16 @@ interface DatabaseAccess {
     fun getHighestLevelPageAtHeight(ctx: EContext, pageStoreName: String, height: Long): Int
     fun getPrunablePages(ctx: EContext, pageStoreName: String, lowestHeightToKeep: Long): List<Long>
     fun getLowestSnapshotHeightToKeep(ctx: EContext, pageStoreName: String, blockHeight: Long, snapshotsToKeep: Int = 100): Long?
+
+    // Snapshots
     fun getLatestSnapshotHeight(ctx: EContext, pageStoreName: String): Long?
+    fun getSnapshotSyncState(ctx: EContext): SnapshotSyncState?
+    fun setSnapshotSyncState(ctx: EContext, state: SnapshotSyncState)
+    fun setSnapshotSyncContextState(ctx: EContext, state: SnapshotSyncContextState)
+    fun getAllSnapshotSyncContexts(ctx: EContext): List<SnapshotSyncContextState>
+    fun setSnapshotSyncContextStateOffset(ctx: EContext, contextId: Long, offset: Long)
+    fun removeSnapshotSyncContextState(ctx: EContext, contextId: Long)
+    fun pruneSnapshotSyncState(ctx: EContext)
 
     // Peers
     fun getPeerInfoCollection(ctx: AppContext): Array<PeerInfo>

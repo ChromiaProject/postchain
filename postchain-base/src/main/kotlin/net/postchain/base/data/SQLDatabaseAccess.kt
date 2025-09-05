@@ -66,6 +66,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     protected fun tableFaultyConfiguration(chainId: Long): String = tableName(chainId, "sys.faulty_configuration")
     protected fun tableSnapshotContexts(chainId: Long): String = tableName(chainId, "sys.snapshot_contexts")
     protected fun tableSnapshotUpdatedDatum(chainId: Long): String = tableName(chainId, "sys.snapshot_updated_datum")
+    protected fun tableSnapshotSyncState(chainId: Long): String = tableName(chainId, "sys.snapshot_sync_state")
+    protected fun tableSnapshotSyncState(ctx: EContext): String = tableSnapshotSyncState(ctx.chainID)
+    protected fun tableSnapshotSyncContextState(chainId: Long): String = tableName(chainId, "sys.snapshot_sync_context_state")
+    protected fun tableSnapshotSyncContextState(ctx: EContext): String = tableSnapshotSyncContextState(ctx.chainID)
     private fun tableFaultyConfiguration(ctx: EContext): String = tableFaultyConfiguration(ctx.chainID)
     internal fun tableTransactions(ctx: EContext): String = tableName(ctx, "transactions")
     protected fun tableTransactions(chainId: Long): String = tableName(chainId, "transactions")
@@ -127,6 +131,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     protected abstract fun cmdCreateTableSnapshotContexts(chainId: Long): String
     protected abstract fun cmdCreateTableSnapshotUpdatedDatum(chainId: Long): String
+    protected abstract fun cmdCreateTableSnapshotSyncState(chainId: Long): String
+    protected abstract fun cmdCreateTableSnapshotSyncContextState(chainId: Long): String
 
     // Tables not part of the batch creation run
     protected abstract fun cmdCreateTableEvent(ctx: EContext, prefix: String): String
@@ -147,6 +153,7 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
     private val intRes = ScalarHandler<Int>()
     val longRes = ScalarHandler<Long>()
     private val stringRes = ScalarHandler<String>()
+    private val nullableStringRes = ScalarHandler<String?>()
     private val nullableByteArrayRes = ScalarHandler<ByteArray?>()
     private val nullableIntRes = ScalarHandler<Int?>()
     private val nullableLongRes = ScalarHandler<Long?>()
@@ -170,6 +177,9 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
         const val TABLE_SYNC_UNTIL_FIELD_CHAIN_IID = "chain_iid"
         const val TABLE_SYNC_UNTIL_FIELD_HEIGHT = "block_height"
+
+        const val TABLE_SNAPSHOT_SYNC_STATE_HEIGHT = "height"
+        const val TABLE_SNAPSHOT_SYNC_STATE_ROOT_HASH = "root_hash"
     }
 
     override fun isSchemaExists(connection: Connection, schema: String): Boolean {
@@ -967,6 +977,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 .forEach { chainId ->
                     queryRunner.update(connection, cmdCreateTableSnapshotContexts(chainId))
                     queryRunner.update(connection, cmdCreateTableSnapshotUpdatedDatum(chainId))
+                    queryRunner.update(connection, cmdCreateTableSnapshotSyncState(chainId))
+                    queryRunner.update(connection, cmdCreateTableSnapshotSyncContextState(chainId))
                 }
     }
 
@@ -1006,6 +1018,8 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         queryRunner.update(ctx.conn, cmdDropTableConfigurationDataNotNull(ctx.chainID))
         queryRunner.update(ctx.conn, cmdCreateTableSnapshotContexts(ctx.chainID))
         queryRunner.update(ctx.conn, cmdCreateTableSnapshotUpdatedDatum(ctx.chainID))
+        queryRunner.update(ctx.conn, cmdCreateTableSnapshotSyncState(ctx.chainID))
+        queryRunner.update(ctx.conn, cmdCreateTableSnapshotSyncContextState(ctx.chainID))
 
         val txIndex = "CREATE INDEX IF NOT EXISTS ${tableName(ctx, "transactions_block_iid_idx")} " +
                 "ON ${tableTransactions(ctx)}(block_iid)"
@@ -1650,6 +1664,67 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         val sql = "SELECT max(block_height) FROM ${tablePages(ctx, pageStoreName)}"
 
         return queryRunner.query(ctx.conn, sql, nullableLongRes)
+    }
+
+    override fun getSnapshotSyncState(ctx: EContext): SnapshotSyncState? {
+        val height = getSnapshotSyncStateValue(ctx, TABLE_SNAPSHOT_SYNC_STATE_HEIGHT)?.toLong()
+        val rootHash = getSnapshotSyncStateValue(ctx, TABLE_SNAPSHOT_SYNC_STATE_ROOT_HASH)?.hexStringToByteArray()
+        if (height != null && rootHash != null) {
+            return SnapshotSyncState(height, rootHash)
+        }
+        return null
+    }
+
+    override fun setSnapshotSyncState(ctx: EContext, state: SnapshotSyncState) {
+        setSnapshotSyncStateValue(ctx, TABLE_SNAPSHOT_SYNC_STATE_HEIGHT, state.height.toString())
+        setSnapshotSyncStateValue(ctx, TABLE_SNAPSHOT_SYNC_STATE_ROOT_HASH, state.rootHash.toHex())
+    }
+
+    override fun setSnapshotSyncContextState(ctx: EContext, state: SnapshotSyncContextState) {
+        val sql = """
+            INSERT INTO ${tableSnapshotSyncContextState(ctx)} (context_id, root_hash, datum_id_offset, max_datum_id)
+            VALUES (?, ?, ?, ?)
+        """.trimIndent()
+        queryRunner.update(ctx.conn, sql, state.contextId, state.contextRootHash, state.datumIdOffset, state.maxDatumId)
+    }
+
+    override fun getAllSnapshotSyncContexts(ctx: EContext): List<SnapshotSyncContextState> {
+        val sql = "SELECT context_id, root_hash, datum_id_offset, max_datum_id FROM ${tableSnapshotSyncContextState(ctx)}"
+        return queryRunner.query(ctx.conn, sql, mapListHandler)
+                .map { SnapshotSyncContextState(
+                        it["context_id"] as Long,
+                        it["root_hash"] as ByteArray,
+                        it["datum_id_offset"] as Long,
+                        it["max_datum_id"] as Long,
+                ) }
+    }
+
+    private fun getSnapshotSyncStateValue(ctx: EContext, name: String): String? {
+        val sql = "SELECT value FROM ${tableSnapshotSyncState(ctx)} where name = ?"
+        return queryRunner.query(ctx.conn, sql, nullableStringRes, name)
+    }
+
+    override fun setSnapshotSyncContextStateOffset(ctx: EContext, contextId: Long, offset: Long) {
+        val sql = "UPDATE ${tableSnapshotSyncContextState(ctx)} SET datum_id_offset = ? WHERE context_id = ?"
+        queryRunner.update(ctx.conn, sql, contextId, offset)
+    }
+
+    override fun removeSnapshotSyncContextState(ctx: EContext, contextId: Long) {
+        val sql = "DELETE FROM ${tableSnapshotSyncContextState(ctx)} WHERE context_id = ?"
+        queryRunner.update(ctx.conn, sql, contextId)
+    }
+
+    private fun setSnapshotSyncStateValue(ctx: EContext, name: String, value: String) {
+        val sql = """
+            INSERT INTO ${tableSnapshotSyncState(ctx)} (name, value) VALUES (?, ?)
+            ON CONFLICT (name) DO UPDATE SET value = EXCLUDED.value;
+        """.trimIndent()
+        queryRunner.update(ctx.conn, sql, name, value)
+    }
+
+    override fun pruneSnapshotSyncState(ctx: EContext) {
+        queryRunner.update(ctx.conn, "DELETE FROM ${tableSnapshotSyncState(ctx)}")
+        queryRunner.update(ctx.conn, "DELETE FROM ${tableSnapshotSyncContextState(ctx)}")
     }
 
     /**
