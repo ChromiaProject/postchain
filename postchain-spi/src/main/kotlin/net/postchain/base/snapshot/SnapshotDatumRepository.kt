@@ -12,7 +12,6 @@ interface SnapshotDatumRepository {
 
     fun getDatumWithType(ctx: EContext, height: Long, contextId: Long, datumId: Long): SnapshotDatum?
 
-    // TODO: remove maxDataSize and use MAX_PACKAGE_CONTENT_BYTES as hard limit instead?
     fun getDatums(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long, maxTime: Long): List<SnapshotDatum>
 
     fun getRangeProof(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long): RangeProof

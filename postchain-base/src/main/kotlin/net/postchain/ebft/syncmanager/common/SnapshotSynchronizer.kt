@@ -6,6 +6,8 @@ import net.postchain.base.configuration.BlockchainConfigurationData
 import net.postchain.base.configuration.snapshot
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatumInfo
+import net.postchain.base.data.SnapshotSyncContextState
+import net.postchain.base.data.SnapshotSyncState
 import net.postchain.base.extension.CONFIG_HASH_EXTRA_HEADER
 import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.snapshot.RangeProof
@@ -15,12 +17,10 @@ import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.base.snapshot.VerifyRangeProof
 import net.postchain.base.withReadConnection
-import net.postchain.base.withReadWriteConnection
 import net.postchain.base.withWriteConnection
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
-import net.postchain.concurrent.util.get
 import net.postchain.core.BlockRid
 import net.postchain.core.EContext
 import net.postchain.core.NodeRid
@@ -68,13 +68,12 @@ class SnapshotSynchronizer(
     }
 
     private var receivedLatestSnapshotHeight = mutableMapOf<NodeRid, SnapshotBlockHeader>()
-    private val contextSyncState = mutableMapOf<Long, SnapshotContextState>() // State of progress per context, each context is removed on completion
-    private lateinit var blockSnapshotRootHash: ByteArray
+    private val contextSyncRequests = mutableMapOf<Long, SnapshotContextState>() // State of progress per context, each context is removed on completion
     internal val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAware>()
     private var lastStoredSnapshotData = mutableMapOf<Long, Long>() // TODO: remove later, just for monitoring wasted time
 
-    var blockHeaderContextData: Map<Long, SnapshotBlockHeaderContextData> = emptyMap()
-        private set
+    private lateinit var syncState: SnapshotSyncState
+    private val contextStates = mutableMapOf<Long, SnapshotSyncContextState>()
 
     // TODO: Fetch snapshot info and determine if it is worth it
     fun trySnapshotSync() {
@@ -95,7 +94,17 @@ class SnapshotSynchronizer(
         }
     }
 
+    fun getContextStates(): List<SnapshotSyncContextState> {
+        return contextStates.values.toList()
+    }
+
     private fun shouldDoSnapshotSync(): Boolean {
+
+        if (loadOngoingSyncState()) {
+            logger.info("Continuing snapshot sync for height ${syncState.height} with context offsets: ${contextStates.values.map { it.contextId to it.datumIdOffset }}")
+            return true
+        }
+
         var lastRequestForSnapshotHeight = 0L
         var numberOfTries = 0
         while (isProcessRunning()) {
@@ -120,7 +129,6 @@ class SnapshotSynchronizer(
                 .filter { (_, blockHeader) -> blockHeader.header.isNotEmpty() }
                 .map { (peerId, blockHeader) -> peerId to blockHeader }
                 .sortedByDescending { (_, blockHeader) -> BlockHeaderData.fromBinary(blockHeader.header).getHeight() }
-        // TODO: Return false if we are below snapshot sync threshold?
 
         // We try all but unless peers are malicious or we are lacking config it should be fine
         for ((peerId, candidate) in snapshotCandidates) {
@@ -176,10 +184,36 @@ class SnapshotSynchronizer(
             try {
                 validator.validateWitness(BaseBlockWitness.fromBytes(candidate.witness), witnessBuilder)
                 logger.info("Received snapshot info from peers, highest valid height was: $candidateHeaderHeight")
+
+                if (candidateHeaderHeight <= params.snapshotSyncThreshold) {
+                    logger.info("Snapshot height $candidateHeaderHeight is below threshold ${params.snapshotSyncThreshold}. Not syncing snapshot.")
+                    return false
+                }
+
                 params.syncToExactHeight  = candidateHeaderHeight
-                candidateHeader.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]?.asByteArray()?.let { blockSnapshotRootHash = it }
-                blockHeaderContextData = getVerifiedContextData(candidate)
+                val rootHash = candidateHeader.getExtra()[SNAPSHOT_ROOT_EXTRA_HEADER]?.asByteArray() ?:
+                    throw ProgrammerMistake("Snapshot root hash not found in block header")
+                val blockHeaderContextData = getVerifiedContextData(candidate, rootHash)
+
+                withWriteConnection(workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID) { ctx ->
+                    DatabaseAccess.of(ctx).apply {
+                        pruneSnapshotSyncState(ctx)
+
+                        syncState = SnapshotSyncState(candidateHeaderHeight, rootHash)
+                        setSnapshotSyncState(ctx, syncState)
+
+                        blockHeaderContextData.values.forEach {
+                            val contextState = SnapshotSyncContextState(it.contextId, it.rootHash,
+                                    0, it.datumIdMax ?: 0)
+                            contextStates[it.contextId] = contextState
+                            setSnapshotSyncContextState(ctx, contextState)
+                        }
+                    }
+                    true
+                }
+
                 setInitialNodeStates(candidate)
+
                 logger.info("Snapshot sync starts from nodes: ${peerStatuses.getSyncablePeers(candidateHeaderHeight)}")
                 return true
             } catch (e: Exception) {
@@ -190,7 +224,7 @@ class SnapshotSynchronizer(
             }
         }
 
-        return false // TODO: What do we do here?
+        return false
     }
 
     /**
@@ -245,14 +279,14 @@ class SnapshotSynchronizer(
                                     }
 
                                     val storeTime = measureTime {
-                                        storeSnapshotData(message.contextId, preparedData)
+                                        storeSnapshotData(message.contextId, preparedData, end)
                                     }
-                                    logger.debug { "Stored ${preparedData.size} datums (${FileUtils.byteCountToDisplaySize(preparedData.sumOf { it.data.nrOfBytes() })} bytes) from offset ${message.datumIdFrom} for context id ${message.contextId} in ${storeTime.toLong(DurationUnit.MILLISECONDS)} ms. Wasted time from last store: $waitTime ms" }
+                                    logger.debug { "Stored ${preparedData.size} datums (${FileUtils.byteCountToDisplaySize(preparedData.sumOf { it.data.nrOfBytes() })}) from offset ${message.datumIdFrom} for context id ${message.contextId} in ${storeTime.toLong(DurationUnit.MILLISECONDS)} ms. End: $end. Wasted time from last store: $waitTime ms" }
                                     lastStoredSnapshotData[message.contextId] = System.currentTimeMillis()
 
                                     if (end) {
                                         logger.debug { "Snapshot end reached for context ${state.contextId}" }
-                                        contextSyncState.remove(state.contextId)
+                                        contextSyncRequests.remove(state.contextId)
                                     }
                                 } else {
                                     with("Snapshot data received from $peerId is not valid for context ${state.contextId} and offset ${state.offset}") {
@@ -279,54 +313,61 @@ class SnapshotSynchronizer(
             leafs[it.datumId] = it.hash
         }
         val proof = RangeProof(snapshotProof.leftBoundaryHashes, snapshotProof.rightBoundaryHashes, snapshotProof.commonPath)
-        return verifyRangeProof.verify(blockHeaderContextData[contextId]!!.rootHash, proof, datumIdFrom, leafs.values.toList())
+        return verifyRangeProof.verify(contextStates[contextId]!!.contextRootHash, proof, datumIdFrom, leafs.values.toList())
     }
 
-    // Snapshot responses must be validated as proofs
     private fun syncSnapshotUntil() {
 
         if (isProcessRunning()) {
             sendInitialSnapshotDataRequest()
 
-            while (isProcessRunning() && contextSyncState.isNotEmpty()) {
+            while (isProcessRunning() && contextSyncRequests.isNotEmpty()) {
                 processMessages(false)
                 processRequestTimeouts()
                 sleep(params.loopInterval)
             }
 
-            if (isProcessRunning() && contextSyncState.isEmpty()) {
-                val latestSnapshotRootHash = buildSnapshot(params.syncToExactHeight)
-                if (blockSnapshotRootHash.contentEquals(latestSnapshotRootHash)) {
-                    logger.info("Finished syncing snapshot")
-                } else {
-                    logger.warn("Finished syncing snapshot, but root hashes do not match")
-                    throw ProgrammerMistake("Snapshot root hashes do not match")
-                }
+            if (isProcessRunning() && contextSyncRequests.isEmpty()) {
+                buildAndVerifySnapshot()
+                // TODO add a call to SnapshowAware.finalizeEtc?
             }
         }
     }
 
-    private fun buildSnapshot(height: Long): Hash {
-        return withReadWriteConnection(workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID) { ctx ->
-            RootSnapshotBlockBuilder(ctx, height, workerContext.blockchainConfiguration.snapshot.levelsPerPage,
-                workerContext.appConfig.cryptoSystem).build()
+    private fun buildAndVerifySnapshot() {
+        withWriteConnection(workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID) { ctx ->
+            val localSnapshotRootHash = RootSnapshotBlockBuilder(ctx, syncState.height,
+                    workerContext.blockchainConfiguration.snapshot.levelsPerPage,
+                    workerContext.appConfig.cryptoSystem).build()
+
+            if (syncState.rootHash.contentEquals(localSnapshotRootHash)) {
+                DatabaseAccess.of(ctx).pruneSnapshotSyncState(ctx)
+                logger.info("Finished snapshot syncing successfully")
+            } else {
+                logger.warn("Finished snapshot syncing, but root hashes do not match")
+                throw ProgrammerMistake("Snapshot root hashes do not match")
+            }
+
+            true
         }
     }
 
-    private fun storeSnapshotData(contextId: Long, data: List<FullSnapshotDatumData>) {
+    private fun storeSnapshotData(contextId: Long, data: List<FullSnapshotDatumData>, end: Boolean) {
         if (data.isNotEmpty()) {
             withWriteConnection(workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID) { ctx ->
                 DatabaseAccess.of(ctx).apply {
                     val module = getSnapshotAwareModuleByContext(ctx, contextId)
-
-                    val datumInfoList = data.map {
+                    insertUpdatedDatum(ctx, contextId, data.map {
                         DatumInfo(it.datumId, it.hash, if (it.isPermanent) null else GtvEncoder.encodeGtv(it.data))
-                    }
-                    val datumList = data.map {
+                    })
+                    module.constructDatum(ctx, data.map {
                         SnapshotDatum(it.datumId, it.data, it.isPermanent)
+                    })
+                    if (end) {
+                        removeSnapshotSyncContextState(ctx, contextId)
+                    } else {
+                        setSnapshotSyncContextStateOffset(ctx, contextId, data.last().datumId + 1)
                     }
-                    insertUpdatedDatum(ctx, contextId, datumInfoList)
-                    module.constructDatum(ctx, datumList)
                 }
 
                 true
@@ -347,7 +388,7 @@ class SnapshotSynchronizer(
     }
 
     private fun verifyAndGetExpectedRequest(message: SnapshotData, peerId: NodeRid): SnapshotContextState? {
-        val contextState = contextSyncState[message.contextId]
+        val contextState = contextSyncRequests[message.contextId]
         var error: String? = null
         if (contextState == null) {
             error = "Received snapshot data for unknown context ${message.contextId}"
@@ -373,13 +414,11 @@ class SnapshotSynchronizer(
     }
 
     private fun sendInitialSnapshotDataRequest() {
-        blockQueries.getSnapshotContextMaxIds(params.syncToExactHeight).get()
-                .forEach { (contextId, _) ->
-                    // TODO we will for now always start from 0, but on restart etc we could continue sync from the same height
-                    val state = SnapshotContextState(contextId)
-                    contextSyncState[state.contextId] = state
-                    sendGetSnapshotData(state)
-                }
+        contextStates.values.forEach {
+            val state = SnapshotContextState(it.contextId, offset = it.datumIdOffset)
+            contextSyncRequests[state.contextId] = state
+            sendGetSnapshotData(state)
+        }
     }
 
     private fun sendGetSnapshotData(contextState: SnapshotContextState) {
@@ -392,8 +431,8 @@ class SnapshotSynchronizer(
         if (peer == null) {
             logger.info { "Couldn't find any node to send snapshot data request to for context ${contextState.contextId} and offset ${contextState.offset}." }
         } else {
+            logger.debug { "Sent GetSnapshotData to peer $peer for context ${contextState.contextId}, offset ${contextState.offset}. Already sent to (${contextState.sentTo.size}): ${contextState.sentTo}" }
             contextState.sentTo.add(peer)
-            logger.debug { "Sent GetSnapshotData to peer $peer for context ${contextState.contextId}, offset ${contextState.offset}. Already sent to: ${contextState.sentTo}" }
         }
         contextState.timeSent = System.currentTimeMillis()
     }
@@ -406,7 +445,7 @@ class SnapshotSynchronizer(
 
     private fun processRequestTimeouts() {
         val now = System.currentTimeMillis()
-        contextSyncState
+        contextSyncRequests
                 .filterValues { it.timeSent + params.jobTimeout < now }
                 .values
                 .forEach {
@@ -416,11 +455,11 @@ class SnapshotSynchronizer(
         }
     }
 
-    private fun getVerifiedContextData(candidate: SnapshotBlockHeader): Map<Long, SnapshotBlockHeaderContextData> {
+    private fun getVerifiedContextData(candidate: SnapshotBlockHeader, rootHash: ByteArray): Map<Long, SnapshotBlockHeaderContextData> {
         val rootHashOfContextHashes = verifyRangeProof.calculateMerkleRoot(
                 candidate.contextData.map { it.rootHash },
                 workerContext.blockchainConfiguration.snapshot.levelsPerPage)
-        if (!rootHashOfContextHashes.contentEquals(blockSnapshotRootHash)) {
+        if (!rootHashOfContextHashes.contentEquals(rootHash)) {
             throw ProgrammerMistake("Merkle root of snapshot context data does not match")
         }
         return candidate.contextData.associateBy { it.contextId }
@@ -437,9 +476,24 @@ class SnapshotSynchronizer(
                     if (syncableNodes.containsKey(it)) {
                         peerStatuses.markSyncable(it)
                     } else {
-                        peerStatuses.drained(it, BlockHeaderData.fromBinary(receivedLatestSnapshotHeight[it]!!.header).getHeight())
+                        peerStatuses.drained(it,
+                                BlockHeaderData.fromBinary(receivedLatestSnapshotHeight[it]!!.header).getHeight(),
+                                drainedTimeout = params.snapshotSyncPeerParameters.resurrectDrainedTime)
                     }
                 }
+    }
+
+    private fun loadOngoingSyncState(): Boolean {
+        return withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
+            val db = DatabaseAccess.of(ctx)
+            syncState = db.getSnapshotSyncState(ctx) ?: return@withReadConnection false
+            db.getAllSnapshotSyncContexts(ctx).forEach {
+                contextStates[it.contextId] = it
+            }
+            params.syncToExactHeight = syncState.height
+            configuredPeers.forEach { peerStatuses.addPeer(it) }
+            true
+        }
     }
 }
 

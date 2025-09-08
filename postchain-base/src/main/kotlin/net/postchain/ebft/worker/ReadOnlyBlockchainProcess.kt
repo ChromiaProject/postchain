@@ -231,8 +231,8 @@ class ReadOnlyBlockchainProcess(
     private fun currentSnapshotSyncContextStatus(): List<SnapshotSyncContextStatus>? = when (syncMethod) {
         SyncMethod.SNAPSHOT_SYNC -> {
             val localMaxIds = blockchainEngine.getBlockQueries().getSnapshotContextMaxIds(Long.MAX_VALUE).get()
-            snapshotSynchronizer.blockHeaderContextData.values.map {
-                SnapshotSyncContextStatus(it.contextId, localMaxIds[it.contextId], it.datumIdMax)
+            snapshotSynchronizer.getContextStates().map {
+                SnapshotSyncContextStatus(it.contextId, localMaxIds[it.contextId], it.maxDatumId)
             }
         }
         else -> null
