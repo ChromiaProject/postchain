@@ -160,7 +160,6 @@ class ReadOnlyBlockchainProcess(
         withLoggingContext(loggingContext) {
             if (params.slowSyncEnabled) {
                 logger.debug { "Using slow sync for read only bc process" }
-                // TODO: We should check if snapshots are enabled for this bc
                 if (snapshotSyncEnabled) {
                     syncMethod = SyncMethod.SNAPSHOT_SYNC
                     snapshotSynchronizer.trySnapshotSync()
@@ -173,7 +172,6 @@ class ReadOnlyBlockchainProcess(
                 syncMethod = SyncMethod.NOT_SYNCING
             } else {
                 logger.debug { "Using fast sync for read only bc process" }
-                // TODO: We should check if snapshots are enabled for this bc
                 if (snapshotSyncEnabled) {
                     syncMethod = SyncMethod.SNAPSHOT_SYNC
                     snapshotSynchronizer.trySnapshotSync()
