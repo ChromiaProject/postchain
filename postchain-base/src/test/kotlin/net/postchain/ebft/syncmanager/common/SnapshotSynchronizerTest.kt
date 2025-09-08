@@ -70,7 +70,7 @@ class SnapshotSynchronizerTest {
     private val node = "0350FE40766BC0CE8D08B3F5B810E49A8352FDD458606BD5FAFE5ACDCDC8FF3F57"
     private val nodeRid = NodeRid.fromHex(node)
     private val height = 10L
-    private val lastBlockHeight = 10L
+    private var lastBlockHeight = 0L
     private val header: ByteArray = "header".toByteArray()
     private val witness: ByteArray = "witness".toByteArray()
     private val peerIds = mutableSetOf<NodeRid>()
@@ -85,7 +85,7 @@ class SnapshotSynchronizerTest {
     }
     private val commManager: CommunicationManager<EbftMessage> = mock()
     private val blockQueries: BlockQueries = mock {
-        on { getLastBlockHeight() } doReturn CompletableFuture.completedStage(lastBlockHeight)
+        on { getLastBlockHeight() } doAnswer { CompletableFuture.completedStage(lastBlockHeight) }
         on { getSnapshotContextMaxIds(anyLong()) } doAnswer { CompletableFuture.completedStage(snapshotModuleByContextMap.values.associate { it.contextId to 0L }) }
     }
     private val blockWitness: BlockWitness = mock {

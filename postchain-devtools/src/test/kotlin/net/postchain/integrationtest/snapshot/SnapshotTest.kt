@@ -45,6 +45,7 @@ class SnapshotTest : IntegrationTestSetup() {
 
     @Test
     fun snapshotTest() {
+        configOverrides.addProperty("fastsync.job_timeout", "10")
         val nodes = createNodes(4, "/net/postchain/devtools/snapshot/blockchain_config_4.xml")
         val hashCalc = GtvMerkleHashCalculatorV2(cryptoSystem)
 
@@ -161,6 +162,7 @@ class SnapshotTest : IntegrationTestSetup() {
     @ParameterizedTest
     @ValueSource(longs = [1L, 100L, Long.MAX_VALUE])
     fun reconstructSnapshotDataTest(maxDataSize: Long) {
+        configOverrides.addProperty("fastsync.job_timeout", "10")
         val nodes = createNodes(4, "/net/postchain/devtools/snapshot/blockchain_config_4.xml")
         val brid = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.blockchainRid
         val transactionFactory = nodes[0].getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.getConfiguration().getTransactionFactory()

@@ -53,6 +53,7 @@ import net.postchain.ebft.syncmanager.common.EBFTNodesCondition
 import net.postchain.ebft.syncmanager.common.FastSynchronizer
 import net.postchain.ebft.syncmanager.common.Messaging
 import net.postchain.ebft.syncmanager.common.PeerStatuses
+import net.postchain.ebft.syncmanager.common.SnapshotSynchronizer
 import net.postchain.ebft.syncmanager.common.SyncParameters
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
@@ -99,6 +100,15 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
     @Volatile
     private var useFastSyncAlgorithm: Boolean
     private val fastSynchronizer: FastSynchronizer
+
+    private val snapshotSynchronizer = SnapshotSynchronizer(
+            workerContext,
+            blockDatabase,
+            params,
+            PeerStatuses(params.snapshotSyncPeerParameters),
+            isProcessRunning,
+            RateLimitConfiguration.fromAppConfig(workerContext.appConfig)
+    )
 
     companion object : KLogging() {
         const val MAX_STATUS_INTERVAL = 1_000
@@ -169,7 +179,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                                                 blockRID = message.blockRID
                                                 revolting = message.revolting
                                                 round = message.round
-                                                state = NodeBlockState.values()[message.state]
+                                                state = NodeBlockState.entries[message.state]
                                                 if (shouldSetSignature(state, message)) {
                                                     logger.trace { "Got signature from Status for ${blockRID?.toHex()} from $xPeerId" }
                                                     signature = message.signature
@@ -533,7 +543,11 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
             }
             // Wait for any queued blocks to commit/fail before starting sync
             blockManager.waitForRunningOperationsToComplete()
-            // TODO: Use snapshot sync here
+            // TODO: Maybe we need to check latest rather than current config?
+            val snapshotSyncEnabled = BlockchainConfigurationData.snapshotSyncEnabled(workerContext.blockchainConfiguration.rawConfig)
+            if (snapshotSyncEnabled) {
+                snapshotSynchronizer.trySnapshotSync()
+            }
             fastSynchronizer.syncUntilResponsiveNodesDrained()
             // turn off fast sync, reset current block to null, and query for the last known state from db to prevent
             // possible race conditions

@@ -79,7 +79,9 @@ class ValidatorSyncManagerTest {
         on { getBlockQueries() } doReturn blockQueries
         on { getConfiguration() } doReturn blockchainConfiguration
     }
-    private val appConfig: AppConfig = mock()
+    private val appConfig = mock<AppConfig> {
+        on { cryptoSystem } doReturn mock()
+    }
     private val nodeConfig: NodeConfig = mock()
     private val networkNodes: NetworkNodes = mock {
         on { getPeerIds() } doReturn peerIds

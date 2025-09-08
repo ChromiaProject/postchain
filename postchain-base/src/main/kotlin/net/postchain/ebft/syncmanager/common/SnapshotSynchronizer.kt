@@ -21,6 +21,7 @@ import net.postchain.base.withWriteConnection
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
+import net.postchain.concurrent.util.get
 import net.postchain.core.BlockRid
 import net.postchain.core.EContext
 import net.postchain.core.NodeRid
@@ -75,7 +76,6 @@ class SnapshotSynchronizer(
     private lateinit var syncState: SnapshotSyncState
     private val contextStates = mutableMapOf<Long, SnapshotSyncContextState>()
 
-    // TODO: Fetch snapshot info and determine if it is worth it
     fun trySnapshotSync() {
         if (shouldDoSnapshotSync()) {
             // Start with blocks, we have a blockdb that simply saves the block without applying txs (after checking signature)
@@ -103,6 +103,9 @@ class SnapshotSynchronizer(
         if (loadOngoingSyncState()) {
             logger.info("Continuing snapshot sync for height ${syncState.height} with context offsets: ${contextStates.values.map { it.contextId to it.datumIdOffset }}")
             return true
+        } else if (blockQueries.getLastBlockHeight().get() > 0) {
+            logger.info("Last block height for this node is greater than 0. Not syncing snapshot")
+            return false
         }
 
         var lastRequestForSnapshotHeight = 0L
@@ -129,6 +132,11 @@ class SnapshotSynchronizer(
                 .filter { (_, blockHeader) -> blockHeader.header.isNotEmpty() }
                 .map { (peerId, blockHeader) -> peerId to blockHeader }
                 .sortedByDescending { (_, blockHeader) -> BlockHeaderData.fromBinary(blockHeader.header).getHeight() }
+
+        if (snapshotCandidates.isEmpty()) {
+            logger.debug { "No snapshot candidates found. Not syncing snapshot." }
+            return false
+        }
 
         // We try all but unless peers are malicious or we are lacking config it should be fine
         for ((peerId, candidate) in snapshotCandidates) {
@@ -247,6 +255,9 @@ class SnapshotSynchronizer(
                     is GetBlockRange -> sendBlockRangeFromHeight(peerId, message.startAtHeight, blockHeight.get())
                     is GetBlockSignature -> sendBlockSignature(peerId, message.blockRID)
 
+                    is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(peerId, workerContext.engine.blockBuilderStorage,
+                            workerContext.blockchainConfiguration.chainID, workerContext.blockchainConfiguration.snapshot.levelsPerPage,
+                            workerContext.appConfig.cryptoSystem)
                     is SnapshotBlockHeader -> {
                         if (awaitsSnapshotHeights) {
                             receivedLatestSnapshotHeight[peerId] = message
