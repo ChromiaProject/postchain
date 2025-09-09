@@ -20,7 +20,6 @@ import net.postchain.core.TxEContext
 import net.postchain.devtools.IntegrationTestSetup
 import net.postchain.devtools.PostchainTestNode.Companion.DEFAULT_CHAIN_IID
 import net.postchain.devtools.getModules
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -278,13 +277,20 @@ open class SnapshotTestModule(
         return rawDatum?.toLong()
     }
 
-    override fun getPermanentDatum(ctx: EContext, datumId: Long): Gtv? {
-        val sql = "SELECT datum FROM ${conf.permanentTableName} WHERE datum_id = $datumId"
-        val rawDatum = QueryRunner().query(ctx.conn, sql, ScalarHandler<ByteArray>())
-        if (rawDatum != null) {
-            return GtvDecoder.decodeGtv(rawDatum)
+    override fun getPermanentDatums(ctx: EContext, datumIdFrom: Long, datumHandler: (stateData: SnapshotDatum?) -> Boolean) {
+        val sql = "SELECT datum_id, datum FROM ${conf.permanentTableName} WHERE datum_id >= ?"
+        ctx.conn.prepareStatement(sql).use {
+            it.setLong(1, datumIdFrom)
+            val resultSet = it.executeQuery()
+            while (resultSet.next()) {
+                val data = SnapshotDatum(resultSet.getLong("datum_id"),
+                        GtvDecoder.decodeGtv(resultSet.getBytes("datum")), true)
+                if (!datumHandler(data)) {
+                    return
+                }
+            }
+            datumHandler(null)
         }
-        return null
     }
 
     override fun initializeDB(ctx: EContext) {

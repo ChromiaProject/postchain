@@ -96,7 +96,12 @@ class BaseSnapshotDatumRepository(
     private fun getPermanentDatum(ctx: EContext, contextId: Long, datumId: Long): Gtv? {
         val dba = DatabaseAccess.of(ctx)
         val module = dba.getSnapshotAwareModuleByContext(ctx, contextId)
-        return module.getPermanentDatum(ctx, datumId) // We assume the module will throw if it can't resolve a datum with this ID
+        var datum: SnapshotDatum? = null
+        module.getPermanentDatums(ctx, datumId) {
+            datum = it
+            false
+        }
+        return if (datum?.id == datumId) datum?.data else null
     }
 
     override fun getLatestSnapshotHeight(ctx: EContext): Long? {

@@ -2,7 +2,6 @@ package net.postchain.gtx
 
 import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.core.EContext
-import net.postchain.gtv.Gtv
 
 const val SNAPSHOT_TABLE_PREFIX = "sys.x.gtx_module"
 
@@ -12,7 +11,12 @@ interface SnapshotAware {
     /** Returns the maximum datum ID of the permanent data, or null if no data is available  */
     fun getPermanentDatumIdMax(ctx: EContext): Long?
 
-    fun getPermanentDatum(ctx: EContext, datumId: Long): Gtv?
+    /** Read and call `datumHandler` for each permanent datum in sequence from provided start `datumIdFrom`.
+     * @param datumIdFrom The ID of the first datum to read.
+     * @param datumHandler The handler to call for each datum. If `datum` is null the end is reached. Modules continues
+     * to read datums until this returns false.
+     */
+    fun getPermanentDatums(ctx: EContext, datumIdFrom: Long, datumHandler: (datum: SnapshotDatum?) -> Boolean)
 
     /** Let the module rebuild its table data from snapshot datum data  */
     fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>)

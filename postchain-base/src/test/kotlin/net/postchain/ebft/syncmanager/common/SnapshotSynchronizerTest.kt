@@ -36,7 +36,6 @@ import net.postchain.ebft.message.SnapshotDatumData
 import net.postchain.ebft.message.SnapshotRangeProof
 import net.postchain.ebft.syncmanager.configuration.RateLimitConfiguration
 import net.postchain.ebft.worker.WorkerContext
-import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
 import net.postchain.gtv.GtvNull
@@ -403,7 +402,9 @@ class SnapshotSynchronizerTest {
 
         override fun getPermanentDatumIdMax(ctx: EContext): Long? = null
 
-        override fun getPermanentDatum(ctx: EContext, datumId: Long): Gtv? = null
+        override fun getPermanentDatums(ctx: EContext, datumIdFrom: Long, datumHandler: (datum: SnapshotDatum?) -> Boolean) {
+            datumHandler(null)
+        }
 
         override fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>) {
             datumList.forEach(constructDatumInvocations::add)
