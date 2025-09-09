@@ -442,7 +442,9 @@ class SnapshotSynchronizer(
         if (peer == null) {
             logger.info { "Couldn't find any node to send snapshot data request to for context ${contextState.contextId} and offset ${contextState.offset}." }
         } else {
-            logger.debug { "Sent GetSnapshotData to peer $peer for context ${contextState.contextId}, offset ${contextState.offset}. Already sent to (${contextState.sentTo.size}): ${contextState.sentTo}" }
+            logger.debug { "Sent GetSnapshotData to peer $peer for context ${contextState.contextId}, offset ${contextState.offset}." +
+                    (if (contextState.sentTo.isNotEmpty()) "Already sent to (${contextState.sentTo.size}): ${contextState.sentTo}" else "") }
+
             contextState.sentTo.add(peer)
         }
         contextState.timeSent = System.currentTimeMillis()
