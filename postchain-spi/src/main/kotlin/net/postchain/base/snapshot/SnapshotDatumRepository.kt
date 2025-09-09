@@ -1,5 +1,6 @@
 package net.postchain.base.snapshot
 
+import net.postchain.common.data.Hash
 import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
 
@@ -12,7 +13,9 @@ interface SnapshotDatumRepository {
 
     fun getDatumWithType(ctx: EContext, height: Long, contextId: Long, datumId: Long): SnapshotDatum?
 
-    fun getDatums(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long, maxTime: Long): List<SnapshotDatum>
+    fun getDatums(ctx: EContext, height: Long, contextId: Long, permanent: Boolean, datumIdFrom: Long, datumIdTo: Long, maxDataSize: Long, maxTime: Long): Pair<List<SnapshotDatum>, List<Pair<Long, Long>>>
+
+    fun getDatumHashes(ctx: EContext, height: Long, contextId: Long, permanent: Boolean, ranges: List<Pair<Long, Long>>): List<Pair<Long, Hash>>
 
     fun getRangeProof(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long): RangeProof
 

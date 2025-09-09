@@ -5,6 +5,7 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.snapshot.SimpleDigestSystem
 import net.postchain.base.snapshot.SnapshotPageStore
 import net.postchain.base.withReadWriteConnection
+import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.concurrent.util.get
 import net.postchain.core.NodeRid
@@ -222,35 +223,42 @@ abstract class Messaging(
     }
 
     fun sendSnapshotData(
-            peerId: NodeRid, chainId: Long, height: Long, contextId: Long,
-            datumIdFrom: Long, maxDataSize: Long, maxTime: Long
+            peerId: NodeRid, chainId: Long, height: Long, contextId: Long, permanent: Boolean,
+            datumIdFrom: Long, maxDataSize: Long, maxTime: Long,
     ) {
         val requestId = Objects.hash(chainId, height, contextId, datumIdFrom)
         if (servedSnapshotDataAtOffset[peerId]?.contains(requestId) == true) {
-            logger.debug { "Already responded to request from peer $peerId for snapshot data for chainID $chainId, height $height, contextID $contextId and datumIDFrom $datumIdFrom. Ignoring." }
+            logger.debug { "Already responded to request from peer $peerId for snapshot data for chainID $chainId, " +
+                    "height $height, contextID $contextId, permanent $permanent and datumIDFrom $datumIdFrom. Ignoring." }
             return
         }
         // TODO need something as this? if (isTotalServedBlockRequestLimitReached(peerId)) return
 
         try {
             val timeAndData = measureTimedValue {
-                blockQueries.getSnapshotData(height, contextId, datumIdFrom, maxDataSize, maxTime).get().let { data ->
+                blockQueries.getSnapshotData(height, contextId, permanent, datumIdFrom, maxDataSize, maxTime * 5).get().let { (data, gaps) ->
                     val proof = if (data.isNotEmpty())
-                        blockQueries.getSnapshotRangeProof(height, contextId, datumIdFrom, datumIdFrom + data.size - 1).get()
+                        blockQueries.getSnapshotRangeProof(height, contextId, data.first().id, data.last().id).get()
                     else
                         null
-                    data to proof
+                    val gapHashes: List<Pair<Long, Hash>> = if (gaps.isEmpty())
+                        emptyList()
+                    else
+                        blockQueries.getSnapshotDataHashes(height, contextId, !permanent, gaps).get()
+
+                    Triple(data, proof, gapHashes)
                 }
             }
-            val (data, proof) = timeAndData.value
+            val (data, proof, gapHashes) = timeAndData.value
 
             logger.debug { "Read ${data.size} (${FileUtils.byteCountToDisplaySize(data.sumOf { it.data.nrOfBytes() })}) snapshot data for height $height and context id $contextId to $peerId in ${timeAndData.duration.toInt(DurationUnit.MILLISECONDS)} ms" }
 
             val sendTime = measureTime {
-                communicationManager.sendPacket(SnapshotData(height, contextId, datumIdFrom,
-                        data.map { SnapshotDatumData(it.data, it.isPermanent) },
-                        proof?.let { SnapshotRangeProof(proof.leftBoundaryHashes, proof.rightBoundaryHashes, proof.commonPath) }),
-                        peerId)
+                communicationManager.sendPacket(SnapshotData(height, contextId, permanent, datumIdFrom,
+                        data.map { SnapshotDatumData(it.id, it.data, it.isPermanent) },
+                        proof?.let { SnapshotRangeProof(proof.leftBoundaryHashes, proof.rightBoundaryHashes, proof.commonPath) },
+                        gapHashes
+                        ), peerId)
                 servedSnapshotDataAtOffset.getOrPut(peerId) { mutableSetOf() }.add(requestId)
             }
 

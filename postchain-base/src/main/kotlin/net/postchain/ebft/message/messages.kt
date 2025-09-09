@@ -316,19 +316,20 @@ class SnapshotBlockHeaderContextData(val contextId: Long, val rootHash: Hash, va
 /**
  * Request snapshot data from a node at offset "datumIdFrom".
  */
-class GetSnapshotData(val height: Long, val contextId: Long, val datumIdFrom: Long) : EbftMessage(MessageTopic.GETSNAPSHOTDATA) {
+class GetSnapshotData(val height: Long, val contextId: Long, val permanent: Boolean, val datumIdFrom: Long) : EbftMessage(MessageTopic.GETSNAPSHOTDATA) {
     companion object {
         fun buildFromGtv(data: GtvArray, arrOffset: Int): GetSnapshotData {
             return GetSnapshotData(
                     data[0 + arrOffset].asInteger(),
                     data[1 + arrOffset].asInteger(),
-                    data[2 + arrOffset].asInteger()
+                    data[2 + arrOffset].asBoolean(),
+                    data[3 + arrOffset].asInteger()
             )
         }
     }
 
     override fun toGtv(version: Long): Gtv {
-        return gtv(topic.toGtv(), gtv(height), gtv(contextId), gtv(datumIdFrom))
+        return gtv(topic.toGtv(), gtv(height), gtv(contextId), gtv(permanent), gtv(datumIdFrom))
     }
 }
 
@@ -342,18 +343,22 @@ class GetSnapshotData(val height: Long, val contextId: Long, val datumIdFrom: Lo
 class SnapshotData(
         val height: Long,
         val contextId: Long,
+        val permanent: Boolean,
         val datumIdFrom: Long,
         val data: List<SnapshotDatumData>,
-        val proof: SnapshotRangeProof?
+        val proof: SnapshotRangeProof?,
+        val gapHashes: List<Pair<Long, Hash>>?,
 ) : EbftMessage(MessageTopic.SNAPSHOTDATA) {
     companion object {
         fun buildFromGtv(data: GtvArray, arrOffset: Int): SnapshotData {
             return SnapshotData(
                     data[0 + arrOffset].asInteger(),
                     data[1 + arrOffset].asInteger(),
-                    data[2 + arrOffset].asInteger(),
-                    data[3 + arrOffset].asArray().map { SnapshotDatumData(it[0], it[1].asBoolean()) },
-                    data[4 + arrOffset].let { gtv -> if (gtv.isNull()) null else SnapshotRangeProof.buildFromGtv(gtv) }
+                    data[2 + arrOffset].asBoolean(),
+                    data[3 + arrOffset].asInteger(),
+                    data[4 + arrOffset].asArray().map { SnapshotDatumData(it[0].asInteger(), it[1], it[2].asBoolean()) },
+                    data[5 + arrOffset].let { gtv -> if (gtv.isNull()) null else SnapshotRangeProof.buildFromGtv(gtv) },
+                    data[6 + arrOffset].let { gtv -> if (gtv.isNull()) null else gtv.asArray().map { Pair(it[0].asInteger(), it[1].asByteArray())} },
             )
         }
     }
@@ -362,13 +367,16 @@ class SnapshotData(
         return gtv(topic.toGtv(),
                 gtv(height),
                 gtv(contextId),
+                gtv(permanent),
                 gtv(datumIdFrom),
-                gtv(data.map { gtv(it.data, gtv(it.isPermanent)) }),
-                proof?.toGtv() ?: GtvNull)
+                gtv(data.map { gtv(gtv(it.id), it.data, gtv(it.isPermanent)) }),
+                proof?.toGtv() ?: GtvNull,
+                gapHashes?.let { gtv(it.map { gtv(gtv(it.first), gtv(it.second)) }) } ?: GtvNull,
+        )
     }
 }
 
-data class SnapshotDatumData(val data: Gtv, val isPermanent: Boolean)
+data class SnapshotDatumData(val id: Long, val data: Gtv, val isPermanent: Boolean)
 
 class SnapshotRangeProof(
         val leftBoundaryHashes: List<Hash>,

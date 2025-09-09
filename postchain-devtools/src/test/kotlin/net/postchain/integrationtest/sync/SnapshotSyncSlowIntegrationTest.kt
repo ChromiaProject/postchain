@@ -378,7 +378,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
                 setSnapshotSyncState(ctx, SnapshotSyncState(node0Height, node0RootHash))
                 contextDataList.forEach {
                     setSnapshotSyncContextState(ctx, SnapshotSyncContextState(it.contextId, it.rootHash,
-                            0, it.datumIdMax!!))
+                            0, 0, it.datumIdMax!!))
                 }
             }
             true
@@ -458,7 +458,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
                 setSnapshotSyncState(ctx, SnapshotSyncState(node0Height, node0RootHash))
                 contextDataList.forEach {
                     setSnapshotSyncContextState(ctx, SnapshotSyncContextState(it.contextId, it.rootHash,
-                            2, it.datumIdMax!!))
+                            2, 2, it.datumIdMax!!))
                 }
 
                 // Insert snapshot update datums up to id 1 for both contexts

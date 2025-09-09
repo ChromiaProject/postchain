@@ -60,7 +60,7 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
 
     override fun makeBlockQueries(storage: Storage): BlockQueries {
         val snapshotAwareModules = getSnapshotAwareModules()
-        val snapshotDatumRepository = BaseSnapshotDatumRepository(snapshotAwareModules, snapshot.levelsPerPage, cryptoSystem)
+        val snapshotDatumRepository = BaseSnapshotDatumRepository(snapshotAwareModules, snapshot.levelsPerPage, cryptoSystem, configData.merkleHashCalculator)
         return GTXBlockQueries(this, storage, blockStore, chainID, blockchainContext.nodeRID, module, snapshotDatumRepository)
     }
 

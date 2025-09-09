@@ -8,6 +8,7 @@ import net.postchain.base.gtv.BlockHeaderData
 import net.postchain.base.snapshot.RangeProof
 import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.base.snapshot.SnapshotDatumRepository
+import net.postchain.common.data.Hash
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
 import net.postchain.core.EContext
@@ -255,9 +256,14 @@ abstract class BaseBlockQueries(
         snapshotDatumRepository.getContextMaxIds(it, height)
     }
 
-    override fun getSnapshotData(height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long, maxTime: Long):
-            CompletionStage<List<SnapshotDatum>> = runOpRegardless {
-        snapshotDatumRepository.getDatums(it, height, contextId, datumIdFrom, maxDataSize, maxTime)
+    override fun getSnapshotData(height: Long, contextId: Long, permanent: Boolean, datumIdFrom: Long, maxDataSize: Long, maxTime: Long):
+            CompletionStage<Pair<List<SnapshotDatum>, List<Pair<Long, Long>>>> = runOpRegardless {
+        snapshotDatumRepository.getDatums(it, height, contextId, permanent, datumIdFrom, Long.MAX_VALUE, maxDataSize, maxTime)
+    }
+
+    override fun getSnapshotDataHashes(height: Long, contextId: Long, permanent: Boolean, gaps: List<Pair<Long, Long>>):
+            CompletionStage<List<Pair<Long, Hash>>> = runOpRegardless {
+        snapshotDatumRepository.getDatumHashes(it, height, contextId, permanent, gaps)
     }
 
     override fun getSnapshotRangeProof(height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long):

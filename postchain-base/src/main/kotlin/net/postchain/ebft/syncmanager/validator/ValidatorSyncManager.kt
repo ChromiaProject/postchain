@@ -167,7 +167,8 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                     is GetLatestSnapshotBlock -> sendLatestSnapshotHeight(xPeerId, workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID, workerContext.blockchainConfiguration.snapshot.levelsPerPage, workerContext.appConfig.cryptoSystem)
 
                     is GetSnapshotData -> sendSnapshotData(xPeerId, blockchainConfiguration.chainID,
-                            message.height, message.contextId, message.datumIdFrom, params.snapshotSyncMaxDataSize, params.snapshotSyncMaxTime)
+                            message.height, message.contextId, message.permanent, message.datumIdFrom,
+                            params.snapshotSyncMaxDataSize, params.snapshotSyncMaxTime)
 
                     else -> {
                         if (!isReadOnlyNode) { // This check is actually good DOS protection

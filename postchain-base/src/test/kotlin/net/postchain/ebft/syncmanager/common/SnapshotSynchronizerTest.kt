@@ -167,7 +167,7 @@ class SnapshotSynchronizerTest {
     private lateinit var ss: SnapshotSynchronizer
 
     private val dummyProof = SnapshotRangeProof(emptyList(), emptyList(), emptyList())
-    private val dummySnapshotData = listOf(SnapshotDatumData(gtv(1), true))
+    private val dummySnapshotData = listOf(SnapshotDatumData(0, gtv(1), true))
 
     @BeforeEach
     fun setup() {
@@ -276,7 +276,7 @@ class SnapshotSynchronizerTest {
                 null
             } else {
                 verificationEnd = true
-                SnapshotData(message.height, message.contextId, message.datumIdFrom, dummySnapshotData, dummyProof)
+                SnapshotData(message.height, message.contextId, message.permanent, message.datumIdFrom, dummySnapshotData, dummyProof, emptyList())
             }
         }
 
@@ -320,7 +320,7 @@ class SnapshotSynchronizerTest {
         whenGetSnapshotDataReplyWith { randomPeer, message ->
             if (expectBlacklistedPeer == null) {
                 expectBlacklistedPeer = randomPeer
-                listOf(SnapshotDatumData(gtv(123), false))
+                listOf(SnapshotDatumData(0, gtv(123), false))
             } else {
                 emptyList()
             }
@@ -358,8 +358,8 @@ class SnapshotSynchronizerTest {
 
     private fun whenGetSnapshotDataReplyWith(op: (peer: NodeRid, message: GetSnapshotData) -> List<SnapshotDatumData>) {
         whenGetSnapshotData { peer, message ->
-            SnapshotData(message.height, message.contextId, message.datumIdFrom,
-                    op(peer, message), dummyProof)
+            SnapshotData(message.height, message.contextId, message.permanent, message.datumIdFrom,
+                    op(peer, message), dummyProof, emptyList())
         }
     }
 

@@ -14,8 +14,11 @@ data class SnapshotSyncContextState(
         /** Snapshot root hash for this context */
         val contextRootHash: ByteArray,
 
-        /** Last unrequested datum id */
-        var datumIdOffset: Long,
+        /** Last unrequested dynamic datum id, -1 marks the end has been reached */
+        var dynamicDatumIdOffset: Long,
+
+        /** Last unrequested permanent datum id, -1 marks the end has been reached */
+        var permanentDatumIdOffset: Long,
 
         /** Possible max datum id for this context, not verified */
         val maxDatumId: Long

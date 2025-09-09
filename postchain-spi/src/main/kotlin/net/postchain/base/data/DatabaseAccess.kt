@@ -178,6 +178,7 @@ interface DatabaseAccess {
     @Deprecated("Use getState()", ReplaceWith("getState(ctx, prefix, height, stateN)"))
     fun getAccountState(ctx: EContext, prefix: String, height: Long, stateN: Long): AccountState?
     fun getState(ctx: EContext, prefix: String, height: Long, stateN: Long): StateData?
+    fun getStates(ctx: EContext, prefix: String, height: Long, startN: Long, datumHandler: (stateData: StateData?) -> Boolean)
     fun getStateNMax(ctx: EContext, prefix: String, height: Long): Long?
     fun pruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, heightMustBeHigherThan: Long)
     fun safePruneAccountStates(ctx: EContext, prefix: String, left: Long, right: Long, nextSnapshotHeight: Long)
@@ -197,7 +198,7 @@ interface DatabaseAccess {
     fun setSnapshotSyncState(ctx: EContext, state: SnapshotSyncState)
     fun setSnapshotSyncContextState(ctx: EContext, state: SnapshotSyncContextState)
     fun getAllSnapshotSyncContexts(ctx: EContext): List<SnapshotSyncContextState>
-    fun setSnapshotSyncContextStateOffset(ctx: EContext, contextId: Long, offset: Long)
+    fun setSnapshotSyncContextStateOffset(ctx: EContext, contextId: Long, permanent: Boolean, offset: Long)
     fun removeSnapshotSyncContextState(ctx: EContext, contextId: Long)
     fun pruneSnapshotSyncState(ctx: EContext)
 

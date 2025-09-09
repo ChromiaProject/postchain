@@ -241,8 +241,12 @@ class PostgreSQLDatabaseAccess : SQLDatabaseAccess() {
 
     override fun cmdCreateTableSnapshotSyncContextState(): String {
         return "CREATE TABLE IF NOT EXISTS ${tableSnapshotSyncContextState()} (" +
-                "chain_iid BIGINT NOT NULL, context_id BIGINT, root_hash BYTEA NOT NULL," +
-                "datum_id_offset BIGINT NOT NULL, max_datum_id BIGINT NOT NULL," +
+                "chain_iid BIGINT NOT NULL," +
+                "context_id BIGINT NOT NULL," +
+                "root_hash BYTEA NOT NULL," +
+                "dynamic_datum_id_offset BIGINT NOT NULL," +
+                "permanent_datum_id_offset BIGINT NOT NULL," +
+                "max_datum_id BIGINT NOT NULL," +
                 "PRIMARY KEY (chain_iid, context_id))"
     }
 

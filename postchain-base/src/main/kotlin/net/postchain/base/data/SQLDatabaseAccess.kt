@@ -543,6 +543,24 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
         )
     }
 
+    override fun getStates(ctx: EContext, prefix: String, height: Long, startN: Long, datumHandler: (stateData: StateData?) -> Boolean) {
+        val sql = """SELECT state_n, data FROM ${tableStateLeafs(ctx, prefix)} 
+            WHERE block_height <= ? AND state_n >= ? 
+            ORDER BY state_n ASC"""
+        ctx.conn.prepareStatement(sql).use {
+            it.setLong(1, height)
+            it.setLong(2, startN)
+            val resultSet = it.executeQuery()
+            while (resultSet.next()) {
+                val data = StateData(height, resultSet.getLong("state_n"), resultSet.getBytes("data"))
+                if (!datumHandler(data)) {
+                    return
+                }
+            }
+            datumHandler(null)
+        }
+    }
+
     override fun getStateNMax(ctx: EContext, prefix: String, height: Long): Long? {
         val sql = """SELECT block_height, MAX(state_n) AS state_n_max FROM ${tableStateLeafs(ctx, prefix)}
             WHERE block_height <= ?
@@ -1660,27 +1678,34 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
 
     override fun setSnapshotSyncContextState(ctx: EContext, state: SnapshotSyncContextState) {
         val sql = """
-            INSERT INTO ${tableSnapshotSyncContextState()} (chain_iid, context_id, root_hash, datum_id_offset, max_datum_id)
-                VALUES (?, ?, ?, ?, ?)
+            INSERT INTO ${tableSnapshotSyncContextState()} (chain_iid, context_id, root_hash, dynamic_datum_id_offset, permanent_datum_id_offset, max_datum_id)
+                VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT (chain_iid, context_id) DO UPDATE SET root_hash = EXCLUDED.root_hash,
-                datum_id_offset = EXCLUDED.datum_id_offset, max_datum_id = EXCLUDED.max_datum_id
+                dynamic_datum_id_offset = EXCLUDED.dynamic_datum_id_offset,
+                permanent_datum_id_offset = EXCLUDED.permanent_datum_id_offset,
+                max_datum_id = EXCLUDED.max_datum_id
         """.trimIndent()
-        queryRunner.update(ctx.conn, sql, ctx.chainID, state.contextId, state.contextRootHash, state.datumIdOffset, state.maxDatumId)
+        queryRunner.update(ctx.conn, sql, ctx.chainID, state.contextId, state.contextRootHash, state.dynamicDatumIdOffset, state.permanentDatumIdOffset, state.maxDatumId)
     }
 
     override fun getAllSnapshotSyncContexts(ctx: EContext): List<SnapshotSyncContextState> {
-        val sql = "SELECT context_id, root_hash, datum_id_offset, max_datum_id FROM ${tableSnapshotSyncContextState()} WHERE chain_iid = ?"
+        val sql = "SELECT context_id, root_hash, dynamic_datum_id_offset, permanent_datum_id_offset, max_datum_id FROM ${tableSnapshotSyncContextState()} WHERE chain_iid = ?"
         return queryRunner.query(ctx.conn, sql, mapListHandler, ctx.chainID)
                 .map { SnapshotSyncContextState(
                         it["context_id"] as Long,
                         it["root_hash"] as ByteArray,
-                        it["datum_id_offset"] as Long,
+                        it["dynamic_datum_id_offset"] as Long,
+                        it["permanent_datum_id_offset"] as Long,
                         it["max_datum_id"] as Long,
                 ) }
     }
 
-    override fun setSnapshotSyncContextStateOffset(ctx: EContext, contextId: Long, offset: Long) {
-        val sql = "UPDATE ${tableSnapshotSyncContextState()} SET datum_id_offset = ? WHERE chain_iid = ? AND context_id = ?"
+    override fun setSnapshotSyncContextStateOffset(ctx: EContext, contextId: Long, permanent: Boolean, offset: Long) {
+        val column = if (permanent)
+            "permanent_datum_id_offset"
+        else
+            "dynamic_datum_id_offset"
+        val sql = "UPDATE ${tableSnapshotSyncContextState()} SET $column = ? WHERE chain_iid = ? AND context_id = ?"
         queryRunner.update(ctx.conn, sql, offset, ctx.chainID, contextId)
     }
 
