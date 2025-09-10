@@ -42,6 +42,7 @@ interface BlockEContext : EContext {
 
 interface TxEContext : BlockEContext {
     val txIID: Long
+    val tx: Transaction
     fun emitEvent(type: String, data: Gtv)
     // called after transaction was added to DB
     fun done()
