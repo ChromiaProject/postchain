@@ -262,9 +262,9 @@ class SnapshotSynchronizer(
                         if (awaitsSnapshotHeights) {
                             receivedLatestSnapshotHeight[peerId] = message
                             if (message.header.isNotEmpty()) {
-                                logger.info("GOT LATEST SNAPSHOT HEADER: ${BlockHeaderData.fromBinary(message.header)}")
+                                logger.info("Got a snapshot header from $peerId. Adding it to snapshot header candidates.")
                             } else {
-                                logger.info("GOT LATEST SNAPSHOT HEADER: EMPTY")
+                                logger.info("Got no snapshot header from $peerId")
                             }
                         }
                     }
