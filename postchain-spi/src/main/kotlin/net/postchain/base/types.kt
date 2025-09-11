@@ -96,7 +96,7 @@ open class BaseBlockEContext(
 open class BaseTxEContext(
     val bectx: BlockEContext,
     override val txIID: Long,
-    val tx: Transaction
+    override val tx: Transaction
 ) : BlockEContext by bectx, TxEContext {
 
     companion object : KLogging()

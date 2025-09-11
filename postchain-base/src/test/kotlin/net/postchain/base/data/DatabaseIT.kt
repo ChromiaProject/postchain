@@ -44,6 +44,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import java.sql.SQLException
 
+@Suppress("SqlSourceToSinkFlow")
 class DatabaseIT {
 
     private val appConfig: AppConfig = testDbConfig("database_it")

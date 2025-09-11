@@ -26,6 +26,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory
 import net.postchain.gtv.GtvNull
+import net.postchain.gtv.GtvType
 import net.postchain.gtv.gtvml.GtvMLEncoder
 import net.postchain.gtv.gtvml.GtvMLParser
 import net.postchain.gtv.mapper.GtvObjectMapper
@@ -97,10 +98,18 @@ val errorJsonBody = Body.auto<ErrorBody>().toLens()
 val errorGtvBody = Body.binary(ContentType.OCTET_STREAM, "error GTV").map(
         {
             val gtv = GtvDecoder.decodeGtv(it)
+            when (gtv.type) {
+                GtvType.STRING -> ErrorBody(gtv.asString())
+                GtvType.DICT -> ErrorBody(gtv.asDict()["error"]!!.asString(), gtv.asDict()["code"]?.asString())
+                else -> ErrorBody("invalid error GTV")
+            }
             ErrorBody(gtv.asString())
         },
         {
-            val gtv = GtvFactory.gtv(it.error)
+            val gtv = if (it.code != null)
+                GtvFactory.gtv(mapOf("error" to GtvFactory.gtv(it.error), "code" to GtvFactory.gtv(it.code)))
+            else
+                GtvFactory.gtv(it.error)
             GtvEncoder.encodeGtv(gtv).inputStream()
         }
 ).toLens()
@@ -262,7 +271,7 @@ data class BlockchainIidRef(val iid: Long) : BlockchainRef
 data class BlockHeight(val blockHeight: Long)
 data class TransactionsCount(val transactionsCount: Long)
 data class Tx(val tx: String)
-data class ErrorBody(val error: String = "")
+data class ErrorBody(val error: String = "", val code: String? = null)
 data class Version(val version: Int)
 data class InfraVersion(
         val postchain: String,

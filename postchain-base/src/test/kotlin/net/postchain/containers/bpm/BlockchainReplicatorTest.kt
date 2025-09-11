@@ -55,7 +55,7 @@ class BlockchainReplicatorTest {
                 0L,
                 srcContainer,
                 dstContainer
-        );
+        )
 
         verify(dstContainer, times(10)).importBlocks(
                 any(),
@@ -72,7 +72,7 @@ class BlockchainReplicatorTest {
                 0L,
                 srcContainer,
                 dstContainer
-        );
+        )
 
         verify(dstContainer, times(5)).importBlocks(
                 any(),
@@ -93,7 +93,7 @@ class BlockchainReplicatorTest {
                 0L,
                 srcContainer,
                 dstContainer
-        );
+        )
 
         verify(dstContainer, never()).importBlocks(any(), any())
     }

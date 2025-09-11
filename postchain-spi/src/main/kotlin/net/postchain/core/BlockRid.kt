@@ -6,8 +6,8 @@ import net.postchain.common.toHex
 /**
  * Wrapper type for a BC block's identifier (which is an array of bytes)
  *
- * Note1: Previously we used to use [BlockchainRid] even for Block RIDs, but that practice can cause mixup.
- * Note2: We could use generics to abstract both [BlockRid] and [BlockchainRid] into one class.
+ * Note1: Previously we used to use [net.postchain.common.BlockchainRid] even for Block RIDs, but that practice can cause mixup.
+ * Note2: We could use generics to abstract both [BlockRid] and [net.postchain.common.BlockchainRid] into one class.
  */
 data class BlockRid(val data: ByteArray) {
 

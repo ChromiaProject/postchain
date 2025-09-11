@@ -17,6 +17,7 @@ class ConfigurationHashBlockBuilderExtension(private val merkleHashVersion: Long
 
     override fun init(blockEContext: BlockEContext, baseBB: BaseBlockBuilder) {}
 
+    @Suppress("removal")
     override fun finalize(): Map<String, Gtv> = mutableMapOf<String, Gtv>(
             CONFIG_HASH_EXTRA_HEADER to gtv(configHash)
     ).also {

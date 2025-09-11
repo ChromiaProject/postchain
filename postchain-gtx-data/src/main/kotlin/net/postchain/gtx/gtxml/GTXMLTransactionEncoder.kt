@@ -18,7 +18,7 @@ object GTXMLTransactionEncoder {
     private val objectFactory = ObjectFactory()
 
     /**
-     * Encodes [GTXData] into XML format
+     * Encodes [Gtx] into XML format
      */
     fun encodeXMLGTXTransaction(gtxTxData: Gtx): String {
         val transactionType = objectFactory.createTransactionType()

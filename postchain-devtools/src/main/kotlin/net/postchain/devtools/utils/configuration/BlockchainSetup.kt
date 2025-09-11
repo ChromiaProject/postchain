@@ -16,7 +16,7 @@ import net.postchain.gtv.Gtv
  *
  * @property chainId is the ID of the chain
  * @property rid is the blockchainRID
- * @property bcGtv is the BC configuration in the form of [GTV] dictionary
+ * @property bcGtv is the BC configuration in the form of GTV dictionary
  * @property signerNodeList is a list of [NodeSeqNumber] that must sign this chain
  * @property chainDependencies is a set of the other chain IDs this chain depends on
  * @property shouldHaveNormalTx  means we will generate regular test TX for this blockchain, a chain with only

@@ -4,7 +4,12 @@ package net.postchain.gtv.merkle
 
 import net.postchain.common.data.Hash
 import net.postchain.crypto.Digester
-import net.postchain.gtv.*
+import net.postchain.gtv.Gtv
+import net.postchain.gtv.GtvByteArray
+import net.postchain.gtv.GtvCollection
+import net.postchain.gtv.GtvInteger
+import net.postchain.gtv.GtvPrimitive
+import net.postchain.gtv.GtvString
 import net.postchain.gtv.merkle.proof.GtvMerkleHashSummaryFactory
 import net.postchain.gtv.merkle.proof.GtvMerkleProofTreeFactory
 import java.nio.charset.Charset
@@ -18,7 +23,7 @@ fun dummySerializatorFun(iGtv: Gtv): ByteArray {
     when (iGtv) {
         is GtvInteger -> {
             val i: Long = iGtv.integer
-            if (i > 127 && i > -1) {
+            if (i > 127) {
                 throw IllegalArgumentException("Test integers should be positive and should not be bigger than 127: $i")
             } else {
                 val b: Byte = i.toByte()
@@ -58,8 +63,6 @@ fun dummyAddOneHashFun(bArr: ByteArray, digester: Digester?): Hash {
 /**
  * The "dummy" version is a real calculator, but it uses simplified versions of
  * serializations and hashing
- *
- * @property memoization is possible to override with some other version (for example that prunes more often)
  */
 class MerkleHashCalculatorDummy : GtvMerkleHashCalculatorBase(null) {
 

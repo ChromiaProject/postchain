@@ -2,12 +2,12 @@
 
 package net.postchain.gtv.merkle
 
+import net.postchain.common.exception.UserMistake
 import net.postchain.gtv.merkle.MerkleBasics.HASH_PREFIX_LEAF
 import net.postchain.gtv.merkle.MerkleBasics.HASH_PREFIX_NODE
-import net.postchain.gtv.merkle.proof.MerkleHashSummary
 import net.postchain.gtv.merkle.path.PathElement
 import net.postchain.gtv.merkle.path.PathLeafElement
-import net.postchain.common.exception.UserMistake
+import net.postchain.gtv.merkle.proof.MerkleHashSummary
 
 
 /**
@@ -20,7 +20,7 @@ import net.postchain.common.exception.UserMistake
  *
  * The tree is filled from left to right.
  *
- *  Our rule for transforming an args into a [ContentLeafFullBinaryTree] is illustrated by Example3 below:
+ *  Our rule for transforming an args into a ContentLeafFullBinaryTree is illustrated by Example3 below:
  *  -------------
  *  Example3:
  *
@@ -48,7 +48,7 @@ import net.postchain.common.exception.UserMistake
  *
  * All elements have some idea about if they are a (proof) path leaf or not.
  * If you are not building a proof, this will be false on all elements.
- * (Prefixes are used when a [Hash] is calculated for the node.)
+ * (Prefixes are used when a [net.postchain.common.data.Hash] is calculated for the node.)
  */
 open class BinaryTreeElement {
 

@@ -5,7 +5,7 @@ import net.postchain.StorageBuilder
 import net.postchain.base.PeerInfo
 import net.postchain.config.app.AppConfig
 import net.postchain.config.app.AppConfig.Companion.DEFAULT_PORT
-import net.postchain.core.*
+import net.postchain.core.Transaction
 import net.postchain.crypto.devtools.KeyPairHelper
 import net.postchain.devtools.testinfra.TestTransaction
 import net.postchain.devtools.utils.configuration.NodeNameWithBlockchains
@@ -31,7 +31,7 @@ typealias IntegrationTest = ConfigFileBasedIntegrationTest
 
 /**
  * This is the integration test base class used before the Setup classes were created,
- * now most tests should go with the [IntegrationTestSetup] or [GtxTxIntegrationTestSetup]
+ * now most tests should go with the [IntegrationTestSetup] or [net.postchain.devtools.utils.GtxTxIntegrationTestSetup]
  * We should still use this class for tests when we need to test broken configuration files,
  * or when we need to do non-standard stuff, like adding one blockchain at a time.
  */
@@ -179,7 +179,7 @@ open class ConfigFileBasedIntegrationTest : AbstractIntegration() {
      * Starts the nodes with the number of chains different for each node
      *
      * @param count is the number of nodes
-     * @param nodeConfigsFilenamesAndBlockchainConfigsFilenames an array with pairs, mapping the node to the actual blockchain file paths to run on this node.
+     * @param nodeNameWithBlockchainsArr an array with pairs, mapping the node to the actual blockchain file paths to run on this node.
      */
     protected fun createMultipleChainNodesWithVariableNumberOfChains(
             count: Int,

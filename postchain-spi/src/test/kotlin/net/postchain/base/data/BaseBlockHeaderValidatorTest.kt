@@ -2,7 +2,7 @@ package net.postchain.base.data
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
-import net.postchain.base.*
+import net.postchain.base.BaseBlockHeader
 import net.postchain.common.BlockchainRid
 import net.postchain.common.hexStringToByteArray
 import net.postchain.core.ValidationResult
@@ -18,7 +18,7 @@ val calculator = GtvMerkleHashCalculatorV2(cryptoSystem)
 /**
  * The [BaseBlockWitnessProvider] doesn't have any DB dependencies, which makes it pretty easy to do unit test for
  *
- * Note: this is somewhat overlapping the [BaseBlockBuilderValidatonTest]
+ * Note: this is somewhat overlapping the [net.postchain.base.BaseBlockBuilderValidationTest]
  */
 class BaseBlockHeaderValidatorTest {
 
@@ -52,7 +52,7 @@ class BaseBlockHeaderValidatorTest {
     }
 
     @Suppress("UNUSED_PARAMETER")
-    fun getBlockRid(height: Long): ByteArray? {
+    fun getBlockRid(height: Long): ByteArray {
         return myBlockRid
     }
 }

@@ -32,16 +32,19 @@ class MockBlockchainConfigurationProvider :
         return checkNeedConfChangeViaDataSource(eContext, checkPendingConfigs)
     }
 
-    /**
-     * Same principle for "historic" as for "current"
-     */
     override fun getHistoricConfigurationHeight(eContext: EContext, chainId: Long, historicBlockHeight: Long): Long? {
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val blockchainRid = ChainUtil.ridOf(chainId)
-        val nextConfigHeight = dataSource.findNextConfigurationHeight(blockchainRid.data, historicBlockHeight)
-        logger.debug("getHistoricConfigurationHeight() - checking historic height: $historicBlockHeight, next conf at: $nextConfigHeight")
-        return nextConfigHeight
+        var height = -1L
+        while (height < historicBlockHeight) {
+            val nextHeight = dataSource.findNextConfigurationHeight(blockchainRid.data, height + 1)
+            if (nextHeight == null || nextHeight > historicBlockHeight) {
+                return height
+            } else height = nextHeight
+        }
+
+        return height
     }
 
     override fun getBlockchainRid(eContext: EContext, dba: DatabaseAccess) = ChainUtil.ridOf(eContext.chainID)

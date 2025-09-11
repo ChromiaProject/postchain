@@ -1,13 +1,17 @@
 package net.postchain.containers.bpm.resources
 
-import net.postchain.containers.bpm.resources.ResourceLimitType.*
+import net.postchain.containers.bpm.resources.ResourceLimitType.CPU
+import net.postchain.containers.bpm.resources.ResourceLimitType.IO_READ
+import net.postchain.containers.bpm.resources.ResourceLimitType.IO_WRITE
+import net.postchain.containers.bpm.resources.ResourceLimitType.RAM
+import net.postchain.containers.bpm.resources.ResourceLimitType.STORAGE
 
 enum class ResourceLimitType {
 
     CPU, RAM, STORAGE, IO_READ, IO_WRITE;
 
     companion object {
-        fun from(type: String?): ResourceLimitType? = values().firstOrNull { it.name == type }
+        fun from(type: String?): ResourceLimitType? = ResourceLimitType.entries.firstOrNull { it.name == type }
     }
 }
 

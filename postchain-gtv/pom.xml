@@ -170,6 +170,7 @@
                         </goals>
                         <phase>generate-sources</phase>
                         <configuration>
+                            <!--suppress MavenModelInspection -->
                             <skip>${asn1.notRequired}</skip>
                             <includePluginDependencies>true</includePluginDependencies>
                             <mainClass>com.beanit.jasn1.compiler.Compiler</mainClass>

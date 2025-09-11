@@ -42,7 +42,6 @@ interface GTXSpecialTxExtension {
      *
      * @param position is position in the block, either "begin" or "end"
      * @param bctx
-     * @param blockchainRID is the alternative identifier of the chain (we can get chainIid from the [BlockEContext])
      * @return all new operations created
      */
     fun createSpecialOperations(

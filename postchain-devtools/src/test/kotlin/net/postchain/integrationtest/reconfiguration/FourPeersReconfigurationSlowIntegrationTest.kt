@@ -255,9 +255,9 @@ class FourPeersReconfigurationSlowIntegrationTest : ReconfigurationTest() {
                     // Asserting equality of tx charts of all nodes
 
                     // Building tx charts of the minimum (common) length for all nodes
-                    val commonHeight = nodes.map { node ->
+                    val commonHeight = nodes.minOfOrNull { node ->
                         node.query(DEFAULT_CHAIN_IID) { it.getLastBlockHeight() } ?: -1L
-                    }.minOrNull() ?: -1L
+                    } ?: -1L
 
                     assertThat(commonHeight > 0L).isTrue()
 

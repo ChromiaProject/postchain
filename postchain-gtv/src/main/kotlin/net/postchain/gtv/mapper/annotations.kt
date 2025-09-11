@@ -1,7 +1,7 @@
 package net.postchain.gtv.mapper
 
 /**
- * Sets the name of this property in a [GtvDictionary].
+ * Sets the name of this property in a [net.postchain.gtv.GtvDictionary].
  *
  * @param name The name of this property
  */
@@ -11,13 +11,13 @@ annotation class Name(val name: String)
 /**
  * Marks this property as nullable.
  *
- * [Note]: The property must also be marked as nullable using kotlin ? operator
+ * Note: The property must also be marked as nullable using kotlin ? operator
  */
 @Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.TYPE_PARAMETER)
 annotation class Nullable
 
 /**
- * For primitive types, set the default value for this property if missing in [Gtv].
+ * For primitive types, set the default value for this property if missing in GTV.
  *
  * @param defaultLong Default value if target property is type [Long]
  * @param defaultString Default value if target property is type [String]
@@ -35,13 +35,13 @@ annotation class DefaultValue(val defaultLong: Long = 0,
                               val defaultDecimal: String = "0.0")
 
 /**
- * For collection types, set the default value for this property to empty collection if missing in [Gtv].
+ * For collection types, set the default value for this property to empty collection if missing in GTV.
  */
 @Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.TYPE_PARAMETER)
 annotation class DefaultEmpty()
 
 /**
- * Sets the path to this property if nested inside several [GtvDictionary].
+ * Sets the path to this property if nested inside several [net.postchain.gtv.GtvDictionary].
  *
  * @param path Path to property as a list of strings
  */
@@ -59,7 +59,7 @@ annotation class Transient(val mappedName: String)
 /**
  * Store a gtv-view of this object.
  *
- * [Note]: Must be of type [Gtv] and used exclusively
+ * Note: Must be of type [net.postchain.gtv.Gtv] and used exclusively
  */
 @Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER, AnnotationTarget.TYPE_PARAMETER)
 annotation class RawGtv

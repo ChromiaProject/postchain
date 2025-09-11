@@ -65,8 +65,8 @@ import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtv.merkleHash
 import net.postchain.gtx.CompositeGTXModule
-import net.postchain.gtx.GTXBlockchainConfiguration
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
+import net.postchain.gtx.GTXModuleAware
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.MetadataProvider
 import net.postchain.gtx.UnknownQuery
@@ -288,8 +288,8 @@ open class PostchainModel(
     override fun toString(): String = "${this.javaClass.simpleName}(chainId=$chainIID)"
 
     override fun getMetadata(): ApiMetadata {
-        if (blockchainConfiguration !is GTXBlockchainConfiguration) {
-            logger.debug { "Blockchain configuration is not a GTXBlockchainConfiguration, returning empty metadata" }
+        if (blockchainConfiguration !is GTXModuleAware) {
+            logger.debug { "Blockchain configuration is not GTXModuleAware, returning empty metadata" }
             return ApiMetadata(mapOf(), mapOf())
         }
 

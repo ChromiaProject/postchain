@@ -187,7 +187,7 @@ public class net/postchain/base/BaseTxEContext : net/postchain/core/BlockEContex
 	public fun getId ()Ljava/lang/String;
 	public fun getInterface (Ljava/lang/Class;)Ljava/lang/Object;
 	public fun getTimestamp ()J
-	public final fun getTx ()Lnet/postchain/core/Transaction;
+	public fun getTx ()Lnet/postchain/core/Transaction;
 	public fun getTxIID ()J
 }
 
@@ -534,6 +534,7 @@ public class net/postchain/base/data/BaseBlockBuilder : net/postchain/base/Abstr
 	public fun appendTransaction (Lnet/postchain/core/Transaction;)V
 	public fun begin (Lnet/postchain/core/block/BlockHeader;)V
 	protected fun buildBlockchainDependencies (Lnet/postchain/core/block/BlockHeader;)Lnet/postchain/base/BlockchainDependencies;
+	protected fun checkSpecialTransaction (Lnet/postchain/core/Transaction;)V
 	protected fun computeMerkleRootHash ()[B
 	public fun finalizeAndValidate (Lnet/postchain/core/block/BlockHeader;Ljava/util/Set;)V
 	public fun finalizeBlock (J)Lnet/postchain/core/block/BlockHeader;
@@ -829,6 +830,11 @@ public final class net/postchain/base/data/MinimalBlockHeaderInfo {
 	public final fun getHeaderPrevBlockRid ()Lnet/postchain/core/BlockRid;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/base/data/TestBlockBuilder : net/postchain/base/data/BaseBlockBuilder {
+	public fun <init> (Lnet/postchain/common/BlockchainRid;Lnet/postchain/crypto/CryptoSystem;Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockStore;Lnet/postchain/base/SpecialTransactionHandler;[[BLnet/postchain/crypto/SigMaker;Lnet/postchain/base/BlockWitnessProvider;Ljava/util/List;Ljava/util/List;ZJJJZJ[BZLnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;Ljava/time/Clock;)V
+	public synthetic fun <init> (Lnet/postchain/common/BlockchainRid;Lnet/postchain/crypto/CryptoSystem;Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockStore;Lnet/postchain/base/SpecialTransactionHandler;[[BLnet/postchain/crypto/SigMaker;Lnet/postchain/base/BlockWitnessProvider;Ljava/util/List;Ljava/util/List;ZJJJZJ[BZLnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;Ljava/time/Clock;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 }
 
 public final class net/postchain/base/extension/ConfigurationHashBlockBuilderExtension : net/postchain/base/BaseBlockBuilderExtension {
@@ -1279,11 +1285,13 @@ public abstract interface class net/postchain/core/BlockchainConfiguration {
 	public abstract fun initializeModules (Lnet/postchain/PostchainContext;)V
 	public abstract fun makeBlockBuilder (Lnet/postchain/core/ExecutionContext;ZLjava/util/List;)Lnet/postchain/core/block/BlockBuilder;
 	public abstract fun makeBlockQueries (Lnet/postchain/core/Storage;)Lnet/postchain/core/block/BlockQueries;
+	public abstract fun makeTestBlockBuilder (Lnet/postchain/core/ExecutionContext;Ljava/util/List;)Lnet/postchain/core/block/BlockBuilder;
 	public abstract fun shutdownModules ()V
 }
 
 public final class net/postchain/core/BlockchainConfiguration$DefaultImpls {
 	public static synthetic fun makeBlockBuilder$default (Lnet/postchain/core/BlockchainConfiguration;Lnet/postchain/core/ExecutionContext;ZLjava/util/List;ILjava/lang/Object;)Lnet/postchain/core/block/BlockBuilder;
+	public static synthetic fun makeTestBlockBuilder$default (Lnet/postchain/core/BlockchainConfiguration;Lnet/postchain/core/ExecutionContext;Ljava/util/List;ILjava/lang/Object;)Lnet/postchain/core/block/BlockBuilder;
 }
 
 public abstract interface class net/postchain/core/BlockchainConfigurationFactory {
@@ -1658,6 +1666,7 @@ public abstract interface class net/postchain/core/TxEContext : net/postchain/co
 	public abstract fun addAfterAppendHook (Lkotlin/jvm/functions/Function0;)V
 	public abstract fun done ()V
 	public abstract fun emitEvent (Ljava/lang/String;Lnet/postchain/gtv/Gtv;)V
+	public abstract fun getTx ()Lnet/postchain/core/Transaction;
 	public abstract fun getTxIID ()J
 }
 

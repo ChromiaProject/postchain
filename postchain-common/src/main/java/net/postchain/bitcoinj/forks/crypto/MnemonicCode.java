@@ -43,6 +43,7 @@ import static kotlin.jvm.internal.Intrinsics.checkNotNull;
  *  - Change class to non-static
  */
 
+@SuppressWarnings({"FieldMayBeFinal", "UnnecessaryLocalVariable"})
 public class MnemonicCode {
     private ArrayList<String> wordList;
     private static final String BIP39_ENGLISH_RESOURCE_NAME = "/mnemonic/wordlist/english.txt";
