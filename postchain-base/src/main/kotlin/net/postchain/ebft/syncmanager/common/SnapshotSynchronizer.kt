@@ -71,7 +71,7 @@ class SnapshotSynchronizer(
     private var receivedLatestSnapshotHeight = mutableMapOf<NodeRid, SnapshotBlockHeader>()
     private val contextSyncRequests = mutableMapOf<Long, SnapshotContextState>() // State of progress per context, each context is removed on completion
     internal val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAware>()
-    private var lastStoredSnapshotData = mutableMapOf<Long, Long>() // TODO: remove later, just for monitoring wasted time
+    private var lastStoredSnapshotDataTime = mutableMapOf<Long, Long>()
 
     private lateinit var syncState: SnapshotSyncState
     private val contextStates = mutableMapOf<Long, SnapshotSyncContextState>()
@@ -262,9 +262,9 @@ class SnapshotSynchronizer(
                         if (awaitsSnapshotHeights) {
                             receivedLatestSnapshotHeight[peerId] = message
                             if (message.header.isNotEmpty()) {
-                                logger.info("GOT LATEST SNAPSHOT HEADER: ${BlockHeaderData.fromBinary(message.header)}")
+                                logger.info("Got a snapshot header from $peerId. Adding it to snapshot header candidates.")
                             } else {
-                                logger.info("GOT LATEST SNAPSHOT HEADER: EMPTY")
+                                logger.info("Got no snapshot header from $peerId")
                             }
                         }
                     }
@@ -285,7 +285,7 @@ class SnapshotSynchronizer(
                                         requestNextSnapshotData(state, message)
                                     }
 
-                                    val waitTime = lastStoredSnapshotData[message.contextId]?.let {
+                                    val waitTime = lastStoredSnapshotDataTime[message.contextId]?.let {
                                         System.currentTimeMillis() - it
                                     }
 
@@ -293,7 +293,7 @@ class SnapshotSynchronizer(
                                         storeSnapshotData(message.contextId, preparedData, end)
                                     }
                                     logger.debug { "Stored ${preparedData.size} datums (${FileUtils.byteCountToDisplaySize(preparedData.sumOf { it.data.nrOfBytes() })}) from offset ${message.datumIdFrom} for context id ${message.contextId} in ${storeTime.toLong(DurationUnit.MILLISECONDS)} ms. End: $end. Wasted time from last store: $waitTime ms" }
-                                    lastStoredSnapshotData[message.contextId] = System.currentTimeMillis()
+                                    lastStoredSnapshotDataTime[message.contextId] = System.currentTimeMillis()
 
                                     if (end) {
                                         logger.debug { "Snapshot end reached for context ${state.contextId}" }
@@ -340,7 +340,6 @@ class SnapshotSynchronizer(
 
             if (isProcessRunning() && contextSyncRequests.isEmpty()) {
                 buildAndVerifySnapshot()
-                // TODO add a call to SnapshowAware.finalizeEtc?
             }
         }
     }

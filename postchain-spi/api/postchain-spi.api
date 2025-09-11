@@ -52,6 +52,7 @@ public abstract class net/postchain/base/AbstractBlockBuilder : net/postchain/ba
 	public final fun getEctx ()Lnet/postchain/core/ExecutionContext;
 	protected final fun getFinalized ()Z
 	public fun getHeight ()Ljava/lang/Long;
+	protected final fun getNextTransactionNumber ()J
 	protected final fun getRawTransactions ()Ljava/util/List;
 	public final fun getStore ()Lnet/postchain/core/block/BlockStore;
 	public final fun getTransactions ()Ljava/util/List;
@@ -64,6 +65,7 @@ public abstract class net/postchain/base/AbstractBlockBuilder : net/postchain/ba
 	protected final fun setBlockchainDependencies (Lnet/postchain/base/BlockchainDependencies;)V
 	protected final fun setBuildingNewBlock (Z)V
 	protected final fun setFinalized (Z)V
+	protected final fun setNextTransactionNumber (J)V
 	protected final fun set_blockData (Lnet/postchain/core/block/BlockData;)V
 }
 
@@ -472,12 +474,15 @@ public final class net/postchain/base/configuration/BlockchainConfigurationField
 	public static final field KEY_REVOLT_WHEN_SHOULD_BUILD_BLOCK Ljava/lang/String;
 	public static final field KEY_SIGNERS Ljava/lang/String;
 	public static final field KEY_SNAPSHOT Ljava/lang/String;
+	public static final field KEY_SNAPSHOT_INTERVAL Ljava/lang/String;
+	public static final field KEY_SNAPSHOT_LEVELS_PER_PAGE Ljava/lang/String;
 	public static final field KEY_SYNC Ljava/lang/String;
 	public static final field KEY_SYNC_EXT Ljava/lang/String;
 	public static final fun getAsyncQueryQueueCapacity (Lnet/postchain/core/BlockchainConfiguration;)J
 	public static final fun getAsyncQueryResultRetentionSeconds (Lnet/postchain/core/BlockchainConfiguration;)J
 	public static final fun getAsyncQueryTimeoutSeconds (Lnet/postchain/core/BlockchainConfiguration;)J
 	public static final fun getQueryCacheTtlSeconds (Lnet/postchain/core/BlockchainConfiguration;)J
+	public static final fun getSnapshot (Lnet/postchain/core/BlockchainConfiguration;)Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;
 }
 
 public final class net/postchain/base/configuration/BlockchainConfigurationOptions {
@@ -634,6 +639,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getAllBlocksWithTransactions (Lnet/postchain/core/ExecutionContext;JJLkotlin/jvm/functions/Function1;)V
 	public abstract fun getAllConfigurations (Ljava/sql/Connection;J)Ljava/util/List;
 	public abstract fun getAllConfigurations (Lnet/postchain/core/ExecutionContext;)Ljava/util/List;
+	public abstract fun getAllSnapshotSyncContexts (Lnet/postchain/core/ExecutionContext;)Ljava/util/List;
 	public abstract fun getBlock (Lnet/postchain/core/ExecutionContext;[B)Lnet/postchain/base/data/DatabaseAccess$BlockInfoExt;
 	public abstract fun getBlockHeader (Lnet/postchain/core/ExecutionContext;[B)[B
 	public abstract fun getBlockHeight (Lnet/postchain/core/ExecutionContext;[BJ)Ljava/lang/Long;
@@ -686,9 +692,9 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun getSnapshotContextId (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;)J
 	public abstract fun getSnapshotContextModule (Lnet/postchain/core/ExecutionContext;J)Ljava/lang/String;
 	public abstract fun getSnapshotModuleContextIds (Lnet/postchain/core/ExecutionContext;)Ljava/util/List;
+	public abstract fun getSnapshotSyncState (Lnet/postchain/core/ExecutionContext;)Lnet/postchain/base/data/SnapshotSyncState;
 	public abstract fun getState (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JJ)Lnet/postchain/base/data/DatabaseAccess$StateData;
 	public abstract fun getStateNMax (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;J)Ljava/lang/Long;
-	public abstract fun getStatesBySize (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JJJ)Ljava/util/List;
 	public abstract fun getTransactionInfo (Lnet/postchain/core/ExecutionContext;[BZ)Lnet/postchain/core/TransactionInfoExt;
 	public abstract fun getTransactionsInfo (Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockQueryTimeFilter;II)Lnet/postchain/core/TransactionInfoExtsTruncated;
 	public abstract fun getTransactionsInfoBySigner (Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockQueryTimeFilter;ILnet/postchain/crypto/PubKey;I)Lnet/postchain/core/TransactionInfoExtsTruncated;
@@ -706,6 +712,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun insertPage (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;Lnet/postchain/base/snapshot/Page;)V
 	public abstract fun insertState (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JJ[B)V
 	public abstract fun insertTransaction (Lnet/postchain/core/BlockEContext;Lnet/postchain/core/Transaction;J)J
+	public abstract fun insertUpdatedDatum (Lnet/postchain/core/ExecutionContext;JLjava/util/List;)V
 	public abstract fun insertUpdatedDatum (Lnet/postchain/core/ExecutionContext;JLnet/postchain/base/data/DatumInfo;)V
 	public abstract fun isSavepointSupported ()Z
 	public abstract fun isSchemaExists (Ljava/sql/Connection;Ljava/lang/String;)Z
@@ -714,6 +721,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun listConfigurations (Lnet/postchain/core/ExecutionContext;)Ljava/util/List;
 	public abstract fun pruneAccountStates (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JJJ)V
 	public abstract fun pruneEvents (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;J)V
+	public abstract fun pruneSnapshotSyncState (Lnet/postchain/core/ExecutionContext;)V
 	public abstract fun removeAllBlockchainReplicas (Lnet/postchain/core/ExecutionContext;)Z
 	public abstract fun removeAllBlockchainSpecificFunctions (Lnet/postchain/core/ExecutionContext;)V
 	public abstract fun removeAllBlockchainSpecificTables (Lnet/postchain/core/ExecutionContext;Ljava/util/List;)V
@@ -723,10 +731,14 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun removeConfiguration (Lnet/postchain/core/ExecutionContext;J)I
 	public abstract fun removeContainerIid (Lnet/postchain/core/AppContext;Ljava/lang/String;)V
 	public abstract fun removePeerInfo (Lnet/postchain/core/AppContext;Lnet/postchain/crypto/PubKey;)[Lnet/postchain/base/PeerInfo;
+	public abstract fun removeSnapshotSyncContextState (Lnet/postchain/core/ExecutionContext;J)V
 	public abstract fun safePruneAccountStates (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;JJJ)V
 	public abstract fun setCurrentSchema (Ljava/sql/Connection;Ljava/lang/String;)V
 	public abstract fun setLastChainId (Lnet/postchain/core/ExecutionContext;)V
 	public abstract fun setMustSyncUntil (Lnet/postchain/core/AppContext;Lnet/postchain/common/BlockchainRid;J)Z
+	public abstract fun setSnapshotSyncContextState (Lnet/postchain/core/ExecutionContext;Lnet/postchain/base/data/SnapshotSyncContextState;)V
+	public abstract fun setSnapshotSyncContextStateOffset (Lnet/postchain/core/ExecutionContext;JJ)V
+	public abstract fun setSnapshotSyncState (Lnet/postchain/core/ExecutionContext;Lnet/postchain/base/data/SnapshotSyncState;)V
 	public abstract fun tableName (Ljava/lang/String;)Ljava/lang/String;
 	public abstract fun tableName (Lnet/postchain/core/ExecutionContext;Ljava/lang/String;)Ljava/lang/String;
 	public abstract fun updateFaultyConfigurationReportHeight (Lnet/postchain/core/ExecutionContext;J)V
@@ -832,6 +844,46 @@ public final class net/postchain/base/data/MinimalBlockHeaderInfo {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class net/postchain/base/data/PersistOnlyBlockBuilder : net/postchain/base/AbstractBlockBuilder {
+	public fun <init> (Lnet/postchain/core/ExecutionContext;Lnet/postchain/common/BlockchainRid;Lnet/postchain/core/block/BlockStore;Lnet/postchain/base/BlockWitnessProvider;[B)V
+	public fun appendTransaction (Lnet/postchain/core/Transaction;)V
+	public fun finalizeAndValidate (Lnet/postchain/core/block/BlockHeader;Ljava/util/Set;)V
+	public fun finalizeBlock (J)Lnet/postchain/core/block/BlockHeader;
+	public fun getBlockWitnessBuilder ()Lnet/postchain/core/block/BlockWitnessBuilder;
+	public fun processEmittedEvent (Lnet/postchain/core/TxEContext;Ljava/lang/String;Lnet/postchain/gtv/Gtv;)V
+}
+
+public final class net/postchain/base/data/SnapshotSyncContextState {
+	public fun <init> (J[BJJ)V
+	public final fun component1 ()J
+	public final fun component2 ()[B
+	public final fun component3 ()J
+	public final fun component4 ()J
+	public final fun copy (J[BJJ)Lnet/postchain/base/data/SnapshotSyncContextState;
+	public static synthetic fun copy$default (Lnet/postchain/base/data/SnapshotSyncContextState;J[BJJILjava/lang/Object;)Lnet/postchain/base/data/SnapshotSyncContextState;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getContextId ()J
+	public final fun getContextRootHash ()[B
+	public final fun getDatumIdOffset ()J
+	public final fun getMaxDatumId ()J
+	public fun hashCode ()I
+	public final fun setDatumIdOffset (J)V
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/base/data/SnapshotSyncState {
+	public fun <init> (J[B)V
+	public final fun component1 ()J
+	public final fun component2 ()[B
+	public final fun copy (J[B)Lnet/postchain/base/data/SnapshotSyncState;
+	public static synthetic fun copy$default (Lnet/postchain/base/data/SnapshotSyncState;J[BILjava/lang/Object;)Lnet/postchain/base/data/SnapshotSyncState;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getHeight ()J
+	public final fun getRootHash ()[B
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class net/postchain/base/data/TestBlockBuilder : net/postchain/base/data/BaseBlockBuilder {
 	public fun <init> (Lnet/postchain/common/BlockchainRid;Lnet/postchain/crypto/CryptoSystem;Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockStore;Lnet/postchain/base/SpecialTransactionHandler;[[BLnet/postchain/crypto/SigMaker;Lnet/postchain/base/BlockWitnessProvider;Ljava/util/List;Ljava/util/List;ZJJJZJ[BZLnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;Ljava/time/Clock;)V
 	public synthetic fun <init> (Lnet/postchain/common/BlockchainRid;Lnet/postchain/crypto/CryptoSystem;Lnet/postchain/core/ExecutionContext;Lnet/postchain/core/block/BlockStore;Lnet/postchain/base/SpecialTransactionHandler;[[BLnet/postchain/crypto/SigMaker;Lnet/postchain/base/BlockWitnessProvider;Ljava/util/List;Ljava/util/List;ZJJJZJ[BZLnet/postchain/gtv/merkle/GtvMerkleHashCalculatorBase;Ljava/time/Clock;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -908,34 +960,31 @@ public final class net/postchain/base/gtv/GtvToBlockchainRidFactory {
 
 public class net/postchain/base/snapshot/BasePageStore : net/postchain/base/snapshot/PageStore {
 	public fun <init> (Ljava/lang/String;Lnet/postchain/core/ExecutionContext;ILnet/postchain/base/snapshot/DigestSystem;)V
+	public fun getAllLeafHashes (J)Ljava/util/List;
 	public final fun getCtx ()Lnet/postchain/core/ExecutionContext;
 	public final fun getDs ()Lnet/postchain/base/snapshot/DigestSystem;
 	public final fun getLevelsPerPage ()I
 	public fun getMerkleProof (JJ)Ljava/util/List;
 	public final fun getName ()Ljava/lang/String;
+	public fun getRangeMerkleProof (JJJ)Lnet/postchain/base/snapshot/RangeProof;
 	public fun highestLevelPage (J)I
 	public fun readPage (JIJ)Lnet/postchain/base/snapshot/Page;
 	public fun writePage (Lnet/postchain/base/snapshot/Page;)V
 }
 
 public final class net/postchain/base/snapshot/BaseSnapshotDatumRepository : net/postchain/base/snapshot/SnapshotDatumRepository {
-	public fun <init> (Ljava/util/List;)V
+	public fun <init> (Ljava/util/List;ILnet/postchain/crypto/CryptoSystem;)V
+	public fun getContextMaxIds (Lnet/postchain/core/ExecutionContext;J)Ljava/util/Map;
 	public fun getDatum (Lnet/postchain/core/ExecutionContext;JJJ)Lnet/postchain/gtv/Gtv;
 	public fun getDatumIdMax (Lnet/postchain/core/ExecutionContext;JJ)Ljava/lang/Long;
-	public fun getDatumWithType (Lnet/postchain/core/ExecutionContext;JJJ)Lkotlin/Pair;
-	public fun getDatumsBySize (Lnet/postchain/core/ExecutionContext;JJJJ)Ljava/util/List;
+	public fun getDatumWithType (Lnet/postchain/core/ExecutionContext;JJJ)Lnet/postchain/base/snapshot/SnapshotDatum;
+	public fun getDatums (Lnet/postchain/core/ExecutionContext;JJJJJ)Ljava/util/List;
 	public fun getLatestSnapshotHeight (Lnet/postchain/core/ExecutionContext;)Ljava/lang/Long;
-	public fun getPermanentDatum (Lnet/postchain/core/ExecutionContext;JJ)Lnet/postchain/gtv/Gtv;
-	public fun getPermanentDatumIdMax (Lnet/postchain/core/ExecutionContext;J)Ljava/lang/Long;
-	public fun getPermanentDatumsBySize (Lnet/postchain/core/ExecutionContext;JJJ)Ljava/util/List;
-	public fun getStateDatum (Lnet/postchain/core/ExecutionContext;JJJ)Lnet/postchain/gtv/Gtv;
-	public fun getStateDatumIdMax (Lnet/postchain/core/ExecutionContext;JJ)Ljava/lang/Long;
-	public fun getStateDatumsBySize (Lnet/postchain/core/ExecutionContext;JJJJ)Ljava/util/List;
+	public fun getRangeProof (Lnet/postchain/core/ExecutionContext;JJJJ)Lnet/postchain/base/snapshot/RangeProof;
 }
 
 public abstract interface class net/postchain/base/snapshot/DigestSystem {
 	public abstract fun digest ([B)[B
-	public abstract fun getMessageDigest ()Ljava/security/MessageDigest;
 	public abstract fun hash ([B[B)[B
 }
 
@@ -962,15 +1011,43 @@ public final class net/postchain/base/snapshot/Page {
 }
 
 public abstract interface class net/postchain/base/snapshot/PageStore {
+	public abstract fun getAllLeafHashes (J)Ljava/util/List;
 	public abstract fun getMerkleProof (JJ)Ljava/util/List;
+	public abstract fun getRangeMerkleProof (JJJ)Lnet/postchain/base/snapshot/RangeProof;
 	public abstract fun highestLevelPage (J)I
 	public abstract fun readPage (JIJ)Lnet/postchain/base/snapshot/Page;
 	public abstract fun writePage (Lnet/postchain/base/snapshot/Page;)V
 }
 
+public final class net/postchain/base/snapshot/RangeProof {
+	public fun <init> (Ljava/util/List;Ljava/util/List;Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/util/List;Ljava/util/List;)Lnet/postchain/base/snapshot/RangeProof;
+	public static synthetic fun copy$default (Lnet/postchain/base/snapshot/RangeProof;Ljava/util/List;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lnet/postchain/base/snapshot/RangeProof;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCommonPath ()Ljava/util/List;
+	public final fun getLeftBoundaryHashes ()Ljava/util/List;
+	public final fun getRightBoundaryHashes ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class net/postchain/base/snapshot/RootSnapshotBlockBuilder {
+	public static final field Companion Lnet/postchain/base/snapshot/RootSnapshotBlockBuilder$Companion;
+	public fun <init> (Lnet/postchain/core/BlockEContext;ILnet/postchain/crypto/CryptoSystem;)V
+	public fun <init> (Lnet/postchain/core/ExecutionContext;JILnet/postchain/crypto/CryptoSystem;)V
+	public final fun build ()[B
+	public final fun getLastSnapshotHeight ()Ljava/lang/Long;
+}
+
+public final class net/postchain/base/snapshot/RootSnapshotBlockBuilder$Companion : mu/KLogging {
+}
+
 public final class net/postchain/base/snapshot/RootSnapshotBlockBuilderExtension : net/postchain/base/BaseBlockBuilderExtension {
 	public static final field Companion Lnet/postchain/base/snapshot/RootSnapshotBlockBuilderExtension$Companion;
-	public fun <init> (J)V
+	public fun <init> (JI)V
 	public fun finalize ()Ljava/util/Map;
 	public fun init (Lnet/postchain/core/BlockEContext;Lnet/postchain/base/data/BaseBlockBuilder;)V
 }
@@ -984,36 +1061,54 @@ public final class net/postchain/base/snapshot/RootSnapshotBlockBuilderExtension
 
 public final class net/postchain/base/snapshot/SimpleDigestSystem : net/postchain/base/snapshot/DigestSystem {
 	public fun <init> (Ljava/security/MessageDigest;)V
+	public fun <init> (Lnet/postchain/crypto/Digester;)V
 	public fun digest ([B)[B
-	public fun getMessageDigest ()Ljava/security/MessageDigest;
 	public fun hash ([B[B)[B
 }
 
 public final class net/postchain/base/snapshot/SnapshotBlockchainConfigurationData {
-	public fun <init> (Lnet/postchain/gtv/Gtv;J)V
+	public static final field Companion Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData$Companion;
+	public fun <init> (Lnet/postchain/gtv/Gtv;JJ)V
 	public final fun component1 ()Lnet/postchain/gtv/Gtv;
 	public final fun component2 ()J
-	public final fun copy (Lnet/postchain/gtv/Gtv;J)Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;
-	public static synthetic fun copy$default (Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;Lnet/postchain/gtv/Gtv;JILjava/lang/Object;)Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;
+	public final fun copy (Lnet/postchain/gtv/Gtv;JJ)Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;
+	public static synthetic fun copy$default (Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;Lnet/postchain/gtv/Gtv;JJILjava/lang/Object;)Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;
 	public fun equals (Ljava/lang/Object;)Z
+	public static final fun getDefault ()Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;
+	public final fun getLevelsPerPage ()I
 	public final fun getRawGtv ()Lnet/postchain/gtv/Gtv;
 	public final fun getSnapshotInterval ()J
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class net/postchain/base/snapshot/SnapshotBlockchainConfigurationData$Companion : mu/KLogging {
+	public final fun getDefault ()Lnet/postchain/base/snapshot/SnapshotBlockchainConfigurationData;
+}
+
+public final class net/postchain/base/snapshot/SnapshotDatum {
+	public fun <init> (JLnet/postchain/gtv/Gtv;Z)V
+	public final fun component1 ()J
+	public final fun component2 ()Lnet/postchain/gtv/Gtv;
+	public final fun component3 ()Z
+	public final fun copy (JLnet/postchain/gtv/Gtv;Z)Lnet/postchain/base/snapshot/SnapshotDatum;
+	public static synthetic fun copy$default (Lnet/postchain/base/snapshot/SnapshotDatum;JLnet/postchain/gtv/Gtv;ZILjava/lang/Object;)Lnet/postchain/base/snapshot/SnapshotDatum;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getData ()Lnet/postchain/gtv/Gtv;
+	public final fun getId ()J
+	public fun hashCode ()I
+	public final fun isPermanent ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
 public abstract interface class net/postchain/base/snapshot/SnapshotDatumRepository {
+	public abstract fun getContextMaxIds (Lnet/postchain/core/ExecutionContext;J)Ljava/util/Map;
 	public abstract fun getDatum (Lnet/postchain/core/ExecutionContext;JJJ)Lnet/postchain/gtv/Gtv;
 	public abstract fun getDatumIdMax (Lnet/postchain/core/ExecutionContext;JJ)Ljava/lang/Long;
-	public abstract fun getDatumWithType (Lnet/postchain/core/ExecutionContext;JJJ)Lkotlin/Pair;
-	public abstract fun getDatumsBySize (Lnet/postchain/core/ExecutionContext;JJJJ)Ljava/util/List;
+	public abstract fun getDatumWithType (Lnet/postchain/core/ExecutionContext;JJJ)Lnet/postchain/base/snapshot/SnapshotDatum;
+	public abstract fun getDatums (Lnet/postchain/core/ExecutionContext;JJJJJ)Ljava/util/List;
 	public abstract fun getLatestSnapshotHeight (Lnet/postchain/core/ExecutionContext;)Ljava/lang/Long;
-	public abstract fun getPermanentDatum (Lnet/postchain/core/ExecutionContext;JJ)Lnet/postchain/gtv/Gtv;
-	public abstract fun getPermanentDatumIdMax (Lnet/postchain/core/ExecutionContext;J)Ljava/lang/Long;
-	public abstract fun getPermanentDatumsBySize (Lnet/postchain/core/ExecutionContext;JJJ)Ljava/util/List;
-	public abstract fun getStateDatum (Lnet/postchain/core/ExecutionContext;JJJ)Lnet/postchain/gtv/Gtv;
-	public abstract fun getStateDatumIdMax (Lnet/postchain/core/ExecutionContext;JJ)Ljava/lang/Long;
-	public abstract fun getStateDatumsBySize (Lnet/postchain/core/ExecutionContext;JJJJ)Ljava/util/List;
+	public abstract fun getRangeProof (Lnet/postchain/core/ExecutionContext;JJJJ)Lnet/postchain/base/snapshot/RangeProof;
 }
 
 public class net/postchain/base/snapshot/SnapshotPageStore : net/postchain/base/snapshot/BasePageStore {
@@ -1026,6 +1121,13 @@ public class net/postchain/base/snapshot/SnapshotPageStore : net/postchain/base/
 	public fun readPage (JIJ)Lnet/postchain/base/snapshot/Page;
 	public final fun updateSnapshot (JLjava/util/NavigableMap;I)[B
 	public static synthetic fun updateSnapshot$default (Lnet/postchain/base/snapshot/SnapshotPageStore;JLjava/util/NavigableMap;IILjava/lang/Object;)[B
+}
+
+public final class net/postchain/base/snapshot/VerifyRangeProof {
+	public fun <init> (Lnet/postchain/base/snapshot/DigestSystem;)V
+	public final fun calculateMerkleRoot (Ljava/util/List;I)[B
+	public final fun calculateMerkleRoot (Ljava/util/List;J[B)Lkotlin/Pair;
+	public final fun verify ([BLnet/postchain/base/snapshot/RangeProof;JLjava/util/List;)Lkotlin/Pair;
 }
 
 public final class net/postchain/concurrent/util/CompletableFutureHelperKt {
@@ -1275,6 +1377,7 @@ public abstract interface class net/postchain/core/BlockchainConfiguration {
 	public abstract fun getMerkleHashVersion ()J
 	public abstract fun getRawConfig ()Lnet/postchain/gtv/Gtv;
 	public abstract fun getSigners ()Ljava/util/List;
+	public abstract fun getSnapshotAwareModules ()Ljava/util/List;
 	public abstract fun getSyncInfrastructureExtensionNames ()Ljava/util/List;
 	public abstract fun getSyncInfrastructureName ()Lnet/postchain/core/DynamicClassName;
 	public abstract fun getTraits ()Ljava/util/Set;
@@ -1285,6 +1388,7 @@ public abstract interface class net/postchain/core/BlockchainConfiguration {
 	public abstract fun initializeModules (Lnet/postchain/PostchainContext;)V
 	public abstract fun makeBlockBuilder (Lnet/postchain/core/ExecutionContext;ZLjava/util/List;)Lnet/postchain/core/block/BlockBuilder;
 	public abstract fun makeBlockQueries (Lnet/postchain/core/Storage;)Lnet/postchain/core/block/BlockQueries;
+	public abstract fun makePersistOnlyBlockBuilder (Lnet/postchain/core/ExecutionContext;)Lnet/postchain/core/block/BlockBuilder;
 	public abstract fun makeTestBlockBuilder (Lnet/postchain/core/ExecutionContext;Ljava/util/List;)Lnet/postchain/core/block/BlockBuilder;
 	public abstract fun shutdownModules ()V
 }
@@ -1327,6 +1431,7 @@ public abstract interface class net/postchain/core/BlockchainEngine : net/postch
 	public abstract fun hasBuiltFirstBlockAfterConfigUpdate ()Z
 	public abstract fun isRunning ()Z
 	public abstract fun loadUnfinishedBlock (Lnet/postchain/core/block/BlockData;Z)Lkotlin/Pair;
+	public abstract fun persistBlock (Lnet/postchain/core/block/BlockDataWithWitness;)Lkotlin/Pair;
 }
 
 public final class net/postchain/core/BlockchainEngine$DefaultImpls {
@@ -1828,6 +1933,10 @@ public abstract interface class net/postchain/core/block/BlockQueries : net/post
 	public abstract fun getLastBlockTimestamp ()Ljava/util/concurrent/CompletionStage;
 	public abstract fun getLastTransactionNumber ()Ljava/util/concurrent/CompletionStage;
 	public abstract fun getLatestSnapshotBlockHeader ()Ljava/util/concurrent/CompletionStage;
+	public abstract fun getLatestSnapshotHeight ()Ljava/util/concurrent/CompletionStage;
+	public abstract fun getSnapshotContextMaxIds (J)Ljava/util/concurrent/CompletionStage;
+	public abstract fun getSnapshotData (JJJJJ)Ljava/util/concurrent/CompletionStage;
+	public abstract fun getSnapshotRangeProof (JJJJ)Ljava/util/concurrent/CompletionStage;
 	public abstract fun getTransaction ([B)Ljava/util/concurrent/CompletionStage;
 	public abstract fun getTransactionInfo ([BZ)Ljava/util/concurrent/CompletionStage;
 	public abstract fun getTransactionRawData ([B)Ljava/util/concurrent/CompletionStage;
@@ -2342,10 +2451,9 @@ public final class net/postchain/gtx/SimpleGTXOperation : net/postchain/gtx/GTXO
 }
 
 public abstract interface class net/postchain/gtx/SnapshotAware {
-	public abstract fun constructDatum (Lnet/postchain/core/ExecutionContext;JLnet/postchain/gtv/Gtv;Z)V
-	public abstract fun getPermanentDatum (Lnet/postchain/core/ExecutionContext;J)Lnet/postchain/gtv/Gtv;
+	public abstract fun constructDatum (Lnet/postchain/core/ExecutionContext;Ljava/util/List;)V
 	public abstract fun getPermanentDatumIdMax (Lnet/postchain/core/ExecutionContext;)Ljava/lang/Long;
-	public abstract fun getPermanentDatumsBySize (Lnet/postchain/core/ExecutionContext;JJ)Ljava/util/List;
+	public abstract fun getPermanentDatums (Lnet/postchain/core/ExecutionContext;JLkotlin/jvm/functions/Function1;)V
 	public abstract fun initializeSnapshotContext (Lnet/postchain/gtx/SnapshotContext;)V
 }
 

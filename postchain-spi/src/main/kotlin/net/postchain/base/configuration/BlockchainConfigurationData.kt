@@ -85,8 +85,7 @@ data class BlockchainConfigurationData(
     val configHash by lazy {
         rawConfig.merkleHash(merkleHashCalculator)
     }
-    // TODO: For simplicity and to avoid issues, add validation that snapshot can only be enabled with V2 merkle hash
-    val snapshotsEnabled: Boolean = features[BlockchainFeatures.snapshot_enabled.name]?.asBoolean() ?: false
+    val snapshotsEnabled: Boolean = merkleHashVersion >= 2 && features[BlockchainFeatures.snapshot_enabled.name]?.asBoolean() ?: false
 
     companion object {
         @JvmStatic
