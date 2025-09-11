@@ -3,6 +3,7 @@ package net.postchain.devtools.mminfra
 import net.postchain.base.snapshot.RangeProof
 import net.postchain.base.snapshot.SnapshotDatum
 import net.postchain.base.snapshot.SnapshotDatumRepository
+import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.core.EContext
 import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvNull
@@ -16,9 +17,8 @@ class DummySnapshotRepository : SnapshotDatumRepository {
 
     override fun getDatums(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long, maxTime: Long): List<SnapshotDatum> = emptyList()
 
-    override fun getRangeProof(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long): RangeProof {
-        TODO("Not yet implemented")
-    }
+    override fun getRangeProof(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, datumIdTo: Long): RangeProof =
+            throw ProgrammerMistake("Not yet implemented")
 
     override fun getLatestSnapshotHeight(ctx: EContext): Long? = null
 

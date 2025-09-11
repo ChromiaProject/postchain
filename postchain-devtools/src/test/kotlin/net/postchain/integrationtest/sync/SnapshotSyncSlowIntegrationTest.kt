@@ -486,8 +486,9 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         }
     }
 
+    /** For manual testing */
     @Test
-    @Disabled // TODO just for manual tests, remove or move out?
+    @Disabled
     fun syncMoreData() {
         nodeConfigurationOverrides["snapshotsync.max_time"] = 5_000
         nodeConfigurationOverrides["snapshotsync.max_data_size"] = 1024 * 1024 * 1
