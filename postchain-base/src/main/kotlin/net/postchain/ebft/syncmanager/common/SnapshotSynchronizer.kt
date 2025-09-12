@@ -330,6 +330,9 @@ class SnapshotSynchronizer(
     private fun syncSnapshotUntil() {
 
         if (isProcessRunning()) {
+
+            snapshotModuleByContextMap.values.forEach(SnapshotAware::initializeImport)
+
             sendInitialSnapshotDataRequest()
 
             while (isProcessRunning() && contextSyncRequests.isNotEmpty()) {
@@ -339,6 +342,7 @@ class SnapshotSynchronizer(
             }
 
             if (isProcessRunning() && contextSyncRequests.isEmpty()) {
+                snapshotModuleByContextMap.values.forEach(SnapshotAware::finalizeImport)
                 buildAndVerifySnapshot()
             }
         }

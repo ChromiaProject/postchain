@@ -230,7 +230,7 @@ abstract class Messaging(
             logger.debug { "Already responded to request from peer $peerId for snapshot data for chainID $chainId, height $height, contextID $contextId and datumIDFrom $datumIdFrom. Ignoring." }
             return
         }
-        // TODO need something as this? if (isTotalServedBlockRequestLimitReached(peerId)) return
+        if (isTotalServedBlockRequestLimitReached(peerId)) return
 
         try {
             val timeAndData = measureTimedValue {
@@ -264,7 +264,8 @@ abstract class Messaging(
         val limitReached = rateLimitConfiguration.blockRequestRateLimit > 0 &&
                 (MAX_BLOCKS_IN_PACKAGE * (servedBlockRanges[peerID]?.size ?: 0)) +
                 (servedBlockAtHeight[peerID]?.size ?: 0) +
-                (servedBlockHeaderAndBlock[peerID]?.size ?: 0) >= rateLimitConfiguration.blockRequestRateLimit
+                (servedBlockHeaderAndBlock[peerID]?.size ?: 0) +
+                (servedSnapshotDataAtOffset[peerID]?.size ?: 0) >= rateLimitConfiguration.blockRequestRateLimit
 
         if (limitReached) logger.debug { "Total block requests from peer $peerID exceeds rate limit. Ignoring." }
         return limitReached
