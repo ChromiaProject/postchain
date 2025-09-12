@@ -3,6 +3,7 @@ package net.postchain.devtools.mminfra
 import net.postchain.PostchainContext
 import net.postchain.base.BaseBlockchainInfrastructure
 import net.postchain.base.configuration.BlockchainConfigurationOptions
+import net.postchain.base.withReadWriteConnection
 import net.postchain.core.ApiInfrastructure
 import net.postchain.core.BlockchainConfiguration
 import net.postchain.core.BlockchainConfigurationFactorySupplier
@@ -22,7 +23,5 @@ class TestManagedBlockchainInfrastructure(
             chainId: Long,
             bcConfigurationFactory: BlockchainConfigurationFactorySupplier,
             blockchainConfigurationOptions: BlockchainConfigurationOptions
-    ): BlockchainConfiguration {
-        return mockDataSource.getBuiltConfiguration(chainId, rawConfigurationData)
-    }
+    ): BlockchainConfiguration = mockDataSource.getBuiltConfiguration(chainId, rawConfigurationData, eContext)
 }
