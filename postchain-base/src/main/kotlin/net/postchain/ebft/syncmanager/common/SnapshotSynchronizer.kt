@@ -23,7 +23,6 @@ import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.toHex
 import net.postchain.concurrent.util.get
 import net.postchain.core.BlockRid
-import net.postchain.core.EContext
 import net.postchain.core.NodeRid
 import net.postchain.crypto.KeyPair
 import net.postchain.crypto.PrivKey
@@ -70,7 +69,7 @@ class SnapshotSynchronizer(
 
     private var receivedLatestSnapshotHeight = mutableMapOf<NodeRid, SnapshotBlockHeader>()
     private val contextSyncRequests = mutableMapOf<Long, SnapshotContextState>() // State of progress per context, each context is removed on completion
-    internal val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAware>()
+    internal var snapshotModuleByContextMap = mapOf<Long, SnapshotAware>()
     private var lastStoredSnapshotDataTime = mutableMapOf<Long, Long>()
 
     private lateinit var syncState: SnapshotSyncState
@@ -331,9 +330,11 @@ class SnapshotSynchronizer(
 
         if (isProcessRunning()) {
 
-            snapshotModuleByContextMap.values.forEach(SnapshotAware::initializeImport)
+            snapshotModuleByContextMap = getSnapshotModuleByContextMap()
 
             sendInitialSnapshotDataRequest()
+
+            snapshotModuleByContextMap.values.forEach(SnapshotAware::initializeImport)
 
             while (isProcessRunning() && contextSyncRequests.isNotEmpty()) {
                 processMessages(false)
@@ -370,7 +371,8 @@ class SnapshotSynchronizer(
         if (data.isNotEmpty()) {
             withWriteConnection(workerContext.engine.blockBuilderStorage, workerContext.blockchainConfiguration.chainID) { ctx ->
                 DatabaseAccess.of(ctx).apply {
-                    val module = getSnapshotAwareModuleByContext(ctx, contextId)
+                    val module = snapshotModuleByContextMap[contextId] ?:
+                        throw ProgrammerMistake("No module found for snapshot context id $contextId")
                     insertUpdatedDatum(ctx, contextId, data.map {
                         DatumInfo(it.datumId, it.hash, if (it.isPermanent) null else GtvEncoder.encodeGtv(it.data))
                     })
@@ -386,18 +388,6 @@ class SnapshotSynchronizer(
 
                 true
             }
-        }
-    }
-
-    private fun DatabaseAccess.getSnapshotAwareModuleByContext(ctx: EContext, contextId: Long): SnapshotAware {
-        return snapshotModuleByContextMap[contextId] ?: let {
-            val snapshotModules = blockchainConfiguration.getSnapshotAwareModules()
-            val moduleName = getSnapshotContextModule(ctx, contextId)
-
-            val module = snapshotModules.find { it::class.java.canonicalName == moduleName }
-                    ?: throw ProgrammerMistake("No module found for snapshot context id $contextId")
-            snapshotModuleByContextMap[contextId] = module
-            module
         }
     }
 
@@ -509,6 +499,19 @@ class SnapshotSynchronizer(
             params.syncToExactHeight = syncState.height
             configuredPeers.forEach { peerStatuses.addPeer(it) }
             true
+        }
+    }
+
+    private fun getSnapshotModuleByContextMap(): Map<Long, SnapshotAware> {
+        val snapshotModules = blockchainConfiguration.getSnapshotAwareModules()
+        return withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
+            val dba = DatabaseAccess.of(ctx)
+            contextStates.keys.associate {
+                val moduleName = dba.getSnapshotContextModule(ctx, it)
+                val module = snapshotModules.find { module -> module::class.java.canonicalName == moduleName }
+                        ?: throw ProgrammerMistake("No module found for snapshot context id ${it}")
+                it to module
+            }
         }
     }
 }

@@ -267,6 +267,9 @@ open class SnapshotTestModule(
         "emit_datum_$moduleName" to { conf, opData -> EmitDatumOp(conf, opData) }
 ), mapOf()) {
 
+    var initializeImportCalled: Boolean = false
+    var finalizeImportCalled: Boolean = false
+
     override fun initializeSnapshotContext(context: SnapshotContext) {
         conf.snapshotContext = context
     }
@@ -326,6 +329,13 @@ open class SnapshotTestModule(
         }
     }
 
+    override fun initializeImport() {
+        initializeImportCalled = true
+    }
+
+    override fun finalizeImport() {
+        finalizeImportCalled = true
+    }
 }
 
 class SnapshotModuleA : SnapshotTestModule("a")

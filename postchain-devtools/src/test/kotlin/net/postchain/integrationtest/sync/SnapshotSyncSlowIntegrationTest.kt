@@ -1,10 +1,12 @@
 package net.postchain.integrationtest.sync
 
+import assertk.Assert
 import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotEqualTo
 import assertk.assertions.isTrue
+import assertk.assertions.support.expected
 import net.postchain.base.data.DatabaseAccess
 import net.postchain.base.data.DatumInfo
 import net.postchain.base.data.SnapshotSyncContextState
@@ -33,6 +35,7 @@ import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GTXBlockchainConfigurationFactory
 import net.postchain.gtx.GtxBuilder
 import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
+import net.postchain.integrationtest.snapshot.SnapshotTestModule
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.logging.log4j.core.test.appender.ListAppender
 import org.awaitility.Awaitility
@@ -89,9 +92,15 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
             val height = nodes[4].blockQueries().getLastBlockHeight().get()
             assertThat(height).isEqualTo(10)
 
+            // Snapshot sync must finish
+            assertThat(nodes[4]).hasFinalizedImportInTestModules()
+
             // Assert snapshot data is identical
             assertThat(nodes[4].blockQueries().getSnapshotContextMaxIds(height).get().values.filterNotNull())
                     .isEqualTo(listOf(3L, 3L))
+
+            val node0RootHash = getSnapshotRootHash(nodes[0], c1, height, initialConfig)
+            assertThat(getSnapshotRootHash(nodes[4], c1, height, initialConfig)).isEqualTo(node0RootHash)
         }
 
         // Build enough blocks for a new snapshot with updated and new datums
@@ -112,12 +121,17 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         )
 
         Awaitility.await().atMost(Duration.TEN_MINUTES).untilAsserted {
-            assertThat(nodes[0].blockQueries().getLastBlockHeight().get()).isEqualTo(13)
-            assertThat(nodes[4].blockQueries().getLastBlockHeight().get()).isEqualTo(13)
+
+            val node0Height = nodes[0].blockQueries().getLastBlockHeight().get()
+            assertThat(node0Height).isEqualTo(13)
+            assertThat(nodes[4].blockQueries().getLastBlockHeight().get()).isEqualTo(node0Height)
 
             // Assert snapshot data is identical
             assertThat(nodes[4].blockQueries().getSnapshotContextMaxIds(14).get().values.filterNotNull())
                     .isEqualTo(listOf(5L, 4L))
+
+            val node0RootHash = getSnapshotRootHash(nodes[0], c1, node0Height, initialConfig)
+            assertThat(getSnapshotRootHash(nodes[4], c1, node0Height, initialConfig)).isEqualTo(node0RootHash)
         }
     }
 
@@ -154,11 +168,8 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
 
         Awaitility.await().atMost(2, TimeUnit.MINUTES).untilAsserted {
 
-            // Snapshot sync must start
-            assertThat(appender.eventsForNodeContains(nodes[3], "Snapshot sync starts from nodes:")).isTrue()
-
-            // Make sure snapshot sync ran until end
-            assertThat(appender.eventsForNodeContains(nodes[3], "Finished snapshot syncing successfully")).isTrue()
+            // Snapshot sync must finish
+            assertThat(nodes[3]).hasFinalizedImportInTestModules()
 
             // Verify same height
             assertThat(nodes[3].blockQueries().getLastBlockHeight().get()).isEqualTo(node0Height)
@@ -167,9 +178,6 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         // Basic snapshot verification
         assertThat(nodes[3].blockQueries().getSnapshotContextMaxIds(node0Height).get())
                 .isEqualTo(mapOf(0L to 50L, 1L to 30L))
-
-        // Make sure snapshot sync ran until end
-        assertThat(appender.eventsForNodeContains(nodes[3], "Finished snapshot syncing successfully")).isTrue()
 
         // Verify root hash
         assertThat(getSnapshotRootHash(nodes[3], c1, node0Height, config)).isEqualTo(node0RootHash)
@@ -288,6 +296,10 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         val replicaNode = nodes[4]
 
         Awaitility.await().atMost(Duration.FIVE_MINUTES).untilAsserted {
+
+            // Snapshot sync must finish
+            assertThat(nodes[4]).hasFinalizedImportInTestModules()
+
             val height = replicaNode.blockQueries().getLastBlockHeight().get()
             assertThat(height).isEqualTo(7)
 
@@ -390,7 +402,8 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         // Check that the node starts to sync and completes it with a correct root hash
         Awaitility.await().atMost(2, TimeUnit.MINUTES).untilAsserted {
             assertThat(appender.eventsForNodeContains(replicaNode, "Continuing snapshot sync for height $node0Height with context offsets: [(0, 0), (1, 0)]")).isTrue()
-            assertThat(appender.eventsForNodeContains(replicaNode, "Finished snapshot syncing successfully")).isTrue()
+            // Snapshot sync must finish
+            assertThat(replicaNode).hasFinalizedImportInTestModules()
             assertThat(getSnapshotRootHash(replicaNode, c1, node0Height, config)).isEqualTo(node0RootHash)
         }
     }
@@ -516,12 +529,9 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
         restartNodeClean(4, c1, -1)
         val replicaNode = nodes[4]
 
-        // Snapshot sync must start
         Awaitility.await().atMost(Duration.TEN_MINUTES).untilAsserted {
-            assertThat(appender.eventsForNodeContains(replicaNode, "Snapshot sync starts from nodes"))
-        }
-
-        Awaitility.await().atMost(Duration.TEN_MINUTES).untilAsserted {
+            // Snapshot sync must finish
+            assertThat(replicaNode).hasFinalizedImportInTestModules()
             val replicaHeight = replicaNode.blockQueries().getLastBlockHeight().get()
             assertThat(replicaHeight).isEqualTo(node0Height)
             assertThat(getSnapshotRootHash(replicaNode, c1, node0Height, config)).isEqualTo(node0RootHash)
@@ -612,5 +622,17 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
                 SnapshotBlockHeaderContextData(it.key, contextRootHashes[it.key.toInt()], it.value)
             }
         }
+    }
+}
+
+fun Assert<PostchainTestNode>.hasFinalizedImportInTestModules() = given { node ->
+    val modulesSynced = node.getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.getConfiguration().getSnapshotAwareModules()
+            .filterIsInstance<SnapshotTestModule>()
+            .map { it.initializeImportCalled && it.finalizeImportCalled }
+    if (modulesSynced.isEmpty()) {
+        expected("to contain any ${SnapshotTestModule::class.java.name} module")
+    }
+    if (modulesSynced.any { !it }) {
+        expected("to have a ${SnapshotTestModule::class.java.name} module called with sync data")
     }
 }
