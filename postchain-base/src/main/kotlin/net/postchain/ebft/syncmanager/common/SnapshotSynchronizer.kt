@@ -61,24 +61,10 @@ class SnapshotSynchronizer(
         val isProcessRunning: () -> Boolean,
         rateLimitConfiguration: RateLimitConfiguration,
         private var verifyRangeProof: VerifyRangeProof = VerifyRangeProof(SimpleDigestSystem(workerContext.appConfig.cryptoSystem)),
-        private var snapshotModuleByContextMap: Map<Long, SnapshotAware> = getSnapshotModuleByContextMap(workerContext)
 ) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {
 
     companion object : KLogging() {
         const val SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL = 10_000L
-
-        private fun getSnapshotModuleByContextMap(workerContext: WorkerContext): Map<Long, SnapshotAware> {
-            val configuration = workerContext.engine.getConfiguration()
-            val snapshotModules = configuration.getSnapshotAwareModules()
-            return withReadConnection(workerContext.engine.blockBuilderStorage, configuration.chainID) { ctx ->
-                val dba = DatabaseAccess.of(ctx)
-                dba.getSnapshotModuleContextIds(ctx).associateWith {
-                    val moduleName = dba.getSnapshotContextModule(ctx, it)
-                    snapshotModules.find { module -> module::class.java.canonicalName == moduleName }
-                            ?: throw ProgrammerMistake("No module found for snapshot context id $it")
-                }
-            }
-        }
     }
 
     private var receivedLatestSnapshotHeight = mutableMapOf<NodeRid, SnapshotBlockHeader>()
@@ -87,6 +73,19 @@ class SnapshotSynchronizer(
 
     private lateinit var syncState: SnapshotSyncState
     private val contextStates = mutableMapOf<Long, SnapshotSyncContextState>()
+
+    private val snapshotModuleByContextMap: Map<Long, SnapshotAware> by lazy {
+        val configuration = workerContext.engine.getConfiguration()
+        val snapshotModules = configuration.getSnapshotAwareModules()
+        withReadConnection(workerContext.engine.blockBuilderStorage, configuration.chainID) { ctx ->
+            val dba = DatabaseAccess.of(ctx)
+            dba.getSnapshotModuleContextIds(ctx).associateWith {
+                val moduleName = dba.getSnapshotContextModule(ctx, it)
+                snapshotModules.find { module -> module::class.java.canonicalName == moduleName }
+                        ?: throw ProgrammerMistake("No module found for snapshot context id $it")
+            }
+        }
+    }
 
     fun trySnapshotSync() {
         if (shouldDoSnapshotSync()) {
@@ -465,10 +464,12 @@ class SnapshotSynchronizer(
                 .filterValues { it.timeSent + params.jobTimeout < now }
                 .values
                 .forEach {
-            logger.debug { "Snapshot request timed out for context ${it.contextId} and offset ${it.offset}, sending request to another node" }
-                    peerStatuses.unresponsive(it.sentTo.last(), "Snapshot request timed out")
+                    logger.debug { "Snapshot request timed out for context ${it.contextId} and offset ${it.offset}, sending request to another node" }
+                    it.sentTo.lastOrNull()?.let { peer ->
+                        peerStatuses.unresponsive(peer, "Snapshot request timed out")
+                    }
                     sendGetSnapshotData(it)
-        }
+                }
     }
 
     private fun getVerifiedContextData(candidate: SnapshotBlockHeader, rootHash: ByteArray): Map<Long, SnapshotBlockHeaderContextData> {
@@ -492,8 +493,10 @@ class SnapshotSynchronizer(
                     if (syncableNodes.containsKey(it)) {
                         peerStatuses.markSyncable(it)
                     } else {
-                        peerStatuses.drained(it,
-                                BlockHeaderData.fromBinary(receivedLatestSnapshotHeight[it]!!.header).getHeight(),
+                        val height = receivedLatestSnapshotHeight[it]?.header?.let { bh ->
+                            BlockHeaderData.fromBinary(bh).getHeight()
+                        } ?: 0
+                        peerStatuses.drained(it, height,
                                 drainedTimeout = params.snapshotSyncPeerParameters.resurrectDrainedTime)
                     }
                 }
