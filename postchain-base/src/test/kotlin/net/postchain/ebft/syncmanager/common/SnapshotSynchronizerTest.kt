@@ -51,7 +51,6 @@ import org.junit.jupiter.api.assertThrows
 import org.mockito.ArgumentMatchers.anyInt
 import org.mockito.ArgumentMatchers.anyLong
 import org.mockito.Mockito.`when`
-import org.mockito.kotlin.KInvocationOnMock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
 import org.mockito.kotlin.doReturn
@@ -109,8 +108,11 @@ class SnapshotSynchronizerTest {
         }
     }
     private val databaeAccess = mock<DatabaseAccess> {
+        on { getSnapshotModuleContextIds(any<EContext>()) } doAnswer {
+            snapshotModuleByContextMap.keys.toList()
+        }
         on { getSnapshotContextModule(any<EContext>(), anyLong()) } doAnswer {
-            snapshotModuleByContextMap[it.getArgument(1)]!!.name
+            snapshotModuleByContextMap[it.getArgument(1)]!!::class.java.canonicalName
         }
     }
     private val ctx = mock<EContext> {
@@ -185,7 +187,7 @@ class SnapshotSynchronizerTest {
         val snapshotBlockHeaderMsg = makeSnapshotBlockHeaderMessage(10)
         `when`(commManager.getPackets()).doAnswer {
             peerIds.map { ReceivedPacket(it, 1L, snapshotBlockHeaderMsg as EbftMessage) }.toMutableList()
-        }.doAnswer(::provideQueuedPackets)
+        }.doAnswer { provideQueuedPackets() }
         whenGetSnapshotDataReplyWith { _, message ->
             if (message.datumIdFrom + 1 > snapshotModuleByContextMap[message.contextId]!!.datumIdMax) {
                 verificationEnd = true
@@ -224,7 +226,7 @@ class SnapshotSynchronizerTest {
                     ReceivedPacket(node3, 1L, notLatestSnapshotBlockHeaderMsg),
                     ReceivedPacket(node4, 1L, notLatestSnapshotBlockHeaderMsg),
             )
-        }.doAnswer(::provideQueuedPackets)
+        }.doAnswer { provideQueuedPackets() }
         var firstGetSnapshotDataReplyWith = true
         val nodesReceivedGetSnapshotData = mutableSetOf<NodeRid>()
         whenGetSnapshotDataReplyWith { randomPeer, message ->
@@ -242,7 +244,7 @@ class SnapshotSynchronizerTest {
 
         // Expected, everything is received but we are not interested in building the snapshot here
         val exception = assertThrows<ProgrammerMistake> {
-            params.snapshotSyncPeerParameters.resurrectDrainedTime = 10
+            params.snapshotSyncPeerParameters.resurrectDrainedTime = 100
             ss.trySnapshotSync()
         }
         assertThat(exception.message).isEqualTo("Snapshot root hashes do not match")
@@ -270,7 +272,7 @@ class SnapshotSynchronizerTest {
                     ReceivedPacket(node3, 1L, snapshotBlockHeaderMsg),
                     ReceivedPacket(node4, 1L, notLatestSnapshotBlockHeaderMsg),
             )
-        }.doAnswer(::provideQueuedPackets)
+        }.doAnswer { provideQueuedPackets() }
         val nodesReceivedGetSnapshotData = mutableSetOf<NodeRid>()
         whenGetSnapshotData { randomPeer, message ->
             // Record peers receiving this request and keep ignoring them until expected 3 nodes has received them
@@ -313,7 +315,7 @@ class SnapshotSynchronizerTest {
                     ReceivedPacket(node3, 1L, snapshotBlockHeaderMsg),
                     ReceivedPacket(node4, 1L, snapshotBlockHeaderMsg),
             )
-        }.doAnswer(::provideQueuedPackets)
+        }.doAnswer { provideQueuedPackets() }
         `when`(verifyRangeProof.verify(any<Hash>(), any<RangeProof>(), anyLong(), any<List<Hash>>())).thenAnswer {
             isProcessRunning = false
             false to false
@@ -334,7 +336,7 @@ class SnapshotSynchronizerTest {
         assertThat(peerStatuses.stateOf(expectBlacklistedPeer!!).state).isEqualTo(KnownState.State.BLACKLISTED)
     }
 
-    private fun provideQueuedPackets(mock: KInvocationOnMock): MutableList<ReceivedPacket<EbftMessage>> {
+    private fun provideQueuedPackets(): MutableList<ReceivedPacket<EbftMessage>> {
         return if (messageQueue.isNotEmpty()) {
             val message = messageQueue.poll()
             mutableListOf(ReceivedPacket(message.first, 1L, message.second))
@@ -390,7 +392,6 @@ class SnapshotSynchronizerTest {
     private fun addTestModules(datumIdMaxList: List<Long>) {
         datumIdMaxList.mapIndexed { contextId, datumIdMax -> SnapshotAwareTestModule(contextId.toLong(), datumIdMax) }
                 .forEach { snapshotModuleByContextMap[it.contextId] = it }
-        ss.snapshotModuleByContextMap.putAll(snapshotModuleByContextMap)
     }
 
     class SnapshotAwareTestModule(
