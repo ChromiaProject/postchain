@@ -50,7 +50,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
 
     override fun addNodeConfigurationOverrides(nodeSetup: NodeSetup) {
         super.addNodeConfigurationOverrides(nodeSetup)
-        nodeSetup.nodeSpecificConfigs.setProperty("snapshotsync.threshold", 5)
+        nodeSetup.nodeSpecificConfigs.setProperty("snapshotsync.threshold", 0) // Always sync by default
         nodeConfigurationOverrides.forEach { (key, value) -> nodeSetup.nodeSpecificConfigs.setProperty(key, value) }
     }
 
