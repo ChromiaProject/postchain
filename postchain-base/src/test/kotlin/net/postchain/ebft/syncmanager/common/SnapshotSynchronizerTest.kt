@@ -3,6 +3,7 @@ package net.postchain.ebft.syncmanager.common
 import assertk.assertThat
 import assertk.assertions.hasSize
 import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import net.postchain.base.BaseBlockHeader
 import net.postchain.base.BlockWitnessProvider
 import net.postchain.base.NetworkNodes
@@ -200,6 +201,8 @@ class SnapshotSynchronizerTest {
 
         // Assert constructed data
         assertThat(snapshotModuleByContextMap[0]!!.constructDatumInvocations.size).isEqualTo(5)
+        assertThat(snapshotModuleByContextMap[0]!!.initializeImportCalled).isTrue()
+        assertThat(snapshotModuleByContextMap[0]!!.finalizeImportCalled).isTrue()
     }
 
     /**
@@ -397,6 +400,8 @@ class SnapshotSynchronizerTest {
     ) : SnapshotAware {
 
         val constructDatumInvocations = mutableListOf<SnapshotDatum>()
+        var initializeImportCalled = false
+        var finalizeImportCalled = false
 
         override fun initializeSnapshotContext(context: SnapshotContext) {}
 
@@ -408,6 +413,14 @@ class SnapshotSynchronizerTest {
 
         override fun constructDatum(ctx: EContext, datumList: List<SnapshotDatum>) {
             datumList.forEach(constructDatumInvocations::add)
+        }
+
+        override fun initializeImport() {
+            initializeImportCalled = true
+        }
+
+        override fun finalizeImport() {
+            finalizeImportCalled = true
         }
     }
 }
