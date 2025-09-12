@@ -60,16 +60,29 @@ class SnapshotSynchronizer(
         val peerStatuses: PeerStatuses,
         val isProcessRunning: () -> Boolean,
         rateLimitConfiguration: RateLimitConfiguration,
-        private var verifyRangeProof: VerifyRangeProof = VerifyRangeProof(SimpleDigestSystem(workerContext.appConfig.cryptoSystem))
+        private var verifyRangeProof: VerifyRangeProof = VerifyRangeProof(SimpleDigestSystem(workerContext.appConfig.cryptoSystem)),
+        private var snapshotModuleByContextMap: Map<Long, SnapshotAware> = getSnapshotModuleByContextMap(workerContext)
 ) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {
 
     companion object : KLogging() {
         const val SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL = 10_000L
+
+        private fun getSnapshotModuleByContextMap(workerContext: WorkerContext): Map<Long, SnapshotAware> {
+            val configuration = workerContext.engine.getConfiguration()
+            val snapshotModules = configuration.getSnapshotAwareModules()
+            return withReadConnection(workerContext.engine.blockBuilderStorage, configuration.chainID) { ctx ->
+                val dba = DatabaseAccess.of(ctx)
+                dba.getSnapshotModuleContextIds(ctx).associateWith {
+                    val moduleName = dba.getSnapshotContextModule(ctx, it)
+                    snapshotModules.find { module -> module::class.java.canonicalName == moduleName }
+                            ?: throw ProgrammerMistake("No module found for snapshot context id $it")
+                }
+            }
+        }
     }
 
     private var receivedLatestSnapshotHeight = mutableMapOf<NodeRid, SnapshotBlockHeader>()
     private val contextSyncRequests = mutableMapOf<Long, SnapshotContextState>() // State of progress per context, each context is removed on completion
-    internal var snapshotModuleByContextMap = mapOf<Long, SnapshotAware>()
     private var lastStoredSnapshotDataTime = mutableMapOf<Long, Long>()
 
     private lateinit var syncState: SnapshotSyncState
@@ -329,9 +342,6 @@ class SnapshotSynchronizer(
     private fun syncSnapshotUntil() {
 
         if (isProcessRunning()) {
-
-            snapshotModuleByContextMap = getSnapshotModuleByContextMap()
-
             sendInitialSnapshotDataRequest()
 
             snapshotModuleByContextMap.values.forEach(SnapshotAware::initializeImport)
@@ -499,19 +509,6 @@ class SnapshotSynchronizer(
             params.syncToExactHeight = syncState.height
             configuredPeers.forEach { peerStatuses.addPeer(it) }
             true
-        }
-    }
-
-    private fun getSnapshotModuleByContextMap(): Map<Long, SnapshotAware> {
-        val snapshotModules = blockchainConfiguration.getSnapshotAwareModules()
-        return withReadConnection(workerContext.engine.blockBuilderStorage, blockchainConfiguration.chainID) { ctx ->
-            val dba = DatabaseAccess.of(ctx)
-            contextStates.keys.associate {
-                val moduleName = dba.getSnapshotContextModule(ctx, it)
-                val module = snapshotModules.find { module -> module::class.java.canonicalName == moduleName }
-                        ?: throw ProgrammerMistake("No module found for snapshot context id ${it}")
-                it to module
-            }
         }
     }
 }

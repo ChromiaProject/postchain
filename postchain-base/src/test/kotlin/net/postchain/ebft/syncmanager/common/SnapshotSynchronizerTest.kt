@@ -153,6 +153,7 @@ class SnapshotSynchronizerTest {
             snapshotSyncThreshold = 0
     )
     private val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAwareTestModule>()
+    private val ssSnapshotModuleByContextMap = mutableMapOf<Long, SnapshotAware>()
     private val messageQueue = LinkedList<Pair<NodeRid, EbftMessage>>()
     private val node1 = NodeRid(1) { 1 }
     private val node2 = NodeRid(1) { 2 }
@@ -175,7 +176,7 @@ class SnapshotSynchronizerTest {
         snapshotModuleByContextMap.clear()
         messageQueue.clear()
         ss = spy(SnapshotSynchronizer(workerContext, blockDatabase, params, peerStatuses, { isProcessRunning },
-                RateLimitConfiguration(100), verifyRangeProof))
+                RateLimitConfiguration(100), verifyRangeProof, ssSnapshotModuleByContextMap))
     }
 
     @Test
@@ -242,7 +243,7 @@ class SnapshotSynchronizerTest {
 
         // Expected, everything is received but we are not interested in building the snapshot here
         val exception = assertThrows<ProgrammerMistake> {
-            params.snapshotSyncPeerParameters.resurrectDrainedTime = 10
+            params.snapshotSyncPeerParameters.resurrectDrainedTime = 100
             ss.trySnapshotSync()
         }
         assertThat(exception.message).isEqualTo("Snapshot root hashes do not match")
@@ -390,7 +391,7 @@ class SnapshotSynchronizerTest {
     private fun addTestModules(datumIdMaxList: List<Long>) {
         datumIdMaxList.mapIndexed { contextId, datumIdMax -> SnapshotAwareTestModule(contextId.toLong(), datumIdMax) }
                 .forEach { snapshotModuleByContextMap[it.contextId] = it }
-        ss.snapshotModuleByContextMap.putAll(snapshotModuleByContextMap)
+        ssSnapshotModuleByContextMap.putAll(snapshotModuleByContextMap.mapValues { it.value })
     }
 
     class SnapshotAwareTestModule(
