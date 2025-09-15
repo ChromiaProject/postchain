@@ -29,6 +29,7 @@ import net.postchain.core.block.BlockQueryHeightFilter
 import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.crypto.PubKey
 import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Signature
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
@@ -178,6 +179,17 @@ class RestApiMockForClientManual {
             }
         }
 
+        override fun queryWithHeight(query: GtxQuery): Pair<Gtv, Long> {
+            return when (query.args) {
+                gtv(mapOf("a" to gtv("oknullresponse"), "c" to gtv(3))) -> GtvNull to 5
+                gtv(mapOf("a" to gtv("okemptyresponse"), "c" to gtv(3))) -> gtv(mapOf()) to 5
+                gtv(mapOf("a" to gtv("oksimpleresponse"), "c" to gtv(3))) -> gtv(mapOf("test" to gtv("hi"))) to 5
+                gtv(mapOf("a" to gtv("usermistake"), "c" to gtv(3))) -> throw UserMistake("expected error")
+                gtv(mapOf("a" to gtv("programmermistake"), "c" to gtv(3))) -> throw ProgrammerMistake("expected error")
+                else -> throw ProgrammerMistake("unexpected error")
+            }
+        }
+
         override fun enqueueQuery(query: GtxQuery) {
             TODO("Not yet implemented")
         }
@@ -268,6 +280,10 @@ class RestApiMockForClientManual {
         }
 
         override fun getMetadata(): ApiMetadata {
+            TODO("Not yet implemented")
+        }
+
+        override fun getBlockSigMaker(): SigMaker {
             TODO("Not yet implemented")
         }
     }

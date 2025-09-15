@@ -138,7 +138,7 @@ open class BaseBlockchainInfrastructure(
                             storage = sharedStorage,
                             chainID = configuration.chainID,
                     ) { ctx, query ->
-                        configuration.module.query(ctx, query.name, query.args)
+                        configuration.module.query(ctx, query.name, query.args) to DatabaseAccess.of(ctx).getLastBlockHeight(ctx)
                     }
                 } else {
                     logger.info { "Disabling async queries" }

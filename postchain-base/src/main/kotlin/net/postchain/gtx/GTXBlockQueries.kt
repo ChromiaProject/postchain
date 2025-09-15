@@ -21,6 +21,10 @@ class GTXBlockQueries(private val blockchainConfiguration: GTXBlockchainConfigur
         module.query(it, name, args)
     }
 
+    override fun queryWithHeight(name: String, args: Gtv): CompletionStage<Pair<Gtv, Long>> = runOp {
+        module.query(it, name, args) to blockStore.getLastBlockHeight(it)
+    }
+
     override fun getTransaction(txRID: ByteArray): CompletionStage<Transaction?> = runOp {
         val txBytes = blockStore.getTxBytes(it, txRID)
         if (txBytes == null)

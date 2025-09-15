@@ -125,7 +125,7 @@ fun secp256k1_ecdh(privKey: ByteArray, pubKey: ByteArray): ByteArray {
  *
  * (See super class for doc)
  */
-open class Secp256k1SigMaker(val pubKey: ByteArray, val privKey: ByteArray, val digestFun: (ByteArray) -> Hash) : SigMaker {
+open class Secp256k1SigMaker(override val id: String, val pubKey: ByteArray, val privKey: ByteArray, val digestFun: (ByteArray) -> Hash) : SigMaker {
 
     init {
         try {
@@ -178,6 +178,7 @@ open class Secp256k1SigMaker(val pubKey: ByteArray, val privKey: ByteArray, val 
  * A collection of cryptographic functions based on the elliptic curve secp256k1
  */
 open class Secp256K1CryptoSystem : BaseCryptoSystem() {
+    override val id: String = "secp256k1"
 
     /**
      * Builds logic to be used for signing data based on supplied key parameters
@@ -189,7 +190,7 @@ open class Secp256K1CryptoSystem : BaseCryptoSystem() {
     @Deprecated("Pass in KeyPair instead",
             ReplaceWith("buildSigMaker(KeyPair(pubKey, privKey))", imports = ["net.postchain.crypto.KeyPair"]))
     override fun buildSigMaker(pubKey: ByteArray, privKey: ByteArray): SigMaker {
-        return Secp256k1SigMaker(pubKey, privKey, ::digest)
+        return Secp256k1SigMaker(id, pubKey, privKey, ::digest)
     }
 
     /**
@@ -199,7 +200,7 @@ open class Secp256K1CryptoSystem : BaseCryptoSystem() {
      * @return a class to be used to sign specified data with [keyPair]
      */
     override fun buildSigMaker(keyPair: KeyPair): SigMaker {
-        return Secp256k1SigMaker(keyPair.pubKey.data, keyPair.privKey.data, ::digest)
+        return Secp256k1SigMaker(id, keyPair.pubKey.data, keyPair.privKey.data, ::digest)
     }
 
     override fun validatePubKey(pubKey: ByteArray): Boolean = try {
@@ -241,7 +242,7 @@ open class Secp256K1CryptoSystem : BaseCryptoSystem() {
         return try {
             ECPrivateKeyParameters(d, CURVE) // validate private key
             true
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             logger.debug { "Generated invalid private key: $d" }
             false
         }

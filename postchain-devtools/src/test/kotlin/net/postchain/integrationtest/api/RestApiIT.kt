@@ -7,6 +7,7 @@ import assertk.assertions.isEqualTo
 import assertk.assertions.isFalse
 import assertk.assertions.isGreaterThan
 import assertk.assertions.isNotEqualTo
+import assertk.assertions.isTrue
 import assertk.isContentEqualTo
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
@@ -14,6 +15,7 @@ import com.google.gson.JsonParser
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.RestApi.Companion.REST_API_VERSION
+import net.postchain.api.rest.model.QueryResponseSignatureData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.data.Hash
 import net.postchain.common.hexStringToByteArray
@@ -23,6 +25,7 @@ import net.postchain.core.AsyncQueryResponse
 import net.postchain.core.AsyncQueryResponseStatus
 import net.postchain.core.EContext
 import net.postchain.crypto.KeyPair
+import net.postchain.crypto.Signature
 import net.postchain.crypto.devtools.KeyPairHelper.privKey
 import net.postchain.crypto.devtools.KeyPairHelper.pubKey
 import net.postchain.crypto.sha256Digest
@@ -50,6 +53,9 @@ import net.postchain.integrationtest.JsonTools
 import net.postchain.integrationtest.JsonTools.jsonAsMap
 import net.postchain.integrationtest.reconfiguration.TogglableFaultyGtxModule
 import org.awaitility.Awaitility.await
+import org.greenbytes.http.sfv.ByteSequenceItem
+import org.greenbytes.http.sfv.Parser
+import org.greenbytes.http.sfv.StringItem
 import org.hamcrest.CoreMatchers.equalTo
 import org.hamcrest.Matchers
 import org.hamcrest.core.IsEqual
@@ -120,15 +126,15 @@ class RestApiIT : IntegrationTestSetup() {
                 .body("version", equalTo(REST_API_VERSION))
 
         given().port(nodes[0].getRestApiHttpPort())
-            .get("/metadata/$blockchainRID")
-            .then()
-            .statusCode(200)
-            .contentType(ContentType.JSON)
-            .body("operations.nop.gtxModule", Matchers.equalTo(StandardOpsGTXModule::class.qualifiedName))
-            .body("operations.nop.args[0].name", Matchers.equalTo("nonce"))
-            .body("operations.nop.args[0].required", Matchers.equalTo(true))
-            .body("queries.last_block_info.gtxModule", Matchers.equalTo(StandardOpsGTXModule::class.qualifiedName))
-            .body("queries.last_block_info.returnType.gtvTypes[0]", Matchers.equalTo("DICT"))
+                .get("/metadata/$blockchainRID")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .body("operations.nop.gtxModule", Matchers.equalTo(StandardOpsGTXModule::class.qualifiedName))
+                .body("operations.nop.args[0].name", Matchers.equalTo("nonce"))
+                .body("operations.nop.args[0].required", Matchers.equalTo(true))
+                .body("queries.last_block_info.gtxModule", Matchers.equalTo(StandardOpsGTXModule::class.qualifiedName))
+                .body("queries.last_block_info.returnType.gtvTypes[0]", Matchers.equalTo("DICT"))
     }
 
     @Test
@@ -612,6 +618,48 @@ class RestApiIT : IntegrationTestSetup() {
     }
 
     @Test
+    fun testQueryGtv() {
+        val nodesCount = 1
+        configOverrides.setProperty("testpeerinfos", createPeerInfos(nodesCount))
+        configOverrides.setProperty("api.port", 0)
+        val nodes = createNodes(nodesCount, "/net/postchain/devtools/api/blockchain_config_async_query.xml")
+        val blockchainRIDBytes = nodes[0].getBlockchainRid(1L)!! // Just take first chain from first node.
+        val blockchainRID = blockchainRIDBytes.toHex()
+
+        buildBlockAndCommit(nodes[0])
+        buildBlockAndCommit(nodes[0])
+
+        val query = GtxQuery("test_query", gtv(mapOf("i" to gtv(100L), "flag" to gtv(true))))
+        val response = given().port(nodes[0].getRestApiHttpPort())
+                .header("Content-Type", ContentType.BINARY)
+                .header("X-Accept-Query-Response-Signature", true)
+                .body(query.encode())
+                .post("/query_gtv/$blockchainRID")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+                .header("X-Block-Height", equalTo("1"))
+
+        val answer = gtv(100 * 100)
+
+        assertThat(response.extract().asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(answer))
+
+        val signatureHeader = response.extract().header("X-Query-Response-Signature")
+        val signatureDict = Parser(signatureHeader).parseDictionary()
+        assertThat((signatureDict.get()["alg"] as StringItem).get()).isEqualTo(cryptoSystem.id)
+        val subject = (signatureDict.get()["subject"] as ByteSequenceItem).get().array()
+        assertThat(subject).isContentEqualTo(nodes[0].pubKey.hexStringToByteArray())
+        val sig = (signatureDict.get()["sig"] as ByteSequenceItem).get().array()
+        val queryResponseSignatureData = QueryResponseSignatureData(
+                name = query.name,
+                args = query.args,
+                height = 1,
+                response = answer)
+        val hash = GtvObjectMapper.toGtvDictionary(queryResponseSignatureData).merkleHash(GtvMerkleHashCalculatorV2(::sha256Digest))
+        assertThat(cryptoSystem.verifyDigest(hash, Signature(subject, sig))).isTrue()
+    }
+
+    @Test
     fun testAsyncQuery() {
         val nodesCount = 1
         configOverrides.setProperty("testpeerinfos", createPeerInfos(nodesCount))
@@ -620,6 +668,7 @@ class RestApiIT : IntegrationTestSetup() {
         val blockchainRIDBytes = nodes[0].getBlockchainRid(1L)!! // Just take first chain from first node.
         val blockchainRID = blockchainRIDBytes.toHex()
 
+        buildBlockAndCommit(nodes[0])
         buildBlockAndCommit(nodes[0])
 
         val query = GtxQuery("test_query", gtv(mapOf("i" to gtv(100L), "flag" to gtv(true))))
@@ -631,18 +680,20 @@ class RestApiIT : IntegrationTestSetup() {
                 .then()
                 .statusCode(202)
 
-        val body = given().port(nodes[0].getRestApiHttpPort())
-                .get("/query_async/$blockchainRID/${queryRid.toHex()}")
-                .then()
-                .statusCode(200)
-                .contentType(ContentType.BINARY)
-                .extract().asByteArray()
-
         await().atMost(5, TimeUnit.SECONDS).untilAsserted {
+            val body = given().port(nodes[0].getRestApiHttpPort())
+                    .get("/query_async/$blockchainRID/${queryRid.toHex()}")
+                    .then()
+                    .statusCode(200)
+                    .contentType(ContentType.BINARY)
+                    .header("X-Block-Height", equalTo("1"))
+                    .extract().asByteArray()
+
             assertThat(body).isContentEqualTo(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(AsyncQueryResponse(
                     status = AsyncQueryResponseStatus.COMPLETED,
                     queryResponse = gtv(100 * 100),
                     errorMessage = null,
+                    blockHeight = 1,
             ))))
         }
     }

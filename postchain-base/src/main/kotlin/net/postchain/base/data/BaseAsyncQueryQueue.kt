@@ -35,7 +35,7 @@ class BaseAsyncQueryQueue(
         private val resultRetentionSeconds: Long,
         private val storage: Storage,
         private val chainID: Long,
-        private val queryExecutor: (EContext, GtxQuery) -> Gtv,
+        private val queryExecutor: (EContext, GtxQuery) -> Pair<Gtv, Long>,
 ) : AsyncQueryQueue {
 
     companion object : KLogging()
@@ -67,7 +67,8 @@ class BaseAsyncQueryQueue(
         if (results.putIfAbsent(queryRid, AsyncQueryResponse(
                         status = AsyncQueryResponseStatus.PENDING,
                         queryResponse = GtvNull,
-                        errorMessage = null
+                        errorMessage = null,
+                        blockHeight = null,
                 )) != null) {
             logger.debug { "Query $queryRid already in queue" }
             throw DuplicateException("Query already in queue")
@@ -80,7 +81,7 @@ class BaseAsyncQueryQueue(
                 try {
                     logger.debug { "Processing query $queryRid" }
                     val ctx = storage.openReadConnection(chainID)
-                    val result = try {
+                    val (result, blockHeight) = try {
                         connection.set(ctx.conn)
                         queryExecutor(ctx, query)
                     } finally {
@@ -90,7 +91,8 @@ class BaseAsyncQueryQueue(
                     results.replace(queryRid, AsyncQueryResponse(
                             status = AsyncQueryResponseStatus.COMPLETED,
                             queryResponse = result,
-                            errorMessage = null
+                            errorMessage = null,
+                            blockHeight = blockHeight,
                     ))
                     logger.debug { "Query $queryRid completed successfully" }
                 } catch (e: InterruptedException) {
@@ -98,26 +100,30 @@ class BaseAsyncQueryQueue(
                     results.replace(queryRid, AsyncQueryResponse(
                             status = AsyncQueryResponseStatus.FAILED,
                             queryResponse = GtvNull,
-                            errorMessage = "Query timed out after $queryTimeoutSeconds seconds"))
+                            errorMessage = "Query timed out after $queryTimeoutSeconds seconds",
+                            blockHeight = null))
                 } catch (e: SQLTimeoutException) {
                     logger.debug(e) { "Query $queryRid got SQLTimeoutException" }
                     results.replace(queryRid, AsyncQueryResponse(
                             status = AsyncQueryResponseStatus.FAILED,
                             queryResponse = GtvNull,
-                            errorMessage = "Query timed out after $queryTimeoutSeconds seconds"))
+                            errorMessage = "Query timed out after $queryTimeoutSeconds seconds",
+                            blockHeight = null))
                 } catch (e: SQLException) {
                     if (e.sqlState == "57014") { // query_canceled https://www.postgresql.org/docs/16/errcodes-appendix.html
                         logger.debug(e) { "Query $queryRid got SQLException with SQL State 57014 query_canceled" }
                         results.replace(queryRid, AsyncQueryResponse(
                                 status = AsyncQueryResponseStatus.FAILED,
                                 queryResponse = GtvNull,
-                                errorMessage = "Query timed out after $queryTimeoutSeconds seconds"))
+                                errorMessage = "Query timed out after $queryTimeoutSeconds seconds",
+                                blockHeight = null))
                     } else {
                         logger.warn(e) { "Unexpected error processing query $queryRid: $e" }
                         results.replace(queryRid, AsyncQueryResponse(
                                 status = AsyncQueryResponseStatus.FAILED,
                                 queryResponse = GtvNull,
-                                errorMessage = "Unknown error"
+                                errorMessage = "Unknown error",
+                                blockHeight = null
                         ))
                     }
                 } catch (e: UserMistake) {
@@ -125,14 +131,16 @@ class BaseAsyncQueryQueue(
                     results.replace(queryRid, AsyncQueryResponse(
                             status = AsyncQueryResponseStatus.FAILED,
                             queryResponse = GtvNull,
-                            errorMessage = e.message ?: "Unknown error"
+                            errorMessage = e.message ?: "Unknown error",
+                            blockHeight = null
                     ))
                 } catch (e: Exception) {
                     logger.warn(e) { "Unexpected error processing query $queryRid: $e" }
                     results.replace(queryRid, AsyncQueryResponse(
                             status = AsyncQueryResponseStatus.FAILED,
                             queryResponse = GtvNull,
-                            errorMessage = "Unknown error"
+                            errorMessage = "Unknown error",
+                            blockHeight = null
                     ))
                 } finally {
                     timeoutFuture.get()?.cancel(false)
@@ -180,7 +188,8 @@ class BaseAsyncQueryQueue(
         return results[queryRid] ?: AsyncQueryResponse(
                 status = AsyncQueryResponseStatus.NOT_FOUND,
                 queryResponse = GtvNull,
-                errorMessage = null
+                errorMessage = null,
+                blockHeight = null
         )
     }
 

@@ -48,7 +48,7 @@ info:
     
     The exact procedure to calculate the hash is documented in the README in 
     [postchain-gtv](https://gitlab.com/chromaway/core/postchain/-/tree/dev/postchain-gtv) module
-  version: "21"
+  version: "22"
 tags:
   - name: block
     description: Fetch block(s)
@@ -960,7 +960,7 @@ paths:
         Any path elements after `type` will be passed to the query as `path: list<text>`.
         Any query parameters will be passed to the query as `query_params: map<text, list<text?>>`.
         
-        The query needs to respond with: 
+        The query needs to respond with (Rell syntax): 
         ```
           struct web_query_response {
             content_type: text;
@@ -1010,7 +1010,8 @@ paths:
             application/octet-stream: { }
   /query_gtv/{blockchainRid}:
     description: |
-      The GET method enable caching of query responses, while the POST method has more efficient encoding of query parameters.
+      The GET method enable caching of query responses, while the POST method has more efficient encoding of query parameters 
+      and supports signing of responses.
     get:
       tags:
         - query
@@ -1036,6 +1037,12 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            X-Block-Height:
+              description: The block height the query response was generated at
+              required: true
+              schema:
+                type: integer
           content:
             application/octet-stream: { }
         '400':
@@ -1058,12 +1065,41 @@ paths:
         Response body contains binary GTV value.
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
+        - $ref: "#/components/parameters/acceptQueryResponseSignature"
       requestBody:
         content:
           application/octet-stream: { }
       responses:
         '200':
           description: OK
+          headers:
+            X-Block-Height:
+              description: The block height the query response was generated at
+              required: true
+              schema:
+                type: integer
+            X-Query-Response-Signature:
+              description: | 
+                Node's signature of the query response. 
+                
+                Will only be included if the request contains header `X-Accept-Query-Response-Signature: true`.
+                
+                This is a Dictionary Structured Header (defined in Section 3.2 of RFC 9651), containing the following members:                
+                * `alg` - the signature algorithm, a String, currently only "secp256k1" is supported 
+                * `subject` - identifier of the signer, a Byte Sequence, for alg="secp256k1" this is the compressed public key  
+                * `sig` - the signature, a Byte Sequence
+                
+                The signed data is Merkle hash V2 of this GTV structure as dictionary (Rell syntax):                
+                ```
+                  struct query_response_signature_data {
+                    name: text;           
+                    args: gtv; 
+                    height: integer; // same as `X-Block-Height` header
+                    response: gtv;
+                  }
+                ```
+              required: false
+              example: 'alg=\"secp256k1\", subject=:A6MBaXvfzXBDE7pI5R1WdUPyoYIDHv1pFd3Ae7zE4WBw:, sig=:QCZVnPLGwzkKw+BZHb22vxNcroxfb6FPeWkW7z/xr01hul2EdUSsCRUm6M+LpsxTc781OK3i9Vgb72wbmJXI7A==:'
           content:
             application/octet-stream: { }
         '400':
@@ -1173,10 +1209,13 @@ paths:
         }
         struct async_query_response {
             status: async_query_response_status;
-            response: gtv;
+            response: gtv?;
             error: text?;
+            height: integer?; // same as X-Block-Height header 
         }
         ```
+        
+        The `X-Block-Height` header will be set if and only if `status` is `COMPLETED`. 
       parameters:
         - $ref: "#/components/parameters/blockchainRid"
         - name: queryRid
@@ -1188,6 +1227,12 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            X-Block-Height:
+              description: The block height the query response was generated at
+              required: false
+              schema:
+                type: integer
           content:
             application/octet-stream: { }
         '403':
@@ -1919,6 +1964,14 @@ components:
       schema:
         $ref: "#/components/schemas/signature"
       example: "03A301697BDFCD704313BA48E51D567543F2A182031EFD6915DDC07BBCC4E16070:68FDCFA6E4D075BBF701AFDCA297B288F5477D42414A446234FC7F3910ED78893C9ADCC49C306DB7F2804949D5E63959BEBCA370FB825D5F4F74265D006C89F4"
+    acceptQueryResponseSignature:
+      name: X-Accept-Query-Response-Signature
+      description: Request the node to include an `X-Query-Response-Signature` header in the response
+      in: header
+      required: false
+      schema: 
+        type: boolean
+      example: true
   schemas:
     tx:
       type: object

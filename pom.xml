@@ -472,6 +472,12 @@
                 <version>1.2.0</version>
             </dependency>
 
+            <dependency>
+              <groupId>org.greenbytes.http</groupId>
+              <artifactId>structured-fields</artifactId>
+              <version>0.4</version>
+            </dependency>
+
             <!-- Cli -->
             <dependency>
                 <groupId>com.github.ajalt.clikt</groupId>

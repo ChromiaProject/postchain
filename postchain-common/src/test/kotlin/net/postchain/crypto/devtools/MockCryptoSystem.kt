@@ -13,6 +13,7 @@ import net.postchain.crypto.sha256Digest
 import kotlin.random.Random
 
 class MockCryptoSystem : CryptoSystem {
+    override val id: String = "mock"
 
     override val random: Random
         get() = Random.Default
@@ -22,11 +23,11 @@ class MockCryptoSystem : CryptoSystem {
     @Deprecated("Pass in KeyPair instead",
             ReplaceWith("buildSigMaker(KeyPair(pubKey, privKey))", imports = ["net.postchain.crypto.KeyPair"]))
     override fun buildSigMaker(pubKey: ByteArray, privKey: ByteArray): SigMaker {
-        return MockSigMaker(pubKey, privKey, ::digest)
+        return MockSigMaker(id, pubKey, privKey, ::digest)
     }
 
     override fun buildSigMaker(keyPair: KeyPair): SigMaker {
-        return MockSigMaker(keyPair.pubKey.data, keyPair.privKey.data, ::digest)
+        return MockSigMaker(id, keyPair.pubKey.data, keyPair.privKey.data, ::digest)
     }
 
     override fun verifyDigest(digest: ByteArray, s: Signature): Boolean {

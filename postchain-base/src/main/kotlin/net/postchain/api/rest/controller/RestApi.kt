@@ -15,6 +15,7 @@ import net.postchain.api.rest.Empty
 import net.postchain.api.rest.ErrorBody
 import net.postchain.api.rest.InfraVersion
 import net.postchain.api.rest.Version
+import net.postchain.api.rest.acceptQueryResponseSignatureHeader
 import net.postchain.api.rest.afterHeightQuery
 import net.postchain.api.rest.afterTimeQuery
 import net.postchain.api.rest.beforeHeightQuery
@@ -44,6 +45,7 @@ import net.postchain.api.rest.infraVersionBody
 import net.postchain.api.rest.limitQuery
 import net.postchain.api.rest.metadataBody
 import net.postchain.api.rest.model.DecodedTransactionInfoExt
+import net.postchain.api.rest.model.QueryResponseSignatureData
 import net.postchain.api.rest.model.TxRid
 import net.postchain.api.rest.nodeStatusBody
 import net.postchain.api.rest.nodeStatusesBody
@@ -84,6 +86,7 @@ import net.postchain.core.block.BlockQueryHeightFilter
 import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.PubKey
+import net.postchain.crypto.sha256Digest
 import net.postchain.debug.DiagnosticProperty
 import net.postchain.debug.ErrorValue
 import net.postchain.debug.JsonNodeDiagnosticContext
@@ -99,6 +102,8 @@ import net.postchain.gtv.GtvStream
 import net.postchain.gtv.GtvString
 import net.postchain.gtv.GtvType
 import net.postchain.gtv.mapper.GtvObjectMapper
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
 import net.postchain.gtx.UnknownOperation
@@ -107,6 +112,9 @@ import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
 import net.postchain.managed.ManagedNodeDataSource
 import net.postchain.managed.config.ManagedDataSourceAware
+import org.greenbytes.http.sfv.ByteSequenceItem
+import org.greenbytes.http.sfv.Dictionary
+import org.greenbytes.http.sfv.StringItem
 import org.http4k.core.Body
 import org.http4k.core.ContentType
 import org.http4k.core.Filter
@@ -167,6 +175,8 @@ const val FORBIDDEN_CONFIG_NOT_SIGNED_BY_PROVIDER = "Configuration must be signe
 
 const val DATA_TRUNCATED_HEADER = "X-Data-Truncated"
 const val TRANSACTION_TIMESTAMP = "X-Transaction-Timestamp"
+const val BLOCK_HEIGHT_HEADER = "X-Block-Height"
+const val QUERY_RESPONSE_SIGNATURE = "X-Query-Response-Signature"
 
 const val QUERY_TYPE = "type"
 const val QUERY_ARGS = "~args"
@@ -199,7 +209,7 @@ class RestApi(
 ) : Modellable, Closeable {
 
     companion object : KLogging() {
-        const val REST_API_VERSION = 21
+        const val REST_API_VERSION = 22
 
         private const val MAX_NUMBER_OF_BLOCKS_PER_REQUEST = 100
         private const val DEFAULT_ENTRY_RESULTS_REQUEST = 25
@@ -649,8 +659,10 @@ class RestApi(
     private fun getQueryGtv(request: Request): Response {
         val model = model(request)
         val query = extractGetQuery(request.uri.queries().toParametersMap())
-        val queryResult = model.query(query)
-        return getQueryResponse(model, Response(OK).with(binaryBody of GtvEncoder.encodeGtv(queryResult)))
+        val (queryResult, blockHeight) = model.queryWithHeight(query)
+        return getQueryResponse(model, Response(OK)
+                .with(binaryBody of GtvEncoder.encodeGtv(queryResult)))
+                .header(BLOCK_HEIGHT_HEADER, blockHeight.toString())
     }
 
     private fun postQueryGtv(request: Request): Response {
@@ -662,8 +674,30 @@ class RestApi(
             logger.debug { "Invalid GTV data in POST /query_gtv: $e" }
             throw IllegalArgumentException("Invalid GTV data")
         }
-        val response = model.query(gtvQuery)
-        return Response(OK).with(binaryBody of GtvEncoder.encodeGtv(response))
+        val (queryResult, blockHeight) = model.queryWithHeight(gtvQuery)
+        return Response(OK)
+                .with(binaryBody of GtvEncoder.encodeGtv(queryResult))
+                .header(BLOCK_HEIGHT_HEADER, blockHeight.toString())
+                .let {
+                    if (acceptQueryResponseSignatureHeader(request))
+                        it.header(QUERY_RESPONSE_SIGNATURE, makeQueryResponseSignature(model, QueryResponseSignatureData(
+                                name = gtvQuery.name,
+                                args = gtvQuery.args,
+                                height = blockHeight,
+                                response = queryResult)))
+                    else it
+                }
+    }
+
+    private fun makeQueryResponseSignature(model: Model, queryResponseSignatureData: QueryResponseSignatureData): String {
+        val hash = GtvObjectMapper.toGtvDictionary(queryResponseSignatureData).merkleHash(GtvMerkleHashCalculatorV2(::sha256Digest))
+        val sigMaker = model.getBlockSigMaker()
+        val signature = sigMaker.signDigest(hash)
+        return Dictionary.valueOf(mapOf(
+                "alg" to StringItem.valueOf(sigMaker.id),
+                "subject" to ByteSequenceItem.valueOf(signature.subjectID),
+                "sig" to ByteSequenceItem.valueOf(signature.data),
+        )).serialize()
     }
 
     private fun postQueryAsync(request: Request): Response {
@@ -683,8 +717,9 @@ class RestApi(
         val model = model(request)
         val queryRid = queryRidPath(request)
         val response = model.fetchQueryResponse(queryRid)
-        return Response(OK).with(binaryBody of
-                GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(response)))
+        return Response(OK)
+                .with(binaryBody of GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(response)))
+                .let { if (response.blockHeight != null) it.header(BLOCK_HEIGHT_HEADER, response.blockHeight.toString()) else it }
     }
 
     private fun getQueryResponse(model: Model, response: Response, cacheTtlSeconds: Long = -1): Response =

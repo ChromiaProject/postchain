@@ -67,6 +67,8 @@ val signatureHeader = Header.string()
         }
         .optional(X_POSTCHAIN_SIGNATURE_HEADER)
 
+val acceptQueryResponseSignatureHeader = Header.boolean().defaulted("X-Accept-Query-Response-Signature", false)
+
 val txRidPath = Path.regexGroup(ridRegex, 1).map { TxRid(it.hexStringToByteArray()) }.of("txRid", "Hex encoded transaction RID")
 val blockRidPath = Path.regexGroup(ridRegex, 1).map { BlockRid(it.hexStringToByteArray()) }.of("blockRid", "Hex encoded block RID")
 val queryRidPath = Path.regexGroup(ridRegex, 1).map { WrappedByteArray(it.hexStringToByteArray()) }.of("queryRid", "Hex encoded query RID")
