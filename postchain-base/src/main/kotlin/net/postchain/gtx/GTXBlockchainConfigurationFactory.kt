@@ -17,7 +17,6 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.mapper.toObject
 import net.postchain.logging.BLOCKCHAIN_RID_TAG
 import net.postchain.logging.CHAIN_IID_TAG
-import java.sql.SQLException
 
 /**
  * TODO: (Olle) This should be in the "net.postchain.base.gtx" package (setting it apart from the GTX module),
@@ -37,26 +36,15 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
         }
 
         fun extraConfigurationValidation(configurationData: BlockchainConfigurationData, eContext: EContext) {
-            val currentMerkleHashVersion = DatabaseAccess.of(eContext).getCurrentMerkleHashVersion(eContext)
+            val dba = DatabaseAccess.of(eContext)
+            val currentMerkleHashVersion = dba.getCurrentMerkleHashVersion(eContext)
             val newMerkleHashVersion = configurationData.merkleHashVersion
             if (newMerkleHashVersion < currentMerkleHashVersion) {
                 throw UserMistake("Cannot downgrade merkle hash version from $currentMerkleHashVersion to $newMerkleHashVersion")
             }
 
-            if (configurationData.snapshotsEnabled) {
-                val snapshotsEnabled = try {
-                    (DatabaseAccess.of(eContext).getLatestSnapshotHeight(eContext, "${SNAPSHOT_TABLE_PREFIX}_root_snapshot")
-                            ?: 0) > 0
-                } catch (e: SQLException) {
-                    if (e.sqlState == "42P01") {
-                        false
-                    } else {
-                        throw e
-                    }
-                }
-                if (!snapshotsEnabled) {
-                    throw UserMistake("Snapshots can only be enabled on height 0")
-                }
+            if (configurationData.snapshotsEnabled && !dba.isSnapshotEnabled(eContext)) {
+                throw UserMistake("Snapshots can only be enabled on height 0")
             }
         }
 

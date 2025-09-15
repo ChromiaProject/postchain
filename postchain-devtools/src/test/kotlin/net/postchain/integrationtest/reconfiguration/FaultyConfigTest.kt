@@ -93,7 +93,12 @@ class FaultyConfigTest : IntegrationTestSetup() {
 
     @Test
     fun `cannot enable snapshot on existing chain`() {
-        val (node) = createNodes(1, "/net/postchain/devtools/reconfiguration/single_peer/blockchain_config_1.xml")
+        val initialConfig = "/net/postchain/devtools/reconfiguration/single_peer/blockchain_config_1.xml"
+        val (node) = createNodes(1, initialConfig)
+        val initialConfigGtv = readBlockchainConfig(initialConfig)
+        withReadConnection(node.postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { eContext: EContext ->
+            GTXBlockchainConfigurationFactory.validateConfiguration(initialConfigGtv, node.getBlockchainRid(DEFAULT_CHAIN_IID)!!, eContext)
+        }
         val invalidConfig = readBlockchainConfig("/net/postchain/devtools/snapshot/blockchain_config_4.xml")
         assertFailure {
             withReadConnection(node.postchainContext.sharedStorage, DEFAULT_CHAIN_IID) { eContext: EContext ->

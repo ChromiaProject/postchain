@@ -192,6 +192,7 @@ interface DatabaseAccess {
     fun getLowestSnapshotHeightToKeep(ctx: EContext, pageStoreName: String, blockHeight: Long, snapshotsToKeep: Int = 100): Long?
 
     // Snapshots
+    fun isSnapshotEnabled(ctx: EContext): Boolean
     fun getLatestSnapshotHeight(ctx: EContext, pageStoreName: String): Long?
     fun getSnapshotSyncState(ctx: EContext): SnapshotSyncState?
     fun setSnapshotSyncState(ctx: EContext, state: SnapshotSyncState)
