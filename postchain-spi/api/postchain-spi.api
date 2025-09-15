@@ -716,6 +716,7 @@ public abstract interface class net/postchain/base/data/DatabaseAccess {
 	public abstract fun insertUpdatedDatum (Lnet/postchain/core/ExecutionContext;JLnet/postchain/base/data/DatumInfo;)V
 	public abstract fun isSavepointSupported ()Z
 	public abstract fun isSchemaExists (Ljava/sql/Connection;Ljava/lang/String;)Z
+	public abstract fun isSnapshotEnabled (Lnet/postchain/core/ExecutionContext;)Z
 	public abstract fun isTransactionConfirmed (Lnet/postchain/core/ExecutionContext;[B)Z
 	public abstract fun listConfigurationHashes (Lnet/postchain/core/ExecutionContext;)Ljava/util/List;
 	public abstract fun listConfigurations (Lnet/postchain/core/ExecutionContext;)Ljava/util/List;
