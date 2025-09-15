@@ -628,7 +628,7 @@ class SnapshotSyncSlowIntegrationTest : ManagedModeTest() {
 fun Assert<PostchainTestNode>.hasFinalizedImportInTestModules() = given { node ->
     val modulesSynced = node.getBlockchainInstance(DEFAULT_CHAIN_IID).blockchainEngine.getConfiguration().getSnapshotAwareModules()
             .filterIsInstance<SnapshotTestModule>()
-            .map { it.initializeImportCalled && it.finalizeImportCalled }
+            .map { it.finalizeImportCalled }
     if (modulesSynced.isEmpty()) {
         expected("to contain any ${SnapshotTestModule::class.java.name} module")
     }

@@ -69,10 +69,10 @@ class SnapshotSynchronizer(
 
     private var receivedLatestSnapshotHeight = mutableMapOf<NodeRid, SnapshotBlockHeader>()
     private val contextSyncRequests = mutableMapOf<Long, SnapshotContextState>() // State of progress per context, each context is removed on completion
-    private var lastStoredSnapshotDataTime = mutableMapOf<Long, Long>()
+    private var lastStoredSnapshotDataTime = mutableMapOf<Long, Long>() // <context ID, time in milliseconds> - tracks "waiting time" between writing datums to storage.
 
     private lateinit var syncState: SnapshotSyncState
-    private val contextStates = mutableMapOf<Long, SnapshotSyncContextState>()
+    private val contextStates = mutableMapOf<Long, SnapshotSyncContextState>() // <context ID, state> - contains initial states at startup and context root hash
 
     private val snapshotModuleByContextMap: Map<Long, SnapshotAware> by lazy {
         val configuration = workerContext.engine.getConfiguration()
@@ -233,6 +233,8 @@ class SnapshotSynchronizer(
 
                 setInitialNodeStates(candidate)
 
+                snapshotModuleByContextMap.values.forEach(SnapshotAware::initializeImport)
+
                 logger.info("Snapshot sync starts from nodes: ${peerStatuses.getSyncablePeers(candidateHeaderHeight)}")
                 return true
             } catch (e: Exception) {
@@ -342,8 +344,6 @@ class SnapshotSynchronizer(
 
         if (isProcessRunning()) {
             sendInitialSnapshotDataRequest()
-
-            snapshotModuleByContextMap.values.forEach(SnapshotAware::initializeImport)
 
             while (isProcessRunning() && contextSyncRequests.isNotEmpty()) {
                 processMessages(false)
