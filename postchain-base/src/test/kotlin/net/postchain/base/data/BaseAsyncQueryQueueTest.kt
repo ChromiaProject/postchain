@@ -47,8 +47,8 @@ class BaseAsyncQueryQueueTest {
     @Test
     fun `enqueue and process query successfully`() {
         // Arrange
-        val queryExecutor: (EContext, GtxQuery) -> Gtv = mock {
-            on { invoke(any(), any()) } doReturn gtv("success")
+        val queryExecutor: (EContext, GtxQuery) -> Pair<Gtv, Long> = mock {
+            on { invoke(any(), any()) } doReturn (gtv("success") to 5)
         }
         val mockStorage: BaseStorage = mock {
             on { openReadConnection(any()) } doReturn mock {}
@@ -81,7 +81,7 @@ class BaseAsyncQueryQueueTest {
     @Test
     fun `handle query execution error`() {
         // Arrange
-        val queryExecutor: (EContext, GtxQuery) -> Gtv = mock {
+        val queryExecutor: (EContext, GtxQuery) -> Pair<Gtv, Long> = mock {
             on { invoke(any(), any()) } doThrow UserMistake("Test error")
         }
         val mockStorage: BaseStorage = mock {
@@ -116,11 +116,11 @@ class BaseAsyncQueryQueueTest {
     fun `respect queue capacity limit`() {
         // Arrange
         val latch = CountDownLatch(1)
-        val queryExecutor: (EContext, GtxQuery) -> Gtv = mock {
+        val queryExecutor: (EContext, GtxQuery) -> Pair<Gtv, Long> = mock {
             on { invoke(any(), any()) } doAnswer {
                 // Block the executor thread to fill up the queue
                 latch.await(5, TimeUnit.SECONDS)
-                gtv("success")
+                gtv("success") to 5
             }
         }
         val mockStorage: BaseStorage = mock {
@@ -184,8 +184,8 @@ class BaseAsyncQueryQueueTest {
                 resultRetentionSeconds = 10,
                 storage = mockStorage,
                 chainID = 1,
-        ) { ctx, query ->
-            gtv("success")
+        ) { _, _ ->
+            gtv("success") to 5
         }
 
         // Act
@@ -205,7 +205,7 @@ class BaseAsyncQueryQueueTest {
         val mockStorage: BaseStorage = mock {
             on { openReadConnection(any()) } doReturn mock {}
         }
-        val queryExecutor: (EContext, GtxQuery) -> Gtv = mock {
+        val queryExecutor: (EContext, GtxQuery) -> Pair<Gtv, Long> = mock {
             on { invoke(any(), any()) } doAnswer {
                 try {
                     Thread.sleep(2000) // Sleep longer than timeout
@@ -213,7 +213,7 @@ class BaseAsyncQueryQueueTest {
                     interrupted.set(true)
                     throw e
                 }
-                gtv("success")
+                gtv("success") to 5
             }
         }
         asyncQueryQueue = BaseAsyncQueryQueue(
@@ -245,8 +245,8 @@ class BaseAsyncQueryQueueTest {
     @Test
     fun `test duplicate query`() {
         // Arrange
-        val queryExecutor: (EContext, GtxQuery) -> Gtv = mock {
-            on { invoke(any(), any()) } doReturn gtv("success")
+        val queryExecutor: (EContext, GtxQuery) -> Pair<Gtv, Long> = mock {
+            on { invoke(any(), any()) } doReturn (gtv("success") to 5)
         }
         val mockStorage: BaseStorage = mock {
             on { openReadConnection(any()) } doReturn mock {}
@@ -274,8 +274,8 @@ class BaseAsyncQueryQueueTest {
     @Test
     fun `test result retention period`() {
         // Arrange
-        val queryExecutor: (EContext, GtxQuery) -> Gtv = mock {
-            on { invoke(any(), any()) } doReturn gtv("success")
+        val queryExecutor: (EContext, GtxQuery) -> Pair<Gtv, Long> = mock {
+            on { invoke(any(), any()) } doReturn (gtv("success") to 5)
         }
         val mockStorage: BaseStorage = mock {
             on { openReadConnection(any()) } doReturn mock {}

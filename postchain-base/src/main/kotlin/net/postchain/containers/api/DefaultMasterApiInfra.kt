@@ -64,7 +64,7 @@ class DefaultMasterApiInfra(
                     containerRequestConcurrency = dynamicContainerRequestConcurrency,
                     subnodeHttpRedirect = subnodeHttpRedirect,
                     maxRequestBodySize = maxRequestBodySize,
-                    maxDataSize = maxDataSize
+                    maxDataSize = maxDataSize,
             )
         }
     }

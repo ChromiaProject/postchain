@@ -139,19 +139,20 @@ open class PostchainModel(
 
     override fun confirmBlock(blockRID: BlockRid): BlockSignature? {
         return blockQueries.getBlock(blockRID.data, true).get()?.let {
-            val blockSigMaker = when (blockchainConfiguration) {
-                is BaseBlockchainConfiguration -> blockchainConfiguration.blockSigMaker
-                is ManagedBlockchainConfiguration -> blockchainConfiguration.configuration.blockSigMaker
-                else -> throw UserMistake("Unknown blockchain configuration detected: " + blockchainConfiguration.javaClass.simpleName)
-            }
             val witnessProvider = BaseBlockWitnessProvider(
                     postchainContext.cryptoSystem,
-                    blockSigMaker,
+                    getBlockSigMaker(),
                     blockchainConfiguration.signers.toTypedArray()
             )
             val witnessBuilder = witnessProvider.createWitnessBuilderWithOwnSignature(blockRID) as MultiSigBlockWitnessBuilder
             BlockSignature.fromSignature(witnessBuilder.getMySignature())
         }
+    }
+
+    override fun getBlockSigMaker(): SigMaker = when (blockchainConfiguration) {
+        is BaseBlockchainConfiguration -> blockchainConfiguration.blockSigMaker
+        is ManagedBlockchainConfiguration -> blockchainConfiguration.configuration.blockSigMaker
+        else -> throw UserMistake("Unknown blockchain configuration detected: " + blockchainConfiguration.javaClass.simpleName)
     }
 
     override fun getConfirmationProof(txRID: TxRid): ConfirmationProof? =
@@ -175,7 +176,11 @@ open class PostchainModel(
         }
     }
 
-    override fun query(query: GtxQuery): Gtv {
+    override fun query(query: GtxQuery): Gtv = queryInternal(query, withHeight = false).first
+
+    override fun queryWithHeight(query: GtxQuery): Pair<Gtv, Long> = queryInternal(query, withHeight = true)
+
+    private fun queryInternal(query: GtxQuery, withHeight: Boolean): Pair<Gtv, Long> {
         val timerBuilder = Timer.builder(QUERIES_METRIC_NAME)
                 .description(QUERIES_METRIC_DESCRIPTION)
                 .tag(CHAIN_IID_TAG, chainIID.toString())
@@ -183,11 +188,15 @@ open class PostchainModel(
                 .tag(QUERY_NAME_TAG, query.name)
         val sample = Timer.start(Metrics.globalRegistry)
         return try {
-            val result = blockQueries.query(query.name, query.args).get()
+            val (result, height) = if (withHeight) {
+                blockQueries.queryWithHeight(query.name, query.args).get()
+            } else {
+                blockQueries.query(query.name, query.args).get() to -1L
+            }
             sample.stop(timerBuilder
                     .tag(RESULT_TAG, SUCCESS_RESULT)
                     .register(Metrics.globalRegistry))
-            result
+            result to height
         } catch (e: UnknownQuery) {
             // do not add metrics for unknown queries to avoid blowing up the QUERY_NAME_TAG dimension
             throw e
@@ -254,6 +263,9 @@ open class PostchainModel(
             }
 
             val blockSigMaker: SigMaker = object : SigMaker {
+                override val id: String
+                    get() = throw NotImplementedError("SigMaker")
+
                 override fun signMessage(msg: ByteArray) = throw NotImplementedError("SigMaker")
                 override fun signDigest(digest: Hash) = throw NotImplementedError("SigMaker")
             }

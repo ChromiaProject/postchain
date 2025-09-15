@@ -23,5 +23,8 @@ class TestBlockQueries(
             BaseBlockWitness.fromBytes(witnessData)
 
     override fun query(name: String, args: Gtv): CompletionStage<Gtv> =
-             CompletableFuture.failedStage(UserMistake("Queries are not supported"))
+            CompletableFuture.failedStage(UserMistake("Queries are not supported"))
+
+    override fun queryWithHeight(name: String, args: Gtv): CompletionStage<Pair<Gtv, Long>> =
+            CompletableFuture.failedStage(UserMistake("Queries are not supported"))
 }

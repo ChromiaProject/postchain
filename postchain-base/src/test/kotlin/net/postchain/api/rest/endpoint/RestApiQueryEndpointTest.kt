@@ -4,12 +4,14 @@ package net.postchain.api.rest.endpoint
 
 import assertk.assertThat
 import assertk.assertions.isEqualTo
+import assertk.assertions.isTrue
 import assertk.isContentEqualTo
 import io.restassured.RestAssured
 import io.restassured.http.ContentType
 import net.postchain.api.rest.controller.Errors
 import net.postchain.api.rest.controller.Model
 import net.postchain.api.rest.controller.RestApi
+import net.postchain.api.rest.model.QueryResponseSignatureData
 import net.postchain.common.BlockchainRid
 import net.postchain.common.exception.ProgrammerMistake
 import net.postchain.common.exception.UserMistake
@@ -17,6 +19,10 @@ import net.postchain.common.toHex
 import net.postchain.common.wrap
 import net.postchain.core.AsyncQueryResponse
 import net.postchain.core.AsyncQueryResponseStatus
+import net.postchain.crypto.Secp256K1CryptoSystem
+import net.postchain.crypto.Signature
+import net.postchain.crypto.devtools.KeyPairHelper
+import net.postchain.crypto.sha256Digest
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.GtvFactory.gtv
@@ -25,9 +31,14 @@ import net.postchain.gtv.GtvStream
 import net.postchain.gtv.gtvToJSON
 import net.postchain.gtv.makeStrictGtvGson
 import net.postchain.gtv.mapper.GtvObjectMapper
+import net.postchain.gtv.merkle.GtvMerkleHashCalculatorV2
+import net.postchain.gtv.merkleHash
 import net.postchain.gtx.GtxQuery
 import net.postchain.gtx.NON_STRICT_QUERY_ARGUMENT
 import net.postchain.gtx.UnknownQuery
+import org.greenbytes.http.sfv.ByteSequenceItem
+import org.greenbytes.http.sfv.Parser
+import org.greenbytes.http.sfv.StringItem
 import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.nullValue
 import org.hamcrest.Matchers.greaterThan
@@ -49,6 +60,8 @@ import java.math.BigInteger
  */
 class RestApiQueryEndpointTest {
 
+    private val cryptoSystem = Secp256K1CryptoSystem()
+    private val keyPair = KeyPairHelper.keyPair(0)
     private val basePath = "/api/v1"
     private val blockchainRID = BlockchainRid.buildFromHex("78967baa4768cbcef11c508326ffb13a956689fcb6dc3ba17f4b895cbb1577a3")
     private val gson = makeStrictGtvGson()
@@ -57,18 +70,18 @@ class RestApiQueryEndpointTest {
 
     @BeforeEach
     fun setup() {
+        restApi = RestApi(0, basePath, gracefulShutdown = false)
+
         model = mock {
             on { chainIID } doReturn 1L
             on { blockchainRid } doReturn blockchainRID
             on { live } doReturn true
         }
-
-        restApi = RestApi(0, basePath, gracefulShutdown = false)
     }
 
     @AfterEach
     fun tearDown() {
-        restApi.close()
+        if (::restApi.isInitialized) restApi.close()
     }
 
     @Test
@@ -495,7 +508,7 @@ class RestApiQueryEndpointTest {
         val query = GtxQuery("test_query", gtv(mapOf()))
         val answer = gtv("answer")
 
-        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryWithHeight(query)).thenReturn(answer to 5)
         whenever(model.queryCacheTtlSeconds).thenReturn(17L)
 
         restApi.attachModel(blockchainRID, model)
@@ -506,6 +519,7 @@ class RestApiQueryEndpointTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
+                .header("X-Block-Height", equalTo("5"))
                 .header("Cache-Control", equalTo("public, max-age=17"))
 
         assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(answer))
@@ -522,7 +536,7 @@ class RestApiQueryEndpointTest {
         val query = GtxQuery("test_query", gtv(mapOf("a" to gtv("b"), "c" to gtv(3), NON_STRICT_QUERY_ARGUMENT to gtv(true))))
         val answer = gtv("answer")
 
-        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryWithHeight(query)).thenReturn(answer to 5)
         whenever(model.queryCacheTtlSeconds).thenReturn(17L)
 
         restApi.attachModel(blockchainRID, model)
@@ -533,6 +547,7 @@ class RestApiQueryEndpointTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
+                .header("X-Block-Height", equalTo("5"))
                 .header("Cache-Control", equalTo("public, max-age=17"))
 
         assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(answer))
@@ -544,7 +559,7 @@ class RestApiQueryEndpointTest {
         val queryString = "type=${query.name}&~args=${GtvEncoder.encodeGtv(query.args).toHex()}"
         val answer = gtv("answer")
 
-        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryWithHeight(query)).thenReturn(answer to 5)
         whenever(model.queryCacheTtlSeconds).thenReturn(17L)
 
         restApi.attachModel(blockchainRID, model)
@@ -555,6 +570,7 @@ class RestApiQueryEndpointTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
+                .header("X-Block-Height", equalTo("5"))
                 .header("Cache-Control", equalTo("public, max-age=17"))
 
         assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(answer))
@@ -583,11 +599,11 @@ class RestApiQueryEndpointTest {
     }
 
     @Test
-    fun gtvRequestAndResponseTypes() {
+    fun `POST query_gtv`() {
         val query = GtxQuery("test_query", gtv(mapOf("type" to gtv("value"))))
         val answer = gtv("answer")
 
-        whenever(model.query(query)).thenReturn(answer)
+        whenever(model.queryWithHeight(query)).thenReturn(answer to 5)
 
         restApi.attachModel(blockchainRID, model)
 
@@ -598,8 +614,47 @@ class RestApiQueryEndpointTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
+                .header("X-Block-Height", equalTo("5"))
+                .header("X-Query-Response-Signature", nullValue())
 
         assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(answer))
+    }
+
+    @Test
+    fun `POST query_gtv with signature`() {
+        val query = GtxQuery("test_query", gtv(mapOf("type" to gtv("value"))))
+        val answer = gtv("answer")
+
+        whenever(model.queryWithHeight(query)).thenReturn(answer to 5)
+        whenever(model.getBlockSigMaker()).thenReturn(cryptoSystem.buildSigMaker(keyPair))
+
+        restApi.attachModel(blockchainRID, model)
+
+        val response = RestAssured.given().basePath(basePath).port(restApi.actualPort())
+                .header("Accept", ContentType.BINARY)
+                .header("X-Accept-Query-Response-Signature", true)
+                .body(query.encode())
+                .post("/query_gtv/${blockchainRID}")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.BINARY)
+                .header("X-Block-Height", equalTo("5"))
+
+        assertThat(response.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(answer))
+
+        val signatureHeader = response.extract().header("X-Query-Response-Signature")
+        val signatureDict = Parser(signatureHeader).parseDictionary()
+        assertThat((signatureDict.get()["alg"] as StringItem).get()).isEqualTo(cryptoSystem.id)
+        val subject = (signatureDict.get()["subject"] as ByteSequenceItem).get().array()
+        assertThat(subject).isContentEqualTo(keyPair.pubKey.data)
+        val sig = (signatureDict.get()["sig"] as ByteSequenceItem).get().array()
+        val queryResponseSignatureData = QueryResponseSignatureData(
+                name = query.name,
+                args = query.args,
+                height = 5,
+                response = answer)
+        val hash = GtvObjectMapper.toGtvDictionary(queryResponseSignatureData).merkleHash(GtvMerkleHashCalculatorV2(::sha256Digest))
+        assertThat(cryptoSystem.verifyDigest(hash, Signature(subject, sig))).isTrue()
     }
 
     @Test
@@ -607,7 +662,7 @@ class RestApiQueryEndpointTest {
         val query = GtxQuery("test_query", gtv(mapOf("arg" to gtv("value"))))
 
         val errorMessage = "Unknown query"
-        whenever(model.query(query)).thenThrow(UserMistake(errorMessage))
+        whenever(model.queryWithHeight(query)).thenThrow(UserMistake(errorMessage))
 
         restApi.attachModel(blockchainRID, model)
 
@@ -701,6 +756,7 @@ class RestApiQueryEndpointTest {
                 status = AsyncQueryResponseStatus.COMPLETED,
                 queryResponse = answer,
                 errorMessage = null,
+                blockHeight = 5,
         ))
 
         val body = RestAssured.given().basePath(basePath).port(restApi.actualPort())
@@ -708,11 +764,13 @@ class RestApiQueryEndpointTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.BINARY)
+                .header("X-Block-Height", equalTo("5"))
 
         assertThat(body.extract().response().body.asByteArray()).isContentEqualTo(GtvEncoder.encodeGtv(GtvObjectMapper.toGtvDictionary(AsyncQueryResponse(
                 status = AsyncQueryResponseStatus.COMPLETED,
                 queryResponse = answer,
                 errorMessage = null,
+                blockHeight = 5,
         ))))
     }
 
@@ -745,7 +803,7 @@ class RestApiQueryEndpointTest {
         val queryString = queryMap.map { "${it.key}=${it.value.toString().trim('"')}" }.joinToString("&")
         val query = GtxQuery("test_query", gtv(mapOf()))
 
-        whenever(model.query(query)).thenThrow(UnknownQuery("test_query"))
+        whenever(model.queryWithHeight(query)).thenThrow(UnknownQuery("test_query"))
 
         restApi.attachModel(blockchainRID, model)
 

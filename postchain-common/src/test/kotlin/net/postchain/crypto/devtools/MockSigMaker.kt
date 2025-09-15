@@ -5,7 +5,7 @@ import net.postchain.crypto.SigMaker
 import net.postchain.crypto.Signature
 import kotlin.experimental.xor
 
-class MockSigMaker(val pubKey: ByteArray, val privKey: ByteArray, val digestFun: (ByteArray) -> Hash): SigMaker {
+class MockSigMaker(override val id: String, val pubKey: ByteArray, val privKey: ByteArray, val digestFun: (ByteArray) -> Hash): SigMaker {
     override fun signMessage(msg: ByteArray): Signature {
         val digestMsg = digestFun(msg)
         return signDigest(digestMsg)

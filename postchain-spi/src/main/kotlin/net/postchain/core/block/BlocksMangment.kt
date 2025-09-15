@@ -48,6 +48,7 @@ interface BlockQueries : Shutdownable {
     fun getTransactionsInfoBySigner(timeFilter: BlockQueryTimeFilter, limit: Int, signer: PubKey, maxDataSize: Int): CompletionStage<TransactionInfoExtsTruncated>
     fun getLastTransactionNumber(): CompletionStage<Long>
     fun query(name: String, args: Gtv): CompletionStage<Gtv>
+    fun queryWithHeight(name: String, args: Gtv): CompletionStage<Pair<Gtv, Long>>
     fun isTransactionConfirmed(txRID: ByteArray): CompletionStage<Boolean>
 }
 

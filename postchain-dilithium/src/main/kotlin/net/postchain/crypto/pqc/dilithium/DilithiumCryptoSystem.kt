@@ -24,6 +24,7 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 
 class DilithiumCryptoSystem : BaseCryptoSystem() {
+    override val id = "dilithium2"
 
     private val dilithiumParameters = DilithiumParameters.dilithium2 // TODO: Investigate which parameters we should use
 
@@ -38,7 +39,7 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
     override fun buildSigMaker(pubKey: ByteArray, privKey: ByteArray): SigMaker =
             buildSigMaker(KeyPair(PubKey(pubKey), PrivKey(privKey)))
 
-    override fun buildSigMaker(keyPair: KeyPair): SigMaker = DilithiumSigMaker(keyPair, ::digest)
+    override fun buildSigMaker(keyPair: KeyPair): SigMaker = DilithiumSigMaker(id, keyPair, ::digest)
 
     override fun generateKeyPair(): KeyPair {
         val keyPairGenerator = KeyPairGenerator.getInstance(ALGORITHM, PROVIDER).apply {
@@ -62,7 +63,7 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
         return PubKey(decodedPublicKey.encoded)
     }
 
-    // 0x30 indicates that content is ASN1 encoded, it is also not a valid start for an ECDSA key
+    // 0x30 indicates that content is ASN1 encoded; it is also not a valid start for an ECDSA key
     override fun deriveSignatureVerificationFromSubject(subjectID: ByteArray): BasicVerifier? =
             if (subjectID[0].toInt() == 0x30) {
                 try {
@@ -72,7 +73,7 @@ class DilithiumCryptoSystem : BaseCryptoSystem() {
                     if (signatureAlgorithmId == BCObjectIdentifiers.dilithium2) {
                         ::verifyDilithiumSignature
                     } else throw UserMistake("Unknown signature algorithm identifier $signatureAlgorithmId")
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     throw UserMistake("Invalid format of ASN1 encoded public key")
                 }
             } else {

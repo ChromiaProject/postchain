@@ -14,4 +14,5 @@ data class AsyncQueryResponse(
         @Name("status") val status: AsyncQueryResponseStatus,
         @Name("response") val queryResponse: Gtv,
         @Name("error") val errorMessage: String?,
+        @Name("height") val blockHeight: Long?,
 )

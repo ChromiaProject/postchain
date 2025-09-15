@@ -226,6 +226,7 @@ public abstract interface class net/postchain/crypto/CryptoSystem : net/postchai
 	public abstract fun buildSigMaker ([B[B)Lnet/postchain/crypto/SigMaker;
 	public abstract fun derivePubKey (Lnet/postchain/crypto/PrivKey;)Lnet/postchain/crypto/PubKey;
 	public abstract fun generateKeyPair ()Lnet/postchain/crypto/KeyPair;
+	public abstract fun getId ()Ljava/lang/String;
 	public abstract fun getRandom ()Lkotlin/random/Random;
 	public abstract fun getRandomBytes (I)[B
 	public abstract fun makeVerifier ()Lkotlin/jvm/functions/Function2;
@@ -316,6 +317,7 @@ public class net/postchain/crypto/Secp256K1CryptoSystem : net/postchain/crypto/B
 	public fun generateKeyPair ()Lnet/postchain/crypto/KeyPair;
 	public final fun generateKeyPairWithMnemonic ()Lkotlin/Pair;
 	public final fun generatePrivKey ()Lnet/postchain/crypto/PrivKey;
+	public fun getId ()Ljava/lang/String;
 	public final fun recoverKeyPairFromMnemonic (Ljava/lang/String;)Lkotlin/Pair;
 	public fun validatePubKey ([B)Z
 }
@@ -335,8 +337,9 @@ public final class net/postchain/crypto/Secp256k1Kt {
 }
 
 public class net/postchain/crypto/Secp256k1SigMaker : net/postchain/crypto/SigMaker {
-	public fun <init> ([B[BLkotlin/jvm/functions/Function1;)V
+	public fun <init> (Ljava/lang/String;[B[BLkotlin/jvm/functions/Function1;)V
 	public final fun getDigestFun ()Lkotlin/jvm/functions/Function1;
+	public fun getId ()Ljava/lang/String;
 	public final fun getPrivKey ()[B
 	public final fun getPubKey ()[B
 	public fun signDigest ([B)Lnet/postchain/crypto/Signature;
@@ -348,6 +351,7 @@ public final class net/postchain/crypto/Sha256digestKt {
 }
 
 public abstract interface class net/postchain/crypto/SigMaker {
+	public abstract fun getId ()Ljava/lang/String;
 	public abstract fun signDigest ([B)Lnet/postchain/crypto/Signature;
 	public abstract fun signMessage ([B)Lnet/postchain/crypto/Signature;
 }

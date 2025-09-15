@@ -1081,13 +1081,15 @@ public abstract interface class net/postchain/core/AsyncQueryQueue : net/postcha
 }
 
 public final class net/postchain/core/AsyncQueryResponse {
-	public fun <init> (Lnet/postchain/core/AsyncQueryResponseStatus;Lnet/postchain/gtv/Gtv;Ljava/lang/String;)V
+	public fun <init> (Lnet/postchain/core/AsyncQueryResponseStatus;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;)V
 	public final fun component1 ()Lnet/postchain/core/AsyncQueryResponseStatus;
 	public final fun component2 ()Lnet/postchain/gtv/Gtv;
 	public final fun component3 ()Ljava/lang/String;
-	public final fun copy (Lnet/postchain/core/AsyncQueryResponseStatus;Lnet/postchain/gtv/Gtv;Ljava/lang/String;)Lnet/postchain/core/AsyncQueryResponse;
-	public static synthetic fun copy$default (Lnet/postchain/core/AsyncQueryResponse;Lnet/postchain/core/AsyncQueryResponseStatus;Lnet/postchain/gtv/Gtv;Ljava/lang/String;ILjava/lang/Object;)Lnet/postchain/core/AsyncQueryResponse;
+	public final fun component4 ()Ljava/lang/Long;
+	public final fun copy (Lnet/postchain/core/AsyncQueryResponseStatus;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;)Lnet/postchain/core/AsyncQueryResponse;
+	public static synthetic fun copy$default (Lnet/postchain/core/AsyncQueryResponse;Lnet/postchain/core/AsyncQueryResponseStatus;Lnet/postchain/gtv/Gtv;Ljava/lang/String;Ljava/lang/Long;ILjava/lang/Object;)Lnet/postchain/core/AsyncQueryResponse;
 	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBlockHeight ()Ljava/lang/Long;
 	public final fun getErrorMessage ()Ljava/lang/String;
 	public final fun getQueryResponse ()Lnet/postchain/gtv/Gtv;
 	public final fun getStatus ()Lnet/postchain/core/AsyncQueryResponseStatus;
@@ -1723,6 +1725,7 @@ public abstract interface class net/postchain/core/block/BlockQueries : net/post
 	public abstract fun getTransactionsInfoBySigner (Lnet/postchain/core/block/BlockQueryTimeFilter;ILnet/postchain/crypto/PubKey;I)Ljava/util/concurrent/CompletionStage;
 	public abstract fun isTransactionConfirmed ([B)Ljava/util/concurrent/CompletionStage;
 	public abstract fun query (Ljava/lang/String;Lnet/postchain/gtv/Gtv;)Ljava/util/concurrent/CompletionStage;
+	public abstract fun queryWithHeight (Ljava/lang/String;Lnet/postchain/gtv/Gtv;)Ljava/util/concurrent/CompletionStage;
 }
 
 public final class net/postchain/core/block/BlockQueries$DefaultImpls {

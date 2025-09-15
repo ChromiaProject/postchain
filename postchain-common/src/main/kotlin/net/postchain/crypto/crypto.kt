@@ -9,6 +9,8 @@ import kotlin.random.Random
  * Can sign digests/messages.
  */
 interface SigMaker {
+    /** The id of the `CryptoSystem` which this belongs to. */
+    val id: String
 
     /**
      * @param msg is raw binary data that should be the base for the signature (Usually the raw data will be digested
@@ -18,7 +20,7 @@ interface SigMaker {
     fun signMessage(msg: ByteArray): Signature
 
     /**
-     * Note: To save CPU cycles you should call this method if you already have the digest and just need the signature.
+     * Note: To save CPU cycles, you should call this method if you already have the digest and just need the signature.
      *
      * @param digest is the "hash" that should be signed
      * @return a [Signature] created using the specific algo of the implementation.
@@ -28,8 +30,8 @@ interface SigMaker {
 
 /**
  * Function that will return a boolean depending on if the data and
- * signature applied to that data will properly verify
- * */
+ * signature applied to that data will properly verify.
+ */
 typealias Verifier = (ByteArray, Signature) -> Boolean
 
 typealias BasicVerifier = (ByteArray, ByteArray, ByteArray) -> Boolean
@@ -38,6 +40,9 @@ typealias BasicVerifier = (ByteArray, ByteArray, ByteArray) -> Boolean
  * CryptoSystem implements necessary cryptographic functionalities.
  */
 interface CryptoSystem : Digester {
+    /** Identifier of the algorithm. */
+    val id: String
+
     val random: Random
 
     @Deprecated("Pass in KeyPair instead",

@@ -24,6 +24,7 @@ import net.postchain.core.block.BlockDetailsTruncated
 import net.postchain.core.block.BlockQueryHeightFilter
 import net.postchain.core.block.BlockQueryTimeFilter
 import net.postchain.crypto.PubKey
+import net.postchain.crypto.SigMaker
 import net.postchain.ebft.rest.contract.StateNodeStatus
 import net.postchain.gtv.Gtv
 import net.postchain.gtx.GtxQuery
@@ -69,6 +70,7 @@ interface Model : ChainModel {
      */
     fun checkQueryCorrectness(query: GtxQuery)
     fun query(query: GtxQuery): Gtv
+    fun queryWithHeight(query: GtxQuery): Pair<Gtv, Long>
     fun enqueueQuery(query: GtxQuery)
     fun fetchQueryResponse(queryRid: WrappedByteArray): AsyncQueryResponse
 
@@ -82,6 +84,7 @@ interface Model : ChainModel {
     fun getVersion(): Version
     fun getInfrastructureVersion(): InfraVersion
     fun getMetadata(): ApiMetadata
+    fun getBlockSigMaker(): SigMaker
 }
 
 class NotSupported(message: String) : Exception(message)

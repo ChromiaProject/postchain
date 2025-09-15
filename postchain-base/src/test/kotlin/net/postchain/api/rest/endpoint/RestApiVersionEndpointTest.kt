@@ -43,7 +43,7 @@ class RestApiVersionEndpointTest {
             on { blockchainRid } doReturn blockchainRID
             on { live } doReturn true
         }
-        restApi = RestApi(0, basePath, diagnosticContext, false)
+        restApi = RestApi(0, basePath, nodeDiagnosticContext = diagnosticContext, gracefulShutdown = false)
     }
 
     @AfterEach
