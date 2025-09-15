@@ -36,10 +36,15 @@ open class GTXBlockchainConfigurationFactory : BlockchainConfigurationFactory {
         }
 
         fun extraConfigurationValidation(configurationData: BlockchainConfigurationData, eContext: EContext) {
-            val currentMerkleHashVersion = DatabaseAccess.of(eContext).getCurrentMerkleHashVersion(eContext)
+            val dba = DatabaseAccess.of(eContext)
+            val currentMerkleHashVersion = dba.getCurrentMerkleHashVersion(eContext)
             val newMerkleHashVersion = configurationData.merkleHashVersion
             if (newMerkleHashVersion < currentMerkleHashVersion) {
                 throw UserMistake("Cannot downgrade merkle hash version from $currentMerkleHashVersion to $newMerkleHashVersion")
+            }
+
+            if (configurationData.snapshotsEnabled && !dba.isSnapshotEnabled(eContext)) {
+                throw UserMistake("Snapshots can only be enabled on height 0")
             }
         }
 

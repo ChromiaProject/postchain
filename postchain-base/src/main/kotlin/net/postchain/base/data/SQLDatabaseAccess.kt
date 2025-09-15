@@ -41,6 +41,7 @@ import net.postchain.core.block.size
 import net.postchain.crypto.PubKey
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.mapper.toObject
+import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
 import org.apache.commons.dbutils.QueryRunner
 import org.apache.commons.dbutils.handlers.ColumnListHandler
 import org.apache.commons.dbutils.handlers.MapListHandler
@@ -1629,6 +1630,10 @@ abstract class SQLDatabaseAccess : DatabaseAccess {
                 return list[snapshotsToKeep - 1]
             }
         }
+    }
+
+    override fun isSnapshotEnabled(ctx: EContext): Boolean {
+        return tableExists(ctx.conn, tablePages(ctx, "${SNAPSHOT_TABLE_PREFIX}_root_snapshot"))
     }
 
     override fun getLatestSnapshotHeight(ctx: EContext, pageStoreName: String): Long? {
