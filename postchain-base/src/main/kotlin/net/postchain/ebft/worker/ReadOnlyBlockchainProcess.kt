@@ -187,6 +187,7 @@ class ReadOnlyBlockchainProcess(
         withLoggingContext(loggingContext) {
             txChecker?.shutdown()
             blockDatabase.stop()
+            persistOnlyBlockWriter.stop()
             workerContext.shutdown()
         }
     }

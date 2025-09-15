@@ -23,10 +23,9 @@ class VerifyRangeProof(private val ds: DigestSystem) {
 
         // Extract the range of leaves from the full leaf array
         val endLeafIndex = startLeafIndex + leafHashes.size - 1
-        val rangeLeaves = leafHashes.subList(0, leafHashes.size)
 
         // Build up the tree level by level
-        var currentLevel = rangeLeaves.toMutableList()
+        var currentLevel = leafHashes.toMutableList()
         var currentStart = startLeafIndex
         var currentEnd = endLeafIndex
         var leftBoundaryIndex = 0

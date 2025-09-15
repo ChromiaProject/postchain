@@ -10,6 +10,7 @@ import net.postchain.core.block.BlockTrace
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class PersistOnlyBlockWriter(
         private val loggingContext: Map<String, String>,
@@ -19,8 +20,19 @@ class PersistOnlyBlockWriter(
 
     companion object : KLogging()
 
-    private val executor: ExecutorService = Executors.newSingleThreadExecutor {
-        Thread(it, "$nodeIndex-c${engine.chainID}-PersistOnlyBlockWriter")
+    // Lazy init since we might never use this block writer unless we snapshot sync
+    private var _executor: ExecutorService? = null
+    private val executor: ExecutorService
+        get() = _executor ?: synchronized(this) {
+            _executor ?: Executors.newSingleThreadExecutor {
+                Thread(it, "$nodeIndex-c${engine.chainID}-PersistOnlyBlockWriter")
+            }.also { _executor = it }
+        }
+
+    fun stop() {
+        // Shutdown without triggering lazy init
+        _executor?.shutdownNow()
+        _executor?.awaitTermination(1000, TimeUnit.MILLISECONDS)
     }
 
     override fun addBlock(block: BlockDataWithWitness, dependsOn: CompletableFuture<Unit>?, existingBTrace: BlockTrace?): CompletableFuture<Unit> {

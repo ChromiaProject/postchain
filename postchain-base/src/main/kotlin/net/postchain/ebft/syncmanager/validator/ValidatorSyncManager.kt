@@ -27,6 +27,7 @@ import net.postchain.ebft.FetchUnfinishedBlockIntent
 import net.postchain.ebft.NodeBlockState
 import net.postchain.ebft.NodeStateTracker
 import net.postchain.ebft.NodeStatus
+import net.postchain.ebft.PersistOnlyBlockWriter
 import net.postchain.ebft.StatusManager
 import net.postchain.ebft.message.AppliedConfig
 import net.postchain.ebft.message.BlockData
@@ -81,6 +82,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
                            startInFastSync: Boolean,
                            private val ensureAppliedConfigSenderStarted: () -> Boolean,
                            rateLimitConfiguration: RateLimitConfiguration,
+                           persistOnlyBlockWriter: PersistOnlyBlockWriter,
                            private val clock: Clock = Clock.systemUTC()
 ) : Messaging(workerContext.engine.getBlockQueries(), workerContext.communicationManager, BlockPacker, rateLimitConfiguration) {
     private val blockchainConfiguration = workerContext.blockchainConfiguration
@@ -103,7 +105,7 @@ class ValidatorSyncManager(private val workerContext: WorkerContext,
 
     private val snapshotSynchronizer = SnapshotSynchronizer(
             workerContext,
-            blockDatabase,
+            persistOnlyBlockWriter,
             params,
             PeerStatuses(params.snapshotSyncPeerParameters),
             isProcessRunning,

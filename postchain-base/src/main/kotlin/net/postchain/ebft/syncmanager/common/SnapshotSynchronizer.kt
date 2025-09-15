@@ -64,7 +64,7 @@ class SnapshotSynchronizer(
 ) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {
 
     companion object : KLogging() {
-        const val SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL = 10_000L
+        const val SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL_MS = 10_000L
     }
 
     private var receivedLatestSnapshotHeight = mutableMapOf<NodeRid, SnapshotBlockHeader>()
@@ -180,8 +180,8 @@ class SnapshotSynchronizer(
                     }
 
                     if (snapshotHeightConfigData == null) {
-                        logger.warn("Unable to find config with hash ${candidateHeaderConfig?.toHex()} at height $candidateHeaderHeight. Retrying in $SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL ms...")
-                        val endTime = System.currentTimeMillis() + SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL
+                        logger.warn("Unable to find config with hash ${candidateHeaderConfig?.toHex()} at height $candidateHeaderHeight. Retrying in $SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL_MS ms...")
+                        val endTime = System.currentTimeMillis() + SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL_MS
                         while (System.currentTimeMillis() < endTime) {
                             sleep(100)
                             if (!isProcessRunning()) return false
@@ -195,7 +195,7 @@ class SnapshotSynchronizer(
                 val validator = baseBlockWitnessProviderProvider(
                         workerContext.appConfig.cryptoSystem,
                         workerContext.appConfig.cryptoSystem.buildSigMaker(myKeyPair),
-                        snapshotHeightConfigData!!.signers.toTypedArray()
+                        snapshotHeightConfigData.signers.toTypedArray()
                 )
                 validator to validator.createWitnessBuilderWithoutOwnSignature(candidateHeaderRid)
             }

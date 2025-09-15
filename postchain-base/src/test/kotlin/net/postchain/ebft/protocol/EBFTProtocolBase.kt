@@ -30,6 +30,7 @@ import net.postchain.ebft.BlockIntent
 import net.postchain.ebft.BuildBlockIntent
 import net.postchain.ebft.NodeBlockState
 import net.postchain.ebft.NodeStateTracker
+import net.postchain.ebft.PersistOnlyBlockWriter
 import net.postchain.ebft.message.EbftMessage
 import net.postchain.ebft.message.MessageDurationTracker
 import net.postchain.ebft.message.StateChangeTracker
@@ -86,6 +87,7 @@ abstract class EBFTProtocolBase {
     protected val blockDatabase: BlockDatabase = mock {
         on { applyAndVerifyBlockSignature(any()) } doReturn true
     }
+    protected val persistOnlyBlockWriter: PersistOnlyBlockWriter = mock {}
 
     protected val blockStrategy: BlockBuildingStrategy = mock()
     protected val nodeStateTracker: NodeStateTracker = mock()
@@ -153,7 +155,7 @@ abstract class EBFTProtocolBase {
         doReturn(BaseStatusManager.ZERO_SERIAL_TIME).whenever(clock).millis()
         statusManager = BaseStatusManager(nodes, myNodeId, 0, nodeStatusMetrics, stateChangeTracker, clock)
         blockManager = BaseBlockManager(blockDatabase, statusManager, blockStrategy, workerContext)
-        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, syncMetrics, { true }, false, { true }, RateLimitConfiguration.fromAppConfig(appConfig), clock)
+        syncManager = ValidatorSyncManager(workerContext, emptyMap(), statusManager, blockManager, blockDatabase, nodeStateTracker, revoltTracker, syncMetrics, { true }, false, { true }, RateLimitConfiguration.fromAppConfig(appConfig), persistOnlyBlockWriter, clock)
         statusManager.recomputeStatus()
     }
 
