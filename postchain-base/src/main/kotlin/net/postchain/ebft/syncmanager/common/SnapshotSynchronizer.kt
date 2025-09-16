@@ -61,17 +61,17 @@ class SnapshotSynchronizer(
         val peerStatuses: PeerStatuses,
         val isProcessRunning: () -> Boolean,
         rateLimitConfiguration: RateLimitConfiguration,
-        private var verifyRangeProof: VerifyRangeProof = VerifyRangeProof(SimpleDigestSystem(workerContext.appConfig.cryptoSystem)),
-        private var clock: Clock = Clock.systemUTC(),
+        private val verifyRangeProof: VerifyRangeProof = VerifyRangeProof(SimpleDigestSystem(workerContext.appConfig.cryptoSystem)),
+        private val clock: Clock = Clock.systemUTC(),
 ) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {
 
     companion object : KLogging() {
         const val SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL_MS = 10_000L
     }
 
-    private var receivedLatestSnapshotHeight = mutableMapOf<NodeRid, SnapshotBlockHeader>()
+    private val receivedLatestSnapshotHeight = mutableMapOf<NodeRid, SnapshotBlockHeader>()
     private val contextSyncRequests = mutableMapOf<Long, SnapshotContextState>() // State of progress per context, each context is removed on completion
-    private var lastStoredSnapshotDataTime = mutableMapOf<Long, Long>() // <context ID, time in milliseconds> - tracks "waiting time" between writing datums to storage.
+    private val lastStoredSnapshotDataTime = mutableMapOf<Long, Long>() // <context ID, time in milliseconds> - tracks "waiting time" between writing datums to storage.
 
     private lateinit var syncState: SnapshotSyncState
     private val contextStates = mutableMapOf<Long, SnapshotSyncContextState>() // <context ID, state> - contains initial states at startup and context root hash
