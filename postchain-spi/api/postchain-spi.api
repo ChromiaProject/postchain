@@ -974,7 +974,8 @@ public class net/postchain/base/snapshot/BasePageStore : net/postchain/base/snap
 }
 
 public final class net/postchain/base/snapshot/BaseSnapshotDatumRepository : net/postchain/base/snapshot/SnapshotDatumRepository {
-	public fun <init> (Ljava/util/List;ILnet/postchain/crypto/CryptoSystem;)V
+	public fun <init> (Ljava/util/List;ILnet/postchain/crypto/CryptoSystem;Ljava/time/Clock;)V
+	public synthetic fun <init> (Ljava/util/List;ILnet/postchain/crypto/CryptoSystem;Ljava/time/Clock;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun getContextMaxIds (Lnet/postchain/core/ExecutionContext;J)Ljava/util/Map;
 	public fun getDatum (Lnet/postchain/core/ExecutionContext;JJJ)Lnet/postchain/gtv/Gtv;
 	public fun getDatumIdMax (Lnet/postchain/core/ExecutionContext;JJ)Ljava/lang/Long;
