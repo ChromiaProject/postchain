@@ -1,7 +1,7 @@
 image: registry.gitlab.com/chromaway/core-tools/chromia-images/maven-docker-java21:1.0.6@sha256:089097e3a81f53e3c707847579228bfc466a1eb826f8fd1a1b885b99d62e8c36
 include:
   - project: "chromaway/core-infra/gitlab-automation"
-    ref: 1.2.0
+    ref: 1.3.0
     file:
       - templates/release.yml
       - templates/maven-dependency-scanning.yml
@@ -44,7 +44,6 @@ stages:
   - slow-integration-tests
   - deploy
   - dependency-check
-  - prepare_release
   - release
 
 # Triggered by that something was merged into or pushed onto main
@@ -76,25 +75,8 @@ deploy:
       -Drevision=$CI_COMMIT_TAG
       clean source:jar deploy
 
-prepare_release:
-  stage: prepare_release
-  rules:
-    - if: '$CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+$/'
-  script:
-    - 'curl -H "PRIVATE-TOKEN: $CI_API_TOKEN" "$CI_API_V4_URL/projects/$CI_PROJECT_ID/repository/changelog?version=$CI_COMMIT_TAG" | jq -r .notes > release_notes.md'
-  artifacts:
-    paths:
-      - release_notes.md
-
-
 gitlab-release:
-  stage: release
-  image: registry.gitlab.com/gitlab-org/release-cli:latest
-  needs:
-    - job: prepare_release
-      artifacts: true
-  rules:
-    - if: '$CI_COMMIT_TAG =~ /^v?\d+\.\d+\.\d+$/'
+  extends: .gitlab-release-with-notes
   script:
     - echo "Running the release job."
   release:
