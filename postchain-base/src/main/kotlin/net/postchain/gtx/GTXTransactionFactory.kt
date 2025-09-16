@@ -12,6 +12,7 @@ import net.postchain.gtv.GtvDecoder
 import net.postchain.gtv.GtvEncoder
 import net.postchain.gtv.merkle.GtvMerkleHashCalculatorBase
 import net.postchain.gtv.merkleHash
+import kotlin.time.Duration
 
 /**
  * Idea is that we can build a [GTXTransaction] from different layers.
@@ -19,7 +20,8 @@ import net.postchain.gtv.merkleHash
  */
 class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXModule, val cs: CryptoSystem,
                             val gtvMerkleHashCalculator: GtvMerkleHashCalculatorBase,
-                            val maxTransactionSize: Long = 1024 * 1024, val maxTransactionSignatures: Long = 100) : TransactionFactory {
+                            val maxTransactionSize: Long = 1024 * 1024, val maxTransactionSignatures: Long = 100,
+                            val slowOpThreshold: Duration = Duration.INFINITE) : TransactionFactory {
 
     override fun decodeTransaction(data: ByteArray): Transaction {
         if (data.size > maxTransactionSize) {
@@ -72,7 +74,8 @@ class GTXTransactionFactory(val blockchainRID: BlockchainRid, val module: GTXMod
         val signatures = gtxData.signatures
         val ops = body.getExtOpData().map { module.makeTransactor(it) }.toTypedArray()
 
-        return GTXTransaction(rawData, gtvData, gtxData, signers.toTypedArray(), signatures.toTypedArray(), ops, myHash, myRID, cs)
+        return GTXTransaction(rawData, gtvData, gtxData, signers.toTypedArray(), signatures.toTypedArray(),
+                ops, myHash, myRID, cs, slowOpThreshold)
     }
 
 }

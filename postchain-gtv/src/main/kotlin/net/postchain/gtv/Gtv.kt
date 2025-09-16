@@ -47,5 +47,9 @@ interface Gtv {
     fun getRawGtv(): RawGtv
 
     fun nrOfBytes(): Int
-}
 
+    /**
+     * @return a human-readable string representation, truncated if the value is large.
+     */
+    fun shortString(): String
+}

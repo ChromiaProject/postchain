@@ -29,6 +29,8 @@ data class GtvInteger(val integer: Long) : GtvPrimitive() {
         return Long.SIZE_BYTES
     }
 
+    override fun shortString() = toString()
+
     override fun toString(): String {
         return integer.toString()
     }

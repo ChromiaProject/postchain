@@ -35,6 +35,9 @@ data class GtvString(val string: String) : GtvPrimitive() {
         return (string.length * 2)
     }
 
+    override fun shortString() =
+            "\"" + ESCAPE_GTV.translate(string.take(64)) + if (string.length > 64) "..." else "\""
+
     override fun toString(): String {
         return "\"${ESCAPE_GTV.translate(string)}\""
     }

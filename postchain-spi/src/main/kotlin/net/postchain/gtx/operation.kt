@@ -24,6 +24,8 @@ abstract class GTXOperation(val data: ExtOpData) : Transactor {
     override fun isSpecial(): Boolean {
         return data.opName.startsWith("__")  // We used to return "false" here always, but that wos just too confusing IMO
     }
+
+    fun shortSignature(): String = data.opName + data.args.joinToString(prefix = "(", postfix = ")", limit = 10) { it.shortString() }
 }
 
 class SimpleGTXOperation(data: ExtOpData,

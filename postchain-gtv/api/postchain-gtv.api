@@ -28,6 +28,7 @@ public abstract interface class net/postchain/gtv/Gtv {
 	public abstract fun getType ()Lnet/postchain/gtv/GtvType;
 	public abstract fun isNull ()Z
 	public abstract fun nrOfBytes ()I
+	public abstract fun shortString ()Ljava/lang/String;
 }
 
 public final class net/postchain/gtv/Gtv$DefaultImpls {
@@ -63,6 +64,7 @@ public final class net/postchain/gtv/GtvArray : net/postchain/gtv/GtvCollection 
 	public fun getType ()Lnet/postchain/gtv/GtvType;
 	public fun hashCode ()I
 	public fun nrOfBytes ()I
+	public fun shortString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -79,6 +81,7 @@ public final class net/postchain/gtv/GtvBigInteger : net/postchain/gtv/GtvPrimit
 	public fun getType ()Lnet/postchain/gtv/GtvType;
 	public fun hashCode ()I
 	public fun nrOfBytes ()I
+	public fun shortString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -95,6 +98,7 @@ public final class net/postchain/gtv/GtvByteArray : net/postchain/gtv/GtvPrimiti
 	public fun getType ()Lnet/postchain/gtv/GtvType;
 	public fun hashCode ()I
 	public fun nrOfBytes ()I
+	public fun shortString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -126,6 +130,7 @@ public final class net/postchain/gtv/GtvDictionary : net/postchain/gtv/GtvCollec
 	public fun getType ()Lnet/postchain/gtv/GtvType;
 	public fun hashCode ()I
 	public fun nrOfBytes ()I
+	public fun shortString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -190,6 +195,7 @@ public final class net/postchain/gtv/GtvInteger : net/postchain/gtv/GtvPrimitive
 	public fun getType ()Lnet/postchain/gtv/GtvType;
 	public fun hashCode ()I
 	public fun nrOfBytes ()I
+	public fun shortString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -200,6 +206,7 @@ public final class net/postchain/gtv/GtvNull : net/postchain/gtv/GtvPrimitive {
 	public fun getType ()Lnet/postchain/gtv/GtvType;
 	public fun isNull ()Z
 	public fun nrOfBytes ()I
+	public fun shortString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -221,6 +228,7 @@ public final class net/postchain/gtv/GtvString : net/postchain/gtv/GtvPrimitive 
 	public fun getType ()Lnet/postchain/gtv/GtvType;
 	public fun hashCode ()I
 	public fun nrOfBytes ()I
+	public fun shortString ()Ljava/lang/String;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -271,6 +279,8 @@ public final class net/postchain/gtv/GtvVirtualArray : net/postchain/gtv/GtvVirt
 	public fun hashCode ()I
 	public final fun isKeyPresent (I)Z
 	public fun nrOfBytes ()I
+	public synthetic fun shortString ()Ljava/lang/String;
+	public fun shortString ()Ljava/lang/Void;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -295,6 +305,8 @@ public final class net/postchain/gtv/GtvVirtualDictionary : net/postchain/gtv/Gt
 	public fun hashCode ()I
 	public final fun isKeyPresent (Ljava/lang/String;)Z
 	public fun nrOfBytes ()I
+	public synthetic fun shortString ()Ljava/lang/String;
+	public fun shortString ()Ljava/lang/Void;
 	public fun toString ()Ljava/lang/String;
 }
 

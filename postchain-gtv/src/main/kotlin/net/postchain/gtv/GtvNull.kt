@@ -25,5 +25,7 @@ object GtvNull : GtvPrimitive() {
         return 0
     }
 
+    override fun shortString() = toString()
+
     override fun toString() = "null"
 }

@@ -20,6 +20,8 @@ data class GtvStream(val stream: InputStream, val length: Long?) : AbstractGtv()
         throw UserMistake("Don't call this method on GtvInputStream")
     }
 
+    override fun shortString() = throw UserMistake("Don't call this method on GtvInputStream")
+
     override fun equals(other: Any?): Boolean {
         throw UserMistake("You cannot compare a GtvInputStream with something else.")
     }

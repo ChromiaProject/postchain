@@ -26,6 +26,8 @@ data class GtvBigInteger(val integer: BigInteger) : GtvPrimitive() {
         return ((integer.bitLength() + 1) / 8) + 1
     }
 
+    override fun shortString() = if (nrOfBytes() > 16) "very_big_integer" else toString()
+
     override fun toString(): String {
         return integer.toString() + "L"
     }

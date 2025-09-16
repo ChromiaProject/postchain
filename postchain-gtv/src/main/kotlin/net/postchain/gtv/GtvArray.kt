@@ -56,6 +56,8 @@ data class GtvArray(val array: Array<out Gtv>) : GtvCollection() {
         return result
     }
 
+    override fun shortString() = if (array.size > 16) "long_array" else "${array.map { it.shortString() }}"
+
     override fun toString(): String {
         return "${array.map { it.toString() }}"
     }

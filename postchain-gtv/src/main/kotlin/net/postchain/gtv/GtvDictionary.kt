@@ -72,6 +72,13 @@ data class GtvDictionary private constructor(val dict: Map<String, Gtv>) : GtvCo
         return sumNrOfBytes
     }
 
+    override fun shortString() = if (dict.isEmpty())
+        "[:]"
+    else if (dict.size > 16)
+        "long_dict"
+    else
+        dict.asIterable().joinToString(prefix = "[", postfix = "]") { entity -> "\"${ESCAPE_GTV.translate(entity.key.take(64))}\": ${entity.value.shortString()}" }
+
     override fun toString() = if (dict.isEmpty())
         "[:]"
     else

@@ -46,6 +46,8 @@ data class GtvByteArray(val bytearray: ByteArray) : GtvPrimitive() {
         return result
     }
 
+    override fun shortString() = if (nrOfBytes() > 33) "long_byte_array" else toString()
+
     override fun toString(): String {
         return "x\"${bytearray.toHex()}\""
     }
