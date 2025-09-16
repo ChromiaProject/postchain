@@ -2,6 +2,7 @@
 
 package net.postchain.gtx
 
+import mu.KLogging
 import net.postchain.common.data.Hash
 import net.postchain.common.exception.TransactionIncorrect
 import net.postchain.common.exception.UserMistake
@@ -14,6 +15,8 @@ import net.postchain.core.TxEContext
 import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.Signature
 import net.postchain.gtv.Gtv
+import kotlin.system.measureNanoTime
+import kotlin.time.Duration
 
 /**
  * A transaction based on the GTX format.
@@ -37,8 +40,13 @@ class GTXTransaction(
         val ops: Array<Transactor>,
         val myHash: Hash,
         val myRID: ByteArray,
-        val cs: CryptoSystem
+        val cs: CryptoSystem,
+        slowOpThreshold: Duration = Duration.INFINITE,
 ) : SignableTransaction {
+
+    companion object : KLogging()
+
+    private val slowOpThresholdNanos = slowOpThreshold.inWholeNanoseconds
 
     private val cachedRawData by lazy { gtxData.encode() } // We are not sure if we have the rawData, and if we ever need to calculate it, it will be cached here.
     var isChecked: Boolean = false
@@ -82,7 +90,9 @@ class GTXTransaction(
 
         if (signers.size > 1) {
             val set = HashSet<WrappedByteArray>(signers.size)
-            for (signer in signers) { set.add(signer.wrap()) }
+            for (signer in signers) {
+                set.add(signer.wrap())
+            }
             if (set.size != signers.size) {
                 throw TransactionIncorrect(myRID, "Duplicate signers")
             }
@@ -157,8 +167,12 @@ class GTXTransaction(
     override fun apply(ctx: TxEContext): Boolean {
         checkCorrectness()
         for (op in ops) {
-            if (!op.apply(ctx))
-                throw UserMistake("Operation failed")
+            val opSignature = (op as? GTXOperation)?.shortSignature() ?: "<unknown>"
+            val opTimeNanos = measureNanoTime {
+                if (!op.apply(ctx))
+                    throw UserMistake("Operation $opSignature failed")
+            }
+            maybeLogSlowOp(opTimeNanos, opSignature, "apply")
         }
         return true
     }
@@ -166,10 +180,20 @@ class GTXTransaction(
     override fun applyWhileSyncing(ctx: TxEContext): Boolean {
         checkCorrectnessWhileSyncing()
         for (op in ops) {
-            if (!op.applyWhileSyncing(ctx))
-                throw UserMistake("Operation failed")
+            val opSignature = (op as? GTXOperation)?.shortSignature() ?: "<unknown>"
+            val opTimeNanos = measureNanoTime {
+                if (!op.applyWhileSyncing(ctx))
+                    throw UserMistake("Operation $opSignature failed")
+            }
+            maybeLogSlowOp(opTimeNanos, opSignature, "apply while syncing")
         }
         return true
+    }
+
+    private fun maybeLogSlowOp(opTimeNanos: Long, opSignature: String, msg: String) {
+        if (opTimeNanos > slowOpThresholdNanos) {
+            logger.info("Operation $opSignature is slow, took ${opTimeNanos / 1000} ms to $msg")
+        }
     }
 
     override fun toString(): String = "GTXTransaction(RID=${myRID.toHex()})"

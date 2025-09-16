@@ -17,6 +17,8 @@ import net.postchain.crypto.CryptoSystem
 import net.postchain.crypto.SigMaker
 import net.postchain.gtv.mapper.toObject
 import net.postchain.gtx.special.GTXSpecialTxHandler
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
                                       cryptoSystem: CryptoSystem,
@@ -30,7 +32,8 @@ open class GTXBlockchainConfiguration(configData: BlockchainConfigurationData,
 
     private val txFactory = GTXTransactionFactory(
             effectiveBlockchainRID, module, cryptoSystem, configData.merkleHashCalculator,
-            maxTransactionSize = gtxConfig.maxTxSize, maxTransactionSignatures = gtxConfig.maxTxSignatures
+            maxTransactionSize = gtxConfig.maxTxSize, maxTransactionSignatures = gtxConfig.maxTxSignatures,
+            slowOpThreshold = if (gtxConfig.slowOpThreshold < 0) Duration.INFINITE else gtxConfig.slowOpThreshold.milliseconds,
     )
 
     private val specTxHandler: GTXSpecialTxHandler // Note: this is NOT the same as the variable in Base.

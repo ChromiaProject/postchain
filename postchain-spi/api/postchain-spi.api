@@ -451,6 +451,7 @@ public final class net/postchain/base/configuration/BlockchainConfigurationField
 	public static final field KEY_GTX_ALLOWOVERRIDES Ljava/lang/String;
 	public static final field KEY_GTX_MAX_TX_SIGNATURES Ljava/lang/String;
 	public static final field KEY_GTX_MODULES Ljava/lang/String;
+	public static final field KEY_GTX_SLOW_OP_THRESHOLD Ljava/lang/String;
 	public static final field KEY_GTX_TX_SIZE Ljava/lang/String;
 	public static final field KEY_HISTORIC_BRID Ljava/lang/String;
 	public static final field KEY_MAX_BLOCK_FUTURE_TIME Ljava/lang/String;
@@ -2074,6 +2075,8 @@ public final class net/postchain/gtv/GtvStream : net/postchain/gtv/AbstractGtv {
 	public fun getType ()Lnet/postchain/gtv/GtvType;
 	public fun hashCode ()I
 	public fun nrOfBytes ()I
+	public synthetic fun shortString ()Ljava/lang/String;
+	public fun shortString ()Ljava/lang/Void;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -2148,6 +2151,7 @@ public abstract class net/postchain/gtx/GTXOperation : net/postchain/core/Transa
 	public fun isCorrect ()Z
 	public fun isSinglePerTransaction ()Z
 	public fun isSpecial ()Z
+	public final fun shortSignature ()Ljava/lang/String;
 }
 
 public abstract interface class net/postchain/gtx/MetadataProvider {

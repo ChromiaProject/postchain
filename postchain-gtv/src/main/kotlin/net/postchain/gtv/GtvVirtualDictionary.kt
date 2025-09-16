@@ -3,8 +3,8 @@
 package net.postchain.gtv
 
 import net.postchain.common.exception.UserMistake
-import net.postchain.gtv.merkle.proof.MerkleProofElement
 import net.postchain.gtv.gtvmessages.RawGtv
+import net.postchain.gtv.merkle.proof.MerkleProofElement
 
 /**
  * The virtual version of [GtvDictionary] only implements few of the methods defined in [Gtv].
@@ -65,6 +65,8 @@ data class GtvVirtualDictionary(val proofElement: MerkleProofElement, val dict: 
     override fun equals(other: Any?): Boolean {
         throw UserMistake("You cannot compare a virtual object with something else.")
     }
+
+    override fun shortString() = throw UserMistake("Don't call this method on a virtual object")
 
     override fun hashCode(): Int {
         throw UserMistake("Don't call this method on a virtual object")
