@@ -49,6 +49,7 @@ import net.postchain.gtx.SnapshotAware
 import net.postchain.managed.ManagedBlockchainConfigurationProvider
 import org.apache.commons.io.FileUtils
 import java.lang.Thread.sleep
+import java.time.Clock
 import java.util.TreeMap
 import kotlin.time.DurationUnit
 import kotlin.time.measureTime
@@ -61,6 +62,7 @@ class SnapshotSynchronizer(
         val isProcessRunning: () -> Boolean,
         rateLimitConfiguration: RateLimitConfiguration,
         private var verifyRangeProof: VerifyRangeProof = VerifyRangeProof(SimpleDigestSystem(workerContext.appConfig.cryptoSystem)),
+        private var clock: Clock = Clock.systemUTC(),
 ) : AbstractSynchronizer(workerContext, rateLimitConfiguration) {
 
     companion object : KLogging() {
@@ -125,14 +127,14 @@ class SnapshotSynchronizer(
             val peersLeft = configuredPeers - receivedLatestSnapshotHeight.keys
             if (peersLeft.isEmpty()) break
 
-            if (System.currentTimeMillis() - lastRequestForSnapshotHeight >= params.jobTimeout) {
+            if (clock.millis() - lastRequestForSnapshotHeight >= params.jobTimeout) {
                 if (numberOfTries > 3) break
 
                 peersLeft.forEach {
                     communicationManager.sendPacket(GetLatestSnapshotBlock(), it)
                     logger.info("Requested latest snapshot block from peer $it")
                 }
-                lastRequestForSnapshotHeight = System.currentTimeMillis()
+                lastRequestForSnapshotHeight = clock.millis()
                 numberOfTries++
             }
             processMessages(true)
@@ -181,8 +183,8 @@ class SnapshotSynchronizer(
 
                     if (snapshotHeightConfigData == null) {
                         logger.warn("Unable to find config with hash ${candidateHeaderConfig?.toHex()} at height $candidateHeaderHeight. Retrying in $SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL_MS ms...")
-                        val endTime = System.currentTimeMillis() + SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL_MS
-                        while (System.currentTimeMillis() < endTime) {
+                        val endTime = clock.millis() + SNAPSHOT_CONFIG_FETCH_RETRY_INTERVAL_MS
+                        while (clock.millis() < endTime) {
                             sleep(100)
                             if (!isProcessRunning()) return false
 
@@ -299,14 +301,14 @@ class SnapshotSynchronizer(
                                     }
 
                                     val waitTime = lastStoredSnapshotDataTime[message.contextId]?.let {
-                                        System.currentTimeMillis() - it
+                                        clock.millis() - it
                                     }
 
                                     val storeTime = measureTime {
                                         storeSnapshotData(message.contextId, preparedData, end)
                                     }
                                     logger.debug { "Stored ${preparedData.size} datums (${FileUtils.byteCountToDisplaySize(preparedData.sumOf { it.data.nrOfBytes() })}) from offset ${message.datumIdFrom} for context id ${message.contextId} in ${storeTime.toLong(DurationUnit.MILLISECONDS)} ms. End: $end. Wasted time from last store: $waitTime ms" }
-                                    lastStoredSnapshotDataTime[message.contextId] = System.currentTimeMillis()
+                                    lastStoredSnapshotDataTime[message.contextId] = clock.millis()
 
                                     if (end) {
                                         logger.debug { "Snapshot end reached for context ${state.contextId}" }
@@ -449,7 +451,7 @@ class SnapshotSynchronizer(
 
             contextState.sentTo.add(peer)
         }
-        contextState.timeSent = System.currentTimeMillis()
+        contextState.timeSent = clock.millis()
     }
 
     private fun requestNextSnapshotData(state: SnapshotContextState, message: SnapshotData) {
@@ -459,7 +461,7 @@ class SnapshotSynchronizer(
     }
 
     private fun processRequestTimeouts() {
-        val now = System.currentTimeMillis()
+        val now = clock.millis()
         contextSyncRequests
                 .filterValues { it.timeSent + params.jobTimeout < now }
                 .values
@@ -526,4 +528,26 @@ data class SnapshotContextState(
         val sentTo: MutableList<NodeRid> = mutableListOf(),
 )
 
-data class FullSnapshotDatumData(val datumId: Long, val data: Gtv, val hash: Hash, val isPermanent: Boolean)
+data class FullSnapshotDatumData(val datumId: Long, val data: Gtv, val hash: Hash, val isPermanent: Boolean) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as FullSnapshotDatumData
+
+        if (datumId != other.datumId) return false
+        if (isPermanent != other.isPermanent) return false
+        if (data != other.data) return false
+        if (!hash.contentEquals(other.hash)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = datumId.hashCode()
+        result = 31 * result + isPermanent.hashCode()
+        result = 31 * result + data.hashCode()
+        result = 31 * result + hash.contentHashCode()
+        return result
+    }
+}

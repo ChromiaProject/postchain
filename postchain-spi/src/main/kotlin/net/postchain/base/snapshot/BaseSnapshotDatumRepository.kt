@@ -8,14 +8,13 @@ import net.postchain.gtv.Gtv
 import net.postchain.gtv.GtvDecoder
 import net.postchain.gtx.SNAPSHOT_TABLE_PREFIX
 import net.postchain.gtx.SnapshotAware
+import java.time.Clock
 
-/**
- * TODO: We need to think about where and how to instantiate this repository
- */
 class BaseSnapshotDatumRepository(
         private val snapshotModules: List<SnapshotAware>,
         private val levelsPerPage: Int,
-        cryptoSystem: CryptoSystem
+        cryptoSystem: CryptoSystem,
+        private val clock: Clock = Clock.systemUTC()
 ) : SnapshotDatumRepository {
     private val digestSystem = SimpleDigestSystem(cryptoSystem)
     private val snapshotModuleByContextMap = mutableMapOf<Long, SnapshotAware>()
@@ -72,7 +71,7 @@ class BaseSnapshotDatumRepository(
     }
 
     override fun getDatums(ctx: EContext, height: Long, contextId: Long, datumIdFrom: Long, maxDataSize: Long, maxTime: Long): List<SnapshotDatum> {
-        val start = System.currentTimeMillis()
+        val start = clock.millis()
         val data = mutableListOf<SnapshotDatum>()
         var size = 0
         var offset = datumIdFrom
@@ -81,7 +80,7 @@ class BaseSnapshotDatumRepository(
             data.add(SnapshotDatum(offset, datum.data, datum.isPermanent))
             size += datum.data.nrOfBytes()
             offset++
-            if (System.currentTimeMillis() - start >= maxTime) {
+            if (clock.millis() - start >= maxTime) {
                 break
             }
         } while (size < maxDataSize)

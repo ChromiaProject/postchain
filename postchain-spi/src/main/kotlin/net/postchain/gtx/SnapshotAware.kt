@@ -5,6 +5,10 @@ import net.postchain.core.EContext
 
 const val SNAPSHOT_TABLE_PREFIX = "sys.x.gtx_module"
 
+/**
+ * This interface should be implemented by all modules that want to be snapshot compatible. More information
+ * can be found in the [documentation](../../../../../../../doc/snapshots/snapshot-modules.md).
+ */
 interface SnapshotAware {
     /** Called at startup to provide the module with the [SnapshotContext] */
     fun initializeSnapshotContext(context: SnapshotContext)
