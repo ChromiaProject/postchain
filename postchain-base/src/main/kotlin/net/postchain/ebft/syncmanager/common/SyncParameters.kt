@@ -100,7 +100,7 @@ data class SyncParameters(
                     slowSyncMinSleepTime = config.getEnvOrLong("POSTCHAIN_SLOWSYNC_MIN_SLEEP_TIME", "slowsync.min_sleep_time", 20),
                     slowSyncMaxPeerWaitTime = config.getEnvOrLong("POSTCHAIN_SLOWSYNC_MAX_PEER_WAIT_TIME", "slowsync.max_peer_wait_time", 2000),
                     syncPeerParameters = syncPeerParameters,
-                    snapshotSyncThreshold = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_THRESHOLD", "snapshotsync.threshold", 100_000),
+                    snapshotSyncThreshold = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_THRESHOLD", "snapshotsync.threshold", 10_000),
                     snapshotSyncMaxDataSize = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_MAX_DATA_SIZE", "snapshotsync.max_data_size", BlockPacker.MAX_PACKAGE_CONTENT_BYTES.toLong()),
                     snapshotSyncMaxTime = config.getEnvOrLong("POSTCHAIN_SNAPSHOTSYNC_MAX_TIME", "snapshotsync.max_time", 5_000L),
                     snapshotSyncPeerParameters = SyncPeerParameters(
