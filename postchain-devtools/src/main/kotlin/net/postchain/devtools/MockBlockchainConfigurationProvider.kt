@@ -36,15 +36,7 @@ class MockBlockchainConfigurationProvider :
         requireChainIdToBeSameAsInContext(eContext, chainId)
 
         val blockchainRid = ChainUtil.ridOf(chainId)
-        var height = -1L
-        while (height < historicBlockHeight) {
-            val nextHeight = dataSource.findNextConfigurationHeight(blockchainRid.data, height + 1)
-            if (nextHeight == null || nextHeight > historicBlockHeight) {
-                return height
-            } else height = nextHeight
-        }
-
-        return height
+        return dataSource.getHistoricConfigurationHeight(blockchainRid, historicBlockHeight)
     }
 
     override fun getBlockchainRid(eContext: EContext, dba: DatabaseAccess) = ChainUtil.ridOf(eContext.chainID)
