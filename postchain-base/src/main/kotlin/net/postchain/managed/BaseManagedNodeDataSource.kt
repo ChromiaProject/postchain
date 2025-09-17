@@ -262,4 +262,28 @@ open class BaseManagedNodeDataSource(val queryRunner: QueryRunner, val appConfig
                     "cm_get_blockchain_api_urls",
                     buildArgs("blockchain_rid" to gtv(brid.data))
             ).asArray().map { it.asString() }
+
+    override fun getHistoricConfigurationHeight(blockchainRid: BlockchainRid, historicBlockHeight: Long): Long? {
+        return if (nmApiVersion >= 25) {
+            val res = query(
+                    "nm_get_historic_configuration_height",
+                    buildArgs(
+                            "blockchain_rid" to gtv(blockchainRid.data),
+                            "height" to gtv(historicBlockHeight))
+            )
+
+            if (res.isNull()) null else res.asInteger()
+        } else {
+            // Fallback to inefficient method
+            var height = -1L
+            while (height < historicBlockHeight) {
+                val nextHeight = findNextConfigurationHeight(blockchainRid.data, height + 1)
+                if (nextHeight == null || nextHeight > historicBlockHeight) {
+                    return height
+                } else height = nextHeight
+            }
+
+            height
+        }
+    }
 }

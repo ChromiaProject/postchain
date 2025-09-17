@@ -40,4 +40,6 @@ interface ManagedNodeDataSource : PeerInfoDataSource, QueryRunner {
      * Returns the REST API URL:s of signer nodes for a blockchain.
      */
     fun getBlockchainApiUrls(brid: BlockchainRid): List<String>
+
+    fun getHistoricConfigurationHeight(blockchainRid: BlockchainRid, historicBlockHeight: Long): Long?
 }

@@ -144,6 +144,20 @@ open class MockManagedNodeDataSource : ManagedNodeDataSource {
         return emptyList()
     }
 
+    override fun getHistoricConfigurationHeight(blockchainRid: BlockchainRid, historicBlockHeight: Long): Long? {
+        val configs = bridToConfigs[blockchainRid] ?: return null
+        if (configs.containsKey(historicBlockHeight)) return historicBlockHeight
+
+        var prevHeight: Long? = null
+        for (h in configs.keys) {
+            if (h > historicBlockHeight) {
+                return prevHeight
+            }
+            prevHeight = h
+        }
+        return null
+    }
+
     fun addExtraReplica(brid: BlockchainRid, replica: NodeRid) {
         extraReplicas.computeIfAbsent(brid) { mutableSetOf() }.add(replica)
     }

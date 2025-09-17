@@ -68,15 +68,7 @@ open class ManagedBlockchainConfigurationProvider : AbstractBlockchainConfigurat
             val blockchainRid = getBlockchainRid(eContext, dba)
 
             // We don't have any efficient query for this in directory chain
-            var height = -1L
-            while (height < historicBlockHeight) {
-                val nextHeight = dataSource.findNextConfigurationHeight(blockchainRid.data, height + 1)
-                if (nextHeight == null || nextHeight > historicBlockHeight) {
-                    return height
-                } else height = nextHeight
-            }
-
-            return height
+            return dataSource.getHistoricConfigurationHeight(blockchainRid, historicBlockHeight)
         }
     }
 
